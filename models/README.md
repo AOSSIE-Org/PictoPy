@@ -2,6 +2,7 @@ Directory contains models tested , the best performing model will be used finall
 
 Directory structure
   .
+    
     ├── ...
     ├── face_detection          # Contains models which detect faces
     ├── object_detection        # Contains models for object detection
