@@ -16,4 +16,14 @@ An open source image sorting tool designed to organize your image collection eff
 4. **Multiprocessing Support:**
    - Pictopy should supports multiprocessing, optimizing the sorting process and improving overall performance.
 
-   
+
+
+**How to run the application:**
+- copy the UI folder code and move to this directory
+- run the command   'npm init -y'
+- Now run the command   'npm install electron --save-dev'
+- Go to package.json and change the scripts like this : "scripts": {
+                                                               "start": "electron ."
+                                                                        }
+- Now run this command to run the application    'npm start'
+
