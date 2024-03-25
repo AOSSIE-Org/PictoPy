@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Anuj Dutt's Machine Learning Blog">
+    <meta name="author" content="Anuj Dutt">
+    <meta property="og:title" content="Anuj Dutt's Machine Learning Blog">
+    <meta property="og:description" content="Anuj Dutt's Machine Learning Blog">
+    <meta property="og:image" content="https://uploads.toptal.io/blog/image/443/toptal-blog-image-1407508081138.png">
+
+    <title>Image Classification using TensorFlow.js</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Theme CSS -->
+    <link href="css/clean-blog.min.css" rel="stylesheet">
+
+    <!-- Load TensorFlow.js Library -->
+   <script src="https://unpkg.com/@tensorflow/tfjs"></script>
+   <!-- Load mobilenet model from TF.js -->
+   <script src="https://unpkg.com/@tensorflow-models/mobilenet"></script>
+
+    <!-- Custom Fonts -->
+    <link href="vendor/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <link href='https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+   
+
+    <style media="screen">
+    * {
+     box-sizing: border-box;
+   }
+   /* Create three equal columns that sits next to each other */
+   .fix{
+     margin-right: 80px;
+     margin-left: 160px;
+    }
+    .custom-column {
+     float: left;
+     width: 25%;
+     padding: 5px;
+     top: 200px;
+     /* overflow: hidden; */
+   }
+   /* Clearfix (clear floats) */
+   .custom-row::after {
+     content: "";
+     clear: both;
+     display: table;
+     /* overflow: hidden; */
+   }
+    </style>
+
+</head>
+
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+        <div class="container-fluid">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header page-scroll">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    Menu <i class="fa fa-bars"></i>
+                </button>
+                <!--<a class="navbar-brand" href="index.html">Start Bootstrap</a> -->
+            </div>
+
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="index.html">Home</a>
+                    </li>
+                    <li>
+                        <a href="about.html">About</a>
+                    </li>
+                    <!-- <li>
+                        <a href="index.html">Blog</a>
+                    </li> -->
+                    <li>
+                        <a href="https://anujdutt9.github.io/">Blog</a>
+                    </li>
+                </ul>
+            </div>
+            <!-- /.navbar-collapse -->
+        </div>
+        <!-- /.container -->
+    </nav>
+
+    <!-- ******************************************************************************** -->
+    <!-- Uncomment this to show Page Header Image-->
+    <!-- Set your background image for this header on the line below. -->
+    <header class="intro-header" style="background-image: url(img/tfjs.jpg)">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                    <div class="post-heading">
+                        <h1>Image Classification using TensorFlow.js</h1>
+                        <h2 class="subheading">On-Device Image Classification in the Browser.</h2>
+                        <span class="meta">Posted on March 15, 2019</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- ******************************************************************************** -->
+
+    <!-- Post Content -->
+    <article>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+
+                  <p><b>Hello Everyone !!</b></p>
+                  <p>Thanks for continuing with this post.</p>
+
+                  <p align='justify'>In this post, I want to show you that how easy it is to use an existing Machine Learning model and using it using TensorFlow.js to make predictions on images in the browser. So, let's get started.</p>
+                  <p align='justify'>First, let me begin by showing you a simple demo of what we'll be building in this tutorial. Below, you can see some images. If you click on any image, you see that some text appears below that tells that what the machine learning model thinks is in the image i.e. predicted labels and their probabilities. Go ahead and try it out.</p>
+
+                  <!-- Show some Sample Images to Select from for Classification -->
+                  <div class="custom-row">
+                    <div class="custom-column">
+                      <img id="1" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/panda.jpg" alt="Snow" width="150" height="150">
+                    </div>
+                    <div class="custom-column">
+                      <img id="2" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/parachute.jpg" alt="Snow" width="150" height="150">
+                    </div>
+                    <div class="custom-column">
+                      <img id="3" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/cannon.png" alt="Snow" width="150" height="150">
+                    </div>
+                    <div class="custom-column">
+                      <img id="4" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/bagpack.jpg" alt="Snow" width="150" height="150">
+                    </div>
+                    <div class="custom-column">
+                      <img id="5" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/hummingbird.jpg" alt="Snow" width="150" height="150">
+                    </div>
+                    <div class="custom-column">
+                      <img id="6" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/wall_clock.jpeg" alt="Snow" width="150" height="150">
+                    </div>
+                    <div class="custom-column">
+                      <img id="7" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/beer.jpg" alt="Snow" width="150" height="150">
+                    </div>
+                    <div class="custom-column">
+                      <img id="8" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/crawfish.jpg" alt="Snow" width="150" height="150">
+                    </div>
+                </div>
+
+                 <br/>
+                <div id="prediction1" class="custom-row" style="border:0px solid #ccc;font:16px/26px Georgia, Garamond, Serif;overflow:auto;">
+                 <br/>Predicted Labels and their Probabilities appears here.<br/><br/>
+               </div>
+
+               <!-- <br/> -->
+
+               <p align="justify">So, what's going on here. I am making use of TensorFlow.js to load a MobileNet model and providing the selected images as input to the model to get some predictions from the model. What's different in this approach as compared to others is that all the prediction using the model is taking place in your browser.</p>
+               <p align="justify">Yes, you heard that right !! It's hapenning right here on your browser, be it the phone or a laptop. No server required. Don't believe me yet ? Go ahead and open your browser's console and click on any image. Believe me now ?</p>
+               <p align="justify">As you open the console and click on an image above, you should see some output like in the image below. This is the output that I get when I select the Panda image:</p>
+               <img src="img/tfjs_ImageClassifier/mobilenet_in_browser.png" alt="" width= "800">
+
+               <p align="justify">Let's see how this all is done in code. The first step is to load TensorFlow.js library and the MobileNet model. We can doo this in two ways: load the library hosted using a CDN or load the library locally using a tfjs.json and model.json files. In this tutorial we'll be using the CND. Let's see this in code.</p>
+               <img src="img/tfjs_ImageClassifier/tfjs_mobilenet_cdn.png" alt="" width="800">
+               <p align="justify">Next, we define a function to get the ID of the image that the user selects. For this, we provide all images with a unique ID. Then to get this ID on selecting an image and process it, we add a OnClick event to each image that calls a function in JavaScript.</p>
+               <img src="img/tfjs_ImageClassifier/image_id.png" alt="" width="1000" height="60">
+               <p align="justify"> The OnClick event calls the imageSelected(image_id) function in JavaScript and passes in the selected image's ID as an argument. The JavaScript function for doing this looks like follows:</p>
+               <img src="img/tfjs_ImageClassifier/func1.png" alt="" width="800">
+
+               <p align="justify">Now that we know that which image was selected, we can use this information to get the image from the source for processing like resizing the image to 224x224 for input to MobileNet model as follows:</p>
+               <img src="img/tfjs_ImageClassifier/image_preprocessing.png" alt="" width="800">
+
+               <p align="justify">Since, we have done all the pre-processing required, we are now ready to make predictions on the selected image. For doing this, we just load our MobileNet model using CDN or you can save and load the model locally as a model.json file and call the model.classify(image) function. The model.classify(image) function returns two things, the className i.e. the class labels for the image and probability i.e. the probability the model thinks this image belongs to that class. This can be done in the code as follows:</p>
+               <img src="img/tfjs_ImageClassifier/model_prediction.png" alt="" width="800">
+
+               <p align="justify">So, in this tutorial, we saw that how to use TensorFlow.js for performing image classification in the browser using a machine learning model. You can follow almost similar steps to use a custom machine learning model and run in the browser.</p>
+               <p align="justify">I'll leave you with some more examples to play around with below.</p>
+
+                <div class="custom-row">
+                    <div class="custom-column">
+                      <img id="9" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/broom.jpg" alt="Snow" width="150" height="150">
+                    </div>
+                    <div class="custom-column">
+                      <img id="10" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/warplane.jpg" alt="Snow" width="150" height="150">
+                    </div>
+                    <div class="custom-column">
+                      <img id="11" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/golf-cart.jpg" alt="Snow" width="150" height="150">
+                    </div>
+                    <div class="custom-column">
+                      <img id="12" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/monkey.jpg" alt="Snow" width="150" height="150">
+                    </div>
+                    <div class="custom-column">
+                      <img id="13" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/microphone.jpg" alt="Snow" width="150" height="150">
+                    </div>
+                    <div class="custom-column">
+                      <img id="14" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/tractor-trailer.jpg" alt="Snow" width="150" height="150">
+                    </div>
+                    <div class="custom-column">
+                      <img id="15" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/necklace.jpg" alt="Snow" width="150" height="150">
+                    </div>
+                    <div class="custom-column">
+                      <img id="16" onclick="imageSelected(this.id)" src="https://anujdutt9.github.io/Javascript-Machine-Learning/Image-Classifier/image/goggles.jpeg" alt="Snow" width="150" height="150">
+                    </div>
+                  </div>
+
+                  <!-- Show Selected Image here as a Large Image -->
+                  <!-- <div class="custom-row">
+                    <div class="custom-column">
+                      <img id="selectedImage" src="http://savings.gov.pk/wp-content/plugins/ldd-directory-lite/public/images/noimage.png" alt="Snow" width= 700px height= 450px>
+                    </div>
+                  </div> -->
+
+                  <div id="prediction2" class="custom-row" style="border:0px solid #ccc;font:16px/26px Georgia, Garamond, Serif;overflow:auto;">
+                   <br/>Predicted Labels and their Probabilities appears here.<br/><br/>
+                 </div>
+
+                 <!-- <p align="center">
+                   <img id="custom" src="http://savings.gov.pk/wp-content/plugins/ldd-directory-lite/public/images/noimage.png" alt="" width="600" height="500">
+                 </p> -->
+
+                 <!-- <div class="file-upload-wrapper fix" align="center">
+                  <input type="file" name="file" class="file-upload" onchange="customImage(this)"/>
+                </div>
+
+                <div id="prediction3" class="custom-row" style="border:0px solid #ccc;font:16px/26px Georgia, Garamond, Serif;overflow:auto;">
+                 <br/>Predicted Labels and their Probabilities appears here.<br/><br/>
+               </div> -->
+
+
+                 <!-- Javascript Code to Get the Image and Perform Classification -->
+                   <script type="text/javascript">
+
+                   // Function to get the id of the image selected by clicking on it.
+                   function imageSelected(image_id){
+                     console.log("Selected Image: " + image_id);
+                     if (image_id != " "){
+                       app(image_id);
+                     }
+                   }
+
+                   // Function to Resize the selected image to MobileNet Input Size
+                   function processImage(image_id){
+                     // Code to Resize the selected image to MobileNet Input Size
+                     const img = new Image();
+                     img.crossOrigin = "anonymous";
+                     img.src = document.getElementById(image_id).src;
+                     img.width = 224;
+                     img.height = 224;
+                     return img;
+                   }
+
+                   // Function to Load the Model, get the image and make predictions
+                   async function app(selectedImageID) {
+                     console.log('Loading mobilenet..');
+                     // Perform Image Pre-processing
+                     var img = processImage(selectedImageID);
+                     // Load the model.
+                     net = await mobilenet.load();
+                     console.log('Sucessfully loaded model');
+                     // Placeholder for presenting the r
+                     var predText = " ";
+                     // Make a prediction through the model on our image.
+                     const result = await net.classify(img);
+                     console.log("Image: " + selectedImageID + "; Predictions: " + result.length);
+                     for (let j=0; j<result.length; j++){
+                       console.log("ClassName: " + result[j].className + "; " + "Probability: " + result[j].probability);
+                       predText += "The model is " + Math.round(result[j].probability*100).toString().bold() +
+                                   "% sure that the image contains a " + result[j].className.bold() + ". <br/><br/>"
+                     }
+
+                     if (selectedImageID <= 8){
+                       document.getElementById("prediction1").innerHTML = predText;
+                     }
+                     else if (selectedImageID > 8){
+                       document.getElementById("prediction2").innerHTML = predText;
+                     }
+
+                   }
+                   </script>
+
+
+                  <div id="disqus_thread"></div>
+                    <script type="text/javascript">
+                      /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+                      var disqus_shortname = 'anujdutt9-github-io'; // required: replace example with your forum shortname
+
+                      /* * * DON'T EDIT BELOW THIS LINE * * */
+                     (function() {
+                         var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+                         dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+                         (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+                     })();
+                    </script>
+                    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+                    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+                  </div>
+                </div>
+            </div>
+        </div>
+    </article>
+
+    <hr>
+
+
+
+
+    <!-- jQuery -->
+    <script src="vendor/jquery/jquery.min.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="vendor/bootstrap/js/bootstrap.min.js"></script>
+
+    <!-- Contact Form JavaScript -->
+    <script src="js/jqBootstrapValidation.js"></script>
+    <script src="js/contact_me.js"></script>
+
+    <!-- Theme JavaScript -->
+    <script src="js/clean-blog.min.js"></script>
+
+</body>
+</html>

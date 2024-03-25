@@ -1,0 +1,28 @@
+{
+  "name": "train",
+  "version": "1.0.0",
+  "description": "Use the power of Machine Learning to diagnose TB from chest x-rays.",
+  "main": "main.js",
+  "engines": {
+    "node": ">=8.11.0"
+  },
+  "scripts": {
+    "train": "node main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SaschaDittmann/tfjs-tuberculosis.git"
+  },
+  "author": "Sascha Dittmann",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/SaschaDittmann/tfjs-tuberculosis/issues"
+  },
+  "homepage": "https://github.com/SaschaDittmann/tfjs-tuberculosis#readme",
+  "dependencies": {
+    "@tensorflow/tfjs-node-gpu": "1.2.7"
+  },
+  "devDependencies": {
+    "clang-format": "~1.2.2"
+  }
+}
