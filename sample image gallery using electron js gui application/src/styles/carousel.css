@@ -1,0 +1,132 @@
+.popup-image-window {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0.7);
+  top: 0%;
+  left: 0%;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.popup-image-container img {
+  display: block;
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+.popup-image-window span {
+  position: absolute;
+  top: 2vh;
+  right: 10vw;
+  font-size: 3rem;
+  color: white;
+  cursor: pointer;
+}
+
+.popup-image-container .text{
+  position: relative;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 0.2rem 0.5rem;
+  color: white;
+}
+
+.carousel-btn {
+  position: absolute;
+  z-index: 2;
+  background: none;
+  border: none;
+  font-size: 2.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.5);
+  padding: 0 0.5rem;
+  border-radius: 0.25rem;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.carousel-btn:hover{
+  color: white;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.popup-image-container {
+  position: relative;
+  margin: 15vh 10vw 15vh;
+  display: inline-block;
+  flex-direction: column;
+}
+
+.carousel-btn.prev {
+  left: 4rem;
+}
+
+.carousel-btn.next {
+  right: 4rem;
+}
+
+.sm-text {
+  font-size: 0.6rem;
+}
+
+.position-cnt {
+  position: absolute;
+  margin: 0.5rem;
+  top: 0%;
+  right: 0%;
+  font-size: 0.7rem;
+}
+
+.popup-image-container .info i {
+  color: white;
+  font-size: 1.2rem;
+  position: absolute;
+  line-height: 0%;
+  top: 4px;
+  right: 4px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 2;
+  cursor: pointer;
+}
+
+.popup-image-container .info i:hover {
+  background-color: rgba(0, 0, 0, 1);
+}
+
+.popup-image-container .info[data-active-info] i {
+  background-color: rgba(25, 135, 84, 0.7);
+}
+
+.popup-image-container .info[data-active-info] i:hover {
+  background-color: rgba(25, 135, 84, 1);
+}
+
+.popup-image-container .info .info-text  {
+  margin: 2em 10%;
+  color: white;
+  font-size: 0.8rem;
+}
+
+.popup-image-container .info .info-text p  {
+  font-size: 0.7rem;
+}
+
+.info-text-container {
+  opacity: 0;
+  position: absolute;
+  top: 0%;
+  right: 0%;
+  bottom: 0%;
+  width: 25%;
+  height: calc(100% - 42.4px);
+  background-color: rgba(0, 0, 0, 0.5);
+  overflow-wrap: break-word;
+  overflow-y: scroll;
+}
+
+.info[data-active-info] .info-text-container {
+  opacity: 1;
+}

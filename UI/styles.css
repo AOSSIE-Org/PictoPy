@@ -1,0 +1,131 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: white; /* Dark background color */
+}
+
+.container {
+    display: flex;
+}
+
+.left-side {
+    width: 18vw; /* Adjust width as needed */
+    background-color: #444; /* Light black */
+    color: #fff; /* Text color */
+    padding: 20px;
+    height: 100vh;
+    /* text-align: right; */
+}
+
+.right-side {
+    flex: 1;
+    padding: 20px;
+ /* Text color for right side */
+}
+
+.logo{
+    display: inline;
+}
+
+.logo img {
+    width: 100px; /* Adjust size as needed */
+    height: auto;
+}
+
+.project-name h1 {
+    margin: 10px 0;
+    border-bottom: 2px solid #fff; /* Underline effect */
+    padding-bottom: 10px;
+}
+
+.tabs{
+    text-align: center;
+}
+
+.tabs ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.tabs ul li {
+    margin-bottom: 10px;
+}
+
+.tabs ul li a {
+    color: #fff;
+    text-decoration: none;
+}
+
+.tabs ul li a.active {
+    font-weight: bold;
+}
+
+.top-section {
+    margin-bottom: 20px;
+}
+
+.classification {
+    display: flex;
+    justify-content: space-between;
+}
+
+.classification .classification-item {
+    width: calc(25% - 10px); /* Adjust width and margin as needed */
+    margin-right: 10px;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.5); /* Semi-transparent white background */
+}
+
+.main-section {
+    overflow-x: auto; /* Enable horizontal scroll */
+}
+
+/* Styling for photos and content in the classification section can be added here */
+
+.classification {
+    display: flex;
+    justify-content: space-between;
+}
+
+.classification-item {
+    position: relative; /* Positioning context for absolute positioning */
+    width: calc(25% - 10px); /* Adjust width and margin as needed */
+    margin-right: 10px;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.3); /* Semi-transparent white background */
+    text-align: center; /* Center content horizontally */
+}
+
+.classification-item img {
+    width: 100%; /* Make images fill their container */
+    height: auto; /* Maintain aspect ratio */
+    filter: blur(1.3px); /* Apply blur effect to the image */
+}
+
+.classification-item p {
+    position: absolute; /* Position classification text absolutely */
+    top: 50%; /* Align text vertically at the center */
+    left: 0; /* Align text to the left */
+    right: 0; /* Align text to the right */
+    transform: translateY(-50%); /* Adjust for vertical alignment */
+    color: #fff; /* Text color */
+    font-size: 16px; /* Adjust font size as needed */
+}
+
+
+.main-section {
+    overflow-x: auto; /* Enable horizontal scroll */
+}
+
+.horizontal-scroll {
+    display: flex;
+    flex-wrap: nowrap; /* Prevent items from wrapping to the next line */
+    padding-bottom: 20px; /* Add some space at the bottom for better visibility */
+}
+
+.horizontal-scroll img {
+    width: 15vw; /* Adjust width as needed */
+    height: auto; /* Maintain aspect ratio */
+    margin: 10px; /* Add space between photos */
+}
