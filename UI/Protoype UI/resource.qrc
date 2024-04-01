@@ -1,0 +1,25 @@
+<RCC>
+  <qresource prefix="icon">
+    <file>icon/usgs-hoS3dzgpHzw-unsplash.jpg</file>
+    <file>icon/pawel-czerwinski-6lQDFGOB1iw-unsplash.jpg</file>
+    <file>icon/jean-philippe-delberghe-75xPHEQBmvA-unsplash.jpg</file>
+    <file>icon/alex-perez-pEgsWN0kwbQ-unsplash.jpg</file>
+    <file>C:/Users/Rugved/Downloads/photos.png</file>
+    <file>icon/account-logout-64.ico</file>
+    <file>icon/activity-feed-32.ico</file>
+    <file>icon/activity-feed-48.ico</file>
+    <file>icon/close-window-64.ico</file>
+    <file>icon/dashboard-5-32.ico</file>
+    <file>icon/dashboard-5-48.ico</file>
+    <file>icon/group-32.ico</file>
+    <file>icon/group-48.ico</file>
+    <file>icon/home-4-32.ico</file>
+    <file>icon/home-4-48.ico</file>
+    <file>icon/Logo.png</file>
+    <file>icon/menu-4-32.ico</file>
+    <file>icon/product-32.ico</file>
+    <file>icon/product-48.ico</file>
+    <file>icon/search-13-48.ico</file>
+    <file>icon/user-48.ico</file>
+  </qresource>
+</RCC>
