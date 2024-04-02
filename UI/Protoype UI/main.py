@@ -12,9 +12,16 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
+        # Hide the icon only widget
         self.ui.icon_only_widget.hide()
+
+        # Set the current index of the stacked widget to 0
         self.ui.stackedWidget.setCurrentIndex(0)
+
+        # Set the home button 2 as checked
         self.ui.home_btn_2.setChecked(True)
+      
+      
 
     ## Function for searching
     def on_search_btn_clicked(self):
@@ -86,9 +93,13 @@ if __name__ == "__main__":
     app.setStyleSheet(style_stream.readAll())
 
 
+    # Create an instance of the MainWindow class
     window = MainWindow()
+
+    # Show the main window
     window.show()
 
+    # Execute the application event loop
     sys.exit(app.exec())
 
 
