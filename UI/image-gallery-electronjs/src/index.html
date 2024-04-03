@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+
+  <!-- STYLES -->
+  <link rel="stylesheet" type="text/css" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
+   <link rel="stylesheet" type="text/css" href="../node_modules/bootstrap-icons/font/bootstrap-icons.css">
+  <link rel="stylesheet" type="text/css" href="./styles/style.css">
+  <link rel="stylesheet" type="text/css" href="./styles/carousel.css">
+  <link rel="stylesheet" type="text/css" href="./styles/options_btn.css">
+  
+  <!-- SCRIPTS -->
+  <script type="text/javascript" src="../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="text/javascript" src="../node_modules/jquery/dist/jquery.min.js"></script>
+   <script type="text/javascript" src="../node_modules/sweetalert2/dist/sweetalert2.all.min.js"></script>
+  <script type="text/javascript" src="app.js" defer></script>
+  <script type="text/javascript" src="carousel.js" defer></script>
+
+  <title>Galería de Imágenes</title>
+</head>
+<body>
+  <div class="header-container">
+    <h1>Galería de <span>Imágenes</span></h1>
+    <button type="button" class="btn-add" data-bs-toggle="modal" data-bs-target="#addModal"><i class="bi bi-plus-circle"></i></button>
+  </div>
+
+  <div class="gallery-container"></div>
+  
+  <div class="popup-image-window" hidden>
+    <span>&times;</span>
+    <div class="popup-image-container">
+      <div class="info">
+        <i class="bi bi-info-circle btn-info"></i>
+        <div class="info-text-container">
+          <div class="info-text">Descripción:<p></p></div>
+        </div>
+      </div>
+      <img src="" alt="">
+      <div class="text">
+        <div class="img-name"></div>
+        <div class="sm-text"></div>
+        <div class="position-cnt"></div>
+      </div>
+    </div>
+    <button class="carousel-btn prev" data-carousel-btn="prev">&lArr;</button>
+    <button class="carousel-btn next" data-carousel-btn="next">&rArr;</button>
+  </div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="addBtnLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addBtnLabel">Añade una nueva imagen</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        
+        <form id="addForm" class="row g-3 needs-validation" novalidate>
+   
+          <div class="col-md-12">
+            <label for="NewImgName" class="form-label">Nombre para tu imagen*:</label>
+            <input type="text" class="form-control" id="NewImgName" placeholder="Un lindo gatito." required>
+            <div class="valid-feedback">
+              OK!!
+            </div>
+            <div class="invalid-feedback">
+              Debes ingresar un nombre para tu imagen.
+            </div>
+          </div>
+
+          <div class="mb-12">
+            <label for="NewImgDescription" class="form-label">Descripción:</label>
+            <textarea class="form-control" id="NewImgDescription" rows="4" placeholder="De manera opcional, puedes añadir una descripción que represente a tu imagen."></textarea>
+          </div>
+
+          <div class="mb-12">
+            <label for="NewImg" class="form-label">Selecciona tu imagen:</label>
+            <input class="form-control" type="file" id="NewImg" required>
+            <div class="valid-feedback">
+              Archivo Seleccionado!!
+            </div>
+            <div class="invalid-feedback">
+              Debes seleccionar la imagen que desees añadir.
+            </div>
+          </div>
+
+          <div class="col-12">
+            <button class="btn btn-primary" type="submit">Cargar</button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="addBtnLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addBtnLabel">Edita tu Imagen</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        
+        <form id="editForm" class="row g-3 needs-validation" novalidate>
+   
+          <div class="col-md-12">
+            <label for="editImgName" class="form-label">Nombre para tu imagen*:</label>
+            <input type="text" class="form-control" id="editImgName" placeholder="Un lindo gatito." required>
+            <div class="valid-feedback">
+              OK!!
+            </div>
+            <div class="invalid-feedback">
+              Debes ingresar un nombre para tu imagen.
+            </div>
+          </div>
+
+          <div class="mb-12">
+            <label for="editImgDescription" class="form-label">Descripción:</label>
+            <textarea class="form-control" id="editImgDescription" rows="4" placeholder="De manera opcional, puedes añadir una descripción que represente a tu imagen."></textarea>
+          </div>
+
+           <div class="col-12">
+            <button class="btn btn-primary" type="submit">Cambiar</button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+  
+</body>
+</html>

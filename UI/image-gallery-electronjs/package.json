@@ -1,0 +1,49 @@
+{
+  "name": "image-gallery",
+  "productName": "Image Gallery",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron .",
+    "dev": "electronmon .",
+    "build": "electron-builder"
+  },
+  "build": {
+    "appId": "Image Gallery",
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
+      "uninstallDisplayName": "Image Resizer Uninstaller",
+      "license": "license.md",
+      "allowToChangeInstallationDirectory": true
+    },
+    "files": [
+      "**/*"
+    ]
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bootstrap": "^5.2.2",
+    "bootstrap-icons": "^1.9.1",
+    "dotenv": "^16.3.1",
+    "jquery": "^3.6.1",
+    "promise-mysql": "^5.2.0",
+    "sweetalert2": "^11.6.8"
+  },
+  "devDependencies": {
+    "electron": "^21.2.2",
+    "electron-builder": "^23.6.0",
+    "electronmon": "^2.0.2"
+  }
+}

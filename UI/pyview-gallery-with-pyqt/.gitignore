@@ -1,0 +1,4 @@
+*.pyc
+/test.jpg
+settings.json
+launch.json
