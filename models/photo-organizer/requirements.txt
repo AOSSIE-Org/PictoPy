@@ -1,0 +1,4 @@
+streamlit
+facenet_pytorch
+fastai>=2.5
+pillow
