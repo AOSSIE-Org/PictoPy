@@ -25,9 +25,7 @@ function App() {
           <a
             target="_blank"
             rel="noreferrer"
-            onClick={() => {
-              setCnt(cnt + 1)
-            }}
+            onClick={ipcHandle}
           >
             {cnt}
           </a>
