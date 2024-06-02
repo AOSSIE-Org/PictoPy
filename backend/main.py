@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 from app.routes.test import router as test_router
+from app.routes.images import router as images_router
 
 app = FastAPI()
 
@@ -20,3 +21,4 @@ app.add_middleware(
 
 
 app.include_router(test_router, prefix="/test", tags=["Test"])
+app.include_router(images_router, prefix="/images", tags=["Images"])

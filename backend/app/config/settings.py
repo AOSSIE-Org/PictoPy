@@ -4,3 +4,5 @@ DEFAULT_FACE_DETECTION_MODEL = "app/models/yolov8n-face.onnx"
 
 TEST_INPUT_PATH = "tests/inputs"
 TEST_OUTPUT_PATH = "tests/outputs"
+
+IMAGES_PATH = "../images"
