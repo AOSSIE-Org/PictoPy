@@ -1,18 +1,23 @@
 import os
 import cv2
 import shutil
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-
 
 from app.config.settings import DEFAULT_OBJ_DETECTION_MODEL, DEFAULT_FACE_DETECTION_MODEL, IMAGES_PATH
 from app.yolov8 import YOLOv8
 from app.yolov8.utils import class_names
+from app.utils.classification import get_classes
 
 router = APIRouter()
 
+async def run_get_classes(img_path):
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, get_classes, img_path)
+    print(result)
 
 @router.post("/return")
-def test_route(payload: dict):
+async def test_route(payload: dict):
     model_path = DEFAULT_FACE_DETECTION_MODEL
     yolov8_detector = YOLOv8(model_path, conf_thres=0.2, iou_thres=0.3)
     print(payload)
@@ -29,23 +34,11 @@ def test_route(payload: dict):
     boxes, scores, class_ids = yolov8_detector(img)
     print(scores, "\n", class_ids)
     for x in class_ids: print(class_names[x], sep=" ")
-    # Draw detections
-    combined_img = yolov8_detector.draw_detections(img)
-    cv2.namedWindow("Detected Objects", cv2.WINDOW_NORMAL)
-    cv2.imshow("Detected Objects", combined_img)
-    cv2.imwrite("tests/outputs/detected_objects.jpg", combined_img)
-
-    # Wait for a key press or window close event
-    while True:
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-        if cv2.getWindowProperty("Detected Objects", cv2.WND_PROP_VISIBLE) < 1:
-            break
-
-    # Clean up
-    cv2.destroyAllWindows()
+    
+    # Run get_classes asynchronously
+    asyncio.create_task(run_get_classes(img_path))
+    
     return {"message": f"{class_ids}"}
-
 
 @router.get("/images")
 def get_images():
@@ -59,7 +52,6 @@ def get_images():
     
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))    
-
 
 @router.post("/single-image")
 def add_single_image(payload: dict):
