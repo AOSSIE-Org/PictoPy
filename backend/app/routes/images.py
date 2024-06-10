@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.config.settings  import IMAGES_PATH
 from app.utils.classification import get_classes
-from app.database.images import insert_image_db, extract_ids_from_array
+from app.database.images import insert_image_db, delete_image_db
 
 router = APIRouter()
 
@@ -62,17 +62,17 @@ async def add_single_image(payload: dict):
 @router.delete("/delete-image")
 def delete_image(payload: dict):
     try:
-        if 'filename' not in payload:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'filename' in payload")
+        if 'path' not in payload:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'path' in payload")
 
-        filename = payload['filename']
+        filename = payload['path']
         file_path = os.path.join(IMAGES_PATH, filename)
 
         if not os.path.isfile(file_path):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image file not found")
 
         os.remove(file_path)
-
+        delete_image_db(file_path)
         return {"message": "Image deleted successfully"}
 
     except HTTPException as e:

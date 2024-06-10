@@ -3,6 +3,8 @@ import os
 from app.config.settings import IMAGES_PATH
 from app.utils.classification import get_classes2
 
+
+# refactor this to initailize , and add tqdm?
 def create_images_table():
     conn = sqlite3.connect('app/database/images.db')
     cursor = conn.cursor()
@@ -67,3 +69,19 @@ def extract_ids_from_array(path):
         return [int(id) for id in ids]
     else:
         return None
+    
+
+def delete_image_db(path):
+    conn = sqlite3.connect('app/database/images.db')
+    cursor = conn.cursor()
+
+    # Convert the relative path to an absolute path before deleting from the database
+    abs_path = os.path.abspath(path)
+
+    # Delete the entry from the images table based on the path
+    cursor.execute("""
+        DELETE FROM images WHERE path = ?
+    """, (abs_path,))
+
+    conn.commit()
+    conn.close()
