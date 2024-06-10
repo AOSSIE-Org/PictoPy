@@ -1,10 +1,19 @@
 import os
 import shutil
+import asyncio
 from fastapi import APIRouter, HTTPException, status
+
 from app.config.settings  import IMAGES_PATH
-# from app.routes.test import 
+from app.utils.classification import get_classes
+from app.database.images import insert_image_db, extract_ids_from_array
 
 router = APIRouter()
+
+async def run_get_classes(img_path):
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, get_classes, img_path)
+    # error check here later
+    insert_image_db(img_path, result['ids'])
 
 
 @router.get("/all-images")
@@ -22,7 +31,7 @@ def get_images():
 
 
 @router.post("/single-image")
-def add_single_image(payload: dict):
+async def add_single_image(payload: dict):
     try:
         if 'path' not in payload:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'path' in payload")
@@ -40,6 +49,7 @@ def add_single_image(payload: dict):
         destination_path = os.path.join(IMAGES_PATH, os.path.basename(image_path))
         # if we do not want to store copies and just move use shutil.move instead
         shutil.copy(image_path, destination_path)
+        asyncio.create_task(run_get_classes(destination_path))
 
         return {"message": "Image copied to the gallery successfully"}
 
