@@ -11,7 +11,7 @@ from app.yolov8.utils import class_names
 
 
 def get_classes(img_path):
-    model_path = DEFAULT_FACE_DETECTION_MODEL
+    model_path = DEFAULT_OBJ_DETECTION_MODEL
     yolov8_detector = YOLOv8(model_path, conf_thres=0.2, iou_thres=0.3)
     img = cv2.imread(img_path)
     if img is None:
@@ -28,7 +28,7 @@ def get_classes(img_path):
 
 ## depricate this later, just use above function
 def get_classes2(img_path):
-    model_path = DEFAULT_FACE_DETECTION_MODEL
+    model_path = DEFAULT_OBJ_DETECTION_MODEL
     yolov8_detector = YOLOv8(model_path, conf_thres=0.2, iou_thres=0.3)
     img = cv2.imread(img_path)
     if img is None:

@@ -25,17 +25,18 @@ def create_images_table():
     for filename in os.listdir(IMAGES_PATH):
         file_path = os.path.abspath(os.path.join(IMAGES_PATH, filename))
         if file_path not in db_paths:
-            print(f"Path not in database: {file_path}")
+            print(f"Not in database: {file_path}")
             result = get_classes2(file_path)
             insert_image_db(file_path, result['ids'])
         else:
-            print(file_path)
+            print(f"Already in database: {file_path}")
     conn.commit()
     conn.close()
 
 def insert_image_db(path, array):
     conn = sqlite3.connect('app/database/images.db')
     cursor = conn.cursor()
+    # print(path, array, sep=" --> ", flush=True)
     # exclude the [ and ] and join everything with ,
     lst_str = ','.join(array[1:-1].split())
 
@@ -54,7 +55,7 @@ def extract_ids_from_array(path):
     conn = sqlite3.connect('app/database/images.db')
     cursor = conn.cursor()
 
-    # Convert the relative path to an absolute path before querying the database
+    # convert to absolute path
     abs_path = os.path.abspath(path)
 
     # Retrieve the array string from the images table based on the path
@@ -75,7 +76,7 @@ def delete_image_db(path):
     conn = sqlite3.connect('app/database/images.db')
     cursor = conn.cursor()
 
-    # Convert the relative path to an absolute path before deleting from the database
+    # convert to absolute path
     abs_path = os.path.abspath(path)
 
     # Delete the entry from the images table based on the path
