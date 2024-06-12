@@ -27,3 +27,4 @@ def extract_metadata(image_path):
             metadata[tag] = data
 
     return metadata
+
