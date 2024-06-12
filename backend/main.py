@@ -4,8 +4,12 @@ This module contains the main FastAPI application.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-
+from app.database.images import create_images_table
 from app.routes.test import router as test_router
+from app.routes.images import router as images_router
+
+
+create_images_table()
 
 app = FastAPI()
 
@@ -20,3 +24,4 @@ app.add_middleware(
 
 
 app.include_router(test_router, prefix="/test", tags=["Test"])
+app.include_router(images_router, prefix="/images", tags=["Images"])
