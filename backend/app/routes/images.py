@@ -84,7 +84,7 @@ async def add_multiple_images(payload: dict):
             shutil.copy(image_path, destination_path)
             tasks.append(asyncio.create_task(run_get_classes(destination_path)))
 
-        # Create a background task to process the images asynchronously
+        # process all these asynchronously in the backend TODO ? add progress bar?
         asyncio.create_task(process_images(tasks))
 
         return {"message": "Images are being processed in the background"}

@@ -1,20 +1,22 @@
+import os
 from PIL import Image
 from PIL.ExifTags import TAGS
+from datetime import datetime
 
-# https://thepythoncode.com/article/extracting-image-metadata-in-python
+
 def extract_metadata(image_path):
     metadata = {}
 
     with Image.open(image_path) as image:
         info_dict = {
-            "Filename": image.filename,
-            "Image Size": image.size,
-            "Image Height": image.height,
-            "Image Width": image.width,
-            "Image Format": image.format,
-            "Image Mode": image.mode,
-            "Image is Animated": getattr(image, "is_animated", False),
-            "Frames in Image": getattr(image, "n_frames", 1)
+            # "filename": image.filename,
+            # "image_is_animated": getattr(image, "is_animated", False),
+            # "frames_in_image": getattr(image, "n_frames", 1)
+            # "image_height": image.height,
+            # "image_width": image.width,
+            "image_size": image.size,
+            "image_format": image.format,
+            "image_mode": image.mode,
         }
         metadata.update(info_dict)
 
@@ -24,7 +26,15 @@ def extract_metadata(image_path):
             data = exifdata.get(tag_id)
             if isinstance(data, bytes):
                 data = data.decode()
-            metadata[tag] = data
+            metadata[str(tag).lower().replace(" ", "_")] = data
+
+    # image file size
+    file_size = os.path.getsize(image_path)
+    metadata["file_size"] = file_size
+
+    # image creation date
+    creation_time = os.path.getctime(image_path)
+    creation_date = datetime.fromtimestamp(creation_time).strftime("%Y-%m-%d %H:%M:%S")
+    metadata["creation_date"] = creation_date
 
     return metadata
-
