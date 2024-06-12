@@ -35,9 +35,5 @@ def get_classes2(img_path):
         print(f"Failed to load image: {img_path}")
         return None
 
-    # # Detect Objects
-    # print("sleeping..", flush=True)
-    # time.sleep(5)
-    # print("woke", flush=True)
     boxes, scores, class_ids = yolov8_detector(img)
-    return {"ids": f"{class_ids}"}
+    return class_ids.tolist()

@@ -1,7 +1,7 @@
 from PIL import Image
 from PIL.ExifTags import TAGS
 
-
+# https://thepythoncode.com/article/extracting-image-metadata-in-python
 def extract_metadata(image_path):
     metadata = {}
 
