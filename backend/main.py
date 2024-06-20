@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database.images import create_images_table
 from app.routes.test import router as test_router
 from app.routes.images import router as images_router
+from app.routes.albums import router as albums_router
 
 
 create_images_table()
@@ -25,3 +26,4 @@ app.add_middleware(
 
 app.include_router(test_router, prefix="/test", tags=["Test"])
 app.include_router(images_router, prefix="/images", tags=["Images"])
+app.include_router(albums_router, prefix="/albums", tags=["Albums"])
