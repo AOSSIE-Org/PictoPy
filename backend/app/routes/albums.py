@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from app.database.albums import add_photo_to_album, delete_album, remove_photo_from_album, create_album, get_all_albums
+from app.database.albums import add_photo_to_album, delete_album, remove_photo_from_album, create_album, get_all_albums, add_photos_to_album
 
 router = APIRouter()
 
@@ -20,6 +20,7 @@ def create_new_album(payload: dict):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+
 @router.delete("/delete-album")
 def delete_existing_album(payload: dict):
     try:
@@ -36,6 +37,7 @@ def delete_existing_album(payload: dict):
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 
 @router.post("/add-to-album")
 def add_image_to_album(payload: dict):
@@ -58,6 +60,32 @@ def add_image_to_album(payload: dict):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+
+@router.post("/add-multiple-to-album")
+def add_multiple_images_to_album(payload: dict):
+    try:
+        if 'album_name' not in payload:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'album_name' in payload")
+        if 'paths' not in payload:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'paths' in payload")
+
+        album_name = payload['album_name']
+        paths = payload['paths']
+
+        if not isinstance(paths, list):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="'paths' should be a list")
+
+        add_photos_to_album(album_name, paths)
+
+        return {"message": f"Images added to album '{album_name}' successfully"}
+
+    except HTTPException as e:
+        raise e
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
 @router.delete("/remove-from-album")
 def remove_image_from_album(payload: dict):
     try:
@@ -78,6 +106,7 @@ def remove_image_from_album(payload: dict):
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 
 @router.get("/albums")
 def get_albums():

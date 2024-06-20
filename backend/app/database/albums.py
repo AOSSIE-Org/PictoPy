@@ -72,6 +72,31 @@ def add_photo_to_album(album_name, image_path):
     conn.commit()
     conn.close()
 
+
+def add_photos_to_album(album_name, image_paths):
+    conn = sqlite3.connect(ALBUM_DATABASE_PATH)
+    cursor = conn.cursor()
+
+    # get the current list of image paths for the album
+    cursor.execute("""
+        SELECT image_paths FROM albums WHERE album_name = ?
+    """, (album_name,))
+
+    result = cursor.fetchone()
+    if result:
+        existing_paths = json.loads(result[0])
+        # convert image paths to absolute paths and append them to the existing list
+        abs_paths = [os.path.abspath(path) for path in image_paths]
+        updated_paths = existing_paths + abs_paths
+
+        cursor.execute("""
+            UPDATE albums SET image_paths = ? WHERE album_name = ?
+        """, (json.dumps(updated_paths), album_name))
+
+    conn.commit()
+    conn.close()
+
+
 def remove_photo_from_album(album_name, image_path):
     conn = sqlite3.connect(ALBUM_DATABASE_PATH)
     cursor = conn.cursor()
@@ -115,3 +140,5 @@ def get_all_albums():
 
     conn.close()
     return albums
+
+
