@@ -2,71 +2,74 @@ import sqlite3
 import os
 import json
 
-from app.config.settings import ALBUM_DATABASE_PATH, IMAGES_DATABASE_PATH
+from app.config.settings import ALBUM_DATABASE_PATH
+from app.utils.wrappers import image_exists, album_exists
 from app.database.images import is_image_in_database
 
+
+"""
+TODO: Handle case when image is not in database for adding multiple photos to an album? (necessary?)
+"""
+def create_albums_table():
+    conn = sqlite3.connect(ALBUM_DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS albums (
+            album_name TEXT PRIMARY KEY,
+            image_paths TEXT
+        )
+    """)
+
+    conn.commit()
+    conn.close()
 
 def create_album(album_name):
     conn = sqlite3.connect(ALBUM_DATABASE_PATH)
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT COUNT(*) FROM albums WHERE album_name = ?
-    """, (album_name,))
+    cursor.execute("SELECT COUNT(*) FROM albums WHERE album_name = ?", (album_name,))
     count = cursor.fetchone()[0]
 
     if count > 0:
         conn.close()
         raise ValueError(f"Album '{album_name}' already exists")
 
-    cursor.execute("""
-        INSERT INTO albums (album_name, image_paths)
-        VALUES (?, ?)
-    """, (album_name, json.dumps([])))
+    cursor.execute("INSERT INTO albums (album_name, image_paths) VALUES (?, ?)",
+                   (album_name, json.dumps([])))
     conn.commit()
     conn.close()
 
+@album_exists
 def delete_album(album_name):
     conn = sqlite3.connect(ALBUM_DATABASE_PATH)
     cursor = conn.cursor()
-    cursor.execute("""
-        DELETE FROM albums WHERE album_name = ?
-    """, (album_name,))
-
+    cursor.execute("DELETE FROM albums WHERE album_name = ?", (album_name,))
     conn.commit()
     conn.close()
 
+@album_exists
+@image_exists
 def add_photo_to_album(album_name, image_path):
-    if not is_image_in_database(image_path):
-        raise ValueError(f"Image '{image_path}' does not exist in the database")
-
     conn = sqlite3.connect(ALBUM_DATABASE_PATH)
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT image_paths FROM albums WHERE album_name = ?
-    """, (album_name,))
-
+    cursor.execute("SELECT image_paths FROM albums WHERE album_name = ?", (album_name,))
     result = cursor.fetchone()
-    if result:
-        image_paths = json.loads(result[0])
-        abs_path = os.path.abspath(image_path)
-        if abs_path not in image_paths:
-            image_paths.append(abs_path)
-            cursor.execute("""
-                UPDATE albums SET image_paths = ? WHERE album_name = ?
-            """, (json.dumps(image_paths), album_name))
-            conn.commit()
-    else:
-        conn.close()
-        raise ValueError(f"Album '{album_name}' does not exist")
-
+    image_paths = json.loads(result[0])
+    abs_path = os.path.abspath(image_path)
+    if abs_path not in image_paths:
+        image_paths.append(abs_path)
+        cursor.execute("UPDATE albums SET image_paths = ? WHERE album_name = ?",
+                       (json.dumps(image_paths), album_name))
+        conn.commit()
     conn.close()
 
+@album_exists
 def add_photos_to_album(album_name, image_paths):
     conn = sqlite3.connect(ALBUM_DATABASE_PATH)
     cursor = conn.cursor()
 
+    # get the current list of image paths for the album
     cursor.execute("""
         SELECT image_paths FROM albums WHERE album_name = ?
     """, (album_name,))
@@ -74,82 +77,52 @@ def add_photos_to_album(album_name, image_paths):
     result = cursor.fetchone()
     if result:
         existing_paths = json.loads(result[0])
-        abs_paths = []
-        for path in image_paths:
-            if not is_image_in_database(path):
-                raise ValueError(f"Image '{path}' does not exist in the database")
-            abs_path = os.path.abspath(path)
-            if abs_path not in existing_paths:
-                abs_paths.append(abs_path)
-        
+        # convert image paths to absolute paths and append them to the existing list
+        abs_paths = [os.path.abspath(path) for path in image_paths]
         updated_paths = existing_paths + abs_paths
 
         cursor.execute("""
             UPDATE albums SET image_paths = ? WHERE album_name = ?
         """, (json.dumps(updated_paths), album_name))
-    else:
-        conn.close()
-        raise ValueError(f"Album '{album_name}' does not exist")
 
     conn.commit()
     conn.close()
 
+@album_exists
 def get_album_photos(album_name):
     conn = sqlite3.connect(ALBUM_DATABASE_PATH)
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT image_paths FROM albums WHERE album_name = ?
-    """, (album_name,))
-
+    cursor.execute("SELECT image_paths FROM albums WHERE album_name = ?", (album_name,))
     result = cursor.fetchone()
     conn.close()
 
-    if result:
-        image_paths = json.loads(result[0])
-        return image_paths
-    else:
-        return None
+    return json.loads(result[0]) if result else None
 
+@album_exists
+@image_exists
 def remove_photo_from_album(album_name, image_path):
     conn = sqlite3.connect(ALBUM_DATABASE_PATH)
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT image_paths FROM albums WHERE album_name = ?
-    """, (album_name,))
-
+    cursor.execute("SELECT image_paths FROM albums WHERE album_name = ?", (album_name,))
     result = cursor.fetchone()
-    if result:
-        image_paths = json.loads(result[0])
-        abs_path = os.path.abspath(image_path)
-        if abs_path in image_paths:
-            image_paths.remove(abs_path)
-
-            cursor.execute("""
-                UPDATE albums SET image_paths = ? WHERE album_name = ?
-            """, (json.dumps(image_paths), album_name))
-    else:
-        conn.close()
-        raise ValueError(f"Album '{album_name}' does not exist")
-
-    conn.commit()
+    image_paths = json.loads(result[0])
+    abs_path = os.path.abspath(image_path)
+    if abs_path in image_paths:
+        image_paths.remove(abs_path)
+        cursor.execute("UPDATE albums SET image_paths = ? WHERE album_name = ?",
+                       (json.dumps(image_paths), album_name))
+        conn.commit()
     conn.close()
 
 def get_all_albums():
     conn = sqlite3.connect(ALBUM_DATABASE_PATH)
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT album_name, image_paths FROM albums
-    """)
-
+    cursor.execute("SELECT album_name, image_paths FROM albums")
     results = cursor.fetchall()
-    albums = []
-    for result in results:
-        album_name = result[0]
-        image_paths = json.loads(result[1])
-        albums.append({"album_name": album_name, "image_paths": image_paths})
+    albums = [{"album_name": name, "image_paths": json.loads(paths)} for name, paths in results]
 
     conn.close()
     return albums
