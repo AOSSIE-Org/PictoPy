@@ -140,3 +140,5 @@ def get_class_ids(payload: dict):
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+

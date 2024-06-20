@@ -91,3 +91,18 @@ def get_objects_db(path):
         return class_ids
     else:
         return None
+    
+def is_image_in_database(path):
+    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
+    cursor = conn.cursor()
+    
+    abs_path = os.path.abspath(path)
+    
+    cursor.execute("""
+        SELECT COUNT(*) FROM images WHERE path = ?
+    """, (abs_path,))
+    
+    count = cursor.fetchone()[0]
+    conn.close()
+    
+    return count > 0
