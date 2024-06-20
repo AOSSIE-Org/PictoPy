@@ -96,7 +96,24 @@ def add_photos_to_album(album_name, image_paths):
     conn.commit()
     conn.close()
 
+def get_album_photos(album_name):
+    conn = sqlite3.connect(ALBUM_DATABASE_PATH)
+    cursor = conn.cursor()
 
+    cursor.execute("""
+        SELECT image_paths FROM albums WHERE album_name = ?
+    """, (album_name,))
+
+    result = cursor.fetchone()
+    conn.close()
+
+    if result:
+        image_paths = json.loads(result[0])
+        return image_paths
+    else:
+        return None
+    
+    
 def remove_photo_from_album(album_name, image_path):
     conn = sqlite3.connect(ALBUM_DATABASE_PATH)
     cursor = conn.cursor()

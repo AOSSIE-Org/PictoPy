@@ -1,6 +1,12 @@
 from fastapi import APIRouter, HTTPException, status
-from app.database.albums import add_photo_to_album, delete_album, remove_photo_from_album, create_album, get_all_albums, add_photos_to_album
+from app.database.albums import add_photo_to_album, delete_album, remove_photo_from_album, create_album, get_all_albums, add_photos_to_album, get_album_photos
 
+
+"""
+TODO:
+1. Add album description (can be null and edited), date created, (add it for images as well?)
+2. Add error checking, handle edge cases, throw mmore descriptive errors, currently no errors are shown
+"""
 router = APIRouter()
 
 @router.post("/create-album")
@@ -108,11 +114,33 @@ def remove_image_from_album(payload: dict):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.get("/albums")
-def get_albums():
+@router.get("/view-album")
+def view_album_photos(payload: dict):
     try:
+        if 'album_name' not in payload:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'album_name' in payload")
+
+        album_name = payload['album_name']
+        photos = get_album_photos(album_name)
+
+        if photos is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Album '{album_name}' not found")
+
+        return {"album_name": album_name, "photos": photos}
+
+    except HTTPException as e:
+        raise e
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get("/view-all")
+def get_albums():
+    try:    
         albums = get_all_albums()
         return {"albums": albums}
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
