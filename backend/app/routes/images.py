@@ -1,7 +1,7 @@
 import os
 import shutil
 import asyncio
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Query
 
 from app.config.settings  import IMAGES_PATH
 from app.utils.classification import get_classes
@@ -121,14 +121,14 @@ def delete_image(payload: dict):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
-@router.get("/objects")
-def get_class_ids(payload: dict):
-    try:
-        if 'path' not in payload:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'path' in payload")
 
-        image_path = payload['path']
-        class_ids = get_objects_db(image_path)
+@router.get("/objects")
+def get_class_ids(path: str = Query(...)):
+    try:
+        if not path:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'path' parameter")
+
+        class_ids = get_objects_db(path)
 
         if class_ids:
             return {"class_ids": class_ids}
@@ -140,5 +140,3 @@ def get_class_ids(payload: dict):
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-    
-
