@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Query
-from app.database.albums import add_photo_to_album, delete_album, remove_photo_from_album, create_album, get_all_albums, add_photos_to_album, get_album_photos
+from app.database.albums import add_photo_to_album, delete_album, remove_photo_from_album, create_album, get_all_albums, add_photos_to_album, get_album_photos, edit_album_description
 
 
 """
@@ -16,7 +16,8 @@ def create_new_album(payload: dict):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'name' in payload")
 
         album_name = payload['name']
-        create_album(album_name)
+        description = payload.get('description')  # This will be None if not provided
+        create_album(album_name, description)
 
         return {"message": f"Album '{album_name}' created successfully"}
 
@@ -25,7 +26,6 @@ def create_new_album(payload: dict):
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
 
 @router.delete("/delete-album")
 def delete_existing_album(payload: dict):
@@ -132,6 +132,29 @@ def view_album_photos(album_name: str = Query(..., description="Name of the albu
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.put("/edit-album-description")
+def update_album_description(payload: dict):
+    try:
+        if 'name' not in payload:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'name' in payload")
+        if 'description' not in payload:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'description' in payload")
+
+        album_name = payload['name']
+        new_description = payload['description']
+
+        edit_album_description(album_name, new_description)
+
+        return {"message": f"Description for album '{album_name}' updated successfully"}
+
+    except HTTPException as e:
+        raise e
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
 
 @router.get("/view-all")
 def get_albums():

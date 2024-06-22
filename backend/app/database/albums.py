@@ -16,14 +16,15 @@ def create_albums_table():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS albums (
             album_name TEXT PRIMARY KEY,
-            image_paths TEXT
+            image_paths TEXT,
+            description TEXT,
+            date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-
     conn.commit()
     conn.close()
 
-def create_album(album_name):
+def create_album(album_name, description=None):
     conn = sqlite3.connect(ALBUM_DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -34,8 +35,8 @@ def create_album(album_name):
         conn.close()
         raise ValueError(f"Album '{album_name}' already exists")
 
-    cursor.execute("INSERT INTO albums (album_name, image_paths) VALUES (?, ?)",
-                   (album_name, json.dumps([])))
+    cursor.execute("INSERT INTO albums (album_name, image_paths, description) VALUES (?, ?, ?)",
+                   (album_name, json.dumps([]), description))
     conn.commit()
     conn.close()
 
@@ -126,3 +127,13 @@ def get_all_albums():
 
     conn.close()
     return albums
+
+@album_exists
+def edit_album_description(album_name, new_description):
+    conn = sqlite3.connect(ALBUM_DATABASE_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("UPDATE albums SET description = ? WHERE album_name = ?",
+                   (new_description, album_name))
+    conn.commit()
+    conn.close()
