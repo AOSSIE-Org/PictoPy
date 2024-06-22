@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Query
 from app.database.albums import add_photo_to_album, delete_album, remove_photo_from_album, create_album, get_all_albums, add_photos_to_album, get_album_photos
 
 
@@ -115,12 +115,11 @@ def remove_image_from_album(payload: dict):
 
 
 @router.get("/view-album")
-def view_album_photos(payload: dict):
+def view_album_photos(album_name: str = Query(..., description="Name of the album to view")):
     try:
-        if 'album_name' not in payload:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'album_name' in payload")
+        if not album_name:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'album_name' parameter")
 
-        album_name = payload['album_name']
         photos = get_album_photos(album_name)
 
         if photos is None:
@@ -133,7 +132,6 @@ def view_album_photos(payload: dict):
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
 
 @router.get("/view-all")
 def get_albums():
