@@ -1,19 +1,24 @@
 import sqlite3
 import os
-from app.config.settings import IMAGES_PATH
+import json
+
+from app.config.settings import IMAGES_PATH, IMAGES_DATABASE_PATH
 from app.utils.classification import get_classes2
+from app.utils.metadata import extract_metadata
 
 
 # refactor this to initailize , and add tqdm?
+
 def create_images_table():
-    conn = sqlite3.connect('app/database/images.db')
+    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
     cursor = conn.cursor()
 
     # Create the images table if it doesn't exist
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS images (
             path TEXT PRIMARY KEY,
-            array TEXT
+            class_ids TEXT,
+            metadata TEXT
         )
     """)
     cursor.execute("""
@@ -26,54 +31,31 @@ def create_images_table():
         file_path = os.path.abspath(os.path.join(IMAGES_PATH, filename))
         if file_path not in db_paths:
             print(f"Not in database: {file_path}")
-            result = get_classes2(file_path)
-            insert_image_db(file_path, result['ids'])
+            class_ids = get_classes2(file_path)
+            metadata = extract_metadata(file_path)
+            insert_image_db(file_path, class_ids, metadata)
         else:
             print(f"Already in database: {file_path}")
     conn.commit()
     conn.close()
 
-def insert_image_db(path, array):
-    conn = sqlite3.connect('app/database/images.db')
+def insert_image_db(path, class_ids, metadata):
+    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
     cursor = conn.cursor()
-    # print(path, array, sep=" --> ", flush=True)
-    # exclude the [ and ] and join everything with ,
-    lst_str = ','.join(array[1:-1].split())
-
-    # Convert the relative path to an absolute path before inserting into the database
     abs_path = os.path.abspath(path)
+    class_ids_json = json.dumps(class_ids)
+    metadata_json = json.dumps(metadata)
 
     cursor.execute("""
-        INSERT OR REPLACE INTO images (path, array)
-        VALUES (?, ?)
-    """, (abs_path, lst_str))
+        INSERT OR REPLACE INTO images (path, class_ids, metadata)
+        VALUES (?, ?, ?)
+    """, (abs_path, class_ids_json, metadata_json))
 
     conn.commit()
     conn.close()
 
-def extract_ids_from_array(path):
-    conn = sqlite3.connect('app/database/images.db')
-    cursor = conn.cursor()
-
-    # convert to absolute path
-    abs_path = os.path.abspath(path)
-
-    # Retrieve the array string from the images table based on the path
-    cursor.execute("""
-        SELECT array FROM images WHERE path = ?
-    """, (abs_path,))
-
-    result = cursor.fetchone()
-    conn.close()
-    if result:
-        ids = result[0].split(',')
-        return [int(id) for id in ids]
-    else:
-        return None
-    
-
 def delete_image_db(path):
-    conn = sqlite3.connect('app/database/images.db')
+    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
     cursor = conn.cursor()
 
     # convert to absolute path
@@ -86,3 +68,41 @@ def delete_image_db(path):
 
     conn.commit()
     conn.close()
+
+
+def get_objects_db(path):
+    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
+    cursor = conn.cursor()
+
+    # convert to absolute path
+    abs_path = os.path.abspath(path)
+
+    # get the id based on key (path)
+    cursor.execute("""
+        SELECT class_ids FROM images WHERE path = ?
+    """, (abs_path,))
+
+    result = cursor.fetchone()
+    conn.close()
+
+    if result:
+        class_ids_json = result[0]
+        class_ids = json.loads(class_ids_json)
+        return class_ids
+    else:
+        return None
+    
+def is_image_in_database(path):
+    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
+    cursor = conn.cursor()
+    
+    abs_path = os.path.abspath(path)
+    
+    cursor.execute("""
+        SELECT COUNT(*) FROM images WHERE path = ?
+    """, (abs_path,))
+    
+    count = cursor.fetchone()[0]
+    conn.close()
+    
+    return count > 0
