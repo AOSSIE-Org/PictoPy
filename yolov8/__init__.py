@@ -1,1 +1,1 @@
-from .YOLOv8 import YOLOv8, detectedClass
+from .YOLOv8 import YOLOv8, detectClasslass

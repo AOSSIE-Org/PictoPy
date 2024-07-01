@@ -2,19 +2,21 @@
 import os
 import sqlite3
 from sqlite3 import IntegrityError
-from typing import Dict, List, Generator
-from utils.fs import genHash, isImg, imgPaths, homeDir, detectFileWithHash
-from utils.db import connectDB, createTable, executeQuery, closeConnection, groupByclasses, hashExist
+from typing import Dict, List, Generator, Tuple
+from utils.fs import genHash, isImg, imgPaths, homeDir, detectFileWithHash, deleteFile
+from utils.db import connectDB, createTable, executeQuery, closeConnection, groupByClass, hashExist, hideByClass, unhideByClass, deleteFromDB, deleteByClass, toggleVisibility
 from utils.createDB import  createSchema, classesExist
-from yolov8 import detectedClass
+from yolov8 import detectClasslass
 
 
 def processImgs(conn: sqlite3.Connection, files: Generator[str, None, None]) -> None:
     for file in files:
         imgHash = genHash(file)
+        if hashExist(conn, imgHash):
+            continue
         try:
-            imgClass = detectedClass(file)
-            _, imageID = executeQuery(conn, f"INSERT INTO IMAGES(hash, path) VALUES('{imgHash}', '{file}')", 1)
+            imgClass = detectClasslass(file)
+            _, imageID = executeQuery(conn, f"INSERT INTO MEDIA(hash, path, hidden) VALUES('{imgHash}', '{file}', 0)", 1)
 
             for className in imgClass:
                 try:
@@ -25,7 +27,7 @@ def processImgs(conn: sqlite3.Connection, files: Generator[str, None, None]) -> 
                 executeQuery(conn, f"INSERT OR IGNORE INTO JUNCTION(imageID, classID) VALUES('{imageID}', '{classID}')")
 
         except IntegrityError:
-            executeQuery(conn, f"UPDATE IMAGES SET path = '{file}' WHERE hash = '{imgHash}'")
+            executeQuery(conn, f"UPDATE MEDIA SET path = '{file}' WHERE hash = '{imgHash}'")
 
 
 #NN
@@ -41,17 +43,17 @@ def fileByClass(conn: sqlite3.Connection, files: Generator[str, None, None], tab
             classDict[imageClass].append(filePath)
     return classDict
 
-def classifyPath() -> Dict[str, List[str]]:
+def classifyPath() -> Dict[str, Tuple[str]]:
     """
     Classify images in the home directory and store the results in the database.
 
     Returns:
-        Dict[str, List[str]]: Dictionary mapping class names to lists of file paths.
+        Dict[str, Tuple[str]]: Dictionary mapping class names to lists of file paths.
     """
     dbPath = os.path.join(homeDir(), ".pictopy.db")
     conn = connectDB(dbPath)
     # columns = ["hash TEXT PRIMARY KEY", "imageClass TEXT"]
-    # tableID = "media"
+    # tableID = "MEDIA"
     # createTable(conn, tableID, columns)
     createSchema(conn)
 
@@ -62,7 +64,8 @@ def classifyPath() -> Dict[str, List[str]]:
     files = imgPaths(homeDir())  
     # Retrieve files classified by class from the database
     # result = fileByClass(conn, files, tableID)
-    result = groupByclasses(conn)
+    # unhideByClass(conn, ("tv", "truck"))
+    result = groupByClass(conn)
 
     closeConnection(conn)
 
@@ -73,4 +76,4 @@ def classifyPath() -> Dict[str, List[str]]:
 if __name__ == "__main__":
     print(classifyPath())
 
-# periodically run the object detection function and compare it with DB
+# periodically run the object detection function and compare it with DB (TBI)
