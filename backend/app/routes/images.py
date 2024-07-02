@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, status, Query
 from app.config.settings  import IMAGES_PATH
 from app.utils.classification import get_classes
 from app.database.images import insert_image_db, delete_image_db, get_objects_db, extract_metadata
+from app.yolov8.utils import class_names
 
 router = APIRouter()
 
@@ -121,7 +122,6 @@ def delete_image(payload: dict):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
-
 @router.get("/objects")
 def get_class_ids(path: str = Query(...)):
     try:
@@ -129,9 +129,11 @@ def get_class_ids(path: str = Query(...)):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'path' parameter")
 
         class_ids = get_objects_db(path)
+        if len(class_ids) == 0: return {"classes": "None"}
 
         if class_ids:
-            return {"class_ids": class_ids}
+            ids = (",").join([class_names[int(x)] for x in list(set(class_ids[1:-1].split(" ")))])
+            return {"classes": ids}
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found in the database")
 
