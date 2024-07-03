@@ -129,7 +129,8 @@ def get_class_ids(path: str = Query(...)):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'path' parameter")
 
         class_ids = get_objects_db(path)
-        if len(class_ids) == 0: return {"classes": "None"}
+        if not class_ids:
+            return {"classes": "None"}
 
         if class_ids:
             ids = (",").join([class_names[int(x)] for x in list(set(class_ids[1:-1].split(" ")))])

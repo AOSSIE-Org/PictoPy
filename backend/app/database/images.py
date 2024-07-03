@@ -6,7 +6,6 @@ from app.config.settings import IMAGES_PATH, IMAGES_DATABASE_PATH
 from app.utils.classification import get_classes2
 from app.utils.metadata import extract_metadata
 
-
 # refactor this to initailize , and add tqdm?
 
 def create_images_table():
