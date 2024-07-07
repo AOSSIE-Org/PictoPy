@@ -6,6 +6,7 @@ from app.config.settings import IMAGES_PATH, IMAGES_DATABASE_PATH
 from app.utils.classification import get_classes2
 from app.utils.metadata import extract_metadata
 
+
 # refactor this to initailize , and add tqdm?
 
 def create_images_table():
@@ -68,6 +69,15 @@ def delete_image_db(path):
     conn.commit()
     conn.close()
 
+def get_all_image_paths_from_db():
+    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT path FROM images")
+    paths = [row[0] for row in cursor.fetchall()]
+
+    conn.close()
+    return paths
 
 def get_objects_db(path):
     conn = sqlite3.connect(IMAGES_DATABASE_PATH)

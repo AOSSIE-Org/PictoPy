@@ -1,11 +1,12 @@
 import os
 import shutil
+import json
 import asyncio
 from fastapi import APIRouter, HTTPException, status, Query
 
 from app.config.settings  import IMAGES_PATH
 from app.utils.classification import get_classes
-from app.database.images import insert_image_db, delete_image_db, get_objects_db, extract_metadata
+from app.database.images import insert_image_db, delete_image_db, get_objects_db, extract_metadata, is_image_in_database, get_all_image_paths_from_db
 from app.yolov8.utils import class_names
 
 router = APIRouter()
@@ -121,7 +122,29 @@ def delete_image(payload: dict):
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.get("/all-image-objects")
+def get_all_image_objects():
+    try:
+        image_paths = get_all_image_paths_from_db()
+        
+        data = {}
+        for image_path in image_paths:
+            classes = get_objects_db(image_path)
+            #  print(image_path, classes)
+            if classes:
+                class_ids = classes[1:-1].split()
+                class_ids = list(set(class_ids))
+                class_names_list = [class_names[int(x)] for x in class_ids]
+                data[image_path] = ", ".join(class_names_list) if class_names_list else None
+            else:
+                data[image_path] = "None"
+
+        return {"data": data}
     
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 @router.get("/objects")
 def get_class_ids(path: str = Query(...)):
     try:
