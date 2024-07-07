@@ -166,3 +166,44 @@ def get_class_ids(path: str = Query(...)):
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.post("/add-folder")
+async def add_folder(payload: dict):
+    try:
+        if 'folder_path' not in payload:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'folder_path' in payload")
+
+        folder_path = payload['folder_path']
+        if not os.path.isdir(folder_path):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid folder path")
+
+        image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.gif']
+        tasks = []
+
+        for root, _, files in os.walk(folder_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                file_extension = os.path.splitext(file_path)[1].lower()
+                print(file_path)
+                if file_extension in image_extensions:
+                    destination_path = os.path.join(IMAGES_PATH, file)
+                    
+                    if os.path.exists(destination_path):
+                        print(f"File {file} already exists in destination. Skipping.")
+                        continue
+                    
+                    shutil.copy(file_path, destination_path)
+                    tasks.append(asyncio.create_task(run_get_classes(destination_path)))
+
+        if not tasks:
+            return {"message": "No valid images found in the specified folder"}
+
+        asyncio.create_task(process_images(tasks))
+
+        return {"message": f"Processing {len(tasks)} images from the folder in the background"}
+
+    except HTTPException as e:
+        raise e
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

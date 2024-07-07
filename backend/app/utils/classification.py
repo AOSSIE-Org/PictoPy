@@ -20,7 +20,7 @@ def get_classes(img_path):
 
     # Detect Objects
     print("sleeping..", flush=True)
-    time.sleep(5)
+    #  time.sleep(5)
     print("woke", flush=True)
     boxes, scores, class_ids = yolov8_detector(img)
     return {"ids": f"{class_ids}"}
