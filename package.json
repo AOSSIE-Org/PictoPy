@@ -6,12 +6,6 @@
     "scripts": {
         "linux-dev": "bash ./scripts/linux-dev.sh",
         "win-dev": "cd scripts && win-dev.bat"
-    },
-    
-    "devDependencies": {
-        "@types/node": "^20.14.10",
-        "autoprefixer": "^10.4.19",
-        "postcss": "^8.4.39",
-        "tailwindcss": "^3.4.4"
     }
+   
 }
