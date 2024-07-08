@@ -2,3 +2,5 @@
 *pycache*
 *.jpg
 *.png
+build
+dist

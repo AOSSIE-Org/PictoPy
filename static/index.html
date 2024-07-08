@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.9">
+    <title>PictoPy</title>
+    <link rel="icon" href="{{ url_for('static', filename='asset/favicon.png') }}">
+    <link rel="stylesheet" href="/static/index.css"/>
+    <script src="/static/index.js"></script>
+</head>
+<body>
+    <div class="container">
+         <div class="buttonContainer">
+             <button onclick="callRoute('delete')">Delete</button>
+             <button onclick="callRoute('hide')">Hide</button>
+             <button onclick="callRoute('ShowHidden')">Show Hidden</button>
+         </div>
+         {% for className, paths in classDict.items() %}
+         <div class="mediaSection">
+            <label>
+                <input type="checkbox" id="{{ className }}" onchange="toggleClass('{{ className }}')">
+                <span class="mediaClass">{{ className }}</span>
+            </label>
+            <div class="mediaImages">
+                {% for path in paths %}
+                <div>
+                    <input type="checkbox" name="selectedImages[]" value="{{ path }}" class="{{ className }}">
+                    <img src="media/{{ path }}" alt="{{ className }}">
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+   </div>
+</body>
+</html>
