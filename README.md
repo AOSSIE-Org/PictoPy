@@ -2,16 +2,16 @@
 
 An open source image sorting tool designed to organize your image collection efficiently.
 
-## Backend
 ### Steps to run backend
 
-1. Clone this repo
-2. Create a virtual env by running: `python3 -m venv venv`
-3. Activate the env by running `source venv/bin/activate` and install dependancies via `pip install requirments.txt`
+1. Install Docker Compose
+2. Clone this repo
+3. Go inside cloned folder
 4. Run:
 ```bash
-python main.py
+docker compose up
 ```
+5. open http://127.0.0.1:5000 in browser
 
 
 ## Features to be Implemented

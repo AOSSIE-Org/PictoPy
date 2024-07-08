@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  windows-build:
+    image: batonogov/pyinstaller-windows:latest
+    volumes:
+      - ./:/src
+
+  osx-build:
+    image: batonogov/pyinstaller-osx:latest
+    volumes:
+      - ./:/src
+
+  linux-build:
+    image: batonogov/pyinstaller-linux:latest
+    volumes:
+      - ./:/src

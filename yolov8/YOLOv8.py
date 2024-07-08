@@ -295,7 +295,7 @@ def uniqueClasses(class_ids: List[int]) -> List[str]:
     return classes
 
 
-def detectClasslass(imgPath: str) -> List[str]:
+def detectClasses(imgPath: str, model_path: str) -> List[str]:
     """
     Detect objects in an image and return a list of unique classes.
 
@@ -305,7 +305,6 @@ def detectClasslass(imgPath: str) -> List[str]:
     Returns:
         list: A list of unique class names detected in the image.
     """
-    model_path = "models/yolov8n.onnx"
     img, yolov8_detector = imgDetector(imgPath, model_path)
     _, _, class_ids = markObjects(img, yolov8_detector)
     saveOutputImage(imgPath, img, yolov8_detector)
