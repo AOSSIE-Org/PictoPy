@@ -4,8 +4,8 @@
     "version": "0.0.0",
     "type": "module",
     "scripts": {
-      "linux-dev": "bash ./scripts/linux-dev.sh",
-      "win-dev": "cd scripts && win-dev.bat"
+        "linux-dev": "bash ./scripts/linux-dev.sh",
+        "win-dev": "cd scripts && win-dev.bat"
     }
-  }
-  
+   
+}

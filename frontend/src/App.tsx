@@ -1,11 +1,12 @@
 import "./App.css";
+import React from "react";
+import { BrowserRouter as Router } from "react-router-dom";
+import { AppRoutes } from "./routes/AppRoutes";
+import "./App.css";
 
-function App() {
-  return (
-    <div className="flex h-full w-full justify-center items-center">
-      <h1 className="text-3xl font-bold underline">Hello rust</h1>
-    </div>
-  );
-}
-
+const App: React.FC = () => (
+  <Router>
+    <AppRoutes />
+  </Router>
+);
 export default App;
