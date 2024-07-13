@@ -9,3 +9,4 @@ IMAGES_PATH = "../images"
 
 IMAGES_DATABASE_PATH = "app/database/images.db"
 ALBUM_DATABASE_PATH = "app/database/albums.db"
+MAPPINGS_DATABASE_PATH = "app/database/mappings.db"

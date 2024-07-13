@@ -2,7 +2,7 @@ import sqlite3
 import os
 import json
 
-from app.config.settings import IMAGES_PATH, IMAGES_DATABASE_PATH
+from app.config.settings import IMAGES_PATH, IMAGES_DATABASE_PATH, MAPPINGS_DATABASE_PATH
 from app.utils.classification import get_classes
 from app.utils.metadata import extract_metadata
 
@@ -99,7 +99,7 @@ def get_objects_db(path):
     class_ids = class_ids.split(",")
     print(class_ids, type(class_ids), flush=True)
 
-    conn_mappings = sqlite3.connect('mappings.db')
+    conn_mappings = sqlite3.connect(MAPPINGS_DATABASE_PATH)
     cursor_mappings = conn_mappings.cursor()
     class_names = []
     for class_id in class_ids:
