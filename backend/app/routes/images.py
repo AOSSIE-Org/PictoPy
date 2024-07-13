@@ -15,7 +15,7 @@ async def run_get_classes(img_path):
     loop = asyncio.get_event_loop()
     result = await loop.run_in_executor(None, get_classes, img_path)
     # error check here later
-    insert_image_db(img_path, result['ids'], extract_metadata(img_path))
+    insert_image_db(img_path, result, extract_metadata(img_path))
 
 
 @router.get("/all-images")
@@ -131,13 +131,13 @@ def get_all_image_objects():
         data = {}
         for image_path in image_paths:
             classes = get_objects_db(image_path)
-            #  print(image_path, classes)
+            print(image_path, classes, flush=True)
             if classes:
                 #  class_ids = classes[1:-1].split()
                 #  class_ids = list(set(class_ids))
                 #  class_names_list = [class_names[int(x)] for x in class_ids]
                 #  data[image_path] = ", ".join(class_names_list) if class_names_list else None
-                data = classes
+                data[image_path] = classes
             else:
                 data[image_path] = "None"
 
@@ -153,6 +153,7 @@ def get_class_ids(path: str = Query(...)):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'path' parameter")
 
         class_ids = get_objects_db(path)
+        print(class_ids, flush=True)
         if not class_ids:
             return {"classes": "None"}
 

@@ -25,7 +25,6 @@ def create_images_table():
         SELECT path FROM images
     """)
     db_paths = [row[0] for row in cursor.fetchall()]
-    print(db_paths)
     # Go through the images folder and print paths not present in the database
     for filename in os.listdir(IMAGES_PATH):
         file_path = os.path.abspath(os.path.join(IMAGES_PATH, filename))
@@ -97,11 +96,11 @@ def get_objects_db(path):
 
     class_ids_json = result[0]
     class_ids = json.loads(class_ids_json)
+    class_ids = class_ids.split(",")
+    print(class_ids, type(class_ids), flush=True)
 
     conn_mappings = sqlite3.connect('mappings.db')
     cursor_mappings = conn_mappings.cursor()
-
-    print(class_ids)
     class_names = []
     for class_id in class_ids:
         cursor_mappings.execute("""
@@ -110,11 +109,12 @@ def get_objects_db(path):
         name_result = cursor_mappings.fetchone()
         if name_result:
             class_names.append(name_result[0])
-        else:
-            class_names.append(f"Unknown (ID: {class_id})")
+        #  else:
+        #      print(f"UNKNOWN ID --> {class_id}" , flush=True)
+        #      class_names.append(f"Unknown (ID: {class_id})")
 
     conn_mappings.close()
-
+    class_names = list(set(class_names))
     return class_names
 
 def is_image_in_database(path):

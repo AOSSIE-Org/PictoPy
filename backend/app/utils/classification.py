@@ -15,5 +15,4 @@ def get_classes(img_path):
     id_str = [str(x) for x in class_ids]
     id_str = ','.join(id_str)
     print(id_str, flush=True)
-    return {"ids": f"{class_ids}"}
-
+    return id_str
