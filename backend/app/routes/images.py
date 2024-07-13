@@ -133,10 +133,11 @@ def get_all_image_objects():
             classes = get_objects_db(image_path)
             #  print(image_path, classes)
             if classes:
-                class_ids = classes[1:-1].split()
-                class_ids = list(set(class_ids))
-                class_names_list = [class_names[int(x)] for x in class_ids]
-                data[image_path] = ", ".join(class_names_list) if class_names_list else None
+                #  class_ids = classes[1:-1].split()
+                #  class_ids = list(set(class_ids))
+                #  class_names_list = [class_names[int(x)] for x in class_ids]
+                #  data[image_path] = ", ".join(class_names_list) if class_names_list else None
+                data = classes
             else:
                 data[image_path] = "None"
 
@@ -156,7 +157,8 @@ def get_class_ids(path: str = Query(...)):
             return {"classes": "None"}
 
         if class_ids:
-            ids = (",").join([class_names[int(x)] for x in list(set(class_ids[1:-1].split(" ")))])
+            #  ids = (",").join([class_names[int(x)] for x in list(set(class_ids[1:-1].split(" ")))])
+            ids = class_ids
             return {"classes": ids}
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found in the database")

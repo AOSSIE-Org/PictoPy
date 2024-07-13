@@ -3,7 +3,7 @@ import os
 import json
 
 from app.config.settings import IMAGES_PATH, IMAGES_DATABASE_PATH
-from app.utils.classification import get_classes2
+from app.utils.classification import get_classes
 from app.utils.metadata import extract_metadata
 
 
@@ -31,7 +31,7 @@ def create_images_table():
         file_path = os.path.abspath(os.path.join(IMAGES_PATH, filename))
         if file_path not in db_paths:
             print(f"Not in database: {file_path}")
-            class_ids = get_classes2(file_path)
+            class_ids = get_classes(file_path)
             metadata = extract_metadata(file_path)
             insert_image_db(file_path, class_ids, metadata)
         else:
@@ -80,27 +80,43 @@ def get_all_image_paths_from_db():
     return paths
 
 def get_objects_db(path):
-    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
-    cursor = conn.cursor()
+    conn_images = sqlite3.connect(IMAGES_DATABASE_PATH)
+    cursor_images = conn_images.cursor()
 
-    # convert to absolute path
     abs_path = os.path.abspath(path)
 
-    # get the id based on key (path)
-    cursor.execute("""
+    cursor_images.execute("""
         SELECT class_ids FROM images WHERE path = ?
     """, (abs_path,))
 
-    result = cursor.fetchone()
-    conn.close()
+    result = cursor_images.fetchone()
+    conn_images.close()
 
-    if result:
-        class_ids_json = result[0]
-        class_ids = json.loads(class_ids_json)
-        return class_ids
-    else:
+    if not result:
         return None
-    
+
+    class_ids_json = result[0]
+    class_ids = json.loads(class_ids_json)
+
+    conn_mappings = sqlite3.connect('mappings.db')
+    cursor_mappings = conn_mappings.cursor()
+
+    print(class_ids)
+    class_names = []
+    for class_id in class_ids:
+        cursor_mappings.execute("""
+            SELECT name FROM mappings WHERE class_id = ?
+        """, (class_id,))
+        name_result = cursor_mappings.fetchone()
+        if name_result:
+            class_names.append(name_result[0])
+        else:
+            class_names.append(f"Unknown (ID: {class_id})")
+
+    conn_mappings.close()
+
+    return class_names
+
 def is_image_in_database(path):
     conn = sqlite3.connect(IMAGES_DATABASE_PATH)
     cursor = conn.cursor()
