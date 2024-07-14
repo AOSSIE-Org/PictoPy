@@ -4,6 +4,7 @@ import asyncio
 from fastapi import APIRouter, HTTPException, status, Query
 
 from app.config.settings  import IMAGES_PATH
+from app.facenet.facenet import detect_faces
 from app.utils.classification import get_classes
 from app.database.images import get_all_image_ids_from_db, get_path_from_id, insert_image_db, delete_image_db, get_objects_db, extract_metadata
 
@@ -14,6 +15,10 @@ async def run_get_classes(img_path):
     result = await loop.run_in_executor(None, get_classes, img_path)
     # error check here later
     insert_image_db(img_path, result, extract_metadata(img_path))
+    if result:
+        classes = result.split(",")
+        if '0' in classes:
+            detect_faces(img_path)
 
 
 @router.get("/all-images")

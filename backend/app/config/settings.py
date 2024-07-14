@@ -10,4 +10,5 @@ IMAGES_PATH = "../images"
 
 IMAGES_DATABASE_PATH = "app/database/images.db"
 ALBUM_DATABASE_PATH = "app/database/albums.db"
-MAPPINGS_DATABASE_PATH = "app/database/mappings.db"
+MAPPINGS_DATABASE_PATH = "app/database/yolo_mapping.db"
+FACES_DATABASE_PATH = "app/database/faces.db"

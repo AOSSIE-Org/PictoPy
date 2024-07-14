@@ -1,27 +1,38 @@
-from fastapi import APIRouter
-
-from app.facenet.facenet import get_face_embedding
+from fastapi import APIRouter, HTTPException
+from app.database.faces import get_all_face_embeddings
 from app.facenet.preprocess import cosine_similarity
-
 
 router = APIRouter()
 
-@router.post("/match")
-def face_matching(payload: dict):
-    image_paths = payload['paths']
-    #  image_paths = get_all_image_paths_from_db()
-    embeddings = []
-    for path in image_paths:
-        embedding = get_face_embedding(path)
-        embeddings.append(embedding)
-
-    for i, e1 in enumerate(embeddings):
-        for j, e2 in enumerate(embeddings):
-            similarrity = cosine_similarity(e1, e2)
-            if i >= j or similarrity < 0.5: continue
-            img1 = image_paths[i].split("/")[-1]
-            img2 = image_paths[j].split("/")[-1]
-            print(img1, img2)
-
-
-
+@router.get("/match")
+def face_matching():
+    try:
+        all_embeddings = get_all_face_embeddings()
+        
+        similar_pairs = []
+        
+        for i, img1_data in enumerate(all_embeddings):
+            for j, img2_data in enumerate(all_embeddings):
+                if i >= j:
+                    continue
+                
+                for embedding1 in img1_data['embeddings']:
+                    for embedding2 in img2_data['embeddings']:
+                        similarity = cosine_similarity(embedding1, embedding2)
+                        if similarity >= 0.5:
+                            img1 = img1_data['image_path'].split("/")[-1]
+                            img2 = img2_data['image_path'].split("/")[-1]
+                            similar_pairs.append({
+                                'image1': img1,
+                                'image2': img2,
+                                'similarity': float(similarity)
+                            })
+                            break
+                    else:
+                        continue
+                    break
+        
+        return {"similar_pairs": similar_pairs}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
