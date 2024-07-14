@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, status, Query
 
 from app.config.settings  import IMAGES_PATH
 from app.utils.classification import get_classes
-from app.database.images import insert_image_db, delete_image_db, get_objects_db, extract_metadata, get_all_image_paths_from_db
+from app.database.images import get_all_image_ids_from_db, get_path_from_id, insert_image_db, delete_image_db, get_objects_db, extract_metadata
 
 router = APIRouter()
 
@@ -124,17 +124,14 @@ def delete_image(payload: dict):
 @router.get("/all-image-objects")
 def get_all_image_objects():
     try:
-        image_paths = get_all_image_paths_from_db()
+        image_ids = get_all_image_ids_from_db()
         
         data = {}
-        for image_path in image_paths:
+        for image_id in image_ids:
+            image_path = get_path_from_id(image_id)
             classes = get_objects_db(image_path)
             print(image_path, classes, flush=True)
             if classes:
-                #  class_ids = classes[1:-1].split()
-                #  class_ids = list(set(class_ids))
-                #  class_names_list = [class_names[int(x)] for x in class_ids]
-                #  data[image_path] = ", ".join(class_names_list) if class_names_list else None
                 data[image_path] = classes
             else:
                 data[image_path] = "None"
@@ -144,7 +141,7 @@ def get_all_image_objects():
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-@router.get("/objects")
+
 def get_class_ids(path: str = Query(...)):
     try:
         if not path:
