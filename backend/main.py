@@ -10,6 +10,7 @@ from app.database.models import create_YOLO_mappings
 from app.routes.test import router as test_router
 from app.routes.images import router as images_router
 from app.routes.albums import router as albums_router
+from app.routes.facetagging import router as tagging_router
 
 
 create_YOLO_mappings()
@@ -32,3 +33,4 @@ app.add_middleware(
 app.include_router(test_router, prefix="/test", tags=["Test"])
 app.include_router(images_router, prefix="/images", tags=["Images"])
 app.include_router(albums_router, prefix="/albums", tags=["Albums"])
+app.include_router(tagging_router, prefix="/tag", tags=["Tagging"])
