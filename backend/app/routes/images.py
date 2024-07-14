@@ -1,13 +1,11 @@
 import os
 import shutil
-import json
 import asyncio
 from fastapi import APIRouter, HTTPException, status, Query
 
 from app.config.settings  import IMAGES_PATH
 from app.utils.classification import get_classes
-from app.database.images import insert_image_db, delete_image_db, get_objects_db, extract_metadata, is_image_in_database, get_all_image_paths_from_db
-from app.yolov8.utils import class_names
+from app.database.images import insert_image_db, delete_image_db, get_objects_db, extract_metadata, get_all_image_paths_from_db
 
 router = APIRouter()
 
