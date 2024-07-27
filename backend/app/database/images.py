@@ -7,6 +7,7 @@ from app.config.settings import (
     IMAGES_DATABASE_PATH,
     MAPPINGS_DATABASE_PATH,
 )
+from app.facecluster.init_face_cluster import get_face_cluster
 from app.facenet.facenet import detect_faces
 from app.utils.classification import get_classes
 from app.utils.metadata import extract_metadata
@@ -98,9 +99,11 @@ def delete_image_db(path):
         cursor.execute("DELETE FROM images WHERE id = ?", (image_id,))
         cursor.execute("DELETE FROM image_id_mapping WHERE id = ?", (image_id,))
 
-        # Instead of calling delete_face_embeddings directly, use this:
+        # Instead of calling delete_face_embeddings directly, for circular import error
         from app.database.faces import delete_face_embeddings
 
+        clusters = get_face_cluster()
+        clusters.remove_image(image_id)
         delete_face_embeddings(image_id)
 
     conn.commit()

@@ -3,18 +3,20 @@ from sklearn.cluster import DBSCAN
 from sklearn.metrics.pairwise import cosine_distances
 import sqlite3
 import json
+from collections import defaultdict
 from app.config.settings import CLUSTERS_DATABASE_PATH
-from app.database.images import get_path_from_id, get_id_from_path
+from app.utils.pathmapping import get_path_from_id, get_id_from_path
 from app.database.faces import get_face_embeddings, get_all_face_embeddings
 
 
 class FaceCluster:
     def __init__(
-        self, eps=0.5, min_samples=2, metric="cosine", db_path=CLUSTERS_DATABASE_PATH
+        self, eps=0.3, min_samples=2, metric="cosine", db_path=CLUSTERS_DATABASE_PATH
     ):
         self.eps = eps
         self.min_samples = min_samples
         self.metric = metric
+        # print("DBSCAN Eps: ", eps)
         self.dbscan = DBSCAN(eps=eps, min_samples=min_samples, metric=metric)
         self.embeddings = np.array([])
         self.image_ids = []
@@ -33,13 +35,11 @@ class FaceCluster:
         return self.get_clusters()
 
     def get_clusters(self):
-        clusters = {}
+        clusters = defaultdict(set)
         if self.labels is not None:
             for i, label in enumerate(self.labels):
-                if label not in clusters:
-                    clusters[label] = []
-                clusters[label].append(self.image_ids[i])
-        return clusters
+                clusters[int(label)].add(self.image_ids[i])
+        return {k: list(v) for k, v in clusters.items()}
 
     def get_all_clusters(self):
         clusters = self.get_clusters()
@@ -73,19 +73,44 @@ class FaceCluster:
         self.save_to_db()
         return self.get_all_clusters()
 
-    def remove_face(self, image_path):
-        image_id = get_id_from_path(image_path)
+    def remove_image(self, image_id):
         if image_id in self.image_ids:
-            index = self.image_ids.index(image_id)
-            self.embeddings = np.delete(self.embeddings, index, axis=0)
-            self.image_ids.pop(index)
-            self.labels = np.delete(self.labels, index)
+            indices_to_remove = [
+                i for i, id in enumerate(self.image_ids) if id == image_id
+            ]
+            self.embeddings = np.delete(self.embeddings, indices_to_remove, axis=0)
+            self.image_ids = [
+                id for i, id in enumerate(self.image_ids) if i not in indices_to_remove
+            ]
+            self.labels = np.delete(self.labels, indices_to_remove)
 
             if len(self.embeddings) > 0:
                 self.labels = self.dbscan.fit_predict(self.embeddings)
 
         self.save_to_db()
         return self.get_all_clusters()
+
+    def get_related_images(self, image_id):
+        if image_id not in self.image_ids:
+            return []
+
+        indices = [i for i, id in enumerate(self.image_ids) if id == image_id]
+        embeddings = self.embeddings[indices]
+
+        related_images = set()
+        for embedding in embeddings:
+            for i, other_embedding in enumerate(self.embeddings):
+                if self.image_ids[i] != image_id:
+                    similarity = (
+                        1
+                        - cosine_distances(
+                            embedding.reshape(1, -1), other_embedding.reshape(1, -1)
+                        )[0][0]
+                    )
+                    if similarity >= self.eps:
+                        related_images.add(self.image_ids[i])
+
+        return list(related_images)
 
     def save_to_db(self):
         conn = sqlite3.connect(self.db_path)
@@ -126,13 +151,12 @@ class FaceCluster:
 
                 # Load embeddings from face database
                 all_embeddings = get_all_face_embeddings()
-                instance.embeddings = np.array(
-                    [
-                        emb["embeddings"][0]
-                        for emb in all_embeddings
-                        if get_id_from_path(emb["image_path"]) in instance.image_ids
-                    ]
-                )
+                instance.embeddings = []
+                for emb in all_embeddings:
+                    image_id = get_id_from_path(emb["image_path"])
+                    if image_id in instance.image_ids:
+                        instance.embeddings.extend(emb["embeddings"])
+                instance.embeddings = np.array(instance.embeddings)
 
         except sqlite3.OperationalError:
             pass

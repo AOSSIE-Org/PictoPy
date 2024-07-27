@@ -59,3 +59,14 @@ def face_clusters():
         return {"clusters": formatted_clusters}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/related-images/{image_id}")
+def get_related_images(image_id: int):
+    try:
+        cluster = get_face_cluster()
+        related_image_ids = cluster.get_related_images(image_id)
+        related_image_paths = [get_path_from_id(id) for id in related_image_ids]
+        return {"related_images": related_image_paths}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
