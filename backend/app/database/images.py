@@ -11,6 +11,7 @@ from app.facecluster.init_face_cluster import get_face_cluster
 from app.facenet.facenet import detect_faces
 from app.utils.classification import get_classes
 from app.utils.metadata import extract_metadata
+from app.database.albums import remove_image_from_all_albums
 
 
 def create_image_id_mapping_table():
@@ -100,6 +101,7 @@ def delete_image_db(path):
         cursor.execute("DELETE FROM image_id_mapping WHERE id = ?", (image_id,))
 
         # Instead of calling delete_face_embeddings directly, for circular import error
+        remove_image_from_all_albums(image_id)
         from app.database.faces import delete_face_embeddings
 
         clusters = get_face_cluster()

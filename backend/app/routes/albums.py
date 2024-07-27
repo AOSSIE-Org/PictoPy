@@ -5,7 +5,6 @@ from app.database.albums import (
     remove_photo_from_album,
     create_album,
     get_all_albums,
-    add_photos_to_album,
     get_album_photos,
     edit_album_description,
 )
@@ -89,7 +88,14 @@ def add_multiple_images_to_album(payload: dict):
                 detail="'paths' should be a list",
             )
 
-        add_photos_to_album(album_name, paths)
+        for path in paths:
+            try:
+                add_photo_to_album(album_name, path)
+            except:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"{path} not in Database",
+                )
 
         return {"message": f"Images added to album '{album_name}' successfully"}
 
