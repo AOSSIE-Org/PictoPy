@@ -2,6 +2,7 @@
 This module contains the main FastAPI application.
 """
 
+from time import sleep
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,19 +10,28 @@ from app.database.faces import cleanup_face_embeddings, create_faces_table
 from app.database.images import create_image_id_mapping_table, create_images_table
 from app.database.albums import create_albums_table
 from app.database.yolo_mapping import create_YOLO_mappings
+from app.facecluster.init_face_cluster import init_face_cluster
 from app.routes.test import router as test_router
 from app.routes.images import router as images_router
 from app.routes.albums import router as albums_router
 from app.routes.facetagging import router as tagging_router
 
 create_YOLO_mappings()
+create_faces_table()
 create_image_id_mapping_table()
 create_images_table()
 create_albums_table()
-create_faces_table()
 cleanup_face_embeddings()
 
+
+init_face_cluster()
 app = FastAPI()
+
+
+# @app.on_event("startup")
+# async def startup_event():
+#     init_face_cluster()
+
 
 # Add CORS middleware
 app.add_middleware(

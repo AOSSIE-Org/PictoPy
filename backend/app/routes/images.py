@@ -25,7 +25,7 @@ async def run_get_classes(img_path):
     insert_image_db(img_path, result, extract_metadata(img_path))
     if result:
         classes = result.split(",")
-        if "0" in classes:
+        if "0" in classes and classes.count("0") < 8:
             detect_faces(img_path)
 
 

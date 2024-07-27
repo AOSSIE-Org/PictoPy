@@ -7,6 +7,7 @@ from app.config.settings import (
     IMAGES_DATABASE_PATH,
     MAPPINGS_DATABASE_PATH,
 )
+from app.facenet.facenet import detect_faces
 from app.utils.classification import get_classes
 from app.utils.metadata import extract_metadata
 
@@ -53,6 +54,7 @@ def create_images_table():
             class_ids = get_classes(file_path)
             metadata = extract_metadata(file_path)
             insert_image_db(file_path, class_ids, metadata)
+            detect_faces(file_path)
         else:
             print(f"Already in database: {file_path}")
     conn.commit()
