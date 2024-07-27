@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from app.database.faces import get_all_face_embeddings
 from app.database.images import get_path_from_id
 from app.facecluster.init_face_cluster import get_face_cluster
 from app.facenet.preprocess import cosine_similarity
+from app.utils.path_id_mapping import get_id_from_path
 
 router = APIRouter()
 
@@ -61,10 +62,11 @@ def face_clusters():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/related-images/{image_id}")
-def get_related_images(image_id: int):
+@router.get("/related-images")
+def get_related_images(path: str = Query(..., description="full path to the image")):
     try:
         cluster = get_face_cluster()
+        image_id = get_id_from_path(path)
         related_image_ids = cluster.get_related_images(image_id)
         related_image_paths = [get_path_from_id(id) for id in related_image_ids]
         return {"related_images": related_image_paths}

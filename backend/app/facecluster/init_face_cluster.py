@@ -12,7 +12,7 @@ def init_face_cluster(db_path=CLUSTERS_DATABASE_PATH):
         return face_cluster
 
     if os.path.exists(db_path):
-        print("Loading existing face clusters from database...")
+        print("Loading existing face clusters from database...", flush=True)
         face_cluster = FaceCluster.load_from_db(db_path)
     else:
         print("Creating new face clusters database...")
@@ -24,7 +24,7 @@ def init_face_cluster(db_path=CLUSTERS_DATABASE_PATH):
             image_paths = [e["image_path"] for e in all_embeddings]
             face_cluster.fit(embeddings, image_paths)
         else:
-            print("No face embeddings found. Creating empty clusters.")
+            print("No face embeddings found. Creating empty clusters.", flush=True)
             face_cluster.fit([], [])
 
         face_cluster.save_to_db()
