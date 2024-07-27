@@ -5,7 +5,7 @@ import sqlite3
 import json
 from collections import defaultdict
 from app.config.settings import CLUSTERS_DATABASE_PATH
-from app.utils.pathmapping import get_path_from_id, get_id_from_path
+from app.utils.path_id_mapping import get_path_from_id, get_id_from_path
 from app.database.faces import get_face_embeddings, get_all_face_embeddings
 
 

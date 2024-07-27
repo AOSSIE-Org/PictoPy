@@ -45,19 +45,19 @@ def create_images_table():
     """
     )
 
-    cursor.execute("SELECT path FROM image_id_mapping")
-    db_paths = [row[0] for row in cursor.fetchall()]
+    # cursor.execute("SELECT path FROM image_id_mapping")
+    # db_paths = [row[0] for row in cursor.fetchall()]
 
-    for filename in os.listdir(IMAGES_PATH):
-        file_path = os.path.abspath(os.path.join(IMAGES_PATH, filename))
-        if file_path not in db_paths:
-            print(f"Not in database: {file_path}")
-            class_ids = get_classes(file_path)
-            metadata = extract_metadata(file_path)
-            insert_image_db(file_path, class_ids, metadata)
-            detect_faces(file_path)
-        else:
-            print(f"Already in database: {file_path}")
+    # for filename in os.listdir(IMAGES_PATH):
+    #     file_path = os.path.abspath(os.path.join(IMAGES_PATH, filename))
+    #     if file_path not in db_paths:
+    #         print(f"Not in database: {file_path}")
+    #         class_ids = get_classes(file_path)
+    #         metadata = extract_metadata(file_path)
+    #         insert_image_db(file_path, class_ids, metadata)
+    #         detect_faces(file_path)
+    #     else:
+    #         print(f"Already in database: {file_path}")
     conn.commit()
     conn.close()
 
