@@ -4,33 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=0.9">
     <title>PictoPy</title>
-    <link rel="icon" href="{{ url_for('static', filename='asset/favicon.png') }}">
+    <link rel="icon" href="{{ url_for('static', filename='asset/favicon.ico') }}">
     <link rel="stylesheet" href="/static/index.css"/>
+    <script src="/static/indicateNav.js"></script>
     <script src="/static/index.js"></script>
 </head>
 <body>
-    <div class="container">
-         <div class="buttonContainer">
-             <button onclick="callRoute('delete')">Delete</button>
-             <button onclick="callRoute('hide')">Hide</button>
-             <button onclick="callRoute('ShowHidden')">Show Hidden</button>
-         </div>
-         {% for className, paths in classDict.items() %}
-         <div class="mediaSection">
-            <label>
-                <input type="checkbox" id="{{ className }}" onchange="toggleClass('{{ className }}')">
-                <span class="mediaClass">{{ className }}</span>
-            </label>
-            <div class="mediaImages">
-                {% for path in paths %}
-                <div>
-                    <input type="checkbox" name="selectedImages[]" value="{{ path }}" class="{{ className }}">
-                    <img src="media/{{ path }}" alt="{{ className }}">
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endfor %}
-   </div>
+    <div id="dataContainer" class="container"></div>
+
+    <div id="floatingWindow" class="floating-window">
+        <div class="media-container" id="mediaContent"></div>
+    </div>
+
+    <div id="floatingNavCard" class="floating-nav-card"></div>
 </body>
 </html>

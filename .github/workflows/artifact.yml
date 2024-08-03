@@ -1,0 +1,37 @@
+name: Build and Upload Artifacts
+
+on:
+  push:
+    branches:
+      - artifact
+      - version_2
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      - name: Run Docker Compose
+        run: |
+          docker compose -f build_compose.yaml up
+
+      - name: Check for available files
+        run: |
+          tree .
+
+      - name: UploadArtifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Artifacts
+          path: dist/

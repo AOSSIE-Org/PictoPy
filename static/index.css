@@ -1,24 +1,202 @@
-.mediaSection {
-    margin-bottom: 20px;
+html {
+    scrollbar-width: none;
 }
-.mediaClass {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 5px;
+
+body {
+    font-family: 'Comic Sans MS', sans-serif;
+    background-color: rgba(0, 0, 0, 0.95);
+    transition: background-color 0.3s ease;
 }
-.mediaImages {
+
+.container {
     display: flex;
     flex-wrap: wrap;
-    margin-bottom: 10px;
+    gap: 10px;
+    justify-content: center;
 }
-.mediaImages img {
-    max-width: 200px;
-    margin-right: 10px;
-    margin-bottom: 10px;
+
+.card {
+    border: 4px solid rgba(0, 0, 0, 0);
+    padding: 4px;
+    width: 300px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 10px; 
+    overflow: hidden;
+    position: relative;
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
-.buttonContainer {
-    margin-top: 10px;
+
+.card.selected {
+    border-color: rgba(255, 255, 255, 0.4); 
 }
-.buttonContainer button {
-    margin-right: 10px;
+
+.thumbnail {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.card:hover {
+    transform: scale(1.05);
+    /*
+    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.2);
+    */
+}
+
+.group-name {
+    font-size: 0.9em; 
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 6px;
+    border-radius: 10px;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+.floating-window {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    padding: 0;
+    border-radius: 10px;
+    /*
+    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.4);
+    */
+    z-index: 1000;
+    display: none; /* Hidden by default */
+    width: 95vw;
+    height: 95vh;
+    overflow: hidden; /* Prevents overflow */
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.floating-window .media-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.floating-window img, .floating-window video {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 10px;
+}
+
+/* Styling for navigation sections */
+.floating-nav-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.8);
+    border: 4px solid rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    /*
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    */
+    flex-direction: row;
+    bottom: 10px;
+    border-radius: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.nav-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.nav-icon {
+    display: inline-block;
+}
+
+.nav-icon img {
+    width: 50px; 
+    height: 50px;
+    cursor: pointer;
+    padding: 6px;
+    transition: transform 0.3s ease;
+}
+
+.nav-icon img:hover {
+    transform: scale(1.2);
+}
+
+/* Interaction with Nav Icons */
+img.section.clicked,
+img.toggle.enabled,
+img.button.clicked,
+img.select {
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.2); 
+    transition: transform 0.3s ease, background-color 0.3s ease; 
+}
+
+/* Additional animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 1; }
+    to { opacity: 1; }
+}
+
+.floating-window {
+    animation: fadeIn 0.3s ease;
+}
+
+/*
+Info View
+*/
+
+.info-table {
+    max-width: 90%;
+    border-collapse: collapse;
+    border-radius: 10px;
+    overflow: hidden; /* To apply rounded corners to the table */
+    color: white;
+}
+
+.info-table th, .info-table td {
+    border: 4px solid rgba(255, 255, 255, 0.8);
+    padding: 30px;
+}
+
+.info-table th {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.info-table td {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.tag-button {
+    display: inline-block;
+    border: 3px solid rgba(255, 255, 255, 0.9);
+    padding: 5px 10px;
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.2);
+    text-align: center;
+    cursor: pointer;
+}
+
+.tag-button:hover {
+    background-color: rgba(0, 0, 0, 0.0);
 }
