@@ -10,7 +10,7 @@ class_names = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'tra
                'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase',
                'scissors', 'teddy bear', 'hair drier', 'toothbrush']
 
-# Create a list of colors for each class where each color is a tuple of 3 integer values
+# Create a list of colors for each class where each color is a list of 3 integer values
 rng = np.random.default_rng(3)
 colors = rng.uniform(0, 255, size=(len(class_names), 3))
 
@@ -162,7 +162,7 @@ def draw_detections(image: np.ndarray, boxes: np.ndarray, scores: np.ndarray, cl
 
     return det_img
 
-def draw_box( image: np.ndarray, box: np.ndarray, color: tuple[int, int, int] = (0, 0, 255),
+def draw_box( image: np.ndarray, box: np.ndarray, color: list[int, int, int] = (0, 0, 255),
              thickness: int = 2) -> np.ndarray:
     """
     Draws a rectangle on the image with the specified color and thickness.
@@ -180,7 +180,7 @@ def draw_box( image: np.ndarray, box: np.ndarray, color: tuple[int, int, int] = 
     return cv2.rectangle(image, (x1, y1), (x2, y2), color, thickness)
 
 
-def draw_text(image: np.ndarray, text: str, box: np.ndarray, color: tuple[int, int, int] = (0, 0, 255),
+def draw_text(image: np.ndarray, text: str, box: np.ndarray, color: list[int, int, int] = (0, 0, 255),
               font_size: float = 0.001, text_thickness: int = 2) -> np.ndarray:
     """
     Draws text on the image at the specified location with the specified color, font size, and thickness.

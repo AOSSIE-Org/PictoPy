@@ -1,59 +1,63 @@
 import os
 import sys
 import hashlib
-from typing import Generator, Union, Tuple
+from typing import Generator, Union, List
 
-def genHash(imgPath: str) -> str:
+def genHash(path: str) -> str:
     """
-    Generates a hash of the image file.
+    Generates a hash of file.
 
     Args:
-        imgPath: Path to the image file.
+        path: Path to the file.
 
     Returns:
-        A hexadecimal string representing the hash of the image file.
+        A hexadecimal string representing the hash of the file.
     """
-    with open(imgPath, "rb") as f:
-        imgData = f.read()
-        return hashlib.md5(imgData).hexdigest()
+    with open(path, "rb") as f:
+        return hashlib.md5(f.read()).hexdigest()
 
 
-def isImg(filePath: str) -> bool:
+def checkExtension(filePath: str, extensions: List[str]) -> bool:
     """
-    Checks if the file is an image.
+    Checks if the file has one of the specified extensions.
 
     Args:
         filePath: Path to the file.
+        extensions: List of allowed extensions.
 
     Returns:
-        True if the file is an image, False otherwise.
+        True if the file has one of the extensions, False otherwise.
     """
     _, fileExtension = os.path.splitext(filePath)
-    imgExts = [".jpg", ".jpeg", ".png", ".webp", ".bmp", ".avif"]
-    return fileExtension.lower() in imgExts
+    return fileExtension.lower() in extensions
 
-
-def imgPaths(startPath: str) -> Generator[str, None, None]:
+def mediaPaths(startPath: str) -> Generator[tuple[str, str, str], None, None]:
     """
-    Generate path to all images in the given directory and it's subdirectories.
+    Generate paths to all images and videos in the given directory and its subdirectories.
     Ignore hidden directories.
 
     Args:
-        startPath: Path to the directory to search for images.
+        startPath: Path to the directory to search for images and videos.
 
-    Returns:
-        A generator that yields paths to all images in the directory.
+    Yields:
+        Tuple containing (file path, file type ('img' or 'vid'), root directory path).
     """
     for root, dirs, files in os.walk(startPath):
         for dir_name in list(dirs):  # Convert dirs to a list to avoid RuntimeError
-            if dir_name.startswith('.'):
+            if dir_name.startswith(('.', 'AppData')):
                 dirs.remove(dir_name)
         
         for file in files:
-            if isImg(file):
-                yield os.path.join(root, file)
+            fileType = None
+            if checkExtension(file, [".jpg", ".jpeg", ".png", ".webp", ".bmp", ".avif"]):
+                fileType = "img"
+            elif checkExtension(file, [".mp4", ".mkv", ".webm"]):
+                fileType = "vid"
+            if fileType:
+                yield os.path.join(root, file), fileType, root
                 
 
+# NN
 def detectFileWithHash(files: Generator[str, None, None], targetHash: str) -> Union[str, None]:
     """
     Detect a file with a specific hash value from a generator.
@@ -84,12 +88,12 @@ def homeDir() -> str:
     """
     return os.path.expanduser("~")
 
-def deleteFile(paths: Tuple[str]) -> None:
+def deleteFile(paths: List[str]) -> None:
     """
     Delete files by path.
 
     Args:
-        paths: A tuple of paths to delete.
+        paths: A list of paths to delete.
     """
     for path in paths:
         try:
