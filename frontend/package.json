@@ -1,0 +1,41 @@
+{
+  "name": "tauri-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@radix-ui/react-dropdown-menu": "^2.1.1",
+    "@radix-ui/react-slot": "^1.1.0",
+    "@tauri-apps/api": ">=2.0.0-beta.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0-beta.5",
+    "@tauri-apps/plugin-fs": "^2.0.0-beta.3",
+    "@tauri-apps/plugin-shell": "^2.0.0-beta.4",
+    "axios": "^1.7.2",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.400.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.24.1",
+    "tailwind-merge": "^2.3.0",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0-beta.21",
+    "@types/node": "^20.14.9",
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.0.2",
+    "vite": "^5.0.0"
+  }
+}
