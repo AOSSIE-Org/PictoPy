@@ -1,5 +1,5 @@
 use crate::repositories::FileRepository;
-use crate::models::{FileInfo, FileType};
+use crate::models::{FileType};
 use std::path::PathBuf;
 
 pub struct FileService;

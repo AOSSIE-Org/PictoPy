@@ -1,5 +1,4 @@
 use walkdir::WalkDir;
-// use std::path::PathBuf;
 use crate::models::{FileInfo, FileType};
 use crate::utils::file_utils::{is_image_extension, is_video_extension};
 

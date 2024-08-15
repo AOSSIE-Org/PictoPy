@@ -1,8 +1,8 @@
 import React from "react";
-
 import { Button } from "../ui/button";
-import { FolderOpenIcon } from "../Icons/Icons";
 import { open } from "@tauri-apps/plugin-dialog";
+import { FolderOpenIcon } from "../ui/Icons/Icons";
+
 
 interface FolderPickerProps {
   setFolderPath: (path: string) => void;
@@ -29,10 +29,10 @@ const FolderPicker: React.FC<FolderPickerProps> = ({ setFolderPath }) => {
       <Button
         onClick={pickFolder}
         variant="outline"
-        className="text-black-50 dark:text-gray-50 border-gray-500 dark:border-gray-500 hover:bg-gray-700 dark:hover:bg-gray-700"
+        className="text-gray-50 border-gray-500 dark:border-gray-500 hover:bg-gray-700 dark:hover:bg-gray-700"
       >
-        <FolderOpenIcon className="mr-2 h-5 w-5 text-black-50 dark:text-gray-50" />
-        Choose Folder
+        <FolderOpenIcon className="mr-2 h-5 w-5 text-black-50 text-gray-50" />
+        Add folder
       </Button>
     </div>
   );
