@@ -57,7 +57,11 @@ extra_css:
   - stylesheets/extra.css
 
 nav:
-  - Home: index.md
+  - Home:
+      - Introduction: index.md
+      - Overview: overview/features.md
+      - Backend: backend/setup.md
+      - Frontend: frontend/setup.md
   - Overview:
       - Features: overview/features.md
       - Architecture: overview/architecture.md
