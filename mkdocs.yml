@@ -59,7 +59,6 @@ extra_css:
 nav:
   - Home: index.md
   - Overview:
-      - Introduction: overview/introduction.md
       - Features: overview/features.md
       - Architecture: overview/architecture.md
   - Backend:

@@ -6,10 +6,6 @@ offering smart tagging capabilities for photos based on objects, faces, or scene
     <div style="width:33%">
         <h2>Overview</h2>
         <ul>
-            <li><a href='./overview/introduction'>
-                   Introduction
-                 </a>
-            </li>
             <li><a href='./overview/features'>
                    Features
                  </a>
