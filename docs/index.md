@@ -34,6 +34,11 @@ offering smart tagging capabilities for photos based on objects, faces, or scene
                 </a>
             </li>
             <li>
+                <a href="./backend/directory-structure">
+                    Directory Structure
+                </a>
+            </li>
+            <li>
                 <a href="./backend/api">
                     API
                 </a>

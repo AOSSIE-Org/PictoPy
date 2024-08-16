@@ -55,6 +55,7 @@ nav:
       - Architecture: overview/architecture.md
   - Backend:
       - Setup: backend/setup.md
+      - Directory Structure: backend/directory-structure.md
       - Database: backend/database.md
       - API: backend/api.md
       - Image Processing: backend/image-processing.md
