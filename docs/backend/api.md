@@ -1,7 +1,7 @@
 # API
 
-The API calls to PictoPy are done via HTTP requests since we are hosting our backend on a Flask server. Follow this [Link](https://www.postman.com/cryosat-explorer-62744145/workspace/pictopy/overview)
-to get example request and response.
+The API calls to PictoPy are done via HTTP requests since we are hosting our backend on a Flask server. This was done to ensure low coupling between the frontend and the backend.
+Follow this [Link](https://www.postman.com/cryosat-explorer-62744145/workspace/pictopy/overview) to get example request and response.
 ## Table of Contents
 1. [Albums](#albums)
 2. [Image](#image)

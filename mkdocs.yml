@@ -1,6 +1,14 @@
 site_name: PictoPy
+repo_name: AOSSIE-Org/PictoPy
+repo_url: https://github.com/AOSSIE-Org/PictoPy
+edit_uri: edit/main/docs/
+
 theme:
   name: material
+  logo: assets/PictoPy-logo.png
+  favicon: assets/PictoPy-logo.png
+  icon:
+    repo: fontawesome/brands/github
   features:
     - navigation.tabs
     - navigation.sections
@@ -11,6 +19,7 @@ theme:
     - content.tabs.link
     - content.code.annotation
     - content.code.copy
+    - navigation.footer
   language: en
   palette:
     - scheme: default
@@ -64,3 +73,13 @@ nav:
       - UI Components: frontend/ui-components.md
       - State Management: frontend/state-management.md
       - Gallery View: frontend/gallery-view.md
+
+extra:
+  analytics:
+    provider: google
+    property: G-N3Q505TMQ6
+  social:
+    - icon: fontawesome/brands/twitter
+      link: https://x.com/aossie_org
+    - icon: fontawesome/brands/github
+      link: https://github.com/AOSSIE-Org/PictoPy/

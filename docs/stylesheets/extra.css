@@ -1,3 +1,8 @@
 .md-typeset .admonition-title {
     margin-bottom: 10px;
 }
+
+.md-header__button.md-logo img {
+    width: 60px;
+    height: auto;
+}
