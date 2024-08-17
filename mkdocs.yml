@@ -1,0 +1,88 @@
+site_name: PictoPy
+repo_name: AOSSIE-Org/PictoPy
+repo_url: https://github.com/AOSSIE-Org/PictoPy
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  logo: assets/PictoPy-logo.png
+  favicon: assets/PictoPy-logo.png
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+    - navigation.footer
+  language: en
+  palette:
+    - scheme: default
+      primary: red
+      accent: red
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: red
+      accent: red
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - pymdownx.arithmatex:
+      generic: true
+  - footnotes
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.mark
+  - attr_list
+
+extra_css:
+  - stylesheets/output.css
+  - stylesheets/extra.css
+
+nav:
+  - Home:
+      - Introduction: index.md
+      - Overview: overview/features.md
+      - Backend: backend/setup.md
+      - Frontend: frontend/setup.md
+  - Overview:
+      - Features: overview/features.md
+      - Architecture: overview/architecture.md
+  - Backend:
+      - Setup: backend/setup.md
+      - Directory Structure: backend/directory-structure.md
+      - Database: backend/database.md
+      - API: backend/api.md
+      - Image Processing: backend/image-processing.md
+  - Frontend:
+      - Setup: frontend/setup.md
+      - UI Components: frontend/ui-components.md
+      - State Management: frontend/state-management.md
+      - Gallery View: frontend/gallery-view.md
+
+extra:
+  analytics:
+    provider: google
+    property: G-N3Q505TMQ6
+  social:
+    - icon: fontawesome/brands/twitter
+      link: https://x.com/aossie_org
+    - icon: fontawesome/brands/github
+      link: https://github.com/AOSSIE-Org/PictoPy/
