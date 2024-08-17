@@ -1,7 +1,8 @@
 import React from "react";
 import { Button } from "../ui/button";
-import { FileIcon } from "../ui/Navigation/Icons/Icons";
+
 import { open } from "@tauri-apps/plugin-dialog";
+import { FileIcon } from "../ui/Icons/Icons";
 
 interface FilePickerProps {
   setFilePaths: (paths: string[]) => void;

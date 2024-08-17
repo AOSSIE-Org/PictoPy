@@ -24,7 +24,7 @@ export const useInitialPageController = () => {
   const handleFolderPathChange = async (path: string) => {
     setFolderPath(path);
     await FolderService.saveFolderPath(path);
-    navigate("/home");
+    folderPath && navigate("/home");
   };
 
   return { loading, handleFolderPathChange };
