@@ -1,12 +1,11 @@
+import { Link, useLocation } from "react-router-dom";
 import {
   AlbumIcon,
   FileIcon,
   HomeIcon,
-  ImageIcon,
   SettingsIcon,
   VideoIcon,
-} from "@/components/Icons/Icons";
-import { Link, useLocation } from "react-router-dom";
+} from "@/components/ui/Icons/Icons";
 
 function Sidebar() {
   const location = useLocation();
@@ -37,13 +36,7 @@ function Sidebar() {
           />
           <span className="font-sans">Ai tagging</span>
         </Link>
-        <Link to="/photos" className={linkClasses("/photos")}>
-          <ImageIcon
-            className="h-5 w-5"
-            fillColor={isActive("/photos") ? "#6465F3" : "none"}
-          />
-          <span className="font-sans">Photos</span>
-        </Link>
+
         <Link to="/videos" className={linkClasses("/videos")}>
           <VideoIcon
             className="h-5 w-5"

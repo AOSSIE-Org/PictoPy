@@ -1,5 +1,5 @@
 import FolderPicker from "@/components/FolderPicker/FolderPicker";
-import { Pitopy } from "@/components/Icons/Icons";
+import { Pitopy } from "@/components/ui/Icons/Icons";
 import React from "react";
 
 interface SetupScreenProps {

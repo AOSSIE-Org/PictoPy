@@ -1,19 +1,23 @@
-import AIGallery from "@/components/Photos/AIgallery";
+import AIGallery from "@/components/AITagging/AIgallery";
+import { LoadingScreen } from "@/components/ui/LoadingScreen/LoadingScreen";
 
 import useAIImage from "@/hooks/AI_Image";
 
 const AITagging: React.FC = () => {
-  const localPath = localStorage.getItem("folderPath") || "";
-  const { images, loading } = useAIImage(localPath);
+  const { images, loading } = useAIImage("tagged-images");
 
   if (loading) {
-    return <div>Loading images...</div>;
+    return (
+      <div>
+        <LoadingScreen />
+      </div>
+    );
   }
 
   return (
-    <div>
-      <AIGallery images={images} title={localPath} />
-    </div>
+    <>
+      <AIGallery mediaItems={images} title="Tagged images" type="image" folderPath="" />
+    </>
   );
 };
 

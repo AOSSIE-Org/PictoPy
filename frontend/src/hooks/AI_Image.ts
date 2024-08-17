@@ -1,29 +1,9 @@
+//src\hooks\AI_Image.ts
 import { useState, useEffect } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
-
-interface Image {
-  id: string;
-  date: string;
-  title: string;
-  popularity: number;
-  src: string;
-  tags: string[];
-}
-
-const initialData = {
-  "E:/work/gsoc/New folder/PictoPy/images/001.jpg": "broccoli, bowl",
-  "/home/bassam/Documents/os/PictoPy/images/000000000025.jpg": "giraffe",
-  "/home/bassam/Documents/os/PictoPy/images/000000000030.jpg":
-    "vase, potted plant",
-  "/home/bassam/Documents/os/PictoPy/images/000000000034.jpg": "zebra",
-  "/home/bassam/Documents/os/PictoPy/images/001.jpg": "person",
-  "/home/bassam/Documents/os/PictoPy/images/001.png": "person, car",
-  "/home/bassam/Documents/os/PictoPy/images/002.jpg": "person, tie",
-  "/home/bassam/Documents/os/PictoPy/images/004.png":
-    "bowl, cup, dining table, bottle, fork, spoon, knife, wine glass",
-  "/home/bassam/Documents/os/PictoPy/images/cat.png": "cat",
-  "/home/bassam/Documents/os/PictoPy/images/zidane.jpg": "person, tie",
-};
+import { APIResponse, Image } from "@/types/image";
+import { AddFolderResult } from "@/types/Album";
+import { BACKED_URL } from "@/Config/Backend";
 
 const useAIImage = (folderPath: string) => {
   const [images, setImages] = useState<Image[]>([]);
@@ -32,10 +12,15 @@ const useAIImage = (folderPath: string) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Simulating fetching data, replace with actual API call if needed
-        const allImageObjects = initialData;
+        const response = await fetch(`${BACKED_URL}/images/all-image-objects`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const allImageObjects: APIResponse = await response.json();
 
-        const parsedAndSortedImages = parseAndSortImageData(allImageObjects);
+        const parsedAndSortedImages = parseAndSortImageData(
+          allImageObjects.data
+        );
         setImages(parsedAndSortedImages);
       } catch (error) {
         console.error("Error fetching images:", error);
@@ -47,22 +32,16 @@ const useAIImage = (folderPath: string) => {
     fetchData();
   }, [folderPath]);
 
-  const parseAndSortImageData = (data: any): Image[] => {
-    const parsedImages: Image[] = Object.entries(data).map(
-      ([src, tags], index) => {
-        const srcc = convertFileSrc(src);
-        return {
-          id: String(index),
-          date: new Date().toISOString(),
-          title: src.substring(src.lastIndexOf("/") + 1),
-          popularity: tags.split(", ").length,
-          src: srcc,
-          tags: tags.split(", "),
-        };
-      }
-    );
+  const parseAndSortImageData = (data: APIResponse["data"]): Image[] => {
+    const parsedImages: Image[] = Object.entries(data).map(([src, tags]) => {
+      const srcc = convertFileSrc(src);
+      return {
+        title: src.substring(src.lastIndexOf("\\") + 1),
 
-    parsedImages.sort((a, b) => b.popularity - a.popularity);
+        src: srcc,
+        tags: tags,
+      };
+    });
 
     return parsedImages;
   };
@@ -71,3 +50,40 @@ const useAIImage = (folderPath: string) => {
 };
 
 export default useAIImage;
+
+export function useAddFolder() {
+  const [result, setResult] = useState<AddFolderResult>({
+    data: null,
+    error: null,
+    isLoading: false,
+  });
+
+  const addFolder = async (folderPath: string): Promise<void> => {
+    setResult({ data: null, error: null, isLoading: true });
+
+    try {
+      const response = await fetch(`${BACKED_URL}/images/add-folder`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ folder_path: folderPath }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add folder");
+      }
+
+      const data = await response.json();
+      setResult({ data, error: null, isLoading: false });
+    } catch (error) {
+      setResult({
+        data: null,
+        error: (error as Error).message,
+        isLoading: false,
+      });
+    }
+  };
+
+  return { addFolder, ...result };
+}

@@ -1,18 +1,19 @@
-import VideoGallery from "@/components/Videos/VideoGallery";
-import { usevideos } from "@/hooks/UseVideos";
+import { LoadingScreen } from "@/components/ui/LoadingScreen/LoadingScreen";
+import MediaGallery from "@/components/Media/MediaGallery";
+import { useVideos } from "@/hooks/UseVideos";
 
 const Videos: React.FC = () => {
   const localPath = localStorage.getItem("folderPath") || "";
-  const { videos, loading } = usevideos(localPath);
+  const { videos, loading } = useVideos(localPath);
 
   if (loading) {
-    return <div>Loading images...</div>;
+    return <LoadingScreen />;
   }
 
   return (
-    <div>
-      <VideoGallery videos={videos} title={localPath} />
-    </div>
+    <>
+      <MediaGallery mediaItems={videos} title="Video Gallery" type="video" />
+    </>
   );
 };
 

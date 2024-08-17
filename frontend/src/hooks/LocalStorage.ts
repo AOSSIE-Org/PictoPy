@@ -1,11 +1,13 @@
 import { useState } from "react";
 
-export function useLocalStorage(key: string, initialValue: string) {
-  const [storedValue, setStoredValue] = useState(() => {
+export function useLocalStorage(
+  key: string,
+  initialValue: string
+): [string, (value: string) => void] {
+  const [storedValue, setStoredValue] = useState<string>(() => {
     try {
       const item = window.localStorage.getItem(key);
-      if (item === null) return initialValue;
-      return item ? item : initialValue;
+      return item !== null ? item : initialValue;
     } catch (error) {
       console.log(error);
       return initialValue;
@@ -15,7 +17,7 @@ export function useLocalStorage(key: string, initialValue: string) {
   const setValue = (value: string) => {
     try {
       setStoredValue(value);
-      localStorage.setItem("folderPath", value);
+      localStorage.setItem(key, value);
     } catch (error) {
       console.log(error);
     }

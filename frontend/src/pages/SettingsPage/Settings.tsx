@@ -3,7 +3,7 @@ import FolderPicker from "@/components/FolderPicker/FolderPicker";
 
 import { deleteCache } from "@/services/cacheService";
 import { Button } from "@/components/ui/button";
-import { RefreshCwIcon } from "@/components/Icons/Icons";
+import { RefreshCwIcon } from "@/components/ui/Icons/Icons";
 import { useLocalStorage } from "@/hooks/LocalStorage";
 
 const Settings: React.FC = () => {
