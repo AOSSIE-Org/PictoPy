@@ -243,3 +243,90 @@ export const useEditAlbumDescription = () => {
 
   return { editDescription, isLoading, error };
 };
+
+interface AddMultipleImagesResult {
+  data: any | null;
+  error: string | null;
+  isLoading: boolean;
+}
+
+export function useAddMultipleImages() {
+  const [result, setResult] = useState<AddMultipleImagesResult>({
+    data: null,
+    error: null,
+    isLoading: false,
+  });
+
+  const addMultipleImages = async (paths: string[]): Promise<void> => {
+    setResult({ data: null, error: null, isLoading: true });
+
+    try {
+      const response = await fetch(
+        `${BACKED_URL}/images/multiple-images`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ paths }),
+        }
+      );
+      console.log(response);
+      if (!response.ok) {
+        throw new Error("Failed to add multiple images");
+      }
+
+      const data = await response.json();
+      setResult({ data, error: null, isLoading: false });
+    } catch (error) {
+      setResult({
+        data: null,
+        error: (error as Error).message,
+        isLoading: false,
+      });
+    }
+  };
+
+  return { addMultipleImages, ...result };
+}
+
+interface Image {
+  id: string;
+  path: string;
+  // Add other properties as needed
+}
+
+export function useFetchAllImages() {
+  const [images, setImages] = useState<Image[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchImages = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${BACKED_URL}/images/all-images`, {
+        headers: {
+          accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch images");
+      }
+      const data = await response.json();
+      console.log(data);
+      setImages(data);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchImages();
+  }, []);
+
+  return { images, isLoading, error, refetch: fetchImages };
+}
