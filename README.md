@@ -1,43 +1,110 @@
-# Contents
-1. [`Backend`](#Backend)
-2. [`Project Description (PictoPy)`](#PictoPy)
-
-# Backend
-## Steps to run backend
-
-1. Head over to `/backend` after cloning
-2. Create a virtual env by running: `python3 -m venv venv`
-3. Activate the env by running `source venv/bin/activate` and install dependancies via `pip install requirments.txt`
-4. Start the server via `./run.sh` (for development mode add the flag  `--test` [RECOMMENDED])
-5. The server should now be hosted on port `8000` on localhost.
-
-## Some pointers for the backend
-
-- Entry point is `main.py` which calls the routes, currently there is a `/test` route for developing, to test an image, send a request to the backend (`localhost:8000/test/return`) with the following Body format:
-```
-{
-  "path": "<Path to image>"
-}
-```
-Eg: try it out with path as`backend/tests/inputs/zidane.jpg`
-- A window should pop up showing the highlighted detections, simply press `q` to exit, or comment out the `cv2` lines in `test.py`
-- Change the type of inference by changing `model_path` variable in `app/test` route, by default there are two models available in the `app/models` directory (face and object deteciton).
 # PictoPy
 
-An open source image sorting tool designed to organize your image collection efficiently.
+PictoPy is an advanced desktop gallery application that combines the power of Tauri, React, and Rust for the frontend with a Python backend for sophisticated image analysis and management.
 
-## Features to be Implemented
+## Architecture
 
-1. **A dedicated Local Database:**
-   - A dedicated local database for caching tags, significantly improving the speed and efficiency of image sorting.
+### Frontend
+- **Tauri**: Enables building the desktop application
+- **React**: Used for creating the user interface
+- **Rust**: Powers the backend, which the frontend communicates with through Tauri's API
 
-2. **Image Recognition Library:**
-   - Uses an advanced image recognition library for evaluating objects in images along with faces, ensuring a smoother and more accurate sorting process.
+### Backend (Python)
+- **FastAPI**: Serves as the API framework
+- **SQLite**: Database for storing metadata and embeddings
+- **YOLO**: Used for object detection
+- **FaceNet**: Generates face embeddings
+- **ONNX Runtime**: Runs the models efficiently
+- **DBSCAN**: Performs clustering for face embeddings
 
-3. **Improved UI/UX:**
-   - A smooth user interface for a more intuitive and pleasant experience. 
+### Backend (Rust via Tauri)
+Handles file system operations and provides a secure bridge between the frontend and local system.
 
-4. **Multiprocessing Support:**
-   - Pictopy should supports multiprocessing, optimizing the sorting process and improving overall performance.
+## Features
 
-   
+- Smart tagging of photos based on detected objects, faces, and their recognition
+- Traditional gallery features of album management
+- Advanced image analysis with object detection and facial recognition
+- Privacy-focused design with offline functionality
+- Efficient data handling and parallel processing
+- Smart search and retrieval
+- Cross-platform compatibility
+
+## Technical Stack
+
+| Component | Technology |
+| --------- | ---------- |
+| Frontend | React |
+| Desktop Framework | Tauri |
+| Rust Backend | Rust |
+| Python Backend | Python |
+| Database | SQLite |
+| Image Processing | OpenCV, ONNX Runtime |
+| Object Detection | YOLOv8 |
+| Face Recognition | FaceNet |
+| API Framework | FastAPI |
+| State Management | React Hooks |
+| Styling | Tailwind CSS |
+| Routing | React Router |
+| UI Components | Radix UI |
+| Build Tool | Vite |
+| Type Checking | TypeScript |
+
+## Setup
+
+### Frontend Setup
+
+#### Prerequisites
+- Node.js (LTS version recommended)
+- npm (comes with Node.js)
+- Rust (latest stable version)
+- Tauri CLI
+
+#### Installation
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+#### Running the Application
+```bash
+npm run tauri dev
+```
+
+#### Building for Production
+```bash
+npm run tauri build
+```
+
+### Python Backend Setup
+
+#### Installation
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+2. Set up a virtual environment (recommended)
+3. Install requirements:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+#### Running the Backend
+For UNIX-based systems:
+```bash
+./run.sh --test
+```
+
+The backend should now be running on port 8000 by default.
+
+## Additional Resources
+- [Tauri Documentation](https://tauri.app/v1/guides/)
+- [React Documentation](https://reactjs.org/docs/getting-started.html)
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+
+## Troubleshooting
+If you encounter any issues, please check the respective documentation for Tauri, React, and FastAPI. For persistent problems, feel free to open an issue in the project repository.
