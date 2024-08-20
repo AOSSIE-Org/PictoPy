@@ -30,9 +30,18 @@
 
 | Component | Technology |
 | --------- | ---------- |
-| Backend | Python |
+| Frontend | React |
+| Desktop Framework | Tauri |
+| Rust Backend | Rust |
+| Python Backend | Python |
 | Database | SQLite |
 | Image Processing | OpenCV, ONNX Runtime |
 | Object Detection | YOLOv8 |
 | Face Recognition | FaceNet |
 | API Framework | FastAPI |
+| State Management | React Hooks |
+| Styling | Tailwind CSS |
+| Routing | React Router |
+| UI Components | Radix UI |
+| Build Tool | Vite |
+| Type Checking | TypeScript |
