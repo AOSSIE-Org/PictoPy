@@ -11,7 +11,7 @@
 
 PictoPy is an advanced multimedia management application designed to streamline the organization, classification, and manipulation of images and videos. Built with a robust backend using Flask and a dynamic frontend leveraging modern web technologies, PictoPy provides a seamless user experience for managing media files.
 
-> For Other Sections Of Documentation including Development phase, check [Docs folder](./docs) or the [**Wiki**](https://github.com/imxade/pictopyGSOC/wiki).
+> For Other Sections Of Documentation including **Development phase**, check [Docs folder](./docs) or the [**Wiki**](https://github.com/imxade/pictopyGSOC/wiki).
 
 ### Key Features
 
