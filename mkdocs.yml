@@ -60,17 +60,23 @@ nav:
   - Home:
       - Introduction: index.md
       - Overview: overview/features.md
-      - Backend: backend/setup.md
+      - Backend:
+          - Python Backend: backend/backend_python/setup.md
+          - Rust Backend: backend/backend_rust/setup.md
       - Frontend: frontend/setup.md
   - Overview:
       - Features: overview/features.md
       - Architecture: overview/architecture.md
   - Backend:
-      - Setup: backend/setup.md
-      - Directory Structure: backend/directory-structure.md
-      - Database: backend/database.md
-      - API: backend/api.md
-      - Image Processing: backend/image-processing.md
+      - Python Backend:
+          - Setup: backend/backend_python/setup.md
+          - Directory Structure: backend/backend_python/directory-structure.md
+          - Database: backend/backend_python/database.md
+          - API: backend/backend_python/api.md
+          - Image Processing: backend/backend_python/image-processing.md
+      - Rust Backend:
+          - Setup: backend/backend_rust/setup.md
+          - API: backend/backend_rust/api.md
   - Frontend:
       - Setup: frontend/setup.md
       - UI Components: frontend/ui-components.md
