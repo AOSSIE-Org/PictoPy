@@ -294,10 +294,14 @@ function toggleGroupSelection(pathsArray) {
 
 // Update the selection status of a card
 function updateCardSelection(path) {
+    console.log(`Called updateCardSelection with path: ${path}`);
     const cards = document.getElementsByClassName('card');
+    console.log(`Found ${cards.length} cards`);
     for (const card of cards) {
-        if (card.querySelector('img').src.endsWith(path)) {
+        console.log(`Processing card: ${card.outerHTML}`);
+        if (card.querySelector('img').src.endsWith(path.replace(/\\/g, '/'))) {
             card.classList.toggle('selected', selectedMedia.includes(path));
+            console.log("Selected");
         }
     }
 }

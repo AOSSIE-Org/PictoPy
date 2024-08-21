@@ -2,40 +2,12 @@ import os
 from typing import Dict, List
 from utils import *
 from media import *
+from config import *
 from flask import Flask, render_template, send_file, request, redirect, url_for, Response, jsonify
 from markupsafe import escape
 from urllib.parse import unquote
 
 writing = False
-
-def dataDir() -> str:
-    """
-    Data directory is created on the user's home directory.
-
-    Returns:
-        str: The path to the home directory.
-    """
-    directory = os.path.join(os.path.expanduser("~"), ".pictopy")
-    os.makedirs(directory, exist_ok=True)
-    return directory 
-
-def dbPath() -> str:
-    """
-    Database is created on the user's home directory.
-
-    Returns:
-        str: The path to the database file.
-    """
-    return os.path.join(dataDir(), "database.db")
-
-def logPath() -> str:
-    """
-    Log file is created on the user's home directory.
-
-    Returns:
-        str: The path to the log file.
-    """
-    return os.path.join(dataDir(), "log.txt")
 
 def updateDB(groupBy: str = None) -> None:
     """

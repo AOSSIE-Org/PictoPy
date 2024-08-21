@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - artifact
-      - version_2
   pull_request:
     branches:
       - main
