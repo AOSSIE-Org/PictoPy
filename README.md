@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="../raw/version_2/static/asset/favicon.ico" alt="PictoPy Logo" width="100px">
+  <img src="https://aossie.org/_next/static/media/Pictopy.bdb654f4.png" alt="PictoPy Logo" width="100px">
 
   <a href="https://aossie.org/">
     <img src="https://aossie.org/logo1.png" alt="PictoPy Logo" width="100px">
