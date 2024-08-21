@@ -82,6 +82,10 @@ nav:
       - UI Components: frontend/ui-components.md
       - State Management: frontend/state-management.md
       - Gallery View: frontend/gallery-view.md
+  - GSoC:
+      - GSoC: GSoC/GSoC.md
+      - GSoC2024:
+          - Bassam Adnan: GSoC/GSoC2024/BassamAdnan.md
 
 extra:
   social:

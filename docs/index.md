@@ -21,6 +21,10 @@ This project was announced by [AOSSIE](https://aossie.org/), an umbrella organiz
                    Architecture
                  </a>
             </li>
+            <li><a href='./GSoC/GSoC'>
+                   GSoC
+                 </a>
+            </li>
         </ul>
     </div>
     <div style="width:25%">

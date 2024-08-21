@@ -27,13 +27,11 @@ We use DBSCAN algorithm to perform clustering for face embeddings generated. All
 on queries from the backend.
 
 !!! note "Note"
-We discuss all of the features and configuration of our application in further sections of the documentation. They can be used for both developers
-as well as users who want to use the app. A postman collection has also been added which can be found in our API section.
+    We discuss all of the features and configuration of our application in further sections of the documentation. They can be used for both developers
+    as well as users who want to use the app. A postman collection has also been added which can be found in our API section.
 <br>
 <br>
 
 ## Backend rust (via Tauri)
 
 The Rust backend, integrated through Tauri, is a core component of our application. It leverages Rust's performance and safety features to handle file system operations, provide a secure bridge between the frontend and the local system, and manage OS-level interactions. This backend efficiently manages tasks such as reading and writing image files, extracting metadata, and ensuring secure access to system resources. It communicates with the React frontend through an IPC mechanism, allowing for seamless integration of low-level functionalities with the user interface. This architecture enables high-performance, secure operations on the local system while maintaining a smooth user experience.
-
-
