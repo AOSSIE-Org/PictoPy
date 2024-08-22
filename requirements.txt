@@ -25,3 +25,4 @@ QtPy
 sympy
 typing_extensions
 Werkzeug
+xxhash

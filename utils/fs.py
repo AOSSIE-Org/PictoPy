@@ -1,11 +1,18 @@
 import os
 import sys
-import hashlib
+import xxhash
+import mmap
 from typing import Generator, Union, List
+from markupsafe import escape
+from urllib.parse import unquote
 
 def genHash(path: str) -> str:
     """
-    Generates a hash of file.
+    Generates a fast, non-cryptographic hash of a file using xxHash 
+    And memory mapping making file's content to be accessible as if 
+    it were part of the program's memory, but it's actually stored on disk. 
+    Why hash and not uuid?
+    Hashes are based on content and not on name/path.
 
     Args:
         path: Path to the file.
@@ -13,9 +20,15 @@ def genHash(path: str) -> str:
     Returns:
         A hexadecimal string representing the hash of the file.
     """
-    with open(path, "rb") as f:
-        return hashlib.md5(f.read()).hexdigest()
-
+    try:
+        hash_xx = xxhash.xxh64()
+        with open(path, "rb") as f:
+            with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
+                hash_xx.update(mm)
+        return hash_xx.hexdigest()
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
 
 def checkExtension(filePath: str, extensions: List[str]) -> bool:
     """
@@ -78,16 +91,6 @@ def detectFileWithHash(files: Generator[str, None, None], targetHash: str) -> Un
     return None
 
 
-def homeDir() -> str:
-    """
-    Get the home directory path.
-    Handle Android (TBI)
-
-    Returns:
-        str: Home directory path.
-    """
-    return os.path.expanduser("~")
-
 def deleteFile(paths: List[str]) -> None:
     """
     Delete files by path.
@@ -128,3 +131,27 @@ def pathOf(path) -> str:
     if pathExist(path):
         return path
     return f"{sys._MEIPASS}/{path}" 
+
+def decodeLinkPath(path: str) -> str:
+    """
+    Decodes a URL-encoded path and attempts to find the corresponding file or directory.
+    If the file or directory exists under either the Unix-style path or the relative path,
+    it returns the absolute path. Otherwise, it should redirect to the index page.
+
+    Args:
+        path: The URL-encoded path to decode and locate.
+
+    Returns:
+        The absolute path if found, or a redirect to the index page if not.
+    """
+    path = escape(unquote(path))
+
+    # Convert the path to Windows-style path for checking
+    unixPath = f"/{path}"
+    if pathExist(unixPath):
+        return unixPath
+
+    # Convert the path to Windows-style path for checking
+    windowsPath = path.replace("/", "\\")
+    if pathExist(windowsPath):
+        return windowsPath
