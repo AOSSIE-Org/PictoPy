@@ -11,7 +11,7 @@
 
 PictoPy is an advanced multimedia management application designed to streamline the organization, classification, and manipulation of images and videos. Built with a robust backend using Flask and a dynamic frontend leveraging modern web technologies, PictoPy provides a seamless user experience for managing media files.
 
-> For Other Sections Of Documentation including **Development phase**, check [Docs folder](./docs) or the [**Wiki**](https://github.com/imxade/pictopyGSOC/wiki).
+> For Other Sections Of Documentation including **Development phase**, check [Docs folder](./docs) or the [**Wiki**](https://github.com/imxade/pictopy/wiki).
 
 ### Key Features
 
@@ -42,7 +42,7 @@ PictoPy is an advanced multimedia management application designed to streamline 
 
 ### Bleeding Edge Candidates:
 - **Location:**
-  - Navigate to the [**Actions**](https://github.com/imxade/pictopyGSOC/actions) section of the repository.
+  - Navigate to the [**Actions**](https://github.com/imxade/pictopy/actions) section of the repository.
 - **Details:**
   - This section contains the latest builds, which may include new features and bug fixes.
   - Click on the latest (topmost) action in the list.
@@ -53,7 +53,7 @@ PictoPy is an advanced multimedia management application designed to streamline 
 ### Released Candidates:
 > Currently no releases has been made
 - **Location:**
-  - Navigate to the [**Releases**](https://github.com/imxade/pictopyGSOC/releases) section of the repository.
+  - Navigate to the [**Releases**](https://github.com/imxade/pictopy/releases) section of the repository.
 - **Details:**
   - This section **will** contain stable versions of the application.
   - Download the desired release by clicking on the relevant version.
