@@ -80,24 +80,59 @@ npm run tauri dev
 npm run tauri build
 ```
 
-### Python Backend Setup
+`# Python Backend Setup
 
-#### Installation
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Set up a virtual environment (recommended)
-3. Install requirements:
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Installation
 
-#### Running the Backend
-For UNIX-based systems:
+### Navigate to the backend directory:
 ```bash
-./run.sh --test
-```
+cd backend `
+
+### Set up a virtual environment (recommended)
+
+`python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate`
+
+### Install requirements:
+
+
+`pip install -r requirements.txt`
+
+### Install missing system dependencies:
+
+You may encounter issues with missing libraries like `libGL.so.1`, which is required by OpenCV. To resolve this, install the necessary dependencies:
+
+For Debian/Ubuntu-based systems:
+
+`sudo apt-get update
+sudo apt-get install -y libglib2.0-dev libgl1-mesa-glx`
+
+### Permission errors with `run.sh`:
+
+If you encounter a "Permission denied" error while trying to execute the `run.sh` script, make sure to grant execute permissions:
+
+
+
+`chmod +x ./run.sh`
+
+### `gobject-2.0` not found error:
+
+If you receive an error related to `gobject-2.0`, you will need to install `libglib2.0-dev`:
+
+
+
+`sudo apt-get install -y libglib2.0-dev pkg-config`
+
+Running the Backend
+-------------------
+
+For UNIX-based systems:
+
+bash
+
+Copy code
+
+`./run.sh --test`
 
 The backend should now be running on port 8000 by default.
 
