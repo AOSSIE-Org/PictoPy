@@ -19,7 +19,7 @@
   },
   "productName": "tauri-app",
   "version": "0.0.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.tauri.dev", 
   "plugins": {},
   "app": {
     "windows": [
@@ -32,7 +32,6 @@
       }
     ],
     "security": {
-   
       "assetProtocol": {
         "scope": [
           "**"
@@ -41,6 +40,5 @@
       },
       "csp": null
     }
-    
   }
 }
