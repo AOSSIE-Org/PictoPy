@@ -79,61 +79,128 @@ npm run tauri dev
 ```bash
 npm run tauri build
 ```
+### Python Backend Setup
 
-`# Python Backend Setup
-
-## Installation
-
-### Navigate to the backend directory:
-```bash
-cd backend `
-
-### Set up a virtual environment (recommended)
-
-`python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate`
-
-### Install requirements:
+#### Installation Steps
 
 
-`pip install -r requirements.txt`
+1.  **Navigate to the Backend Directory:** Open your terminal and use `cd` to change directories:
 
-### Install missing system dependencies:
+    Bash
 
-You may encounter issues with missing libraries like `libGL.so.1`, which is required by OpenCV. To resolve this, install the necessary dependencies:
+    ```
+    cd backend
 
-For Debian/Ubuntu-based systems:
-
-`sudo apt-get update
-sudo apt-get install -y libglib2.0-dev libgl1-mesa-glx`
-
-### Permission errors with `run.sh`:
-
-If you encounter a "Permission denied" error while trying to execute the `run.sh` script, make sure to grant execute permissions:
+    ```
 
 
+2.  **Set Up a Virtual Environment (Highly Recommended):** Virtual environments isolate project dependencies. Create one using:
 
-`chmod +x ./run.sh`
+    Bash
 
-### `gobject-2.0` not found error:
+    ```
+    python -m venv venv  # Replace "venv" with your desired environment name
 
-If you receive an error related to `gobject-2.0`, you will need to install `libglib2.0-dev`:
+    ```
+
+
+    Activate it for Linux/macOS:
+
+    Bash
+
+    ```
+    source venv/bin/activate
+
+    ```
+
+ 
+
+    Activate it for Windows:
+
+    Bash
+
+    ```
+    venv\Scripts\activate.bat
+
+    ```
+
+3.  **Install Dependencies:** The `requirements.txt` file lists required packages. Install them using pip:
+
+    Bash
+
+    ```
+    pip install -r requirements.txt
+
+    ```
 
 
 
-`sudo apt-get install -y libglib2.0-dev pkg-config`
+4.  **Missing System Dependencies:** Some dependencies might need system-level libraries like `libGL.so.1` (often needed by OpenCV). Install the appropriate packages based on your distribution:
 
-Running the Backend
--------------------
+    **Debian/Ubuntu:**
 
-For UNIX-based systems:
+    Bash
 
-bash
+    ```
+    sudo apt update
+    sudo apt install -y libglib2.0-dev libgl1-mesa-glx
 
-Copy code
+    ```
 
-`./run.sh --test`
+  
 
+    **Other Systems:** Consult your distribution's documentation for installation instructions.
+
+5.  **Permission Errors with `run.sh`:** If you encounter a "Permission denied" error when running `run.sh`, grant execute permissions:
+
+    Bash
+
+    ```
+    chmod +x ./run.sh
+
+    ```
+
+
+
+6.  **`gobject-2.0` Not Found Error:** Resolve this error by installing `libglib2.0-dev` (Debian/Ubuntu):
+
+    Bash
+
+    ```
+    sudo apt install -y libglib2.0-dev pkg-config
+
+    ```
+
+
+    For other systems, consult your distribution's documentation.
+
+**Running the Backend**
+
+Once installation and dependency resolution are complete, you can start the backend server:
+
+**UNIX-based Systems (Linux, macOS):**
+
+Bash
+
+```
+./run.sh  # To run in production mode
+./run.sh --test  # To run in testing mode (if a test script exists)
+
+```
+
+
+
+**Windows:**
+
+Bash
+
+```
+run.bat  # To run in production mode
+run.bat --test  # To run in testing mode (if a test script exists)
+
+```
+
+Us
 The backend should now be running on port 8000 by default.
 
 ## Additional Resources
