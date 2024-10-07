@@ -19,7 +19,7 @@
   },
   "productName": "tauri-app",
   "version": "0.0.0",
-  "identifier": "com.xxxx.x", 
+  "identifier": "com.tauri.dev", 
   "plugins": {},
   "app": {
     "windows": [
