@@ -5,6 +5,7 @@ This module contains the main FastAPI application.
 from time import sleep
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 
 from app.database.faces import cleanup_face_embeddings, create_faces_table
 from app.database.images import create_image_id_mapping_table, create_images_table
@@ -17,11 +18,8 @@ from app.routes.albums import router as albums_router
 from app.routes.facetagging import router as tagging_router
 
 
-app = FastAPI()
-
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     create_YOLO_mappings()
     create_faces_table()
     create_image_id_mapping_table()
@@ -29,14 +27,12 @@ async def startup_event():
     create_albums_table()
     cleanup_face_embeddings()
     init_face_cluster()
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
+    yield
     face_cluster = get_face_cluster()
     if face_cluster:
         face_cluster.save_to_db()
 
+app = FastAPI(lifespan=lifespan)
 
 # Add CORS middleware
 app.add_middleware(
