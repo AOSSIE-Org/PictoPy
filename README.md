@@ -79,26 +79,128 @@ npm run tauri dev
 ```bash
 npm run tauri build
 ```
-
 ### Python Backend Setup
 
-#### Installation
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Set up a virtual environment (recommended)
-3. Install requirements:
-   ```bash
-   pip install -r requirements.txt
-   ```
+#### Installation Steps
 
-#### Running the Backend
-For UNIX-based systems:
-```bash
-./run.sh --test
+
+1.  **Navigate to the Backend Directory:** Open your terminal and use `cd` to change directories:
+
+    Bash
+
+    ```
+    cd backend
+
+    ```
+
+
+2.  **Set Up a Virtual Environment (Highly Recommended):** Virtual environments isolate project dependencies. Create one using:
+
+    Bash
+
+    ```
+    python -m venv venv  # Replace "venv" with your desired environment name
+
+    ```
+
+
+    Activate it for Linux/macOS:
+
+    Bash
+
+    ```
+    source venv/bin/activate
+
+    ```
+
+ 
+
+    Activate it for Windows:
+
+    Bash
+
+    ```
+    venv\Scripts\activate.bat
+
+    ```
+
+3.  **Install Dependencies:** The `requirements.txt` file lists required packages. Install them using pip:
+
+    Bash
+
+    ```
+    pip install -r requirements.txt
+
+    ```
+
+
+
+4.  **Missing System Dependencies:** Some dependencies might need system-level libraries like `libGL.so.1` (often needed by OpenCV). Install the appropriate packages based on your distribution:
+
+    **Debian/Ubuntu:**
+
+    Bash
+
+    ```
+    sudo apt update
+    sudo apt install -y libglib2.0-dev libgl1-mesa-glx
+
+    ```
+
+  
+
+    **Other Systems:** Consult your distribution's documentation for installation instructions.
+
+5.  **Permission Errors with `run.sh`:** If you encounter a "Permission denied" error when running `run.sh`, grant execute permissions:
+
+    Bash
+
+    ```
+    chmod +x ./run.sh
+
+    ```
+
+
+
+6.  **`gobject-2.0` Not Found Error:** Resolve this error by installing `libglib2.0-dev` (Debian/Ubuntu):
+
+    Bash
+
+    ```
+    sudo apt install -y libglib2.0-dev pkg-config
+
+    ```
+
+
+    For other systems, consult your distribution's documentation.
+
+**Running the Backend**
+
+Once installation and dependency resolution are complete, you can start the backend server:
+
+**UNIX-based Systems (Linux, macOS):**
+
+Bash
+
+```
+./run.sh  # To run in production mode
+./run.sh --test  # To run in testing mode (if a test script exists)
+
 ```
 
+
+
+**Windows:**
+
+Bash
+
+```
+run.bat  # To run in production mode
+run.bat --test  # To run in testing mode (if a test script exists)
+
+```
+
+Us
 The backend should now be running on port 8000 by default.
 
 ## Additional Resources
