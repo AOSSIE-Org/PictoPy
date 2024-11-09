@@ -180,28 +180,41 @@ Once installation and dependency resolution are complete, you can start the back
 
 **UNIX-based Systems (Linux, macOS):**
 
-Bash
+bash
 
-```
-./run.sh  # To run in production mode
-./run.sh --test  # To run in testing mode (if a test script exists)
+Copy
 
-```
-
-
+`./run.sh  # To run in production mode
+./run.sh --test  # To run in testing mode`
 
 **Windows:**
 
-Bash
+Using PowerShell (Recommended):
 
-```
-run.bat  # To run in production mode
-run.bat --test  # To run in testing mode (if a test script exists)
+powershell
 
-```
+Copy
 
-Us
-The backend should now be running on port 8000 by default.
+`.\run-server.ps1  # To run in production mode
+.\run-server.ps1 --test  # To run in testing mode`
+
+Note: If you encounter a PowerShell execution policy error, run this command first:
+
+powershell
+
+`Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+
+Alternative using Batch (Legacy):
+
+batch
+
+
+`run.bat  # To run in production mode
+run.bat --test # To run in testing mode`
+
+The server will start on `http://localhost:8000` by default. In test mode, the server will automatically restart if any errors are detected or if source files are modified.
+
+You can control the number of workers by setting the `WORKERS` environment variable before running the script. If not set, it defaults to 1 worker.
 
 ## Additional Resources
 - [Tauri Documentation](https://tauri.app/v1/guides/)
