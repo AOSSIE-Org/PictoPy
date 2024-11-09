@@ -182,10 +182,10 @@ Once installation and dependency resolution are complete, you can start the back
 
 bash
 
-Copy
-
-`./run.sh  # To run in production mode
-./run.sh --test  # To run in testing mode`
+```
+./run.sh  # To run in production mode
+./run.sh --test  # To run in testing mode
+```
 
 **Windows:**
 
@@ -193,24 +193,26 @@ Using PowerShell (Recommended):
 
 powershell
 
-Copy
-
-`.\run-server.ps1  # To run in production mode
-.\run-server.ps1 --test  # To run in testing mode`
+```
+.\run-server.ps1  # To run in production mode
+.\run-server.ps1 --test  # To run in testing mode
+```
 
 Note: If you encounter a PowerShell execution policy error, run this command first:
 
 powershell
 
-`Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+```
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
 
 Alternative using Batch (Legacy):
+bash
 
-batch
-
-
-`run.bat  # To run in production mode
-run.bat --test # To run in testing mode`
+```
+run.bat  # To run in production mode
+run.bat --test # To run in testing mode
+```
 
 The server will start on `http://localhost:8000` by default. In test mode, the server will automatically restart if any errors are detected or if source files are modified.
 
