@@ -86,7 +86,7 @@ npm run tauri dev
 Create Signing Keys for tauri using the command:
 
 ```bash
-npm run tauri signer generate -- -w ~/.tauri/myapp.key
+npm run tauri signer generate
 ```
 
 Set the public key in tauri.conf.json as pubkey and private key and password in Enviroment Variables as TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD
