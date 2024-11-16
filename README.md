@@ -105,6 +105,20 @@ TAURI_SIGNING_PRIVATE_KEY_PASSWORD=pass
 npm run tauri build
 ```
 
+#### Running the Dockerfile
+
+To build the Docker image, use the following command:
+```bash
+docker build --build-arg TAURI_SIGNING_PRIVATE_KEY=<private_key> --build-arg TAURI_SIGNING_PRIVATE_KEY_PASSWORD=<password> -t <image_name> .
+```
+Replace <private_key> and <password> with your actual Tauri signing private key and password and <image_name> with the image name. If you are using the default key, you can use the following command:
+
+```bash
+docker build --build-arg TAURI_SIGNING_PRIVATE_KEY=dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5NlF2SjE3cWNXOVlQQ0JBTlNITEpOUVoyQ3ZuNTdOSkwyNE1NN2RmVWQ1a0FBQkFBQUFBQUFBQUFBQUlBQUFBQU9XOGpTSFNRd0Q4SjNSbm5Oc1E0OThIUGx6SS9lWXI3ZjJxN3BESEh1QTRiQXlkR2E5aG1oK1g0Tk5kcmFzc0IvZFZScEpubnptRkxlbDlUR2R1d1Y5OGRSYUVmUGoxNTFBcHpQZ1dSS2lHWklZVHNkV1Byd1VQSnZCdTZFWlVGOUFNVENBRlgweUU9Cg== --build-arg TAURI_SIGNING_PRIVATE_KEY_PASSWORD=pass -t <image_name> .
+```
+This command uses the preset private key and password.
+
+
 ### Python Backend Setup
 
 #### Installation Steps

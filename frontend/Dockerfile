@@ -1,7 +1,7 @@
-# Use Ubuntu 22.04 as base for newer GLib version
+# Use Ubuntu 22.04 as the base image
 FROM ubuntu:22.04
 
-# Install dependencies (including GLib >= 2.70)
+# Install dependencies 
 RUN apt-get update && \
     apt-get install -y \
         curl \
@@ -22,9 +22,6 @@ RUN apt-get update && \
         libwebkit2gtk-4.1-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set PKG_CONFIG_PATH environment variable
-# ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
-
 # Install Node.js (Node.js 16 is compatible with Tauri)
 RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
     apt-get install -y nodejs
@@ -36,6 +33,10 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Install Tauri CLI
 RUN npm install -g @tauri-apps/cli
 
+# Define build arguments
+ARG TAURI_SIGNING_PRIVATE_KEY
+ARG TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+
 # Copy the application source code to the container
 WORKDIR /app
 COPY . .
@@ -43,8 +44,9 @@ COPY . .
 # Install dependencies
 RUN npm install
 
-ENV TAURI_SIGNING_PRIVATE_KEY=dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5NlF2SjE3cWNXOVlQQ0JBTlNITEpOUVoyQ3ZuNTdOSkwyNE1NN2RmVWQ1a0FBQkFBQUFBQUFBQUFBQUlBQUFBQU9XOGpTSFNRd0Q4SjNSbm5Oc1E0OThIUGx6SS9lWXI3ZjJxN3BESEh1QTRiQXlkR2E5aG1oK1g0Tk5kcmFzc0IvZFZScEpubnptRkxlbDlUR2R1d1Y5OGRSYUVmUGoxNTFBcHpQZ1dSS2lHWklZVHNkV1Byd1VQSnZCdTZFWlVGOUFNVENBRlgweUU9Cg==
-ENV TAURI_SIGNING_PRIVATE_KEY_PASSWORD=pass
+# Set environment variables using build arguments
+ENV TAURI_SIGNING_PRIVATE_KEY=$TAURI_SIGNING_PRIVATE_KEY
+ENV TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 
 # Build the frontend (React app)
 RUN npm run build
