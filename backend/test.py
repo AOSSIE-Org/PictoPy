@@ -3,6 +3,9 @@ import json
 import numpy as np
 from sklearn.cluster import DBSCAN
 from app.config.settings import FACES_DATABASE_PATH, IMAGES_DATABASE_PATH
+import os 
+from PIL import Image
+from app.image_captioning.caption import caption1
 
 
 def get_all_face_embeddings():
@@ -36,6 +39,25 @@ def get_all_face_embeddings():
     conn_images.close()
     return np.array(all_embeddings), image_paths, skipped_images
 
+def captioning_images():
+    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT path FROM image_id_mapping;")
+    paths = [row[0] for row in cursor.fetchall()]  
+    
+    conn.close()
+    captions = []
+    paths = []
+    for i in paths:
+        img = Image.open(os.path.abspath(i))  
+        img = np.array(img) 
+        caption = caption1(img)
+        print(f"{os.path.abspath(i)}:{caption}")
+        captions.append(caption)
+        paths.append(os.path.abspath(i))
+    print(captions)
+    print(paths)
 
 def main():
     embedding_array, image_paths, skipped_images = get_all_face_embeddings()
@@ -68,6 +90,7 @@ def main():
 
     n_clusters = len(valid_clusters) - (1 if -1 in valid_clusters else 0)
     print(f"\nNumber of valid clusters found: {n_clusters}")
+    captioning_images()
 
 
 if __name__ == "__main__":
