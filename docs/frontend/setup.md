@@ -25,9 +25,23 @@ All commands executed below are with respect to the `frontend/` directory
    ```
 
 2. Install the project dependencies:
-   ```bash
-   npm install
-   ```
+   - For Windows/Mac
+    ```bash
+    npm install
+    ```
+   - For Linux
+   
+     1.Installing Dependencies
+        ```bash 
+         npm install
+        ```
+     2.Grant executable permissions to the setup script:  
+      ```bash
+      chmod +x scripts/setup_env.sh
+      ```
+     3.Run the dependencies script
+        ```bash 
+        npm run setup:linux
 
 For more information on npm commands, see the [npm documentation](https://docs.npmjs.com/).
 
