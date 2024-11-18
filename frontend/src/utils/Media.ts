@@ -1,19 +1,19 @@
 // Media.ts
 
-import { MediaItem } from "@/types/Media";
+import { MediaItem } from '@/types/Media';
 
 export function sortMedia(
   mediaItems: MediaItem[],
-  sortBy: string
+  sortBy: string,
 ): MediaItem[] {
   return [...mediaItems].sort((a, b) => {
     const aDate = a.date ? new Date(a.date) : new Date();
     const bDate = b.date ? new Date(b.date) : new Date();
 
-    if (sortBy === "date") {
+    if (sortBy === 'date') {
       return 0;
-    } else if (sortBy.startsWith("year-")) {
-      const year = parseInt(sortBy.split("-")[1]);
+    } else if (sortBy.startsWith('year-')) {
+      const year = parseInt(sortBy.split('-')[1]);
       const aYear = aDate.getFullYear();
       const bYear = bDate.getFullYear();
 
@@ -27,7 +27,7 @@ export function sortMedia(
       return 0;
     } else {
       console.warn(
-        `Invalid sortBy option: ${sortBy}. Defaulting to date sorting.`
+        `Invalid sortBy option: ${sortBy}. Defaulting to date sorting.`,
       );
       return bDate.getTime() - aDate.getTime();
     }

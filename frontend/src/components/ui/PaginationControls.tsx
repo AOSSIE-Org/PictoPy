@@ -1,4 +1,4 @@
-import { PaginationControlsProps } from "@/types/Media";
+import { PaginationControlsProps } from '@/types/Media';
 import {
   Pagination,
   PaginationContent,
@@ -6,7 +6,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "./pagination";
+} from './pagination';
 
 export default function PaginationControls({
   currentPage,
@@ -23,7 +23,7 @@ export default function PaginationControls({
     if (startPage > 1) {
       pages.push(1);
       if (startPage > 2) {
-        pages.push("...");
+        pages.push('...');
       }
     }
 
@@ -33,7 +33,7 @@ export default function PaginationControls({
 
     if (endPage < totalPages) {
       if (endPage < totalPages - 1) {
-        pages.push("...");
+        pages.push('...');
       }
       pages.push(totalPages);
     }
@@ -42,12 +42,12 @@ export default function PaginationControls({
   };
 
   return (
-    <div className="flex justify-center mt-6">
+    <div className="mt-6 flex justify-center">
       <Pagination>
         <PaginationPrevious onClick={() => onPageChange(currentPage - 1)} />
         <PaginationContent>
           {getPageNumbers().map((page, index) =>
-            page === "..." ? (
+            page === '...' ? (
               <PaginationItem key={index}>
                 <PaginationLink>{page}</PaginationLink>
               </PaginationItem>
@@ -60,7 +60,7 @@ export default function PaginationControls({
                   {page}
                 </PaginationLink>
               </PaginationItem>
-            )
+            ),
           )}
         </PaginationContent>
         <PaginationNext onClick={() => onPageChange(currentPage + 1)} />
