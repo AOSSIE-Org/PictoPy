@@ -28,6 +28,8 @@ packages=(
     libjavascriptcoregtk-4.1-dev
     libsoup-3.0-dev
     libwebkit2gtk-4.1-dev
+    librsvg2-dev
+    file 
 )
 
 # check and install required packages
