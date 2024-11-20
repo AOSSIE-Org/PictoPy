@@ -41,20 +41,14 @@ ARG TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 
 # Copy the application source code to the container
 WORKDIR /app
-COPY . .
-
+# Copy the package.json file
+COPY package.json .
 # Install dependencies
 RUN npm install
-
+# Copy the rest of the code
+COPY . .
 # Set environment variables using build arguments
 ENV TAURI_SIGNING_PRIVATE_KEY=$TAURI_SIGNING_PRIVATE_KEY
 ENV TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$TAURI_SIGNING_PRIVATE_KEY_PASSWORD
-
-# Build the frontend (React app)
-RUN npm run build
-
-# Build the Tauri application
-RUN npm run tauri build -v
-
 # Set the container's entrypoint to access the bundled files
 CMD ["bash"]
