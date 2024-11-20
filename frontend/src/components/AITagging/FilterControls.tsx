@@ -1,18 +1,18 @@
-import React from "react";
+import React from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
+} from '../ui/dropdown-menu';
 
-import { Button } from "../ui/button";
-import { MediaItem } from "@/types/Media";
-import FolderPicker from "../FolderPicker/FolderPicker";
-import { useAddFolder } from "@/hooks/AI_Image";
-import LoadingScreen from "../ui/LoadingScreen/LoadingScreen";
-import { ListOrderedIcon } from "../ui/Icons/Icons";
+import { Button } from '../ui/button';
+import { MediaItem } from '@/types/Media';
+import FolderPicker from '../FolderPicker/FolderPicker';
+import { useAddFolder } from '@/hooks/AI_Image';
+import LoadingScreen from '../ui/LoadingScreen/LoadingScreen';
+import { ListOrderedIcon } from '../ui/Icons/Icons';
 
 interface FilterControlsProps {
   filterTag: string;
@@ -38,7 +38,7 @@ export default function FilterControls({
   const uniqueTags = React.useMemo(() => {
     const allTags = mediaItems.flatMap((item) => item.tags);
     return Array.from(new Set(allTags))
-      .filter((tag): tag is string => typeof tag === "string")
+      .filter((tag): tag is string => typeof tag === 'string')
       .sort();
   }, [mediaItems]);
 
@@ -47,7 +47,7 @@ export default function FilterControls({
       await addFolder(path);
       await onFolderAdded();
     } catch (error) {
-      console.error("Error adding folder:", error);
+      console.error('Error adding folder:', error);
     }
   };
 
@@ -62,12 +62,12 @@ export default function FilterControls({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="flex items-center gap-2">
-              <ListOrderedIcon className="w-4 h-4" />
-              Filter by {filterTag || "tags"}
+              <ListOrderedIcon className="h-4 w-4" />
+              Filter by {filterTag || 'tags'}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-[200px] bg-white  dark:text-foreground"
+            className="w-[200px] bg-white dark:text-foreground"
             align="end"
           >
             <DropdownMenuRadioGroup

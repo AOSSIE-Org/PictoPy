@@ -1,11 +1,11 @@
-import { useCallback, useMemo, useState } from "react";
-import FilterControls from "./FilterControls";
-import MediaGrid from "../Media/Mediagrid";
+import { useCallback, useMemo, useState } from 'react';
+import FilterControls from './FilterControls';
+import MediaGrid from '../Media/Mediagrid';
 
-import { MediaGalleryProps } from "@/types/Media";
-import MediaView from "../Media/MediaView";
-import useAIImage from "../../hooks/AI_Image";
-import PaginationControls from "../ui/PaginationControls";
+import { MediaGalleryProps } from '@/types/Media';
+import MediaView from '../Media/MediaView';
+import useAIImage from '../../hooks/AI_Image';
+import PaginationControls from '../ui/PaginationControls';
 
 export default function AIGallery({
   title,
@@ -13,7 +13,7 @@ export default function AIGallery({
   folderPath,
 }: MediaGalleryProps & { folderPath: string }) {
   const { images: mediaItems, loading } = useAIImage(folderPath);
-  const [filterTag, setFilterTag] = useState<string>("");
+  const [filterTag, setFilterTag] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
@@ -23,7 +23,7 @@ export default function AIGallery({
   const filteredMediaItems = useMemo(() => {
     return filterTag
       ? mediaItems.filter((mediaItem: any) =>
-          mediaItem.tags.includes(filterTag)
+          mediaItem.tags.includes(filterTag),
         )
       : mediaItems;
   }, [filterTag, mediaItems]);
@@ -49,8 +49,8 @@ export default function AIGallery({
 
   return (
     <div className="container">
-      <div className="dark:bg-background dark:text-foreground max-w-6xl mx-auto px-4 md:px-6 py-8">
-        <div className="flex items-center justify-between mb-6">
+      <div className="mx-auto max-w-6xl px-4 py-8 dark:bg-background dark:text-foreground md:px-6">
+        <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold">{title}</h1>
 
           <FilterControls

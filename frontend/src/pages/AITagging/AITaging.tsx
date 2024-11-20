@@ -1,10 +1,10 @@
-import AIGallery from "@/components/AITagging/AIgallery";
-import { LoadingScreen } from "@/components/ui/LoadingScreen/LoadingScreen";
+import AIGallery from '@/components/AITagging/AIgallery';
+import { LoadingScreen } from '@/components/ui/LoadingScreen/LoadingScreen';
 
-import useAIImage from "@/hooks/AI_Image";
+import useAIImage from '@/hooks/AI_Image';
 
 const AITagging: React.FC = () => {
-  const { images, loading } = useAIImage("tagged-images");
+  const { images, loading } = useAIImage('tagged-images');
 
   if (loading) {
     return (
@@ -16,7 +16,12 @@ const AITagging: React.FC = () => {
 
   return (
     <>
-      <AIGallery mediaItems={images} title="Tagged images" type="image" folderPath="" />
+      <AIGallery
+        mediaItems={images}
+        title="Tagged images"
+        type="image"
+        folderPath=""
+      />
     </>
   );
 };

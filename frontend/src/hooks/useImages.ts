@@ -1,7 +1,7 @@
 // src/hooks/useImages.ts
 
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import { useState, useEffect } from "react";
+import { convertFileSrc, invoke } from '@tauri-apps/api/core';
+import { useState, useEffect } from 'react';
 
 interface ImageData {
   src: string;
@@ -26,20 +26,20 @@ export const useImages = (folderPath: string) => {
   useEffect(() => {
     const fetchImages = async () => {
       try {
-        console.log("Fetching images from folder:", folderPath);
+        console.log('Fetching images from folder:', folderPath);
 
         // Fetch image paths using invoke
         const response: ResponseData = await invoke(
-          "get_all_images_with_cache",
+          'get_all_images_with_cache',
           {
             directory: folderPath,
-          }
+          },
         );
 
         // Ensure response is in the expected format
 
-        if (!response || typeof response !== "object") {
-          console.error("Invalid response format:", response);
+        if (!response || typeof response !== 'object') {
+          console.error('Invalid response format:', response);
           setLoading(false);
           return;
         }
@@ -50,7 +50,7 @@ export const useImages = (folderPath: string) => {
         for (const year in response) {
           if (
             !response.hasOwnProperty(year) ||
-            typeof response[year] !== "object"
+            typeof response[year] !== 'object'
           ) {
             continue;
           }
@@ -70,7 +70,7 @@ export const useImages = (folderPath: string) => {
               imagePaths.map(async (imagePath: string) => {
                 const src = await convertFileSrc(imagePath);
 
-                const filename = imagePath.split("\\").pop();
+                const filename = imagePath.split('\\').pop();
                 const matches = filename
                   ? filename.match(/\d{4}-\d{2}-\d{2}/)
                   : null;
@@ -91,7 +91,7 @@ export const useImages = (folderPath: string) => {
 
                   tags: [],
                 };
-              })
+              }),
             );
 
             imageUrls.push(...mappedImages);
@@ -100,7 +100,7 @@ export const useImages = (folderPath: string) => {
 
         setImages(imageUrls);
       } catch (error) {
-        console.error("Error fetching images:", error);
+        console.error('Error fetching images:', error);
       } finally {
         setLoading(false);
       }

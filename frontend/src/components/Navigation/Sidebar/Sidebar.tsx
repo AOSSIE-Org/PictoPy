@@ -1,11 +1,11 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from 'react-router-dom';
 import {
   AlbumIcon,
   FileIcon,
   HomeIcon,
   SettingsIcon,
   VideoIcon,
-} from "@/components/ui/Icons/Icons";
+} from '@/components/ui/Icons/Icons';
 
 function Sidebar() {
   const location = useLocation();
@@ -15,46 +15,46 @@ function Sidebar() {
   const linkClasses = (path: string) =>
     `flex items-center flex-col gap-2 ${
       isActive(path)
-        ? "text-[#6465F3] glow"
-        : "text-white hover:text-gray-50 dark:text-gray-400 dark:hover:text-gray-50"
+        ? 'text-[#6465F3] glow'
+        : 'text-white hover:text-gray-50 dark:text-gray-400 dark:hover:text-gray-50'
     }`;
 
   return (
-    <div className="flex sidebar flex-col justify-between bg-[#333333] w-40 border-r border-gray-700 dark:border-gray-700 p-4 space-y-4">
-      <div className="flex flex-col mt-2 gap-10">
-        <Link to="/home" className={linkClasses("/home")}>
+    <div className="sidebar flex w-40 flex-col justify-between space-y-4 border-r border-gray-700 bg-[#333333] p-4 dark:border-gray-700">
+      <div className="mt-2 flex flex-col gap-10">
+        <Link to="/home" className={linkClasses('/home')}>
           <HomeIcon
             className="h-5 w-5"
-            fillColor={isActive("/home") ? "#6465F3" : "  none"}
+            fillColor={isActive('/home') ? '#6465F3' : '  none'}
           />
           <span className="font-sans">Home</span>
         </Link>
-        <Link to="/ai-tagging" className={linkClasses("/ai-tagging")}>
+        <Link to="/ai-tagging" className={linkClasses('/ai-tagging')}>
           <FileIcon
             className="h-5 w-5"
-            fillColor={isActive("/ai-tagging") ? "#6465F3" : "none"}
+            fillColor={isActive('/ai-tagging') ? '#6465F3' : 'none'}
           />
           <span className="font-sans">Ai tagging</span>
         </Link>
 
-        <Link to="/videos" className={linkClasses("/videos")}>
+        <Link to="/videos" className={linkClasses('/videos')}>
           <VideoIcon
             className="h-5 w-5"
-            fillColor={isActive("/videos") ? "#6465F3" : "currentColor"}
+            fillColor={isActive('/videos') ? '#6465F3' : 'currentColor'}
           />
           <span className="font-sans">Videos</span>
         </Link>
-        <Link to="/albums" className={linkClasses("/albums")}>
+        <Link to="/albums" className={linkClasses('/albums')}>
           <AlbumIcon
             className="h-5 w-5"
-            fillColor={isActive("/albums") ? "#6465F3" : "  none"}
+            fillColor={isActive('/albums') ? '#6465F3' : '  none'}
           />
           <span className="font-sans">Albums</span>
         </Link>
       </div>
-      <Link to="/settings" className={linkClasses("/settings")}>
+      <Link to="/settings" className={linkClasses('/settings')}>
         <SettingsIcon
-          fillColor={isActive("/settings") ? "#6465F3" : "currentColor"}
+          fillColor={isActive('/settings') ? '#6465F3' : 'currentColor'}
         />
         <span className="font-sans">Settings</span>
       </Link>
