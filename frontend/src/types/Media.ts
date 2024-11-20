@@ -6,20 +6,20 @@ export interface MediaItem {
 }
 export interface MediaCardProps {
   item: MediaItem;
-  type: "image" | "video";
+  type: 'image' | 'video';
 }
 
 export interface MediaGalleryProps {
   mediaItems: MediaItem[];
   title?: string;
-  type: "image" | "video";
+  type: 'image' | 'video';
 }
 
 export interface MediaGridProps {
   mediaItems: MediaItem[];
   itemsPerRow: number;
   openMediaViewer: (index: number) => void;
-  type: "image" | "video";
+  type: 'image' | 'video';
 }
 export interface MediaViewProps {
   initialIndex: number;
@@ -27,7 +27,7 @@ export interface MediaViewProps {
   allMedia: string[];
   currentPage: number;
   itemsPerPage: number;
-  type: "image" | "video";
+  type: 'image' | 'video';
 }
 
 export interface YearOption {

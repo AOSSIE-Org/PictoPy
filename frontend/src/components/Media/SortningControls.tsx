@@ -1,15 +1,15 @@
-import React from "react";
+import React from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 
-import { Button } from "@/components/ui/button";
-import { SortingControlsProps, YearOption } from "@/types/Media";
-import { ListOrderedIcon } from "../ui/Icons/Icons";
+import { Button } from '@/components/ui/button';
+import { SortingControlsProps, YearOption } from '@/types/Media';
+import { ListOrderedIcon } from '../ui/Icons/Icons';
 
 const SortingControls: React.FC<SortingControlsProps> = ({
   sortBy,
@@ -43,7 +43,7 @@ const SortingControls: React.FC<SortingControlsProps> = ({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" className="flex items-center gap-2">
-          <ListOrderedIcon className="w-4 h-4" />
+          <ListOrderedIcon className="h-4 w-4" />
           Sort by {sortBy}
         </Button>
       </DropdownMenuTrigger>

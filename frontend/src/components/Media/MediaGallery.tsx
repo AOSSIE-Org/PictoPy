@@ -1,12 +1,12 @@
-import { useMemo, useState, useCallback } from "react";
-import MediaGrid from "./Mediagrid";
+import { useMemo, useState, useCallback } from 'react';
+import MediaGrid from './Mediagrid';
 
-import MediaView from "./MediaView";
-import SortingControls from "./SortningControls";
+import MediaView from './MediaView';
+import SortingControls from './SortningControls';
 
-import PaginationControls from "../ui/PaginationControls";
-import { MediaGalleryProps } from "@/types/Media";
-import { sortMedia } from "@/utils/Media";
+import PaginationControls from '../ui/PaginationControls';
+import { MediaGalleryProps } from '@/types/Media';
+import { sortMedia } from '@/utils/Media';
 
 export default function MediaGallery({
   mediaItems,
@@ -14,7 +14,7 @@ export default function MediaGallery({
   type,
 }: MediaGalleryProps) {
   const currentYear = new Date().getFullYear().toString();
-  const [sortBy, setSortBy] = useState<string>("date");
+  const [sortBy, setSortBy] = useState<string>('date');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
@@ -48,8 +48,8 @@ export default function MediaGallery({
 
   return (
     <div className="container">
-      <div className="dark:bg-background dark:text-foreground max-w-6xl mx-auto px-4 md:px-6 py-8">
-        <div className="flex items-center justify-between mb-6">
+      <div className="mx-auto max-w-6xl px-4 py-8 dark:bg-background dark:text-foreground md:px-6">
+        <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold">{title || currentYear}</h1>
           <SortingControls
             sortBy={sortBy}

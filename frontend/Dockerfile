@@ -20,6 +20,8 @@ RUN apt-get update && \
         libjavascriptcoregtk-4.1-dev \
         libsoup-3.0-dev \
         libwebkit2gtk-4.1-dev \
+        librsvg2-dev \
+        file \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js (Node.js 16 is compatible with Tauri)

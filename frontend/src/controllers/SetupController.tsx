@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useFolderPath } from "../hooks/useFolderPath";
-import { FolderService } from "@/hooks/folderService";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useFolderPath } from '../hooks/useFolderPath';
+import { FolderService } from '@/hooks/folderService';
 
 export const useInitialPageController = () => {
   const [loading, setLoading] = useState(true);
@@ -13,7 +13,7 @@ export const useInitialPageController = () => {
       const savedFolderPath = await FolderService.getSavedFolderPath();
       if (savedFolderPath) {
         setFolderPath(savedFolderPath);
-        navigate("/home");
+        navigate('/home');
       }
       setLoading(false);
     };
@@ -24,7 +24,7 @@ export const useInitialPageController = () => {
   const handleFolderPathChange = async (path: string) => {
     setFolderPath(path);
     await FolderService.saveFolderPath(path);
-    folderPath && navigate("/home");
+    folderPath && navigate('/home');
   };
 
   return { loading, handleFolderPathChange };

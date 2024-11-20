@@ -1,9 +1,9 @@
 //src\hooks\AI_Image.ts
-import { useState, useEffect } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
-import { APIResponse, Image } from "@/types/image";
-import { AddFolderResult } from "@/types/Album";
-import { BACKED_URL } from "@/Config/Backend";
+import { useState, useEffect } from 'react';
+import { convertFileSrc } from '@tauri-apps/api/core';
+import { APIResponse, Image } from '@/types/image';
+import { AddFolderResult } from '@/types/Album';
+import { BACKED_URL } from '@/Config/Backend';
 
 const useAIImage = (folderPath: string) => {
   const [images, setImages] = useState<Image[]>([]);
@@ -19,11 +19,11 @@ const useAIImage = (folderPath: string) => {
         const allImageObjects: APIResponse = await response.json();
 
         const parsedAndSortedImages = parseAndSortImageData(
-          allImageObjects.data
+          allImageObjects.data,
         );
         setImages(parsedAndSortedImages);
       } catch (error) {
-        console.error("Error fetching images:", error);
+        console.error('Error fetching images:', error);
       } finally {
         setLoading(false);
       }
@@ -32,11 +32,11 @@ const useAIImage = (folderPath: string) => {
     fetchData();
   }, [folderPath]);
 
-  const parseAndSortImageData = (data: APIResponse["data"]): Image[] => {
+  const parseAndSortImageData = (data: APIResponse['data']): Image[] => {
     const parsedImages: Image[] = Object.entries(data).map(([src, tags]) => {
       const srcc = convertFileSrc(src);
       return {
-        title: src.substring(src.lastIndexOf("\\") + 1),
+        title: src.substring(src.lastIndexOf('\\') + 1),
 
         src: srcc,
         tags: tags,
@@ -63,15 +63,15 @@ export function useAddFolder() {
 
     try {
       const response = await fetch(`${BACKED_URL}/images/add-folder`, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ folder_path: folderPath }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to add folder");
+        throw new Error('Failed to add folder');
       }
 
       const data = await response.json();

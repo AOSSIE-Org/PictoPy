@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react';
 
 interface Image {
   id: string;
@@ -18,12 +18,12 @@ function useSortedImages(data: any): Image[] {
 
       for (const filePath in data) {
         if (Object.prototype.hasOwnProperty.call(data, filePath)) {
-          const tags = data[filePath].split(", ");
-          const fileName = filePath.substring(filePath.lastIndexOf("/") + 1);
+          const tags = data[filePath].split(', ');
+          const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
 
           const image: Image = {
             id: fileName,
-            date: "",
+            date: '',
             title: data[filePath],
             popularity: tags.length,
             src: filePath,
@@ -55,24 +55,24 @@ export interface MediaItem {
   title?: string;
 }
 
-type SortBy = "date" | `year-${string}`;
+type SortBy = 'date' | `year-${string}`;
 
 export function useSortMedia(mediaItems: MediaItem[]) {
-  const [sortBy, setSortBy] = useState<SortBy>("date");
+  const [sortBy, setSortBy] = useState<SortBy>('date');
 
   const sortedMedia = useMemo(() => {
     const sortedItems = [...mediaItems];
 
-    if (sortBy === "date") {
+    if (sortBy === 'date') {
       return sortedItems.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
       );
-    } else if (sortBy.startsWith("year-")) {
-      const year = sortBy.split("-")[1];
+    } else if (sortBy.startsWith('year-')) {
+      const year = sortBy.split('-')[1];
       return sortedItems
         .filter((item) => new Date(item.date).getFullYear().toString() === year)
         .sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
         );
     }
 
