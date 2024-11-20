@@ -1,0 +1,9 @@
+# Ignore node_modules
+node_modules/
+# Ignore generated files
+/dist
+/src-tauri/target/
+/src-tauri/gen/schemas
+# Ignore Git files
+.git/
+.gitignore
