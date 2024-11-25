@@ -295,14 +295,14 @@ export function useAddMultipleImages() {
   return { addMultipleImages, ...result };
 }
 
-interface Image {
-  id: string;
-  path: string;
-  // Add other properties as needed
-}
+// interface Image {
+//   id: string;
+//   path: string;
+//   // Add other properties as needed
+// }
 
 export function useFetchAllImages() {
-  const [images, setImages] = useState<Image[]>([]);
+  const [images, setImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -321,7 +321,7 @@ export function useFetchAllImages() {
       }
       const data = await response.json();
       console.log(data);
-      setImages(data);
+      setImages(data.images);
     } catch (err) {
       setError((err as Error).message);
     } finally {
