@@ -63,7 +63,7 @@ def delete_existing_album(payload: dict):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
-
+    
 
 @router.post("/add-multiple-to-album")
 def add_multiple_images_to_album(payload: dict):
@@ -106,7 +106,6 @@ def add_multiple_images_to_album(payload: dict):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
-
 
 @router.delete("/remove-from-album")
 def remove_image_from_album(payload: dict):
