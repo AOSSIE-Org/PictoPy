@@ -4,24 +4,24 @@ FROM ubuntu:22.04
 # Install dependencies 
 RUN apt-get update && \
     apt-get install -y \
-        curl \
-        build-essential \
-        libgtk-3-dev \
-        libwebkit2gtk-4.0-dev \
-        libappindicator3-dev \
-        wget \
-        xz-utils \
-        libssl-dev \
-        libglib2.0-dev \
-        libgirepository1.0-dev \
-        pkg-config \
-        software-properties-common \
-        libjavascriptcoregtk-4.0-dev \
-        libjavascriptcoregtk-4.1-dev \
-        libsoup-3.0-dev \
-        libwebkit2gtk-4.1-dev \
-        librsvg2-dev \
-        file \
+    curl \
+    build-essential \
+    libgtk-3-dev \
+    libwebkit2gtk-4.0-dev \
+    libappindicator3-dev \
+    wget \
+    xz-utils \
+    libssl-dev \
+    libglib2.0-dev \
+    libgirepository1.0-dev \
+    pkg-config \
+    software-properties-common \
+    libjavascriptcoregtk-4.0-dev \
+    libjavascriptcoregtk-4.1-dev \
+    libsoup-3.0-dev \
+    libwebkit2gtk-4.1-dev \
+    librsvg2-dev \
+    file \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js (Node.js 16 is compatible with Tauri)
@@ -41,20 +41,14 @@ ARG TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 
 # Copy the application source code to the container
 WORKDIR /app
-COPY . .
-
+# Copy the package.json file
+COPY package.json .
 # Install dependencies
 RUN npm install
-
+# Copy the rest of the code
+COPY . .
 # Set environment variables using build arguments
 ENV TAURI_SIGNING_PRIVATE_KEY=$TAURI_SIGNING_PRIVATE_KEY
 ENV TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$TAURI_SIGNING_PRIVATE_KEY_PASSWORD
-
-# Build the frontend (React app)
-RUN npm run build
-
-# Build the Tauri application
-RUN npm run tauri build -v
-
 # Set the container's entrypoint to access the bundled files
 CMD ["bash"]
