@@ -1,12 +1,12 @@
-import { ROUTES } from "@/constants/routes";
-import AITagging from "@/pages/AITagging/AITaging";
-import Album from "@/pages/Album/Album";
-import Dashboard from "@/pages/Dashboard/Dashboard";
-import Settings from "@/pages/SettingsPage/Settings";
-import Videos from "@/pages/VideosPage/Videos";
+import { ROUTES } from '@/constants/routes';
+import AITagging from '@/pages/AITagging/AITaging';
+import Album from '@/pages/Album/Album';
+import Dashboard from '@/pages/Dashboard/Dashboard';
+import Settings from '@/pages/SettingsPage/Settings';
+import Videos from '@/pages/VideosPage/Videos';
 
-import React from "react";
-import { Routes, Route } from "react-router-dom";
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
 
 export const LayoutRoutes: React.FC = () => (
   <Routes>

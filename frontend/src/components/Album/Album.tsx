@@ -1,12 +1,12 @@
-import React, { useState } from "react";
-import { useAllAlbums, useDeleteAlbum } from "../../hooks/AlbumService";
-import AlbumList from "./AlbumList";
-import { Button } from "@/components/ui/button";
-import CreateAlbumForm from "./AlbumForm";
-import EditAlbumDialog from "./AlbumDialog";
-import ErrorDialog from "./Error";
-import AlbumView from "./Albumview";
-import { Album } from "@/types/Album";
+import React, { useState } from 'react';
+import { useAllAlbums, useDeleteAlbum } from '../../hooks/AlbumService';
+import AlbumList from './AlbumList';
+import { Button } from '@/components/ui/button';
+import CreateAlbumForm from './AlbumForm';
+import EditAlbumDialog from './AlbumDialog';
+import ErrorDialog from './Error';
+import AlbumView from './Albumview';
+import { Album } from '@/types/Album';
 
 const AlbumsView: React.FC = () => {
   const { albums, isLoading, refetch } = useAllAlbums();
@@ -25,14 +25,14 @@ const AlbumsView: React.FC = () => {
     setErrorDialogContent({
       title,
       description:
-        err instanceof Error ? err.message : "An unknown error occurred",
+        err instanceof Error ? err.message : 'An unknown error occurred',
     });
   };
 
   const transformedAlbums = albums.map((album: Album) => ({
     id: album.album_name,
     title: album.album_name,
-    coverImage: album.image_paths[0] || "/Pictopy.svg",
+    coverImage: album.image_paths[0] || `D:/Data/Pictopy/PictoPy/frontend/public/tauri.svg`,
     imageCount: album.image_paths.length,
   }));
 
@@ -45,13 +45,13 @@ const AlbumsView: React.FC = () => {
       await deleteAlbum(albumId);
       refetch();
     } catch (err) {
-      showErrorDialog("Error Deleting Album", err);
+      showErrorDialog('Error Deleting Album', err);
     }
   };
-  if(albums.length === 0) {
+  if (albums.length === 0) {
     return (
       <div className="container mx-auto p-4">
-        <div className="flex justify-between items-center mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Albums</h1>
           <Button onClick={() => setIsCreateFormOpen(true)} variant="outline">
             Create New Album
@@ -85,7 +85,7 @@ const AlbumsView: React.FC = () => {
         />
       ) : (
         <>
-          <div className="flex justify-between items-center mb-4">
+          <div className="mb-4 flex items-center justify-between">
             <h1 className="text-2xl font-bold">Albums</h1>
             <Button onClick={() => setIsCreateFormOpen(true)} variant="outline">
               Create New Album

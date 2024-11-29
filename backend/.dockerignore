@@ -1,0 +1,17 @@
+*.pyc
+*.pyo
+__pycache__/
+venv/
+env/
+*.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+.git/
+.gitignore
+images/
+*.log
+*.pid
+run.bat
+run-server.ps1

@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   useViewAlbum,
   useRemoveImageFromAlbum,
-} from "../../hooks/AlbumService";
-import { Button } from "@/components/ui/button";
-import { convertFileSrc } from "@tauri-apps/api/core";
-import ImageSelectionPage from "./ImageSelection";
-import { AlbumData, AlbumViewProps } from "@/types/Album";
-import MediaView from "../Media/MediaView";
-
-
+} from '../../hooks/AlbumService';
+import { Button } from '@/components/ui/button';
+import { convertFileSrc } from '@tauri-apps/api/core';
+import ImageSelectionPage from './ImageSelection';
+import { AlbumData, AlbumViewProps } from '@/types/Album';
+import MediaView from '../Media/MediaView';
 
 const AlbumView: React.FC<AlbumViewProps> = ({
   albumName,
@@ -20,11 +18,11 @@ const AlbumView: React.FC<AlbumViewProps> = ({
   const { removeImage, isLoading: isRemovingImage } = useRemoveImageFromAlbum();
   const [showImageSelection, setShowImageSelection] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
-    null
+    null,
   );
 
   useEffect(() => {
-    viewAlbum(albumName).catch((err) => onError("Error loading album", err));
+    viewAlbum(albumName).catch((err) => onError('Error loading album', err));
   }, [albumName, viewAlbum, onError]);
 
   const handleRemoveImage = async (imageUrl: string) => {
@@ -32,7 +30,7 @@ const AlbumView: React.FC<AlbumViewProps> = ({
       await removeImage(albumName, imageUrl);
       await viewAlbum(albumName);
     } catch (err) {
-      onError("Error Removing Image", err);
+      onError('Error Removing Image', err);
     }
   };
 
@@ -66,12 +64,12 @@ const AlbumView: React.FC<AlbumViewProps> = ({
 
   // Convert all image paths to their correct source URLs
   const convertedImagePaths = albumData.photos.map((path) =>
-    convertFileSrc(path)
+    convertFileSrc(path),
   );
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <Button onClick={onBack} variant="outline">
           Back to Albums
         </Button>
@@ -81,19 +79,19 @@ const AlbumView: React.FC<AlbumViewProps> = ({
       </div>
 
       {albumData.photos && albumData.photos.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {convertedImagePaths.map((srcc, index) => (
             <div key={index} className="relative">
               <img
                 src={srcc}
                 alt={`Album image ${index + 1}`}
-                className="w-full h-40 object-cover rounded-lg cursor-pointer"
+                className="h-40 w-full cursor-pointer rounded-lg object-cover"
                 onClick={() => handleImageClick(index)}
               />
               <Button
                 onClick={() => handleRemoveImage(albumData.photos[index])}
                 disabled={isRemovingImage}
-                className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full"
+                className="absolute right-2 top-2 rounded-full bg-red-500 p-1 text-white"
               >
                 X
               </Button>

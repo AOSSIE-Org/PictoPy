@@ -1,6 +1,6 @@
 // components/MediaGallery/MediaView.tsx
-import { MediaViewProps } from "@/types/Media";
-import React, { useEffect, useState } from "react";
+import { MediaViewProps } from '@/types/Media';
+import React, { useEffect, useState } from 'react';
 
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
@@ -11,7 +11,7 @@ const MediaView: React.FC<MediaViewProps> = ({
   type,
 }) => {
   const [globalIndex, setGlobalIndex] = useState<number>(
-    (currentPage - 1) * itemsPerPage + initialIndex
+    (currentPage - 1) * itemsPerPage + initialIndex,
   );
 
   useEffect(() => {
@@ -35,14 +35,14 @@ const MediaView: React.FC<MediaViewProps> = ({
   }
 
   return (
-    <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-black bg-opacity-90 z-50">
+    <div className="fixed left-0 top-0 z-50 flex h-full w-full items-center justify-center bg-black bg-opacity-90">
       <button
         onClick={onClose}
-        className="absolute z-0 top-4 left-4 px-4 py-2 rounded-md border border-black bg-white text-black text-sm hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)] transition duration-200"
+        className="absolute left-4 top-4 z-0 rounded-md border border-black bg-white px-4 py-2 text-sm text-black transition duration-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)]"
       >
         Back
       </button>
-      {type === "image" ? (
+      {type === 'image' ? (
         <img
           src={allMedia[globalIndex]}
           alt={`image-${globalIndex}`}
@@ -58,15 +58,15 @@ const MediaView: React.FC<MediaViewProps> = ({
       )}
       <button
         onClick={handlePrevItem}
-        className="absolute top-1/2 left-4 transform -translate-y-1/2 p-2 rounded-md border border-black bg-white text-black text-sm hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)] transition duration-20"
+        className="duration-20 absolute left-4 top-1/2 -translate-y-1/2 transform rounded-md border border-black bg-white p-2 text-sm text-black transition hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)]"
       >
-        {"<"}
+        {'<'}
       </button>
       <button
         onClick={handleNextItem}
-        className="absolute top-1/2 right-4 transform -translate-y-1/2 p-2 rounded-md border border-black bg-white text-black text-sm hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)] transition duration-200"
+        className="absolute right-4 top-1/2 -translate-y-1/2 transform rounded-md border border-black bg-white p-2 text-sm text-black transition duration-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)]"
       >
-        {">"}
+        {'>'}
       </button>
     </div>
   );

@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   useViewAlbum,
   useRemoveImageFromAlbum,
-} from "../../hooks/AlbumService";
-import { Button } from "@/components/ui/button";
+} from '../../hooks/AlbumService';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 
-import { convertFileSrc } from "@tauri-apps/api/core";
-import ImageSelectionPage from "./ImageSelection";
+import { convertFileSrc } from '@tauri-apps/api/core';
+import ImageSelectionPage from './ImageSelection';
 
 interface ImageManagementDialogProps {
   albumName: string | null;
@@ -39,7 +39,7 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
 
   useEffect(() => {
     if (albumName) {
-      viewAlbum(albumName).catch((err) => onError("Error loading album", err));
+      viewAlbum(albumName).catch((err) => onError('Error loading album', err));
     }
   }, [albumName, viewAlbum, onError]);
 
@@ -50,13 +50,13 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
         await viewAlbum(albumName);
         onSuccess();
       } catch (err) {
-        onError("Error Removing Image", err);
+        onError('Error Removing Image', err);
       }
     }
   };
 
   const getImageName = (path: string) => {
-    return path.split("\\").pop() || path;
+    return path.split('\\').pop() || path;
   };
 
   if (viewError) {
@@ -70,11 +70,11 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
   if (showImageSelection) {
     return (
       <ImageSelectionPage
-        albumName={albumName || ""}
+        albumName={albumName || ''}
         onClose={() => setShowImageSelection(false)}
         onSuccess={() => {
           setShowImageSelection(false);
-          viewAlbum(albumName || "");
+          viewAlbum(albumName || '');
           onSuccess();
         }}
         onError={onError}
@@ -101,16 +101,16 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
                 <img
                   src={srcc}
                   alt={`Album image ${getImageName(image)}`}
-                  className="w-full h-32 object-cover rounded-lg"
+                  className="h-32 w-full rounded-lg object-cover"
                 />
                 <Button
                   onClick={() => handleRemoveImage(image)}
                   disabled={isRemovingImage}
-                  className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-full"
+                  className="absolute right-0 top-0 rounded-full bg-red-500 p-1 text-white"
                 >
                   X
                 </Button>
-                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 truncate rounded-b-lg">
+                <div className="absolute bottom-0 left-0 right-0 truncate rounded-b-lg bg-black bg-opacity-50 p-1 text-xs text-white">
                   {getImageName(image)}
                 </div>
               </div>

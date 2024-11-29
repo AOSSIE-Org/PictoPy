@@ -1,6 +1,6 @@
 // src\components\ui\404\404.tsx
 
-import React from "react";
+import React from 'react';
 
 interface NotFoundProps {
   message: string;
@@ -8,17 +8,17 @@ interface NotFoundProps {
 
 const NotFoundPage: React.FC<NotFoundProps> = ({ message }) => {
   return (
-    <div className="flex flex-col items-center justify-center min-w-[90vh] min-h-[50vh] dark:bg-gray-900">
-      <div className="text-center max-w-md w-full px-4">
-        <h1 className="text-6xl font-bold text-gray-800 dark:text-gray-200 mb-4">
+    <div className="flex min-h-[50vh] min-w-[90vh] flex-col items-center justify-center dark:bg-gray-900">
+      <div className="w-full max-w-md px-4 text-center">
+        <h1 className="mb-4 text-6xl font-bold text-gray-800 dark:text-gray-200">
           404
         </h1>
-        <p className="text-2xl text-gray-600 dark:text-gray-400 mb-8">
+        <p className="mb-8 text-2xl text-gray-600 dark:text-gray-400">
           {message} Not Found
         </p>
         <a
           href="/"
-          className="inline-block px-6 py-3 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          className="inline-block rounded bg-blue-500 px-6 py-3 text-white transition-colors hover:bg-blue-600"
         >
           Go Home
         </a>

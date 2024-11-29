@@ -1,10 +1,10 @@
-import React from "react";
-import { lineWobble } from "ldrs";
+import React from 'react';
+import { lineWobble } from 'ldrs';
 
 lineWobble.register();
 
 export const LoadingScreen: React.FC = () => (
-  <div className="fixed inset-0 flex flex-col justify-center items-center bg-gray-900 bg-opacity-75 z-50">
+  <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-900 bg-opacity-75">
     <l-line-wobble
       size="80"
       stroke="5"
@@ -12,7 +12,7 @@ export const LoadingScreen: React.FC = () => (
       speed="1.75"
       color="white"
     ></l-line-wobble>
-    <p className="mt-4 text-white text-lg font-semibold animate-pulse">
+    <p className="mt-4 animate-pulse text-lg font-semibold text-white">
       Loading...
     </p>
   </div>
