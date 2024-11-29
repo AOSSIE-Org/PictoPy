@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { useCreateAlbum } from "../../hooks/AlbumService";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import React, { useState } from 'react';
+import { useCreateAlbum } from '../../hooks/AlbumService';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 import {
   Dialog,
@@ -9,11 +9,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "../ui/textarea";
-import { CreateAlbumFormProps } from "@/types/Album";
-
-
+} from '@/components/ui/dialog';
+import { Textarea } from '../ui/textarea';
+import { CreateAlbumFormProps } from '@/types/Album';
 
 const CreateAlbumForm: React.FC<CreateAlbumFormProps> = ({
   isOpen,
@@ -21,8 +19,8 @@ const CreateAlbumForm: React.FC<CreateAlbumFormProps> = ({
   onSuccess,
   onError,
 }) => {
-  const [newAlbumName, setNewAlbumName] = useState("");
-  const [newAlbumDescription, setNewAlbumDescription] = useState("");
+  const [newAlbumName, setNewAlbumName] = useState('');
+  const [newAlbumDescription, setNewAlbumDescription] = useState('');
   const { createAlbum, isLoading: isCreating } = useCreateAlbum();
 
   const handleCreateAlbum = async () => {
@@ -32,15 +30,15 @@ const CreateAlbumForm: React.FC<CreateAlbumFormProps> = ({
           name: newAlbumName.trim(),
           description: newAlbumDescription.trim(),
         });
-        setNewAlbumName("");
-        setNewAlbumDescription("");
+        setNewAlbumName('');
+        setNewAlbumDescription('');
         onSuccess();
         onClose();
       } catch (err) {
-        onError("Error Creating Album", err);
+        onError('Error Creating Album', err);
       }
     } else {
-      onError("Invalid Album Name", new Error("Album name cannot be empty"));
+      onError('Invalid Album Name', new Error('Album name cannot be empty'));
     }
   };
 
@@ -69,7 +67,7 @@ const CreateAlbumForm: React.FC<CreateAlbumFormProps> = ({
             onClick={handleCreateAlbum}
             disabled={isCreating || !newAlbumName.trim()}
           >
-            {isCreating ? "Creating..." : "Create Album"}
+            {isCreating ? 'Creating...' : 'Create Album'}
           </Button>
           <Button onClick={onClose} variant="outline">
             Cancel

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 
 import {
   Dialog,
@@ -7,10 +7,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "../ui/textarea";
-import { useEditAlbumDescription } from "@/hooks/AlbumService";
-import { EditAlbumDialogProps } from "@/types/Album";
+} from '@/components/ui/dialog';
+import { Textarea } from '../ui/textarea';
+import { useEditAlbumDescription } from '@/hooks/AlbumService';
+import { EditAlbumDialogProps } from '@/types/Album';
 
 const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
   album,
@@ -19,10 +19,10 @@ const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
   onError,
 }) => {
   const { editDescription, isLoading: isEditing } = useEditAlbumDescription();
-  const [description, setDescription] = useState(album?.description || "");
+  const [description, setDescription] = useState(album?.description || '');
 
   useEffect(() => {
-    setDescription(album?.description || "");
+    setDescription(album?.description || '');
   }, [album]);
 
   const handleEditAlbum = async () => {
@@ -31,7 +31,7 @@ const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
         await editDescription(album.album_name, description);
         onSuccess();
       } catch (err) {
-        onError("Error Editing Album", err);
+        onError('Error Editing Album', err);
       }
     }
   };
@@ -50,7 +50,7 @@ const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
         />
         <DialogFooter>
           <Button onClick={handleEditAlbum} disabled={isEditing}>
-            {isEditing ? "Saving..." : "Save"}
+            {isEditing ? 'Saving...' : 'Save'}
           </Button>
           <Button onClick={onClose} variant="outline">
             Cancel

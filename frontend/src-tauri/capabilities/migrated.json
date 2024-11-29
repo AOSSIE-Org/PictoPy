@@ -2,9 +2,7 @@
   "identifier": "migrated",
   "description": "permissions that were migrated from v1",
   "local": true,
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "permissions": [
     "path:default",
     "event:default",
@@ -26,15 +24,11 @@
     "dialog:allow-open",
     {
       "identifier": "fs:scope",
-      "allow": [
-        "**"
-      ]
+      "allow": ["**"]
     },
     {
       "identifier": "fs:read-all",
-      "allow": [
-        "**"
-      ]
+      "allow": ["**"]
     },
     "shell:default",
     "dialog:default",

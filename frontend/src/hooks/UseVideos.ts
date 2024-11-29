@@ -1,7 +1,7 @@
 // src/hooks/usevideos.ts
 
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import { useState, useEffect } from "react";
+import { convertFileSrc, invoke } from '@tauri-apps/api/core';
+import { useState, useEffect } from 'react';
 
 interface VideoData {
   src: string;
@@ -26,15 +26,15 @@ export const useVideos = (folderPath: string) => {
       try {
         // Fetch video paths using invoke
         const response: ResponseData = await invoke(
-          "get_all_videos_with_cache",
+          'get_all_videos_with_cache',
           {
             directory: folderPath,
-          }
+          },
         );
 
         // Ensure response is in the expected format
-        if (!response || typeof response !== "object") {
-          console.error("Invalid response format:", response);
+        if (!response || typeof response !== 'object') {
+          console.error('Invalid response format:', response);
           setLoading(false);
           return;
         }
@@ -44,7 +44,7 @@ export const useVideos = (folderPath: string) => {
         for (const year in response) {
           if (
             !response.hasOwnProperty(year) ||
-            typeof response[year] !== "object"
+            typeof response[year] !== 'object'
           ) {
             continue;
           }
@@ -64,7 +64,7 @@ export const useVideos = (folderPath: string) => {
               videoPaths.map(async (videoPath: string) => {
                 const src = await convertFileSrc(videoPath);
 
-                const filename = videoPath.split("\\").pop();
+                const filename = videoPath.split('\\').pop();
                 const matches = filename
                   ? filename.match(/\d{4}-\d{2}-\d{2}/)
                   : null;
@@ -83,7 +83,7 @@ export const useVideos = (folderPath: string) => {
                   date,
                   tags: [],
                 };
-              })
+              }),
             );
 
             videoUrls.push(...mappedVideos);
@@ -92,7 +92,7 @@ export const useVideos = (folderPath: string) => {
 
         setVideos(videoUrls);
       } catch (error) {
-        console.error("Error fetching videos:", error);
+        console.error('Error fetching videos:', error);
       } finally {
         setLoading(false);
       }
@@ -103,4 +103,3 @@ export const useVideos = (folderPath: string) => {
 
   return { videos, loading };
 };
-

@@ -1,22 +1,31 @@
-FROM python:3.10.12-slim
+FROM python:3.10.12-slim AS build
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1-mesa-glx \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . /app
+COPY requirements.txt /app/
 
-RUN chmod +x run.sh
+FROM python:3.10.12-slim
 
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip uninstall uvcorn
-RUN mkdir ../images
+
+COPY . /app/
+
+RUN chmod +x run.sh && mkdir -p ../images
 
 EXPOSE 8000
-
 ENV WORKERS=1
 
 CMD ["./run.sh"]

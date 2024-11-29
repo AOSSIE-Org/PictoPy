@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 
 import {
   useAddMultipleImagesToAlbum,
   useFetchAllImages,
-} from "../../hooks/AlbumService";
-import { Button } from "@/components/ui/button";
-import { convertFileSrc } from "@tauri-apps/api/core";
+} from '../../hooks/AlbumService';
+import { Button } from '@/components/ui/button';
+import { convertFileSrc } from '@tauri-apps/api/core';
 
 interface ImageSelectionPageProps {
   albumName: string;
@@ -26,11 +26,11 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
     useAddMultipleImagesToAlbum();
 
   // Extract the array of image paths
-  const allImages: string[] = allImagesData?.map((image) => image.path) || [];
+  const allImages: string[] = allImagesData??[];;
 
   useEffect(() => {
     if (error) {
-      onError("Error Fetching Images", error);
+      onError('Error Fetching Images', error);
     }
   }, [error, onError]);
 
@@ -38,7 +38,7 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
     setSelectedImages((prev) =>
       prev.includes(imagePath)
         ? prev.filter((path) => path !== imagePath)
-        : [...prev, imagePath]
+        : [...prev, imagePath],
     );
   };
 
@@ -49,13 +49,13 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
         onSuccess();
         setSelectedImages([]);
       } catch (err) {
-        onError("Error Adding Images", err);
+        onError('Error Adding Images', err);
       }
     }
   };
 
   const getImageName = (path: string) => {
-    return path.split("\\").pop() || path;
+    return path.split('\\').pop() || path;
   };
 
   if (isLoading) {
@@ -68,27 +68,27 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Select Images for {albumName}</h1>
+      <h1 className="mb-4 text-2xl font-bold">Select Images for {albumName}</h1>
       {/* <FolderPicker setFolderPath={handleFolderPick} /> */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {allImages.map((imagePath, index) => {
           const srcc = convertFileSrc(imagePath);
           return (
             <div key={index} className="relative">
               <div
-                className={`absolute -top-2 -right-2 w-6 h-6 rounded-full border-2 border-white cursor-pointer z-10 ${
+                className={`absolute -right-2 -top-2 z-10 h-6 w-6 cursor-pointer rounded-full border-2 border-white ${
                   selectedImages.includes(imagePath)
-                    ? "bg-blue-500"
-                    : "bg-gray-300"
+                    ? 'bg-blue-500'
+                    : 'bg-gray-300'
                 }`}
                 onClick={() => toggleImageSelection(imagePath)}
               />
               <img
                 src={srcc}
                 alt={`Image ${getImageName(imagePath)}`}
-                className="w-full h-40 object-cover rounded-lg"
+                className="h-40 w-full rounded-lg object-cover"
               />
-              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 truncate rounded-b-lg">
+              <div className="absolute bottom-0 left-0 right-0 truncate rounded-b-lg bg-black bg-opacity-50 p-1 text-xs text-white">
                 {getImageName(imagePath)}
               </div>
             </div>

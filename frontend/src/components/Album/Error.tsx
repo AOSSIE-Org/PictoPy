@@ -1,5 +1,5 @@
-import React from "react";
-import { Button } from "@/components/ui/button";
+import React from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -7,10 +7,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { ErrorDialogProps } from "@/types/Album";
-
-
+} from '@/components/ui/dialog';
+import { ErrorDialogProps } from '@/types/Album';
 
 const ErrorDialog: React.FC<ErrorDialogProps> = ({ content, onClose }) => {
   return (

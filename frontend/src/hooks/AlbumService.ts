@@ -1,13 +1,13 @@
-import { BACKED_URL } from "@/Config/Backend";
-import { Album } from "@/types/Album";
+import { BACKED_URL } from '@/Config/Backend';
+import { Album } from '@/types/Album';
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from 'react';
 
 const apiCall = async (url: string, method: string, body?: any) => {
   const response = await fetch(url, {
     method,
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -30,19 +30,19 @@ export const useCreateAlbum = () => {
       try {
         const result = await apiCall(
           `${BACKED_URL}/albums/create-album`,
-          "POST",
-          newAlbum
+          'POST',
+          newAlbum,
         );
         setIsLoading(false);
         return result;
       } catch (err) {
         setError(
-          err instanceof Error ? err : new Error("An unknown error occurred")
+          err instanceof Error ? err : new Error('An unknown error occurred'),
         );
         setIsLoading(false);
       }
     },
-    []
+    [],
   );
 
   return { createAlbum, isLoading, error };
@@ -56,15 +56,19 @@ export const useDeleteAlbum = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await apiCall(`${BACKED_URL}/albums/delete-album`, "DELETE", {
-        name: albumId,
-      });
+      const result = await apiCall(
+        `${BACKED_URL}/albums/delete-album`,
+        'DELETE',
+        {
+          name: albumId,
+        },
+      );
       console.log(result);
       setIsLoading(false);
       return result;
     } catch (err) {
       setError(
-        err instanceof Error ? err : new Error("An unknown error occurred")
+        err instanceof Error ? err : new Error('An unknown error occurred'),
       );
       setIsLoading(false);
     }
@@ -82,13 +86,13 @@ export const useAllAlbums = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await apiCall(`${BACKED_URL}/albums/view-all`, "GET");
+      const result = await apiCall(`${BACKED_URL}/albums/view-all`, 'GET');
       setAlbums(result.albums);
       setIsLoading(false);
       console.log(result);
     } catch (err) {
       setError(
-        err instanceof Error ? err : new Error("An unknown error occurred")
+        err instanceof Error ? err : new Error('An unknown error occurred'),
       );
       setIsLoading(false);
     }
@@ -109,15 +113,19 @@ export const useAddImageToAlbum = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await apiCall(`${BACKED_URL}/albums/add-to-album`, "POST", {
-        album_name: albumName,
-        image_path: imagePath,
-      });
+      const result = await apiCall(
+        `${BACKED_URL}/albums/add-to-album`,
+        'POST',
+        {
+          album_name: albumName,
+          image_path: imagePath,
+        },
+      );
       setIsLoading(false);
       return result;
     } catch (err) {
       setError(
-        err instanceof Error ? err : new Error("An unknown error occurred")
+        err instanceof Error ? err : new Error('An unknown error occurred'),
       );
       setIsLoading(false);
     }
@@ -138,20 +146,20 @@ export const useAddMultipleImagesToAlbum = () => {
       try {
         const result = await apiCall(
           `${BACKED_URL}/albums/add-multiple-to-album`,
-          "POST",
-          { album_name: albumName, paths: imagePaths }
+          'POST',
+          { album_name: albumName, paths: imagePaths },
         );
         console.log(result);
         setIsLoading(false);
         return result;
       } catch (err) {
         setError(
-          err instanceof Error ? err : new Error("An unknown error occurred")
+          err instanceof Error ? err : new Error('An unknown error occurred'),
         );
         setIsLoading(false);
       }
     },
-    []
+    [],
   );
 
   return { addMultipleImages, isLoading, error };
@@ -169,20 +177,20 @@ export const useRemoveImageFromAlbum = () => {
         console.log({ album_name: albumName, path: imagePath });
         const result = await apiCall(
           `${BACKED_URL}/albums/remove-from-album`,
-          "DELETE",
-          { album_name: albumName, path: imagePath }
+          'DELETE',
+          { album_name: albumName, path: imagePath },
         );
         setIsLoading(false);
 
         return result;
       } catch (err) {
         setError(
-          err instanceof Error ? err : new Error("An unknown error occurred")
+          err instanceof Error ? err : new Error('An unknown error occurred'),
         );
         setIsLoading(false);
       }
     },
-    []
+    [],
   );
 
   return { removeImage, isLoading, error };
@@ -199,14 +207,14 @@ export const useViewAlbum = () => {
     try {
       const result = await apiCall(
         `${BACKED_URL}/albums/view-album?album_name=${encodeURIComponent(albumName)}`,
-        "GET"
+        'GET',
       );
       setAlbum(result);
       console.log(result);
       setIsLoading(false);
     } catch (err) {
       setError(
-        err instanceof Error ? err : new Error("An unknown error occurred")
+        err instanceof Error ? err : new Error('An unknown error occurred'),
       );
       setIsLoading(false);
     }
@@ -226,19 +234,19 @@ export const useEditAlbumDescription = () => {
       try {
         const result = await apiCall(
           `${BACKED_URL}/albums/edit-album-description`,
-          "PUT",
-          { album_name: albumName, new_description: newDescription }
+          'PUT',
+          { album_name: albumName, new_description: newDescription },
         );
         setIsLoading(false);
         return result;
       } catch (err) {
         setError(
-          err instanceof Error ? err : new Error("An unknown error occurred")
+          err instanceof Error ? err : new Error('An unknown error occurred'),
         );
         setIsLoading(false);
       }
     },
-    []
+    [],
   );
 
   return { editDescription, isLoading, error };
@@ -261,19 +269,16 @@ export function useAddMultipleImages() {
     setResult({ data: null, error: null, isLoading: true });
 
     try {
-      const response = await fetch(
-        `${BACKED_URL}/images/multiple-images`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ paths }),
-        }
-      );
+      const response = await fetch(`${BACKED_URL}/images/multiple-images`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ paths }),
+      });
       console.log(response);
       if (!response.ok) {
-        throw new Error("Failed to add multiple images");
+        throw new Error('Failed to add multiple images');
       }
 
       const data = await response.json();
@@ -290,14 +295,14 @@ export function useAddMultipleImages() {
   return { addMultipleImages, ...result };
 }
 
-interface Image {
-  id: string;
-  path: string;
-  // Add other properties as needed
-}
+// interface Image {
+//   id: string;
+//   path: string;
+//   // Add other properties as needed
+// }
 
 export function useFetchAllImages() {
-  const [images, setImages] = useState<Image[]>([]);
+  const [images, setImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -307,16 +312,16 @@ export function useFetchAllImages() {
     try {
       const response = await fetch(`${BACKED_URL}/images/all-images`, {
         headers: {
-          accept: "application/json",
+          accept: 'application/json',
         },
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch images");
+        throw new Error('Failed to fetch images');
       }
       const data = await response.json();
       console.log(data);
-      setImages(data);
+      setImages(data.images);
     } catch (err) {
       setError((err as Error).message);
     } finally {
