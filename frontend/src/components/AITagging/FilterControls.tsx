@@ -67,7 +67,7 @@ export default function FilterControls({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-[200px] bg-white dark:text-foreground"
+            className="w-[200px] bg-white dark:text-foreground max-h-[500px] overflow-y-auto"
             align="end"
           >
             <DropdownMenuRadioGroup
