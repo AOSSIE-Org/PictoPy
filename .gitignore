@@ -21,6 +21,7 @@ dist-ssr
 *.ntvs*
 *.njsproj
 *.sln
+.env.example
 *.sw?
 videos_cache.txt
 images_cache.txt
