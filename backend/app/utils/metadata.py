@@ -2,6 +2,7 @@ import os
 from PIL import Image
 from PIL.ExifTags import TAGS
 from datetime import datetime
+from PIL.TiffImagePlugin import IFDRational
 
 
 def extract_metadata(image_path):
@@ -24,6 +25,12 @@ def extract_metadata(image_path):
         for tag_id in exifdata:
             tag = TAGS.get(tag_id, tag_id)
             data = exifdata.get(tag_id)
+
+            if isinstance(data,tuple) or isinstance(data,list) : 
+                data = [float(d) if isinstance(d,IFDRational) else d for d in data ]
+            elif isinstance(data,IFDRational) : 
+                data = float(data)
+
             if isinstance(data, bytes):
                 data = data.decode()
             metadata[str(tag).lower().replace(" ", "_")] = data
