@@ -66,6 +66,9 @@ This project was announced by [AOSSIE](https://aossie.org/), an umbrella organiz
                     API
                 </a>
             </li>
+            <li>
+              <a href="./backend/docker-setup.md">Docker setup</a>
+            </li>
         </ul>
     </div>
     <div style="width:25%">
@@ -74,6 +77,11 @@ This project was announced by [AOSSIE](https://aossie.org/), an umbrella organiz
             <li>
                 <a href="./frontend/setup">
                     Setup
+                </a>
+            </li>
+            <li>
+               <a href="./frontend/docker-setup.md">
+                    Docker Setup
                 </a>
             </li>
             <li>
