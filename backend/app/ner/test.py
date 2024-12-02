@@ -2,6 +2,7 @@ import numpy as np
 import onnxruntime
 from transformers import AutoTokenizer, AutoConfig
 
+# Run the ner_onnx.py to create the onnx model in the models folder
 model_path = r'C:\Users\sanid\Downloads\gsoc_@pictopy\PictoPy\backend\app\models\bert-base-NER.onnx'
 session = onnxruntime.InferenceSession(model_path)
 
