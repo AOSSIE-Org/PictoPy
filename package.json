@@ -6,7 +6,11 @@
   "scripts": {
     "linux-dev": "bash ./scripts/linux-dev.sh",
     "win-dev": "cd scripts && win-dev.bat",
-    "prepare": "husky"
+    "prepare": "husky",
+    "lint:check": "cd frontend && eslint --max-warnings 0 --config .eslintrc.json .",
+    "lint:fix": "cd frontend && eslint --max-warnings 0 --config .eslintrc.json . --fix",
+    "format:fix": "cd frontend && prettier --write \"**/*.{ts,tsx,json}\"",
+    "format:check": "cd frontend && prettier --check \"**/*.{ts,tsx,json}\""
   },
   "devDependencies": {
     "husky": "^9.1.7"
