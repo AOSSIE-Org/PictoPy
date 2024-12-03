@@ -1,11 +1,14 @@
 {
-    "name": "pictopy",
-    "private": true,
-    "version": "0.0.0",
-    "type": "module",
-    "scripts": {
-        "linux-dev": "bash ./scripts/linux-dev.sh",
-        "win-dev": "cd scripts && win-dev.bat"
-    }
-   
+  "name": "pictopy",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "linux-dev": "bash ./scripts/linux-dev.sh",
+    "win-dev": "cd scripts && win-dev.bat",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
 }
