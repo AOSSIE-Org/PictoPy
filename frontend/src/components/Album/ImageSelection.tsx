@@ -26,7 +26,7 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
     useAddMultipleImagesToAlbum();
 
   // Extract the array of image paths
-  const allImages: string[] = allImagesData??[];;
+  const allImages: string[] = allImagesData ?? [];
 
   useEffect(() => {
     if (error) {
