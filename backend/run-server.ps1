@@ -1,49 +1,67 @@
-# PowerShell equivalent of the bash script
-
-# Handle Ctrl+C
+# Set up the global flag for running
 $script:running = $true
-[Console]::TreatControlCAsInput = $true
+$process = $null  # Variable to store the Hypercorn process
 
+# Function to handle Ctrl+C gracefully
 function Handle-CtrlC {
-    Write-Host "Exiting..."
+    Write-Host "Exiting gracefully..."
     $script:running = $false
-    exit 0
+
+    # Terminate the Hypercorn process if it exists
+    if ($process -ne $null -and !$process.HasExited) {
+        Write-Host "Terminating Hypercorn process..."
+        $process.Kill()
+    }
 }
 
-# Start a job to check for Ctrl+C
-Start-Job -ScriptBlock {
-    while ($true) {
-        if ([Console]::KeyAvailable) {
-            $key = [Console]::ReadKey($true)
-            if (($key.Modifiers -band [ConsoleModifiers]::Control) -and ($key.Key -eq 'C')) {
-                Handle-CtrlC
-            }
-        }
-        Start-Sleep -Milliseconds 100
-    }
+# Register an event handler for the Ctrl+C (ConsoleBreak) signal
+Register-EngineEvent -SourceIdentifier ConsoleBreak -Action {
+    Handle-CtrlC
 } | Out-Null
 
+# Main Script
 if ($args[0] -eq "--test") {
     while ($script:running) {
         Write-Host "Starting Hypercorn server in test environment..."
-        $process = Start-Process -FilePath "hypercorn" -ArgumentList "main:app --bind 0.0.0.0:8000 --log-level debug --reload --access-log -" -RedirectStandardOutput "hypercorn.log" -RedirectStandardError "hypercorn.log" -PassThru
         
+        # Start the Hypercorn server process
+        $process = Start-Process -FilePath "hypercorn" `
+                                 -ArgumentList "main:app --bind 0.0.0.0:8000 --log-level debug --reload --access-log -" `
+                                 -RedirectStandardOutput "hypercorn.log" `
+                                 -RedirectStandardError "hypercorn.log" `
+                                 -PassThru
+
         # Monitor the log file for errors
-        Get-Content "hypercorn.log" -Wait | ForEach-Object {
+        Get-Content -Path "hypercorn.log" -Wait | ForEach-Object {
             Write-Host $_
             if ($_ -match "Syntax error") {
                 Write-Host "Syntax error detected. Restarting server..."
                 $process.Kill()
             }
         }
-        
+
         Write-Host "Hypercorn server crashed in test environment. Restarting in 3 seconds..."
         Start-Sleep -Seconds 3
     }
-}
-else {
-    # Get the WORKERS environment variable or default to 1
+} else {
+    # Get the WORKERS environment variable or use a default value
     $workers = if ($env:WORKERS) { $env:WORKERS } else { "1" }
     Write-Host "WORKERS: $workers"
-    hypercorn main:app --workers $workers --bind 0.0.0.0:8000
+
+    # Start the Hypercorn server
+    $process = Start-Process -FilePath "hypercorn" `
+                             -ArgumentList "main:app --workers $workers --bind 0.0.0.0:8000" `
+                             -PassThru
+
+    # Wait for process termination or Ctrl+C
+    while ($process -and !$process.HasExited -and $script:running) {
+        Start-Sleep -Milliseconds 100
+    }
+
+    # Cleanup
+    if ($process -and !$process.HasExited) {
+        $process.Kill()
+    }
 }
+
+Write-Host "Script has exited."
