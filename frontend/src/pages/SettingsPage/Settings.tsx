@@ -26,12 +26,12 @@ const Settings: React.FC = () => {
 
   return (
     <div className="container mx-auto flex-1 px-4 py-8">
-      <div className="space-y-6 rounded-lg bg-gray-800 p-6 shadow dark:bg-gray-800">
+      <div className="space-y-6 rounded-3xl bg-[#333333] p-6 shadow dark:bg-[#333333]">
         <div>
           <h2 className="mb-2 text-lg font-medium text-gray-50 dark:text-gray-50">
             Current Folder Path
           </h2>
-          <div className="rounded-md bg-gray-700 px-4 py-3 text-gray-300 dark:bg-gray-700 dark:text-gray-300">
+          <div className="rounded-md bg-[#414141] px-4 py-3 text-gray-300 dark:bg-[#414141] dark:text-gray-300">
             {currentPath && <>{currentPath}</>}
           </div>
         </div>
@@ -39,7 +39,7 @@ const Settings: React.FC = () => {
         <Button
           onClick={handleDeleteCache}
           variant="outline"
-          className="border-gray-500 text-gray-50 hover:bg-gray-700 dark:border-gray-500 dark:text-gray-50 dark:hover:bg-gray-700"
+          className="border-gray-500 text-gray-50 hover:bg-[#414141] dark:border-[#414141] dark:text-gray-50 dark:hover:bg-[#414141]"
         >
           <RefreshCwIcon className="mr-2 h-5 w-5 text-gray-50 dark:text-gray-50" />
           Refresh Cache
