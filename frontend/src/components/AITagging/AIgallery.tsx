@@ -17,6 +17,8 @@ export default function AIGallery({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
+  const [isVisibleSelectedImage, setIsVisibleSelectedImage] =
+    useState<boolean>(true);
   const itemsPerPage: number = 9;
   const itemsPerRow: number = 3;
 
@@ -51,27 +53,34 @@ export default function AIGallery({
     <div className="container">
       <div className="mx-auto max-w-6xl px-4 py-8 dark:bg-background dark:text-foreground md:px-6">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{title}</h1>
 
+          {isVisibleSelectedImage && <h1 className="text-2xl font-bold">{title}</h1>}
           <FilterControls
             filterTag={filterTag}
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
             onFolderAdded={handleFolderAdded}
             isLoading={loading}
+            isVisibleSelectedImage={isVisibleSelectedImage}
+            setIsVisibleSelectedImage={setIsVisibleSelectedImage}
           />
         </div>
-        <MediaGrid
-          mediaItems={currentItems}
-          itemsPerRow={itemsPerRow}
-          openMediaViewer={openMediaViewer}
-          type={type}
-        />
-        <PaginationControls
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
+
+        {isVisibleSelectedImage && (
+          <>
+            <MediaGrid
+              mediaItems={currentItems}
+              itemsPerRow={itemsPerRow}
+              openMediaViewer={openMediaViewer}
+              type={type}
+            />
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </>
+        )}
         {showMediaViewer && (
           <MediaView
             initialIndex={selectedMediaIndex}
