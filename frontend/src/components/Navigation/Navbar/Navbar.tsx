@@ -5,7 +5,7 @@ export function Navbar(props: { title?: string }) {
       < div className="flex h-16 items-center justify-between bg-[#333333] px-16 w-[50%] mt-3 rounded-3xl ">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <img src="/Pictopy.svg" alt="" />
+            <img src="/tauri.svg" height={"20px"} width={"20px"} alt="" />
             <span className="font-sans text-lg font-bold text-gray-50">
               Pictopy
             </span>

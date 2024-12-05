@@ -32,7 +32,7 @@ const AlbumsView: React.FC = () => {
   const transformedAlbums = albums.map((album: Album) => ({
     id: album.album_name,
     title: album.album_name,
-    coverImage: album.image_paths[0] || `D:/Data/Pictopy/PictoPy/frontend/public/tauri.svg`,
+    coverImage: album.image_paths[0] || `D:/Data/picto/UPDATED-PICTOPY/PictoPy/frontend/public/tauri.svg`,
     imageCount: album.image_paths.length,
   }));
 
