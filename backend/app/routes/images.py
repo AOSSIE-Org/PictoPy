@@ -133,6 +133,41 @@ def delete_image(payload: dict):
         )
 
 
+
+@router.delete("/multiple-images")
+def delete_multiple_images(payload:dict) : 
+    try :
+        paths = payload["paths"]
+        if not isinstance(paths, list):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="'paths' should be a list",
+            )
+
+        for path in paths:
+            try:   
+                if not os.path.isfile(path):
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND, detail="Image file not found"
+                    )
+
+                os.remove(path)
+                delete_image_db(path)
+            except:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"{path} not in Database",
+                )
+        
+        return {"message": f"Images deleted successfully"}
+    
+    except Exception as e : 
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+    
+
+
 @router.get("/all-image-objects")
 def get_all_image_objects():
     try:
