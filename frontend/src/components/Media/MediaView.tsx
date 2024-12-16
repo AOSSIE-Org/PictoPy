@@ -18,6 +18,22 @@ const MediaView: React.FC<MediaViewProps> = ({
     setGlobalIndex((currentPage - 1) * itemsPerPage + initialIndex);
   }, [initialIndex, currentPage, itemsPerPage]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") {
+        handleNextItem();
+      } else if (e.key === "ArrowLeft") {
+        handlePrevItem();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [globalIndex]);
+
   function handlePrevItem() {
     if (globalIndex > 0) {
       setGlobalIndex(globalIndex - 1);
