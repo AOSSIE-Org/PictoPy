@@ -40,11 +40,20 @@ export default function PaginationControls({
 
     return pages;
   };
-
+  const handlePrevious = () => {
+    if(currentPage > 1) {
+      onPageChange(currentPage - 1);
+    }
+  }
+  const handleNext = () => {
+    if(currentPage < totalPages) {
+      onPageChange(currentPage + 1);
+    }
+  }
   return (
     <div className="mt-6 flex justify-center">
       <Pagination>
-        <PaginationPrevious onClick={() => onPageChange(currentPage - 1)} />
+        <PaginationPrevious onClick={handlePrevious} />
         <PaginationContent>
           {getPageNumbers().map((page, index) =>
             page === '...' ? (
@@ -63,7 +72,7 @@ export default function PaginationControls({
             ),
           )}
         </PaginationContent>
-        <PaginationNext onClick={() => onPageChange(currentPage + 1)} />
+        <PaginationNext onClick={handleNext} />
       </Pagination>
     </div>
   );
