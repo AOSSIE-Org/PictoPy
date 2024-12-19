@@ -4,29 +4,29 @@ import { Album } from '@/types/Album';
 import { useState, useCallback, useEffect } from 'react';
 
 const apiCall = async (url: string, method: string, body?: any) => {
-  const response = await fetch(url, {
+  let response = await fetch(url, {
     method,
     headers: {
       'Content-Type': 'application/json',
     },
     body: body ? JSON.stringify(body) : undefined,
   });
-
+  const jsonResponse = await response.json();
   if (!response.ok) {
-    throw new Error(`API call failed: ${response.statusText}`);
+    throw new Error(
+      `API call failed: ${jsonResponse.error || response.statusText}`,
+    );
   }
 
-  return response.json();
+  return jsonResponse;
 };
 
 export const useCreateAlbum = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
 
   const createAlbum = useCallback(
     async (newAlbum: { name: string; description?: string }) => {
       setIsLoading(true);
-      setError(null);
       try {
         const result = await apiCall(
           `${BACKED_URL}/albums/create-album`,
@@ -36,25 +36,21 @@ export const useCreateAlbum = () => {
         setIsLoading(false);
         return result;
       } catch (err) {
-        setError(
-          err instanceof Error ? err : new Error('An unknown error occurred'),
-        );
         setIsLoading(false);
+        throw err;
       }
     },
     [],
   );
 
-  return { createAlbum, isLoading, error };
+  return { createAlbum, isLoading, setIsLoading };
 };
 
 export const useDeleteAlbum = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
 
   const deleteAlbum = useCallback(async (albumId: string) => {
     setIsLoading(true);
-    setError(null);
     try {
       const result = await apiCall(
         `${BACKED_URL}/albums/delete-album`,
@@ -67,34 +63,27 @@ export const useDeleteAlbum = () => {
       setIsLoading(false);
       return result;
     } catch (err) {
-      setError(
-        err instanceof Error ? err : new Error('An unknown error occurred'),
-      );
       setIsLoading(false);
+      throw err;
     }
   }, []);
 
-  return { deleteAlbum, isLoading, error };
+  return { deleteAlbum, isLoading };
 };
 
 export const useAllAlbums = () => {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
 
   const fetchAlbums = useCallback(async () => {
     setIsLoading(true);
-    setError(null);
     try {
       const result = await apiCall(`${BACKED_URL}/albums/view-all`, 'GET');
       setAlbums(result.albums);
       setIsLoading(false);
-      console.log(result);
     } catch (err) {
-      setError(
-        err instanceof Error ? err : new Error('An unknown error occurred'),
-      );
       setIsLoading(false);
+      throw err;
     }
   }, []);
 
@@ -102,7 +91,7 @@ export const useAllAlbums = () => {
     fetchAlbums();
   }, [fetchAlbums]);
 
-  return { albums, isLoading, error, refetch: fetchAlbums };
+  return { albums, isLoading, refetch: fetchAlbums };
 };
 
 export const useAddImageToAlbum = () => {
@@ -210,7 +199,6 @@ export const useViewAlbum = () => {
         'GET',
       );
       setAlbum(result);
-      console.log(result);
       setIsLoading(false);
     } catch (err) {
       setError(
@@ -225,31 +213,27 @@ export const useViewAlbum = () => {
 
 export const useEditAlbumDescription = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
 
   const editDescription = useCallback(
     async (albumName: string, newDescription: string) => {
       setIsLoading(true);
-      setError(null);
       try {
         const result = await apiCall(
           `${BACKED_URL}/albums/edit-album-description`,
           'PUT',
-          { album_name: albumName, new_description: newDescription },
+          { album_name: albumName, description: newDescription },
         );
         setIsLoading(false);
         return result;
       } catch (err) {
-        setError(
-          err instanceof Error ? err : new Error('An unknown error occurred'),
-        );
         setIsLoading(false);
+        throw err;
       }
     },
     [],
   );
 
-  return { editDescription, isLoading, error };
+  return { editDescription, isLoading };
 };
 
 interface AddMultipleImagesResult {
@@ -320,7 +304,6 @@ export function useFetchAllImages() {
         throw new Error('Failed to fetch images');
       }
       const data = await response.json();
-      console.log(data);
       setImages(data.images);
     } catch (err) {
       setError((err as Error).message);

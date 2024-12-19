@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, status, Query
+from fastapi import APIRouter, status, Query
+from fastapi.responses import JSONResponse
 from app.database.albums import (
     add_photo_to_album,
     delete_album,
@@ -8,7 +9,8 @@ from app.database.albums import (
     get_album_photos,
     edit_album_description,
 )
-
+from app.utils.APIError import APIError
+from app.utils.wrappers import exception_handler_wrapper
 
 """
 TODO:
@@ -19,193 +21,136 @@ router = APIRouter()
 
 
 @router.post("/create-album")
+@exception_handler_wrapper
 def create_new_album(payload: dict):
-    try:
-        if "name" not in payload:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing 'name' in payload",
-            )
-
-        album_name = payload["name"]
-        description = payload.get("description")  # This will be None if not provided
-        create_album(album_name, description)
-
-        return {"message": f"Album '{album_name}' created successfully"}
-
-    except HTTPException as e:
-        raise e
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+    if "name" not in payload:
+        raise APIError("Missing 'name' in payload", status.HTTP_400_BAD_REQUEST)
+    album_name = payload["name"]
+    description = payload.get("description")  # This will be None if not provided
+    create_album(album_name, description)
+    return JSONResponse(
+        status_code=status.HTTP_201_CREATED,
+        content={
+            "message": f"Album '{album_name}' created successfully",
+            "success": True,
+        },
+    )
 
 
 @router.delete("/delete-album")
+@exception_handler_wrapper
 def delete_existing_album(payload: dict):
-    try:
-        if "name" not in payload:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing 'name' in payload",
-            )
+    if "name" not in payload:
+        raise APIError("Missing 'name' in payload", status.HTTP_400_BAD_REQUEST)
 
-        album_name = payload["name"]
-        delete_album(album_name)
+    album_name = payload["name"]
+    delete_album(album_name)
 
-        return {"message": f"Album '{album_name}' deleted successfully"}
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "message": f"Album '{album_name}' deleted successfully",
+            "success": True,
+        },
+    )
 
-    except HTTPException as e:
-        raise e
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
-    
 
 @router.post("/add-multiple-to-album")
+@exception_handler_wrapper
 def add_multiple_images_to_album(payload: dict):
-    try:
-        if "album_name" not in payload:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing 'album_name' in payload",
+    if "album_name" not in payload:
+        raise APIError("Missing 'album_name' in payload", status.HTTP_400_BAD_REQUEST)
+    if "paths" not in payload:
+        raise APIError("Missing 'paths' in payload", status.HTTP_400_BAD_REQUEST)
+
+    album_name = payload["album_name"]
+    paths = payload["paths"]
+
+    if not isinstance(paths, list):
+        raise APIError("Paths should be a list", status.HTTP_400_BAD_REQUEST)
+
+    for path in paths:
+        try:
+            add_photo_to_album(album_name, path)
+        except Exception as e:
+            raise APIError(
+                f"Error adding image '{path}' to album '{album_name}': {str(e)}",
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-        if "paths" not in payload:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing 'paths' in payload",
-            )
 
-        album_name = payload["album_name"]
-        paths = payload["paths"]
+    return JSONResponse(
+        status_code=status.HTTP_201_CREATED,
+        content={
+            "message": f"Images added to album '{album_name}' successfully",
+            "success": True,
+        },
+    )
 
-        if not isinstance(paths, list):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="'paths' should be a list",
-            )
-
-        for path in paths:
-            try:
-                add_photo_to_album(album_name, path)
-            except:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"{path} not in Database",
-                )
-
-        return {"message": f"Images added to album '{album_name}' successfully"}
-
-    except HTTPException as e:
-        raise e
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
 
 @router.delete("/remove-from-album")
+@exception_handler_wrapper
 def remove_image_from_album(payload: dict):
-    try:
-        if "album_name" not in payload:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing 'album_name' in payload",
-            )
-        if "path" not in payload:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing 'path' in payload",
-            )
+    if "album_name" not in payload:
+        raise APIError("Missing 'album_name' in payload", status.HTTP_400_BAD_REQUEST)
+    if "path" not in payload:
+        raise APIError("Missing 'path' in payload", status.HTTP_400_BAD_REQUEST)
+    album_name = payload["album_name"]
+    path = payload["path"]
 
-        album_name = payload["album_name"]
-        path = payload["path"]
+    remove_photo_from_album(album_name, path)
 
-        remove_photo_from_album(album_name, path)
-
-        return {
-            "message": f"Image '{path}' removed from album '{album_name}' successfully"
-        }
-
-    except HTTPException as e:
-        raise e
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+    return {"message": f"Image '{path}' removed from album '{album_name}' successfully"}
 
 
 @router.get("/view-album")
+@exception_handler_wrapper
 def view_album_photos(
-    album_name: str = Query(..., description="Name of the album to view")
+    album_name: str = Query(..., description="Name of the album to view"),
 ):
-    try:
-        if not album_name:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing 'album_name' parameter",
-            )
+    if not album_name:
+        raise APIError("Missing album_name parameter", status.HTTP_400_BAD_REQUEST)
 
-        photos = get_album_photos(album_name)
+    photos = get_album_photos(album_name)
 
-        if photos is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Album '{album_name}' not found",
-            )
-
-        return {"album_name": album_name, "photos": photos}
-
-    except HTTPException as e:
-        raise e
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+    if photos is None:
+        raise APIError(
+            f"Album '{album_name}' does not exist", status.HTTP_404_NOT_FOUND
         )
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "album_name": album_name,
+            "photos": photos,
+            "success": True,
+        },
+    )
 
 
 @router.put("/edit-album-description")
+@exception_handler_wrapper
 def update_album_description(payload: dict):
-    try:
-        if "name" not in payload:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing 'name' in payload",
-            )
-        if "description" not in payload:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing 'description' in payload",
-            )
+    if "album_name" not in payload:
+        raise APIError("Missing 'name' in payload", status.HTTP_400_BAD_REQUEST)
+    if "description" not in payload:
+        raise APIError("Missing 'description' in payload", status.HTTP_400_BAD_REQUEST)
 
-        album_name = payload["name"]
-        new_description = payload["description"]
+    album_name = payload["album_name"]
+    new_description = payload["description"]
 
-        edit_album_description(album_name, new_description)
+    edit_album_description(album_name, new_description)
 
-        return {"message": f"Description for album '{album_name}' updated successfully"}
-
-    except HTTPException as e:
-        raise e
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "message": f"Description for album '{album_name}' updated successfully",
+            "success": True,
+        },
+    )
 
 
 @router.get("/view-all")
+@exception_handler_wrapper
 def get_albums():
-    try:
-        albums = get_all_albums()
-        return {"albums": albums}
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+    albums = get_all_albums()
+    return {"albums": albums, "success": True}

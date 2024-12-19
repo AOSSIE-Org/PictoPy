@@ -4,6 +4,8 @@ import json
 from app.config.settings import ALBUM_DATABASE_PATH
 from app.utils.wrappers import image_exists, album_exists
 from app.utils.path_id_mapping import get_id_from_path, get_path_from_id
+from app.utils.APIError import APIError
+from fastapi import status
 
 
 def create_albums_table():
@@ -32,7 +34,7 @@ def create_album(album_name, description=None):
 
     if count > 0:
         conn.close()
-        raise ValueError(f"Album '{album_name}' already exists")
+        raise APIError(f"Album '{album_name}' already exists", 409)
 
     cursor.execute(
         "INSERT INTO albums (album_name, image_ids, description) VALUES (?, ?, ?)",
@@ -60,7 +62,9 @@ def add_photo_to_album(album_name, image_path):
     # print("GOT IMAGE ID", image_id, flush=True)
     if image_id is None:
         conn.close()
-        raise ValueError(f"Image '{image_path}' not found in the database")
+        raise APIError(
+            f"Image '{image_path}' not found in the database", status.HTTP_404_NOT_FOUND
+        )
 
     cursor.execute("SELECT image_ids FROM albums WHERE album_name = ?", (album_name,))
     result = cursor.fetchone()
@@ -99,7 +103,9 @@ def remove_photo_from_album(album_name, image_path):
     image_id = get_id_from_path(image_path)
     if image_id is None:
         conn.close()
-        raise ValueError(f"Image '{image_path}' not found in the database")
+        raise APIError(
+            f"Image '{image_path}' not found in the database", status.HTTP_404_NOT_FOUND
+        )
 
     cursor.execute("SELECT image_ids FROM albums WHERE album_name = ?", (album_name,))
     result = cursor.fetchone()
@@ -118,14 +124,15 @@ def get_all_albums():
     conn = sqlite3.connect(ALBUM_DATABASE_PATH)
     cursor = conn.cursor()
 
-    cursor.execute("SELECT album_name, image_ids FROM albums")
+    cursor.execute("SELECT album_name, image_ids, description FROM albums")
     results = cursor.fetchall()
     albums = [
         {
             "album_name": name,
             "image_paths": [get_path_from_id(id) for id in json.loads(ids)],
+            "description": description,
         }
-        for name, ids in results
+        for name, ids, description in results
     ]
 
     conn.close()
