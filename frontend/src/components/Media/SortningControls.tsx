@@ -9,8 +9,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { SortingControlsProps, YearOption } from '@/types/Media';
-import { ListOrderedIcon } from '../ui/Icons/Icons';
-
+import { ArrowDownWideNarrow } from 'lucide-react';
 const SortingControls: React.FC<SortingControlsProps> = ({
   sortBy,
   setSortBy,
@@ -43,8 +42,8 @@ const SortingControls: React.FC<SortingControlsProps> = ({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" className="flex items-center gap-2">
-          <ListOrderedIcon className="h-4 w-4" />
-          Sort by {sortBy}
+          <ArrowDownWideNarrow className="h-4 w-4" />
+          <p className="pb-[1px]">Sort by {sortBy}</p>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent

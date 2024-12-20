@@ -15,21 +15,14 @@ export default function MediaGrid({
       </div>
     );
   }
+
   return (
-    <div
-      className={`grid gap-4 md:gap-6 ${
-        itemsPerRow === 2
-          ? 'grid-cols-1 sm:grid-cols-2'
-          : itemsPerRow === 3
-            ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'
-            : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
-      }`}
-    >
+    <div className={`flex flex-wrap justify-evenly gap-4`}>
       {mediaItems.map((item, index) => (
         <div
           key={index}
           onClick={() => openMediaViewer(index)}
-          className="cursor-pointer"
+          className="h-56 w-60 cursor-pointer"
         >
           <MediaCard item={item} type={type} />
         </div>

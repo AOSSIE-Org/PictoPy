@@ -18,7 +18,7 @@ export default function MediaGallery({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
-  const itemsPerPage: number = 9;
+  const itemsPerPage: number = 20;
   const itemsPerRow: number = 3;
 
   const sortedMedia = useMemo(() => {
@@ -45,10 +45,10 @@ export default function MediaGallery({
   const closeMediaViewer = useCallback(() => {
     setShowMediaViewer(false);
   }, []);
-
+  console.log(currentItems);
   return (
-    <div className="container">
-      <div className="mx-auto max-w-6xl px-4 py-8 dark:bg-background dark:text-foreground md:px-6">
+    <div className="w-full">
+      <div className="mx-auto px-2 pb-8 pt-1 dark:bg-background dark:text-foreground">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold">{title || currentYear}</h1>
           <SortingControls
