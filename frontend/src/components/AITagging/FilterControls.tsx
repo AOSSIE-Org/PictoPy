@@ -94,6 +94,7 @@ export default function FilterControls({
       )}
       <div className="flex items-center gap-4 overflow-auto">
         <FolderPicker setFolderPath={handleFolderPick} />
+        
         <Button onClick={() => setIsVisibleSelectedImage(false)} variant="outline">
           Delete Image
         </Button>
