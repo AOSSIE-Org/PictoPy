@@ -59,7 +59,7 @@ export const useDeleteAlbum = () => {
           name: albumId,
         },
       );
-      console.log(result);
+      // console.log(result);
       setIsLoading(false);
       return result;
     } catch (err) {
@@ -129,7 +129,7 @@ export const useAddMultipleImagesToAlbum = () => {
 
   const addMultipleImages = useCallback(
     async (albumName: string, imagePaths: string[]) => {
-      console.log({ album_name: albumName, image_paths: imagePaths });
+      // console.log({ album_name: albumName, image_paths: imagePaths });
       setIsLoading(true);
       setError(null);
       try {
@@ -138,7 +138,7 @@ export const useAddMultipleImagesToAlbum = () => {
           'POST',
           { album_name: albumName, paths: imagePaths },
         );
-        console.log(result);
+        // console.log(result);
         setIsLoading(false);
         return result;
       } catch (err) {
@@ -163,7 +163,7 @@ export const useRemoveImageFromAlbum = () => {
       setIsLoading(true);
       setError(null);
       try {
-        console.log({ album_name: albumName, path: imagePath });
+        // console.log({ album_name: albumName, path: imagePath });
         const result = await apiCall(
           `${BACKED_URL}/albums/remove-from-album`,
           'DELETE',
@@ -260,7 +260,7 @@ export function useAddMultipleImages() {
         },
         body: JSON.stringify({ paths }),
       });
-      console.log(response);
+      // console.log(response);
       if (!response.ok) {
         throw new Error('Failed to add multiple images');
       }

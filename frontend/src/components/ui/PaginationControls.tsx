@@ -41,38 +41,51 @@ export default function PaginationControls({
     return pages;
   };
   const handlePrevious = () => {
-    if(currentPage > 1) {
+    if (currentPage > 1) {
       onPageChange(currentPage - 1);
     }
-  }
+  };
   const handleNext = () => {
-    if(currentPage < totalPages) {
+    if (currentPage < totalPages) {
       onPageChange(currentPage + 1);
     }
-  }
+  };
   return (
     <div className="mt-6 flex justify-center">
       <Pagination>
-        <PaginationPrevious onClick={handlePrevious} />
-        <PaginationContent>
-          {getPageNumbers().map((page, index) =>
-            page === '...' ? (
-              <PaginationItem key={index}>
-                <PaginationLink>{page}</PaginationLink>
-              </PaginationItem>
-            ) : (
-              <PaginationItem key={index}>
-                <PaginationLink
-                  isActive={page === currentPage}
-                  onClick={() => onPageChange(Number(page))}
-                >
-                  {page}
-                </PaginationLink>
-              </PaginationItem>
-            ),
-          )}
-        </PaginationContent>
-        <PaginationNext onClick={handleNext} />
+        {currentPage === 1 ? null : (
+          <PaginationPrevious
+            onClick={handlePrevious}
+            className="mr-2 border border-white"
+          />
+        )}
+        {totalPages === 1 ? null : (
+          <PaginationContent>
+            {getPageNumbers().map((page, index) =>
+              page === '...' ? (
+                <PaginationItem key={index}>
+                  <PaginationLink>{page}</PaginationLink>
+                </PaginationItem>
+              ) : (
+                <PaginationItem key={index}>
+                  <PaginationLink
+                    isActive={page === currentPage}
+                    onClick={() => onPageChange(Number(page))}
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              ),
+            )}
+          </PaginationContent>
+        )}
+
+        {currentPage === totalPages ? null : (
+          <PaginationNext
+            onClick={handleNext}
+            className="ml-2 border border-white"
+          />
+        )}
       </Pagination>
     </div>
   );

@@ -15,16 +15,15 @@ import LoadingScreen from '../ui/LoadingScreen/LoadingScreen';
 import { ListOrderedIcon } from '../ui/Icons/Icons';
 import DeleteSelectedImagePage from '../FolderPicker/DeleteSelectedImagePage';
 import ErrorDialog from '../Album/Error';
-
-
+import { Trash2, Filter } from 'lucide-react';
 interface FilterControlsProps {
   filterTag: string;
   setFilterTag: (tag: string) => void;
   mediaItems: MediaItem[];
   onFolderAdded: () => Promise<void>;
   isLoading: boolean;
-  isVisibleSelectedImage: boolean,
-  setIsVisibleSelectedImage : (value:boolean) => void;
+  isVisibleSelectedImage: boolean;
+  setIsVisibleSelectedImage: (value: boolean) => void;
 }
 
 export default function FilterControls({
@@ -34,7 +33,7 @@ export default function FilterControls({
   onFolderAdded,
   isLoading,
   isVisibleSelectedImage,
-  setIsVisibleSelectedImage
+  setIsVisibleSelectedImage,
 }: FilterControlsProps) {
   const {
     addFolder,
@@ -49,7 +48,6 @@ export default function FilterControls({
       .sort();
   }, [mediaItems]);
 
- 
   const handleFolderPick = async (path: string) => {
     try {
       await addFolder(path);
@@ -72,7 +70,6 @@ export default function FilterControls({
     });
   };
 
-
   if (!isVisibleSelectedImage) {
     return (
       <div>
@@ -83,8 +80,6 @@ export default function FilterControls({
       </div>
     );
   }
-  
-
 
   return (
     <>
@@ -93,16 +88,23 @@ export default function FilterControls({
         <div className="text-red-500">Error: {addFolderError}</div>
       )}
       <div className="flex items-center gap-4 overflow-auto">
-        <FolderPicker setFolderPath={handleFolderPick} />
-        
-        <Button onClick={() => setIsVisibleSelectedImage(false)} variant="outline">
-          Delete Image
+        <FolderPicker setFolderPath={handleFolderPick} settingsPage={false} />
+
+        <Button
+          onClick={() => setIsVisibleSelectedImage(false)}
+          variant="outline"
+          className="border-white"
+        >
+          <Trash2 className="h-4 w-4" />
+          <p className="ml-1 hidden lg:inline">Delete Images</p>
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="flex items-center gap-2">
-              <ListOrderedIcon className="h-4 w-4" />
-              Filter by {filterTag || 'tags'}
+              <Filter className="h-4 w-4" />
+              <p className="hidden lg:inline">
+                Filter by {filterTag || 'tags'}
+              </p>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -131,4 +133,3 @@ export default function FilterControls({
     </>
   );
 }
-
