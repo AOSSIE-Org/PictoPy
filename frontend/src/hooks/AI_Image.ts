@@ -62,6 +62,7 @@ export function useAddFolder() {
     setResult({ data: null, error: null, isLoading: true });
 
     try {
+      console.log(BACKED_URL);
       const response = await fetch(`${BACKED_URL}/images/add-folder`, {
         method: 'POST',
         headers: {
