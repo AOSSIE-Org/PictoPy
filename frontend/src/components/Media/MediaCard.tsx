@@ -1,6 +1,6 @@
 // components/MediaGallery/MediaCard.tsx
-
 import { MediaCardProps } from '@/types/Media';
+import { Play } from 'lucide-react';
 
 export default function MediaCard({ item, type }: MediaCardProps) {
   return (
@@ -13,11 +13,21 @@ export default function MediaCard({ item, type }: MediaCardProps) {
           style={{ opacity: 1 }}
         />
       ) : (
-        <video
-          controls
-          src={item.src}
-          className="h-64 w-full object-cover transition-opacity duration-300"
-        />
+        <>
+          <video
+            src={item.src}
+            className="h-full w-full object-cover transition-opacity duration-300"
+            playsInline
+            muted
+          />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+            <Play
+              className="h-12 w-12 text-white"
+              fill="white"
+              strokeWidth={1}
+            />
+          </div>
+        </>
       )}
     </div>
   );

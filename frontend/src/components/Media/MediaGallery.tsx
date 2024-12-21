@@ -45,7 +45,6 @@ export default function MediaGallery({
   const closeMediaViewer = useCallback(() => {
     setShowMediaViewer(false);
   }, []);
-  console.log(currentItems);
   return (
     <div className="w-full">
       <div className="mx-auto px-2 pb-8 pt-1 dark:bg-background dark:text-foreground">
@@ -63,11 +62,13 @@ export default function MediaGallery({
           openMediaViewer={openMediaViewer}
           type={type}
         />
-        <PaginationControls
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
+        {totalPages >= 1 && (
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        )}
         {showMediaViewer && (
           <MediaView
             initialIndex={selectedMediaIndex}

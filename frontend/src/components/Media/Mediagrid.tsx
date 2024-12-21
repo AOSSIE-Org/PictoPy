@@ -17,12 +17,14 @@ export default function MediaGrid({
   }
 
   return (
-    <div className={`flex flex-wrap justify-evenly gap-4`}>
+    <div
+      className={`grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4`}
+    >
       {mediaItems.map((item, index) => (
         <div
           key={index}
           onClick={() => openMediaViewer(index)}
-          className="h-56 w-60 cursor-pointer"
+          className="h-56 cursor-pointer"
         >
           <MediaCard item={item} type={type} />
         </div>
