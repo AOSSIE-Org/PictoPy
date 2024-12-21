@@ -5,6 +5,7 @@ This module contains the main FastAPI application.
 from time import sleep
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from contextlib import asynccontextmanager
 
 from app.database.faces import cleanup_face_embeddings, create_faces_table
@@ -32,6 +33,7 @@ async def lifespan(app: FastAPI):
     if face_cluster:
         face_cluster.save_to_db()
 
+
 app = FastAPI(lifespan=lifespan)
 
 # Add CORS middleware
@@ -42,6 +44,12 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
+
+
+@app.get("/")
+async def root():
+    return {"message": "PictoPy Server is up and running!"}
+
 
 app.include_router(test_router, prefix="/test", tags=["Test"])
 app.include_router(images_router, prefix="/images", tags=["Images"])

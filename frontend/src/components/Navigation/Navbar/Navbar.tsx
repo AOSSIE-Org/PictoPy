@@ -1,11 +1,12 @@
 export function Navbar(props: { title?: string }) {
   return (
+
     <>
       <header className="flex w-full flex-row items-center justify-center align-middle">
-        <div className="mt-3 flex h-16 w-[50%] items-center justify-between rounded-3xl bg-[#333333] px-16">
+        <div className="mt-3 flex h-16 w-[50%] items-center justify-between rounded-3xl bg-[#333333] px-16 mb-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <img src="/Pictopy.svg" alt="" />
+              <img src="/tauri.svg" height={'20px'} width={'20px'} alt="" />
               <span className="font-sans text-lg font-bold text-gray-50">
                 Pictopy
               </span>
@@ -18,6 +19,6 @@ export function Navbar(props: { title?: string }) {
           </div>
         </div>
       </header>
-    </>
+    </div>
   );
 }
