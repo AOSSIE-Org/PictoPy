@@ -7,14 +7,14 @@ function Sidebar() {
   const isActive = (path: string) => location.pathname === path;
 
   const linkClasses = (path: string) =>
-    `flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-300 group ${
+    `flex flex-col items-center gap-2 p-3 rounded-xl transition-colors duration-200 group ${
       isActive(path)
-        ? 'text-sky-400 bg-sky-500/20 shadow-md shadow-sky-500/10'
-        : 'text-white hover:text-sky-300 hover:bg-sky-500/10 dark:text-gray-400 dark:hover:text-sky-300'
+        ? 'text-white bg-white/10 shadow-md backdrop-blur-md backdrop-saturate-150'
+        : 'text-white hover:text-white hover:bg-white/5 hover:border-white/10 hover:shadow-sm dark:text-gray-400 dark:hover:text-white'
     }`;
 
   const iconClasses =
-    'h-5 w-5 transition-all duration-300 ease-out group-hover:scale-110';
+    'h-5 w-5 transition-all duration-200 ease-out group-hover:scale-110';
 
   return (
     <div className="sidebar m-4 flex w-36 flex-col justify-between rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md backdrop-saturate-150 dark:border-white/5">

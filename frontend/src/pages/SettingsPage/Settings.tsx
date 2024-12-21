@@ -3,7 +3,7 @@ import FolderPicker from '@/components/FolderPicker/FolderPicker';
 
 import { deleteCache } from '@/services/cacheService';
 import { Button } from '@/components/ui/button';
-import { RefreshCwIcon } from '@/components/ui/Icons/Icons';
+import { FolderSync } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/LocalStorage';
 
 const Settings: React.FC = () => {
@@ -25,25 +25,31 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto flex-1 px-4 py-8">
-      <div className="space-y-6 rounded-3xl bg-[#333333] p-6 shadow dark:bg-[#333333]">
+    <div className="mx-auto flex-1 px-4 pt-1">
+      <div className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6 shadow backdrop-blur-md backdrop-saturate-150 dark:border-white/5">
         <div>
           <h2 className="mb-2 text-lg font-medium text-gray-50 dark:text-gray-50">
             Current Folder Path
           </h2>
-          <div className="rounded-md bg-[#414141] px-4 py-3 text-gray-300 dark:bg-[#414141] dark:text-gray-300">
+          <div className="rounded-md border border-white/5 bg-white/5 px-4 py-3 text-gray-300 backdrop-blur-sm dark:text-gray-300">
             {currentPath && <>{currentPath}</>}
           </div>
         </div>
-        <FolderPicker setFolderPath={handleFolderPathChange} />
-        <Button
-          onClick={handleDeleteCache}
-          variant="outline"
-          className="border-gray-500 text-gray-50 hover:bg-[#414141] dark:border-[#414141] dark:text-gray-50 dark:hover:bg-[#414141]"
-        >
-          <RefreshCwIcon className="mr-2 h-5 w-5 text-gray-50 dark:text-gray-50" />
-          Refresh Cache
-        </Button>
+        <div className="w-40 space-y-4">
+          <FolderPicker
+            setFolderPath={handleFolderPathChange}
+            className="h-10 w-full"
+            settingsPage={true}
+          />
+          <Button
+            onClick={handleDeleteCache}
+            variant="outline"
+            className="h-10 w-full border-white text-gray-50 hover:bg-white dark:text-gray-50"
+          >
+            <FolderSync className="text-gray-5 mr-2 h-5 w-5 dark:text-gray-50" />
+            Refresh Cache
+          </Button>
+        </div>
       </div>
     </div>
   );
