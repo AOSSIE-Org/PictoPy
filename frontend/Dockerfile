@@ -52,4 +52,4 @@ ENV TAURI_SIGNING_PRIVATE_KEY=$TAURI_SIGNING_PRIVATE_KEY
 ENV TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 # Set the container's entrypoint to access the bundled files
 EXPOSE 1420
-CMD ["tail" "-f" "/dev/null"]
+CMD ["tail", "-f" ,"/dev/null"]
