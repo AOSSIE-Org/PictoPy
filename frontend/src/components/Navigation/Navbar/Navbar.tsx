@@ -19,6 +19,6 @@ export function Navbar(props: { title?: string }) {
           </div>
         </div>
       </header>
-    </div>
+    </>
   );
 }
