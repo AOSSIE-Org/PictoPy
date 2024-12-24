@@ -20,19 +20,19 @@ function Sidebar() {
     }`;
 
   return (
-    <div className="sidebar flex w-40 flex-col justify-between space-y-4 border-r border-gray-700 bg-[#333333] p-4 dark:border-gray-700 m-4 rounded-3xl">
+    <div className="sidebar m-4 flex w-40 flex-col justify-between space-y-4 rounded-3xl border-r border-gray-700 bg-[#333333] p-4 dark:border-gray-700">
       <div className="mt-2 flex flex-col gap-10">
         <Link to="/home" className={linkClasses('/home')}>
           <HomeIcon
             className="h-5 w-5"
-            fillColor={isActive('/home') ? '#6465F3' : '  none'}
+            fill={isActive('/home') ? '#6465F3' : 'currentColor'}
           />
           <span className="font-sans">Home</span>
         </Link>
         <Link to="/ai-tagging" className={linkClasses('/ai-tagging')}>
           <FileIcon
             className="h-5 w-5"
-            fillColor={isActive('/ai-tagging') ? '#6465F3' : 'none'}
+            fill={isActive('/ai-tagging') ? '#6465F3' : 'currentColor'}
           />
           <span className="font-sans">AI Tagging</span>
         </Link>
@@ -40,21 +40,21 @@ function Sidebar() {
         <Link to="/videos" className={linkClasses('/videos')}>
           <VideoIcon
             className="h-5 w-5"
-            fillColor={isActive('/videos') ? '#6465F3' : 'currentColor'}
+            fill={isActive('/videos') ? '#6465F3' : 'currentColor'}
           />
           <span className="font-sans">Videos</span>
         </Link>
         <Link to="/albums" className={linkClasses('/albums')}>
           <AlbumIcon
             className="h-5 w-5"
-            fillColor={isActive('/albums') ? '#6465F3' : '  none'}
+            fill={isActive('/albums') ? '#6465F3' : 'currentColor'}
           />
           <span className="font-sans">Albums</span>
         </Link>
       </div>
       <Link to="/settings" className={linkClasses('/settings')}>
         <SettingsIcon
-          fillColor={isActive('/settings') ? '#6465F3' : 'currentColor'}
+          fill={isActive('/settings') ? '#6465F3' : 'currentColor'}
         />
         <span className="font-sans">Settings</span>
       </Link>

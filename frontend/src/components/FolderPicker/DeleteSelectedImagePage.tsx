@@ -1,38 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 import {
-  useAddMultipleImagesToAlbum,
+  useDeleteMultipleImages,
   useFetchAllImages,
-} from '../../hooks/AlbumService';
+} from '../../hooks/DeleteImages';
 import { Button } from '@/components/ui/button';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
-interface ImageSelectionPageProps {
-  albumName: string;
-  onClose: () => void;
-  onSuccess: () => void;
-  onError: (title: string, error: unknown) => void;
+interface DeleteSelectedImageProps {
+  setIsVisibleSelectedImage:(value:boolean) => void;
+  onError : (title:string,err:any) => void
 }
 
-const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
-  albumName,
-  onClose,
-  onSuccess,
-  onError,
+
+
+const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
+  setIsVisibleSelectedImage,
+  onError
 }) => {
-  const { images: allImagesData, isLoading, error } = useFetchAllImages();
+  const { images: allImagesData, isLoading } = useFetchAllImages();
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const { addMultipleImages, isLoading: isAddingImages } =
-    useAddMultipleImagesToAlbum();
+  const { deleteMultipleImages, isLoading: isAddingImages } =
+    useDeleteMultipleImages();
 
   // Extract the array of image paths
-  const allImages: string[] = allImagesData ?? [];
-
-  useEffect(() => {
-    if (error) {
-      onError('Error Fetching Images', error);
-    }
-  }, [error, onError]);
+  const allImages: string[] = allImagesData??[];
 
   const toggleImageSelection = (imagePath: string) => {
     setSelectedImages((prev) =>
@@ -43,13 +35,16 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
   };
 
   const handleAddSelectedImages = async () => {
-    if (selectedImages.length > 0) {
+    if (selectedImages.length > 0) {  
       try {
-        await addMultipleImages(albumName, selectedImages);
-        onSuccess();
+        await deleteMultipleImages(selectedImages);
+        console.log("Selected Images : ",selectedImages);
         setSelectedImages([]);
+        if(!isLoading) {
+            setIsVisibleSelectedImage(true);
+        }
       } catch (err) {
-        onError('Error Adding Images', err);
+        onError('Error during deleting images', err);
       }
     }
   };
@@ -68,7 +63,7 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="mb-4 text-2xl font-bold">Select Images for {albumName}</h1>
+      <h1 className="mb-4 text-2xl font-bold">Select Images</h1>
       {/* <FolderPicker setFolderPath={handleFolderPick} /> */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {allImages.map((imagePath, index) => {
@@ -96,16 +91,16 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
         })}
       </div>
       <div className="mt-4 flex justify-between">
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={()=>setIsVisibleSelectedImage(true)}>Cancel</Button>
         <Button
           onClick={handleAddSelectedImages}
           disabled={isAddingImages || selectedImages.length === 0}
         >
-          Add Selected Images ({selectedImages.length})
+          Delete Selected Images ({selectedImages.length})
         </Button>
       </div>
     </div>
   );
 };
 
-export default ImageSelectionPage;
+export default DeleteSelectedImagePage;

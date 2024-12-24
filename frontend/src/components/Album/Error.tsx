@@ -16,7 +16,9 @@ const ErrorDialog: React.FC<ErrorDialogProps> = ({ content, onClose }) => {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{content?.title}</DialogTitle>
-          <DialogDescription>{content?.description}</DialogDescription>
+          <DialogDescription className="text-red-600">
+            {content?.description}
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button onClick={onClose}>Close</Button>

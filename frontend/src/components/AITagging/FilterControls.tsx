@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +13,9 @@ import FolderPicker from '../FolderPicker/FolderPicker';
 import { useAddFolder } from '@/hooks/AI_Image';
 import LoadingScreen from '../ui/LoadingScreen/LoadingScreen';
 import { ListOrderedIcon } from '../ui/Icons/Icons';
+import DeleteSelectedImagePage from '../FolderPicker/DeleteSelectedImagePage';
+import ErrorDialog from '../Album/Error';
+
 
 interface FilterControlsProps {
   filterTag: string;
@@ -20,6 +23,8 @@ interface FilterControlsProps {
   mediaItems: MediaItem[];
   onFolderAdded: () => Promise<void>;
   isLoading: boolean;
+  isVisibleSelectedImage: boolean,
+  setIsVisibleSelectedImage : (value:boolean) => void;
 }
 
 export default function FilterControls({
@@ -28,6 +33,8 @@ export default function FilterControls({
   mediaItems,
   onFolderAdded,
   isLoading,
+  isVisibleSelectedImage,
+  setIsVisibleSelectedImage
 }: FilterControlsProps) {
   const {
     addFolder,
@@ -42,6 +49,7 @@ export default function FilterControls({
       .sort();
   }, [mediaItems]);
 
+ 
   const handleFolderPick = async (path: string) => {
     try {
       await addFolder(path);
@@ -51,6 +59,33 @@ export default function FilterControls({
     }
   };
 
+  const [errorDialogContent, setErrorDialogContent] = useState<{
+    title: string;
+    description: string;
+  } | null>(null);
+
+  const showErrorDialog = (title: string, err: unknown) => {
+    setErrorDialogContent({
+      title,
+      description:
+        err instanceof Error ? err.message : 'An unknown error occurred',
+    });
+  };
+
+
+  if (!isVisibleSelectedImage) {
+    return (
+      <div>
+        <DeleteSelectedImagePage
+          setIsVisibleSelectedImage={setIsVisibleSelectedImage}
+          onError={showErrorDialog}
+        />
+      </div>
+    );
+  }
+  
+
+
   return (
     <>
       {(isLoading || isAddingFolder) && <LoadingScreen />}
@@ -59,6 +94,10 @@ export default function FilterControls({
       )}
       <div className="flex items-center gap-4 overflow-auto">
         <FolderPicker setFolderPath={handleFolderPick} />
+        
+        <Button onClick={() => setIsVisibleSelectedImage(false)} variant="outline">
+          Delete Image
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="flex items-center gap-2">
@@ -67,7 +106,7 @@ export default function FilterControls({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-[200px] bg-white dark:text-foreground max-h-[500px] overflow-y-auto"
+            className="max-h-[500px] w-[200px] overflow-y-auto bg-white dark:text-foreground"
             align="end"
           >
             <DropdownMenuRadioGroup
@@ -84,7 +123,12 @@ export default function FilterControls({
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+        <ErrorDialog
+          content={errorDialogContent}
+          onClose={() => setErrorDialogContent(null)}
+        />
       </div>
     </>
   );
 }
+
