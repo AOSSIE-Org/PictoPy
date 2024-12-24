@@ -1,7 +1,6 @@
 export function Navbar(props: { title?: string }) {
   return (
-
-    <>
+    <div>
       <header className="flex w-full flex-row items-center justify-center align-middle">
         <div className="mt-3 flex h-16 w-[50%] items-center justify-between rounded-3xl bg-[#333333] px-16 mb-4">
           <div className="flex items-center gap-4">
