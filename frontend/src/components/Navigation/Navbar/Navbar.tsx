@@ -25,4 +25,3 @@ export function Navbar(props: { title?: string }) {
     </>
   );
 }
-
