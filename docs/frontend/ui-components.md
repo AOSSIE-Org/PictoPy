@@ -7,11 +7,13 @@
 A modal dialog component based on Radix UI.
 
 Key features:
+
 - Customizable content, header, and footer
 - Accessible design
 - Animated transitions
 
 Usage:
+
 ```jsx
 <Dialog>
   <DialogContent>
@@ -28,6 +30,7 @@ Usage:
 A styled input component.
 
 Usage:
+
 ```jsx
 <Input type="text" placeholder="Enter text" />
 ```
@@ -37,6 +40,7 @@ Usage:
 A versatile button component with various styles.
 
 Usage:
+
 ```jsx
 <Button variant="outline" onClick={handleClick}>
   Click me
@@ -48,6 +52,7 @@ Usage:
 A customizable dropdown menu component.
 
 Usage:
+
 ```jsx
 <DropdownMenu>
   <DropdownMenuTrigger>Open</DropdownMenuTrigger>
@@ -65,6 +70,7 @@ Usage:
 Displays an individual media item (image or video).
 
 Usage:
+
 ```jsx
 <MediaCard item={mediaItem} type="image" />
 ```
@@ -74,6 +80,7 @@ Usage:
 Renders a grid of MediaCard components.
 
 Usage:
+
 ```jsx
 <MediaGrid
   mediaItems={items}
@@ -88,6 +95,7 @@ Usage:
 Provides a full-screen view of media items with navigation.
 
 Usage:
+
 ```jsx
 <MediaView
   initialIndex={0}
@@ -106,6 +114,7 @@ Usage:
 Displays an individual album with cover image and actions.
 
 Usage:
+
 ```jsx
 <AlbumCard
   album={albumData}
@@ -120,6 +129,7 @@ Usage:
 Renders a grid of AlbumCard components.
 
 Usage:
+
 ```jsx
 <AlbumList
   albums={albumsData}
@@ -135,12 +145,9 @@ Usage:
 Displays the contents of a single album.
 
 Usage:
+
 ```jsx
-<AlbumView
-  albumName="My Album"
-  onBack={handleBack}
-  onError={handleError}
-/>
+<AlbumView albumName="My Album" onBack={handleBack} onError={handleError} />
 ```
 
 ## Utility Components
@@ -150,8 +157,11 @@ Usage:
 Displays a full-screen loading indicator.
 
 Usage:
+
 ```jsx
-{isLoading && <LoadingScreen />}
+{
+  isLoading && <LoadingScreen />;
+}
 ```
 
 ### 2. ErrorDialog
@@ -159,11 +169,9 @@ Usage:
 Displays error messages in a dialog.
 
 Usage:
+
 ```jsx
-<ErrorDialog
-  content={errorContent}
-  onClose={handleClose}
-/>
+<ErrorDialog content={errorContent} onClose={handleClose} />
 ```
 
 ### 3. PaginationControls
@@ -171,6 +179,7 @@ Usage:
 Provides pagination controls for lists or grids.
 
 Usage:
+
 ```jsx
 <PaginationControls
   currentPage={1}
@@ -186,6 +195,7 @@ Usage:
 A form dialog for creating new albums.
 
 Usage:
+
 ```jsx
 <CreateAlbumForm
   isOpen={isOpen}
@@ -200,6 +210,7 @@ Usage:
 A dialog for editing album details.
 
 Usage:
+
 ```jsx
 <EditAlbumDialog
   album={selectedAlbum}

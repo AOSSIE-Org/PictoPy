@@ -16,6 +16,7 @@ The Gallery View is a core feature of our Tauri application, providing users wit
 The main container component for the gallery view.
 
 ### Key Features
+
 - Manages sorting and pagination state
 - Renders the grid of media items
 - Handles opening and closing of full-screen media view
@@ -23,13 +24,9 @@ The main container component for the gallery view.
 ### Usage
 
 ```jsx
-import MediaGallery from './MediaGallery';
+import MediaGallery from "./MediaGallery";
 
-<MediaGallery
-  mediaItems={items}
-  title="My Gallery"
-  type="image"
-/>
+<MediaGallery mediaItems={items} title="My Gallery" type="image" />;
 ```
 
 ### Implementation Details
@@ -115,7 +112,7 @@ export default function MediaGrid({
       <h1 className="text-2xl font-bold">No media found</h1>
     </div>;
   }
-  
+
   return (
     <div className={`grid gap-4 md:gap-6 ${/* grid classes based on itemsPerRow */}`}>
       {mediaItems.map((item, index) => (
@@ -282,5 +279,4 @@ const SortingControls: React.FC<SortingControlsProps> = ({
 4. Ensure accessibility in all components, especially in the MediaView for keyboard navigation.
 5. Use Tailwind CSS for consistent and responsive styling.
 
-
-This documentation provides an overview of the Gallery View components in your Tauri application. For more detailed information on specific components or functionalities, refer to the individual component files 
+This documentation provides an overview of the Gallery View components in your Tauri application. For more detailed information on specific components or functionalities, refer to the individual component files
