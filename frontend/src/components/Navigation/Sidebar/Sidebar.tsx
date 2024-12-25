@@ -16,11 +16,11 @@ function Sidebar() {
     `flex items-center flex-col gap-2 ${
       isActive(path)
         ? 'text-[#6465F3] glow'
-        : 'text-white hover:text-gray-50 dark:text-gray-400 dark:hover:text-gray-50'
+        : 'hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-50'
     }`;
 
   return (
-    <div className="sidebar m-4 flex w-40 flex-col justify-between space-y-4 rounded-3xl border-r border-gray-700 bg-[#333333] p-4 dark:border-gray-700">
+    <div className="sidebar m-4 flex w-40 flex-col justify-between space-y-4 rounded-3xl border border-gray-200 dark:border-gray-800 bg-theme-light dark:bg-theme-dark p-4">
       <div className="mt-2 flex flex-col gap-10">
         <Link to="/home" className={linkClasses('/home')}>
           <HomeIcon

@@ -26,12 +26,12 @@ const Settings: React.FC = () => {
 
   return (
     <div className="container mx-auto flex-1 px-4 py-8">
-      <div className="space-y-6 rounded-3xl bg-[#333333] p-6 shadow dark:bg-[#333333]">
+      <div className="space-y-6 rounded-3xl bg-theme-light dark:bg-theme-dark p-6 shadow">
         <div>
-          <h2 className="mb-2 text-lg font-medium text-gray-50 dark:text-gray-50">
+          <h2 className="mb-2 text-lg font-medium text-theme-dark dark:text-theme-light">
             Current Folder Path
           </h2>
-          <div className="rounded-md bg-[#414141] px-4 py-3 text-gray-300 dark:bg-[#414141] dark:text-gray-300">
+          <div className="rounded-md bg-gray-100 dark:bg-gray-800 px-4 py-3 text-theme-dark dark:text-theme-light">
             {currentPath && <>{currentPath}</>}
           </div>
         </div>
@@ -39,9 +39,9 @@ const Settings: React.FC = () => {
         <Button
           onClick={handleDeleteCache}
           variant="outline"
-          className="border-gray-500 text-gray-50 hover:bg-[#414141] dark:border-[#414141] dark:text-gray-50 dark:hover:bg-[#414141]"
+          className="border-gray-500 text-theme-dark dark:text-theme-light hover:bg-gray-100 dark:hover:bg-gray-800"
         >
-          <RefreshCwIcon className="mr-2 h-5 w-5 text-gray-50 dark:text-gray-50" />
+          <RefreshCwIcon className="mr-2 h-5 w-5 text-theme-dark dark:text-theme-light" />
           Refresh Cache
         </Button>
       </div>
