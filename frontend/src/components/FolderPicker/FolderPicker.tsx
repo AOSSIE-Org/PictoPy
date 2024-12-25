@@ -28,9 +28,9 @@ const FolderPicker: React.FC<FolderPickerProps> = ({ setFolderPath }) => {
       <Button
         onClick={pickFolder}
         variant="outline"
-        className="border text-black group hover:bg-gray-700 hover:text-white dark:border-gray-500"
+        className="border-gray-500 text-theme-dark dark:text-theme-light hover:bg-gray-100 dark:hover:bg-gray-800"
       >
-        <FolderOpenIcon className="mr-2 h-5 w-5 text-black group-hover:text-white" />
+        <FolderOpenIcon className="mr-2 h-5 w-5 text-theme-dark dark:text-theme-light" />
         Add folder
       </Button>
     </div>
