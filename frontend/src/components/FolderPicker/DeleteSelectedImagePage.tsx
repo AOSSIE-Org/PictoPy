@@ -8,15 +8,13 @@ import { Button } from '@/components/ui/button';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
 interface DeleteSelectedImageProps {
-  setIsVisibleSelectedImage:(value:boolean) => void;
-  onError : (title:string,err:any) => void
+  setIsVisibleSelectedImage: (value: boolean) => void;
+  onError: (title: string, err: any) => void;
 }
-
-
 
 const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
   setIsVisibleSelectedImage,
-  onError
+  onError,
 }) => {
   const { images: allImagesData, isLoading } = useFetchAllImages();
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
@@ -24,7 +22,7 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
     useDeleteMultipleImages();
 
   // Extract the array of image paths
-  const allImages: string[] = allImagesData??[];
+  const allImages: string[] = allImagesData ?? [];
 
   const toggleImageSelection = (imagePath: string) => {
     setSelectedImages((prev) =>
@@ -35,13 +33,13 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
   };
 
   const handleAddSelectedImages = async () => {
-    if (selectedImages.length > 0) {  
+    if (selectedImages.length > 0) {
       try {
         await deleteMultipleImages(selectedImages);
-        console.log("Selected Images : ",selectedImages);
+        console.log('Selected Images : ', selectedImages);
         setSelectedImages([]);
-        if(!isLoading) {
-            setIsVisibleSelectedImage(true);
+        if (!isLoading) {
+          setIsVisibleSelectedImage(true);
         }
       } catch (err) {
         onError('Error during deleting images', err);
@@ -50,9 +48,12 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
   };
 
   const handleSelectAllImages = () => {
+    if (selectedImages.length === allImages.length) {
+      setSelectedImages([]);
+      return;
+    }
     setSelectedImages(allImages);
-    
-  }
+  };
 
   const getImageName = (path: string) => {
     return path.split('\\').pop() || path;
@@ -68,7 +69,7 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
 
   return (
     <div className="container mx-auto p-4">
-      <div className='flex justify-between items-center'>
+      <div className="flex items-center justify-between">
         <h1 className="mb-4 text-2xl font-bold">Select Images</h1>
         <button onClick={handleSelectAllImages}>Select All</button>
       </div>
@@ -99,7 +100,7 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
         })}
       </div>
       <div className="mt-4 flex justify-between">
-        <Button onClick={()=>setIsVisibleSelectedImage(true)}>Cancel</Button>
+        <Button onClick={() => setIsVisibleSelectedImage(true)}>Cancel</Button>
         <Button
           onClick={handleAddSelectedImages}
           disabled={isAddingImages || selectedImages.length === 0}
