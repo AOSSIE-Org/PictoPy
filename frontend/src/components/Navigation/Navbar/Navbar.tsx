@@ -10,13 +10,13 @@ export function Navbar(props: { title?: string }) {
             <span className="text-theme-dark dark:text-theme-light font-sans text-lg font-bold drop-shadow-sm">
               PictoPy
             </span>
-            <ThemeToggle />
           </div>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-theme-dark dark:text-theme-light font-sans text-lg font-medium">
             Welcome {props.title || 'User'}
           </span>
+          <ThemeToggle />
         </div>
       </div>
     </header>
