@@ -53,7 +53,11 @@ const AlbumsView: React.FC = () => {
       <div className="container mx-auto pb-4">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Albums</h1>
-          <Button onClick={() => setIsCreateFormOpen(true)} variant="outline">
+          <Button
+            onClick={() => setIsCreateFormOpen(true)}
+            variant="outline"
+            className="border-gray-500 dark:hover:bg-white/10"
+          >
             Create New Album
           </Button>
         </div>
@@ -93,7 +97,7 @@ const AlbumsView: React.FC = () => {
             <Button
               onClick={() => setIsCreateFormOpen(true)}
               variant="outline"
-              className="flex items-center"
+              className="flex items-center border-gray-500 dark:hover:bg-white/10"
             >
               <SquarePlus className="h-[18px] w-[18px]" />
               <p className="mb-[1px] ml-1">Create New Album</p>

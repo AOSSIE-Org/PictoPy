@@ -33,14 +33,10 @@ const FolderPicker: React.FC<FolderPickerProps> = ({
       <Button
         onClick={pickFolder}
         variant="outline"
-        className={
-          `flex items-center justify-center border-white text-gray-50 hover:text-accent-foreground dark:border-gray-500 dark:hover:bg-gray-700` +
-          className
-        }
+        className={`flex items-center justify-center border-gray-500 text-gray-700 hover:bg-accent dark:text-gray-50 dark:hover:bg-white/10 ${className} `}
       >
         <FolderPlus className="h-[18px] w-[18px]" />
         <p className={`ml-2 ${!settingsPage && 'hidden lg:inline'}`}>
-          {' '}
           Add folder
         </p>
       </Button>

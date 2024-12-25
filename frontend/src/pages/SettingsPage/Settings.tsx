@@ -26,12 +26,12 @@ const Settings: React.FC = () => {
 
   return (
     <div className="mx-auto flex-1 px-4 pt-1">
-      <div className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6 shadow backdrop-blur-md backdrop-saturate-150 dark:border-white/5">
+      <div className="bg-theme-light space-y-6 rounded-2xl border border-white/10 p-6 shadow backdrop-blur-md backdrop-saturate-150 dark:border-white/5 dark:bg-white/5">
         <div>
-          <h2 className="mb-2 text-lg font-medium text-gray-50 dark:text-gray-50">
+          <h2 className="text-theme-dark dark:text-theme-light mb-2 text-lg font-medium">
             Current Folder Path
           </h2>
-          <div className="rounded-md border border-white/5 bg-white/5 px-4 py-3 text-gray-300 backdrop-blur-sm dark:text-gray-300">
+          <div className="text-theme-dark dark:text-theme-light rounded-md border bg-gray-100 px-4 py-3 backdrop-blur-sm dark:border-white/5 dark:bg-white/5">
             {currentPath && <>{currentPath}</>}
           </div>
         </div>
@@ -44,7 +44,7 @@ const Settings: React.FC = () => {
           <Button
             onClick={handleDeleteCache}
             variant="outline"
-            className="h-10 w-full border-white text-gray-50 hover:bg-white dark:text-gray-50"
+            className="h-10 w-full border-gray-500 hover:bg-accent dark:hover:bg-white/10"
           >
             <FolderSync className="text-gray-5 mr-2 h-5 w-5 dark:text-gray-50" />
             Refresh Cache

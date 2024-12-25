@@ -24,6 +24,7 @@ interface FilterControlsProps {
   isLoading: boolean;
   isVisibleSelectedImage: boolean;
   setIsVisibleSelectedImage: (value: boolean) => void;
+  refetchMediaItems: () => Promise<void>;
 }
 
 export default function FilterControls({
@@ -31,6 +32,7 @@ export default function FilterControls({
   setFilterTag,
   mediaItems,
   onFolderAdded,
+  refetchMediaItems,
   isLoading,
   isVisibleSelectedImage,
   setIsVisibleSelectedImage,
@@ -52,6 +54,7 @@ export default function FilterControls({
     try {
       await addFolder(path);
       await onFolderAdded();
+      await refetchMediaItems();
     } catch (error) {
       console.error('Error adding folder:', error);
     }
@@ -76,6 +79,7 @@ export default function FilterControls({
         <DeleteSelectedImagePage
           setIsVisibleSelectedImage={setIsVisibleSelectedImage}
           onError={showErrorDialog}
+          refetchMediaItems={refetchMediaItems}
         />
       </div>
     );
@@ -93,14 +97,17 @@ export default function FilterControls({
         <Button
           onClick={() => setIsVisibleSelectedImage(false)}
           variant="outline"
-          className="border-white"
+          className="border-gray-500 hover:bg-accent dark:hover:bg-white/10"
         >
           <Trash2 className="h-4 w-4" />
           <p className="ml-1 hidden lg:inline">Delete Images</p>
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
+            >
               <Filter className="h-4 w-4" />
               <p className="hidden lg:inline">
                 Filter by {filterTag || 'tags'}
@@ -108,7 +115,7 @@ export default function FilterControls({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="max-h-[500px] w-[200px] overflow-y-auto bg-white dark:text-foreground"
+            className="max-h-[500px] w-[200px] overflow-y-auto"
             align="end"
           >
             <DropdownMenuRadioGroup

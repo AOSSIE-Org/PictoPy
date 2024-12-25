@@ -1,17 +1,20 @@
+import { ThemeToggle } from '@/components/ThemeToggle';
+
 export function Navbar(props: { title?: string }) {
   return (
     <header className="flex w-full flex-row items-center justify-center align-middle">
-      <div className="mb-4 mt-3 flex h-16 items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-16 shadow-lg backdrop-blur-md backdrop-saturate-150 sm:w-[70%] md:w-[50%]">
+      <div className="bg-theme-light mb-4 mt-3 flex h-16 items-center justify-between rounded-2xl border border-gray-200 px-16 shadow-md backdrop-blur-md backdrop-saturate-150 dark:border-white/10 dark:bg-white/5 sm:w-[70%] md:w-[55%]">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 transition-all duration-300 hover:scale-105">
+          <div className="flex items-center gap-2">
             <img src="/public/PictoPy_Logo.png" className="h-7" alt="" />
-            <span className="font-sans text-lg font-bold text-gray-50 drop-shadow-sm">
+            <span className="text-theme-dark dark:text-theme-light font-sans text-lg font-bold drop-shadow-sm">
               PictoPy
             </span>
+            <ThemeToggle />
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <span className="font-sans text-lg font-medium text-gray-50/90 drop-shadow-sm">
+          <span className="text-theme-dark dark:text-theme-light font-sans text-lg font-medium">
             Welcome {props.title || 'User'}
           </span>
         </div>

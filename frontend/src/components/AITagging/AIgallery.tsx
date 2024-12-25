@@ -12,7 +12,11 @@ export default function AIGallery({
   type,
   folderPath,
 }: MediaGalleryProps & { folderPath: string }) {
-  const { images: mediaItems, loading } = useAIImage(folderPath);
+  const {
+    images: mediaItems,
+    loading,
+    refetchMediaItems,
+  } = useAIImage(folderPath);
   const [filterTag, setFilterTag] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
@@ -34,7 +38,7 @@ export default function AIGallery({
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     return filteredMediaItems.slice(indexOfFirstItem, indexOfLastItem);
-  }, [filteredMediaItems, currentPage, itemsPerPage]);
+  }, [filteredMediaItems, currentPage, itemsPerPage, mediaItems]);
 
   const totalPages = Math.ceil(filteredMediaItems.length / itemsPerPage);
 
@@ -47,7 +51,9 @@ export default function AIGallery({
     setShowMediaViewer(false);
   }, []);
 
-  const handleFolderAdded = useCallback(async () => {}, []);
+  const handleFolderAdded = useCallback(async () => {
+    await refetchMediaItems();
+  }, [refetchMediaItems]);
 
   return (
     <div className="w-full">
@@ -60,6 +66,7 @@ export default function AIGallery({
             filterTag={filterTag}
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
+            refetchMediaItems={refetchMediaItems}
             onFolderAdded={handleFolderAdded}
             isLoading={loading}
             isVisibleSelectedImage={isVisibleSelectedImage}

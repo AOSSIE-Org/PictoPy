@@ -9,26 +9,24 @@ const useAIImage = (folderPath: string) => {
   const [images, setImages] = useState<Image[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch(`${BACKED_URL}/images/all-image-objects`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const allImageObjects: APIResponse = await response.json();
-
-        const parsedAndSortedImages = parseAndSortImageData(
-          allImageObjects.data,
-        );
-        setImages(parsedAndSortedImages);
-      } catch (error) {
-        console.error('Error fetching images:', error);
-      } finally {
-        setLoading(false);
+  const fetchData = async () => {
+    try {
+      const response = await fetch(`${BACKED_URL}/images/all-image-objects`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    };
+      const allImageObjects: APIResponse = await response.json();
 
+      const parsedAndSortedImages = parseAndSortImageData(allImageObjects.data);
+      setImages(parsedAndSortedImages);
+    } catch (error) {
+      console.error('Error fetching images:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, [folderPath]);
 
@@ -46,7 +44,7 @@ const useAIImage = (folderPath: string) => {
     return parsedImages;
   };
 
-  return { images, loading };
+  return { images, loading, refetchMediaItems: fetchData };
 };
 
 export default useAIImage;

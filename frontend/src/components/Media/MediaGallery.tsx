@@ -1,9 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import MediaGrid from './Mediagrid';
-
 import MediaView from './MediaView';
 import SortingControls from './SortningControls';
-
 import PaginationControls from '../ui/PaginationControls';
 import { MediaGalleryProps } from '@/types/Media';
 import { sortMedia } from '@/utils/Media';
@@ -22,7 +20,7 @@ export default function MediaGallery({
   const itemsPerRow: number = 3;
 
   const sortedMedia = useMemo(() => {
-    return sortMedia(mediaItems, sortBy);
+    return sortMedia(mediaItems, [sortBy]);
   }, [mediaItems, sortBy]);
 
   const currentItems = useMemo(() => {

@@ -6,10 +6,10 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
 import { Button } from '@/components/ui/button';
 import { SortingControlsProps, YearOption } from '@/types/Media';
 import { ArrowDownWideNarrow } from 'lucide-react';
+
 const SortingControls: React.FC<SortingControlsProps> = ({
   sortBy,
   setSortBy,
@@ -23,36 +23,42 @@ const SortingControls: React.FC<SortingControlsProps> = ({
   const years = mediaItems.reduce<string[]>((acc, curr) => {
     if (curr.date) {
       const year = new Date(curr.date).getFullYear().toString();
-      if (!acc.includes(year)) {
-        acc.push(year);
-      }
+      if (!acc.includes(year)) acc.push(year);
     }
     return acc;
   }, []);
 
-  // Sort years in descending order
   years.sort((a, b) => parseInt(b) - parseInt(a));
 
-  // Generate year options for dropdown
-  const yearOptions: YearOption[] = years.map((year) => ({
-    value: `year-${year}`,
-    label: year,
-  }));
+  const sortingOptions = [
+    { value: 'date', label: 'Sort by Date ' },
+    { value: 'name', label: 'Sort by Name (A-Z)' },
+    { value: 'desc', label: 'Sort by Name (Z-A)' },
+    { value: 'size', label: 'Sort by Size' },
+    { value: 'type', label: 'Sort by Type' },
+    ...years.map((year) => ({
+      value: `year-${year}`,
+      label: `Sort by Year (${year})`,
+    })),
+  ];
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          className="flex items-center gap-2 border-gray-500"
+        >
           <ArrowDownWideNarrow className="h-4 w-4" />
-          <p className="pb-[1px]">Sort by {sortBy}</p>
+          {`Sort: ${sortingOptions.find((opt) => opt.value === sortBy)?.label || 'Select'}`}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="w-[200px] bg-white dark:text-foreground"
+        className="w-[200px] dark:bg-background dark:text-foreground"
         align="end"
       >
         <DropdownMenuRadioGroup value={sortBy} onValueChange={handleSortChange}>
-          <DropdownMenuRadioItem value="date">Date</DropdownMenuRadioItem>
-          {yearOptions.map((option) => (
+          {sortingOptions.map((option) => (
             <DropdownMenuRadioItem key={option.value} value={option.value}>
               {option.label}
             </DropdownMenuRadioItem>

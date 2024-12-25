@@ -16,7 +16,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({
   onDelete,
 }) => {
   return (
-    <div className="group relative h-64 overflow-hidden rounded-lg bg-slate-800 shadow-lg transition-transform duration-300 ease-in-out hover:-translate-y-2 hover:shadow-xl dark:bg-card dark:text-card-foreground">
+    <div className="group relative h-64 overflow-hidden rounded-lg bg-slate-200 shadow-lg transition-transform duration-300 ease-in-out hover:-translate-y-2 hover:shadow-xl dark:bg-slate-800 dark:text-card-foreground">
       <div onClick={onClick} className="h-full cursor-pointer">
         {album.imageCount ? (
           <img
