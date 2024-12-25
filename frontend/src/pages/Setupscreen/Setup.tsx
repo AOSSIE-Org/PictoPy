@@ -1,17 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useInitialPageController } from '@/controllers/SetupController';
 import { SetupScreen } from '@/features/Setup/Setup';
 import { LoadingScreen } from '@/components/LoadingScreen/LoadingScreen';
 
 export const InitialPage: React.FC = () => {
-  const {  handleFolderPathChange } = useInitialPageController();
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-
-  }, []);
+  const { loading, handleFolderPathChange } = useInitialPageController();
+ 
   
   if (loading) {
     return <LoadingScreen />;
