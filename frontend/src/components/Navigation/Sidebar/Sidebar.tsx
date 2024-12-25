@@ -16,7 +16,7 @@ function Sidebar() {
     `flex items-center flex-col gap-2 ${
       isActive(path)
         ? 'text-[#6465F3] glow'
-        : 'hover:text-gray-50 dark:text-gray-400 dark:hover:text-gray-50'
+        : 'hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-50'
     }`;
 
   return (
