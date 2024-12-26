@@ -5,7 +5,7 @@ This repository includes a Docker Compose configuration to streamline the deploy
 
 ## Prerequisites
 
-Before you proceed, ensure the following tools are installed on your system:
+Before you proceed, ensure the following tools are installed in your system:
 
 - [Docker](https://www.docker.com/)
 - [Docker Compose](https://docs.docker.com/compose/)
