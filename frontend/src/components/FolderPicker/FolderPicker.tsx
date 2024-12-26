@@ -1,13 +1,18 @@
 import React from 'react';
 import { Button } from '../ui/button';
 import { open } from '@tauri-apps/plugin-dialog';
-import { FolderOpenIcon } from '../ui/Icons/Icons';
-
+import { FolderPlus } from 'lucide-react';
 interface FolderPickerProps {
   setFolderPath: (path: string) => void;
+  className?: string;
+  settingsPage?: boolean;
 }
 
-const FolderPicker: React.FC<FolderPickerProps> = ({ setFolderPath }) => {
+const FolderPicker: React.FC<FolderPickerProps> = ({
+  setFolderPath,
+  className,
+  settingsPage,
+}) => {
   const pickFolder = async () => {
     try {
       const selected = await open({
@@ -24,14 +29,16 @@ const FolderPicker: React.FC<FolderPickerProps> = ({ setFolderPath }) => {
   };
 
   return (
-    <div className="flex gap-3">
+    <div className="flex w-full gap-3">
       <Button
         onClick={pickFolder}
         variant="outline"
-        className="border-gray-500 text-theme-dark dark:text-theme-light hover:bg-gray-100 dark:hover:bg-gray-800"
+        className={`flex items-center justify-center border-gray-500 text-gray-700 hover:bg-accent dark:text-gray-50 dark:hover:bg-white/10 ${className} `}
       >
-        <FolderOpenIcon className="mr-2 h-5 w-5 text-theme-dark dark:text-theme-light" />
-        Add folder
+        <FolderPlus className="h-[18px] w-[18px]" />
+        <p className={`ml-2 ${!settingsPage && 'hidden lg:inline'}`}>
+          Add folder
+        </p>
       </Button>
     </div>
   );

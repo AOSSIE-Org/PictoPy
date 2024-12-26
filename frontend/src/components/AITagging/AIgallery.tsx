@@ -23,7 +23,7 @@ export default function AIGallery({
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
   const [isVisibleSelectedImage, setIsVisibleSelectedImage] =
     useState<boolean>(true);
-  const itemsPerPage: number = 9;
+  const itemsPerPage: number = 20;
   const itemsPerRow: number = 3;
 
   const filteredMediaItems = useMemo(() => {
@@ -56,8 +56,8 @@ export default function AIGallery({
   }, [refetchMediaItems]);
 
   return (
-    <div className="container">
-      <div className="mx-auto max-w-6xl px-4 py-8 dark:bg-background dark:text-foreground md:px-6">
+    <div className="w-full">
+      <div className="mx-auto px-2 pb-8 dark:bg-background dark:text-foreground">
         <div className="mb-6 flex items-center justify-between">
           {isVisibleSelectedImage && (
             <h1 className="text-2xl font-bold">{title}</h1>

@@ -12,13 +12,7 @@ const AlbumList: React.FC<AlbumListProps> = ({
 }) => {
   return (
     <div
-      className={`grid gap-4 md:gap-6 ${
-        albumsPerRow === 2
-          ? 'grid-cols-1 sm:grid-cols-2'
-          : albumsPerRow === 3
-            ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'
-            : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
-      }`}
+      className={`grid grid-cols-[repeat(auto-fill,_minmax(272px,_1fr))] gap-4`}
     >
       {albums.map((album) => (
         <AlbumCard

@@ -7,8 +7,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { SortingControlsProps } from '@/types/Media';
-import { ListOrderedIcon } from '../ui/Icons/Icons';
+import { SortingControlsProps, YearOption } from '@/types/Media';
+import { ArrowDownWideNarrow } from 'lucide-react';
 
 const SortingControls: React.FC<SortingControlsProps> = ({
   sortBy,
@@ -45,13 +45,16 @@ const SortingControls: React.FC<SortingControlsProps> = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2">
-          <ListOrderedIcon className="h-4 w-4" />
+        <Button
+          variant="outline"
+          className="flex items-center gap-2 border-gray-500"
+        >
+          <ArrowDownWideNarrow className="h-4 w-4" />
           {`Sort: ${sortingOptions.find((opt) => opt.value === sortBy)?.label || 'Select'}`}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="w-[200px] bg-white dark:text-foreground"
+        className="w-[200px] dark:bg-background dark:text-foreground"
         align="end"
       >
         <DropdownMenuRadioGroup value={sortBy} onValueChange={handleSortChange}>
