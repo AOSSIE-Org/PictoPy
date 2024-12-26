@@ -10,11 +10,13 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 interface DeleteSelectedImageProps {
   setIsVisibleSelectedImage: (value: boolean) => void;
   onError: (title: string, err: any) => void;
+  refetchMediaItems: () => void;
 }
 
 const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
   setIsVisibleSelectedImage,
   onError,
+  refetchMediaItems,
 }) => {
   const { images: allImagesData, isLoading } = useFetchAllImages();
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
@@ -38,6 +40,7 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
         await deleteMultipleImages(selectedImages);
         console.log('Selected Images : ', selectedImages);
         setSelectedImages([]);
+        refetchMediaItems();
         if (!isLoading) {
           setIsVisibleSelectedImage(true);
         }
