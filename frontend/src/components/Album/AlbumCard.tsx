@@ -5,7 +5,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { MoreVertical } from 'lucide-react';
+import { MoreVertical, Images } from 'lucide-react';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { AlbumCardProps } from '@/types/Album';
 
@@ -16,15 +16,19 @@ const AlbumCard: React.FC<AlbumCardProps> = ({
   onDelete,
 }) => {
   return (
-    <div className="group relative overflow-hidden rounded-lg shadow-lg transition-transform duration-300 ease-in-out hover:-translate-y-2 hover:shadow-xl dark:bg-card dark:text-card-foreground">
-      <div onClick={onClick} className="cursor-pointer">
-        <img
-          src={convertFileSrc(album.coverImage)}
-          alt={`Cover for ${album.title}`}
-          width={500}
-          height={400}
-          className="h-64 w-full object-cover transition-opacity duration-300"
-        />
+    <div className="group relative h-64 overflow-hidden rounded-lg bg-slate-200 shadow-lg transition-transform duration-300 ease-in-out hover:-translate-y-2 hover:shadow-xl dark:bg-slate-800 dark:text-card-foreground">
+      <div onClick={onClick} className="h-full cursor-pointer">
+        {album.imageCount ? (
+          <img
+            src={convertFileSrc(album.coverImage)}
+            alt={`Cover for ${album.title}`}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <Images className="h-16 w-16 text-slate-400" />
+          </div>
+        )}
         <div className="absolute inset-0 flex items-end bg-black bg-opacity-40 p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
           <div className="text-white">
             <h3 className="text-lg font-semibold">{album.title}</h3>

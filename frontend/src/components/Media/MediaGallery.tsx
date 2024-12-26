@@ -1,9 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import MediaGrid from './Mediagrid';
-
 import MediaView from './MediaView';
 import SortingControls from './SortningControls';
-
 import PaginationControls from '../ui/PaginationControls';
 import { MediaGalleryProps } from '@/types/Media';
 import { sortMedia } from '@/utils/Media';
@@ -18,11 +16,11 @@ export default function MediaGallery({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
-  const itemsPerPage: number = 9;
+  const itemsPerPage: number = 20;
   const itemsPerRow: number = 3;
 
   const sortedMedia = useMemo(() => {
-    return sortMedia(mediaItems, sortBy);
+    return sortMedia(mediaItems, [sortBy]);
   }, [mediaItems, sortBy]);
 
   const currentItems = useMemo(() => {
@@ -45,10 +43,9 @@ export default function MediaGallery({
   const closeMediaViewer = useCallback(() => {
     setShowMediaViewer(false);
   }, []);
-
   return (
-    <div className="container">
-      <div className="mx-auto max-w-6xl px-4 py-8 dark:bg-background dark:text-foreground md:px-6">
+    <div className="w-full">
+      <div className="mx-auto px-2 pb-8 pt-1 dark:bg-background dark:text-foreground">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold">{title || currentYear}</h1>
           <SortingControls
@@ -63,11 +60,13 @@ export default function MediaGallery({
           openMediaViewer={openMediaViewer}
           type={type}
         />
-        <PaginationControls
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
+        {totalPages >= 1 && (
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        )}
         {showMediaViewer && (
           <MediaView
             initialIndex={selectedMediaIndex}

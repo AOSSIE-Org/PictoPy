@@ -1,6 +1,6 @@
 import { MediaViewProps } from '@/types/Media';
 import React, { useEffect, useState } from 'react';
-
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
   onClose,
@@ -23,25 +23,25 @@ const MediaView: React.FC<MediaViewProps> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         onClose();
-      } else if (e.key === "ArrowRight") {
+      } else if (e.key === 'ArrowRight') {
         handleNextItem();
-      } else if (e.key === "ArrowLeft") {
+      } else if (e.key === 'ArrowLeft') {
         handlePrevItem();
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [globalIndex, onClose]);
 
-const handelZoomOut = ()=>{
-  setScale(s => Math.max(0.1, s - 0.1))
-}
-const handelZoomIn = ()=>{
-  setScale(s => Math.min(4, s + 0.1))
-}
+  const handelZoomOut = () => {
+    setScale((s) => Math.max(0.1, s - 0.1));
+  };
+  const handelZoomIn = () => {
+    setScale((s) => Math.min(4, s + 0.1));
+  };
 
   const handleWheel = (e: WheelEvent) => {
     e.preventDefault();
@@ -96,12 +96,18 @@ const handelZoomIn = ()=>{
     }
     resetZoom();
   }
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black bg-opacity-90" />
-      
-      <div className="relative z-50 flex h-full w-full items-center justify-center">
+
+      <div
+        className="relative z-50 flex h-full w-full items-center justify-center"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
+      >
         <button
           onClick={onClose}
           className="absolute left-4 top-4 z-50 rounded-md border border-black bg-white px-4 py-2 text-sm text-black transition duration-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)]"
@@ -112,15 +118,21 @@ const handelZoomIn = ()=>{
         {type === 'image' ? (
           <div
             id="zoomable-image"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                onClose();
+              }
+            }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            className="relative h-full w-full overflow-hidden flex items-center justify-center align-middle" 
+            className="relative flex h-full w-full items-center justify-center overflow-hidden align-middle"
           >
             <img
               src={allMedia[globalIndex]}
               alt={`image-${globalIndex}`}
+              draggable={false}
               className="max-h-full select-none"
               style={{
                 transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
@@ -160,15 +172,15 @@ const handelZoomIn = ()=>{
 
         <button
           onClick={handlePrevItem}
-          className="absolute left-4 top-1/2 z-50 -translate-y-1/2 transform rounded-md border border-black bg-white p-2 text-sm text-black transition duration-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)]"
+          className="absolute left-4 top-1/2 z-50 flex items-center rounded-[50%] border border-black bg-white p-2 text-black transition duration-100 hover:bg-slate-800 hover:text-white"
         >
-          {'<'}
+          <ChevronLeft className="h-6 w-6" />
         </button>
         <button
           onClick={handleNextItem}
-          className="absolute right-4 top-1/2 z-50 -translate-y-1/2 transform rounded-md border border-black bg-white p-2 text-sm text-black transition duration-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)]"
+          className="absolute right-4 top-1/2 z-50 flex items-center rounded-[50%] border border-black bg-white p-2 text-black transition duration-100 hover:bg-slate-800 hover:text-white"
         >
-          {'>'}
+          <ChevronRight className="h-6 w-6" />
         </button>
       </div>
     </div>
