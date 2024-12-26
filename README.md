@@ -66,6 +66,16 @@ Handles file system operations and provides a secure bridge between the frontend
 
 #### Installation
 
+
+1. Clone the repository to your local system:
+    ```bash
+    git clone git@github.com:AOSSIE-Org/PictoPy.git
+    ```
+    ```bash
+    cd PictoPy
+    ```
+
+
 1. Navigate to the frontend directory:
    ```bash
    cd frontend

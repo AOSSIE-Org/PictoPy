@@ -44,12 +44,15 @@ Before you begin, ensure you have the Docker installed on your machine
 Once the image is built, you can run a container using the following command:
 
 ```bash
-docker run -d -p 8000:8000 --name <container_name>  <image_name>
+docker run -it --name backend-container -p 8000:8000 \
+-v images-data:/app/images \
+-v /:/host \
+<image-name>
 ```
 
-- `-d`: Runs the container in detached mode (in the background).
+- `-it`: Runs the container interactively, attaching to the terminal for input/output.
 - `-p 8000:8000`: Maps port 8000 on the host to port 8000 in the container.
-- `--name <container_name>`: Names the container for easier management.
+- `-v`: Mounts a volume to share data between the host and container.
 - `<image_name>`: Specifies the image to use (the one we just built).
 
 ## Verifying the Container
