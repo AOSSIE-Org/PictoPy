@@ -232,6 +232,9 @@ The server will start on `http://localhost:8000` by default. In test mode, the s
 
 You can control the number of workers by setting the `WORKERS` environment variable before running the script. If not set, it defaults to 1 worker.
 
+### Docker Compose Setup
+- [Docker Compose](./docs/docker-compose/redme.md)
+
 ### Setup using Dockerfile
 
 - For setting up the frontend, follow the instructions in the [Frontend Setup Guide](./docs/frontend/docker-setup.md).

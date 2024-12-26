@@ -1,0 +1,34 @@
+version: '3.2'
+name : pictopy
+
+services:
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend-pictopy
+    network_mode: host
+    ports:
+      - "1420:1420"
+    environment:
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - /temp/.X11-unix:/temp/.X11-unix
+      - frontend-data:/app/frontend
+    stdin_open: true
+    tty: true
+  
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend-pictopy
+    ports:
+      - "8000:8000"
+    volumes:
+      - frontend-data:/app/frontend
+  
+
+volumes:
+  frontend-data:
