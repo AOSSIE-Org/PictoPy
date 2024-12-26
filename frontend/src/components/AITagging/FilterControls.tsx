@@ -15,7 +15,7 @@ import LoadingScreen from '../ui/LoadingScreen/LoadingScreen';
 import { ListOrderedIcon } from '../ui/Icons/Icons';
 import DeleteSelectedImagePage from '../FolderPicker/DeleteSelectedImagePage';
 import ErrorDialog from '../Album/Error';
-
+import { Trash2, Filter } from 'lucide-react';
 interface FilterControlsProps {
   filterTag: string;
   setFilterTag: (tag: string) => void;
@@ -92,23 +92,30 @@ export default function FilterControls({
         <div className="text-red-500">Error: {addFolderError}</div>
       )}
       <div className="flex items-center gap-4 overflow-auto">
-        <FolderPicker setFolderPath={handleFolderPick} />
+        <FolderPicker setFolderPath={handleFolderPick} settingsPage={false} />
 
         <Button
           onClick={() => setIsVisibleSelectedImage(false)}
           variant="outline"
+          className="border-gray-500 hover:bg-accent dark:hover:bg-white/10"
         >
-          Delete Image
+          <Trash2 className="h-4 w-4" />
+          <p className="ml-1 hidden lg:inline">Delete Images</p>
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2">
-              <ListOrderedIcon className="h-4 w-4" />
-              Filter by {filterTag || 'tags'}
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
+            >
+              <Filter className="h-4 w-4" />
+              <p className="hidden lg:inline">
+                Filter by {filterTag || 'tags'}
+              </p>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="max-h-[500px] w-[200px] overflow-y-auto bg-white dark:text-foreground"
+            className="max-h-[500px] w-[200px] overflow-y-auto"
             align="end"
           >
             <DropdownMenuRadioGroup

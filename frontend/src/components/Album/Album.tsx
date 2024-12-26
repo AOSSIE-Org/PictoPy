@@ -7,7 +7,7 @@ import EditAlbumDialog from './AlbumDialog';
 import ErrorDialog from './Error';
 import AlbumView from './Albumview';
 import { Album } from '@/types/Album';
-
+import { SquarePlus } from 'lucide-react';
 const AlbumsView: React.FC = () => {
   const { albums, isLoading, refetch } = useAllAlbums();
   const { deleteAlbum } = useDeleteAlbum();
@@ -32,8 +32,7 @@ const AlbumsView: React.FC = () => {
   const transformedAlbums = albums.map((album: Album) => ({
     id: album.album_name,
     title: album.album_name,
-    coverImage: album.image_paths[0] ||
-      `D:/Data/Pictopy/PictoPy/frontend/public/tauri.svg`,
+    coverImage: album.image_paths[0] || ``,
     imageCount: album.image_paths.length,
   }));
 
@@ -51,10 +50,14 @@ const AlbumsView: React.FC = () => {
   };
   if (albums.length === 0) {
     return (
-      <div className="container mx-auto p-4">
+      <div className="container mx-auto pb-4">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Albums</h1>
-          <Button onClick={() => setIsCreateFormOpen(true)} variant="outline">
+          <Button
+            onClick={() => setIsCreateFormOpen(true)}
+            variant="outline"
+            className="border-gray-500 dark:hover:bg-white/10"
+          >
             Create New Album
           </Button>
         </div>
@@ -77,19 +80,27 @@ const AlbumsView: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="mx-auto w-full px-2 pb-4">
       {currentAlbum ? (
         <AlbumView
           albumName={currentAlbum}
-          onBack={() => setCurrentAlbum(null)}
+          onBack={() => {
+            setCurrentAlbum(null);
+            refetch();
+          }}
           onError={showErrorDialog}
         />
       ) : (
         <>
           <div className="mb-4 flex items-center justify-between">
             <h1 className="text-2xl font-bold">Albums</h1>
-            <Button onClick={() => setIsCreateFormOpen(true)} variant="outline">
-              Create New Album
+            <Button
+              onClick={() => setIsCreateFormOpen(true)}
+              variant="outline"
+              className="flex items-center border-gray-500 dark:hover:bg-white/10"
+            >
+              <SquarePlus className="h-[18px] w-[18px]" />
+              <p className="mb-[1px] ml-1">Create New Album</p>
             </Button>
           </div>
           <AlbumList
