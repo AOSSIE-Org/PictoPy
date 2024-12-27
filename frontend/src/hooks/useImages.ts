@@ -23,91 +23,89 @@ export const useImages = (folderPath: string) => {
   const [images, setImages] = useState<ImageData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchImages = async () => {
-      try {
-        console.log('Fetching images from folder:', folderPath);
+  const fetchImages = async () => {
+    try {
+      console.log('Fetching images from folder:', folderPath);
 
-        // Fetch image paths using invoke
-        const response: ResponseData = await invoke(
-          'get_all_images_with_cache',
-          {
-            directory: folderPath,
-          },
-        );
+      // Fetch image paths using invoke
+      const response: ResponseData = await invoke('get_all_images_with_cache', {
+        directory: folderPath,
+      });
 
-        // Ensure response is in the expected format
+      // Ensure response is in the expected format
 
-        if (!response || typeof response !== 'object') {
-          console.error('Invalid response format:', response);
-          setLoading(false);
-          return;
+      if (!response || typeof response !== 'object') {
+        console.error('Invalid response format:', response);
+        setLoading(false);
+        return;
+      }
+
+      const imageUrls: ImageData[] = [];
+
+      // Iterate through each year in the response
+      for (const year in response) {
+        if (
+          !response.hasOwnProperty(year) ||
+          typeof response[year] !== 'object'
+        ) {
+          continue;
         }
 
-        const imageUrls: ImageData[] = [];
-
-        // Iterate through each year in the response
-        for (const year in response) {
+        // Iterate through each month in the current year
+        for (const month in response[year]) {
           if (
-            !response.hasOwnProperty(year) ||
-            typeof response[year] !== 'object'
+            !response[year].hasOwnProperty(month) ||
+            !Array.isArray(response[year][month])
           ) {
             continue;
           }
 
-          // Iterate through each month in the current year
-          for (const month in response[year]) {
-            if (
-              !response[year].hasOwnProperty(month) ||
-              !Array.isArray(response[year][month])
-            ) {
-              continue;
-            }
+          const imagePaths = response[year][month];
 
-            const imagePaths = response[year][month];
+          const mappedImages = await Promise.all(
+            imagePaths.map(async (imagePath: string) => {
+              const src = await convertFileSrc(imagePath);
 
-            const mappedImages = await Promise.all(
-              imagePaths.map(async (imagePath: string) => {
-                const src = await convertFileSrc(imagePath);
+              const filename =
+                imagePath.split('/').pop() || imagePath.split('\\').pop() || '';
+              const matches = filename
+                ? filename.match(/\d{4}-\d{2}-\d{2}/)
+                : null;
 
-                const filename = imagePath.split('\\').pop();
-                const matches = filename
-                  ? filename.match(/\d{4}-\d{2}-\d{2}/)
-                  : null;
+              let date = null;
+              if (matches) {
+                date = new Date(matches[0]).toISOString();
+              } else {
+                date = new Date().toISOString(); // Default to today's date if no valid date found in filename
+              }
 
-                let date = null;
-                if (matches) {
-                  date = new Date(matches[0]).toISOString();
-                } else {
-                  date = new Date().toISOString(); // Default to today's date if no valid date found in filename
-                }
+              return {
+                src,
+                original: src,
 
-                return {
-                  src,
-                  original: src,
+                title: `Image ${imagePath}`,
+                date,
 
-                  title: `Image ${imagePath}`,
-                  date,
+                tags: [],
+              };
+            }),
+          );
 
-                  tags: [],
-                };
-              }),
-            );
-
-            imageUrls.push(...mappedImages);
-          }
+          imageUrls.push(...mappedImages);
         }
-
-        setImages(imageUrls);
-      } catch (error) {
-        console.error('Error fetching images:', error);
-      } finally {
-        setLoading(false);
       }
-    };
 
+      setImages(imageUrls);
+    } catch (error) {
+      console.error('Error fetching images:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchImages();
   }, [folderPath]);
 
-  return { images, loading };
+  return { images, loading, refetch: fetchImages };
 };

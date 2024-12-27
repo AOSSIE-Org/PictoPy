@@ -1,10 +1,13 @@
 import AIGallery from '@/components/AITagging/AIgallery';
 import { LoadingScreen } from '@/components/ui/LoadingScreen/LoadingScreen';
-
-import useAIImage from '@/hooks/AI_Image';
+import { usePictoQuery } from '@/hooks/useQueryExtensio';
+import { getAllImageObjects } from '../../../api/api-functions/images';
 
 const AITagging: React.FC = () => {
-  const { images, loading } = useAIImage('tagged-images');
+  const { isLoading: loading, successData: images } = usePictoQuery({
+    queryFn: getAllImageObjects,
+    queryKey: ['ai-tagging-images', 'ai'],
+  });
 
   if (loading) {
     return (

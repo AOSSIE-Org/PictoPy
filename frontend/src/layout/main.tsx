@@ -7,9 +7,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <Navbar title="User" />
       <div className="sidebar flex" style={{ height: 'calc(100vh - 92px)' }}>
         <Sidebar />
-        <div className="flex flex-1 overflow-x-auto p-4">
-          {children}
-        </div>
+        <div className="flex flex-1 overflow-x-auto p-4">{children}</div>
       </div>
     </div>
   );

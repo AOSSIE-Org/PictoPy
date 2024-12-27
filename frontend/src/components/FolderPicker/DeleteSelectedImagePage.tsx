@@ -1,27 +1,39 @@
 import React, { useState } from 'react';
-
-import {
-  useDeleteMultipleImages,
-  useFetchAllImages,
-} from '../../hooks/DeleteImages';
 import { Button } from '@/components/ui/button';
 import { convertFileSrc } from '@tauri-apps/api/core';
-
+import {
+  usePictoQuery,
+  usePictoMutation,
+  queryClient,
+} from '@/hooks/useQueryExtensio';
+import {
+  delMultipleImages,
+  fetchAllImages,
+} from '../../../api/api-functions/images';
 interface DeleteSelectedImageProps {
   setIsVisibleSelectedImage: (value: boolean) => void;
   onError: (title: string, err: any) => void;
-  refetchMediaItems: () => void;
 }
 
 const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
   setIsVisibleSelectedImage,
   onError,
-  refetchMediaItems,
 }) => {
-  const { images: allImagesData, isLoading } = useFetchAllImages();
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const { deleteMultipleImages, isLoading: isAddingImages } =
-    useDeleteMultipleImages();
+
+  const { successData: allImagesData, isLoading } = usePictoQuery({
+    queryFn: fetchAllImages,
+    queryKey: ['all-images'],
+  });
+
+  const { mutate: deleteMultipleImages, isPending: isAddingImages } =
+    usePictoMutation({
+      mutationFn: delMultipleImages,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['all-images'] });
+      },
+      autoInvalidateTags: ['ai-tagging-images', 'ai'],
+    });
 
   // Extract the array of image paths
   const allImages: string[] = allImagesData ?? [];
@@ -40,7 +52,6 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
         await deleteMultipleImages(selectedImages);
         console.log('Selected Images : ', selectedImages);
         setSelectedImages([]);
-        refetchMediaItems();
         if (!isLoading) {
           setIsVisibleSelectedImage(true);
         }

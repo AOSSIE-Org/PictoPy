@@ -63,7 +63,7 @@ def delete_existing_album(payload: dict):
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
-            "data": {"album_name": album_name},
+            "data": album_name,
             "message": f"Album '{album_name}' deleted successfully",
             "success": True
         }
@@ -270,7 +270,7 @@ def get_albums():
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
-            "data": {"albums": albums},
+            "data": albums,
             "message": "Successfully retrieved all albums",
             "success": True
         }

@@ -41,7 +41,7 @@ def get_images():
         return JSONResponse(
             status_code=200,
             content={
-                "data": {"images": image_files},
+                "data": image_files,
                 "message": "Successfully retrieved all images",
                 "success": True
             }
@@ -129,7 +129,7 @@ async def add_multiple_images(payload: dict):
         return JSONResponse(
             status_code=202,
             content={
-                "data": {"task_count": len(tasks)},
+                "data": len(tasks),
                 "message": "Images are being processed in the background",
                 "success": True
             }
@@ -188,7 +188,7 @@ def delete_image(payload: dict):
         return JSONResponse(
             status_code=200,
             content={
-                "data": {"deleted_path": file_path},
+                "data": file_path,
                 "message": "Image deleted successfully",
                 "success": True
             }
@@ -246,7 +246,7 @@ def delete_multiple_images(payload: dict):
         return JSONResponse(
             status_code=200,
             content={
-                "data": {"deleted_paths": deleted_paths},
+                "data": deleted_paths,
                 "message": "Images deleted successfully",
                 "success": True
             }
@@ -279,7 +279,7 @@ def get_all_image_objects():
         return JSONResponse(
             status_code=200,
             content={
-                "data": {"image_objects": data},
+                "data": data,
                 "message": "Successfully retrieved all image objects",
                 "success": True
             }
@@ -328,7 +328,7 @@ def get_class_ids(path: str = Query(...)):
         return JSONResponse(
             status_code=200,
             content={
-                "data": {"class_ids": class_ids},
+                "data": class_ids,
                 "message": "Successfully retrieved class IDs",
                 "success": True
             }
@@ -397,18 +397,18 @@ async def add_folder(payload: dict):
             return JSONResponse(
                 status_code=200,
                 content={
-                    "data": {"processed_images": 0},
+                    "data": 0,
                     "message": "No valid images found in the specified folder",
                     "success": True
                 }
             )
 
-        asyncio.create_task(process_images(tasks))
+        await asyncio.create_task(process_images(tasks))
 
         return JSONResponse(
-            status_code=202,
+            status_code=200,
             content={
-                "data": {"processed_images": len(tasks)},
+                "data": len(tasks),
                 "message": f"Processing {len(tasks)} images from the folder in the background",
                 "success": True
             }
