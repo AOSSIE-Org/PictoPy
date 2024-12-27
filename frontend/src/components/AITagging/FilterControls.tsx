@@ -10,11 +10,12 @@ import {
 import { Button } from '../ui/button';
 import { MediaItem } from '@/types/Media';
 import FolderPicker from '../FolderPicker/FolderPicker';
-import { useAddFolder } from '@/hooks/AI_Image';
 import LoadingScreen from '../ui/LoadingScreen/LoadingScreen';
 import DeleteSelectedImagePage from '../FolderPicker/DeleteSelectedImagePage';
 import ErrorDialog from '../Album/Error';
 import { Trash2, Filter } from 'lucide-react';
+import { queryClient, usePictoMutation } from '@/hooks/useQueryExtensio';
+import { addFolder } from '../../../api/api-functions/images';
 interface FilterControlsProps {
   filterTag: string;
   setFilterTag: (tag: string) => void;
@@ -23,7 +24,6 @@ interface FilterControlsProps {
   isLoading: boolean;
   isVisibleSelectedImage: boolean;
   setIsVisibleSelectedImage: (value: boolean) => void;
-  refetchMediaItems: () => Promise<void>;
 }
 
 export default function FilterControls({
@@ -31,16 +31,21 @@ export default function FilterControls({
   setFilterTag,
   mediaItems,
   onFolderAdded,
-  refetchMediaItems,
   isLoading,
   isVisibleSelectedImage,
   setIsVisibleSelectedImage,
 }: FilterControlsProps) {
   const {
-    addFolder,
-    isLoading: isAddingFolder,
-    error: addFolderError,
-  } = useAddFolder();
+    mutate: addFolderAPI,
+    isPending: isAddingFolder,
+    errorMessage,
+  } = usePictoMutation({
+    mutationFn: addFolder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-images'] });
+    },
+    autoInvalidateTags: ['ai-tagging-images', 'ai'],
+  });
 
   const uniqueTags = React.useMemo(() => {
     const allTags = mediaItems.flatMap((item) => item.tags);
@@ -51,9 +56,8 @@ export default function FilterControls({
 
   const handleFolderPick = async (path: string) => {
     try {
-      await addFolder(path);
+      addFolderAPI(path);
       await onFolderAdded();
-      await refetchMediaItems();
     } catch (error) {
       console.error('Error adding folder:', error);
     }
@@ -78,7 +82,6 @@ export default function FilterControls({
         <DeleteSelectedImagePage
           setIsVisibleSelectedImage={setIsVisibleSelectedImage}
           onError={showErrorDialog}
-          refetchMediaItems={refetchMediaItems}
         />
       </div>
     );
@@ -87,8 +90,8 @@ export default function FilterControls({
   return (
     <>
       {(isLoading || isAddingFolder) && <LoadingScreen />}
-      {addFolderError && (
-        <div className="text-red-500">Error: {addFolderError}</div>
+      {errorMessage && errorMessage !== 'Something went wrong' && (
+        <div className="text-red-500">Error: {errorMessage}</div>
       )}
       <div className="flex items-center gap-4 overflow-auto">
         <FolderPicker setFolderPath={handleFolderPick} settingsPage={false} />

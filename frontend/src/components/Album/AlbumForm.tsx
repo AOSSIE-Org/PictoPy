@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useCreateAlbum } from '../../hooks/AlbumService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -12,6 +11,8 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '../ui/textarea';
 import { CreateAlbumFormProps } from '@/types/Album';
+import { usePictoMutation } from '@/hooks/useQueryExtensio';
+import { createAlbums } from '../../../api/api-functions/albums';
 
 const CreateAlbumForm: React.FC<CreateAlbumFormProps> = ({
   isOpen,
@@ -21,7 +22,10 @@ const CreateAlbumForm: React.FC<CreateAlbumFormProps> = ({
 }) => {
   const [newAlbumName, setNewAlbumName] = useState('');
   const [newAlbumDescription, setNewAlbumDescription] = useState('');
-  const { createAlbum, isLoading: isCreating } = useCreateAlbum();
+  const { mutate: createAlbum, isPending: isCreating } = usePictoMutation({
+    mutationFn: createAlbums,
+    autoInvalidateTags: ['all-albums'],
+  });
 
   const handleCreateAlbum = async () => {
     if (newAlbumName.trim()) {

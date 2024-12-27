@@ -1,27 +1,39 @@
 import React, { useState } from 'react';
-
-import {
-  useDeleteMultipleImages,
-  useFetchAllImages,
-} from '../../hooks/DeleteImages';
 import { Button } from '@/components/ui/button';
 import { convertFileSrc } from '@tauri-apps/api/core';
-
+import {
+  usePictoQuery,
+  usePictoMutation,
+  queryClient,
+} from '@/hooks/useQueryExtensio';
+import {
+  delMultipleImages,
+  fetchAllImages,
+} from '../../../api/api-functions/images';
 interface DeleteSelectedImageProps {
   setIsVisibleSelectedImage: (value: boolean) => void;
   onError: (title: string, err: any) => void;
-  refetchMediaItems: () => void;
 }
 
 const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
   setIsVisibleSelectedImage,
   onError,
-  refetchMediaItems,
 }) => {
-  const { images: allImagesData, isLoading } = useFetchAllImages();
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const { deleteMultipleImages, isLoading: isAddingImages } =
-    useDeleteMultipleImages();
+
+  const { successData: allImagesData, isLoading } = usePictoQuery({
+    queryFn: fetchAllImages,
+    queryKey: ['all-images'],
+  });
+
+  const { mutate: deleteMultipleImages, isPending: isAddingImages } =
+    usePictoMutation({
+      mutationFn: delMultipleImages,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['all-images'] });
+      },
+      autoInvalidateTags: ['ai-tagging-images', 'ai'],
+    });
 
   // Extract the array of image paths
   const allImages: string[] = allImagesData ?? [];
@@ -40,7 +52,6 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
         await deleteMultipleImages(selectedImages);
         console.log('Selected Images : ', selectedImages);
         setSelectedImages([]);
-        refetchMediaItems();
         if (!isLoading) {
           setIsVisibleSelectedImage(true);
         }
@@ -48,6 +59,14 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
         onError('Error during deleting images', err);
       }
     }
+  };
+
+  const handleSelectAllImages = () => {
+    if (selectedImages.length === allImages.length) {
+      setSelectedImages([]);
+      return;
+    }
+    setSelectedImages(allImages);
   };
 
   const getImageName = (path: string) => {
@@ -64,7 +83,10 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="mb-4 text-2xl font-bold">Select Images</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="mb-4 text-2xl font-bold">Select Images</h1>
+        <button onClick={handleSelectAllImages}>Select All</button>
+      </div>
       {/* <FolderPicker setFolderPath={handleFolderPick} /> */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {allImages.map((imagePath, index) => {

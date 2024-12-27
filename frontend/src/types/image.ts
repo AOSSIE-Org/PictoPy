@@ -8,4 +8,7 @@ export interface APIResponse {
   data: {
     [key: string]: string[];
   };
+  success: boolean;
+  error?: string;
+  message?: string;
 }

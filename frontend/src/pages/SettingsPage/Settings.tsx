@@ -7,10 +7,11 @@ import { FolderSync } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/LocalStorage';
 
 const Settings: React.FC = () => {
-  const [currentPath, setCurrentPath] = useLocalStorage('folderPath', 'abc');
+  const [currentPath, setCurrentPath] = useLocalStorage('folderPath', '');
 
-  const handleFolderPathChange = (newPath: string) => {
+  const handleFolderPathChange = async (newPath: string) => {
     setCurrentPath(newPath);
+    await deleteCache();
   };
 
   const handleDeleteCache = async () => {
