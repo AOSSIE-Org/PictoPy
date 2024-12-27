@@ -14,11 +14,12 @@ For a comprehensive guide on prerequisites, refer to the [Tauri Prerequisites](h
 ## Setup Directory
 
 !!! note "Base Directory"
-    All commands executed below are with respect to the `frontend/` directory
+All commands executed below are with respect to the `frontend/` directory
 
 ### Installing Dependencies
 
 1. Navigate to the frontend directory:
+
    ```bash
    cd frontend
    ```
@@ -39,6 +40,7 @@ npm run tauri dev
 ```
 
 This command will:
+
 - Start the [Vite](https://vitejs.dev/) development server for the frontend
 - Compile the Rust backend
 - Launch the Tauri application window
@@ -46,4 +48,4 @@ This command will:
 For more details on Tauri commands, check the [Tauri CLI documentation](https://tauri.app/v1/api/cli).
 
 !!! note "First Run"
-    The first run might take longer as it needs to compile the Rust code.
+The first run might take longer as it needs to compile the Rust code.

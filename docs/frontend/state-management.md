@@ -23,8 +23,8 @@ Example from `AlbumsView`:
 
 ```javascript
 const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
-const [editingAlbum, setEditingAlbum] = useState<Album | null>(null);
-const [currentAlbum, setCurrentAlbum] = useState<string | null>(null);
+const [editingAlbum, setEditingAlbum] = (useState < Album) | (null > null);
+const [currentAlbum, setCurrentAlbum] = (useState < string) | (null > null);
 ```
 
 ### 2. Memoization
@@ -67,6 +67,7 @@ const openMediaViewer = useCallback((index: number) => {
 We create custom hooks to encapsulate and share logic and state across components.
 
 Examples:
+
 - `useAllAlbums`
 - `useDeleteAlbum`
 - `useAIImage`
@@ -146,7 +147,5 @@ const showErrorDialog = (title: string, err: unknown) => {
 3. Create custom hooks to encapsulate complex state logic and side effects.
 4. Use TypeScript to ensure type safety in state management.
 5. Consider using Context API or a state management library if prop drilling becomes cumbersome.
-
-
 
 By following these patterns and best practices, we maintain a clean and scalable state management system throughout our application.

@@ -22,5 +22,3 @@ export function Navbar(props: { title?: string }) {
     </header>
   );
 }
-
-export default Navbar;
