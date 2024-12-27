@@ -61,6 +61,14 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
     }
   };
 
+  const handleSelectAllImages = () => {
+    if (selectedImages.length === allImages.length) {
+      setSelectedImages([]);
+      return;
+    }
+    setSelectedImages(allImages);
+  };
+
   const getImageName = (path: string) => {
     return path.split('\\').pop() || path;
   };
@@ -75,7 +83,10 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="mb-4 text-2xl font-bold">Select Images</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="mb-4 text-2xl font-bold">Select Images</h1>
+        <button onClick={handleSelectAllImages}>Select All</button>
+      </div>
       {/* <FolderPicker setFolderPath={handleFolderPick} /> */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {allImages.map((imagePath, index) => {
