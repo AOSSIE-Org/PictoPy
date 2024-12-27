@@ -9,8 +9,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '../ui/textarea';
-import { useEditAlbumDescription } from '@/hooks/AlbumService';
 import { EditAlbumDialogProps } from '@/types/Album';
+import { queryClient, usePictoMutation } from '@/hooks/useQueryExtensio';
+import { editAlbumDescription } from '../../../api/api-functions/albums';
 
 const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
   album,
@@ -18,7 +19,15 @@ const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
   onSuccess,
   onError,
 }) => {
-  const { editDescription, isLoading: isEditing } = useEditAlbumDescription();
+  const { mutate: editDescription, isPending: isEditing } = usePictoMutation({
+    mutationFn: editAlbumDescription,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['view-album', album?.album_name],
+      });
+    },
+    autoInvalidateTags: ['all-albums'],
+  });
   const [description, setDescription] = useState(album?.description || '');
 
   useEffect(() => {
@@ -28,7 +37,7 @@ const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
   const handleEditAlbum = async () => {
     if (album) {
       try {
-        await editDescription(album.album_name, description);
+        await editDescription({ album_name: album?.album_name, description });
         onSuccess();
       } catch (err) {
         onError('Error Editing Album', err);

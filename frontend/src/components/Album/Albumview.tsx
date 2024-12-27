@@ -1,34 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import {
-  useViewAlbum,
-  useRemoveImageFromAlbum,
-} from '../../hooks/AlbumService';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import ImageSelectionPage from './ImageSelection';
 import { AlbumData, AlbumViewProps } from '@/types/Album';
 import MediaView from '../Media/MediaView';
 import { CircleX, ArrowLeft, ImagePlus } from 'lucide-react';
+import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtensio';
+import {
+  removeFromAlbum,
+  viewYourAlbum,
+} from '../../../api/api-functions/albums';
 const AlbumView: React.FC<AlbumViewProps> = ({
   albumName,
   onBack,
   onError,
 }) => {
-  const { album, viewAlbum, isLoading, error } = useViewAlbum();
-  const { removeImage, isLoading: isRemovingImage } = useRemoveImageFromAlbum();
+  const {
+    successData: album,
+    isLoading,
+    errorMessage: error,
+  } = usePictoQuery({
+    queryFn: async () => await viewYourAlbum(albumName),
+    queryKey: ['view-album', albumName],
+  });
+  const { mutate: removeImage, isPending: isRemovingImage } = usePictoMutation({
+    mutationFn: removeFromAlbum,
+    autoInvalidateTags: ['view-album', albumName],
+  });
   const [showImageSelection, setShowImageSelection] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
     null,
   );
 
-  useEffect(() => {
-    viewAlbum(albumName).catch((err) => onError('Error loading album', err));
-  }, [albumName, viewAlbum, onError]);
-
   const handleRemoveImage = async (imageUrl: string) => {
     try {
-      await removeImage(albumName, imageUrl);
-      await viewAlbum(albumName);
+      await removeImage({ album_name: albumName, path: imageUrl });
     } catch (err) {
       onError('Error Removing Image', err);
     }
@@ -43,7 +49,8 @@ const AlbumView: React.FC<AlbumViewProps> = ({
   };
 
   if (isLoading) return <div>Loading album...</div>;
-  if (error) return <div>Error loading album: {error.message}</div>;
+  if (error && error !== 'Something went wrong')
+    return <div>Error loading album: {error}</div>;
   if (!album) return <div>No album data available.</div>;
 
   if (showImageSelection) {
@@ -53,7 +60,6 @@ const AlbumView: React.FC<AlbumViewProps> = ({
         onClose={() => setShowImageSelection(false)}
         onSuccess={() => {
           setShowImageSelection(false);
-          viewAlbum(albumName);
         }}
         onError={onError}
       />

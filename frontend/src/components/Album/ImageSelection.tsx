@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-
-import {
-  useAddMultipleImagesToAlbum,
-  useFetchAllImages,
-} from '../../hooks/AlbumService';
 import { Button } from '@/components/ui/button';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtensio';
+import { fetchAllImages } from '../../../api/api-functions/images';
+import { addMultipleToAlbum } from '../../../api/api-functions/albums';
 
 interface ImageSelectionPageProps {
   albumName: string;
@@ -20,19 +18,31 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
   onSuccess,
   onError,
 }) => {
-  const { images: allImagesData, isLoading, error } = useFetchAllImages();
+  const {
+    successData: allImagesData,
+    isLoading,
+    errorMessage,
+  } = usePictoQuery({
+    queryFn: fetchAllImages,
+    queryKey: ['all-images'],
+  });
+
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const { addMultipleImages, isLoading: isAddingImages } =
-    useAddMultipleImagesToAlbum();
+
+  const { mutate: addMultipleImages, isPending: isAddingImages } =
+    usePictoMutation({
+      mutationFn: addMultipleToAlbum,
+      autoInvalidateTags: ['view-album', albumName],
+    });
 
   // Extract the array of image paths
   const allImages: string[] = allImagesData ?? [];
 
   useEffect(() => {
-    if (error) {
-      onError('Error Fetching Images', error);
+    if (errorMessage && errorMessage !== 'Something went wrong') {
+      onError('Error Fetching Images', errorMessage);
     }
-  }, [error, onError]);
+  }, [errorMessage, onError]);
 
   const toggleImageSelection = (imagePath: string) => {
     setSelectedImages((prev) =>
@@ -45,7 +55,10 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
   const handleAddSelectedImages = async () => {
     if (selectedImages.length > 0) {
       try {
-        await addMultipleImages(albumName, selectedImages);
+        await addMultipleImages({
+          album_name: albumName,
+          paths: selectedImages,
+        });
         onSuccess();
         setSelectedImages([]);
       } catch (err) {
