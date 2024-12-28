@@ -4,19 +4,20 @@ import MediaGrid from '../Media/Mediagrid';
 
 import { MediaGalleryProps } from '@/types/Media';
 import MediaView from '../Media/MediaView';
-import useAIImage from '../../hooks/AI_Image';
 import PaginationControls from '../ui/PaginationControls';
+import { queryClient, usePictoQuery } from '@/hooks/useQueryExtensio';
+import { getAllImageObjects } from '../../../api/api-functions/images';
 
 export default function AIGallery({
   title,
   type,
   folderPath,
 }: MediaGalleryProps & { folderPath: string }) {
-  const {
-    images: mediaItems,
-    loading,
-    refetchMediaItems,
-  } = useAIImage(folderPath);
+  const { successData: mediaItems, isLoading: loading } = usePictoQuery({
+    queryFn: getAllImageObjects,
+    queryKey: ['ai-tagging-images', 'ai'],
+  });
+
   const [filterTag, setFilterTag] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
@@ -32,7 +33,7 @@ export default function AIGallery({
           mediaItem.tags.includes(filterTag),
         )
       : mediaItems;
-  }, [filterTag, mediaItems]);
+  }, [filterTag, mediaItems, loading]);
 
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * itemsPerPage;
@@ -51,9 +52,7 @@ export default function AIGallery({
     setShowMediaViewer(false);
   }, []);
 
-  const handleFolderAdded = useCallback(async () => {
-    await refetchMediaItems();
-  }, [refetchMediaItems]);
+  const handleFolderAdded = useCallback(async () => {}, []);
 
   return (
     <div className="w-full">
@@ -66,7 +65,6 @@ export default function AIGallery({
             filterTag={filterTag}
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
-            refetchMediaItems={refetchMediaItems}
             onFolderAdded={handleFolderAdded}
             isLoading={loading}
             isVisibleSelectedImage={isVisibleSelectedImage}
@@ -93,7 +91,7 @@ export default function AIGallery({
           <MediaView
             initialIndex={selectedMediaIndex}
             onClose={closeMediaViewer}
-            allMedia={filteredMediaItems.map((item) => item.src)}
+            allMedia={filteredMediaItems.map((item: any) => item.src)}
             currentPage={currentPage}
             itemsPerPage={itemsPerPage}
             type={type}

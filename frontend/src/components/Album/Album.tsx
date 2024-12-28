@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useAllAlbums, useDeleteAlbum } from '../../hooks/AlbumService';
 import AlbumList from './AlbumList';
 import { Button } from '@/components/ui/button';
 import CreateAlbumForm from './AlbumForm';
@@ -8,9 +7,20 @@ import ErrorDialog from './Error';
 import AlbumView from './Albumview';
 import { Album } from '@/types/Album';
 import { SquarePlus } from 'lucide-react';
+import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtensio';
+import {
+  deleteAlbums,
+  fetchAllAlbums,
+} from '../../../api/api-functions/albums';
 const AlbumsView: React.FC = () => {
-  const { albums, isLoading, refetch } = useAllAlbums();
-  const { deleteAlbum } = useDeleteAlbum();
+  const { successData: albums, isLoading } = usePictoQuery({
+    queryFn: fetchAllAlbums,
+    queryKey: ['all-albums'],
+  });
+  const { mutate: deleteAlbum } = usePictoMutation({
+    mutationFn: deleteAlbums,
+    autoInvalidateTags: ['all-albums'],
+  });
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [editingAlbum, setEditingAlbum] = useState<Album | null>(null);
   const [currentAlbum, setCurrentAlbum] = useState<string | null>(null);
@@ -64,8 +74,7 @@ const AlbumsView: React.FC = () => {
 
   const handleDeleteAlbum = async (albumId: string) => {
     try {
-      await deleteAlbum(albumId);
-      refetch();
+      await deleteAlbum({ name: albumId });
     } catch (err) {
       showErrorDialog('Error Deleting Album', err);
     }
@@ -89,7 +98,6 @@ const AlbumsView: React.FC = () => {
           onClose={() => setIsCreateFormOpen(false)}
           onSuccess={() => {
             setIsCreateFormOpen(false);
-            refetch();
           }}
           onError={showErrorDialog}
         />
@@ -108,7 +116,6 @@ const AlbumsView: React.FC = () => {
           albumName={currentAlbum}
           onBack={() => {
             setCurrentAlbum(null);
-            refetch();
           }}
           onError={showErrorDialog}
         />
@@ -130,7 +137,7 @@ const AlbumsView: React.FC = () => {
             albumsPerRow={3}
             onAlbumClick={handleAlbumClick}
             onEditAlbum={(albumId) => {
-              const album = albums.find((a) => a.album_name === albumId);
+              const album = albums.find((a: any) => a.album_name === albumId);
               if (album) {
                 setEditingAlbum(album);
               }
@@ -145,7 +152,6 @@ const AlbumsView: React.FC = () => {
         onClose={() => setIsCreateFormOpen(false)}
         onSuccess={() => {
           setIsCreateFormOpen(false);
-          refetch();
         }}
         onError={showErrorDialog}
       />
@@ -155,7 +161,6 @@ const AlbumsView: React.FC = () => {
         onClose={() => setEditingAlbum(null)}
         onSuccess={() => {
           setEditingAlbum(null);
-          refetch();
         }}
         onError={showErrorDialog}
       />
