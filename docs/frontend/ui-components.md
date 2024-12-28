@@ -84,7 +84,7 @@ Usage:
 ```jsx
 <MediaGrid
   mediaItems={items}
-  itemsPerRow={3}
+
   openMediaViewer={handleOpen}
   type="image"
 />
@@ -133,7 +133,7 @@ Usage:
 ```jsx
 <AlbumList
   albums={albumsData}
-  albumsPerRow={3}
+
   onAlbumClick={handleAlbumClick}
   onEditAlbum={handleEdit}
   onDeleteAlbum={handleDelete}

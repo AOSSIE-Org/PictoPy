@@ -17,7 +17,7 @@ export interface MediaGalleryProps {
 
 export interface MediaGridProps {
   mediaItems: MediaItem[];
-  itemsPerRow: number;
+  
   openMediaViewer: (index: number) => void;
   type: 'image' | 'video';
 }
