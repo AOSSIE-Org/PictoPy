@@ -26,28 +26,21 @@ jobs:
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        
-      # - name: Install Tauri CLI
-      #   run: cargo install tauri-cli
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
           
-      - name: Check
-        run: ls
       - name: Install frontend dependencies
         run: |
           cd frontend
           npm install
-      - name: Check
-        run: ls
         
       - name: Build Tauri
+        uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: PictoPy/frontend
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD : ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: |
-          cd frontend
-          npm run tauri build
