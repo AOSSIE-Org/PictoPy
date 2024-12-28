@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { SortingControlsProps } from '@/types/Media';
+import { SortingControlsProps, YearOption } from '@/types/Media';
 import { ArrowDownWideNarrow } from 'lucide-react';
 
 const SortingControls: React.FC<SortingControlsProps> = ({

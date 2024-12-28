@@ -12,7 +12,7 @@ import { MediaItem } from '@/types/Media';
 import FolderPicker from '../FolderPicker/FolderPicker';
 import { useAddFolder } from '@/hooks/AI_Image';
 import LoadingScreen from '../ui/LoadingScreen/LoadingScreen';
-
+import { ListOrderedIcon } from '../ui/Icons/Icons';
 import DeleteSelectedImagePage from '../FolderPicker/DeleteSelectedImagePage';
 import ErrorDialog from '../Album/Error';
 import { Trash2, Filter } from 'lucide-react';
