@@ -17,26 +17,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            curl \
-            build-essential \
-            libgtk-3-dev \
-            libwebkit2gtk-4.0-dev \
-            libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
-            wget \
-            xz-utils \
-            libssl-dev \
-            libglib2.0-dev \
-            libgirepository1.0-dev \
-            pkg-config \
-            software-properties-common \
-            libjavascriptcoregtk-4.0-dev \
-            libjavascriptcoregtk-4.1-dev \
-            libsoup-3.0-dev \
-            librsvg2-dev \
-            file
-
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -46,8 +27,8 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli
+      # - name: Install Tauri CLI
+      #   run: cargo install tauri-cli
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -64,6 +45,9 @@ jobs:
         run: ls
         
       - name: Build Tauri
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD : ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           cd frontend
           npm run tauri build
