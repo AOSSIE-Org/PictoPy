@@ -50,7 +50,7 @@ const Settings: React.FC = () => {
           <FolderPicker
             setFolderPath={handleFolderPathChange}
             className="h-10 w-full"
-            settingsPage={true}
+            AITaggingPage={false}
             setIsLoading={setIsLoading}
             handleDeleteCache={handleDeleteCache}
           />
