@@ -5,7 +5,7 @@ import MediaGrid from '../Media/Mediagrid';
 import { MediaGalleryProps } from '@/types/Media';
 import MediaView from '../Media/MediaView';
 import PaginationControls from '../ui/PaginationControls';
-import { queryClient, usePictoQuery } from '@/hooks/useQueryExtensio';
+import { usePictoQuery } from '@/hooks/useQueryExtensio';
 import { getAllImageObjects } from '../../../api/api-functions/images';
 
 export default function AIGallery({
