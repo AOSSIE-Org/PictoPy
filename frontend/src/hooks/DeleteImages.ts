@@ -1,6 +1,5 @@
 import { BACKED_URL } from '@/Config/Backend';
-import { useState , useEffect } from 'react';
-
+import { useState, useEffect } from 'react';
 
 interface DeleteMultipleImagesResult {
   data: any | null;
@@ -44,7 +43,6 @@ export function useDeleteMultipleImages() {
 
   return { deleteMultipleImages, ...result };
 }
-
 
 export function useFetchAllImages() {
   const [images, setImages] = useState<string[]>([]);
