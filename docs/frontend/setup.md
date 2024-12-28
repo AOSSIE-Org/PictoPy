@@ -11,7 +11,7 @@ Before setting up the frontend, ensure you have the following installed:
 
 For a comprehensive guide on prerequisites, refer to the [Tauri Prerequisites](https://v2.tauri.app/start/prerequisites/) documentation.
 
-## Setup Directory
+## Setup-Directory
 
 !!! note "Base Directory"
 All commands executed below are with respect to the `frontend/` directory
