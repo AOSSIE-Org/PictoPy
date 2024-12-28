@@ -10,7 +10,7 @@ PictoPy is an advanced desktop gallery application that combines the power of Ta
 - **React**: Used for creating the user interface
 - **Rust**: Powers the backend, which the frontend communicates with through Tauri's API
 
-### Backend (Python)
+### Backend(Python)
 
 - **FastAPI**: Serves as the API framework
 - **SQLite**: Database for storing metadata and embeddings
