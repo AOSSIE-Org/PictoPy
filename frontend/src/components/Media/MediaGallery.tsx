@@ -17,7 +17,7 @@ export default function MediaGallery({
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
   const itemsPerPage: number = 20;
-  const itemsPerRow: number = 3;
+
 
   const sortedMedia = useMemo(() => {
     return sortMedia(mediaItems, [sortBy]);
@@ -56,7 +56,7 @@ export default function MediaGallery({
         </div>
         <MediaGrid
           mediaItems={currentItems}
-          itemsPerRow={itemsPerRow}
+         
           openMediaViewer={openMediaViewer}
           type={type}
         />

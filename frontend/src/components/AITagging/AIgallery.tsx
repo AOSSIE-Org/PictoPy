@@ -24,7 +24,7 @@ export default function AIGallery({
   const [isVisibleSelectedImage, setIsVisibleSelectedImage] =
     useState<boolean>(true);
   const itemsPerPage: number = 20;
-  const itemsPerRow: number = 3;
+
 
   const filteredMediaItems = useMemo(() => {
     return filterTag
@@ -78,7 +78,7 @@ export default function AIGallery({
           <>
             <MediaGrid
               mediaItems={currentItems}
-              itemsPerRow={itemsPerRow}
+              
               openMediaViewer={openMediaViewer}
               type={type}
             />

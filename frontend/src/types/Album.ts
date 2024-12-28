@@ -54,7 +54,6 @@ export interface AlbumListData {
 
 export interface AlbumListProps {
   albums: AlbumListData[];
-  albumsPerRow: number;
   onAlbumClick: (albumId: string) => void;
   onEditAlbum: (albumId: string) => void;
   onDeleteAlbum: (albumId: string) => void;
