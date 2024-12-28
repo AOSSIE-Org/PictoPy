@@ -1,7 +1,6 @@
 # PictoPy
 
 PictoPy is a modern desktop app designed to transform the handling of digital photos. It facilitates efficient gallery management with a robust focus on privacy, offering smart tagging capabilities for photos based on objects, faces, or scenes.
-
 <br>
 <div style="text-align: center;">
     <img src="assets/AOSSIE-logo.png" alt="AOSSIE Logo" style="display:flex; margin:0 auto; justify-content: center;">
