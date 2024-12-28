@@ -49,16 +49,21 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli
 
-      - name: Navigate to frontend directory
-        run: cd frontend
-
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
           
+      - name: Check
+        run: ls
       - name: Install frontend dependencies
-        run: npm install
+        run: |
+          cd frontend
+          npm install
+      - name: Check
+        run: ls
         
       - name: Build Tauri
-        run: npm run tauri build
+        run: |
+          cd frontend
+          npm run tauri build
