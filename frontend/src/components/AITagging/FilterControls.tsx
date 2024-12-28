@@ -94,7 +94,7 @@ export default function FilterControls({
         <div className="text-red-500">Error: {errorMessage}</div>
       )}
       <div className="flex items-center gap-4 overflow-auto">
-        <FolderPicker setFolderPath={handleFolderPick} AITaggingPage={true} />
+        <FolderPicker setFolderPath={handleFolderPick} settingsPage={false} />
 
         <Button
           onClick={() => setIsVisibleSelectedImage(false)}

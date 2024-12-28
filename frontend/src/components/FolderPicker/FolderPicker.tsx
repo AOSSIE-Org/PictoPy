@@ -4,11 +4,11 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { FolderPlus } from 'lucide-react';
 import { generateThumbnails } from '../../../api/api-functions/images';
 import { usePictoMutation } from '@/hooks/useQueryExtensio';
-
+import LoadingScreen from '@/components/ui/LoadingScreen/LoadingScreen';
 interface FolderPickerProps {
   setFolderPath: (path: string) => void;
   className?: string;
-  AITaggingPage?: boolean;
+  settingsPage?: boolean;
   setIsLoading?: (loading: boolean) => void;
   handleDeleteCache?: () => void;
 }
@@ -16,7 +16,7 @@ interface FolderPickerProps {
 const FolderPicker: React.FC<FolderPickerProps> = ({
   setFolderPath,
   className,
-  AITaggingPage,
+  settingsPage,
   setIsLoading,
   handleDeleteCache,
 }) => {
@@ -42,7 +42,7 @@ const FolderPicker: React.FC<FolderPickerProps> = ({
       if (selected && typeof selected === 'string') {
         setFolderPath(selected);
         console.log('Selected folder:', selected);
-        if (!AITaggingPage) {
+        if (settingsPage) {
           setIsLoading && setIsLoading(true);
           generateThumbnail(selected);
         }
@@ -62,7 +62,7 @@ const FolderPicker: React.FC<FolderPickerProps> = ({
         className={`flex items-center justify-center border-gray-500 text-gray-700 hover:bg-accent dark:text-gray-50 dark:hover:bg-white/10 ${className} `}
       >
         <FolderPlus className="h-[18px] w-[18px]" />
-        <p className={`ml-2 ${AITaggingPage && 'hidden lg:inline'}`}>
+        <p className={`ml-2 ${!settingsPage && 'hidden lg:inline'}`}>
           Add folder
         </p>
       </Button>

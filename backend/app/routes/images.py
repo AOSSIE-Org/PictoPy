@@ -434,6 +434,7 @@ async def add_folder(payload: dict):
         )
 
     except Exception as e:
+        print(e)
         return JSONResponse(
             status_code=500,
             content={
@@ -481,7 +482,7 @@ def generate_thumbnails(payload: dict):
     thumbnail_folder = os.path.join(folder_path, "PictoPy.thumbnails")
     os.makedirs(thumbnail_folder, exist_ok=True)
 
-    image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
+    image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"]
     for root, _, files in os.walk(folder_path):
         if "PictoPy.thumbnails" in root:
             continue

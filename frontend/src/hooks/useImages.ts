@@ -126,9 +126,10 @@ export const useImages = (folderPath: string) => {
   };
 
   useEffect(() => {
+    console.log('Loading true');
     generateThumbnail(folderPath);
     fetchImages();
   }, [folderPath]);
 
-  return { images, loading, refetch: fetchImages };
+  return { images, loading, refetch: fetchImages, isCreating };
 };
