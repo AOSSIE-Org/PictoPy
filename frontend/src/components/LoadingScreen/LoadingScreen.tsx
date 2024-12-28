@@ -1,3 +1,5 @@
 import React from 'react';
-
-export const LoadingScreen: React.FC = () => <div>Loading...</div>;
+import { Progress } from "@/components/ui/progress"
+export const LoadingScreen: React.FC = () => <div>
+    <Progress value={33} />
+</div>;
