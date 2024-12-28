@@ -2,17 +2,36 @@ import React from 'react';
 import { Button } from '../ui/button';
 import { open } from '@tauri-apps/plugin-dialog';
 import { FolderPlus } from 'lucide-react';
+import { generateThumbnails } from '../../../api/api-functions/images';
+import { usePictoMutation } from '@/hooks/useQueryExtensio';
+import LoadingScreen from '@/components/ui/LoadingScreen/LoadingScreen';
 interface FolderPickerProps {
   setFolderPath: (path: string) => void;
   className?: string;
   settingsPage?: boolean;
+  setIsLoading?: (loading: boolean) => void;
+  handleDeleteCache?: () => void;
 }
 
 const FolderPicker: React.FC<FolderPickerProps> = ({
   setFolderPath,
   className,
   settingsPage,
+  setIsLoading,
+  handleDeleteCache,
 }) => {
+  const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation(
+    {
+      mutationFn: generateThumbnails,
+      onSuccess: () => {
+        if (setIsLoading) {
+          setIsLoading(false);
+        }
+      },
+      autoInvalidateTags: ['ai-tagging-images', 'ai'],
+    },
+  );
+
   const pickFolder = async () => {
     try {
       const selected = await open({
@@ -22,12 +41,19 @@ const FolderPicker: React.FC<FolderPickerProps> = ({
       });
       if (selected && typeof selected === 'string') {
         setFolderPath(selected);
+        console.log('Selected folder:', selected);
+        if (settingsPage) {
+          setIsLoading && setIsLoading(true);
+          generateThumbnail(selected);
+        }
+        if (handleDeleteCache) {
+          handleDeleteCache();
+        }
       }
     } catch (error) {
       console.error('Error picking folder:', error);
     }
   };
-
   return (
     <div className="flex w-full gap-3">
       <Button

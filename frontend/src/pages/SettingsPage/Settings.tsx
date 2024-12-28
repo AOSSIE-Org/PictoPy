@@ -1,13 +1,15 @@
 import React from 'react';
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
-
+import { useState } from 'react';
 import { deleteCache } from '@/services/cacheService';
 import { Button } from '@/components/ui/button';
 import { FolderSync } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/LocalStorage';
+import LoadingScreen from '@/components/ui/LoadingScreen/LoadingScreen';
 
 const Settings: React.FC = () => {
   const [currentPath, setCurrentPath] = useLocalStorage('folderPath', '');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleFolderPathChange = async (newPath: string) => {
     setCurrentPath(newPath);
@@ -25,6 +27,14 @@ const Settings: React.FC = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div>
+        <LoadingScreen />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex-1 px-4 pt-1">
       <div className="bg-theme-light space-y-6 rounded-2xl border border-white/10 p-6 shadow backdrop-blur-md backdrop-saturate-150 dark:border-white/5 dark:bg-white/5">
@@ -41,6 +51,8 @@ const Settings: React.FC = () => {
             setFolderPath={handleFolderPathChange}
             className="h-10 w-full"
             settingsPage={true}
+            setIsLoading={setIsLoading}
+            handleDeleteCache={handleDeleteCache}
           />
           <Button
             onClick={handleDeleteCache}
