@@ -102,7 +102,7 @@ const AlbumView: React.FC<AlbumViewProps> = ({
 
       {albumData.photos && albumData.photos.length > 0 ? (
         <div className="grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4">
-          {convertedImagePaths.map(({ url, thumbnailUrl }, index) => (
+          {convertedImagePaths.map(({ thumbnailUrl }, index) => (
             <div key={index} className="relative h-56">
               <img
                 src={thumbnailUrl}

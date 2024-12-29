@@ -5,7 +5,6 @@ import AlbumCard from './AlbumCard';
 
 const AlbumList: React.FC<AlbumListProps> = ({
   albums,
-  albumsPerRow,
   onAlbumClick,
   onEditAlbum,
   onDeleteAlbum,

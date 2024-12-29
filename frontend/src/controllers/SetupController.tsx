@@ -6,7 +6,7 @@ import { FolderService } from '@/hooks/folderService';
 export const useInitialPageController = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { folderPath, setFolderPath } = useFolderPath();
+  const { setFolderPath } = useFolderPath();
 
   useEffect(() => {
     const initializePage = async () => {

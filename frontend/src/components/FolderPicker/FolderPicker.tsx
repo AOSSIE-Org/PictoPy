@@ -4,7 +4,6 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { FolderPlus } from 'lucide-react';
 import { generateThumbnails } from '../../../api/api-functions/images';
 import { usePictoMutation } from '@/hooks/useQueryExtensio';
-import LoadingScreen from '@/components/ui/LoadingScreen/LoadingScreen';
 interface FolderPickerProps {
   setFolderPath: (path: string) => void;
   className?: string;
@@ -20,17 +19,15 @@ const FolderPicker: React.FC<FolderPickerProps> = ({
   setIsLoading,
   handleDeleteCache,
 }) => {
-  const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation(
-    {
-      mutationFn: generateThumbnails,
-      onSuccess: () => {
-        if (setIsLoading) {
-          setIsLoading(false);
-        }
-      },
-      autoInvalidateTags: ['ai-tagging-images', 'ai'],
+  const { mutate: generateThumbnail } = usePictoMutation({
+    mutationFn: generateThumbnails,
+    onSuccess: () => {
+      if (setIsLoading) {
+        setIsLoading(false);
+      }
     },
-  );
+    autoInvalidateTags: ['ai-tagging-images', 'ai'],
+  });
 
   const pickFolder = async () => {
     try {

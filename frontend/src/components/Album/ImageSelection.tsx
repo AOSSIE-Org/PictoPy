@@ -95,7 +95,7 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
       <h1 className="mb-4 text-2xl font-bold">Select Images for {albumName}</h1>
       {/* <FolderPicker setFolderPath={handleFolderPick} /> */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-        {imagesWithThumbnails.map(({ imagePath, url, thumbnailUrl }, index) => {
+        {imagesWithThumbnails.map(({ imagePath, thumbnailUrl }, index) => {
           return (
             <div key={index} className="relative">
               <div

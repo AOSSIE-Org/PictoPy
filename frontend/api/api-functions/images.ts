@@ -2,7 +2,6 @@ import { imagesEndpoints } from '../apiEndpoints';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { APIResponse, Image } from '../../src/types/image';
 import { extractThumbnailPath } from '@/hooks/useImages';
-import { parse } from 'path';
 
 export const fetchAllImages = async () => {
   const response = await fetch(imagesEndpoints.allImages, {
