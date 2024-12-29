@@ -1,19 +1,24 @@
+# This workflow is named "Merge Check" and gets triggered on pull request reviews
 name: Merge Check
 
 on:
   pull_request_review:
+      # Trigger this workflow when a pull request review is submitted
     types: [submitted]
 
 jobs:
   build-tauri:
     permissions:
+      # Grant write permission to repository contents
       contents: write
     strategy:
+      # Stop all parallel jobs on first failure
       fail-fast: true
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      
+      # Check out the repository code
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -30,6 +35,7 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
+           # Cache Rust build artifacts for faster build times
           workspaces: './src-tauri -> target'
           
       - name: Install frontend dependencies
@@ -40,7 +46,9 @@ jobs:
       - name: Build Tauri
         uses: tauri-apps/tauri-action@v0
         with:
+          # Run the Tauri build in the frontend directory
           projectPath: frontend
         env:
+          # Use secrets for signing the Tauri app
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD : ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
