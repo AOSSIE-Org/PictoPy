@@ -66,6 +66,16 @@ Handles file system operations and provides a secure bridge between the frontend
 
 #### Installation
 
+
+1. Clone the repository to your local system:
+    ```bash
+    git clone git@github.com:AOSSIE-Org/PictoPy.git
+    ```
+    ```bash
+    cd PictoPy
+    ```
+
+
 1. Navigate to the frontend directory:
    ```bash
    cd frontend
@@ -231,6 +241,9 @@ run.bat --test # To run in testing mode
 The server will start on `http://localhost:8000` by default. In test mode, the server will automatically restart if any errors are detected or if source files are modified.
 
 You can control the number of workers by setting the `WORKERS` environment variable before running the script. If not set, it defaults to 1 worker.
+
+### Docker Compose Setup
+- [Docker Compose](./docs/docker-compose/redme.md)
 
 ### Setup using Dockerfile
 
