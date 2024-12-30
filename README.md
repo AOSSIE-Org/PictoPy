@@ -75,6 +75,19 @@ Handles file system operations and provides a secure bridge between the frontend
    npm install
    ```
 
+   ```bash
+    cd scripts
+   ```
+
+    On Debian/Ubuntu:
+    ```bash
+    ./setup_env.sh
+    ```
+    On Windows:
+    ```
+    ./setup_win.ps1
+    ```
+
 #### Running the Application
 
 ```bash
@@ -153,6 +166,7 @@ npm run tauri build
     pip install -r requirements.txt
 
     ```
+    Note: python 3.13 and above are not compatible with this project currently.
 
 4.  **Missing System Dependencies:** Some dependencies might need system-level libraries like `libGL.so.1` (often needed by OpenCV). Install the appropriate packages based on your distribution:
 
