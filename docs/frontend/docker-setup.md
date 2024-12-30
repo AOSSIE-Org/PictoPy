@@ -89,6 +89,17 @@ Replace `<HOST_IP>` with your actual IP address.
     npm run tauri dev
     ```
 
+## Building the Tauri App
+
+### Linux
+```bash
+   npm run tauri build
+   ```
+### Windows
+```bash
+   npm run tauri build -- --runner cargo-xwin --target x86_64-pc-windows-msvc
+   ```
+
 ## Accessing the GUI App
 
 If everything is configured correctly, the Tauri GUI app should display on your screen after running the container.
