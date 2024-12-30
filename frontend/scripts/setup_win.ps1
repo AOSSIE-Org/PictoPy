@@ -1,11 +1,5 @@
 # PowerShell script to set up Tauri development environment on Windows
 
-# ANSI escape codes for colors
-$RESET = "`e[0m"
-$RED = "`e[31m"
-$GREEN = "`e[32m"
-$YELLOW = "`e[33m"
-
 # Function to check if a command exists
 function Test-Command($command) {
     $oldPreference = $ErrorActionPreference
@@ -24,10 +18,10 @@ function Install-Chocolatey {
 
 # Check and install Chocolatey
 if (-not (Test-Command choco)) {
-    Write-Output "${YELLOW}Chocolatey is not installed. Installing...${RESET}"
+    Write-Host "Chocolatey is not installed. Installing..." -ForegroundColor Yellow
     Install-Chocolatey
 } else {
-    Write-Output "${GREEN}Chocolatey is already installed.${RESET}"
+    Write-Host "Chocolatey is already installed." -ForegroundColor Green
 }
 
 # Refresh environment variables
@@ -35,48 +29,48 @@ $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";"
 
 # Install Visual Studio Build Tools
 if (-not (Test-Path "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools")) {
-    Write-Output "${YELLOW}Installing Visual Studio Build Tools...${RESET}"
+    Write-Host "Installing Visual Studio Build Tools..." -ForegroundColor Yellow
     choco install visualstudio2019buildtools -y --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
 } else {
-    Write-Output "${GREEN}Visual Studio Build Tools are already installed.${RESET}"
+    Write-Host "Visual Studio Build Tools are already installed." -ForegroundColor Green
 }
 
 # Install WebView2 Runtime
 if (-not (Test-Path "C:\Program Files (x86)\Microsoft\EdgeWebView\Application\msedgewebview2.exe")) {
-    Write-Output "${YELLOW}Installing WebView2 Runtime...${RESET}"
+    Write-Host "Installing WebView2 Runtime..." -ForegroundColor Yellow
     choco install microsoft-edge-webview2-runtime -y
 } else {
-    Write-Output "${GREEN}WebView2 Runtime is already installed.${RESET}"
+    Write-Host "WebView2 Runtime is already installed." -ForegroundColor Green
 }
 
 # Install Rust
 if (-not (Test-Command rustc)) {
-    Write-Output "${YELLOW}Installing Rust...${RESET}"
+    Write-Host "Installing Rust..." -ForegroundColor Yellow
     Invoke-WebRequest https://win.rustup.rs/x86_64 -OutFile rustup-init.exe
     .\rustup-init.exe -y
     Remove-Item rustup-init.exe
 } else {
-    Write-Output "${GREEN}Rust is already installed. Version: $(rustc --version)${RESET}"
+    Write-Host "Rust is already installed. Version: $(rustc --version)" -ForegroundColor Green
 }
 
 # Install Node.js
 if (-not (Test-Command node)) {
-    Write-Output "${YELLOW}Installing Node.js...${RESET}"
+    Write-Host "Installing Node.js..." -ForegroundColor Yellow
     choco install nodejs-lts -y
 } else {
-    Write-Output "${GREEN}Node.js is already installed. Version: $(node --version)${RESET}"
+    Write-Host "Node.js is already installed. Version: $(node --version)" -ForegroundColor Green
 }
 
 # Install CMake
 if (-not (Test-Command cmake)) {
-    Write-Output "${YELLOW}Installing CMake...${RESET}"
+    Write-Host "Installing CMake..." -ForegroundColor Yellow
     choco install cmake -y
 } else {
-    Write-Output "${GREEN}CMake is already installed. Version: $(cmake --version)${RESET}"
+    Write-Host "CMake is already installed. Version: $(cmake --version)" -ForegroundColor Green
 }
 
 # Refresh environment variables again
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
-Write-Output "${GREEN}All required tools and libraries are installed!${RESET}"
-Write-Output "${YELLOW}Please restart your computer to ensure all changes take effect.${RESET}"
+Write-Host "All required tools and libraries are installed!" -ForegroundColor Green
+Write-Host "Please restart your computer to ensure all changes take effect." -ForegroundColor Yellow
