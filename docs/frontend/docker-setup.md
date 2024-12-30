@@ -4,20 +4,14 @@ This guide provides instructions for building and running the PictoPy frontend u
 
 ## Table of Contents
 
-- [Docker Setup for PictoPy Frontend](#docker-setup-for-pictopy-frontend)
-  - [Table of Contents](#table-of-contents)
-  - [Prerequisites](#prerequisites)
-  - [Building the Docker Image](#building-the-docker-image)
-  - [Running the Container](#running-the-container)
-    - [Linux](#linux)
-    - [Windows](#windows)
-  - [Building the Tauri App](#building-the-tauri-app)
-    - [Linux](#linux-1)
-    - [Windows](#windows-1)
-  - [Accessing the GUI App](#accessing-the-gui-app)
-  - [Common Troubleshooting](#common-troubleshooting)
-    - [1. GUI Not Displaying (X Server Issues)](#1-gui-not-displaying-x-server-issues)
-    - [2. Network Issues](#2-network-issues)
+1. [Prerequisites](#prerequisites)
+2. [Building the Docker Image](#building-the-docker-image)
+3. [Running the Container](#running-the-container)
+   - [Linux](#linux)
+   - [Windows](#windows)
+4. [Accessing the GUI App](#accessing-the-gui-app)
+5. [Common Troubleshooting](#common-troubleshooting)
+6. [Notes on Cross-Platform Compatibility](#notes-on-cross-platform-compatibility)
 
 ## Prerequisites
 
@@ -63,12 +57,11 @@ This guide provides instructions for building and running the PictoPy frontend u
 2. Run the container:
 
    ```bash
-   docker run -it -p 1420:1420 -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix <image_name>
-   ```
-
-3. Run the tauri application
-   ```bash
-   npm run tauri dev
+      docker run -it --name frontend-container --network host -p 1420:1420 -e DISPLAY=${DISPLAY} \
+      -v /tmp/.X11-unix:/tmp/.X11-unix \
+      -v images-data:/app/images \
+      -v /:/host \
+      <image-name>
    ```
 
 ### Windows
