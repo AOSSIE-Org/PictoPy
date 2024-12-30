@@ -1,6 +1,7 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::time::SystemTime;
-mod file_service;
+use tauri::State;
 mod cache_service;
 mod file_service;
 pub use cache_service::CacheService;
@@ -42,7 +43,8 @@ pub fn get_all_images_with_cache(
         let mut map: HashMap<u32, HashMap<u32, Vec<String>>> = HashMap::new();
         for path in cached {
             if let Ok(metadata) = std::fs::metadata(&path) {
-                let date = metadata.created()
+                let date = metadata
+                    .created()
                     .or_else(|_| metadata.modified())
                     .unwrap_or_else(|_| SystemTime::now());
 
@@ -50,10 +52,10 @@ pub fn get_all_images_with_cache(
                 let year = datetime.year() as u32;
                 let month = datetime.month();
                 map.entry(year)
-                .or_insert_with(HashMap::new)
-                .entry(month)
-                .or_insert_with(Vec::new)
-                .push(path.to_str().unwrap_or_default().to_string());
+                    .or_insert_with(HashMap::new)
+                    .entry(month)
+                    .or_insert_with(Vec::new)
+                    .push(path.to_str().unwrap_or_default().to_string());
             }
         }
         map
@@ -63,7 +65,19 @@ pub fn get_all_images_with_cache(
 
         for path in all_images {
             if let Ok(metadata) = std::fs::metadata(&path) {
-                let date = metadata.created()
+                let date = metadata
+                    .created()
+                    .or_else(|_| metadata.modified())
+                    .unwrap_or_else(|_| SystemTime::now());
+
+                let datetime: DateTime<Utc> = date.into();
+                let year = datetime.year() as u32;
+                let month = datetime.month();
+                map.entry(year)
+                    .or_insert_with(HashMap::new)
+                    .entry(month)
+                    .or_insert_with(Vec::new)
+                    .push(path.to_str().unwrap_or_default().to_string());
             }
         }
 
@@ -75,6 +89,8 @@ pub fn get_all_images_with_cache(
             .map(|s| PathBuf::from(s))
             .collect();
         if let Err(e) = cache_state.cache_images(&flattened) {
+            eprintln!("Failed to cache images: {}", e);
+        }
 
         map
     };
