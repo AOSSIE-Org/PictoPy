@@ -1,12 +1,13 @@
 export interface Image {
   title: string;
-  src: string;
-  tags: string[];
+  url: string;
+  tags: any;
+  thumbnailUrl: string;
 }
 
 export interface APIResponse {
   data: {
-    [key: string]: string[];
+    [key: string]: any;
   };
   success: boolean;
   error?: string;

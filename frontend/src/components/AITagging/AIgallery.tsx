@@ -1,22 +1,36 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import FilterControls from './FilterControls';
 import MediaGrid from '../Media/Mediagrid';
 
-import { MediaGalleryProps } from '@/types/Media';
+import { LoadingScreen } from '@/components/ui/LoadingScreen/LoadingScreen';
 import MediaView from '../Media/MediaView';
 import PaginationControls from '../ui/PaginationControls';
-import { usePictoQuery } from '@/hooks/useQueryExtensio';
-import { getAllImageObjects } from '../../../api/api-functions/images';
+import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtensio';
+import {
+  getAllImageObjects,
+  generateThumbnails,
+} from '../../../api/api-functions/images';
 
 export default function AIGallery({
   title,
   type,
-}: MediaGalleryProps & { folderPath: string }) {
-  const { successData: mediaItems, isLoading: loading } = usePictoQuery({
-    queryFn: getAllImageObjects,
+  folderPath,
+}: {
+  title: string;
+  type: 'image' | 'video';
+  folderPath: string;
+}) {
+  const { successData, isLoading: loading } = usePictoQuery({
+    queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
-
+  const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation(
+    {
+      mutationFn: generateThumbnails,
+      autoInvalidateTags: ['ai-tagging-images', 'ai'],
+    },
+  );
+  let mediaItems = successData ?? [];
   const [filterTag, setFilterTag] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
@@ -51,12 +65,26 @@ export default function AIGallery({
     setShowMediaViewer(false);
   }, []);
 
-  const handleFolderAdded = useCallback(async () => {}, []);
+  const handleFolderAdded = useCallback(async () => {
+    generateThumbnail(folderPath);
+  }, []);
+
+  useEffect(() => {
+    generateThumbnail(folderPath);
+  }, [folderPath]);
+
+  if (isCreating || loading) {
+    return (
+      <div>
+        <LoadingScreen />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
       <div className="mx-auto px-2 pb-8 dark:bg-background dark:text-foreground">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between">
           {isVisibleSelectedImage && (
             <h1 className="text-2xl font-bold">{title}</h1>
           )}
@@ -90,7 +118,7 @@ export default function AIGallery({
           <MediaView
             initialIndex={selectedMediaIndex}
             onClose={closeMediaViewer}
-            allMedia={filteredMediaItems.map((item: any) => item.src)}
+            allMedia={filteredMediaItems.map((item: any) => item.url)}
             currentPage={currentPage}
             itemsPerPage={itemsPerPage}
             type={type}
