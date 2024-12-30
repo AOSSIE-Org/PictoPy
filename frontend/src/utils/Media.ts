@@ -48,8 +48,8 @@ export function sortMedia(
 
         case 'type':
           // Assuming `type` refers to file extension or media type
-          const aType = a.src.split('.').pop()?.toLowerCase() || '';
-          const bType = b.src.split('.').pop()?.toLowerCase() || '';
+          const aType = a.original?.split('.').pop()?.toLowerCase() || '';
+          const bType = b.original?.split('.').pop()?.toLowerCase() || '';
           const typeCompare = aType.localeCompare(bType);
           if (typeCompare !== 0) return typeCompare;
           break;

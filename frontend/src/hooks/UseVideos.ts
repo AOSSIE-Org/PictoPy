@@ -4,11 +4,12 @@ import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { useState, useEffect } from 'react';
 
 interface VideoData {
-  src: string;
   original: string;
-  title: string;
-  date: string;
-  tags: string[];
+  url: string;
+  thumbnailUrl?: string;
+  date?: string;
+  title?: string;
+  tags?: string[];
 }
 
 interface ResponseData {
@@ -62,7 +63,8 @@ export const useVideos = (folderPath: string) => {
 
             const mappedVideos = await Promise.all(
               videoPaths.map(async (videoPath: string) => {
-                const src = await convertFileSrc(videoPath);
+                const original = videoPath;
+                const url = await convertFileSrc(videoPath);
 
                 const filename = videoPath.split('\\').pop();
                 const matches = filename
@@ -77,8 +79,8 @@ export const useVideos = (folderPath: string) => {
                 }
 
                 return {
-                  src,
-                  original: src,
+                  url,
+                  original,
                   title: `Video ${videoPath}`,
                   date,
                   tags: [],

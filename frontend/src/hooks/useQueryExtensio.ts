@@ -84,7 +84,6 @@ export function usePictoQuery<
   TQueryKey extends QueryKey = QueryKey,
 >(
   options: UseQueryOptions<TQueryFnData, TError, TQueryFnData, TQueryKey>,
-  queryClient?: QueryClient,
 ): UseQueryResult<TQueryFnData, TError> & {
   successData: TSuccessData | undefined;
   errorMessage: string | undefined;
