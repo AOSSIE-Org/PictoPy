@@ -26,8 +26,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app/
 
-RUN chmod +x run.sh && mkdir -p ../images
-
+RUN chmod +x run.sh
+RUN ls app
 EXPOSE 8000
 ENV WORKERS=1
 

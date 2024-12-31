@@ -6,13 +6,14 @@ import { FolderService } from '@/hooks/folderService';
 export const useInitialPageController = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { folderPath, setFolderPath } = useFolderPath();
+  const { setFolderPath } = useFolderPath();
 
   useEffect(() => {
     const initializePage = async () => {
       const savedFolderPath = await FolderService.getSavedFolderPath();
       if (savedFolderPath) {
         setFolderPath(savedFolderPath);
+
         navigate('/home');
       }
       setLoading(false);
@@ -24,7 +25,7 @@ export const useInitialPageController = () => {
   const handleFolderPathChange = async (path: string) => {
     setFolderPath(path);
     await FolderService.saveFolderPath(path);
-    folderPath && navigate('/home');
+    path && navigate('/home');
   };
 
   return { loading, handleFolderPathChange };
