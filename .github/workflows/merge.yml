@@ -1,0 +1,54 @@
+# This workflow is named "Merge Check" and gets triggered on pull request reviews
+name: Merge Check
+
+on:
+  pull_request_review:
+      # Trigger this workflow when a pull request review is submitted
+    types: [submitted]
+
+jobs:
+  build-tauri:
+    permissions:
+      # Grant write permission to repository contents
+      contents: write
+    strategy:
+      # Stop all parallel jobs on first failure
+      fail-fast: true
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      # Check out the repository code
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+           # Cache Rust build artifacts for faster build times
+          workspaces: './src-tauri -> target'
+          
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+        
+      - name: Build Tauri
+        uses: tauri-apps/tauri-action@v0
+        with:
+          # Run the Tauri build in the frontend directory
+          projectPath: frontend
+        env:
+          # Use secrets for signing the Tauri app
+          TAURI_SIGNING_PRIVATE_KEY: dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5NlF2SjE3cWNXOVlQQ0JBTlNITEpOUVoyQ3ZuNTdOSkwyNE1NN2RmVWQ1a0FBQkFBQUFBQUFBQUFBQUlBQUFBQU9XOGpTSFNRd0Q4SjNSbm5Oc1E0OThIUGx6SS9lWXI3ZjJxN3BESEh1QTRiQXlkR2E5aG1oK1g0Tk5kcmFzc0IvZFZScEpubnptRkxlbDlUR2R1d1Y5OGRSYUVmUGoxNTFBcHpQZ1dSS2lHWklZVHNkV1Byd1VQSnZCdTZFWlVGOUFNVENBRlgweUU9Cg==
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD : pass
