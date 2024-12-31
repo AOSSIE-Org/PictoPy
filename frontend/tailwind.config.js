@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: ["class"],
+  darkMode: ["class"], // Enable dark mode
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
@@ -51,11 +51,24 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Custom gradient colors for buttons
+        gradientFrom: "#6366F1", // Indigo
+        gradientVia: "#8B5CF6", // Purple
+        gradientTo: "#EC4899", // Pink
+        // Dark mode-specific gradients
+        gradientFromDark: "#4F46E5",
+        gradientViaDark: "#7C3AED",
+        gradientToDark: "#BE185D",
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      boxShadow: {
+        lg: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+        xl: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+        darkLg: "0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3)",
       },
       keyframes: {
         "accordion-down": {
@@ -66,12 +79,24 @@ module.exports = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        // Smooth hover animation
+        "button-hover": {
+          "0%": { transform: "scale(1)", boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)" },
+          "100%": { transform: "scale(1.05)", boxShadow: "0 6px 10px rgba(0, 0, 0, 0.2)" },
+        },
+        // Reverse hover for dark mode
+        "button-hover-dark": {
+          "0%": { transform: "scale(1)", boxShadow: "0 4px 6px rgba(255, 255, 255, 0.1)" },
+          "100%": { transform: "scale(1.05)", boxShadow: "0 6px 10px rgba(255, 255, 255, 0.15)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "button-hover": "button-hover 0.3s ease-in-out",
+        "button-hover-dark": "button-hover-dark 0.3s ease-in-out",
       },
     },
   },
   plugins: [require("tailwindcss-animate")],
-}
+};

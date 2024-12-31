@@ -18,8 +18,6 @@ module.exports = {
     },
     extend: {
       colors: {
-        'theme-light': '#ffffff',
-        'theme-dark': '#000000',
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -76,4 +74,4 @@ module.exports = {
     },
   },
   plugins: [require("tailwindcss-animate")],
-}
+};
