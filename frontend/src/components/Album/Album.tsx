@@ -7,6 +7,7 @@ import ErrorDialog from './Error';
 import AlbumView from './Albumview';
 import { Album } from '@/types/Album';
 import { SquarePlus } from 'lucide-react';
+import { LoadingScreen } from '@/components/ui/LoadingScreen/LoadingScreen';
 import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtensio';
 import {
   deleteAlbums,
@@ -36,7 +37,7 @@ const AlbumsView: React.FC = () => {
 
 
   if (isLoading) {
-    return <div>Loading albums...</div>;
+    return <LoadingScreen/>;
   }
 
   if (!albums || albums.length === 0) {
