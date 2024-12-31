@@ -172,13 +172,13 @@ const MediaView: React.FC<MediaViewProps> = ({
 
         <button
           onClick={handlePrevItem}
-          className="absolute left-4 top-1/2 z-50 flex items-center rounded-[50%] border border-black bg-white p-2 text-black transition duration-100 hover:bg-slate-800 hover:text-white"
+          className="absolute left-4 top-1/2 z-50 flex items-center rounded-[50%] border border-black bg-white p-2 text-black transition duration-100 hover:bg-slate-700 hover:text-white active:bg-slate-900"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
         <button
           onClick={handleNextItem}
-          className="absolute right-4 top-1/2 z-50 flex items-center rounded-[50%] border border-black bg-white p-2 text-black transition duration-100 hover:bg-slate-800 hover:text-white"
+          className="absolute right-4 top-1/2 z-50 flex items-center rounded-[50%] border border-black bg-white p-2 text-black transition duration-100 hover:bg-slate-800 hover:text-white  active:bg-slate-900"
         >
           <ChevronRight className="h-6 w-6" />
         </button>
