@@ -1,6 +1,7 @@
 import { MediaViewProps } from '@/types/Media';
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
   onClose,
@@ -82,8 +83,6 @@ const MediaView: React.FC<MediaViewProps> = ({
   function handlePrevItem() {
     if (globalIndex > 0) {
       setGlobalIndex(globalIndex - 1);
-    } else {
-      setGlobalIndex(allMedia.length - 1);
     }
     resetZoom();
   }
@@ -91,11 +90,10 @@ const MediaView: React.FC<MediaViewProps> = ({
   function handleNextItem() {
     if (globalIndex < allMedia.length - 1) {
       setGlobalIndex(globalIndex + 1);
-    } else {
-      setGlobalIndex(0);
     }
     resetZoom();
   }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black bg-opacity-90" />
@@ -118,11 +116,6 @@ const MediaView: React.FC<MediaViewProps> = ({
         {type === 'image' ? (
           <div
             id="zoomable-image"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                onClose();
-              }
-            }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -170,18 +163,22 @@ const MediaView: React.FC<MediaViewProps> = ({
           />
         )}
 
-        <button
-          onClick={handlePrevItem}
-          className="absolute left-4 top-1/2 z-50 flex items-center rounded-[50%] border border-black bg-white p-2 text-black transition duration-100 hover:bg-slate-700 hover:text-white active:bg-slate-900"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </button>
-        <button
-          onClick={handleNextItem}
-          className="absolute right-4 top-1/2 z-50 flex items-center rounded-[50%] border border-black bg-white p-2 text-black transition duration-100 hover:bg-slate-800 hover:text-white  active:bg-slate-900"
-        >
-          <ChevronRight className="h-6 w-6" />
-        </button>
+        {globalIndex > 0 && (
+          <button
+            onClick={handlePrevItem}
+            className="absolute left-4 top-1/2 z-50 flex items-center rounded-[50%] border border-black bg-white p-2 text-black transition duration-100 hover:bg-slate-800 hover:text-white active:bg-slate-900"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+        )}
+        {globalIndex < allMedia.length - 1 && (
+          <button
+            onClick={handleNextItem}
+            className="absolute right-4 top-1/2 z-50 flex items-center rounded-[50%] border border-black bg-white p-2 text-black transition duration-100 hover:bg-slate-800 hover:text-white active:bg-slate-900"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+        )}
       </div>
     </div>
   );

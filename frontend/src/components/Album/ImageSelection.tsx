@@ -4,7 +4,8 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtensio';
 import { fetchAllImages } from '../../../api/api-functions/images';
 import { addMultipleToAlbum } from '../../../api/api-functions/albums';
-
+import { extractThumbnailPath } from '@/hooks/useImages';
+import { useQueryClient } from '@tanstack/react-query';
 interface ImageSelectionPageProps {
   albumName: string;
   onClose: () => void;
@@ -18,6 +19,7 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
   onSuccess,
   onError,
 }) => {
+  const queryClient = useQueryClient();
   const {
     successData: allImagesData,
     isLoading,
@@ -32,12 +34,21 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
   const { mutate: addMultipleImages, isPending: isAddingImages } =
     usePictoMutation({
       mutationFn: addMultipleToAlbum,
-      autoInvalidateTags: ['view-album', albumName],
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['view-album', albumName] });
+        queryClient.invalidateQueries({ queryKey: ['all-albums'] });
+      },
     });
 
   // Extract the array of image paths
-  const allImages: string[] = allImagesData ?? [];
-
+  const allImages: string[] = allImagesData?.image_files || [];
+  const imagesWithThumbnails = allImages.map((imagePath) => ({
+    imagePath,
+    url: convertFileSrc(imagePath),
+    thumbnailUrl: convertFileSrc(
+      extractThumbnailPath(allImagesData.folder_path, imagePath),
+    ),
+  }));
   useEffect(() => {
     if (errorMessage && errorMessage !== 'Something went wrong') {
       onError('Error Fetching Images', errorMessage);
@@ -84,8 +95,7 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
       <h1 className="mb-4 text-2xl font-bold">Select Images for {albumName}</h1>
       {/* <FolderPicker setFolderPath={handleFolderPick} /> */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-        {allImages.map((imagePath, index) => {
-          const srcc = convertFileSrc(imagePath);
+        {imagesWithThumbnails.map(({ imagePath, thumbnailUrl }, index) => {
           return (
             <div key={index} className="relative">
               <div
@@ -97,7 +107,7 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
                 onClick={() => toggleImageSelection(imagePath)}
               />
               <img
-                src={srcc}
+                src={thumbnailUrl}
                 alt={`Image ${getImageName(imagePath)}`}
                 className="h-40 w-full rounded-lg object-cover"
               />

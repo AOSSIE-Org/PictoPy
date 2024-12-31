@@ -57,12 +57,11 @@ This guide provides instructions for building and running the PictoPy frontend u
 2. Run the container:
 
    ```bash
-   docker run -it -p 1420:1420 -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix <image_name>
-   ```
-
-3. Run the tauri application
-   ```bash
-   npm run tauri dev
+      docker run -it --name frontend-container --network host -p 1420:1420 -e DISPLAY=${DISPLAY} \
+      -v /tmp/.X11-unix:/tmp/.X11-unix \
+      -v images-data:/app/images \
+      -v /:/host \
+      <image-name>
    ```
 
 ### Windows
@@ -89,6 +88,17 @@ Replace `<HOST_IP>` with your actual IP address.
     ```bash
     npm run tauri dev
     ```
+
+## Building the Tauri App
+
+### Linux
+```bash
+   npm run tauri build
+   ```
+### Windows
+```bash
+   npm run tauri build -- --runner cargo-xwin --target x86_64-pc-windows-msvc
+   ```
 
 ## Accessing the GUI App
 

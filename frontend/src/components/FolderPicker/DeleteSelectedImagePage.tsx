@@ -10,6 +10,7 @@ import {
   delMultipleImages,
   fetchAllImages,
 } from '../../../api/api-functions/images';
+import { extractThumbnailPath } from '@/hooks/useImages';
 interface DeleteSelectedImageProps {
   setIsVisibleSelectedImage: (value: boolean) => void;
   onError: (title: string, err: any) => void;
@@ -21,10 +22,12 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
 }) => {
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
 
-  const { successData: allImagesData, isLoading } = usePictoQuery({
+  const { successData: response, isLoading } = usePictoQuery({
     queryFn: fetchAllImages,
     queryKey: ['all-images'],
   });
+
+  console.log('All Images Data : ', response);
 
   const { mutate: deleteMultipleImages, isPending: isAddingImages } =
     usePictoMutation({
@@ -36,8 +39,17 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
     });
 
   // Extract the array of image paths
-  const allImages: string[] = allImagesData ?? [];
+  const allImages: string[] = response?.image_files || [];
 
+  const imagesWithThumbnails = allImages.map((imagePath) => {
+    return {
+      imagePath,
+      url: convertFileSrc(imagePath),
+      thumbnailUrl: convertFileSrc(
+        extractThumbnailPath(response.folder_path, imagePath),
+      ),
+    };
+  });
   const toggleImageSelection = (imagePath: string) => {
     setSelectedImages((prev) =>
       prev.includes(imagePath)
@@ -87,10 +99,8 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
         <h1 className="mb-4 text-2xl font-bold">Select Images</h1>
         <button onClick={handleSelectAllImages}>Select All</button>
       </div>
-      {/* <FolderPicker setFolderPath={handleFolderPick} /> */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-        {allImages.map((imagePath, index) => {
-          const srcc = convertFileSrc(imagePath);
+        {imagesWithThumbnails.map(({ imagePath, thumbnailUrl }, index) => {
           return (
             <div key={index} className="relative">
               <div
@@ -102,7 +112,7 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
                 onClick={() => toggleImageSelection(imagePath)}
               />
               <img
-                src={srcc}
+                src={thumbnailUrl}
                 alt={`Image ${getImageName(imagePath)}`}
                 className="h-40 w-full rounded-lg object-cover"
               />
