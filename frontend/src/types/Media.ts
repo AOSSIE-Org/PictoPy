@@ -5,6 +5,7 @@ export interface MediaItem {
   date?: string;
   title?: string;
   tags?: string[];
+  imagePath:string;
 }
 export interface MediaCardProps {
   item: MediaItem;
