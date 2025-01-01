@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { convertFileSrc } from '@tauri-apps/api/core';
 import {
   usePictoQuery,
   usePictoMutation,
@@ -10,7 +9,6 @@ import {
   delMultipleImages,
   fetchAllImages,
 } from '../../../api/api-functions/images';
-import { extractThumbnailPath } from '@/hooks/useImages';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +16,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@radix-ui/react-dropdown-menu';
-import { FileDiff, Filter } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { MediaItem } from '@/types/Media';
 interface DeleteSelectedImageProps {
   setIsVisibleSelectedImage: (value: boolean) => void;
@@ -52,17 +50,6 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
   
   // Extract the array of image paths
   const allImages: string[] = response?.image_files || [];
-
-    const imagesWithThumbnails = allImages.map((imagePath) => {
-    return {
-      imagePath,
-      url: convertFileSrc(imagePath),
-      thumbnailUrl: convertFileSrc(
-        extractThumbnailPath(response.folder_path, imagePath),
-      ),
-    };
-  });
-
   const toggleImageSelection = (imagePath: string) => {
     setSelectedImages((prev) =>
       prev.includes(imagePath)
@@ -87,31 +74,29 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
   };
 
 
-  const handleSelectAllImages = () => {
-    if (selectedImages.length === allImages.length) {
-      setSelectedImages([]);
-      return;
-    }
-    setSelectedImages(allImages);
-  };
-
-
   const [filterTag, setFilterTag] = useState<string>(uniqueTags[0]);
 
+  const handleFilterTag = (value: string) => {
+    setSelectedImages([]); 
+    setFilterTag(value); 
+    
+    if(value.length === 0) {
+      setSelectedImages(allImages);
+      return;
+    }
 
-  const handleFilterTag = (value:string)=>{
-    setSelectedImages([]);
-    setFilterTag(value);
-    const selectedImagesPaths : string[] = [];
-    mediaItems.forEach((ele)=>{
-        if(ele.tags?.includes(filterTag)) {
-          selectedImagesPaths.push(ele.imagePath);
-        }
+    const selectedImagesPaths: string[] = [];
+    
+    mediaItems.forEach((ele) => {
+      if (ele.tags?.includes(value)) {
+        selectedImagesPaths.push(ele.imagePath);
+      }
     });
-
-    console.log("Selected Images Path = ",selectedImagesPaths);
-    setSelectedImages(selectedImagesPaths)
-  }
+  
+    console.log("Selected Images Path = ", selectedImagesPaths);
+    setSelectedImages(selectedImagesPaths);
+  };
+  
 
 
 

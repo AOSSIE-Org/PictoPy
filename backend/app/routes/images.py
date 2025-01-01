@@ -250,8 +250,34 @@ def delete_multiple_images(payload: dict):
                         },
                     },
                 )
+            path = os.path.normpath(path)
+            parts = path.split(os.sep)
+            parts.insert(parts.index("images") + 1, "PictoPy.thumbnails")
+            thumb_nail_image_path = os.sep.join(parts)
 
-            os.remove(path)
+           
+            if os.path.exists(path) :
+                try :
+                    os.remove(path)
+                except PermissionError:
+                    print(f"Permission denied for file '{thumb_nail_image_path}'.")
+                except Exception as e:
+                    print(f"An error occurred: {e}")
+            
+            else:
+                print(f"File '{path}' does not exist.")
+            
+            if os.path.exists(thumb_nail_image_path) :
+                try :
+                    os.remove(thumb_nail_image_path)
+                except PermissionError:
+                    print(f"Permission denied for file '{thumb_nail_image_path}'.")
+                except Exception as e:
+                    print(f"An error occurred: {e}")
+            else : 
+                print(f"File '{thumb_nail_image_path}' does not exist.")
+                    
+
             delete_image_db(path)
             deleted_paths.append(path)
 
