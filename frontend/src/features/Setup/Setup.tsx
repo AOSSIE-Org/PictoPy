@@ -15,7 +15,9 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
         <Pitopy className="h-16 w-16 text-gray-900" />
       </div>
       <p className="text-2xl font-bold text-white">Pictopy</p>
-      <FolderPicker setFolderPath={onFolderPathChange} />
+      <div>
+        <FolderPicker setFolderPath={onFolderPathChange} />
+      </div>
     </div>
   </div>
 );

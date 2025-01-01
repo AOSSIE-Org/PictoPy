@@ -12,6 +12,7 @@ import {
   deleteAlbums,
   fetchAllAlbums,
 } from '../../../api/api-functions/albums';
+import { LoadingScreen } from '../LoadingScreen/LoadingScreen';
 const AlbumsView: React.FC = () => {
   const { successData: albums, isLoading } = usePictoQuery({
     queryFn: fetchAllAlbums,
@@ -29,8 +30,14 @@ const AlbumsView: React.FC = () => {
     description: string;
   } | null>(null);
 
-  if (isLoading) return <div>Loading albums...</div>;
-
+  if (isLoading){
+    return (
+      <div className="container flex w-full items-center justify-center">
+       <LoadingScreen/>
+      </div>
+    );
+  }
+   
   const showErrorDialog = (title: string, err: unknown) => {
     setErrorDialogContent({
       title,
