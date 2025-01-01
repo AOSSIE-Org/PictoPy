@@ -136,7 +136,7 @@ const [pageNo,setpageNo] = useState<number>(20);
                         className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
                       >
                         <p className="hidden lg:inline">
-                          Num of images per page : {pageNo || 'tags'}
+                          Num of images per page : {pageNo}
                         </p>
                       </Button>
                     </DropdownMenuTrigger>
@@ -157,7 +157,6 @@ const [pageNo,setpageNo] = useState<number>(20);
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-              
             </div>
           </>
         )}

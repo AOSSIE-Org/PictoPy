@@ -289,6 +289,7 @@ def get_all_image_objects():
             image_path = get_path_from_id(image_id)
             classes = get_objects_db(image_path)
             data[image_path] = classes if classes else "None"
+            print(image_path)
 
         return JSONResponse(
             status_code=200,
