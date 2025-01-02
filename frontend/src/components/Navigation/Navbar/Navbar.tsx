@@ -32,7 +32,7 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
         }
       }
     },
-    [onNameChange],
+    [onNameChange]
   );
 
   const handleNameClick = useCallback(() => {
@@ -52,7 +52,7 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
       }
       setIsEditing(false);
     },
-    [onNameChange],
+    [onNameChange]
   );
 
   return (
@@ -61,7 +61,7 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <img
-              src="/public/PictoPy_Logo.png"
+              src="/PictoPy_Logo.png"
               className="h-7 transition-opacity duration-200 hover:opacity-80"
               alt="PictoPy Logo"
             />

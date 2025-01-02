@@ -111,3 +111,4 @@ module.exports = {
   },
   plugins: [tailwindcssAnimate],
 };
+
