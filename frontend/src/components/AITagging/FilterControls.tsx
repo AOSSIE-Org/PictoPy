@@ -16,6 +16,7 @@ import ErrorDialog from '../Album/Error';
 import { Trash2, Filter } from 'lucide-react';
 import { queryClient, usePictoMutation } from '@/hooks/useQueryExtensio';
 import { addFolder } from '../../../api/api-functions/images';
+
 interface FilterControlsProps {
   filterTag: string;
   setFilterTag: (tag: string) => void;
@@ -53,6 +54,24 @@ export default function FilterControls({
       .filter((tag): tag is string => typeof tag === 'string')
       .sort();
   }, [mediaItems]);
+
+  const [selectedFlags, setSelectedFlags] = useState<{ tag: string; isChecked: boolean }[]>([
+    { tag: 'All tags', isChecked: false },
+    ...uniqueTags.map((ele) => ({ tag: ele, isChecked: false })),
+  ]);
+  
+
+  const handleAddFlag = (idx: number) => {
+    const updatedFlags = [...selectedFlags];
+    updatedFlags[idx].isChecked = true;
+    setSelectedFlags(updatedFlags);
+  };
+
+  const handleRemoveFlag = (idx: number) => {
+    const updatedFlags = [...selectedFlags];
+    updatedFlags[idx].isChecked = false;
+    setSelectedFlags(updatedFlags);
+  };
 
   const handleFolderPick = async (path: string) => {
     try {
@@ -110,12 +129,22 @@ export default function FilterControls({
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
+              className="flex items-center gap-2 border-gray-500 p-2 hover:bg-accent dark:hover:bg-white/10"
             >
               <Filter className="h-4 w-4" />
-              <p className="hidden lg:inline">
-                Filter by {filterTag || 'tags'}
-              </p>
+              Filter by{' '}
+              <div className="flex gap-2">
+                {selectedFlags.map((ele, idx) =>
+                  ele.isChecked ? (
+                    <p
+                      key={idx}
+                      className="rounded-lg border-white bg-gray-700 pl-2 pr-2"
+                    >
+                      {ele.tag}
+                    </p>
+                  ) : null,
+                )}
+              </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -127,10 +156,26 @@ export default function FilterControls({
               value={filterTag}
               onValueChange={setFilterTag}
             >
-              <DropdownMenuRadioItem value="">All tags</DropdownMenuRadioItem>
-              {uniqueTags.map((tag) => (
-                <DropdownMenuRadioItem key={tag} value={tag}>
-                  {tag}
+              {selectedFlags.map((ele, index) => (
+                <DropdownMenuRadioItem
+                  key={ele.tag}
+                  value={ele.tag}
+                  onSelect={(event) => {
+                    event.preventDefault();
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    className="mr-2 cursor-pointer"
+                    value={ele.tag}
+                    checked={selectedFlags[index].isChecked}
+                    onChange={(event) => {
+                      event.target.checked
+                        ? handleAddFlag(index)
+                        : handleRemoveFlag(index);
+                    }}
+                  />
+                  {ele.tag}
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
