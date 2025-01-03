@@ -15,7 +15,9 @@ import {
 } from '../../../api/api-functions/albums';
 
 const AlbumsView: React.FC = () => {
+
   const { successData: albums, isLoading, error } = usePictoQuery({
+
     queryFn: fetchAllAlbums,
     queryKey: ['all-albums'],
   });
@@ -34,13 +36,12 @@ const AlbumsView: React.FC = () => {
   } | null>(null);
 
 
-
-
   if (isLoading) {
     return <LoadingScreen/>;
   }
 
   if (!albums || albums.length === 0) {
+
     return (
       <div className="container mx-auto pb-4">
         <div className="mb-4 flex items-center justify-between">
@@ -60,7 +61,10 @@ const AlbumsView: React.FC = () => {
           onSuccess={() => {
             setIsCreateFormOpen(false);
           }}
+
           onError={(err) => showErrorDialog("Error", err)}
+
+
         />
         <ErrorDialog
           content={errorDialogContent}
@@ -69,6 +73,25 @@ const AlbumsView: React.FC = () => {
       </div>
     );
   }
+  //these funcion works when there are albums
+  const transformedAlbums = albums.map((album: Album) => ({
+    id: album.album_name,
+    title: album.album_name,
+    coverImage: album.image_paths[0] || '',
+    imageCount: album.image_paths.length,
+  }));
+
+  const handleAlbumClick = (albumId: string) => {
+    setCurrentAlbum(albumId);
+  };
+
+  const handleDeleteAlbum = async (albumId: string) => {
+    try {
+      await deleteAlbum({ name: albumId });
+    } catch (err) {
+      showErrorDialog('Error Deleting Album', err);
+    }
+  };
 
   const showErrorDialog = (title: string, err: unknown) => {
     setErrorDialogContent({

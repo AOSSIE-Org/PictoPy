@@ -35,6 +35,7 @@ const parseAndSortImageData = (data: APIResponse['data']): Image[] => {
         extractThumbnailPath(data.folder_path, src),
       );
       return {
+        imagePath:src,
         title: src.substring(src.lastIndexOf('\\') + 1),
         thumbnailUrl,
         url,
