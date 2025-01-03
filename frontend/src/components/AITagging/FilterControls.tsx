@@ -13,13 +13,15 @@ import FolderPicker from '../FolderPicker/FolderPicker';
 import LoadingScreen from '../ui/LoadingScreen/LoadingScreen';
 import DeleteSelectedImagePage from '../FolderPicker/DeleteSelectedImagePage';
 import ErrorDialog from '../Album/Error';
-import { Trash2, Filter } from 'lucide-react';
+import {
+  Trash2,
+  Filter,
+} from 'lucide-react';
 import { queryClient, usePictoMutation } from '@/hooks/useQueryExtensio';
 import { addFolder } from '../../../api/api-functions/images';
 
 interface FilterControlsProps {
-  filterTag: string;
-  setFilterTag: (tag: string) => void;
+  setFilterTag: (tag: string[]) => void;
   mediaItems: MediaItem[];
   onFolderAdded: () => Promise<void>;
   isLoading: boolean;
@@ -28,7 +30,6 @@ interface FilterControlsProps {
 }
 
 export default function FilterControls({
-  filterTag,
   setFilterTag,
   mediaItems,
   onFolderAdded,
@@ -55,11 +56,14 @@ export default function FilterControls({
       .sort();
   }, [mediaItems]);
 
-  const [selectedFlags, setSelectedFlags] = useState<{ tag: string; isChecked: boolean }[]>([
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+
+  const [selectedFlags, setSelectedFlags] = useState<
+    { tag: string; isChecked: boolean }[]
+  >([
     { tag: 'All tags', isChecked: false },
     ...uniqueTags.map((ele) => ({ tag: ele, isChecked: false })),
   ]);
-  
 
   const handleAddFlag = (idx: number) => {
     const updatedFlags = [...selectedFlags];
@@ -73,6 +77,25 @@ export default function FilterControls({
     setSelectedFlags(updatedFlags);
   };
 
+
+  const handleFilterFlag = ()=>{
+    let flags : string[] = [];
+    if(selectedFlags[0].isChecked) {
+      setFilterTag([]);
+      return;
+    }
+    selectedFlags.forEach((ele)=>{
+      if(ele.isChecked) flags.push(ele.tag);
+    })
+
+    console.log("Updated Filter Flags = ",flags);
+    setFilterTag(flags);
+  }
+
+  const handleToggleDropdown = (event:Event) => {
+    event.preventDefault();
+    setIsDropdownOpen((prevState) => !prevState);  // Toggle dropdown visibility
+  };
   const handleFolderPick = async (path: string) => {
     try {
       addFolderAPI(path);
@@ -125,11 +148,12 @@ export default function FilterControls({
           <Trash2 className="h-4 w-4" />
           <p className="ml-1 hidden lg:inline">Delete Images</p>
         </Button>
-        <DropdownMenu>
+        <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              className="flex items-center gap-2 border-gray-500 p-2 hover:bg-accent dark:hover:bg-white/10"
+              className="flex cursor-default items-center gap-2 border-gray-500 p-2 hover:bg-accent dark:hover:bg-white/10"
+              onClick={()=>handleToggleDropdown}
             >
               <Filter className="h-4 w-4" />
               Filter by{' '}
@@ -138,9 +162,10 @@ export default function FilterControls({
                   ele.isChecked ? (
                     <p
                       key={idx}
-                      className="rounded-lg border-white bg-gray-700 pl-2 pr-2"
+                      className="flex items-center justify-center gap-1 rounded-lg border-white bg-gray-800 pb-1 pl-2 pr-2 pt-1"
                     >
                       {ele.tag}
+                     
                     </p>
                   ) : null,
                 )}
@@ -153,27 +178,23 @@ export default function FilterControls({
           >
             <DropdownMenuRadioGroup
               className="overflow-auto"
-              value={filterTag}
-              onValueChange={setFilterTag}
+              onValueChange={handleFilterFlag}
             >
               {selectedFlags.map((ele, index) => (
                 <DropdownMenuRadioItem
                   key={ele.tag}
                   value={ele.tag}
                   onSelect={(event) => {
+                    selectedFlags[index].isChecked ? handleRemoveFlag(index) : handleAddFlag(index);
                     event.preventDefault();
                   }}
+                  className='cursor-pointer'
                 >
                   <input
                     type="checkbox"
                     className="mr-2 cursor-pointer"
                     value={ele.tag}
                     checked={selectedFlags[index].isChecked}
-                    onChange={(event) => {
-                      event.target.checked
-                        ? handleAddFlag(index)
-                        : handleRemoveFlag(index);
-                    }}
                   />
                   {ele.tag}
                 </DropdownMenuRadioItem>
@@ -181,6 +202,7 @@ export default function FilterControls({
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+
         <ErrorDialog
           content={errorDialogContent}
           onClose={() => setErrorDialogContent(null)}
