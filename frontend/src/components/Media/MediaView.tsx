@@ -34,12 +34,12 @@ const MediaView: React.FC<MediaViewProps> = ({
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Update index when props change
+  
   useEffect(() => {
     setGlobalIndex((currentPage - 1) * itemsPerPage + initialIndex);
   }, [initialIndex, currentPage, itemsPerPage]);
 
-  // Keyboard controls
+  
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -55,7 +55,7 @@ const MediaView: React.FC<MediaViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [globalIndex, onClose, favorites]);
 
-  // Slideshow functionality
+  
   useEffect(() => {
     let slideshowInterval: NodeJS.Timeout | null = null;
 
@@ -70,7 +70,7 @@ const MediaView: React.FC<MediaViewProps> = ({
     };
   }, [isSlideshowActive, globalIndex]);
 
-  // Handlers
+  
   const handleZoomIn = () => setScale((s) => Math.min(4, s + 0.1));
   const handleZoomOut = () => setScale((s) => Math.max(0.5, s - 0.1));
   const handleRotate = () => setRotation((prev) => (prev + 90) % 360);
@@ -148,7 +148,7 @@ const MediaView: React.FC<MediaViewProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
-      {/* Top Controls */}
+      
       <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
         <button
           onClick={handleShare}
@@ -189,7 +189,7 @@ const MediaView: React.FC<MediaViewProps> = ({
         </button>
       </div>
 
-      {/* Main Content */}
+      
       <div
         className="relative flex h-full w-full items-center justify-center"
         onClick={(e) => {
@@ -216,7 +216,7 @@ const MediaView: React.FC<MediaViewProps> = ({
               }}
             />
 
-            {/* Image Controls */}
+            
             <div className="absolute bottom-20 right-4 flex gap-2">
               <button
                 onClick={handleZoomOut}
@@ -256,7 +256,7 @@ const MediaView: React.FC<MediaViewProps> = ({
           />
         )}
 
-        {/* Navigation Buttons */}
+        
         <button
           onClick={handlePrevItem}
           className="absolute left-4 top-1/2 z-50 flex items-center rounded-full bg-white/20 p-3 text-white hover:bg-white/40 transition-colors duration-200"

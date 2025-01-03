@@ -10,11 +10,14 @@ import {
   removeFromAlbum,
   viewYourAlbum,
 } from '../../../api/api-functions/albums';
+import { extractThumbnailPath } from '@/hooks/useImages';
+import { useQueryClient } from '@tanstack/react-query';
 const AlbumView: React.FC<AlbumViewProps> = ({
   albumName,
   onBack,
   onError,
 }) => {
+  const queryClient = useQueryClient();
   const {
     successData: album,
     isLoading,
@@ -25,7 +28,12 @@ const AlbumView: React.FC<AlbumViewProps> = ({
   });
   const { mutate: removeImage, isPending: isRemovingImage } = usePictoMutation({
     mutationFn: removeFromAlbum,
-    autoInvalidateTags: ['view-album', albumName],
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['view-album', albumName],
+      });
+      queryClient.invalidateQueries({ queryKey: ['all-albums'] });
+    },
   });
   const [showImageSelection, setShowImageSelection] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
@@ -69,10 +77,16 @@ const AlbumView: React.FC<AlbumViewProps> = ({
   const albumData = album as unknown as AlbumData;
 
   // Convert all image paths to their correct source URLs
-  const convertedImagePaths = albumData.photos.map((path) =>
-    convertFileSrc(path),
-  );
+  const convertedImagePaths = albumData.photos.map((path) => {
+    return {
+      url: convertFileSrc(path),
+      thumbnailUrl: convertFileSrc(
+        extractThumbnailPath(albumData.folder_path, path),
+      ),
+    };
+  });
 
+  // console.log(convertedImagePaths);
   return (
     <div className="mx-auto pb-4 pt-1">
       <div className="mb-4 flex items-center justify-between">
@@ -88,10 +102,10 @@ const AlbumView: React.FC<AlbumViewProps> = ({
 
       {albumData.photos && albumData.photos.length > 0 ? (
         <div className="grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4">
-          {convertedImagePaths.map((srcc, index) => (
+          {convertedImagePaths.map(({ thumbnailUrl }, index) => (
             <div key={index} className="relative h-56">
               <img
-                src={srcc}
+                src={thumbnailUrl}
                 alt={`Album image ${index + 1}`}
                 className="h-full w-full cursor-pointer rounded-lg object-cover"
                 onClick={() => handleImageClick(index)}
@@ -114,7 +128,7 @@ const AlbumView: React.FC<AlbumViewProps> = ({
         <MediaView
           initialIndex={selectedImageIndex}
           onClose={handleCloseMediaView}
-          allMedia={convertedImagePaths}
+          allMedia={convertedImagePaths.map((image) => image.url)}
           currentPage={1}
           itemsPerPage={albumData.photos.length}
           type="image"

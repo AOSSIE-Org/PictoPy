@@ -20,18 +20,21 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
     }
   }, []);
 
-  const handleNameSubmit = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      const inputValue = (e.target as HTMLInputElement).value.trim();
-      if (inputValue) {
-        setName(inputValue);
-        setShowPlaceholder(false);
-        setIsEditing(false);
-        localStorage.setItem('pictopy-username', inputValue);
-        onNameChange?.(inputValue);
+  const handleNameSubmit = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        const inputValue = (e.target as HTMLInputElement).value.trim();
+        if (inputValue) {
+          setName(inputValue);
+          setShowPlaceholder(false);
+          setIsEditing(false);
+          localStorage.setItem('pictopy-username', inputValue);
+          onNameChange?.(inputValue);
+        }
       }
-    }
-  }, [onNameChange]);
+    },
+    [onNameChange]
+  );
 
   const handleNameClick = useCallback(() => {
     if (!isEditing) {
@@ -39,17 +42,19 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
     }
   }, [isEditing]);
 
-  // Handle blur event
-  const handleBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value.trim();
-    if (inputValue) {
-      setName(inputValue);
-      setShowPlaceholder(false);
-      localStorage.setItem('pictopy-username', inputValue);
-      onNameChange?.(inputValue);
-    }
-    setIsEditing(false);
-  }, [onNameChange]);
+  const handleBlur = useCallback(
+    (e: React.FocusEvent<HTMLInputElement>) => {
+      const inputValue = e.target.value.trim();
+      if (inputValue) {
+        setName(inputValue);
+        setShowPlaceholder(false);
+        localStorage.setItem('pictopy-username', inputValue);
+        onNameChange?.(inputValue);
+      }
+      setIsEditing(false);
+    },
+    [onNameChange]
+  );
 
   return (
     <header className="flex w-full flex-row items-center justify-center align-middle">
@@ -58,7 +63,7 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <img
-              src="/public/PictoPy_Logo.png"
+              src="/PictoPy_Logo.png"
               className="h-7 hover:opacity-80 transition-opacity duration-200"
               alt="PictoPy Logo"
             />

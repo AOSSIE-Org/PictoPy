@@ -6,7 +6,7 @@ DEFAULT_FACENET_MODEL = "app/models/facenet.onnx"
 TEST_INPUT_PATH = "tests/inputs"
 TEST_OUTPUT_PATH = "tests/outputs"
 
-IMAGES_PATH = "../images"
+IMAGES_PATH = "./images"
 
 IMAGES_DATABASE_PATH = "app/database/images.db"
 ALBUM_DATABASE_PATH = "app/database/albums.db"

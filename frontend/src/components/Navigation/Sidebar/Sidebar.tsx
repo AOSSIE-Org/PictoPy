@@ -32,7 +32,8 @@ function Sidebar() {
       onMouseLeave={handleMouseLeave}
     >
       <div className="mt-2 flex flex-col gap-2">
-        {[{ path: '/home', label: 'Home', Icon: Home },
+        {[
+          { path: '/home', label: 'Home', Icon: Home },
           { path: '/ai-tagging', label: 'AI Tagging', Icon: Sparkles },
           { path: '/videos', label: 'Videos', Icon: Video },
           { path: '/albums', label: 'Albums', Icon: Images },
@@ -46,7 +47,9 @@ function Sidebar() {
             key={path}
           >
             <Icon
-              className={`${iconClasses} ${isActive(path) ? 'scale-110 text-gray-800' : ''}`}
+              className={`${iconClasses} ${
+                isActive(path) ? 'scale-110 text-gray-800' : ''
+              }`}
               strokeWidth={isActive(path) ? 2.5 : 1.5}
             />
             <span

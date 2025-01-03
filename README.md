@@ -66,6 +66,16 @@ Handles file system operations and provides a secure bridge between the frontend
 
 #### Installation
 
+
+1. Clone the repository to your local system:
+    ```bash
+    git clone git@github.com:AOSSIE-Org/PictoPy.git
+    ```
+    ```bash
+    cd PictoPy
+    ```
+
+
 1. Navigate to the frontend directory:
    ```bash
    cd frontend
@@ -74,6 +84,19 @@ Handles file system operations and provides a secure bridge between the frontend
    ```bash
    npm install
    ```
+
+   ```bash
+    cd scripts
+   ```
+
+    On Debian/Ubuntu:
+    ```bash
+    ./setup_env.sh
+    ```
+    On Windows:
+    ```
+    ./setup_win.ps1
+    ```
 
 #### Running the Application
 
@@ -153,6 +176,7 @@ npm run tauri build
     pip install -r requirements.txt
 
     ```
+    Note: python 3.13 and above are not compatible with this project currently.
 
 4.  **Missing System Dependencies:** Some dependencies might need system-level libraries like `libGL.so.1` (often needed by OpenCV). Install the appropriate packages based on your distribution:
 
@@ -231,6 +255,9 @@ run.bat --test # To run in testing mode
 The server will start on `http://localhost:8000` by default. In test mode, the server will automatically restart if any errors are detected or if source files are modified.
 
 You can control the number of workers by setting the `WORKERS` environment variable before running the script. If not set, it defaults to 1 worker.
+
+### Docker Compose Setup
+- [Docker Compose](./docs/docker-compose/redme.md)
 
 ### Setup using Dockerfile
 

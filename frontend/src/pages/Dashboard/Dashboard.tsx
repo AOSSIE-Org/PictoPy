@@ -4,7 +4,7 @@ import { useImages } from '@/hooks/useImages';
 
 function Dashboard() {
   const localPath = localStorage.getItem('folderPath') || '';
-  const { images, loading } = useImages(localPath);
+  const { images, isCreating: loading } = useImages(localPath);
 
   if (loading) {
     return <LoadingScreen />;
