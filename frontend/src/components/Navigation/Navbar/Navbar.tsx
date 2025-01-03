@@ -67,7 +67,7 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
               className="h-7 hover:opacity-80 transition-opacity duration-200"
               alt="PictoPy Logo"
             />
-            <span className="text-white font-sans text-lg font-bold drop-shadow-sm hover:text-yellow-300 transition-colors duration-200">
+            <span className="text-theme-dark dark:text-theme-light font-sans text-base sm:text-lg font-bold drop-shadow-sm">
               PictoPy
             </span>
           </div>
@@ -108,3 +108,4 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
 }
 
 export default Navbar;
+
