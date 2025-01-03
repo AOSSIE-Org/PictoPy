@@ -11,7 +11,9 @@ interface ImageData {
   title: string;
   date: string;
   tags: string[];
+  imagePath:string;
 }
+
 
 interface ResponseData {
   [year: string]: {
@@ -109,6 +111,7 @@ export const useImages = (folderPath: string) => {
                   title: `Image ${imagePath}`,
                   date,
                   tags: [],
+                  imagePath:''
                 };
               }),
             );
