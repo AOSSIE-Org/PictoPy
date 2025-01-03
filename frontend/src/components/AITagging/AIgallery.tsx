@@ -39,7 +39,7 @@ export default function AIGallery({
     },
   );
   let mediaItems = successData ?? [];
-  const [filterTag, setFilterTag] = useState<string>('');
+  const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
@@ -50,13 +50,15 @@ export default function AIGallery({
     { length: 41 },
     (_, index) => index + 10,
   );
-  const filteredMediaItems = useMemo(() => {
-    return filterTag
-    ? mediaItems.filter((mediaItem: any) =>
-      mediaItem.tags.includes(filterTag),
-  )
-  : mediaItems;
-}, [filterTag, mediaItems, loading]);
+  const filteredMediaItems = useMemo(() => { 
+    return filterTag.length > 0
+      ? mediaItems.filter((mediaItem: any) =>
+          filterTag.some((tag) => mediaItem.tags.includes(tag))
+        )
+      : mediaItems;
+  }, [filterTag, mediaItems, loading])
+
+
 const [pageNo,setpageNo] = useState<number>(20);
 
 
@@ -101,7 +103,6 @@ const [pageNo,setpageNo] = useState<number>(20);
             <h1 className="text-2xl font-bold">{title}</h1>
           )}
           <FilterControls
-            filterTag={filterTag}
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
             onFolderAdded={handleFolderAdded}
