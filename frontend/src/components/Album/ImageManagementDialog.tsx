@@ -104,7 +104,7 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
                   <Button
                     onClick={() => handleRemoveImage(image)}
                     disabled={isRemovingImage}
-                    className="absolute right-0 top-0 rounded-full bg-red-500 p-1 text-white"
+                    className="rounded-full absolute right-0 top-0 bg-red-500 p-1 text-white"
                   >
                     X
                   </Button>
