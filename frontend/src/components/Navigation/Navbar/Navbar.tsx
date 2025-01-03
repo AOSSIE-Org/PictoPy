@@ -11,6 +11,7 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
   const [name, setName] = useState(title || '');
   const [showPlaceholder, setShowPlaceholder] = useState(!title);
 
+  // Handle initial load and localStorage
   useEffect(() => {
     const storedName = localStorage.getItem('pictopy-username');
     if (storedName) {
@@ -65,7 +66,7 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
               className="h-7 transition-opacity duration-200 hover:opacity-80"
               alt="PictoPy Logo"
             />
-            <span className="font-sans text-lg font-bold text-white drop-shadow-sm transition-colors duration-200 hover:text-yellow-300">
+            <span className="text-theme-dark dark:text-theme-light font-sans text-base sm:text-lg font-bold drop-shadow-sm">
               PictoPy
             </span>
           </div>
@@ -105,3 +106,4 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
 }
 
 export default Navbar;
+

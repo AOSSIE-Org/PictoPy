@@ -7,20 +7,26 @@ import ErrorDialog from './Error';
 import AlbumView from './Albumview';
 import { Album } from '@/types/Album';
 import { SquarePlus } from 'lucide-react';
+import { LoadingScreen } from '@/components/ui/LoadingScreen/LoadingScreen';
 import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtensio';
 import {
   deleteAlbums,
   fetchAllAlbums,
 } from '../../../api/api-functions/albums';
+
 const AlbumsView: React.FC = () => {
-  const { successData: albums, isLoading} = usePictoQuery({
+
+  const { successData: albums, isLoading, error } = usePictoQuery({
+
     queryFn: fetchAllAlbums,
     queryKey: ['all-albums'],
   });
+
   const { mutate: deleteAlbum } = usePictoMutation({
     mutationFn: deleteAlbums,
     autoInvalidateTags: ['all-albums'],
   });
+
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [editingAlbum, setEditingAlbum] = useState<Album | null>(null);
   const [currentAlbum, setCurrentAlbum] = useState<string | null>(null);
@@ -29,16 +35,13 @@ const AlbumsView: React.FC = () => {
     description: string;
   } | null>(null);
 
+
   if (isLoading) {
-    return <div>Loading albums...</div>;
+    return <LoadingScreen/>;
   }
-  const showErrorDialog = (title: string, err: unknown) => {
-    setErrorDialogContent({
-      title,
-      description: err instanceof Error ? err.message : 'An unknown error occurred',
-    });
-  };
-  if ( !albums || albums.length === 0) {
+
+  if (!albums || albums.length === 0) {
+
     return (
       <div className="container mx-auto pb-4">
         <div className="mb-4 flex items-center justify-between">
@@ -58,7 +61,10 @@ const AlbumsView: React.FC = () => {
           onSuccess={() => {
             setIsCreateFormOpen(false);
           }}
-          onError={(err)=>showErrorDialog("Error",err)}
+
+          onError={(err) => showErrorDialog("Error", err)}
+
+
         />
         <ErrorDialog
           content={errorDialogContent}
@@ -68,6 +74,32 @@ const AlbumsView: React.FC = () => {
     );
   }
   //these funcion works when there are albums
+  const transformedAlbums = albums.map((album: Album) => ({
+    id: album.album_name,
+    title: album.album_name,
+    coverImage: album.image_paths[0] || '',
+    imageCount: album.image_paths.length,
+  }));
+
+  const handleAlbumClick = (albumId: string) => {
+    setCurrentAlbum(albumId);
+  };
+
+  const handleDeleteAlbum = async (albumId: string) => {
+    try {
+      await deleteAlbum({ name: albumId });
+    } catch (err) {
+      showErrorDialog('Error Deleting Album', err);
+    }
+  };
+
+  const showErrorDialog = (title: string, err: unknown) => {
+    setErrorDialogContent({
+      title,
+      description: err instanceof Error ? err.message : 'An unknown error occurred',
+    });
+  };
+
   const transformedAlbums = albums.map((album: Album) => ({
     id: album.album_name,
     title: album.album_name,
@@ -131,7 +163,7 @@ const AlbumsView: React.FC = () => {
         onSuccess={() => {
           setIsCreateFormOpen(false);
         }}
-        onError={showErrorDialog}
+        onError={(err) => showErrorDialog("Error", err)}
       />
 
       <EditAlbumDialog
@@ -152,3 +184,4 @@ const AlbumsView: React.FC = () => {
 };
 
 export default AlbumsView;
+
