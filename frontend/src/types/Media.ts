@@ -5,7 +5,7 @@ export interface MediaItem {
   date?: string;
   title?: string;
   tags?: string[];
-  imagePath:string;
+  imagePath: string;
 }
 export interface MediaCardProps {
   item: MediaItem;
@@ -27,7 +27,7 @@ export interface MediaGridProps {
 export interface MediaViewProps {
   initialIndex: number;
   onClose: () => void;
-  allMedia: string[];
+  allMedia: { url: string; path?: string }[];
   currentPage: number;
   itemsPerPage: number;
   type: 'image' | 'video';

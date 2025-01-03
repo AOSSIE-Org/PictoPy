@@ -7,6 +7,7 @@ mod file_service;
 pub use cache_service::CacheService;
 use chrono::{DateTime, Datelike, Utc};
 pub use file_service::FileService;
+use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
 
 #[tauri::command]
 pub fn get_folders_with_images(
@@ -169,6 +170,119 @@ pub fn get_all_videos_with_cache(
     }
 
     Ok(videos_by_year_month)
+}
+
+#[tauri::command]
+pub async fn share_file(path: String) -> Result<(), String> {
+    use std::process::Command;
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer")
+            .args(["/select,", &path])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .args(["-R", &path])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn save_edited_image(
+    image_data: Vec<u8>,
+    original_path: String,
+    filter: String,
+    brightness: i32,
+    contrast: i32,
+) -> Result<(), String> {
+    let mut img = image::load_from_memory(&image_data).map_err(|e| e.to_string())?;
+
+    // Apply filter
+    match filter.as_str() {
+        "grayscale(100%)" => img = img.grayscale(),
+        "sepia(100%)" => img = apply_sepia(&img),
+        "invert(100%)" => img.invert(),
+        _ => {}
+    }
+
+    // Apply brightness and contrast
+    img = adjust_brightness_contrast(&img, brightness, contrast);
+
+    // Save the edited image
+    let path = PathBuf::from(original_path);
+    let file_stem = path.file_stem().unwrap_or_default();
+    let extension = path.extension().unwrap_or_default();
+    
+    let mut edited_path = path.clone();
+    edited_path.set_file_name(format!(
+        "{}_edited.{}",
+        file_stem.to_string_lossy(),
+        extension.to_string_lossy()
+    ));
+
+    img.save(&edited_path).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+fn apply_sepia(img: &DynamicImage) -> DynamicImage {
+    let (width, height) = img.dimensions();
+    let mut sepia_img = ImageBuffer::new(width, height);
+
+    for (x, y, pixel) in img.pixels() {
+        let r = pixel[0] as f32;
+        let g = pixel[1] as f32;
+        let b = pixel[2] as f32;
+
+        let sepia_r = (0.393 * r + 0.769 * g + 0.189 * b).min(255.0) as u8;
+        let sepia_g = (0.349 * r + 0.686 * g + 0.168 * b).min(255.0) as u8;
+        let sepia_b = (0.272 * r + 0.534 * g + 0.131 * b).min(255.0) as u8;
+
+        sepia_img.put_pixel(x, y, Rgba([sepia_r, sepia_g, sepia_b, pixel[3]]));
+    }
+
+    DynamicImage::ImageRgba8(sepia_img)
+}
+
+fn adjust_brightness_contrast(img: &DynamicImage, brightness: i32, contrast: i32) -> DynamicImage {
+    let (width, height) = img.dimensions();
+    let mut adjusted_img = ImageBuffer::new(width, height);
+
+    let brightness_factor = brightness as f32 / 100.0;
+    let contrast_factor = contrast as f32 / 100.0;
+
+    for (x, y, pixel) in img.pixels() {
+        let mut new_pixel = [0; 4];
+        for c in 0..3 {
+            let mut color = pixel[c] as f32;
+            // Apply brightness
+            color += 255.0 * (brightness_factor - 1.0);
+            // Apply contrast
+            color = (color - 128.0) * contrast_factor + 128.0;
+            new_pixel[c] = color.max(0.0).min(255.0) as u8;
+        }
+        new_pixel[3] = pixel[3]; // Keep original alpha
+
+        adjusted_img.put_pixel(x, y, Rgba(new_pixel));
+    }
+
+    DynamicImage::ImageRgba8(adjusted_img)
 }
 
 #[tauri::command]
