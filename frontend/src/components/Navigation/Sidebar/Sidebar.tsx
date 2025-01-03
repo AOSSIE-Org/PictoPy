@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Home, Sparkles, Video, Images, Settings } from 'lucide-react';
 import { useState } from 'react';
 
-function Sidebar() {
+const Sidebar = () => {
   const location = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -64,6 +64,6 @@ function Sidebar() {
       </div>
     </div>
   );
-}
+};
 
 export default Sidebar;
