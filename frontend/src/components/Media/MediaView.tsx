@@ -165,7 +165,6 @@ const MediaView: React.FC<MediaViewProps> = ({
       // Create an image element to load the file
       const img = new Image();
       img.src = imageUrl;
-
       await new Promise((resolve) => {
         img.onload = resolve;
       });
@@ -198,7 +197,7 @@ const MediaView: React.FC<MediaViewProps> = ({
       }
 
       ctx.filter = `${filter} brightness(${brightness}%) contrast(${contrast}%)`;
-      ctx.drawImage(canvas, 0, 0);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
       console.log('Canvas prepared, attempting to create blob');
 
