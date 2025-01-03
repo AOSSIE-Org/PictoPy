@@ -2,6 +2,7 @@ import { imagesEndpoints } from '../apiEndpoints';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { APIResponse, Image } from '../../src/types/image';
 import { extractThumbnailPath } from '@/hooks/useImages';
+import { message } from '@tauri-apps/plugin-dialog';
 
 export const fetchAllImages = async () => {
   const response = await fetch(imagesEndpoints.allImages, {
@@ -35,7 +36,7 @@ const parseAndSortImageData = (data: APIResponse['data']): Image[] => {
         extractThumbnailPath(data.folder_path, src),
       );
       return {
-        imagePath:src,
+        imagePath: src,
         title: src.substring(src.lastIndexOf('\\') + 1),
         thumbnailUrl,
         url,
@@ -53,7 +54,8 @@ export const getAllImageObjects = async () => {
   const newObj = {
     data: parsedAndSortedImages,
     success: data.success,
-    error: data.error,
+    error: data?.error,
+    message: data?.message,
   };
 
   return newObj;

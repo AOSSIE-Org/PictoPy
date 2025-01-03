@@ -172,6 +172,66 @@ pub fn get_all_videos_with_cache(
 }
 
 #[tauri::command]
+pub async fn share_file(path: String) -> Result<(), String> {
+    use std::process::Command;
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer")
+            .args(["/select,", &path])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .args(["-R", &path])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn save_edited_image(
+    image_data: Vec<u8>,
+    original_path: String,
+    filter: String,
+    brightness: i32,
+    contrast: i32,
+) -> Result<(), String> {
+    use std::path::PathBuf;
+    use std::fs;
+
+    let path = PathBuf::from(original_path);
+    let file_stem = path.file_stem().unwrap_or_default();
+    let extension = path.extension().unwrap_or_default();
+    
+    let mut edited_path = path.clone();
+    edited_path.set_file_name(format!(
+        "{}_edited.{}",
+        file_stem.to_string_lossy(),
+        extension.to_string_lossy()
+    ));
+
+    println!("Saving edited image to {:?}", edited_path.to_str());
+
+    fs::write(&edited_path, image_data).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn delete_cache(cache_service: State<'_, CacheService>) -> bool {
     cache_service.delete_all_caches()
 }
