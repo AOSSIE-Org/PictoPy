@@ -31,11 +31,12 @@ const SortingControls: React.FC<SortingControlsProps> = ({
   years.sort((a, b) => parseInt(b) - parseInt(a));
 
   const sortingOptions = [
-    { value: 'date', label: 'Sort by Date ' },
+    { value: 'date', label: 'Sort by Date' },
     { value: 'name', label: 'Sort by Name (A-Z)' },
     { value: 'desc', label: 'Sort by Name (Z-A)' },
     { value: 'size', label: 'Sort by Size' },
     { value: 'type', label: 'Sort by Type' },
+    { value: 'favorites', label: 'Sort by Favorites' },
     ...years.map((year) => ({
       value: `year-${year}`,
       label: `Sort by Year (${year})`,
@@ -69,4 +70,4 @@ const SortingControls: React.FC<SortingControlsProps> = ({
   );
 };
 
-export default SortingControls;
+export default SortingControls

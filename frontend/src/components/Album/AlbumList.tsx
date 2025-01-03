@@ -11,7 +11,7 @@ const AlbumList: React.FC<AlbumListProps> = ({
 }) => {
   return (
     <div
-      className={`grid grid-cols-[repeat(auto-fill,_minmax(272px,_1fr))] gap-4`}
+      className="grid grid-cols-[repeat(auto-fill,_minmax(272px,_1fr))] gap-4"
     >
       {albums.map((album) => (
         <AlbumCard
