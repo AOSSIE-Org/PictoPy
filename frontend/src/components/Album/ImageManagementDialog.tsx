@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  useViewAlbum,
-  useRemoveImageFromAlbum,
-} from '../../hooks/AlbumService';
+import { useViewAlbum, useRemoveImageFromAlbum } from '../../hooks/AlbumService';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -39,7 +36,7 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
 
   useEffect(() => {
     if (albumName) {
-      viewAlbum(albumName).catch((err) => onError('Error loading album', err));
+      viewAlbum(albumName).catch((err: Error) => onError('Error loading album', err));
     }
   }, [albumName, viewAlbum, onError]);
 
@@ -94,7 +91,7 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
           </Button>
         </div>
         <div className="grid grid-cols-3 gap-4">
-          {viewedAlbum?.image_paths?.map((image, index) => {
+          {viewedAlbum?.image_paths?.map((image: string, index: number) => {
             const srcc = convertFileSrc(image);
             return (
               <div key={index} className="relative">

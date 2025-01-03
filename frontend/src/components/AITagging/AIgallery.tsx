@@ -5,15 +5,14 @@ import MediaGrid from '../Media/Mediagrid';
 import { MediaGalleryProps } from '@/types/Media';
 import MediaView from '../Media/MediaView';
 import PaginationControls from '../ui/PaginationControls';
-import { queryClient, usePictoQuery } from '@/hooks/useQueryExtensio';
+import { usePictoQuery } from '@/hooks/useQueryExtensio';
 import { getAllImageObjects } from '../../../api/api-functions/images';
 
 export default function AIGallery({
   title,
   type,
-  folderPath,
-}: MediaGalleryProps & { folderPath: string }) {
-  const { successData: mediaItems, isLoading: loading } = usePictoQuery({
+}: MediaGalleryProps) { // Removed folderPath
+  const { successData: mediaItems = [], isLoading: loading, isError } = usePictoQuery({
     queryFn: getAllImageObjects,
     queryKey: ['ai-tagging-images', 'ai'],
   });
@@ -30,16 +29,16 @@ export default function AIGallery({
   const filteredMediaItems = useMemo(() => {
     return filterTag
       ? mediaItems.filter((mediaItem: any) =>
-          mediaItem.tags.includes(filterTag),
+          mediaItem.tags?.includes(filterTag)
         )
       : mediaItems;
-  }, [filterTag, mediaItems, loading]);
+  }, [filterTag, mediaItems]);
 
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     return filteredMediaItems.slice(indexOfFirstItem, indexOfLastItem);
-  }, [filteredMediaItems, currentPage, itemsPerPage, mediaItems]);
+  }, [filteredMediaItems, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filteredMediaItems.length / itemsPerPage);
 
@@ -52,7 +51,17 @@ export default function AIGallery({
     setShowMediaViewer(false);
   }, []);
 
-  const handleFolderAdded = useCallback(async () => {}, []);
+  const handleFolderAdded = useCallback(async () => {
+    // Implement folder logic if needed
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (isError) {
+    return <div>Error loading media items.</div>;
+  }
 
   return (
     <div className="w-full">
@@ -87,6 +96,7 @@ export default function AIGallery({
             />
           </>
         )}
+
         {showMediaViewer && (
           <MediaView
             initialIndex={selectedMediaIndex}
@@ -101,3 +111,4 @@ export default function AIGallery({
     </div>
   );
 }
+
