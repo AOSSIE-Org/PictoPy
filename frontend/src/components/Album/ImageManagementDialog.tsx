@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-
 import { convertFileSrc } from '@tauri-apps/api/core';
 import ImageSelectionPage from './ImageSelection';
 import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtensio';
@@ -54,7 +53,7 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
   };
 
   const getImageName = (path: string) => {
-    return path.split('\\').pop() || path;
+    return path.split('\\').pop() || path.split('/').pop() || path;
   };
 
   if (viewError && viewError !== 'Something went wrong') {

@@ -11,7 +11,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
 }) => (
   <div className="flex min-h-screen items-center justify-center bg-gray-900">
     <div className="animate-fade-in-up flex flex-col items-center justify-center space-y-6">
-      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white">
+      <div className="rounded-full flex h-24 w-24 items-center justify-center bg-white">
         <Pitopy className="h-16 w-16 text-gray-900" />
       </div>
       <p className="text-2xl font-bold text-white">Pictopy</p>
