@@ -101,24 +101,7 @@ const AlbumsView: React.FC = () => {
     });
   };
 
-  const transformedAlbums = albums.map((album: Album) => ({
-    id: album.album_name,
-    title: album.album_name,
-    coverImage: album.image_paths[0] || '',
-    imageCount: album.image_paths.length,
-  }));
 
-  const handleAlbumClick = (albumId: string) => {
-    setCurrentAlbum(albumId);
-  };
-
-  const handleDeleteAlbum = async (albumId: string) => {
-    try {
-      await deleteAlbum({ name: albumId });
-    } catch (err) {
-      showErrorDialog('Error Deleting Album', err);
-    }
-  };
 
   return (
     <div className="mx-auto w-full px-2 pb-4">
