@@ -116,6 +116,12 @@ const MediaView: React.FC<MediaViewProps> = ({
         {type === 'image' ? (
           <div
             id="zoomable-image"
+            //Close when clicked outside the image:
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                onClose();
+              }
+            }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}

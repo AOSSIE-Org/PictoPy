@@ -31,11 +31,9 @@ const parseAndSortImageData = (data: APIResponse['data']): Image[] => {
   const parsedImages: Image[] = Object.entries(data.images).map(
     ([src, tags]) => {
       const url = convertFileSrc(src);
-      const thumbnailUrl = convertFileSrc(
-        extractThumbnailPath(data.folder_path, src),
-      );
+      const thumbnailUrl = convertFileSrc(extractThumbnailPath(src));
       return {
-        imagePath:src,
+        imagePath: src,
         title: src.substring(src.lastIndexOf('\\') + 1),
         thumbnailUrl,
         url,
@@ -85,9 +83,21 @@ export const addMultImages = async (paths: string[]) => {
   return data;
 };
 
-export const generateThumbnails = async (folderPath: string) => {
+export const generateThumbnails = async (folderPath: string[]) => {
   const response = await fetch(imagesEndpoints.generateThumbnails, {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ folder_paths: folderPath }),
+  });
+  const data = await response.json();
+  return data;
+};
+
+export const deleteThumbnails = async (folderPath: string) => {
+  const response = await fetch(imagesEndpoints.deleteThumbnails, {
+    method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
     },

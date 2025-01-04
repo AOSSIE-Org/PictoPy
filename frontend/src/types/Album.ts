@@ -29,8 +29,7 @@ export interface AlbumData {
 }
 export interface CreateAlbumFormProps {
   isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
+  closeForm: () => void;
   onError: (title: string, error: unknown) => void;
 }
 
