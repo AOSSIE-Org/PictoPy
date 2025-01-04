@@ -40,7 +40,7 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`relative sidebar bg-theme-light dark:bg-gray-800 text-gray-900 dark:text-gray-200 m-4 flex flex-col justify-between rounded-2xl border border-gray-300 dark:border-gray-700 p-4 shadow-md transition-all duration-300 ${
+      className={`sidebar relative bg-theme-light dark:bg-gray-800 text-gray-900 dark:text-gray-200 m-4 flex flex-col justify-between rounded-2xl border border-gray-300 dark:border-gray-700 p-4 shadow-md transition-all duration-300 ${
         isExpanded ? 'w-48' : 'w-16'
       }`}
       onMouseEnter={handleMouseEnter}
