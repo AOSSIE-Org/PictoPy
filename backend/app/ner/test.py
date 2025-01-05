@@ -3,12 +3,12 @@ import onnxruntime
 from transformers import AutoTokenizer, AutoConfig
 import cv2
 import asyncio
+from app.config.settings import DEFAULT_NER_MODEL
 import time
 
 # Run the ner_onnx.py to create the onnx model in the models folder
 def ner_marking(text1):
-    # change the path is required
-    model_path = r'C:\Users\sanid\Downloads\gsoc_@pictopy\PictoPy\backend\app\models\bert-base-NER.onnx'
+    model_path = DEFAULT_NER_MODEL
     session = onnxruntime.InferenceSession(model_path)
 
     tokenizer = AutoTokenizer.from_pretrained("dslim/bert-base-NER")
@@ -131,7 +131,7 @@ def preprocess_face_for_onnx(face_image):
 
 #change the path if required
 session = onnxruntime.InferenceSession(
-    r'C:\Users\sanid\Downloads\gsoc_@pictopy\PictoPy\backend\app\models\facenet.onnx', providers=["CPUExecutionProvider"]
+    r'C:\Users\sanid\Downloads\gsoc\PictoPy\backend\app\models\facenet.onnx', providers=["CPUExecutionProvider"]
 )
 
 input_tensor_name = session.get_inputs()[0].name
@@ -150,7 +150,7 @@ def scanned_embeddings(name):
     print(f"Text to Display: {text_to_display}")
 
     #change the path if required
-    face_cascade = cv2.CascadeClassifier(r'C:\Users\sanid\Downloads\gsoc_@pictopy\PictoPy\backend\app\ner\haarcascade_frontalface_default.xml')
+    face_cascade = cv2.CascadeClassifier(r'C:\Users\sanid\Downloads\gsoc\PictoPy\backend\app\ner\haarcascade_frontalface_default.xml')
     if face_cascade.empty():
         raise FileNotFoundError("Failed to load Haar cascade file. Check the file path.")
 
