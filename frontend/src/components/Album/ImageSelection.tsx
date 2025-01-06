@@ -45,9 +45,7 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
   const imagesWithThumbnails = allImages.map((imagePath) => ({
     imagePath,
     url: convertFileSrc(imagePath),
-    thumbnailUrl: convertFileSrc(
-      extractThumbnailPath(allImagesData.folder_path, imagePath),
-    ),
+    thumbnailUrl: convertFileSrc(extractThumbnailPath(imagePath)),
   }));
   useEffect(() => {
     if (errorMessage && errorMessage !== 'Something went wrong') {

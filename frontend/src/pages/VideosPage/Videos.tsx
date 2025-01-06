@@ -1,10 +1,11 @@
 import { LoadingScreen } from '@/components/ui/LoadingScreen/LoadingScreen';
 import MediaGallery from '@/components/Media/MediaGallery';
 import { useVideos } from '@/hooks/UseVideos';
+import { useLocalStorage } from '@/hooks/LocalStorage';
 
 const Videos: React.FC = () => {
-  const localPath = localStorage.getItem('folderPath') || '';
-  const { videos, loading } = useVideos(localPath);
+  const [currentPaths] = useLocalStorage<string[]>('folderPaths', []);
+  const { videos, loading } = useVideos(currentPaths);
 
   if (loading) {
     return <LoadingScreen />;

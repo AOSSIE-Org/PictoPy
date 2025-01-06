@@ -18,7 +18,7 @@ interface ResponseData {
   };
 }
 
-export const useVideos = (folderPath: string) => {
+export const useVideos = (folderPaths: string[]) => {
   const [videos, setVideos] = useState<VideoData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,7 +29,7 @@ export const useVideos = (folderPath: string) => {
         const response: ResponseData = await invoke(
           'get_all_videos_with_cache',
           {
-            directory: folderPath,
+            directories: folderPaths,
           },
         );
 
@@ -64,7 +64,7 @@ export const useVideos = (folderPath: string) => {
             const mappedVideos = await Promise.all(
               videoPaths.map(async (videoPath: string) => {
                 const original = videoPath;
-                const url = await convertFileSrc(videoPath);
+                const url = convertFileSrc(videoPath);
 
                 const filename = videoPath.split('\\').pop();
                 const matches = filename
@@ -81,17 +81,15 @@ export const useVideos = (folderPath: string) => {
                 return {
                   url,
                   original,
-                  title: `Video ${videoPath}`,
+                  title: filename,
                   date,
                   tags: [],
                 };
               }),
             );
-
             videoUrls.push(...mappedVideos);
           }
         }
-
         setVideos(videoUrls);
       } catch (error) {
         console.error('Error fetching videos:', error);
@@ -101,7 +99,7 @@ export const useVideos = (folderPath: string) => {
     };
 
     fetchVideos();
-  }, [folderPath]);
+  }, [folderPaths]);
 
   return { videos, loading };
 };

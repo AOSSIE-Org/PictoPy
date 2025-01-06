@@ -35,7 +35,7 @@ pub fn get_images_in_folder(
 pub fn get_all_images_with_cache(
     state: tauri::State<FileService>,
     cache_state: tauri::State<CacheService>,
-    directory: &str,
+    directories: Vec<String>,
 ) -> Result<HashMap<u32, HashMap<u32, Vec<String>>>, String> {
     let cached_images = cache_state.get_cached_images();
 
@@ -60,35 +60,35 @@ pub fn get_all_images_with_cache(
         }
         map
     } else {
-        let all_images = state.get_all_images(directory);
         let mut map: HashMap<u32, HashMap<u32, Vec<String>>> = HashMap::new();
+        let mut all_image_paths: Vec<PathBuf> = Vec::new();
 
-        for path in all_images {
-            if let Ok(metadata) = std::fs::metadata(&path) {
-                let date = metadata
-                    .created()
-                    .or_else(|_| metadata.modified())
-                    .unwrap_or_else(|_| SystemTime::now());
+        for directory in directories {
+            let all_images = state.get_all_images(&directory);
 
-                let datetime: DateTime<Utc> = date.into();
-                let year = datetime.year() as u32;
-                let month = datetime.month();
-                map.entry(year)
-                    .or_insert_with(HashMap::new)
-                    .entry(month)
-                    .or_insert_with(Vec::new)
-                    .push(path.to_str().unwrap_or_default().to_string());
+            for path in all_images {
+                if let Ok(metadata) = std::fs::metadata(&path) {
+                    let date = metadata
+                        .created()
+                        .or_else(|_| metadata.modified())
+                        .unwrap_or_else(|_| SystemTime::now());
+
+                    let datetime: DateTime<Utc> = date.into();
+                    let year = datetime.year() as u32;
+                    let month = datetime.month();
+                    map.entry(year)
+                        .or_insert_with(HashMap::new)
+                        .entry(month)
+                        .or_insert_with(Vec::new)
+                        .push(path.to_str().unwrap_or_default().to_string());
+
+                    all_image_paths.push(path); // Collect all paths for caching
+                }
             }
         }
 
         // Cache the flattened list of image paths
-        let flattened: Vec<PathBuf> = map
-            .values()
-            .flat_map(|year_map| year_map.values())
-            .flatten()
-            .map(|s| PathBuf::from(s))
-            .collect();
-        if let Err(e) = cache_state.cache_images(&flattened) {
+        if let Err(e) = cache_state.cache_images(&all_image_paths) {
             eprintln!("Failed to cache images: {}", e);
         }
 
@@ -109,59 +109,63 @@ pub fn get_all_images_with_cache(
 pub fn get_all_videos_with_cache(
     state: tauri::State<FileService>,
     cache_state: tauri::State<CacheService>,
-    directory: &str,
+    directories: Vec<String>, // Updated to take an array of directories
 ) -> Result<HashMap<u32, HashMap<u32, Vec<String>>>, String> {
     let cached_videos = cache_state.get_cached_videos();
 
-    let mut videos_by_year_month = if let Some(cached) = cached_videos {
-        let mut map: HashMap<u32, HashMap<u32, Vec<String>>> = HashMap::new();
-        for path in cached {
-            if let Ok(metadata) = std::fs::metadata(&path) {
-                if let Ok(created) = metadata.created() {
-                    let datetime: DateTime<Utc> = created.into();
-                    let year = datetime.year() as u32;
-                    let month = datetime.month();
-                    map.entry(year)
-                        .or_insert_with(HashMap::new)
-                        .entry(month)
-                        .or_insert_with(Vec::new)
-                        .push(path.to_str().unwrap_or_default().to_string());
+    let mut videos_by_year_month: HashMap<u32, HashMap<u32, Vec<String>>> =
+        if let Some(cached) = cached_videos {
+            let mut map: HashMap<u32, HashMap<u32, Vec<String>>> = HashMap::new();
+            for path in cached {
+                if let Ok(metadata) = std::fs::metadata(&path) {
+                    if let Ok(created) = metadata.created() {
+                        let datetime: DateTime<Utc> = created.into();
+                        let year = datetime.year() as u32;
+                        let month = datetime.month();
+                        map.entry(year)
+                            .or_insert_with(HashMap::new)
+                            .entry(month)
+                            .or_insert_with(Vec::new)
+                            .push(path.to_str().unwrap_or_default().to_string());
+                    }
                 }
             }
-        }
-        map
-    } else {
-        let all_videos = state.get_all_videos(directory);
-        let mut map: HashMap<u32, HashMap<u32, Vec<String>>> = HashMap::new();
-
-        for path in all_videos {
-            if let Ok(metadata) = std::fs::metadata(&path) {
-                if let Ok(created) = metadata.created() {
-                    let datetime: DateTime<Utc> = created.into();
-                    let year = datetime.year() as u32;
-                    let month = datetime.month();
-                    map.entry(year)
-                        .or_insert_with(HashMap::new)
-                        .entry(month)
-                        .or_insert_with(Vec::new)
-                        .push(path.to_str().unwrap_or_default().to_string());
+            map
+        } else {
+            let mut map: HashMap<u32, HashMap<u32, Vec<String>>> = HashMap::new();
+            for directory in directories {
+                let all_videos = state.get_all_videos(&directory);
+                for path in all_videos {
+                    if let Ok(metadata) = std::fs::metadata(&path) {
+                        if let Ok(created) = metadata.created() {
+                            let datetime: DateTime<Utc> = created.into();
+                            let year = datetime.year() as u32;
+                            let month = datetime.month();
+                            map.entry(year)
+                                .or_insert_with(HashMap::new)
+                                .entry(month)
+                                .or_insert_with(Vec::new)
+                                .push(path.to_str().unwrap_or_default().to_string());
+                        }
+                    }
                 }
             }
-        }
 
-        let flattened: Vec<PathBuf> = map
-            .values()
-            .flat_map(|year_map| year_map.values())
-            .flatten()
-            .map(|s| PathBuf::from(s))
-            .collect();
-        if let Err(e) = cache_state.cache_videos(&flattened) {
-            eprintln!("Failed to cache videos: {}", e);
-        }
+            // Cache the aggregated video paths
+            let flattened: Vec<PathBuf> = map
+                .values()
+                .flat_map(|year_map| year_map.values())
+                .flatten()
+                .map(|s| PathBuf::from(s))
+                .collect();
+            if let Err(e) = cache_state.cache_videos(&flattened) {
+                eprintln!("Failed to cache videos: {}", e);
+            }
 
-        map
-    };
+            map
+        };
 
+    // Sort the videos within each month
     for year_map in videos_by_year_month.values_mut() {
         for month_vec in year_map.values_mut() {
             month_vec.sort();

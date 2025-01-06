@@ -28,16 +28,15 @@ export default function AIGallery({
   type: 'image' | 'video';
   folderPath: string;
 }) {
-  const { successData, isLoading: loading } = usePictoQuery({
+  const { successData, isLoading: isGeneratingTags } = usePictoQuery({
     queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
-  const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation(
-    {
+  const { mutate: generateThumbnailAPI, isPending: isGeneratingThumbnails } =
+    usePictoMutation({
       mutationFn: generateThumbnails,
       autoInvalidateTags: ['ai-tagging-images', 'ai'],
-    },
-  );
+    });
   let mediaItems = successData ?? [];
   const [filterTag, setFilterTag] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -52,13 +51,12 @@ export default function AIGallery({
   );
   const filteredMediaItems = useMemo(() => {
     return filterTag
-    ? mediaItems.filter((mediaItem: any) =>
-      mediaItem.tags.includes(filterTag),
-  )
-  : mediaItems;
-}, [filterTag, mediaItems, loading]);
-const [pageNo,setpageNo] = useState<number>(20);
-
+      ? mediaItems.filter((mediaItem: any) =>
+          mediaItem.tags.includes(filterTag),
+        )
+      : mediaItems;
+  }, [filterTag, mediaItems, isGeneratingTags]);
+  const [pageNo, setpageNo] = useState<number>(20);
 
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * pageNo;
@@ -78,14 +76,14 @@ const [pageNo,setpageNo] = useState<number>(20);
   }, []);
 
   const handleFolderAdded = useCallback(async () => {
-    generateThumbnail(folderPath);
+    generateThumbnailAPI([folderPath]);
   }, []);
 
   useEffect(() => {
-    generateThumbnail(folderPath);
+    generateThumbnailAPI([folderPath]);
   }, [folderPath]);
 
-  if (isCreating || loading) {
+  if (isGeneratingThumbnails || isGeneratingTags) {
     return (
       <div>
         <LoadingScreen />
@@ -105,7 +103,7 @@ const [pageNo,setpageNo] = useState<number>(20);
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
             onFolderAdded={handleFolderAdded}
-            isLoading={loading}
+            isLoading={isGeneratingTags}
             isVisibleSelectedImage={isVisibleSelectedImage}
             setIsVisibleSelectedImage={setIsVisibleSelectedImage}
           />
@@ -119,44 +117,47 @@ const [pageNo,setpageNo] = useState<number>(20);
               openMediaViewer={openMediaViewer}
               type={type}
             />
-              <div className="relative flex items-center justify-center gap-4">
-                {/* Pagination Controls - Centered */}
-                <PaginationControls
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                />
+            <div className="relative flex items-center justify-center gap-4">
+              {/* Pagination Controls - Centered */}
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
 
-                {/* Dropdown Menu - Right-Aligned */}
-                <div className="absolute mt-5 right-0">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
-                      >
-                        <p className="hidden lg:inline">
-                          Num of images per page : {pageNo}
-                        </p>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      className="max-h-[500px] w-[200px] overflow-y-auto"
-                      align="end"
+              {/* Dropdown Menu - Right-Aligned */}
+              <div className="absolute right-0 mt-5">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
                     >
-                      <DropdownMenuRadioGroup
-                        className="overflow-auto bg-gray-950 p-4 cursor-pointer"
-                        onValueChange={(value)=>setpageNo(Number(value))}
-                      >
-                        {noOfPages.map((itemsPerPage) => (
-                          <DropdownMenuRadioItem key={itemsPerPage} value={`${itemsPerPage}`}>
-                            {itemsPerPage}
-                          </DropdownMenuRadioItem>
-                        ))}
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                      <p className="hidden lg:inline">
+                        Num of images per page : {pageNo}
+                      </p>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    className="max-h-[500px] w-[200px] overflow-y-auto"
+                    align="end"
+                  >
+                    <DropdownMenuRadioGroup
+                      className="cursor-pointer overflow-auto bg-gray-950 p-4"
+                      onValueChange={(value) => setpageNo(Number(value))}
+                    >
+                      {noOfPages.map((itemsPerPage) => (
+                        <DropdownMenuRadioItem
+                          key={itemsPerPage}
+                          value={`${itemsPerPage}`}
+                        >
+                          {itemsPerPage}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </>
         )}
@@ -174,4 +175,3 @@ const [pageNo,setpageNo] = useState<number>(20);
     </div>
   );
 }
-

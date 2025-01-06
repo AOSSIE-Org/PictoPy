@@ -15,9 +15,7 @@ import {
 } from '../../../api/api-functions/albums';
 
 const AlbumsView: React.FC = () => {
-
-  const { successData: albums, isLoading, error } = usePictoQuery({
-
+  const { successData: albums, isLoading } = usePictoQuery({
     queryFn: fetchAllAlbums,
     queryKey: ['all-albums'],
   });
@@ -35,13 +33,11 @@ const AlbumsView: React.FC = () => {
     description: string;
   } | null>(null);
 
-
   if (isLoading) {
-    return <LoadingScreen/>;
+    return <LoadingScreen />;
   }
 
   if (!albums || albums.length === 0) {
-
     return (
       <div className="container mx-auto pb-4">
         <div className="mb-4 flex items-center justify-between">
@@ -57,14 +53,8 @@ const AlbumsView: React.FC = () => {
         <div className="text-center">No albums found.</div>
         <CreateAlbumForm
           isOpen={isCreateFormOpen}
-          onClose={() => setIsCreateFormOpen(false)}
-          onSuccess={() => {
-            setIsCreateFormOpen(false);
-          }}
-
-          onError={(err) => showErrorDialog("Error", err)}
-
-
+          closeForm={() => setIsCreateFormOpen(false)}
+          onError={(title, err) => showErrorDialog(title, err)}
         />
         <ErrorDialog
           content={errorDialogContent}
@@ -96,11 +86,10 @@ const AlbumsView: React.FC = () => {
   const showErrorDialog = (title: string, err: unknown) => {
     setErrorDialogContent({
       title,
-      description: err instanceof Error ? err.message : 'An unknown error occurred',
+      description:
+        err instanceof Error ? err.message : 'An unknown error occurred',
     });
   };
-
-
 
   return (
     <div className="mx-auto w-full px-2 pb-4">
@@ -142,11 +131,8 @@ const AlbumsView: React.FC = () => {
 
       <CreateAlbumForm
         isOpen={isCreateFormOpen}
-        onClose={() => setIsCreateFormOpen(false)}
-        onSuccess={() => {
-          setIsCreateFormOpen(false);
-        }}
-        onError={(err) => showErrorDialog("Error", err)}
+        closeForm={() => setIsCreateFormOpen(false)}
+        onError={(title, err) => showErrorDialog(title, err)}
       />
 
       <EditAlbumDialog
@@ -167,4 +153,3 @@ const AlbumsView: React.FC = () => {
 };
 
 export default AlbumsView;
-
