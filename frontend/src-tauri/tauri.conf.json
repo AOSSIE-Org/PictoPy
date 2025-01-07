@@ -21,6 +21,9 @@
   "version": "0.0.0",
   "identifier": "com.yourcompany.pictopy",
   "plugins": {
+    "fs": {
+      "active": true
+    },
     "updater": {
       "active": true,
       "endpoints": ["https://server.com//api/v1/tauri/update"],
