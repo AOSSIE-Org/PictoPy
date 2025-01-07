@@ -82,6 +82,8 @@ export default function FilterControls({
         <DeleteSelectedImagePage
           setIsVisibleSelectedImage={setIsVisibleSelectedImage}
           onError={showErrorDialog}
+          uniqueTags={uniqueTags}
+          mediaItems={mediaItems}
         />
       </div>
     );

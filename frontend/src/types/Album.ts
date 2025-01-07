@@ -25,6 +25,7 @@ export interface AlbumData {
   album_name: string;
   photos: string[];
   description?: string;
+  folder_path: string;
 }
 export interface CreateAlbumFormProps {
   isOpen: boolean;

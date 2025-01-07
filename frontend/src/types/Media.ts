@@ -1,8 +1,11 @@
 export interface MediaItem {
-  src: string;
+  original?: string;
+  url: string;
+  thumbnailUrl?: string;
   date?: string;
   title?: string;
   tags?: string[];
+  imagePath:string;
 }
 export interface MediaCardProps {
   item: MediaItem;
