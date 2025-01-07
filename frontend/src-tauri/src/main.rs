@@ -7,8 +7,10 @@ mod repositories;
 mod services;
 mod models;
 mod utils;
+mod commands;
 
 use crate::services::{FileService, CacheService};
+use crate::commands::image::compress_image;
 
 fn main() {
     tauri::Builder::default()
@@ -28,7 +30,9 @@ fn main() {
             services::get_all_images_with_cache,
             services::get_all_videos_with_cache,
             services::delete_cache,
+            compress_image
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-}
+} 
+
