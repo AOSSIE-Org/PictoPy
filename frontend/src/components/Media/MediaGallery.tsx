@@ -5,7 +5,6 @@ import SortingControls from './SortningControls';
 import PaginationControls from '../ui/PaginationControls';
 import { MediaGalleryProps } from '@/types/Media';
 import { sortMedia } from '@/utils/Media';
-
 export default function MediaGallery({
   mediaItems,
   title,
@@ -46,8 +45,8 @@ export default function MediaGallery({
   return (
     <div className="w-full">
       <div className="mx-auto px-2 pb-8 pt-1 dark:bg-background dark:text-foreground">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{title || currentYear}</h1>
+        <div className="mb-6 flex items-center justify-between max-sm:flex-col gap-4">
+          <h1 className="text-2xl font-bold max-sm:text-md">{title || currentYear}</h1>
           <SortingControls
             sortBy={sortBy}
             setSortBy={handleSetSortBy}

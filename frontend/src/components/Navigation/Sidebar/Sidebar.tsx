@@ -34,14 +34,14 @@ function Sidebar() {
     'h-5 w-5 transition-transform duration-200 ease-out group-hover:scale-110';
 
   return (
-    <div className="sidebar text-theme-dark dark:text-theme-light bg-theme-light m-4 flex w-36 flex-col justify-between rounded-2xl border border-gray-300 p-4 backdrop-blur-md backdrop-saturate-150 dark:border-white/10 dark:bg-white/5">
+    <div className="sidebar text-theme-dark dark:text-theme-light bg-theme-light m-4 flex w-36  max-sm:w-16 flex-col justify-between rounded-2xl border border-gray-300 p-4 backdrop-blur-md backdrop-saturate-150 dark:border-white/10 dark:bg-white/5">
       <div className="mt-2 flex flex-col gap-4">
         <Link to="/home" className={linkClasses('/home')}>
           <Home
             className={iconClasses}
             strokeWidth={isActive('/home') ? 2.5 : 2}
           />
-          <span className="text-sm font-medium">Home</span>
+          <span className="text-sm font-medium max-sm:hidden">Home</span>
         </Link>
 
         <Link to="/ai-tagging" className={linkClasses('/ai-tagging')}>
@@ -49,7 +49,7 @@ function Sidebar() {
             className={iconClasses}
             strokeWidth={isActive('/ai-tagging') ? 2.5 : 2}
           />
-          <span className="text-sm font-medium">AI Tagging</span>
+          <span className="text-sm font-medium max-sm:hidden">AI Tagging</span>
         </Link>
 
         <Link to="/videos" className={linkClasses('/videos')}>
@@ -57,7 +57,7 @@ function Sidebar() {
             className={iconClasses}
             strokeWidth={isActive('/videos') ? 2.5 : 2}
           />
-          <span className="text-sm font-medium">Videos</span>
+          <span className="text-sm font-medium max-sm:hidden">Videos</span>
         </Link>
 
         <Link to="/albums" className={linkClasses('/albums')}>
@@ -65,7 +65,7 @@ function Sidebar() {
             className={iconClasses}
             strokeWidth={isActive('/albums') ? 2.5 : 2}
           />
-          <span className="text-sm font-medium">Albums</span>
+          <span className="text-sm font-medium max-sm:hidden">Albums</span>
         </Link>
       </div>
 
@@ -74,7 +74,7 @@ function Sidebar() {
           className={`${iconClasses} transform transition-transform group-hover:rotate-90`}
           strokeWidth={isActive('/settings') ? 2.5 : 2}
         />
-        <span className="text-sm font-medium">Settings</span>
+        <span className="text-sm font-medium max-sm:hidden">Settings</span>
       </Link>
     </div>
   );

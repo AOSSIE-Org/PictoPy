@@ -59,7 +59,7 @@ export default function AIGallery({
       <div className="mx-auto px-2 pb-8 dark:bg-background dark:text-foreground">
         <div className="mb-6 flex items-center justify-between">
           {isVisibleSelectedImage && (
-            <h1 className="text-2xl font-bold">{title}</h1>
+            <h1 className="text-2xl font-bold">hii</h1>
           )}
           <FilterControls
             filterTag={filterTag}
