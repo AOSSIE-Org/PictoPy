@@ -37,7 +37,7 @@ const Settings: React.FC = () => {
 
   return (
     <div className="mx-auto flex-1 px-4 pt-1">
-      <div className="bg-theme-light space-y-6 rounded-2xl border border-white/10 p-6 shadow backdrop-blur-md backdrop-saturate-150 dark:border-white/5 dark:bg-white/5">
+      <div className="bg-theme-light rounded-2xl space-y-6 border border-white/10 p-6 shadow backdrop-blur-md backdrop-saturate-150 dark:border-white/5 dark:bg-white/5">
         <div>
           <h2 className="text-theme-dark dark:text-theme-light mb-2 text-lg font-medium">
             Current Folder Path
