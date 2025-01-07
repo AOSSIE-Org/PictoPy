@@ -1,6 +1,7 @@
 import { MediaViewProps } from '@/types/Media';
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { compressImage } from '@/utils/imageCompression';
 
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
@@ -17,6 +18,8 @@ const MediaView: React.FC<MediaViewProps> = ({
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressionError, setCompressionError] = useState<string | null>(null);
 
   useEffect(() => {
     setGlobalIndex((currentPage - 1) * itemsPerPage + initialIndex);
@@ -36,6 +39,17 @@ const MediaView: React.FC<MediaViewProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [globalIndex, onClose]);
+
+  const handleCompression = async () => {
+    setIsCompressing(true);
+    try {
+      await compressImage(allMedia[globalIndex]);
+      setIsCompressing(false);
+    } catch (error) {
+      setCompressionError('Failed to compress image');
+      setIsCompressing(false);
+    }
+  };
 
   const handelZoomOut = () => {
     setScale((s) => Math.max(0.1, s - 0.1));
@@ -152,6 +166,20 @@ const MediaView: React.FC<MediaViewProps> = ({
               >
                 +
               </button>
+              <button
+                onClick={handleCompression}
+                disabled={isCompressing}
+                className="rounded-md border border-black bg-white px-4 py-2 text-sm text-black transition duration-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)]"
+              >
+                {isCompressing ? (
+                  <span className="flex items-center">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Compressing...
+                  </span>
+                ) : (
+                  'Compress'
+                )}
+              </button>
             </div>
           </div>
         ) : (
@@ -161,6 +189,12 @@ const MediaView: React.FC<MediaViewProps> = ({
             controls
             autoPlay
           />
+        )}
+
+        {compressionError && (
+          <div className="absolute top-16 right-4 z-50 rounded-md bg-red-100 p-2 text-sm text-red-600">
+            {compressionError}
+          </div>
         )}
 
         {globalIndex > 0 && (
