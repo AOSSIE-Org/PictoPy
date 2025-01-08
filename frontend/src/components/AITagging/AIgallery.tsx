@@ -35,15 +35,14 @@ export default function AIGallery({
     queryFn: getAllImageObjects,
     queryKey: ['ai-tagging-images', 'ai'],
   });
-
   const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation(
     {
       mutationFn: generateThumbnails,
       autoInvalidateTags: ['ai-tagging-images', 'ai'],
     },
   );
-
-  const [filterTag, setFilterTag] = useState<string>('');
+  let mediaItems = successData ?? [];
+  const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
@@ -55,14 +54,17 @@ export default function AIGallery({
     { length: 41 },
     (_, index) => index + 10,
   );
-
-  const filteredMediaItems = useMemo(() => {
-    return filterTag
+  const filteredMediaItems = useMemo(() => { 
+    return filterTag.length > 0
       ? mediaItems.filter((mediaItem: any) =>
-          mediaItem.tags?.includes(filterTag),
+          filterTag.some((tag) => mediaItem.tags.includes(tag))
         )
       : mediaItems;
-  }, [filterTag, mediaItems]);
+  }, [filterTag, mediaItems, loading])
+
+
+const [pageNo,setpageNo] = useState<number>(20);
+
 
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * pageNo;
@@ -105,7 +107,6 @@ export default function AIGallery({
             <h1 className="text-2xl font-bold">{title}</h1>
           )}
           <FilterControls
-            filterTag={filterTag}
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
             onFolderAdded={handleFolderAdded}
