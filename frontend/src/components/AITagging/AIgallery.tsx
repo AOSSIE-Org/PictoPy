@@ -15,8 +15,8 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from '@radix-ui/react-dropdown-menu';
-import { Button } from '../ui/button';
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
 export default function AIGallery({
   title,
@@ -27,7 +27,11 @@ export default function AIGallery({
   type: 'image' | 'video';
   folderPath: string;
 }) {
-  const { successData: mediaItems = [], isLoading: loading, isError } = usePictoQuery({
+  const {
+    successData: mediaItems = [],
+    isLoading: loading,
+    isError,
+  } = usePictoQuery({
     queryFn: getAllImageObjects,
     queryKey: ['ai-tagging-images', 'ai'],
   });
@@ -39,7 +43,6 @@ export default function AIGallery({
   );
   let mediaItems = successData ?? [];
   const [filterTag, setFilterTag] = useState<string[]>([]);
-
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
@@ -62,6 +65,7 @@ export default function AIGallery({
 
 const [pageNo,setpageNo] = useState<number>(20);
 
+
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * pageNo;
     const indexOfFirstItem = indexOfLastItem - pageNo;
@@ -79,8 +83,8 @@ const [pageNo,setpageNo] = useState<number>(20);
     setShowMediaViewer(false);
   }, []);
 
-  const handleFolderAdded = useCallback(() => {
-    generateThumbnail(folderPath);
+  const handleFolderAdded = useCallback(async () => {
+    await generateThumbnail(folderPath);
   }, [folderPath, generateThumbnail]);
 
   useEffect(() => {
@@ -99,7 +103,9 @@ const [pageNo,setpageNo] = useState<number>(20);
     <div className="w-full">
       <div className="mx-auto px-2 pb-8 dark:bg-background dark:text-foreground">
         <div className="mb-2 flex items-center justify-between">
-          {isVisibleSelectedImage && <h1 className="text-2xl font-bold">{title}</h1>}
+          {isVisibleSelectedImage && (
+            <h1 className="text-2xl font-bold">{title}</h1>
+          )}
           <FilterControls
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
@@ -119,7 +125,6 @@ const [pageNo,setpageNo] = useState<number>(20);
               type={type}
             />
             <div className="relative flex items-center justify-center gap-4">
-
               <PaginationControls
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -128,7 +133,6 @@ const [pageNo,setpageNo] = useState<number>(20);
 
               {/* Dropdown Menu - Right-Aligned */}
               <div className="absolute right-0 mt-5">
-              <div className="absolute mt-5 right-0">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -136,7 +140,7 @@ const [pageNo,setpageNo] = useState<number>(20);
                       className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
                     >
                       <p className="hidden lg:inline">
-                        Num of images per page : {pageNo}
+                        Num of images per page: {pageNo}
                       </p>
                     </Button>
                   </DropdownMenuTrigger>
@@ -146,23 +150,13 @@ const [pageNo,setpageNo] = useState<number>(20);
                   >
                     <DropdownMenuRadioGroup
                       className="cursor-pointer overflow-auto bg-gray-950 p-4"
-                      onValueChange={(value) => setpageNo(Number(value))}
+                      onValueChange={(value) => setPageNo(Number(value))}
                     >
                       {noOfPages.map((itemsPerPage) => (
                         <DropdownMenuRadioItem
                           key={itemsPerPage}
                           value={`${itemsPerPage}`}
                         >
-                      <p className="hidden lg:inline">Num of images per page: {pageNo}</p>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="max-h-[500px] w-[200px] overflow-y-auto" align="end">
-                    <DropdownMenuRadioGroup
-                      className="overflow-auto bg-gray-950 p-4 cursor-pointer"
-                      onValueChange={(value) => setPageNo(Number(value))}
-                    >
-                      {noOfPages.map((itemsPerPage) => (
-                        <DropdownMenuRadioItem key={itemsPerPage} value={`${itemsPerPage}`}>
                           {itemsPerPage}
                         </DropdownMenuRadioItem>
                       ))}
@@ -178,9 +172,10 @@ const [pageNo,setpageNo] = useState<number>(20);
           <MediaView
             initialIndex={selectedMediaIndex}
             onClose={closeMediaViewer}
-            allMedia={filteredMediaItems.map((item: any) => {
-              return { url: item.url, path: item?.imagePath };
-            })}
+            allMedia={filteredMediaItems.map((item: any) => ({
+              url: item.url,
+              path: item?.imagePath,
+            }))}
             currentPage={currentPage}
             itemsPerPage={pageNo}
             type={type}
@@ -190,5 +185,3 @@ const [pageNo,setpageNo] = useState<number>(20);
     </div>
   );
 }
-
-
