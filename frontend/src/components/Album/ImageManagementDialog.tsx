@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-
 import { convertFileSrc } from '@tauri-apps/api/core';
 import ImageSelectionPage from './ImageSelection';
 import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtensio';
@@ -39,6 +38,7 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
     mutationFn: removeFromAlbum,
     autoInvalidateTags: ['view-album', albumName || ''],
   });
+
   const [showImageSelection, setShowImageSelection] = useState(false);
 
   const handleRemoveImage = async (imageUrl: string) => {
@@ -53,7 +53,7 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
   };
 
   const getImageName = (path: string) => {
-    return path.split('\\').pop() || path;
+    return path.split('\\').pop() || path.split('/').pop() || path;
   };
 
   if (viewError && viewError !== 'Something went wrong') {
@@ -90,30 +90,28 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
           </Button>
         </div>
         <div className="grid grid-cols-3 gap-4">
-          {viewedAlbum.photos &&
-            viewedAlbum.photos.length > 0 &&
-            viewedAlbum?.photos?.map((image: any, index: number) => {
-              const srcc = convertFileSrc(image);
-              return (
-                <div key={index} className="relative">
-                  <img
-                    src={srcc}
-                    alt={`Album image ${getImageName(image)}`}
-                    className="h-32 w-full rounded-lg object-cover"
-                  />
-                  <Button
-                    onClick={() => handleRemoveImage(image)}
-                    disabled={isRemovingImage}
-                    className="rounded-full absolute right-0 top-0 bg-red-500 p-1 text-white"
-                  >
-                    X
-                  </Button>
-                  <div className="absolute bottom-0 left-0 right-0 truncate rounded-b-lg bg-black bg-opacity-50 p-1 text-xs text-white">
-                    {getImageName(image)}
-                  </div>
+          {viewedAlbum?.image_paths?.map((image: string, index: number) => {
+            const srcc = convertFileSrc(image);
+            return (
+              <div key={index} className="relative">
+                <img
+                  src={srcc}
+                  alt={`Album image ${getImageName(image)}`}
+                  className="h-32 w-full rounded-lg object-cover"
+                />
+                <Button
+                  onClick={() => handleRemoveImage(image)}
+                  disabled={isRemovingImage}
+                  className="absolute right-0 top-0 rounded-full bg-red-500 p-1 text-white"
+                >
+                  X
+                </Button>
+                <div className="absolute bottom-0 left-0 right-0 truncate rounded-b-lg bg-black bg-opacity-50 p-1 text-xs text-white">
+                  {getImageName(image)}
                 </div>
-              );
-            })}
+              </div>
+            );
+          })}
         </div>
         <DialogFooter>
           <Button onClick={onClose}>Close</Button>

@@ -11,6 +11,7 @@ interface ImageData {
   title: string;
   date: string;
   tags: string[];
+  imagePath: string;
 }
 
 interface ResponseData {
@@ -105,6 +106,7 @@ export const useImages = (folderPath: string) => {
                 return {
                   original,
                   url,
+                  imagePath,
                   thumbnailUrl,
                   title: `Image ${imagePath}`,
                   date,

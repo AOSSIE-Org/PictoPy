@@ -70,7 +70,9 @@ export default function MediaGallery({
           <MediaView
             initialIndex={selectedMediaIndex}
             onClose={closeMediaViewer}
-            allMedia={sortedMedia.map((item) => item.url)}
+            allMedia={sortedMedia.map((item) => {
+              return { url: item.url, path: item?.imagePath };
+            })}
             currentPage={currentPage}
             itemsPerPage={itemsPerPage}
             type={type}
