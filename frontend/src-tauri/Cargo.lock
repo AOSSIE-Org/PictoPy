@@ -7,8 +7,11 @@ name = "Pictopy"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "base64 0.21.7",
  "chrono",
  "image",
+ "rand 0.8.5",
+ "serde",
  "serde_json",
  "tauri",
  "tauri-build",

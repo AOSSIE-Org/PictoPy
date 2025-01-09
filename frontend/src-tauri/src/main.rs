@@ -29,6 +29,7 @@ fn main() {
             services::delete_cache,
             services::share_file,
             services::save_edited_image,
+            services::get_random_memories,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

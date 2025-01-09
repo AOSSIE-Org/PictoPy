@@ -1,5 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Sparkles, Video, Images, Settings } from 'lucide-react';
+import {
+  Home,
+  Sparkles,
+  Video,
+  Images,
+  Settings,
+  BookImage,
+} from 'lucide-react';
 import { useState } from 'react';
 
 const Sidebar = () => {
@@ -25,7 +32,7 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`sidebar relative bg-theme-light dark:bg-gray-800 text-gray-900 dark:text-gray-200 m-4 flex flex-col justify-between rounded-2xl border border-gray-300 dark:border-gray-700 p-4 shadow-md transition-all duration-300 ${
+      className={`sidebar bg-theme-light rounded-2xl relative m-4 flex flex-col justify-between border border-gray-300 p-4 text-gray-900 shadow-md transition-all duration-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 ${
         isExpanded ? 'w-48' : 'w-16'
       }`}
       onMouseEnter={handleMouseEnter}
@@ -38,6 +45,7 @@ const Sidebar = () => {
           { path: '/videos', label: 'Videos', Icon: Video },
           { path: '/albums', label: 'Albums', Icon: Images },
           { path: '/settings', label: 'Settings', Icon: Settings },
+          { path: '/memories', label: 'Memories', Icon: BookImage },
         ].map(({ path, label, Icon }) => (
           <Link
             to={path}

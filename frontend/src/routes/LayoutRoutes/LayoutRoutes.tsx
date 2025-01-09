@@ -2,6 +2,7 @@ import { ROUTES } from '@/constants/routes';
 import AITagging from '@/pages/AITagging/AITaging';
 import Album from '@/pages/Album/Album';
 import Dashboard from '@/pages/Dashboard/Dashboard';
+import Memories from '@/pages/Memories/Memories';
 import Settings from '@/pages/SettingsPage/Settings';
 import Videos from '@/pages/VideosPage/Videos';
 
@@ -15,5 +16,6 @@ export const LayoutRoutes: React.FC = () => (
     <Route path={ROUTES.LAYOUT.SETTINGS} element={<Settings />} />
     <Route path={ROUTES.LAYOUT.AI} element={<AITagging />} />
     <Route path={ROUTES.LAYOUT.ALBUM} element={<Album />} />
+    <Route path={ROUTES.LAYOUT.MEMORIES} element={<Memories/>} />
   </Routes>
 );
