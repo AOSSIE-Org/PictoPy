@@ -1,6 +1,6 @@
 import sqlite3
 import json
-
+import bcrypt
 from app.config.settings import ALBUM_DATABASE_PATH
 from app.utils.wrappers import image_exists, album_exists
 from app.utils.path_id_mapping import get_id_from_path, get_path_from_id
@@ -17,7 +17,9 @@ def create_albums_table():
             album_name TEXT PRIMARY KEY,
             image_ids TEXT,
             description TEXT,
-            date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            is_hidden BOOLEAN DEFAULT FALSE,
+            password_hash TEXT
         )
     """
     )
@@ -25,7 +27,7 @@ def create_albums_table():
     conn.close()
 
 
-def create_album(album_name, description=None):
+def create_album(album_name, description=None, is_hidden=False, password=None):
     conn = sqlite3.connect(ALBUM_DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -35,13 +37,40 @@ def create_album(album_name, description=None):
     if count > 0:
         conn.close()
         raise APIError(f"Album '{album_name}' already exists", 409)
-
+    
+    password_hash = None
+    if is_hidden and password:
+        # Hash the password with bcrypt
+        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
     cursor.execute(
-        "INSERT INTO albums (album_name, image_ids, description) VALUES (?, ?, ?)",
-        (album_name, json.dumps([]), description),
+        "INSERT INTO albums (album_name, image_ids, description, is_hidden, password_hash) VALUES (?, ?, ?, ?, ?)",
+        (album_name, json.dumps([]), description, is_hidden, password_hash),
     )
     conn.commit()
     conn.close()
+
+def verify_album_access(album_name, password=None):
+    conn = sqlite3.connect(ALBUM_DATABASE_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT is_hidden, password_hash FROM albums WHERE album_name = ?", (album_name,))
+    result = cursor.fetchone()
+    conn.close()
+    
+    if not result:
+        raise APIError(f"Album '{album_name}' not found", status.HTTP_404_NOT_FOUND)
+    
+    is_hidden, password_hash = result
+    
+    if is_hidden:
+        if not password:
+            raise APIError("Password required for hidden album", status.HTTP_401_UNAUTHORIZED)
+        
+        if not bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8')):
+            raise APIError("Invalid password", status.HTTP_401_UNAUTHORIZED)
+    
+    return True
 
 
 @album_exists
@@ -80,7 +109,9 @@ def add_photo_to_album(album_name, image_path):
 
 
 @album_exists
-def get_album_photos(album_name):
+def get_album_photos(album_name, password=None):
+    verify_album_access(album_name, password)
+    
     conn = sqlite3.connect(ALBUM_DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -120,19 +151,24 @@ def remove_photo_from_album(album_name, image_path):
     conn.close()
 
 
-def get_all_albums():
+def get_all_albums(include_hidden=False):
     conn = sqlite3.connect(ALBUM_DATABASE_PATH)
     cursor = conn.cursor()
 
-    cursor.execute("SELECT album_name, image_ids, description FROM albums")
+    if include_hidden:
+        cursor.execute("SELECT album_name, image_ids, description, is_hidden FROM albums")
+    else:
+        cursor.execute("SELECT album_name, image_ids, description, is_hidden FROM albums WHERE is_hidden = FALSE")
+    
     results = cursor.fetchall()
     albums = [
         {
             "album_name": name,
             "image_paths": [get_path_from_id(id) for id in json.loads(ids)],
             "description": description,
+            "is_hidden": hidden
         }
-        for name, ids, description in results
+        for name, ids, description, hidden in results
     ]
 
     conn.close()

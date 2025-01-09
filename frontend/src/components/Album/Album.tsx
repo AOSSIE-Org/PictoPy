@@ -86,8 +86,18 @@ const AlbumsView: React.FC = () => {
   }));
 
   const handleAlbumClick = (albumId: string) => {
-    setCurrentAlbum(albumId);
-  };
+    const album = albums.find((a) => a.album_name === albumId);
+    if (album?.is_hidden) {
+      const password = prompt("Enter the password for this hidden album:");
+      if (password === album.password) {
+        setCurrentAlbum(albumId);
+      } else {
+        alert("Incorrect password.");
+      }
+    } else {
+      setCurrentAlbum(albumId);
+    }
+  };  
 
   const handleDeleteAlbum = async (albumId: string) => {
     try {
