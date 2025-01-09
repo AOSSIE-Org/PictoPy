@@ -27,6 +27,7 @@
     "axios": "^1.7.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "framer-motion": "^11.16.3",
     "ldrs": "^1.0.2",
     "lucide-react": "^0.400.0",
     "react": "^18.2.0",
@@ -34,8 +35,8 @@
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^18.2.0",
-    "react-image-crop": "^11.0.7",
     "react-icons": "^5.4.0",
+    "react-image-crop": "^11.0.7",
     "react-router-dom": "^6.24.1",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7"
