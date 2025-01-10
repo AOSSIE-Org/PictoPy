@@ -10,12 +10,14 @@ export interface MediaItem {
 export interface MediaCardProps {
   item: MediaItem;
   type: 'image' | 'video';
+  className?: string;
 }
 
 export interface MediaGalleryProps {
   mediaItems: MediaItem[];
   title?: string;
   type: 'image' | 'video';
+  className?: string;
 }
 
 export interface MediaGridProps {
