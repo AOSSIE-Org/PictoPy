@@ -1,11 +1,19 @@
+import { Check } from 'lucide-react';
 import { MediaGridProps } from '@/types/Media';
 import MediaCard from './MediaCard';
+
+interface EnhancedMediaGridProps extends MediaGridProps {
+  selectedImages?: Set<number>;
+  onImageSelect?: (index: number) => void;
+}
 
 export default function MediaGrid({
   mediaItems,
   openMediaViewer,
   type,
-}: MediaGridProps) {
+  selectedImages = new Set(),
+  onImageSelect,
+}: EnhancedMediaGridProps) {
   if (mediaItems.length === 0) {
     return (
       <div className="flex h-96 items-center justify-center">
@@ -25,6 +33,15 @@ export default function MediaGrid({
     return fileName;
   };
 
+  const handleClick = (index: number, e: React.MouseEvent) => {
+    if ((e.ctrlKey || e.metaKey) && onImageSelect) {
+      onImageSelect(index);
+      e.preventDefault(); // Prevent opening the media viewer when selecting
+    } else {
+      openMediaViewer(index);
+    }
+  };
+
   return (
     <div
       className={`grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4`}
@@ -32,10 +49,21 @@ export default function MediaGrid({
       {mediaItems.map((item, index) => (
         <div
           key={index}
-          onClick={() => openMediaViewer(index)}
-          className="mt-4 h-56 cursor-pointer"
+          onClick={(e) => handleClick(index, e)}
+          className="mt-4 cursor-pointer"
         >
-          <MediaCard item={item} type={type} />
+          <div className="relative h-56">
+            <MediaCard 
+              item={item} 
+              type={type} 
+              className={selectedImages.has(index) ? 'brightness-75' : ''}
+            />
+            {selectedImages.has(index) && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                <Check className="h-8 w-8 text-white" />
+              </div>
+            )}
+          </div>
           <p className="text-center text-sm font-medium">
             {getFileName(item.title || '')}
           </p>

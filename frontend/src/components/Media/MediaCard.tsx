@@ -119,9 +119,6 @@ export default function MediaCard({ item, type }: MediaCardProps) {
         <h3 className="line-clamp-1 text-lg font-semibold text-white">
           {item.title}
         </h3>
-        <p className="mt-1 line-clamp-2 text-sm text-gray-300">
-          {item?.description}
-        </p>
       </div>
 
       <div className="rounded-xl absolute inset-0 ring-2 ring-transparent ring-offset-2 ring-offset-transparent transition-all duration-300 group-focus-visible:ring-blue-500" />
