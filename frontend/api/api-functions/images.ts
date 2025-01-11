@@ -1,6 +1,7 @@
 import { imagesEndpoints } from '../apiEndpoints';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { APIResponse, Image } from '../../src/types/image';
+import { extractThumbnailPath } from '@/hooks/useImages';
 
 export const fetchAllImages = async () => {
   const response = await fetch(imagesEndpoints.allImages, {
@@ -27,16 +28,21 @@ export const delMultipleImages = async (paths: string[]) => {
 };
 
 const parseAndSortImageData = (data: APIResponse['data']): Image[] => {
-  const parsedImages: Image[] = Object.entries(data).map(([src, tags]) => {
-    const srcc = convertFileSrc(src);
-    return {
-      title: src.substring(src.lastIndexOf('\\') + 1),
-
-      src: srcc,
-      tags: tags,
-    };
-  });
-
+  const parsedImages: Image[] = Object.entries(data.images).map(
+    ([src, tags]) => {
+      const url = convertFileSrc(src);
+      const thumbnailUrl = convertFileSrc(
+        extractThumbnailPath(data.folder_path, src),
+      );
+      return {
+        imagePath: src,
+        title: src.substring(src.lastIndexOf('\\') + 1),
+        thumbnailUrl,
+        url,
+        tags: tags,
+      };
+    },
+  );
   return parsedImages;
 };
 
@@ -47,7 +53,8 @@ export const getAllImageObjects = async () => {
   const newObj = {
     data: parsedAndSortedImages,
     success: data.success,
-    error: data.error,
+    error: data?.error,
+    message: data?.message,
   };
 
   return newObj;
@@ -75,6 +82,18 @@ export const addMultImages = async (paths: string[]) => {
     body: JSON.stringify({ paths }),
   });
 
+  const data = await response.json();
+  return data;
+};
+
+export const generateThumbnails = async (folderPath: string) => {
+  const response = await fetch(imagesEndpoints.generateThumbnails, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ folder_path: folderPath }),
+  });
   const data = await response.json();
   return data;
 };

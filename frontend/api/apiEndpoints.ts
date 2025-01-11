@@ -6,6 +6,7 @@ export const imagesEndpoints = {
   allImageObjects: `${BACKED_URL}/images/all-image-objects`,
   addFolder: `${BACKED_URL}/images/add-folder`,
   addMultipleImages: `${BACKED_URL}/images/multiple-images`,
+  generateThumbnails: `${BACKED_URL}/images/generate-thumbnails`,
 };
 
 export const albumEndpoints = {

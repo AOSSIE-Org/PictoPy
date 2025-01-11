@@ -8,13 +8,11 @@ import PaginationControls from '../ui/PaginationControls';
 import { usePictoQuery } from '@/hooks/useQueryExtensio';
 import { getAllImageObjects } from '../../../api/api-functions/images';
 
-export default function AIGallery({ title, type }: MediaGalleryProps) {
-  // Removed folderPath
-  const {
-    successData: mediaItems = [],
-    isLoading: loading,
-    isError,
-  } = usePictoQuery({
+export default function AIGallery({
+  title,
+  type,
+}: MediaGalleryProps) { // Removed folderPath
+  const { successData: mediaItems = [], isLoading: loading, isError } = usePictoQuery({
     queryFn: getAllImageObjects,
     queryKey: ['ai-tagging-images', 'ai'],
   });
@@ -31,7 +29,7 @@ export default function AIGallery({ title, type }: MediaGalleryProps) {
   const filteredMediaItems = useMemo(() => {
     return filterTag
       ? mediaItems.filter((mediaItem: any) =>
-          mediaItem.tags?.includes(filterTag),
+          mediaItem.tags?.includes(filterTag)
         )
       : mediaItems;
   }, [filterTag, mediaItems]);
@@ -113,3 +111,4 @@ export default function AIGallery({ title, type }: MediaGalleryProps) {
     </div>
   );
 }
+

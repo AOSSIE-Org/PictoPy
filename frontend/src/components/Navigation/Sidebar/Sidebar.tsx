@@ -14,7 +14,7 @@ import CustomizationPopup from './CustomizationPopup';
 import ImageCompressor from './ImageCompressor';
 import { defaultStyles, CustomStyles } from './styles';
 
-function Sidebar() {
+const Sidebar = () => {
   const location = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [showCustomize, setShowCustomize] = useState(false);
@@ -188,6 +188,6 @@ function Sidebar() {
       )}
     </>
   );
-}
+};
 
 export default Sidebar;

@@ -46,7 +46,7 @@ export default function MediaGallery({
   return (
     <div className="w-full">
       <div className="mx-auto px-2 pb-8 pt-1 dark:bg-background dark:text-foreground">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between">
           <h1 className="text-2xl font-bold">{title || currentYear}</h1>
           <SortingControls
             sortBy={sortBy}
@@ -71,7 +71,9 @@ export default function MediaGallery({
           <MediaView
             initialIndex={selectedMediaIndex}
             onClose={closeMediaViewer}
-            allMedia={sortedMedia.map((item) => item.src)}
+            allMedia={sortedMedia.map((item) => {
+              return { url: item.url, path: item?.imagePath };
+            })}
             currentPage={currentPage}
             itemsPerPage={itemsPerPage}
             type={type}

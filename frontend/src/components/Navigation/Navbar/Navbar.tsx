@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import React, { useState, useEffect, useCallback } from "react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface NavbarProps {
   title?: string;
@@ -8,12 +8,12 @@ interface NavbarProps {
 
 export function Navbar({ title, onNameChange }: NavbarProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(title || '');
+  const [name, setName] = useState(title || "");
   const [showPlaceholder, setShowPlaceholder] = useState(!title);
 
   // Handle initial load and localStorage
   useEffect(() => {
-    const storedName = localStorage.getItem('pictopy-username');
+    const storedName = localStorage.getItem("pictopy-username");
     if (storedName) {
       setName(storedName);
       setShowPlaceholder(false);
@@ -22,18 +22,18 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
 
   const handleNameSubmit = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
+      if (e.key === "Enter") {
         const inputValue = (e.target as HTMLInputElement).value.trim();
         if (inputValue) {
           setName(inputValue);
           setShowPlaceholder(false);
           setIsEditing(false);
-          localStorage.setItem('pictopy-username', inputValue);
+          localStorage.setItem("pictopy-username", inputValue);
           onNameChange?.(inputValue);
         }
       }
     },
-    [onNameChange],
+    [onNameChange]
   );
 
   const handleNameClick = useCallback(() => {
@@ -48,12 +48,12 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
       if (inputValue) {
         setName(inputValue);
         setShowPlaceholder(false);
-        localStorage.setItem('pictopy-username', inputValue);
+        localStorage.setItem("pictopy-username", inputValue);
         onNameChange?.(inputValue);
       }
       setIsEditing(false);
     },
-    [onNameChange],
+    [onNameChange]
   );
 
   return (
@@ -77,7 +77,7 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
         <div className="flex items-center gap-4">
           <div className="flex items-center">
             <span className="font-sans text-lg font-medium text-white">
-              Welcome{' '}
+              Welcome{" "}
             </span>
             {isEditing || showPlaceholder ? (
               <input
@@ -96,7 +96,7 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
                 className="ml-2 rounded px-2 text-white transition-colors duration-200 hover:text-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-offset-2 focus:ring-offset-transparent"
                 aria-label="Click to edit name"
               >
-                {name || 'User'}
+                {name || "User"}
               </button>
             )}
           </div>
@@ -108,3 +108,4 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
 }
 
 export default Navbar;
+

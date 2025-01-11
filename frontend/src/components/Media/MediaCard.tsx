@@ -8,7 +8,7 @@ export default function MediaCard({ item, type }: MediaCardProps) {
   const [isError, setIsError] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
-
+  
   const handleLoadComplete = () => {
     setIsLoading(false);
     setIsError(false);
@@ -38,7 +38,7 @@ export default function MediaCard({ item, type }: MediaCardProps) {
   };
 
   return (
-    <div
+    <div 
       className="group relative h-full w-full overflow-hidden rounded-xl shadow-lg transition-all duration-500 ease-in-out hover:scale-105 hover:shadow-2xl dark:bg-card dark:text-card-foreground"
       onClick={handleMediaClick}
       role={type === 'video' ? 'button' : 'img'}
@@ -56,7 +56,7 @@ export default function MediaCard({ item, type }: MediaCardProps) {
       {isError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/90">
           <p className="text-white">Failed to load media</p>
-          <button
+          <button 
             className="mt-2 rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
             onClick={() => window.location.reload()}
           >
@@ -71,9 +71,9 @@ export default function MediaCard({ item, type }: MediaCardProps) {
           src={item.src}
           alt={item.title}
           className={cn(
-            'h-full w-full rounded-xl object-cover transition-all duration-700 ease-in-out group-hover:rotate-1 group-hover:scale-110',
-            isLoading && 'opacity-0',
-            isError && 'hidden',
+            "h-full w-full object-cover rounded-xl transition-all duration-700 ease-in-out group-hover:scale-110 group-hover:rotate-1",
+            isLoading && "opacity-0",
+            isError && "hidden"
           )}
           onLoad={handleLoadComplete}
           onError={handleError}
@@ -84,9 +84,9 @@ export default function MediaCard({ item, type }: MediaCardProps) {
             ref={videoRef}
             src={item.src}
             className={cn(
-              'h-full w-full rounded-xl object-cover transition-all duration-700 ease-in-out group-hover:rotate-1 group-hover:scale-110',
-              isLoading && 'opacity-0',
-              isError && 'hidden',
+              "h-full w-full object-cover rounded-xl transition-all duration-700 ease-in-out group-hover:scale-110 group-hover:rotate-1",
+              isLoading && "opacity-0",
+              isError && "hidden"
             )}
             playsInline
             muted={isMuted}
@@ -95,14 +95,14 @@ export default function MediaCard({ item, type }: MediaCardProps) {
             onError={handleError}
           />
           {/* Video Controls Overlay */}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
             <Play
-              className="h-16 w-16 transform text-white drop-shadow-lg transition-transform duration-300 group-hover:scale-110"
+              className="h-16 w-16 text-white drop-shadow-lg transform transition-transform duration-300 group-hover:scale-110"
               fill="white"
               strokeWidth={1.5}
             />
             <button
-              className="absolute bottom-4 right-4 rounded-full bg-black/50 p-2 transition-colors duration-300 hover:bg-black/70"
+              className="absolute bottom-4 right-4 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors duration-300"
               onClick={toggleMute}
               aria-label={isMuted ? 'Unmute' : 'Mute'}
             >
@@ -120,13 +120,9 @@ export default function MediaCard({ item, type }: MediaCardProps) {
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
       {/* Title and Info */}
-      <div className="absolute bottom-0 left-0 w-full translate-y-full transform bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 transition-transform duration-500 group-hover:translate-y-0">
-        <h3 className="line-clamp-1 text-lg font-semibold text-white">
-          {item.title}
-        </h3>
-        <p className="mt-1 line-clamp-2 text-sm text-gray-300">
-          {item.description}
-        </p>
+      <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent transform translate-y-full transition-transform duration-500 group-hover:translate-y-0">
+        <h3 className="text-lg font-semibold text-white line-clamp-1">{item.title}</h3>
+        <p className="mt-1 text-sm text-gray-300 line-clamp-2">{item.description}</p>
       </div>
 
       {/* Focus Ring */}
@@ -134,3 +130,4 @@ export default function MediaCard({ item, type }: MediaCardProps) {
     </div>
   );
 }
+

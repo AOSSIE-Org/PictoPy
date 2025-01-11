@@ -1,14 +1,13 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-use tauri::Manager;
 mod repositories;
 mod services;
 mod models;
 mod utils;
 
 use crate::services::{FileService, CacheService};
+use tauri::Manager; 
 
 fn main() {
     tauri::Builder::default()
@@ -28,6 +27,8 @@ fn main() {
             services::get_all_images_with_cache,
             services::get_all_videos_with_cache,
             services::delete_cache,
+            services::share_file,
+            services::save_edited_image,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

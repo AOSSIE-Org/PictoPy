@@ -19,6 +19,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     if (savedTheme) {
       setTheme(savedTheme);
       document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+    } else {
+      document.documentElement.classList.toggle('dark', true);
     }
   }, []);
 
@@ -28,7 +30,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('dark');
   };
-
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
