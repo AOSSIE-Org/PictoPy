@@ -23,11 +23,9 @@
   "plugins": {
     "updater": {
       "active": true,
-      "endpoints": [
-        "https://server.com//api/v1/tauri/update"
-      ],
+      "endpoints": ["https://server.com//api/v1/tauri/update"],
       "dialog": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI3ODc5QjNDMERGMzlCMUEKUldRYW0vTU5QSnVIdHplYktOV3hKKzdmSGd6ZVN3eTg4Q2ExbmVTbk4yN0pMWjZLYXl1M1ZzN3AK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI3QzQyQUVCMEZBQ0FEQQpSV1RheXZxd3JrSjhDMk9ENllaUm1TcGVSeHdkbTQ4d0QrUjBXVEE0a21LL2RoRkZ2MXB6K1BuRQo= "
     }
   },
   "app": {
@@ -43,9 +41,7 @@
     ],
     "security": {
       "assetProtocol": {
-        "scope": [
-          "**"
-        ],
+        "scope": ["**"],
         "enable": true
       },
       "csp": null

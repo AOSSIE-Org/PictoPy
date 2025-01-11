@@ -11,7 +11,7 @@ edition = "2021"
 tauri-build = { version = "2.0.0-beta", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0-beta", features = [ "protocol-asset"] }
+tauri = { version = "2.0.0-beta", features = ["protocol-asset"] }
 walkdir = "2.3"
 serde_json = "1"
 anyhow = "1.0"

@@ -1,65 +1,192 @@
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Sparkles, Video, Images, Settings } from 'lucide-react';
-import { useState } from 'react';
+import {
+  Home,
+  Sparkles,
+  Video,
+  Images,
+  Settings,
+  Palette,
+  FileArchiveIcon as FileCompress,
+  X,
+} from 'lucide-react';
+import CustomizationPopup from './CustomizationPopup';
+import ImageCompressor from './ImageCompressor';
+import { defaultStyles, CustomStyles } from './styles';
 
 function Sidebar() {
   const location = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showCustomize, setShowCustomize] = useState(false);
+  const [showImageCompressor, setShowImageCompressor] = useState(false);
+  const [styles, setStyles] = useState<CustomStyles>(defaultStyles);
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
 
-  const handleMouseEnter = () => setIsExpanded(true);
-  const handleMouseLeave = () => setIsExpanded(false);
+  useEffect(() => {
+    document.body.style.backgroundColor = styles.uiBackgroundColor;
+  }, [styles.uiBackgroundColor]);
 
-  const linkClasses = (path: string) => {
-    const baseClasses =
-      'group flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-200';
-    const activeClasses = isActive(path)
-      ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
-      : 'text-gray-500 dark:text-gray-300';
-    return `${baseClasses} ${activeClasses}`;
-  };
+  const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      (event.target as HTMLElement).click();
+    }
+  }, []);
 
-  const iconClasses =
-    'h-5 w-5 transition-transform duration-200 ease-out group-hover:scale-110';
+  const sidebarStyle = {
+    background: styles.bgColor,
+    color: styles.textColor,
+    borderColor: styles.borderColor,
+    borderRadius: `${styles.borderRadius}px`,
+    backgroundSize: 'cover',
+    fontFamily: styles.fontFamily,
+    fontSize: `${styles.fontSize}px`,
+    width: isExpanded
+      ? `${styles.expandedWidth}px`
+      : `${styles.sidebarWidth}px`,
+    '--bg-active': styles.activeBackgroundColor,
+    '--text-active': styles.activeTextColor,
+    '--bg-hover': styles.hoverBackgroundColor,
+  } as React.CSSProperties;
+
+  const navItems = [
+    { path: '/home', label: 'Home', Icon: Home },
+    { path: '/ai-tagging', label: 'AI Tagging', Icon: Sparkles },
+    { path: '/videos', label: 'Videos', Icon: Video },
+    { path: '/albums', label: 'Albums', Icon: Images },
+    { path: '/settings', label: 'Settings', Icon: Settings },
+  ];
 
   return (
-    <div
-      className={`relative sidebar bg-theme-light dark:bg-gray-800 text-gray-900 dark:text-gray-200 m-4 flex flex-col justify-between rounded-2xl border border-gray-300 dark:border-gray-700 p-4 shadow-md transition-all duration-300 ${
-        isExpanded ? 'w-48' : 'w-16'
-      }`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <div className="mt-2 flex flex-col gap-2">
-        {[{ path: '/home', label: 'Home', Icon: Home },
-          { path: '/ai-tagging', label: 'AI Tagging', Icon: Sparkles },
-          { path: '/videos', label: 'Videos', Icon: Video },
-          { path: '/albums', label: 'Albums', Icon: Images },
-          { path: '/settings', label: 'Settings', Icon: Settings },
-        ].map(({ path, label, Icon }) => (
-          <Link
-            to={path}
-            className={linkClasses(path)}
-            tabIndex={0}
-            aria-label={label}
-            key={path}
-          >
-            <Icon
-              className={`${iconClasses} ${isActive(path) ? 'scale-110 text-gray-800' : ''}`}
-              strokeWidth={isActive(path) ? 2.5 : 1.5}
-            />
-            <span
-              className={`whitespace-nowrap text-sm font-medium transition-opacity duration-200 ${
-                isExpanded ? 'opacity-100' : 'opacity-0'
-              }`}
+    <>
+      {styles.backgroundVideo && (
+        <>
+          <div className="fixed inset-0 z-[-1] h-full w-full overflow-hidden">
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="absolute left-1/2 top-1/2 h-auto min-h-full w-auto min-w-full -translate-x-1/2 -translate-y-1/2 transform object-cover"
             >
-              {label}
-            </span>
-          </Link>
-        ))}
+              <source src={styles.backgroundVideo} type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+          <div className="fixed inset-0 z-0 bg-black opacity-50"></div>
+        </>
+      )}
+      <div className="p-4">
+        <nav
+          className="sidebar relative z-10 flex h-[calc(90vh-2rem)] flex-col justify-between rounded-3xl border-r transition-all duration-300 ease-in-out hover:w-64"
+          style={sidebarStyle}
+          onMouseEnter={() => setIsExpanded(true)}
+          onMouseLeave={() => setIsExpanded(false)}
+          aria-label="Main Navigation"
+        >
+          <div className="mt-2 flex flex-grow flex-col items-center">
+            {navItems.map(({ path, label, Icon }) => (
+              <Link
+                key={path}
+                to={path}
+                className={`group m-1 flex flex-col items-center gap-1 rounded-lg p-4 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
+                  isActive(path)
+                    ? 'bg-active text-active-text shadow-md'
+                    : 'text-default hover:bg-hover'
+                }`}
+                onMouseEnter={() => setHoveredItem(path)}
+                onMouseLeave={() => setHoveredItem(null)}
+                aria-current={isActive(path) ? 'page' : undefined}
+              >
+                <div
+                  className={`transition-transform duration-300 ${hoveredItem === path ? 'rotate-6 scale-110' : ''}`}
+                >
+                  <Icon
+                    style={{
+                      width: styles.iconSize,
+                      height: styles.iconSize,
+                      color: styles.iconColor,
+                    }}
+                    aria-hidden="true"
+                  />
+                </div>
+                <span className="whitespace-nowrap font-medium transition-all duration-300">
+                  {label}
+                </span>
+              </Link>
+            ))}
+            <button
+              onClick={() => setShowImageCompressor(true)}
+              className="text-default hover:bg-hover group m-1 flex w-full flex-col items-center gap-1 rounded-lg p-4 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+              onMouseEnter={() => setHoveredItem('compressor')}
+              onMouseLeave={() => setHoveredItem(null)}
+              aria-label="Open Image Compressor"
+              onKeyDown={handleKeyDown}
+            >
+              <div
+                className={`transition-transform duration-300 ${hoveredItem === 'compressor' ? 'rotate-6 scale-110' : ''}`}
+              >
+                <FileCompress
+                  style={{
+                    width: styles.iconSize,
+                    height: styles.iconSize,
+                    color: styles.iconColor,
+                  }}
+                  aria-hidden="true"
+                />
+              </div>
+              <span className="whitespace-nowrap font-medium transition-all duration-300">
+                Compressor
+              </span>
+            </button>
+          </div>
+
+          <div className="flex items-center justify-center p-4">
+            <button
+              onClick={() => setShowCustomize(true)}
+              className="bg-hover hover:bg-active rounded-lg p-2 transition-all duration-300 hover:rotate-6 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 active:scale-95"
+              aria-label="Customize sidebar"
+              onKeyDown={handleKeyDown}
+            >
+              <Palette size={20} />
+            </button>
+          </div>
+        </nav>
       </div>
-    </div>
+
+      {showCustomize && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 dark:bg-gray-800">
+            <CustomizationPopup
+              styles={styles}
+              setStyles={setStyles}
+              onClose={() => setShowCustomize(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {showImageCompressor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity duration-300">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 dark:bg-gray-800">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold">Image Compressor</h2>
+              <button
+                onClick={() => setShowImageCompressor(false)}
+                className="text-gray-500 transition-all duration-300 hover:rotate-90 hover:scale-110 hover:text-gray-700 active:scale-95 dark:text-gray-400 dark:hover:text-gray-200"
+                aria-label="Close Image Compressor"
+                onKeyDown={handleKeyDown}
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <ImageCompressor />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

@@ -1,15 +1,17 @@
 import { MediaViewProps } from '@/types/Media';
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, X, Play, Pause, RotateCw, Heart, Share2, ZoomIn, ZoomOut } from 'lucide-react';
-
-interface MediaViewProps {
-  initialIndex: number;
-  onClose: () => void;
-  allMedia: string[];
-  currentPage: number;
-  itemsPerPage: number;
-  type: 'image' | 'video';
-}
+import {
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Play,
+  Pause,
+  RotateCw,
+  Heart,
+  Share2,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
 
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
@@ -21,7 +23,7 @@ const MediaView: React.FC<MediaViewProps> = ({
 }) => {
   // State management
   const [globalIndex, setGlobalIndex] = useState<number>(
-    (currentPage - 1) * itemsPerPage + initialIndex
+    (currentPage - 1) * itemsPerPage + initialIndex,
   );
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -34,12 +36,10 @@ const MediaView: React.FC<MediaViewProps> = ({
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Update index when props change
   useEffect(() => {
     setGlobalIndex((currentPage - 1) * itemsPerPage + initialIndex);
   }, [initialIndex, currentPage, itemsPerPage]);
 
-  // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -55,7 +55,6 @@ const MediaView: React.FC<MediaViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [globalIndex, onClose, favorites]);
 
-  // Slideshow functionality
   useEffect(() => {
     let slideshowInterval: NodeJS.Timeout | null = null;
 
@@ -70,18 +69,17 @@ const MediaView: React.FC<MediaViewProps> = ({
     };
   }, [isSlideshowActive, globalIndex]);
 
-  // Handlers
   const handleZoomIn = () => setScale((s) => Math.min(4, s + 0.1));
   const handleZoomOut = () => setScale((s) => Math.max(0.5, s - 0.1));
   const handleRotate = () => setRotation((prev) => (prev + 90) % 360);
 
   const toggleFavorite = () => {
     const currentMedia = allMedia[globalIndex];
-    setFavorites(prev => {
+    setFavorites((prev) => {
       const newFavorites = prev.includes(currentMedia)
-        ? prev.filter(f => f !== currentMedia)
+        ? prev.filter((f) => f !== currentMedia)
         : [...prev, currentMedia];
-      
+
       localStorage.setItem('pictopy-favorites', JSON.stringify(newFavorites));
       return newFavorites;
     });
@@ -92,7 +90,7 @@ const MediaView: React.FC<MediaViewProps> = ({
       if (navigator.share) {
         await navigator.share({
           title: `Shared Image ${globalIndex + 1}`,
-          url: allMedia[globalIndex]
+          url: allMedia[globalIndex],
         });
       } else {
         await navigator.clipboard.writeText(allMedia[globalIndex]);
@@ -141,18 +139,17 @@ const MediaView: React.FC<MediaViewProps> = ({
   };
 
   const toggleSlideshow = () => {
-    setIsSlideshowActive(prev => !prev);
+    setIsSlideshowActive((prev) => !prev);
   };
 
   const isFavorite = (mediaUrl: string) => favorites.includes(mediaUrl);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
-      {/* Top Controls */}
-      <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
+      <div className="absolute right-4 top-4 z-50 flex items-center gap-2">
         <button
           onClick={handleShare}
-          className="rounded-full bg-white/20 p-2 text-white hover:bg-white/40 transition-colors duration-200"
+          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Share"
         >
           <Share2 className="h-6 w-6" />
@@ -164,7 +161,11 @@ const MediaView: React.FC<MediaViewProps> = ({
               ? 'bg-red-500 hover:bg-red-600'
               : 'bg-white/20 hover:bg-white/40'
           }`}
-          aria-label={isFavorite(allMedia[globalIndex]) ? 'Remove from favorites' : 'Add to favorites'}
+          aria-label={
+            isFavorite(allMedia[globalIndex])
+              ? 'Remove from favorites'
+              : 'Add to favorites'
+          }
         >
           <Heart
             className={`h-6 w-6 ${
@@ -174,22 +175,25 @@ const MediaView: React.FC<MediaViewProps> = ({
         </button>
         <button
           onClick={toggleSlideshow}
-          className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-white hover:bg-white/40 transition-colors duration-200"
+          className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Toggle Slideshow"
         >
-          {isSlideshowActive ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+          {isSlideshowActive ? (
+            <Pause className="h-5 w-5" />
+          ) : (
+            <Play className="h-5 w-5" />
+          )}
           {isSlideshowActive ? 'Pause' : 'Slideshow'}
         </button>
         <button
           onClick={onClose}
-          className="rounded-full bg-white/20 p-2 text-white hover:bg-white/40 transition-colors duration-200"
+          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Close"
         >
           <X className="h-6 w-6" />
         </button>
       </div>
 
-      {/* Main Content */}
       <div
         className="relative flex h-full w-full items-center justify-center"
         onClick={(e) => {
@@ -202,7 +206,7 @@ const MediaView: React.FC<MediaViewProps> = ({
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            className="relative h-full w-full flex items-center justify-center overflow-hidden"
+            className="relative flex h-full w-full items-center justify-center overflow-hidden"
           >
             <img
               src={allMedia[globalIndex]}
@@ -216,31 +220,30 @@ const MediaView: React.FC<MediaViewProps> = ({
               }}
             />
 
-            {/* Image Controls */}
             <div className="absolute bottom-20 right-4 flex gap-2">
               <button
                 onClick={handleZoomOut}
-                className="rounded-md bg-white/20 p-2 text-white hover:bg-white/40 transition-colors duration-200"
+                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
                 aria-label="Zoom Out"
               >
                 <ZoomOut className="h-5 w-5" />
               </button>
               <button
                 onClick={resetZoom}
-                className="rounded-md bg-white/20 px-4 py-2 text-white hover:bg-white/40 transition-colors duration-200"
+                className="rounded-md bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
               >
                 Reset
               </button>
               <button
                 onClick={handleZoomIn}
-                className="rounded-md bg-white/20 p-2 text-white hover:bg-white/40 transition-colors duration-200"
+                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
                 aria-label="Zoom In"
               >
                 <ZoomIn className="h-5 w-5" />
               </button>
               <button
                 onClick={handleRotate}
-                className="rounded-md bg-white/20 p-2 text-white hover:bg-white/40 transition-colors duration-200"
+                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
                 aria-label="Rotate"
               >
                 <RotateCw className="h-5 w-5" />
@@ -256,16 +259,15 @@ const MediaView: React.FC<MediaViewProps> = ({
           />
         )}
 
-        {/* Navigation Buttons */}
         <button
           onClick={handlePrevItem}
-          className="absolute left-4 top-1/2 z-50 flex items-center rounded-full bg-white/20 p-3 text-white hover:bg-white/40 transition-colors duration-200"
+          className="absolute left-4 top-1/2 z-50 flex items-center rounded-full bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
         <button
           onClick={handleNextItem}
-          className="absolute right-4 top-1/2 z-50 flex items-center rounded-full bg-white/20 p-3 text-white hover:bg-white/40 transition-colors duration-200"
+          className="absolute right-4 top-1/2 z-50 flex items-center rounded-full bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
         >
           <ChevronRight className="h-6 w-6" />
         </button>
@@ -284,8 +286,8 @@ const MediaView: React.FC<MediaViewProps> = ({
             } cursor-pointer transition-transform hover:scale-105`}
           >
             {isFavorite(media) && (
-              <div className="absolute top-1 right-1 z-10">
-                <Heart className="h-4 w-4 text-red-500 fill-current" />
+              <div className="absolute right-1 top-1 z-10">
+                <Heart className="h-4 w-4 fill-current text-red-500" />
               </div>
             )}
             {type === 'image' ? (
