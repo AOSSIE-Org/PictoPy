@@ -15,9 +15,11 @@ import {
 } from '../../../api/api-functions/albums';
 
 const AlbumsView: React.FC = () => {
-
-  const { successData: albums, isLoading, error } = usePictoQuery({
-
+  const {
+    successData: albums,
+    isLoading,
+    error,
+  } = usePictoQuery({
     queryFn: fetchAllAlbums,
     queryKey: ['all-albums'],
   });
@@ -35,13 +37,18 @@ const AlbumsView: React.FC = () => {
     description: string;
   } | null>(null);
 
-
   if (isLoading) {
-    return <LoadingScreen/>;
+    return <LoadingScreen />;
   }
+  const showErrorDialog = (title: string, err: unknown) => {
+    setErrorDialogContent({
+      title,
+      description:
+        err instanceof Error ? err.message : 'An unknown error occurred',
+    });
+  };
 
   if (!albums || albums.length === 0) {
-
     return (
       <div className="container mx-auto pb-4">
         <div className="mb-4 flex items-center justify-between">
@@ -61,10 +68,7 @@ const AlbumsView: React.FC = () => {
           onSuccess={() => {
             setIsCreateFormOpen(false);
           }}
-
-          onError={(err) => showErrorDialog("Error", err)}
-
-
+          onError={(err) => showErrorDialog('Error', err)}
         />
         <ErrorDialog
           content={errorDialogContent}
@@ -92,15 +96,6 @@ const AlbumsView: React.FC = () => {
       showErrorDialog('Error Deleting Album', err);
     }
   };
-
-  const showErrorDialog = (title: string, err: unknown) => {
-    setErrorDialogContent({
-      title,
-      description: err instanceof Error ? err.message : 'An unknown error occurred',
-    });
-  };
-
-
 
   return (
     <div className="mx-auto w-full px-2 pb-4">
@@ -146,7 +141,7 @@ const AlbumsView: React.FC = () => {
         onSuccess={() => {
           setIsCreateFormOpen(false);
         }}
-        onError={(err) => showErrorDialog("Error", err)}
+        onError={(err) => showErrorDialog('Error', err)}
       />
 
       <EditAlbumDialog
@@ -167,4 +162,3 @@ const AlbumsView: React.FC = () => {
 };
 
 export default AlbumsView;
-

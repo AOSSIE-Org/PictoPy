@@ -14,25 +14,10 @@ const Sidebar = () => {
   const linkClasses = (path: string) => {
     const baseClasses =
       'group flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-200';
-
-    const activeClasses = `
-      bg-white/95 dark:bg-white/10
-      text-gray-900 dark:text-gray-100
-      shadow-md dark:shadow-gray-900/30
-      backdrop-blur-md backdrop-saturate-150
-      border border-gray-200 dark:border-gray-700
-    `;
-
-    const inactiveClasses = `
-      bg-transparent hover:bg-gray-50 dark:hover:bg-white/10
-      text-gray-700 dark:text-gray-400
-      hover:text-gray-900 dark:hover:text-gray-100
-      border border-transparent
-      hover:border-gray-200 dark:hover:border-gray-700
-      hover:shadow-sm dark:hover:shadow-gray-900/20
-    `;
-
-    return `${baseClasses} ${isActive(path) ? activeClasses : inactiveClasses}`;
+    const activeClasses = isActive(path)
+      ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
+      : 'text-gray-500 dark:text-gray-300';
+    return `${baseClasses} ${activeClasses}`;
   };
 
   const iconClasses =
