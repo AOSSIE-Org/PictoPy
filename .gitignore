@@ -27,3 +27,5 @@ videos_cache.txt
 images_cache.txt
 videos_cache.txt
 venv/
+.env.local
+.env

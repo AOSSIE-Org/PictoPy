@@ -1,9 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import {
-  useViewAlbum,
-  useRemoveImageFromAlbum,
-} from '../../services/AlbumService';
-
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,9 +7,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-
 import { convertFileSrc } from '@tauri-apps/api/core';
 import ImageSelectionPage from './ImageSelection';
+import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtensio';
+import { removeFromAlbum, viewYourAlbum } from 'api/api-functions/albums';
 
 interface ImageManagementDialogProps {
   albumName: string | null;
@@ -28,8 +24,9 @@ const ImageGrid: React.FC<{
   albumName: string;
   onRemove: (image: string) => void;
   isRemoving: boolean;
-}> = ({ images, albumName, onRemove, isRemoving }) => {
-  const getImageName = (path: string) => path.split('\\').pop() || path;
+}> = ({ images, onRemove, isRemoving }) => {
+  const getImageName = (path: string) =>
+    path.split('\\').pop() || path.split('/').pop() || path;
 
   return (
     <div className="grid grid-cols-3 gap-4">
@@ -66,27 +63,25 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
   onError,
 }) => {
   const {
-    album: viewedAlbum,
-    viewAlbum,
+    successData: viewedAlbum,
     isLoading: isViewingAlbum,
-    error: viewError,
-  } = useViewAlbum();
-  const { removeImage, isLoading: isRemovingImage } = useRemoveImageFromAlbum();
-  const [showImageSelection, setShowImageSelection] = useState(false);
+    errorMessage: viewError,
+  } = usePictoQuery({
+    queryFn: async () => await viewYourAlbum(albumName || ''),
+    queryKey: ['view-album', albumName],
+  });
 
-  useEffect(() => {
-    if (albumName) {
-      viewAlbum(albumName).catch((err: Error) =>
-        onError('Error loading album', err),
-      );
-    }
-  }, [albumName, viewAlbum, onError]);
+  const { mutate: removeImage, isPending: isRemovingImage } = usePictoMutation({
+    mutationFn: removeFromAlbum,
+    autoInvalidateTags: ['view-album', albumName || ''],
+  });
+
+  const [showImageSelection, setShowImageSelection] = useState(false);
 
   const handleRemoveImage = async (imageUrl: string) => {
     if (albumName) {
       try {
-        await removeImage(albumName, imageUrl);
-        await viewAlbum(albumName);
+        await removeImage({ album_name: albumName, path: imageUrl });
         onSuccess();
       } catch (err) {
         onError('Error Removing Image', err);
@@ -98,8 +93,8 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
     return null;
   }
 
-  if (viewError) {
-    return <div>Error loading album: {viewError.message}</div>;
+  if (viewError && viewError !== 'Something went wrong') {
+    return <div>Error loading album: {viewError}</div>;
   }
 
   if (isViewingAlbum) {
@@ -117,7 +112,6 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
         onClose={() => setShowImageSelection(false)}
         onSuccess={() => {
           setShowImageSelection(false);
-          viewAlbum(albumName);
           onSuccess();
         }}
         onError={onError}
