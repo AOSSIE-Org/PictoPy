@@ -29,3 +29,4 @@ videos_cache.txt
 venv/
 .env.local
 .env
+backend
