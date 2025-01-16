@@ -1,9 +1,19 @@
 import os
 import shutil
 import asyncio
-from fastapi import APIRouter, Query
-from fastapi.responses import JSONResponse
+import time
+import logging
+from fastapi import APIRouter, Query, HTTPException
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel
+from transformers import pipeline
+from diffusers import StableDiffusionPipeline, DiffusionPipeline, LCMScheduler
+import torch
+import matplotlib.pyplot as plt
+from io import BytesIO
+import base64
 from PIL import Image
+from fastapi import HTTPException, Query
 
 # hello
 from app.config.settings import IMAGES_PATH
@@ -19,6 +29,7 @@ from app.database.images import (
     extract_metadata,
 )
 
+
 router = APIRouter()
 
 
@@ -31,6 +42,44 @@ async def run_get_classes(img_path):
         if "0" in classes and classes.count("0") < 8:
             detect_faces(img_path)
 
+
+
+print(os.curdir)
+
+model_path = os.path.abspath("./app/models/image-generation")
+print("Model path:", model_path)
+# Load the saved diffusion pipeline once
+pipe = DiffusionPipeline.from_pretrained(model_path, torch_dtype=torch.float16)
+pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
+pipe.to("cuda")
+print("Model loaded and ready on GPU")
+
+class GenerateImageRequest(BaseModel):
+    prompt: str
+from fastapi import HTTPException, Query
+
+@router.post("/generate-image")
+async def generate_image(prompt: str = Query(..., description="Prompt for image generation")):
+    try:
+        # Generate the image
+        print("request received")
+        image = pipe(prompt, num_inference_steps=4, guidance_scale=10.0).images[0]
+
+        # Convert the image to a Base64 string
+        buffer = BytesIO()
+        image.save(buffer, format="PNG")
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+         # Clear GPU memory to prevent out-of-memory errors in subsequent requests
+        del image  # Free the image object
+        torch.cuda.empty_cache()
+        # Return the JSON response with the image
+        return JSONResponse(content={
+            "prompt": prompt,
+            "image": image_base64
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/all-images")
 def get_images():
