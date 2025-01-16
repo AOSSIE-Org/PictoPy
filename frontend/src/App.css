@@ -36,7 +36,7 @@
   }
 
   .dark {
-    --background: 221, 39%, 11%;
+    --background: 221 39% 11%;
     --foreground: 0 0% 100%;
 
     --card: 222.2 84% 4.9%;
@@ -73,12 +73,12 @@
   body {
     @apply bg-background text-foreground;
   }
-}
 
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* for Internet Explorer */
+    scrollbar-width: none; /* for Firefox */
+  }
 }

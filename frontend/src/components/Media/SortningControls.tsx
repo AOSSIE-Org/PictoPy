@@ -70,4 +70,4 @@ const SortingControls: React.FC<SortingControlsProps> = ({
   );
 };
 
-export default SortingControls
+export default SortingControls;
