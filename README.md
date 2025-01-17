@@ -270,6 +270,12 @@ You can control the number of workers by setting the `WORKERS` environment varia
   </br>
 - For setting up the backend, follow the instructions in the [Backend Setup Guide](./docs/backend/docker-setup.md).
 
+## AI Model Documentation
+
+For more detailed information on the AI models used in this project, refer to the 
+- [AI Image-Generation](docs\AI-Models\Image-Generation\stable_deffusion.md).
+
+
 ## Additional Resources
 
 - [Tauri Documentation](https://tauri.app/v1/guides/)
