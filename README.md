@@ -55,8 +55,6 @@ Handles file system operations and provides a secure bridge between the frontend
 
 ## Setup
 
-### Frontend Setup
-
 #### Prerequisites
 
 - Node.js (LTS version recommended)
@@ -64,8 +62,8 @@ Handles file system operations and provides a secure bridge between the frontend
 - Rust (latest stable version)
 - Tauri CLI
 
-#### Installation
 
+#### Installation
 
 1. Clone the repository to your local system:
     ```bash
@@ -74,6 +72,13 @@ Handles file system operations and provides a secure bridge between the frontend
     ```bash
     cd PictoPy
     ```
+2. AI image Generation Setup :
+    - [Click Here](https://drive.google.com/uc?export=download&id=1-ufcBNxai2K64NCxPw8wBLKTzRXnZ5HA) to download the AI model.
+    - extract downloaded zip file.
+    - Copy all the folders from `saved_diffusion_pipeline\` folder into `backend\app\models\image-generation\`
+    directory of PictoPy.
+
+### Frontend Setup
 
 
 1. Navigate to the frontend directory:
@@ -274,3 +279,6 @@ You can control the number of workers by setting the `WORKERS` environment varia
 ## Troubleshooting
 
 If you encounter any issues, please check the respective documentation for Tauri, React, and FastAPI. For persistent problems, feel free to open an issue in the project repository.
+
+
+
