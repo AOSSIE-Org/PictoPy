@@ -18,7 +18,6 @@ const AlbumsView: React.FC = () => {
   const {
     successData: albums,
     isLoading,
-    error,
   } = usePictoQuery({
     queryFn: fetchAllAlbums,
     queryKey: ['all-albums'],

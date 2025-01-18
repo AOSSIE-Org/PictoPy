@@ -2,9 +2,11 @@
 This module contains the main FastAPI application.
 """
 
+from uvicorn import Config, Server
 from time import sleep
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import multiprocessing
 
 from contextlib import asynccontextmanager
 
@@ -55,3 +57,14 @@ app.include_router(test_router, prefix="/test", tags=["Test"])
 app.include_router(images_router, prefix="/images", tags=["Images"])
 app.include_router(albums_router, prefix="/albums", tags=["Albums"])
 app.include_router(tagging_router, prefix="/tag", tags=["Tagging"])
+
+
+def run_server():
+    config = Config(app=app, host="0.0.0.0", port=8000)
+    server = Server(config)
+    server.run()
+
+
+if __name__ == "__main__":
+    multiprocessing.freeze_support()  # Required for Windows.
+    run_server()

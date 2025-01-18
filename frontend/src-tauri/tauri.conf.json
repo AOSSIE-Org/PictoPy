@@ -7,7 +7,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["deb","nsis"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -15,7 +15,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "createUpdaterArtifacts": "v1Compatible"
+    "createUpdaterArtifacts": "v1Compatible",
+    "resources": {
+      "./PictoPy_Server": "resources/PictoPy_Server"
+    }
   },
   "productName": "PictoPy",
   "version": "0.0.0",
