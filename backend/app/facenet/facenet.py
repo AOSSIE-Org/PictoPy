@@ -7,8 +7,10 @@ from app.facenet.preprocess import normalize_embedding, preprocess_image
 from app.yolov8.YOLOv8 import YOLOv8
 from app.database.faces import insert_face_embeddings
 
+providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if onnxruntime.get_device() == 'GPU' else ['CPUExecutionProvider']
+
 session = onnxruntime.InferenceSession(
-    DEFAULT_FACENET_MODEL, providers=["CPUExecutionProvider"]
+    DEFAULT_FACENET_MODEL, providers = providers
 )
 
 input_tensor_name = session.get_inputs()[0].name
@@ -23,7 +25,7 @@ def get_face_embedding(image):
 
 def detect_faces(img_path):
     yolov8_detector = YOLOv8(
-        DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.2, iou_thres=0.3
+        DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.35, iou_thres=0.45
     )
     img = cv2.imread(img_path)
     if img is None:
@@ -34,9 +36,13 @@ def detect_faces(img_path):
 
     processed_faces, embeddings = [], []
     for box, score in zip(boxes, scores):
-        if score > 0.5:
+        if score > 0.3:
             x1, y1, x2, y2 = map(int, box)
             face_img = img[y1:y2, x1:x2]
+            padding = 20
+            h, w = face_img.shape[:2]
+            face_img = img[max(0, y1-padding):min(img.shape[0], y2+padding), 
+                           max(0, x1-padding):min(img.shape[1], x2+padding)]
             processed_face = preprocess_image(face_img)
             processed_faces.append(processed_face)
             embedding = get_face_embedding(processed_face)

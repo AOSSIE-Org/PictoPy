@@ -8,7 +8,7 @@ class_names = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'tra
                'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
                'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard',
                'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase',
-               'scissors', 'teddy bear', 'hair drier', 'toothbrush']
+               'scissors', 'teddy bear', 'hair drier', 'toothbrush', 'unknown']
 
 # Create a list of colors for each class where each color is a tuple of 3 integer values
 rng = np.random.default_rng(3)
@@ -82,7 +82,7 @@ def xywh2xyxy(x):
     return y
 
 
-def draw_detections(image, boxes, scores, class_ids, mask_alpha=0.3):
+def draw_detections(image, boxes, scores, class_ids, mask_alpha=0.3, confidence_threshold=0.3):
     det_img = image.copy()
 
     img_height, img_width = image.shape[:2]
@@ -93,11 +93,13 @@ def draw_detections(image, boxes, scores, class_ids, mask_alpha=0.3):
 
     # Draw bounding boxes and labels of detections
     for class_id, box, score in zip(class_ids, boxes, scores):
-        color = colors[class_id]
-
+        if score < confidence_threshold or class_id >= len(class_names) - 1:
+            color = colors[-1] 
+            label = "unknown"
+        else:
+            color = colors[class_id]
+            label = class_names[class_id]
         draw_box(det_img, box, color)
-
-        label = class_names[class_id]
         caption = f'{label} {int(score * 100)}%'
         draw_text(det_img, caption, box, color, font_size, text_thickness)
 
