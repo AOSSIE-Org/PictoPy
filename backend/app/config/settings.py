@@ -1,6 +1,8 @@
 DEFAULT_OBJ_DETECTION_MODEL = "app/models/yolov8n.onnx"
 DEFAULT_FACE_DETECTION_MODEL = "app/models/yolov8n-face.onnx"
 DEFAULT_FACENET_MODEL = "app/models/facenet.onnx"
+DEFAULT_NER_MODEL = "app/models/bert-base-NER.onnx"
+DEFAULT_FRONTAL_MODEL = "app/ner/haarcascade_frontalface_default.xml"
 # MEDIUM_OBJ_DETECTION_MODEL = "app/models/yolov8m.onnx" # not supported
 
 TEST_INPUT_PATH = "tests/inputs"
@@ -13,3 +15,4 @@ ALBUM_DATABASE_PATH = "app/database/albums.db"
 MAPPINGS_DATABASE_PATH = "app/database/yolo_mapping.db"
 FACES_DATABASE_PATH = "app/database/faces.db"
 CLUSTERS_DATABASE_PATH = "app/database/clusters.db"
+NER_DATABASE_PATH = "app/database/ner.db"

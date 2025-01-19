@@ -13,10 +13,12 @@ from app.database.images import create_image_id_mapping_table, create_images_tab
 from app.database.albums import create_albums_table
 from app.database.yolo_mapping import create_YOLO_mappings
 from app.facecluster.init_face_cluster import get_face_cluster, init_face_cluster
+from app.database.ner import (ner_table)
 from app.routes.test import router as test_router
 from app.routes.images import router as images_router
 from app.routes.albums import router as albums_router
 from app.routes.facetagging import router as tagging_router
+from app.routes.ner import router as ner_router
 
 
 @asynccontextmanager
@@ -28,6 +30,7 @@ async def lifespan(app: FastAPI):
     create_albums_table()
     cleanup_face_embeddings()
     init_face_cluster()
+    ner_table()
     yield
     face_cluster = get_face_cluster()
     if face_cluster:
@@ -55,3 +58,4 @@ app.include_router(test_router, prefix="/test", tags=["Test"])
 app.include_router(images_router, prefix="/images", tags=["Images"])
 app.include_router(albums_router, prefix="/albums", tags=["Albums"])
 app.include_router(tagging_router, prefix="/tag", tags=["Tagging"])
+app.include_router(ner_router, prefix="/ner", tags=["ner"])
