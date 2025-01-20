@@ -1,14 +1,19 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod models;
 mod repositories;
 mod services;
-mod models;
 mod utils;
 
-use crate::services::{FileService, CacheService};
-use tauri::Manager; 
+use crate::services::{CacheService, FileService};
+use std::env;
+use tauri::path::BaseDirectory;
+use tauri::Manager;
 
+fn get_env(name: &str) -> String {
+    std::env::var(String::from(name)).unwrap_or(String::from(""))
+}
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -17,6 +22,10 @@ fn main() {
         .setup(|app| {
             let file_service = FileService::new();
             let cache_service = CacheService::new();
+            let resource_path = app
+                .path()
+                .resolve("resources/server", BaseDirectory::Resource)?;
+            println!("Resource path: {:?}", resource_path);
             app.manage(file_service);
             app.manage(cache_service);
             Ok(())
@@ -29,6 +38,7 @@ fn main() {
             services::delete_cache,
             services::share_file,
             services::save_edited_image,
+            services::get_server_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

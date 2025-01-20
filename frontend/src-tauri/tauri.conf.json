@@ -17,7 +17,7 @@
     ],
     "createUpdaterArtifacts": "v1Compatible",
     "resources": {
-      "./PictoPy_Server": "resources/PictoPy_Server"
+      "../../backend/dist/": "resources/server"
     }
   },
   "productName": "PictoPy",

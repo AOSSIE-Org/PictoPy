@@ -8,6 +8,8 @@ pub use cache_service::CacheService;
 use chrono::{DateTime, Datelike, Utc};
 pub use file_service::FileService;
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
+use tauri::path::BaseDirectory;
+use tauri::Manager;
 
 #[tauri::command]
 pub fn get_folders_with_images(
@@ -228,7 +230,7 @@ pub async fn save_edited_image(
     let path = PathBuf::from(original_path);
     let file_stem = path.file_stem().unwrap_or_default();
     let extension = path.extension().unwrap_or_default();
-    
+
     let mut edited_path = path.clone();
     edited_path.set_file_name(format!(
         "{}_edited.{}",
@@ -288,4 +290,13 @@ fn adjust_brightness_contrast(img: &DynamicImage, brightness: i32, contrast: i32
 #[tauri::command]
 pub fn delete_cache(cache_service: State<'_, CacheService>) -> bool {
     cache_service.delete_all_caches()
+}
+
+#[tauri::command]
+pub fn get_server_path(handle: tauri::AppHandle) -> Result<String, String> {
+    let resource_path = handle
+        .path()
+        .resolve("resources/server", BaseDirectory::Resource)
+        .map_err(|e| e.to_string())?;
+    Ok(resource_path.to_string_lossy().to_string())
 }
