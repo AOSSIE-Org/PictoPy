@@ -7,7 +7,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 
 //Listen for window close event and stop server
 const onCloseListener = async () => {
-  await getCurrentWindow().onCloseRequested(async (event) => {
+  await getCurrentWindow().onCloseRequested(async () => {
     await stopServer();
   });
 };
