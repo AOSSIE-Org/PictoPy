@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { FolderSync, Server } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/LocalStorage';
 import LoadingScreen from '@/components/ui/LoadingScreen/LoadingScreen';
-import { serverInterface } from '@/hooks/serverInterface';
+import { restartServer } from '@/utils/serverUtils';
 import { isProd } from '@/utils/isProd';
 const Settings: React.FC = () => {
   const [currentPath, setCurrentPath] = useLocalStorage('folderPath', '');
@@ -63,7 +63,7 @@ const Settings: React.FC = () => {
           </Button>
           {isProd() && (
             <Button
-              onClick={() => serverInterface().restartServer(setIsLoading)}
+              onClick={() => restartServer(setIsLoading)}
               variant="outline"
               className="h-10 w-full border-gray-500 hover:bg-accent dark:hover:bg-white/10"
             >

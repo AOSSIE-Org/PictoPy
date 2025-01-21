@@ -97,7 +97,38 @@
       "identifier": "shell:allow-spawn",
       "allow": [
         {
-          "name": "StartServer",
+          "name": "StartServerUnix",
+          "cmd": "bash",
+          "args": [
+            "-c",
+            {
+              "validator": "\\S+"
+            }
+          ],
+          "sidecar": false
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "StartServerWindows",
+          "cmd": "powershell",
+          "args": [
+            {
+              "validator": "\\S+"
+            }
+          ],
+          "sidecar": false
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "killProcessUnix",
           "cmd": "bash",
           "args": [
             "-c",
@@ -113,10 +144,9 @@
       "identifier": "shell:allow-execute",
       "allow": [
         {
-          "name": "killProcess",
-          "cmd": "bash",
+          "name": "killProcessWindows",
+          "cmd": "powershell",
           "args": [
-            "-c",
             {
               "validator": "\\S+"
             }
