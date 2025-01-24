@@ -23,8 +23,6 @@ impl CacheRepository {
         
         file.lock_exclusive()?;
 
-        file.lock_exclusive()?;
-        
         for path in paths {
             if let Some(path_str) = path.to_str() {
                 writeln!(file, "{}", path_str)?;
