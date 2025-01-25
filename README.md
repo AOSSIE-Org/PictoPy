@@ -271,6 +271,11 @@ You can control the number of workers by setting the `WORKERS` environment varia
 - [React Documentation](https://reactjs.org/docs/getting-started.html)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 
+## AI Model Documentation
+
+For more detailed information about the AI models used in this project, refer to the 
+- [AI Image-Generation](docs\AI-Models\Image-Generation\stable_deffusion.md).
+
 ## Troubleshooting
 
 If you encounter any issues, please check the respective documentation for Tauri, React, and FastAPI. For persistent problems, feel free to open an issue in the project repository.
