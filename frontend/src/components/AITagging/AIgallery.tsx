@@ -1,35 +1,39 @@
 import { useCallback, useMemo, useState } from 'react';
 import FilterControls from './FilterControls';
-import MediaGrid from '../Media/Mediagrid';
+import MediaGrid from '../Media/MediaGrid';
 
 import { MediaGalleryProps } from '@/types/Media';
 import MediaView from '../Media/MediaView';
 import PaginationControls from '../ui/PaginationControls';
-import { usePictoQuery } from '@/hooks/useQueryExtensio';
-import { getAllImageObjects } from '../../../api/api-functions/images';
+import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtensio';
+import { getAllImageObjects, generateThumbnails } from '../../../api/api-functions/images';
 
 export default function AIGallery({
   title,
   type,
-}: MediaGalleryProps) { // Removed folderPath
+}: MediaGalleryProps) {
   const { successData: mediaItems = [], isLoading: loading, isError } = usePictoQuery({
     queryFn: getAllImageObjects,
     queryKey: ['ai-tagging-images', 'ai'],
   });
 
-  const [filterTag, setFilterTag] = useState<string>('');
+  const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation({
+    mutationFn: generateThumbnails,
+    autoInvalidateTags: ['ai-tagging-images', 'ai'],
+  });
+
+  const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
-  const [isVisibleSelectedImage, setIsVisibleSelectedImage] =
-    useState<boolean>(true);
+  const [isVisibleSelectedImage, setIsVisibleSelectedImage] = useState<boolean>(true);
   const itemsPerPage: number = 20;
   const itemsPerRow: number = 3;
 
   const filteredMediaItems = useMemo(() => {
-    return filterTag
+    return filterTag.length > 0
       ? mediaItems.filter((mediaItem: any) =>
-          mediaItem.tags?.includes(filterTag)
+          filterTag.some((tag) => mediaItem.tags?.includes(tag))
         )
       : mediaItems;
   }, [filterTag, mediaItems]);
@@ -71,7 +75,6 @@ export default function AIGallery({
             <h1 className="text-2xl font-bold">{title}</h1>
           )}
           <FilterControls
-            filterTag={filterTag}
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
             onFolderAdded={handleFolderAdded}
@@ -111,4 +114,5 @@ export default function AIGallery({
     </div>
   );
 }
+
 
