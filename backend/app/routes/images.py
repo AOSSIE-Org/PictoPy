@@ -1,9 +1,19 @@
 import os
 import shutil
 import asyncio
-from fastapi import APIRouter, Query
-from fastapi.responses import JSONResponse
+import time
+import logging
+from fastapi import APIRouter, Query, HTTPException
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel
+from transformers import pipeline
+from diffusers import StableDiffusionPipeline, DiffusionPipeline, LCMScheduler
+import torch
+import matplotlib.pyplot as plt
+from io import BytesIO
+import base64
 from PIL import Image
+from fastapi import HTTPException, Query
 
 # hello
 from app.config.settings import IMAGES_PATH
@@ -19,6 +29,23 @@ from app.database.images import (
     extract_metadata,
 )
 
+from diffusers import StableDiffusionPipeline, LCMScheduler
+from transformers import BitsAndBytesConfig
+import torch
+from fastapi import FastAPI, HTTPException, Query
+from pydantic import BaseModel
+from fastapi.responses import JSONResponse
+from io import BytesIO
+import base64
+import os
+import asyncio
+from diffusers import StableDiffusionPipeline
+import torch
+import warnings
+import numpy as np
+import warnings
+
+
 router = APIRouter()
 
 
@@ -30,6 +57,64 @@ async def run_get_classes(img_path):
         classes = result.split(",")
         if "0" in classes and classes.count("0") < 8:
             detect_faces(img_path)
+
+
+
+print(os.curdir)
+
+model_path = os.path.abspath("./app/models/image-generation")
+
+# Check if GPU is available
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"Using device: {device}")
+
+
+# Load the Stable Diffusion pipeline
+pipe = StableDiffusionPipeline.from_pretrained(
+    model_path,
+    torch_dtype=torch.float32,
+)
+
+if(device=="cuda"):
+    pipe.to("cuda")
+else:
+    pipe.to("cpu")
+
+pipe.enable_attention_slicing()
+
+
+# Route to generate an image
+@router.post("/generate-image")
+async def generate_image(prompt: str = Query(..., description="Prompt for image generation")):
+    """
+    Generate an image using the Stable Diffusion model.
+    Example: http://localhost:8000/generate-image?prompt=Astronaut%20in%20a%20jungle
+    """
+    try:
+        print("Request received with prompt:", prompt) 
+
+        
+        image = pipe(prompt, num_inference_steps=5).images[0]
+        
+        buffer = BytesIO()
+        image.save(buffer, format="PNG") 
+        buffer.seek(0)
+
+        # Convert image to Base64
+        image_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+        
+        del image
+        
+        if device == "cuda":
+            torch.cuda.empty_cache()
+        # Return JSON response
+        return JSONResponse(content={
+            "prompt": prompt,
+            "image": image_base64
+        })
+    except Exception as e:
+        print(f"Error generating image: {e}")
+        raise HTTPException(status_code=500, detail=f"Image generation failed: {str(e)}")
 
 
 @router.get("/all-images")
