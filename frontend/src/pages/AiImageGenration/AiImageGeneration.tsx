@@ -209,14 +209,9 @@ const AiImageGeneration = () => {
       <footer className="text-center text-sm py-8 text-gray-500 dark:text-gray-400">
         <span className="flex items-center justify-center gap-1">
           Made with <Heart className="h-4 w-4 text-red-500 animate-pulse" /> by
-          <a
-            href="https://github.com/paragghatage"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:underline"
-          >
-            Parag Ghatage
-          </a>
+          
+            PictoPy Team
+          
         </span>
       </footer>
     </div>
