@@ -73,9 +73,9 @@ Handles file system operations and provides a secure bridge between the frontend
     cd PictoPy
     ```
 2. AI image Generation Setup :
-    - [Click Here](https://drive.google.com/uc?export=download&id=1-ufcBNxai2K64NCxPw8wBLKTzRXnZ5HA) to download the AI model.
+    - [Click Here](https://drive.google.com/file/d/1GYudQt29rtO7HmZs7nT1Wbp97vffkrKb/view?usp=drive_link) to download the AI model.
     - extract downloaded zip file.
-    - Copy all the folders from `saved_diffusion_pipeline\` folder into `backend\app\models\image-generation\`
+    - Copy all the folders from `image-generation\` folder into `backend\app\models\image-generation\`
     directory of PictoPy.
 
 ### Frontend Setup
