@@ -51,7 +51,8 @@ export const getAllImageObjects = async () => {
   const newObj = {
     data: parsedAndSortedImages,
     success: data.success,
-    error: data.error,
+    error: data?.error,
+    message: data?.message,
   };
 
   return newObj;

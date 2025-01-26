@@ -36,6 +36,13 @@ const AlbumsView: React.FC = () => {
   if (isLoading) {
     return <LoadingScreen />;
   }
+  const showErrorDialog = (title: string, err: unknown) => {
+    setErrorDialogContent({
+      title,
+      description:
+        err instanceof Error ? err.message : 'An unknown error occurred',
+    });
+  };
 
   if (!albums || albums.length === 0) {
     return (
@@ -81,14 +88,6 @@ const AlbumsView: React.FC = () => {
     } catch (err) {
       showErrorDialog('Error Deleting Album', err);
     }
-  };
-
-  const showErrorDialog = (title: string, err: unknown) => {
-    setErrorDialogContent({
-      title,
-      description:
-        err instanceof Error ? err.message : 'An unknown error occurred',
-    });
   };
 
   return (

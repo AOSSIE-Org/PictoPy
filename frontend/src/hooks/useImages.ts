@@ -74,7 +74,8 @@ export const useImages = (folderPaths: string[]) => {
           const mappedImages = await Promise.all(
             imagePaths.map(async (imagePath: string) => {
               const original = imagePath;
-              const fileName = imagePath.split('\\').pop();
+              const cleanedImagePath = imagePath.replace(/\\/g, '/');
+              const fileName = cleanedImagePath.split('/').pop();
               const url = convertFileSrc(imagePath);
               const thumbnailUrl = convertFileSrc(
                 extractThumbnailPath(imagePath),
@@ -93,6 +94,7 @@ export const useImages = (folderPaths: string[]) => {
               return {
                 original,
                 url,
+                imagePath,
                 thumbnailUrl,
                 title: fileName || 'Untitled',
                 date,

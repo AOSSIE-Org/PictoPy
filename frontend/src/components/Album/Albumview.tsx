@@ -126,7 +126,9 @@ const AlbumView: React.FC<AlbumViewProps> = ({
         <MediaView
           initialIndex={selectedImageIndex}
           onClose={handleCloseMediaView}
-          allMedia={convertedImagePaths.map((image) => image.url)}
+          allMedia={convertedImagePaths.map((image) => {
+            return { url: image.url };
+          })}
           currentPage={1}
           itemsPerPage={albumData.photos.length}
           type="image"

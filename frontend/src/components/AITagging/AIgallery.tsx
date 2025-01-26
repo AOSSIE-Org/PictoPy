@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import FilterControls from './FilterControls';
 import MediaGrid from '../Media/Mediagrid';
-
 import { LoadingScreen } from '@/components/ui/LoadingScreen/LoadingScreen';
 import MediaView from '../Media/MediaView';
 import PaginationControls from '../ui/PaginationControls';
@@ -16,8 +15,8 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from '@radix-ui/react-dropdown-menu';
-import { Button } from '../ui/button';
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
 export default function AIGallery({
   title,
@@ -38,31 +37,31 @@ export default function AIGallery({
       autoInvalidateTags: ['ai-tagging-images', 'ai'],
     });
   let mediaItems = successData ?? [];
-  const [filterTag, setFilterTag] = useState<string>('');
+  const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
   const [isVisibleSelectedImage, setIsVisibleSelectedImage] =
     useState<boolean>(true);
+  const [pageNo, setPageNo] = useState<number>(20);
   const itemsPerRow: number = 3;
   const noOfPages: number[] = Array.from(
     { length: 41 },
     (_, index) => index + 10,
   );
   const filteredMediaItems = useMemo(() => {
-    return filterTag
+    return filterTag.length > 0
       ? mediaItems.filter((mediaItem: any) =>
-          mediaItem.tags.includes(filterTag),
+          filterTag.some((tag) => mediaItem.tags.includes(tag)),
         )
       : mediaItems;
   }, [filterTag, mediaItems, isGeneratingTags]);
-  const [pageNo, setpageNo] = useState<number>(20);
 
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * pageNo;
     const indexOfFirstItem = indexOfLastItem - pageNo;
     return filteredMediaItems.slice(indexOfFirstItem, indexOfLastItem);
-  }, [filteredMediaItems, currentPage, pageNo, mediaItems]);
+  }, [filteredMediaItems, currentPage, pageNo]);
 
   const totalPages = Math.ceil(filteredMediaItems.length / pageNo);
 
@@ -99,7 +98,6 @@ export default function AIGallery({
             <h1 className="text-2xl font-bold">{title}</h1>
           )}
           <FilterControls
-            filterTag={filterTag}
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
             onFolderAdded={handleFolderAdded}
@@ -118,7 +116,6 @@ export default function AIGallery({
               type={type}
             />
             <div className="relative flex items-center justify-center gap-4">
-              {/* Pagination Controls - Centered */}
               <PaginationControls
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -144,7 +141,7 @@ export default function AIGallery({
                   >
                     <DropdownMenuRadioGroup
                       className="cursor-pointer overflow-auto bg-gray-950 p-4"
-                      onValueChange={(value) => setpageNo(Number(value))}
+                      onValueChange={(value) => setPageNo(Number(value))}
                     >
                       {noOfPages.map((itemsPerPage) => (
                         <DropdownMenuRadioItem
@@ -161,11 +158,15 @@ export default function AIGallery({
             </div>
           </>
         )}
+
         {showMediaViewer && (
           <MediaView
             initialIndex={selectedMediaIndex}
             onClose={closeMediaViewer}
-            allMedia={filteredMediaItems.map((item: any) => item.url)}
+            allMedia={filteredMediaItems.map((item: any) => ({
+              url: item.url,
+              path: item?.imagePath,
+            }))}
             currentPage={currentPage}
             itemsPerPage={pageNo}
             type={type}
