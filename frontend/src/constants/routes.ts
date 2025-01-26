@@ -8,5 +8,6 @@ export const ROUTES = {
     VIDEOS: '/videos',
     SETTINGS: '/settings',
     ALBUM: '/albums',
+    MEMORIES: '/memories',
   },
 };
