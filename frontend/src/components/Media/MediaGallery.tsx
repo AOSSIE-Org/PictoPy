@@ -142,7 +142,11 @@ export default function MediaGallery({
             initialIndex={selectedMediaIndex}
             onClose={closeMediaViewer}
             allMedia={sortedMedia.map((item) => {
-              return { url: item.url, path: item?.imagePath };
+              return {
+                url: item.url,
+                path: item?.imagePath,
+                thumbnailUrl: item.thumbnailUrl,
+              };
             })}
             currentPage={currentPage}
             itemsPerPage={itemsPerPage}
