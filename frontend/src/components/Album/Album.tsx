@@ -15,11 +15,7 @@ import {
 } from '../../../api/api-functions/albums';
 
 const AlbumsView: React.FC = () => {
-  const {
-    successData: albums,
-    isLoading,
-    error,
-  } = usePictoQuery({
+  const { successData: albums, isLoading } = usePictoQuery({
     queryFn: fetchAllAlbums,
     queryKey: ['all-albums'],
   });
@@ -64,11 +60,8 @@ const AlbumsView: React.FC = () => {
         <div className="text-center">No albums found.</div>
         <CreateAlbumForm
           isOpen={isCreateFormOpen}
-          onClose={() => setIsCreateFormOpen(false)}
-          onSuccess={() => {
-            setIsCreateFormOpen(false);
-          }}
-          onError={(err) => showErrorDialog('Error', err)}
+          closeForm={() => setIsCreateFormOpen(false)}
+          onError={(title, err) => showErrorDialog(title, err)}
         />
         <ErrorDialog
           content={errorDialogContent}
@@ -137,11 +130,8 @@ const AlbumsView: React.FC = () => {
 
       <CreateAlbumForm
         isOpen={isCreateFormOpen}
-        onClose={() => setIsCreateFormOpen(false)}
-        onSuccess={() => {
-          setIsCreateFormOpen(false);
-        }}
-        onError={(err) => showErrorDialog('Error', err)}
+        closeForm={() => setIsCreateFormOpen(false)}
+        onError={(title, err) => showErrorDialog(title, err)}
       />
 
       <EditAlbumDialog

@@ -9,7 +9,7 @@ import {
 
 import { Button } from '../ui/button';
 import { MediaItem } from '@/types/Media';
-import FolderPicker from '../FolderPicker/FolderPicker';
+import AITaggingFolderPicker from '../FolderPicker/AITaggingFolderPicker';
 import LoadingScreen from '../ui/LoadingScreen/LoadingScreen';
 import DeleteSelectedImagePage from '../FolderPicker/DeleteSelectedImagePage';
 import ErrorDialog from '../Album/Error';
@@ -138,7 +138,7 @@ export default function FilterControls({
         <div className="text-red-500">Error: {errorMessage}</div>
       )}
       <div className="flex items-center gap-4 overflow-auto">
-        <FolderPicker setFolderPath={handleFolderPick} settingsPage={false} />
+        <AITaggingFolderPicker setFolderPath={handleFolderPick} />
 
         <Button
           onClick={() => setIsVisibleSelectedImage(false)}

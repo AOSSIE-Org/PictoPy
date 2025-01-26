@@ -27,20 +27,15 @@ export default function AIGallery({
   type: 'image' | 'video';
   folderPath: string;
 }) {
-  const {
-    successData: mediaItems = [],
-    isLoading: loading,
-    isError,
-  } = usePictoQuery({
-    queryFn: getAllImageObjects,
+  const { successData, isLoading: isGeneratingTags } = usePictoQuery({
+    queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
-  const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation(
-    {
+  const { mutate: generateThumbnailAPI, isPending: isGeneratingThumbnails } =
+    usePictoMutation({
       mutationFn: generateThumbnails,
       autoInvalidateTags: ['ai-tagging-images', 'ai'],
-    },
-  );
+    });
   let mediaItems = successData ?? [];
   const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -54,17 +49,13 @@ export default function AIGallery({
     { length: 41 },
     (_, index) => index + 10,
   );
-  const filteredMediaItems = useMemo(() => { 
+  const filteredMediaItems = useMemo(() => {
     return filterTag.length > 0
       ? mediaItems.filter((mediaItem: any) =>
-          filterTag.some((tag) => mediaItem.tags.includes(tag))
+          filterTag.some((tag) => mediaItem.tags.includes(tag)),
         )
       : mediaItems;
-  }, [filterTag, mediaItems, loading])
-
-
-const [pageNo,setpageNo] = useState<number>(20);
-
+  }, [filterTag, mediaItems, isGeneratingTags]);
 
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * pageNo;
@@ -84,19 +75,19 @@ const [pageNo,setpageNo] = useState<number>(20);
   }, []);
 
   const handleFolderAdded = useCallback(async () => {
-    await generateThumbnail(folderPath);
-  }, [folderPath, generateThumbnail]);
+    generateThumbnailAPI([folderPath]);
+  }, []);
 
   useEffect(() => {
-    handleFolderAdded();
-  }, [folderPath, handleFolderAdded]);
+    generateThumbnailAPI([folderPath]);
+  }, [folderPath]);
 
-  if (isCreating || loading) {
-    return <LoadingScreen />;
-  }
-
-  if (isError) {
-    return <div>Error loading media items.</div>;
+  if (isGeneratingThumbnails || isGeneratingTags) {
+    return (
+      <div>
+        <LoadingScreen />
+      </div>
+    );
   }
 
   return (
@@ -110,7 +101,7 @@ const [pageNo,setpageNo] = useState<number>(20);
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
             onFolderAdded={handleFolderAdded}
-            isLoading={loading}
+            isLoading={isGeneratingTags}
             isVisibleSelectedImage={isVisibleSelectedImage}
             setIsVisibleSelectedImage={setIsVisibleSelectedImage}
           />
@@ -140,7 +131,7 @@ const [pageNo,setpageNo] = useState<number>(20);
                       className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
                     >
                       <p className="hidden lg:inline">
-                        Num of images per page: {pageNo}
+                        Num of images per page : {pageNo}
                       </p>
                     </Button>
                   </DropdownMenuTrigger>

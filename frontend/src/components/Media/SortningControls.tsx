@@ -50,7 +50,7 @@ const SortingControls: React.FC<SortingControlsProps> = ({
           variant="outline"
           className="flex items-center gap-2 border-gray-500"
         >
-          <ArrowDownWideNarrow className="h-4 w-4" />
+          <ArrowDownWideNarrow className="mt-[1px] h-4 w-4" />
           {`Sort: ${sortingOptions.find((opt) => opt.value === sortBy)?.label || 'Select'}`}
         </Button>
       </DropdownMenuTrigger>
