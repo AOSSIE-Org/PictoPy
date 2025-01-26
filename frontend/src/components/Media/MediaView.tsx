@@ -1,30 +1,20 @@
-import type { MediaViewProps } from '@/types/Media';
-import type React from 'react';
-import { useEffect, useState, useCallback } from 'react';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Edit,
-  Share2,
-  Check,
-  X,
-  SunMoon,
-  Contrast,
-  ZoomIn,
-  ZoomOut,
-  RotateCw,
-  Heart,
-  Play,
-  Pause,
-  Lock,
-  Divide,
-} from 'lucide-react';
-import ReactCrop, { type Crop } from 'react-image-crop';
+import React, { useEffect, useState, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, X, Play, Pause, RotateCw, Heart, Share2, Lock } from 'lucide-react';
+import ReactCrop, { Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { invoke } from '@tauri-apps/api/core';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { useNavigate } from 'react-router-dom';
-import NetflixStylePlayer from '../VideoPlayer/NetflixStylePlayer';
+
+interface MediaViewProps {
+  initialIndex: number;
+  onClose: () => void;
+  allMedia: { url: string; path?: string }[];
+  currentPage: number;
+  itemsPerPage: number;
+  type: 'image' | 'video';
+  isSecureFolder?: boolean;
+}
 
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
@@ -33,32 +23,28 @@ const MediaView: React.FC<MediaViewProps> = ({
   currentPage,
   itemsPerPage,
   type,
-  isSecureFolder,
+  isSecureFolder = false,
 }) => {
-  // State management
   const [globalIndex, setGlobalIndex] = useState<number>(
-    (currentPage - 1) * itemsPerPage + initialIndex,
+    (currentPage - 1) * itemsPerPage + initialIndex
   );
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [isEditing, setIsEditing] = useState(false);
-  const [crop, setCrop] = useState<Crop>();
-  const [completedCrop, setCompletedCrop] = useState<Crop>();
-  const [filter, setFilter] = useState('');
-  const [brightness, setBrightness] = useState(100);
-  const [contrast, setContrast] = useState(100);
-  const [notification, setNotification] = useState<{
-    message: string;
-    type: 'success' | 'error';
-  } | null>(null);
   const [isSlideshowActive, setIsSlideshowActive] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [favorites, setFavorites] = useState<string[]>(() => {
     const saved = localStorage.getItem('pictopy-favorites');
     return saved ? JSON.parse(saved) : [];
   });
+  const [crop, setCrop] = useState<Crop | undefined>(undefined);
+  const [completedCrop, setCompletedCrop] = useState<Crop | undefined>(undefined);
+  const [filter, setFilter] = useState('');
+  const [brightness, setBrightness] = useState(100);
+  const [contrast, setContrast] = useState(100);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -85,25 +71,25 @@ const MediaView: React.FC<MediaViewProps> = ({
 
     if (isSlideshowActive) {
       slideshowInterval = setInterval(() => {
-        setGlobalIndex((prevIndex) => (prevIndex + 1) % allMedia.length);
+        handleNextItem();
       }, 3000);
     }
 
     return () => {
       if (slideshowInterval) clearInterval(slideshowInterval);
     };
-  }, [isSlideshowActive, allMedia.length]);
+  }, [isSlideshowActive, globalIndex]);
 
   const handleZoomIn = () => setScale((s) => Math.min(4, s + 0.1));
   const handleZoomOut = () => setScale((s) => Math.max(0.5, s - 0.1));
   const handleRotate = () => setRotation((prev) => (prev + 90) % 360);
 
   const toggleFavorite = () => {
-    const currentMedia = allMedia[globalIndex].path || '';
+    const currentMedia = allMedia[globalIndex];
     setFavorites((prev) => {
-      const newFavorites = prev.includes(currentMedia)
-        ? prev.filter((f) => f !== currentMedia)
-        : [...prev, currentMedia];
+      const newFavorites = prev.includes(currentMedia.url)
+        ? prev.filter((f) => f !== currentMedia.url)
+        : [...prev, currentMedia.url];
 
       localStorage.setItem('pictopy-favorites', JSON.stringify(newFavorites));
       return newFavorites;
@@ -135,149 +121,10 @@ const MediaView: React.FC<MediaViewProps> = ({
   const handlePrevItem = () => {
     setGlobalIndex(globalIndex > 0 ? globalIndex - 1 : allMedia.length - 1);
     resetZoom();
-    resetEditing();
   };
 
   const handleNextItem = () => {
     setGlobalIndex(globalIndex < allMedia.length - 1 ? globalIndex + 1 : 0);
-    resetZoom();
-    resetEditing();
-  };
-
-  const resetEditing = () => {
-    setIsEditing(false);
-    setCrop(undefined);
-    setCompletedCrop(undefined);
-    setFilter('');
-    setBrightness(100);
-    setContrast(100);
-    setPosition({ x: 0, y: 0 });
-    setScale(1);
-  };
-
-  const showNotification = (message: string, type: 'success' | 'error') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 5000);
-    console.log(`Notification: ${type} - ${message}`);
-  };
-
-  const handleShare = async () => {
-    try {
-      const filePath = allMedia[globalIndex].path;
-      await invoke('share_file', { path: filePath });
-      showNotification('File shared successfully', 'success');
-    } catch (err: any) {
-      showNotification(`Failed to share: ${err}`, 'error');
-    }
-  };
-
-  const handleEditComplete = useCallback(async () => {
-    console.log('Starting handleEditComplete');
-
-    try {
-      const imageData = await readFile(allMedia[globalIndex].path || '');
-      console.log('Image file read successfully');
-
-      const blob = new Blob([imageData], { type: 'image/png' });
-      const imageUrl = URL.createObjectURL(blob);
-
-      const img = new Image();
-      img.src = imageUrl;
-      await new Promise((resolve) => {
-        img.onload = resolve;
-      });
-
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-
-      if (!ctx) {
-        throw new Error('Unable to create image context');
-      }
-
-      if (completedCrop) {
-        canvas.width = completedCrop.width;
-        canvas.height = completedCrop.height;
-        ctx.drawImage(
-          img,
-          completedCrop.x,
-          completedCrop.y,
-          completedCrop.width,
-          completedCrop.height,
-          0,
-          0,
-          completedCrop.width,
-          completedCrop.height,
-        );
-      } else {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-      }
-
-      ctx.filter = `${filter} brightness(${brightness}%) contrast(${contrast}%)`;
-      ctx.drawImage(canvas, 0, 0);
-
-      console.log('Canvas prepared, attempting to create blob');
-
-      const editedBlob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob(resolve, 'image/png');
-      });
-
-      if (!editedBlob) {
-        throw new Error('Failed to create edited image blob');
-      }
-
-      console.log('Edited blob created successfully');
-
-      const arrayBuffer = await editedBlob.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-
-      if (isSecureFolder) {
-        // Save the edited image to a temporary location
-        const tempPath = await invoke<string>('save_temp_image', {
-          imageData: Array.from(uint8Array),
-          originalPath: allMedia[globalIndex].path,
-        });
-
-        // Move the temporary file to the secure folder
-        await invoke('move_to_secure_folder', {
-          path: tempPath,
-          password: prompt('Enter your secure folder password:'),
-        });
-      } else {
-        console.log('Invoking save_edited_image');
-        await invoke('save_edited_image', {
-          imageData: Array.from(uint8Array),
-          originalPath: allMedia[globalIndex].path,
-          filter,
-          brightness,
-          contrast,
-        });
-      }
-
-      console.log('Image saved successfully');
-      showNotification('Image saved successfully', 'success');
-
-      URL.revokeObjectURL(imageUrl);
-    } catch (error) {
-      console.error('Error in handleEditComplete:', error);
-      showNotification(`Failed to save edited image: ${error}`, 'error');
-    }
-
-    setIsEditing(false);
-  }, [
-    completedCrop,
-    filter,
-    brightness,
-    contrast,
-    allMedia,
-    globalIndex,
-    showNotification,
-    isSecureFolder,
-  ]);
-
-  const handleThumbnailClick = (index: number) => {
-    setGlobalIndex(index);
     resetZoom();
   };
 
@@ -287,119 +134,64 @@ const MediaView: React.FC<MediaViewProps> = ({
 
   const isFavorite = (mediaUrl: string) => favorites.includes(mediaUrl);
 
-  const handleMoveToSecureFolder = async () => {
-    const currentMedia = allMedia[globalIndex];
-    if (!currentMedia || !currentMedia.path) return;
-
-    const secureFolderCreated = await invoke<boolean>(
-      'check_secure_folder_status',
-    );
-    if (!secureFolderCreated) {
-      navigate('/secure-folder');
-      return;
-    }
-
+  const handleShare = async () => {
     try {
-      const password = prompt('Enter your secure folder password:');
-      if (!password) return;
-
-      await invoke('move_to_secure_folder', {
-        path: currentMedia.path,
-        password,
-      });
-      showNotification('File moved to secure folder', 'success');
-      // Remove the moved item from allMedia
-      const newAllMedia = [...allMedia];
-      newAllMedia.splice(globalIndex, 1);
-      // Update allMedia state (you might need to lift this state up to a parent component)
-      // setAllMedia(newAllMedia);
-      if (newAllMedia.length === 0) {
-        onClose();
+      if (navigator.share) {
+        await navigator.share({
+          title: `Shared Media ${globalIndex + 1}`,
+          url: allMedia[globalIndex].url,
+        });
       } else {
-        setGlobalIndex(Math.min(globalIndex, newAllMedia.length - 1));
+        await navigator.clipboard.writeText(allMedia[globalIndex].url);
+        console.log('Link copied to clipboard!');
       }
     } catch (error) {
-      showNotification(`Failed to move file: ${error}`, 'error');
+      console.error('Share failed:', error);
     }
+  };
+
+  const handleThumbnailClick = (index: number) => {
+    setGlobalIndex(index);
+    resetZoom();
+  };
+
+  const handleEditComplete = async () => {
+    // Placeholder for editing logic
+    console.log('Edit saved');
+    setIsEditing(false);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
       <div className="absolute right-4 top-4 z-50 flex items-center gap-2">
-        {!isSecureFolder && (
-          <button
-            onClick={handleShare}
-            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-            aria-label="Share"
-          >
-            <Share2 className="h-6 w-6" />
-          </button>
-        )}
-        {!isSecureFolder && (
+        <button
+          onClick={handleShare}
+          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          aria-label="Share"
+        >
+          <Share2 className="h-6 w-6" />
+        </button>
+        {type === 'image' && (
           <button
             onClick={() => setIsEditing(true)}
             className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
             aria-label="Edit"
           >
-            <Edit className="h-6 w-6" />
-          </button>
-        )}
-        {!isSecureFolder && (
-          <button
-            onClick={handleMoveToSecureFolder}
-            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-            aria-label="Move to Secure Folder"
-          >
-            <Lock className="h-6 w-6" />
-          </button>
-        )}
-        {!isSecureFolder && (
-          <button
-            onClick={toggleFavorite}
-            className={`rounded-full p-2 text-white transition-colors duration-300 ${
-              isFavorite(allMedia[globalIndex].path || '')
-                ? 'bg-red-500 hover:bg-red-600'
-                : 'bg-white/20 hover:bg-white/40'
-            }`}
-            aria-label={
-              isFavorite(allMedia[globalIndex].path || '')
-                ? 'Remove from favorites'
-                : 'Add to favorites'
-            }
-          >
-            <Heart
-              className={`h-6 w-6 ${isFavorite(allMedia[globalIndex].path || '') ? 'fill-current' : ''}`}
-            />
+            <RotateCw className="h-6 w-6" />
           </button>
         )}
         <button
-        {type==="image"?(
-          <button
-          onClick={() => setIsEditing(true)}
-          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Edit"
-        >
-          <Edit className="h-6 w-6" />
-        </button>
-
-        ):null}
-
-        {type==="image"?(
-
-          <button
           onClick={toggleSlideshow}
-          className="rounded-full flex items-center gap-2 bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Toggle Slideshow"
-          >
+        >
           {isSlideshowActive ? (
             <Pause className="h-5 w-5" />
           ) : (
             <Play className="h-5 w-5" />
           )}
           {isSlideshowActive ? 'Pause' : 'Slideshow'}
-          </button>
-        ):null}
-        
+        </button>
         <button
           onClick={onClose}
           className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
@@ -409,163 +201,33 @@ const MediaView: React.FC<MediaViewProps> = ({
         </button>
       </div>
 
-        
-      <div
-        className="relative flex h-full w-full items-center justify-center"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
-      >
+      <div className="relative flex h-full w-full items-center justify-center">
         {type === 'image' ? (
-          <div
-            id="zoomable-image"
+          <img
+            src={allMedia[globalIndex].url}
+            alt={`media-${globalIndex}`}
+            draggable={false}
+            className="h-full w-full object-contain"
+            style={{
+              transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
+              cursor: isDragging ? 'grabbing' : 'grab',
+            }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            className="relative flex h-full w-full items-center justify-center overflow-hidden"
-          >
-            {isEditing ? (
-              <ReactCrop
-                crop={crop}
-                onChange={(c) => setCrop(c)}
-                onComplete={(c) => setCompletedCrop(c)}
-              >
-                <img
-                  id="source-image"
-                  src={allMedia[globalIndex].url || '/placeholder.svg'}
-                  alt={`image-${globalIndex}`}
-                  style={{
-                    filter: `${filter} brightness(${brightness}%) contrast(${contrast}%)`,
-                  }}
-                />
-              </ReactCrop>
-            ) : (
-              <img
-                src={allMedia[globalIndex].url || '/placeholder.svg'}
-                alt={`image-${globalIndex}`}
-                draggable={false}
-                className="h-full w-full select-none object-contain"
-                style={{
-                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
-                  transition: isDragging
-                    ? 'none'
-                    : 'transform 0.2s ease-in-out',
-                  cursor: isDragging ? 'grabbing' : 'grab',
-                }}
-              />
-            )}
-          </div>
+          />
         ) : (
-          <NetflixStylePlayer
-          videoSrc= {allMedia[globalIndex].url}
-          description=''
-          title=''
+          <video
+            src={allMedia[globalIndex].url}
+            controls
+            autoPlay
+            className="h-full w-full object-contain"
           />
         )}
-
-        <button
-          onClick={handlePrevItem}
-          className="rounded-full absolute left-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </button>
-        <button
-          onClick={handleNextItem}
-          className="rounded-full absolute right-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
-        >
-          <ChevronRight className="h-6 w-6" />
-        </button>
       </div>
-          {
-            type=="image"?(
 
-              <div className="absolute bottom-20 right-4 flex gap-2">
-        <button
-          onClick={handleZoomOut}
-          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Zoom Out"
-        >
-          <ZoomOut className="h-5 w-5" />
-        </button>
-        <button
-          onClick={resetZoom}
-          className="rounded-md bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
-        >
-          Reset
-        </button>
-        <button
-          onClick={handleZoomIn}
-          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Zoom In"
-        >
-          <ZoomIn className="h-5 w-5" />
-        </button>
-        <button
-          onClick={handleRotate}
-          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Rotate"
-        >
-          <RotateCw className="h-5 w-5" />
-        </button>
-        {isEditing && (
-          <>
-            <button
-              onClick={handleEditComplete}
-              className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-              aria-label="Confirm Edit"
-            >
-              <Check className="h-5 w-5" />
-            </button>
-            <button
-              onClick={resetEditing}
-              className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-              aria-label="Cancel Edit"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <select
-              onChange={(e) => setFilter(e.target.value)}
-              className="rounded-md bg-white/20 px-2 py-2 text-white"
-            >
-              <option value="">No Filter</option>
-              <option value="grayscale(100%)">Grayscale</option>
-              <option value="sepia(100%)">Sepia</option>
-              <option value="invert(100%)">Invert</option>
-            </select>
-            <div className="flex items-center gap-2">
-              <SunMoon className="h-5 w-5 text-white" />
-              <input
-                type="range"
-                min="0"
-                max="200"
-                value={brightness}
-                onChange={(e) => setBrightness(Number(e.target.value))}
-                className="w-24"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Contrast className="h-5 w-5 text-white" />
-              <input
-                type="range"
-                min="0"
-                max="200"
-                value={contrast}
-                onChange={(e) => setContrast(Number(e.target.value))}
-                className="w-24"
-              />
-            </div>
-          </>
-        )}
-      </div>
-            ):null
-          }
-      
-
-      {/* Thumbnails */}
-      {type==="image"?(
-        <div>
-          <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2 opacity-0 transition-opacity duration-300 hover:opacity-100">
+      <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2">
         {allMedia.map((media, index) => (
           <div
             key={index}
@@ -574,35 +236,19 @@ const MediaView: React.FC<MediaViewProps> = ({
               index === globalIndex
                 ? 'border-blue-500 shadow-lg'
                 : 'border-transparent'
-            } cursor-pointer transition-transform hover:scale-105`}
+            }`}
           >
-            {isFavorite(media.path || '') && (
-              <div className="absolute right-1 top-1 z-10">
-                <Heart className="h-4 w-4 fill-current text-red-500" />
-              </div>
+            {isFavorite(media.url) && (
+              <Heart className="absolute right-1 top-1 h-4 w-4 fill-current text-red-500" />
             )}
-            {type === 'image' ? (
-              <img
-                src={media.url || '/placeholder.svg'}
-                alt={`thumbnail-${index}`}
-                className="h-full w-full object-cover"
-              />
-            ) : null}
+            <img
+              src={media.url}
+              alt={`thumbnail-${index}`}
+              className="h-full w-full object-cover"
+            />
           </div>
         ))}
       </div>
-        </div>
-      ):null}
-      
-      {notification && (
-        <div
-          className={`fixed left-1/2 top-4 -translate-x-1/2 transform rounded-md p-4 ${
-            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-          } z-50 text-lg font-bold text-white shadow-lg`}
-        >
-          {notification.message}
-        </div>
-      )}
     </div>
   );
 };
