@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+
+.image {
+  transition: transform 0.3s ease;
+}
+
+.flip-horizontal {
+  transform: scaleX(-1);
+}
+
+.flip-vertical {
+  transform: scaleY(-1);
+}
+ 
 @layer base {
   :root {
     --background: 0 0% 100%;

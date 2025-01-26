@@ -15,11 +15,17 @@ import {
   Heart,
   Play,
   Pause,
+  Highlighter,
+  Moon,
+  FlipHorizontal,
+  FlipVertical,
+  Crop,
 } from 'lucide-react';
-import ReactCrop, { Crop } from 'react-image-crop';
+import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { invoke } from '@tauri-apps/api/core';
 import { readFile } from '@tauri-apps/plugin-fs';
+import { cn } from '@/lib/utils';
 
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
@@ -43,6 +49,16 @@ const MediaView: React.FC<MediaViewProps> = ({
   const [filter, setFilter] = useState('');
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
+  const[HighLight,setHighlight]=useState(100);
+  const[Shadows,setShadows]=useState(0);
+// set edit
+const[isBrightness,setisBrightness]=useState(false);
+const[isHighLight,setisHighLight]=useState(false)
+const[isShadows,setisShadow]=useState(false)
+const[isContrast,setisContrast]=useState(false);
+const[fliphorizontal,setfliphorizontal]=useState(false)
+const[flipvertical,setflipvertical]=useState(false)
+const[isCroppping,setisCropping]=useState(false)
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'error';
@@ -182,7 +198,6 @@ const MediaView: React.FC<MediaViewProps> = ({
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-
       if (!ctx) {
         throw new Error('Unable to create image context');
       }
@@ -207,7 +222,8 @@ const MediaView: React.FC<MediaViewProps> = ({
         ctx.drawImage(img, 0, 0);
       }
 
-      ctx.filter = `${filter} brightness(${brightness}%) contrast(${contrast}%)`;
+      ctx.filter = `${filter} brightness(${brightness}%) contrast(${contrast}%) saturate(${HighLight}%)
+      sepia(${Shadows}%)`;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
       console.log('Canvas prepared, attempting to create blob');
@@ -270,14 +286,14 @@ const MediaView: React.FC<MediaViewProps> = ({
       <div className="absolute right-4 top-4 z-50 flex items-center gap-2">
         <button
           onClick={handleShare}
-          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Share"
         >
           <Share2 className="h-6 w-6" />
         </button>
         <button
           onClick={() => setIsEditing(true)}
-          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Edit"
         >
           <Edit className="h-6 w-6" />
@@ -287,7 +303,7 @@ const MediaView: React.FC<MediaViewProps> = ({
           className={`rounded-full p-2 text-white transition-colors duration-300 ${
             isFavorite(allMedia[globalIndex].path || '')
               ? 'bg-red-500 hover:bg-red-600'
-              : 'bg-white/20 hover:bg-white/40'
+              : 'bg-gray-500 hover:bg-white/40'
           }`}
           aria-label={
             isFavorite(allMedia[globalIndex].path || '')
@@ -303,7 +319,7 @@ const MediaView: React.FC<MediaViewProps> = ({
         </button>
         <button
           onClick={toggleSlideshow}
-          className="rounded-full flex items-center gap-2 bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full flex items-center gap-2 bg-gray-500 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Toggle Slideshow"
         >
           {isSlideshowActive ? (
@@ -315,7 +331,7 @@ const MediaView: React.FC<MediaViewProps> = ({
         </button>
         <button
           onClick={onClose}
-          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Close"
         >
           <X className="h-6 w-6" />
@@ -337,7 +353,7 @@ const MediaView: React.FC<MediaViewProps> = ({
             onMouseLeave={handleMouseUp}
             className="relative flex h-full w-full items-center justify-center overflow-hidden"
           >
-            {isEditing ? (
+            {isEditing  && isCroppping? (
               <ReactCrop
                 crop={crop}
                 onChange={(c) => setCrop(c)}
@@ -348,7 +364,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                   src={allMedia[globalIndex].url}
                   alt={`image-${globalIndex}`}
                   style={{
-                    filter: `${filter} brightness(${brightness}%) contrast(${contrast}%)`,
+                    filter: `${filter} brightness(${brightness}%) contrast(${contrast}%) saturate(${HighLight}%) sepia(${Shadows}%)  `,
                   }}
                 />
               </ReactCrop>
@@ -357,9 +373,9 @@ const MediaView: React.FC<MediaViewProps> = ({
                 src={allMedia[globalIndex].url}
                 alt={`image-${globalIndex}`}
                 draggable={false}
-                className="h-full w-full select-none object-contain"
+                className="h-full w-full select-none object-contain "
                 style={{
-                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
+                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)  ${fliphorizontal ? 'scaleX(-1)' : ''}  ${flipvertical ? 'scaleY(-1)' : ''} `,
                   transition: isDragging
                     ? 'none'
                     : 'transform 0.2s ease-in-out',
@@ -379,97 +395,176 @@ const MediaView: React.FC<MediaViewProps> = ({
 
         <button
           onClick={handlePrevItem}
-          className="rounded-full absolute left-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full absolute left-4 top-1/2 z-50 flex items-center bg-gray-500 p-3 text-white transition-colors duration-200 hover:bg-white/40"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
         <button
           onClick={handleNextItem}
-          className="rounded-full absolute right-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full absolute right-4 top-1/2 z-50 flex items-center bg-gray-500 p-3 text-white transition-colors duration-200 hover:bg-white/40"
         >
           <ChevronRight className="h-6 w-6" />
         </button>
       </div>
-
-      <div className="absolute bottom-20 right-4 flex gap-2">
+<div className=' absolute bottom-20 right-4 flex flex-col gap-2 text-white'>
+  <div className='ml-auto'>
+    <div className={cn('hidden',{'block':isShadows})}>Shadows</div>
+    <div className={cn('hidden',{'block':isContrast})}>Contrast</div>
+    <div className={cn('hidden',{'block':isHighLight})}>HighLight</div>
+    <div className={cn('hidden',{'block':isBrightness})}>Brightness</div>
+  </div>
+      <div className=" flex gap-2">
         <button
           onClick={handleZoomOut}
-          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Zoom Out"
         >
           <ZoomOut className="h-5 w-5" />
         </button>
         <button
           onClick={resetZoom}
-          className="rounded-md bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-md bg-gray-500 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
         >
           Reset
         </button>
         <button
           onClick={handleZoomIn}
-          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Zoom In"
         >
           <ZoomIn className="h-5 w-5" />
         </button>
         <button
           onClick={handleRotate}
-          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Rotate"
         >
           <RotateCw className="h-5 w-5" />
         </button>
+        <button
+          onClick={()=>{
+            setfliphorizontal(!fliphorizontal)
+            console.log(fliphorizontal)
+          }}
+          className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          aria-label="flipHorizontal"
+        >
+          <FlipHorizontal className="h-5 w-5" />
+        </button>
+        <button
+          onClick={()=>{
+            setflipvertical(!flipvertical)
+            console.log(flipvertical)
+          }}
+          className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          aria-label="flipvertical"
+        >
+          <FlipVertical className="h-5 w-5" />
+        </button>
         {isEditing && (
           <>
             <button
+              onClick={()=>{
+                setisCropping(!isCroppping)
+              }}
+              className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+              aria-label="Confirm Edit"
+            >
+              <Crop className="h-5 w-5" />
+            </button>
+            <button
               onClick={handleEditComplete}
-              className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+              className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
               aria-label="Confirm Edit"
             >
               <Check className="h-5 w-5" />
             </button>
             <button
               onClick={resetEditing}
-              className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+              className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
               aria-label="Cancel Edit"
             >
               <X className="h-5 w-5" />
             </button>
             <select
               onChange={(e) => setFilter(e.target.value)}
-              className="rounded-md bg-white/20 px-2 py-2 text-white"
+              className="rounded-md bg-gray-500 px-2 py-2 text-white"
             >
               <option value="">No Filter</option>
               <option value="grayscale(100%)">Grayscale</option>
               <option value="sepia(100%)">Sepia</option>
               <option value="invert(100%)">Invert</option>
             </select>
-            <div className="flex items-center gap-2">
-              <SunMoon className="h-5 w-5 text-white" />
+            <div className="flex items-center gap-2 m-2">
+              <SunMoon className="h-5 w-5 text-white"  onClick={()=>{
+                setisBrightness(!isBrightness)
+                setisContrast(false)
+                setisShadow(false)
+                setisHighLight(false)
+              }}/>
               <input
                 type="range"
                 min="0"
                 max="200"
                 value={brightness}
                 onChange={(e) => setBrightness(Number(e.target.value))}
-                className="w-24"
+                className={cn('w-24 hidden cursor-pointer',{'block':isBrightness})}
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Contrast className="h-5 w-5 text-white" />
+            <div className="flex items-center gap-2 m-2">
+              <Contrast className="h-5 w-5 text-white"  onClick={()=>{
+                setisBrightness(false)
+                setisContrast(!isContrast)
+                setisShadow(false)
+                setisHighLight(false)
+              }}/>
               <input
                 type="range"
                 min="0"
                 max="200"
                 value={contrast}
                 onChange={(e) => setContrast(Number(e.target.value))}
-                className="w-24"
+                className={cn('w-24 hidden cursor-pointer',{'block':isContrast})}
               />
+            </div>
+            <div className="flex items-center gap-2 m-2">
+              <Highlighter className="h-5 w-5 text-white" onClick={()=>{
+                setisBrightness(false)
+                setisContrast(false)
+                setisShadow(false)
+                setisHighLight(!isHighLight)
+              }} />
+              <input
+                type="range"
+                min="0"
+                max="200"
+                value={HighLight}
+                onChange={(e) => setHighlight(Number(e.target.value))}
+                className={cn('w-24 hidden cursor-pointer',{'block':isHighLight})}
+              />
+            </div>
+            <div className="flex items-center gap-2 m-2">
+              <Moon className="h-5 w-5 text-white" onClick={()=>{
+                setisBrightness(false)
+                setisContrast(false)
+                setisShadow(!isShadows)
+                setisHighLight(false)
+              }} />
+              <div className='flex flex-col gap-2 text-white'>
+              <input
+                type="range"
+                min="0"
+                max="200"
+                value={Shadows}
+                onChange={(e) => setShadows(Number(e.target.value))}
+                className={cn('w-24 hidden cursor-pointer',{'block':isShadows})}
+              />
+              </div>
             </div>
           </>
         )}
       </div>
-
+      </div>
       {/* Thumbnails */}
       <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2 opacity-0 transition-opacity duration-300 hover:opacity-100">
         {allMedia.map((media, index) => (
