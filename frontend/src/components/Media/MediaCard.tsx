@@ -120,7 +120,7 @@ export default function MediaCard({ item, type }: MediaCardProps) {
           {item.title}
         </h3>
         <p className="mt-1 line-clamp-2 text-sm text-gray-300">
-          {item?.description}
+          {item?.original}
         </p>
       </div>
 

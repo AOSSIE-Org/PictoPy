@@ -252,8 +252,17 @@ def delete_multiple_images(payload: dict):
                 )
             path = os.path.normpath(path)
             parts = path.split(os.sep)
-            parts.insert(parts.index("images") + 1, "PictoPy.thumbnails")
-            thumb_nail_image_path = os.sep.join(parts)
+            if "images" in parts:
+                parts.insert(parts.index("images") + 1, "PictoPy.thumbnails")
+                thumb_nail_image_path = os.sep.join(parts)
+
+                if os.path.exists(thumb_nail_image_path):
+                    print(f"Thumbnail found: {thumb_nail_image_path}")
+                else:
+                    print(f"Thumbnail not found: {thumb_nail_image_path}")
+            else:
+                thumb_nail_image_path = ""
+                print(f"'images' directory not found in path: {path}")
 
            
             if os.path.exists(path) :
@@ -291,6 +300,7 @@ def delete_multiple_images(payload: dict):
         )
 
     except Exception as e:
+        print(e)
         return JSONResponse(
             status_code=500,
             content={

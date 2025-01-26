@@ -41,30 +41,26 @@ export default function AIGallery({
       autoInvalidateTags: ['ai-tagging-images', 'ai'],
     },
   );
-  let mediaItems = successData ?? [];
   const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
   const [isVisibleSelectedImage, setIsVisibleSelectedImage] =
     useState<boolean>(true);
-  const [pageNo, setPageNo] = useState<number>(20);
   const itemsPerRow: number = 3;
   const noOfPages: number[] = Array.from(
     { length: 41 },
     (_, index) => index + 10,
   );
-  const filteredMediaItems = useMemo(() => { 
+  const filteredMediaItems = useMemo(() => {
     return filterTag.length > 0
       ? mediaItems.filter((mediaItem: any) =>
-          filterTag.some((tag) => mediaItem.tags.includes(tag))
+          filterTag.some((tag) => mediaItem.tags.includes(tag)),
         )
       : mediaItems;
-  }, [filterTag, mediaItems, loading])
+  }, [filterTag, mediaItems, loading]);
 
-
-const [pageNo,setpageNo] = useState<number>(20);
-
+  const [pageNo, setpageNo] = useState<number>(20);
 
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * pageNo;
@@ -150,7 +146,7 @@ const [pageNo,setpageNo] = useState<number>(20);
                   >
                     <DropdownMenuRadioGroup
                       className="cursor-pointer overflow-auto bg-gray-950 p-4"
-                      onValueChange={(value) => setPageNo(Number(value))}
+                      onValueChange={(value) => setpageNo(Number(value))}
                     >
                       {noOfPages.map((itemsPerPage) => (
                         <DropdownMenuRadioItem
