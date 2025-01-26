@@ -87,7 +87,7 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
 
     mediaItems.forEach((ele) => {
       if (ele.tags?.includes(value)) {
-        selectedImagesPaths.push(ele.imagePath);
+        ele.imagePath && selectedImagesPaths.push(ele.imagePath);
       }
     });
 
@@ -160,20 +160,20 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
           return (
             <div key={index} className="relative">
               <div
-                className={`rounded-full absolute -right-2 -top-2 z-10 h-6 w-6 cursor-pointer border-2 border-white ${
-                  selectedImages.includes(imagePath)
+                className={`absolute -right-2 -top-2 z-10 h-6 w-6 cursor-pointer rounded-full border-2 border-white ${
+                  imagePath && selectedImages.includes(imagePath)
                     ? 'bg-blue-500'
                     : 'bg-gray-300'
                 }`}
-                onClick={() => toggleImageSelection(imagePath)}
+                onClick={() => imagePath && toggleImageSelection(imagePath)}
               />
               <img
                 src={thumbnailUrl}
-                alt={`Image ${getImageName(imagePath)}`}
+                alt={`Image ${imagePath && getImageName(imagePath)}`}
                 className="h-40 w-full rounded-lg object-cover"
               />
               <div className="absolute bottom-0 left-0 right-0 truncate rounded-b-lg bg-black bg-opacity-50 p-1 text-xs text-white">
-                {getImageName(imagePath)}
+                {imagePath && getImageName(imagePath)}
               </div>
             </div>
           );
