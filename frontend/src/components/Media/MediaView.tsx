@@ -17,8 +17,11 @@ import {
   Pause,
   Highlighter,
   Moon,
+  FlipHorizontal,
+  FlipVertical,
+  Crop,
 } from 'lucide-react';
-import ReactCrop, { Crop } from 'react-image-crop';
+import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { invoke } from '@tauri-apps/api/core';
 import { readFile } from '@tauri-apps/plugin-fs';
@@ -47,12 +50,15 @@ const MediaView: React.FC<MediaViewProps> = ({
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
   const[HighLight,setHighlight]=useState(100);
-  const[Shadows,setShadows]=useState(100);
+  const[Shadows,setShadows]=useState(0);
 // set edit
 const[isBrightness,setisBrightness]=useState(false);
 const[isHighLight,setisHighLight]=useState(false)
 const[isShadows,setisShadow]=useState(false)
 const[isContrast,setisContrast]=useState(false);
+const[fliphorizontal,setfliphorizontal]=useState(false)
+const[flipvertical,setflipvertical]=useState(false)
+const[isCroppping,setisCropping]=useState(false)
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'error';
@@ -192,7 +198,6 @@ const[isContrast,setisContrast]=useState(false);
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-
       if (!ctx) {
         throw new Error('Unable to create image context');
       }
@@ -348,7 +353,7 @@ const[isContrast,setisContrast]=useState(false);
             onMouseLeave={handleMouseUp}
             className="relative flex h-full w-full items-center justify-center overflow-hidden"
           >
-            {isEditing ? (
+            {isEditing  && isCroppping? (
               <ReactCrop
                 crop={crop}
                 onChange={(c) => setCrop(c)}
@@ -359,7 +364,7 @@ const[isContrast,setisContrast]=useState(false);
                   src={allMedia[globalIndex].url}
                   alt={`image-${globalIndex}`}
                   style={{
-                    filter: `${filter} brightness(${brightness}%) contrast(${contrast}%) saturate(${HighLight}%) sepia(${Shadows}%) `,
+                    filter: `${filter} brightness(${brightness}%) contrast(${contrast}%) saturate(${HighLight}%) sepia(${Shadows}%)  `,
                   }}
                 />
               </ReactCrop>
@@ -368,9 +373,9 @@ const[isContrast,setisContrast]=useState(false);
                 src={allMedia[globalIndex].url}
                 alt={`image-${globalIndex}`}
                 draggable={false}
-                className="h-full w-full select-none object-contain"
+                className="h-full w-full select-none object-contain "
                 style={{
-                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
+                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)  ${fliphorizontal ? 'scaleX(-1)' : ''}  ${flipvertical ? 'scaleY(-1)' : ''} `,
                   transition: isDragging
                     ? 'none'
                     : 'transform 0.2s ease-in-out',
@@ -436,8 +441,37 @@ const[isContrast,setisContrast]=useState(false);
         >
           <RotateCw className="h-5 w-5" />
         </button>
+        <button
+          onClick={()=>{
+            setfliphorizontal(!fliphorizontal)
+            console.log(fliphorizontal)
+          }}
+          className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          aria-label="flipHorizontal"
+        >
+          <FlipHorizontal className="h-5 w-5" />
+        </button>
+        <button
+          onClick={()=>{
+            setflipvertical(!flipvertical)
+            console.log(flipvertical)
+          }}
+          className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          aria-label="flipvertical"
+        >
+          <FlipVertical className="h-5 w-5" />
+        </button>
         {isEditing && (
           <>
+            <button
+              onClick={()=>{
+                setisCropping(!isCroppping)
+              }}
+              className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+              aria-label="Confirm Edit"
+            >
+              <Crop className="h-5 w-5" />
+            </button>
             <button
               onClick={handleEditComplete}
               className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
