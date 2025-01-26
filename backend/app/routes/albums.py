@@ -32,13 +32,34 @@ def create_new_album(payload: dict):
                 },
             },
         )
+    
     album_name = payload["name"]
     description = payload.get("description")
-    create_album(album_name, description)
+    is_hidden = payload.get("is_hidden", False)
+    password = payload.get("password")
+
+    if is_hidden and not password:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "content": {
+                    "success": False,
+                    "error": "Password required for hidden album",
+                    "message": "Password is required when creating a hidden album",
+                },
+            },
+        )
+
+    create_album(album_name, description, is_hidden, password)
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
         content={
-            "data": {"album_name": album_name, "description": description},
+            "data": {
+                "album_name": album_name,
+                "description": description,
+                "is_hidden": is_hidden
+            },
             "message": f"Album '{album_name}' created successfully",
             "success": True,
         },
@@ -190,6 +211,7 @@ def remove_image_from_album(payload: dict):
 @exception_handler_wrapper
 def view_album_photos(
     album_name: str = Query(..., description="Name of the album to view"),
+    password: str = Query(None, description="Password for hidden albums"),
 ):
     if not album_name:
         return JSONResponse(
@@ -204,7 +226,7 @@ def view_album_photos(
             },
         )
 
-    photos = get_album_photos(album_name)
+    photos = get_album_photos(album_name, password)
 
     if photos is None:
         return JSONResponse(
