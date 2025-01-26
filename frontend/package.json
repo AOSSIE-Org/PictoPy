@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "setup:linux": "cd scripts &&  ./setup_env.sh",
+    "setup:linux": "cd scripts && ./setup_env.sh",
     "lint:check": "eslint --max-warnings 0 --config .eslintrc.json .",
     "lint:fix": "eslint --max-warnings 0 --config .eslintrc.json . --fix",
     "format:fix": "prettier --write \"**/*.{ts,tsx,json}\"",
@@ -18,6 +18,7 @@
     "@heroicons/react": "^2.2.0",
     "@radix-ui/react-dialog": "^1.1.1",
     "@radix-ui/react-dropdown-menu": "^2.1.1",
+    "@radix-ui/react-slider": "^1.2.2",
     "@radix-ui/react-slot": "^1.1.0",
     "@tanstack/react-query": "^5.62.10",
     "@tauri-apps/api": ">=2.0.0-beta.0",
@@ -28,6 +29,7 @@
     "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "framer-motion": "^11.16.3",
     "ldrs": "^1.0.2",
     "lucide-react": "^0.400.0",
     "openai": "^4.77.3",
@@ -36,16 +38,15 @@
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^18.2.0",
-
-
     "react-icons": "^5.4.0",
+    "react-image-crop": "^11.0.7",
     "react-router-dom": "^6.24.1",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0-beta.21",
-    "@types/node": "^20.14.9",
+    "@types/node": "^20.17.16",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
     "@typescript-eslint/eslint-plugin": "^8.19.1",

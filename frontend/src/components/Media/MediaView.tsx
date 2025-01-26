@@ -12,6 +12,8 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
+import NetflixStylePlayer from '../VideoPlayer/NetflixStylePlayer';
+import 'react-image-crop/dist/ReactCrop.css';
 
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
@@ -21,9 +23,8 @@ const MediaView: React.FC<MediaViewProps> = ({
   itemsPerPage,
   type,
 }) => {
-  // State management
   const [globalIndex, setGlobalIndex] = useState<number>(
-    (currentPage - 1) * itemsPerPage + initialIndex,
+    (currentPage - 1) * itemsPerPage + initialIndex
   );
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -85,22 +86,6 @@ const MediaView: React.FC<MediaViewProps> = ({
     });
   };
 
-  const handleShare = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `Shared Image ${globalIndex + 1}`,
-          url: allMedia[globalIndex],
-        });
-      } else {
-        await navigator.clipboard.writeText(allMedia[globalIndex]);
-        console.log('Link copied to clipboard!');
-      }
-    } catch (error) {
-      console.error('Share failed:', error);
-    }
-  };
-
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
     setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
@@ -133,11 +118,6 @@ const MediaView: React.FC<MediaViewProps> = ({
     resetZoom();
   };
 
-  const handleThumbnailClick = (index: number) => {
-    setGlobalIndex(index);
-    resetZoom();
-  };
-
   const toggleSlideshow = () => {
     setIsSlideshowActive((prev) => !prev);
   };
@@ -147,13 +127,6 @@ const MediaView: React.FC<MediaViewProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
       <div className="absolute right-4 top-4 z-50 flex items-center gap-2">
-        <button
-          onClick={handleShare}
-          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Share"
-        >
-          <Share2 className="h-6 w-6" />
-        </button>
         <button
           onClick={toggleFavorite}
           className={`rounded-full p-2 text-white transition-colors duration-300 ${
@@ -173,18 +146,20 @@ const MediaView: React.FC<MediaViewProps> = ({
             }`}
           />
         </button>
-        <button
-          onClick={toggleSlideshow}
-          className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Toggle Slideshow"
-        >
-          {isSlideshowActive ? (
-            <Pause className="h-5 w-5" />
-          ) : (
-            <Play className="h-5 w-5" />
-          )}
-          {isSlideshowActive ? 'Pause' : 'Slideshow'}
-        </button>
+        {type === 'image' && (
+          <button
+            onClick={toggleSlideshow}
+            className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Toggle Slideshow"
+          >
+            {isSlideshowActive ? (
+              <Pause className="h-5 w-5" />
+            ) : (
+              <Play className="h-5 w-5" />
+            )}
+            {isSlideshowActive ? 'Pause' : 'Slideshow'}
+          </button>
+        )}
         <button
           onClick={onClose}
           className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
@@ -194,12 +169,7 @@ const MediaView: React.FC<MediaViewProps> = ({
         </button>
       </div>
 
-      <div
-        className="relative flex h-full w-full items-center justify-center"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
-      >
+      <div className="relative flex h-full w-full items-center justify-center">
         {type === 'image' ? (
           <div
             onMouseDown={handleMouseDown}
@@ -216,96 +186,12 @@ const MediaView: React.FC<MediaViewProps> = ({
               style={{
                 transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
                 cursor: isDragging ? 'grabbing' : 'grab',
-                transition: isDragging ? 'none' : 'transform 0.2s ease-in-out',
               }}
             />
-
-            <div className="absolute bottom-20 right-4 flex gap-2">
-              <button
-                onClick={handleZoomOut}
-                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-                aria-label="Zoom Out"
-              >
-                <ZoomOut className="h-5 w-5" />
-              </button>
-              <button
-                onClick={resetZoom}
-                className="rounded-md bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
-              >
-                Reset
-              </button>
-              <button
-                onClick={handleZoomIn}
-                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-                aria-label="Zoom In"
-              >
-                <ZoomIn className="h-5 w-5" />
-              </button>
-              <button
-                onClick={handleRotate}
-                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-                aria-label="Rotate"
-              >
-                <RotateCw className="h-5 w-5" />
-              </button>
-            </div>
           </div>
         ) : (
-          <video
-            src={allMedia[globalIndex]}
-            className="h-full w-full object-contain"
-            controls
-            autoPlay
-          />
+          <NetflixStylePlayer videoSrc={allMedia[globalIndex]} />
         )}
-
-        <button
-          onClick={handlePrevItem}
-          className="absolute left-4 top-1/2 z-50 flex items-center rounded-full bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </button>
-        <button
-          onClick={handleNextItem}
-          className="absolute right-4 top-1/2 z-50 flex items-center rounded-full bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
-        >
-          <ChevronRight className="h-6 w-6" />
-        </button>
-      </div>
-
-      {/* Thumbnails */}
-      <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2 opacity-0 transition-opacity duration-300 hover:opacity-100">
-        {allMedia.map((media, index) => (
-          <div
-            key={index}
-            onClick={() => handleThumbnailClick(index)}
-            className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
-              index === globalIndex
-                ? 'border-blue-500 shadow-lg'
-                : 'border-transparent'
-            } cursor-pointer transition-transform hover:scale-105`}
-          >
-            {isFavorite(media) && (
-              <div className="absolute right-1 top-1 z-10">
-                <Heart className="h-4 w-4 fill-current text-red-500" />
-              </div>
-            )}
-            {type === 'image' ? (
-              <img
-                src={media}
-                alt={`thumbnail-${index}`}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <video
-                src={media}
-                className="h-full w-full object-cover"
-                muted
-                playsInline
-              />
-            )}
-          </div>
-        ))}
       </div>
     </div>
   );

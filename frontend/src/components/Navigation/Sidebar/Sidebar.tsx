@@ -9,6 +9,7 @@ import {
   Palette,
   FileArchiveIcon as FileCompress,
   X,
+  BookImage,
 } from 'lucide-react';
 import CustomizationPopup from './CustomizationPopup';
 import ImageCompressor from './ImageCompressor';
@@ -57,30 +58,28 @@ const Sidebar = () => {
     { path: '/videos', label: 'Videos', Icon: Video },
     { path: '/albums', label: 'Albums', Icon: Images },
     { path: '/settings', label: 'Settings', Icon: Settings },
+    { path: '/memories', label: 'Memories', Icon: BookImage },
   ];
 
   return (
     <>
       {styles.backgroundVideo && (
-        <>
-          <div className="fixed inset-0 z-[-1] h-full w-full overflow-hidden">
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="absolute left-1/2 top-1/2 h-auto min-h-full w-auto min-w-full -translate-x-1/2 -translate-y-1/2 transform object-cover"
-            >
-              <source src={styles.backgroundVideo} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-          </div>
-          <div className="fixed inset-0 z-0 bg-black opacity-50"></div>
-        </>
+        <div className="fixed inset-0 z-[-1] h-full w-full overflow-hidden">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute left-1/2 top-1/2 h-auto min-h-full w-auto min-w-full -translate-x-1/2 -translate-y-1/2 transform object-cover"
+          >
+            <source src={styles.backgroundVideo} type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        </div>
       )}
       <div className="p-4">
         <nav
-          className="sidebar relative z-10 flex h-[calc(90vh-2rem)] flex-col justify-between rounded-3xl border-r transition-all duration-300 ease-in-out hover:w-64"
+          className="sidebar relative z-10 flex h-[calc(90vh-2rem)] flex-col justify-between rounded-3xl border-r transition-all duration-300 ease-in-out"
           style={sidebarStyle}
           onMouseEnter={() => setIsExpanded(true)}
           onMouseLeave={() => setIsExpanded(false)}
@@ -93,42 +92,14 @@ const Sidebar = () => {
                 to={path}
                 className={`group m-1 flex flex-col items-center gap-1 rounded-lg p-4 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
                   isActive(path)
-                    ? 'bg-active text-active-text shadow-md'
-                    : 'text-default hover:bg-hover'
+                    ? 'bg-[var(--bg-active)] text-[var(--text-active)] shadow-md'
+                    : 'text-default hover:bg-[var(--bg-hover)]'
                 }`}
                 onMouseEnter={() => setHoveredItem(path)}
                 onMouseLeave={() => setHoveredItem(null)}
                 aria-current={isActive(path) ? 'page' : undefined}
               >
-                <div
-                  className={`transition-transform duration-300 ${hoveredItem === path ? 'rotate-6 scale-110' : ''}`}
-                >
-                  <Icon
-                    style={{
-                      width: styles.iconSize,
-                      height: styles.iconSize,
-                      color: styles.iconColor,
-                    }}
-                    aria-hidden="true"
-                  />
-                </div>
-                <span className="whitespace-nowrap font-medium transition-all duration-300">
-                  {label}
-                </span>
-              </Link>
-            ))}
-            <button
-              onClick={() => setShowImageCompressor(true)}
-              className="text-default hover:bg-hover group m-1 flex w-full flex-col items-center gap-1 rounded-lg p-4 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-              onMouseEnter={() => setHoveredItem('compressor')}
-              onMouseLeave={() => setHoveredItem(null)}
-              aria-label="Open Image Compressor"
-              onKeyDown={handleKeyDown}
-            >
-              <div
-                className={`transition-transform duration-300 ${hoveredItem === 'compressor' ? 'rotate-6 scale-110' : ''}`}
-              >
-                <FileCompress
+                <Icon
                   style={{
                     width: styles.iconSize,
                     height: styles.iconSize,
@@ -136,17 +107,32 @@ const Sidebar = () => {
                   }}
                   aria-hidden="true"
                 />
-              </div>
-              <span className="whitespace-nowrap font-medium transition-all duration-300">
-                Compressor
-              </span>
+                <span className="whitespace-nowrap font-medium">{label}</span>
+              </Link>
+            ))}
+            <button
+              onClick={() => setShowImageCompressor(true)}
+              className="group m-1 flex w-full flex-col items-center gap-1 rounded-lg p-4 text-default transition-all duration-300 hover:scale-[1.02] hover:bg-[var(--bg-hover)] active:scale-[0.98]"
+              onMouseEnter={() => setHoveredItem('compressor')}
+              onMouseLeave={() => setHoveredItem(null)}
+              aria-label="Open Image Compressor"
+              onKeyDown={handleKeyDown}
+            >
+              <FileCompress
+                style={{
+                  width: styles.iconSize,
+                  height: styles.iconSize,
+                  color: styles.iconColor,
+                }}
+                aria-hidden="true"
+              />
+              <span className="font-medium">Compressor</span>
             </button>
           </div>
-
           <div className="flex items-center justify-center p-4">
             <button
               onClick={() => setShowCustomize(true)}
-              className="bg-hover hover:bg-active rounded-lg p-2 transition-all duration-300 hover:rotate-6 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 active:scale-95"
+              className="bg-[var(--bg-hover)] hover:bg-[var(--bg-active)] rounded-lg p-2 transition-all duration-300 focus:outline-none"
               aria-label="Customize sidebar"
               onKeyDown={handleKeyDown}
             >
@@ -177,7 +163,6 @@ const Sidebar = () => {
                 onClick={() => setShowImageCompressor(false)}
                 className="text-gray-500 transition-all duration-300 hover:rotate-90 hover:scale-110 hover:text-gray-700 active:scale-95 dark:text-gray-400 dark:hover:text-gray-200"
                 aria-label="Close Image Compressor"
-                onKeyDown={handleKeyDown}
               >
                 <X size={24} />
               </button>
