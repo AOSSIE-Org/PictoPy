@@ -8,6 +8,17 @@ pub use cache_service::CacheService;
 use chrono::{DateTime, Datelike, Utc};
 pub use file_service::FileService;
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
+use rand::seq::SliceRandom;
+use std::collections::HashSet;
+use serde::{Serialize, Deserialize};
+use std::path::Path;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MemoryImage {
+    path: String,
+    #[serde(with = "chrono::serde::ts_seconds")]
+    created_at: DateTime<Utc>,
+}
 
 #[tauri::command]
 pub fn get_folders_with_images(
@@ -283,6 +294,68 @@ fn adjust_brightness_contrast(img: &DynamicImage, brightness: i32, contrast: i32
     }
 
     DynamicImage::ImageRgba8(adjusted_img)
+}
+
+#[tauri::command]
+pub fn get_random_memories(directories: Vec<String>, count: usize) -> Result<Vec<MemoryImage>, String> {
+    let mut all_images = Vec::new();
+    let mut used_paths = HashSet::new();
+
+    for dir in directories {
+        let images = get_images_from_directory(&dir)?;
+        all_images.extend(images);
+    }
+
+    let mut rng = rand::thread_rng();
+    all_images.shuffle(&mut rng);
+
+    let selected_images = all_images
+        .into_iter()
+        .filter(|img| used_paths.insert(img.path.clone()))
+        .take(count)
+        .collect();
+
+    Ok(selected_images)
+}
+
+fn get_images_from_directory(dir: &str) -> Result<Vec<MemoryImage>, String> {
+    let path = Path::new(dir);
+    if !path.is_dir() {
+        return Err(format!("{} is not a directory", dir));
+    }
+
+    let mut images = Vec::new();
+
+    for entry in std::fs::read_dir(path).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            // Recursively call get_images_from_directory for subdirectories
+            let sub_images = get_images_from_directory(path.to_str().unwrap())?;
+            images.extend(sub_images);
+        } else if path.is_file() && is_image_file(&path) {
+            if let Ok(metadata) = std::fs::metadata(&path) {
+                if let Ok(created) = metadata.created() {
+                    let created_at: DateTime<Utc> = created.into();
+                    images.push(MemoryImage {
+                        path: path.to_string_lossy().into_owned(),
+                        created_at,
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(images)
+}
+
+fn is_image_file(path: &Path) -> bool {
+    let extensions = ["jpg", "jpeg", "png", "gif"];
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| extensions.contains(&ext.to_lowercase().as_str()))
+        .unwrap_or(false)
 }
 
 #[tauri::command]
