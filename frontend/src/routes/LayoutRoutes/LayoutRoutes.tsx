@@ -3,6 +3,7 @@ import AITagging from '@/pages/AITagging/AITaging';
 import Album from '@/pages/Album/Album';
 import Dashboard from '@/pages/Dashboard/Dashboard';
 import SecureFolder from '@/pages/SecureFolderPage/SecureFolder';
+import Memories from '@/pages/Memories/Memories';
 import Settings from '@/pages/SettingsPage/Settings';
 import Videos from '@/pages/VideosPage/Videos';
 
@@ -17,5 +18,6 @@ export const LayoutRoutes: React.FC = () => (
     <Route path={ROUTES.LAYOUT.AI} element={<AITagging />} />
     <Route path={ROUTES.LAYOUT.ALBUM} element={<Album />} />
     <Route path={ROUTES.LAYOUT.SECURE_FOLDER} element={<SecureFolder />} />
+    <Route path={ROUTES.LAYOUT.MEMORIES} element={<Memories/>} />
   </Routes>
 );

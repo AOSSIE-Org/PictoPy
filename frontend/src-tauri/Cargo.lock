@@ -8,11 +8,13 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "arrayref",
+ "base64 0.21.7",
  "chrono",
  "data-encoding",
  "directories",
  "image",
  "ring",
+ "rand 0.8.5",
  "serde",
  "serde_json",
  "tauri",

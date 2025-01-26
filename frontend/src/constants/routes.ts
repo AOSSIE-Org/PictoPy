@@ -9,5 +9,6 @@ export const ROUTES = {
     SETTINGS: '/settings',
     ALBUM: '/albums',
     SECURE_FOLDER: '/secure-folder',
+    MEMORIES: '/memories',
   },
 };

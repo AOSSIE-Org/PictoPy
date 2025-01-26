@@ -7,6 +7,8 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+backend/app/models/image-generation/*
+
 node_modules
 dist
 dist-ssr

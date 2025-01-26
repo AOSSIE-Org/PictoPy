@@ -17,12 +17,14 @@ import {
   Play,
   Pause,
   Lock,
+  Divide,
 } from 'lucide-react';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { invoke } from '@tauri-apps/api/core';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { useNavigate } from 'react-router-dom';
+import NetflixStylePlayer from '../VideoPlayer/NetflixStylePlayer';
 
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
@@ -371,17 +373,33 @@ const MediaView: React.FC<MediaViewProps> = ({
           </button>
         )}
         <button
+        {type==="image"?(
+          <button
+          onClick={() => setIsEditing(true)}
+          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          aria-label="Edit"
+        >
+          <Edit className="h-6 w-6" />
+        </button>
+
+        ):null}
+
+        {type==="image"?(
+
+          <button
           onClick={toggleSlideshow}
           className="rounded-full flex items-center gap-2 bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Toggle Slideshow"
-        >
+          >
           {isSlideshowActive ? (
             <Pause className="h-5 w-5" />
           ) : (
             <Play className="h-5 w-5" />
           )}
           {isSlideshowActive ? 'Pause' : 'Slideshow'}
-        </button>
+          </button>
+        ):null}
+        
         <button
           onClick={onClose}
           className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
@@ -391,6 +409,7 @@ const MediaView: React.FC<MediaViewProps> = ({
         </button>
       </div>
 
+        
       <div
         className="relative flex h-full w-full items-center justify-center"
         onClick={(e) => {
@@ -438,11 +457,10 @@ const MediaView: React.FC<MediaViewProps> = ({
             )}
           </div>
         ) : (
-          <video
-            src={allMedia[globalIndex].url}
-            className="h-full w-full object-contain"
-            controls
-            autoPlay
+          <NetflixStylePlayer
+          videoSrc= {allMedia[globalIndex].url}
+          description=''
+          title=''
           />
         )}
 
@@ -459,8 +477,10 @@ const MediaView: React.FC<MediaViewProps> = ({
           <ChevronRight className="h-6 w-6" />
         </button>
       </div>
+          {
+            type=="image"?(
 
-      <div className="absolute bottom-20 right-4 flex gap-2">
+              <div className="absolute bottom-20 right-4 flex gap-2">
         <button
           onClick={handleZoomOut}
           className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
@@ -538,9 +558,14 @@ const MediaView: React.FC<MediaViewProps> = ({
           </>
         )}
       </div>
+            ):null
+          }
+      
 
       {/* Thumbnails */}
-      <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2 opacity-0 transition-opacity duration-300 hover:opacity-100">
+      {type==="image"?(
+        <div>
+          <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2 opacity-0 transition-opacity duration-300 hover:opacity-100">
         {allMedia.map((media, index) => (
           <div
             key={index}
@@ -562,17 +587,13 @@ const MediaView: React.FC<MediaViewProps> = ({
                 alt={`thumbnail-${index}`}
                 className="h-full w-full object-cover"
               />
-            ) : (
-              <video
-                src={media.url}
-                className="h-full w-full object-cover"
-                muted
-                playsInline
-              />
-            )}
+            ) : null}
           </div>
         ))}
       </div>
+        </div>
+      ):null}
+      
       {notification && (
         <div
           className={`fixed left-1/2 top-4 -translate-x-1/2 transform rounded-md p-4 ${
