@@ -1,19 +1,20 @@
-import { MediaViewProps } from '@/types/Media';
-import React, { useEffect, useState } from 'react';
-import {
-  ChevronLeft,
-  ChevronRight,
-  X,
-  Play,
-  Pause,
-  RotateCw,
-  Heart,
-  Share2,
-  ZoomIn,
-  ZoomOut,
-} from 'lucide-react';
-import NetflixStylePlayer from '../VideoPlayer/NetflixStylePlayer';
+import React, { useEffect, useState, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, X, Play, Pause, RotateCw, Heart, Share2, Lock } from 'lucide-react';
+import ReactCrop, { Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import { invoke } from '@tauri-apps/api/core';
+import { readFile } from '@tauri-apps/plugin-fs';
+import { useNavigate } from 'react-router-dom';
+
+interface MediaViewProps {
+  initialIndex: number;
+  onClose: () => void;
+  allMedia: { url: string; path?: string }[];
+  currentPage: number;
+  itemsPerPage: number;
+  type: 'image' | 'video';
+  isSecureFolder?: boolean;
+}
 
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
@@ -22,6 +23,7 @@ const MediaView: React.FC<MediaViewProps> = ({
   currentPage,
   itemsPerPage,
   type,
+  isSecureFolder = false,
 }) => {
   const [globalIndex, setGlobalIndex] = useState<number>(
     (currentPage - 1) * itemsPerPage + initialIndex
@@ -36,6 +38,14 @@ const MediaView: React.FC<MediaViewProps> = ({
     const saved = localStorage.getItem('pictopy-favorites');
     return saved ? JSON.parse(saved) : [];
   });
+  const [crop, setCrop] = useState<Crop | undefined>(undefined);
+  const [completedCrop, setCompletedCrop] = useState<Crop | undefined>(undefined);
+  const [filter, setFilter] = useState('');
+  const [brightness, setBrightness] = useState(100);
+  const [contrast, setContrast] = useState(100);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     setGlobalIndex((currentPage - 1) * itemsPerPage + initialIndex);
@@ -77,9 +87,9 @@ const MediaView: React.FC<MediaViewProps> = ({
   const toggleFavorite = () => {
     const currentMedia = allMedia[globalIndex];
     setFavorites((prev) => {
-      const newFavorites = prev.includes(currentMedia)
-        ? prev.filter((f) => f !== currentMedia)
-        : [...prev, currentMedia];
+      const newFavorites = prev.includes(currentMedia.url)
+        ? prev.filter((f) => f !== currentMedia.url)
+        : [...prev, currentMedia.url];
 
       localStorage.setItem('pictopy-favorites', JSON.stringify(newFavorites));
       return newFavorites;
@@ -124,42 +134,64 @@ const MediaView: React.FC<MediaViewProps> = ({
 
   const isFavorite = (mediaUrl: string) => favorites.includes(mediaUrl);
 
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Shared Media ${globalIndex + 1}`,
+          url: allMedia[globalIndex].url,
+        });
+      } else {
+        await navigator.clipboard.writeText(allMedia[globalIndex].url);
+        console.log('Link copied to clipboard!');
+      }
+    } catch (error) {
+      console.error('Share failed:', error);
+    }
+  };
+
+  const handleThumbnailClick = (index: number) => {
+    setGlobalIndex(index);
+    resetZoom();
+  };
+
+  const handleEditComplete = async () => {
+    // Placeholder for editing logic
+    console.log('Edit saved');
+    setIsEditing(false);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
       <div className="absolute right-4 top-4 z-50 flex items-center gap-2">
         <button
-          onClick={toggleFavorite}
-          className={`rounded-full p-2 text-white transition-colors duration-300 ${
-            isFavorite(allMedia[globalIndex])
-              ? 'bg-red-500 hover:bg-red-600'
-              : 'bg-white/20 hover:bg-white/40'
-          }`}
-          aria-label={
-            isFavorite(allMedia[globalIndex])
-              ? 'Remove from favorites'
-              : 'Add to favorites'
-          }
+          onClick={handleShare}
+          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          aria-label="Share"
         >
-          <Heart
-            className={`h-6 w-6 ${
-              isFavorite(allMedia[globalIndex]) ? 'fill-current' : ''
-            }`}
-          />
+          <Share2 className="h-6 w-6" />
         </button>
         {type === 'image' && (
           <button
-            onClick={toggleSlideshow}
-            className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
-            aria-label="Toggle Slideshow"
+            onClick={() => setIsEditing(true)}
+            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Edit"
           >
-            {isSlideshowActive ? (
-              <Pause className="h-5 w-5" />
-            ) : (
-              <Play className="h-5 w-5" />
-            )}
-            {isSlideshowActive ? 'Pause' : 'Slideshow'}
+            <RotateCw className="h-6 w-6" />
           </button>
         )}
+        <button
+          onClick={toggleSlideshow}
+          className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+          aria-label="Toggle Slideshow"
+        >
+          {isSlideshowActive ? (
+            <Pause className="h-5 w-5" />
+          ) : (
+            <Play className="h-5 w-5" />
+          )}
+          {isSlideshowActive ? 'Pause' : 'Slideshow'}
+        </button>
         <button
           onClick={onClose}
           className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
@@ -171,27 +203,51 @@ const MediaView: React.FC<MediaViewProps> = ({
 
       <div className="relative flex h-full w-full items-center justify-center">
         {type === 'image' ? (
-          <div
+          <img
+            src={allMedia[globalIndex].url}
+            alt={`media-${globalIndex}`}
+            draggable={false}
+            className="h-full w-full object-contain"
+            style={{
+              transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
+              cursor: isDragging ? 'grabbing' : 'grab',
+            }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            className="relative flex h-full w-full items-center justify-center overflow-hidden"
+          />
+        ) : (
+          <video
+            src={allMedia[globalIndex].url}
+            controls
+            autoPlay
+            className="h-full w-full object-contain"
+          />
+        )}
+      </div>
+
+      <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2">
+        {allMedia.map((media, index) => (
+          <div
+            key={index}
+            onClick={() => handleThumbnailClick(index)}
+            className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
+              index === globalIndex
+                ? 'border-blue-500 shadow-lg'
+                : 'border-transparent'
+            }`}
           >
+            {isFavorite(media.url) && (
+              <Heart className="absolute right-1 top-1 h-4 w-4 fill-current text-red-500" />
+            )}
             <img
-              src={allMedia[globalIndex]}
-              alt={`media-${globalIndex}`}
-              draggable={false}
-              className="h-full w-full object-contain"
-              style={{
-                transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
-                cursor: isDragging ? 'grabbing' : 'grab',
-              }}
+              src={media.url}
+              alt={`thumbnail-${index}`}
+              className="h-full w-full object-cover"
             />
           </div>
-        ) : (
-          <NetflixStylePlayer videoSrc={allMedia[globalIndex]} />
-        )}
+        ))}
       </div>
     </div>
   );

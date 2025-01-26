@@ -8,6 +8,7 @@ export const ROUTES = {
     VIDEOS: '/videos',
     SETTINGS: '/settings',
     ALBUM: '/albums',
+    SECURE_FOLDER: '/secure-folder',
     MEMORIES: '/memories',
   },
 };
