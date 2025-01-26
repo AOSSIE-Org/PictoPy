@@ -335,6 +335,19 @@ pub async fn move_to_secure_folder(path: String, password: String) -> Result<(),
     println!("Encrypted file saved to: {:?}", secure_folder);
     fs::remove_file(&path).map_err(|e| e.to_string())?;
 
+    let thumbnails_folder = Path::new(&path)
+    .parent() // Get parent directory of the original file
+    .and_then(|parent| parent.join("PictoPy.thumbnails").canonicalize().ok()) // Navigate to PictoPy.thumbnails
+    .ok_or("Unable to locate thumbnails directory")?;
+    let thumbnail_path = thumbnails_folder.join(file_name);
+
+    if thumbnail_path.exists() {
+        fs::remove_file(&thumbnail_path).map_err(|e| e.to_string())?;
+        println!("Thumbnail deleted: {:?}", thumbnail_path);
+    } else {
+        println!("Thumbnail not found: {:?}", thumbnail_path);
+    }
+
     // Store the original path
     let metadata_path = secure_folder.join("metadata.json");
     let mut metadata: HashMap<String, String> = if metadata_path.exists() {
