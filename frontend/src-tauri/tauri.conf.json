@@ -9,7 +9,8 @@
     "active": true,
     "targets": [
       "nsis",
-      "deb"
+      "deb",
+      "dmg"
     ],
     "linux": {
       "deb": {

@@ -9,7 +9,7 @@ on:
       - "frontend/**"
 
 jobs:
-  build-windows:
+  build-server-windows:
     runs-on: windows-latest
     steps:
       - name: Checkout code
@@ -49,7 +49,7 @@ jobs:
           name: PictoPy-Windows
           path: backend/dist/PictoPy-Windows.zip
 
-  build-ubuntu:
+  build-server-ubuntu:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
@@ -89,7 +89,7 @@ jobs:
           name: PictoPy-Ubuntu
           path: backend/dist/PictoPy-Ubuntu.zip
 
-  build-macos:
+  build-server-macos:
     runs-on: macos-latest
     steps:
       - name: Checkout code
@@ -132,7 +132,7 @@ jobs:
   publish-tauri:
     permissions:
       contents: write
-    needs: [build-windows, build-ubuntu, build-macos]
+    needs: [build-server-windows, build-server-ubuntu, build-server-macos]
     strategy:
       fail-fast: false
       matrix:
