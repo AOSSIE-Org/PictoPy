@@ -2,6 +2,7 @@ use fs2::FileExt;
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
+use fs2::FileExt;
 
 pub struct CacheRepository;
 
@@ -22,6 +23,8 @@ impl CacheRepository {
             .create(true)
             .truncate(true)
             .open(cache_file_path)?;
+        
+        file.lock_exclusive()?;
 
       
         file.lock_exclusive()?;
