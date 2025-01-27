@@ -529,7 +529,7 @@ const MediaView: React.FC<MediaViewProps> = ({
               className="rounded-md bg-gray-500 px-2 py-2 text-white"
             >
               <option value="">No Filter</option>
-              <option value="gray-500scale(100%)">gray-500scale</option>
+             <option value="grayscale(100%)">Grayscale</option>
               <option value="sepia(100%)">Sepia</option>
               <option value="invert(100%)">Invert</option>
             </select>
