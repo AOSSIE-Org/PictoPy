@@ -18,26 +18,24 @@ const Memories: React.FC = () => {
   const [showMediaView, setShowMediaView] = useState(false);
   const [selectedMemoryIndex, setSelectedMemoryIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [showStoryView, setShowStoryView] = useState(true);
+  const [showStoryView, setShowStoryView] = useState(false); // Default to false
   const [storyIndex, setStoryIndex] = useState(0);
   const itemsPerPage = 12;
   const [currentPath] = useLocalStorage('folderPath', '');
-  const [currentPaths] = useLocalStorage('folderPaths', []);
+  const [currentPaths] = useLocalStorage<string[]>('folderPaths', []);
   const storyDuration = 3000; // 3 seconds per story
 
   useEffect(() => {
     fetchMemories();
-  }, []);
+  }, [currentPath, currentPaths]);
 
   const fetchMemories = async () => {
     try {
       setIsLoading(true);
+      const directories = currentPaths.length > 0 ? currentPaths : [currentPath];
       const result = await invoke<MemoryImage[]>('get_random_memories', {
-        directories:
-          currentPaths && currentPaths.length > 0
-            ? currentPaths
-            : [currentPath],
-        count: 10, // Request 10 memories
+        directories,
+        count: 10,
       });
       setMemories(result);
     } catch (error) {
@@ -47,12 +45,11 @@ const Memories: React.FC = () => {
     }
   };
 
-  // Story view auto-advance
   useEffect(() => {
     if (showStoryView && memories.length > 0) {
       const timer = setTimeout(() => {
-        if (storyIndex < memories.slice(0, 10).length - 1) {
-          setStoryIndex(storyIndex + 1);
+        if (storyIndex < memories.length - 1) {
+          setStoryIndex((prev) => prev + 1);
         } else {
           setShowStoryView(false);
         }
@@ -79,25 +76,21 @@ const Memories: React.FC = () => {
     setShowMediaView(false);
   }, []);
 
+  // Function to get the time ago (e.g., "2 days ago", "1 month ago", etc.)
   const getTimeAgo = (dateStr: string) => {
     try {
       const timestamp = parseInt(dateStr) * 1000;
       const date = new Date(timestamp);
       const now = new Date();
-      const diffTime = Math.abs(now.getTime() - date.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const diffTime = now.getTime() - date.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       const diffMonths = Math.floor(diffDays / 30);
       const diffYears = Math.floor(diffDays / 365);
 
-      if (diffYears > 0) {
-        return `${diffYears} year${diffYears > 1 ? 's' : ''} ago`;
-      } else if (diffMonths > 0) {
-        return `${diffMonths} month${diffMonths > 1 ? 's' : ''} ago`;
-      } else if (diffDays > 0) {
-        return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-      } else {
-        return 'Today';
-      }
+      if (diffYears > 0) return `${diffYears} year${diffYears > 1 ? 's' : ''} ago`;
+      if (diffMonths > 0) return `${diffMonths} month${diffMonths > 1 ? 's' : ''} ago`;
+      if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      return 'Today';
     } catch (error) {
       console.error('Error parsing date:', error);
       return 'Recently';
@@ -109,9 +102,7 @@ const Memories: React.FC = () => {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-lg text-muted-foreground">
-            Loading your memories...
-          </p>
+          <p className="text-lg text-muted-foreground">Loading your memories...</p>
         </div>
       </div>
     );
@@ -122,9 +113,7 @@ const Memories: React.FC = () => {
       <div className="min-h-screen bg-background p-8">
         <h1 className="mb-8 text-center text-4xl font-bold">Your Memories</h1>
         <div className="flex items-center justify-center">
-          <p className="text-lg text-muted-foreground">
-            No memories found in the selected folder.
-          </p>
+          <p className="text-lg text-muted-foreground">No memories found in the selected folder.</p>
         </div>
       </div>
     );
@@ -147,16 +136,6 @@ const Memories: React.FC = () => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.5 }}
-            onClick={() => {
-              if (storyIndex < 9) {
-                setStoryIndex(storyIndex + 1);
-              }
-            }}
-            onDoubleClick={() => {
-              if (storyIndex > 0) {
-                setStoryIndex(storyIndex - 1);
-              }
-            }}
             className="relative flex h-full w-full items-center justify-center"
           >
             <img
@@ -172,28 +151,8 @@ const Memories: React.FC = () => {
                 className="h-full bg-white"
               />
             </div>
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-8">
-              <motion.h2
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="text-2xl font-bold text-white"
-              >
-                {getTimeAgo(currentMemory.created_at)}
-              </motion.h2>
-            </div>
           </motion.div>
         </AnimatePresence>
-        <div className="absolute left-0 right-0 top-4 flex justify-center gap-1 px-4">
-          {memories.slice(0, 10).map((_, idx) => (
-            <div
-              key={idx}
-              className={`rounded-full h-1 max-w-[100px] flex-1 ${
-                idx === storyIndex ? 'bg-white' : 'bg-gray-600'
-              }`}
-            />
-          ))}
-        </div>
       </div>
     );
   }
@@ -224,11 +183,9 @@ const Memories: React.FC = () => {
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
                 />
               </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-              <div className="absolute bottom-0 left-0 right-0 translate-y-full transform p-4 text-white transition-transform duration-300 group-hover:translate-y-0">
-                <p className="text-sm font-medium">
-                  {getTimeAgo(memory.created_at)}
-                </p>
+              {/* Show time ago under each memory */}
+              <div className="absolute bottom-2 left-2 bg-gray-800 bg-opacity-50 text-white p-2 rounded">
+                {getTimeAgo(memory.created_at)}
               </div>
             </motion.div>
           ))}
@@ -236,13 +193,11 @@ const Memories: React.FC = () => {
       </AnimatePresence>
 
       {totalPages > 1 && (
-        <div className="mt-8">
-          <PaginationControls
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
-        </div>
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       )}
 
       {showMediaView && (
