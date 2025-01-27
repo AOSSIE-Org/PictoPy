@@ -329,7 +329,7 @@ const MediaView: React.FC<MediaViewProps> = ({
         {!isSecureFolder && (
           <button
             onClick={handleShare}
-            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            className="rounded-full bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-gray-900"
             aria-label="Share"
           >
             <Share2 className="h-6 w-6" />
@@ -338,7 +338,7 @@ const MediaView: React.FC<MediaViewProps> = ({
         {!isSecureFolder && (
           <button
             onClick={() => setIsEditing(true)}
-            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            className="rounded-full bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-gray-900"
             aria-label="Edit"
           >
             <Edit className="h-6 w-6" />
@@ -347,7 +347,7 @@ const MediaView: React.FC<MediaViewProps> = ({
         {!isSecureFolder && (
           <button
             onClick={handleMoveToSecureFolder}
-            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            className="rounded-full bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-gray-900"
             aria-label="Move to Secure Folder"
           >
             <Lock className="h-6 w-6" />
@@ -359,7 +359,7 @@ const MediaView: React.FC<MediaViewProps> = ({
             className={`rounded-full p-2 text-white transition-colors duration-300 ${
               isFavorite(allMedia[globalIndex].path || '')
                 ? 'bg-red-500 hover:bg-red-600'
-                : 'bg-white/20 hover:bg-white/40'
+                : 'bg-gray-500 hover:bg-gray-900'
             }`}
             aria-label={
               isFavorite(allMedia[globalIndex].path || '')
@@ -376,7 +376,7 @@ const MediaView: React.FC<MediaViewProps> = ({
         {type==="image"?(
           <button
           onClick={() => setIsEditing(true)}
-          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-gray-900"
           aria-label="Edit"
         >
           <Edit className="h-6 w-6" />
@@ -388,7 +388,7 @@ const MediaView: React.FC<MediaViewProps> = ({
 
           <button
           onClick={toggleSlideshow}
-          className="rounded-full flex items-center gap-2 bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full flex items-center gap-2 bg-gray-500 px-4 py-2 text-white transition-colors duration-200 hover:bg-gray-900"
           aria-label="Toggle Slideshow"
           >
           {isSlideshowActive ? (
@@ -402,7 +402,7 @@ const MediaView: React.FC<MediaViewProps> = ({
         
         <button
           onClick={onClose}
-          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-gray-900"
           aria-label="Close"
         >
           <X className="h-6 w-6" />
@@ -466,13 +466,13 @@ const MediaView: React.FC<MediaViewProps> = ({
 
         <button
           onClick={handlePrevItem}
-          className="rounded-full absolute left-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full absolute left-4 top-1/2 z-50 flex items-center bg-gray-500 p-3 text-white transition-colors duration-200 hover:bg-gray-900"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
         <button
           onClick={handleNextItem}
-          className="rounded-full absolute right-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full absolute right-4 top-1/2 z-50 flex items-center bg-gray-500 p-3 text-white transition-colors duration-200 hover:bg-gray-900"
         >
           <ChevronRight className="h-6 w-6" />
         </button>
@@ -483,27 +483,27 @@ const MediaView: React.FC<MediaViewProps> = ({
               <div className="absolute bottom-20 right-4 flex gap-2">
         <button
           onClick={handleZoomOut}
-          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-gray-900"
           aria-label="Zoom Out"
         >
           <ZoomOut className="h-5 w-5" />
         </button>
         <button
           onClick={resetZoom}
-          className="rounded-md bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-md bg-gray-500 px-4 py-2 text-white transition-colors duration-200 hover:bg-gray-900"
         >
           Reset
         </button>
         <button
           onClick={handleZoomIn}
-          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-gray-900"
           aria-label="Zoom In"
         >
           <ZoomIn className="h-5 w-5" />
         </button>
         <button
           onClick={handleRotate}
-          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-gray-900"
           aria-label="Rotate"
         >
           <RotateCw className="h-5 w-5" />
@@ -512,24 +512,24 @@ const MediaView: React.FC<MediaViewProps> = ({
           <>
             <button
               onClick={handleEditComplete}
-              className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+              className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-gray-900"
               aria-label="Confirm Edit"
             >
               <Check className="h-5 w-5" />
             </button>
             <button
               onClick={resetEditing}
-              className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+              className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-gray-900"
               aria-label="Cancel Edit"
             >
               <X className="h-5 w-5" />
             </button>
             <select
               onChange={(e) => setFilter(e.target.value)}
-              className="rounded-md bg-white/20 px-2 py-2 text-white"
+              className="rounded-md bg-gray-500 px-2 py-2 text-white"
             >
               <option value="">No Filter</option>
-              <option value="grayscale(100%)">Grayscale</option>
+             <option value="grayscale(100%)">Grayscale</option>
               <option value="sepia(100%)">Sepia</option>
               <option value="invert(100%)">Invert</option>
             </select>
