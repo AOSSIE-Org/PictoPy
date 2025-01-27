@@ -11,9 +11,6 @@ use std::env;
 use tauri::path::BaseDirectory;
 use tauri::Manager;
 
-fn get_env(name: &str) -> String {
-    std::env::var(String::from(name)).unwrap_or(String::from(""))
-}
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())

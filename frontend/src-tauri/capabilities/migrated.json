@@ -101,9 +101,7 @@
           "cmd": "bash",
           "args": [
             "-c",
-            {
-              "validator": "\\S+"
-            }
+            "./PictoPy_Server"
           ],
           "sidecar": false
         }
@@ -116,9 +114,7 @@
           "name": "StartServerWindows",
           "cmd": "powershell",
           "args": [
-            {
-              "validator": "\\S+"
-            }
+            "./PictoPy_Server"
           ],
           "sidecar": false
         }
@@ -132,9 +128,7 @@
           "cmd": "bash",
           "args": [
             "-c",
-            {
-              "validator": "\\S+"
-            }
+            "kill -SIGINT `pidof PictoPy_Server`"
           ],
           "sidecar": false
         }
@@ -147,9 +141,7 @@
           "name": "killProcessWindows",
           "cmd": "powershell",
           "args": [
-            {
-              "validator": "\\S+"
-            }
+            "taskkill /t /f /im PictoPy_Server.exe"
           ],
           "sidecar": false
         }

@@ -1,4 +1,4 @@
-name: Build Python Executable and Upload Release
+name: Build and Release
 
 on:
   push:
@@ -6,36 +6,31 @@ on:
       - "**"
     paths:
       - "backend/**"
+      - "frontend/**"
 
 jobs:
   build-windows:
     runs-on: windows-latest
-
     steps:
-      # Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Set up Python 3.12
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.12
 
-      # Install dependencies
       - name: Install dependencies
         run: |
           cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Run PyInstaller to generate the executable
       - name: Build executable with PyInstaller
         run: |
           cd backend
           pyinstaller main.py --name PictoPy_Server --onefile --distpath dist
 
-      # Copy the "app" folder into the same directory as the executable
       - name: Copy app folder
         run: |
           cd backend
@@ -43,13 +38,11 @@ jobs:
           robocopy app dist\app /e
           if ($LASTEXITCODE -le 1) { exit 0 }
 
-      # Zip the folder containing the executable and the "app" folder
       - name: Create ZIP package
         run: |
           cd backend/dist
           tar -a -c -f PictoPy-Windows.zip .
 
-      # Upload the ZIP file as an artifact
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
@@ -57,33 +50,27 @@ jobs:
           path: backend/dist/PictoPy-Windows.zip
 
   build-ubuntu:
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-22.04
     steps:
-      # Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Set up Python 3.12
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.12
 
-      # Install dependencies
       - name: Install dependencies
         run: |
           cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Run PyInstaller to generate the executable
       - name: Build executable with PyInstaller
         run: |
           cd backend
           pyinstaller main.py --name PictoPy_Server --onefile --distpath dist
 
-      # Copy the "app" folder into the same directory as the executable
       - name: Copy app folder
         run: |
           cd backend
@@ -91,13 +78,11 @@ jobs:
           mkdir -p dist/app
           cp -r app/* dist/app/
 
-      # Zip the folder containing the executable and the "app" folder
       - name: Create ZIP package
         run: |
           cd backend/dist
           zip -r PictoPy-Ubuntu.zip .
 
-      # Upload the ZIP file as an artifact
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
@@ -106,32 +91,26 @@ jobs:
 
   build-macos:
     runs-on: macos-latest
-
     steps:
-      # Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Set up Python 3.12
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.12
 
-      # Install dependencies
       - name: Install dependencies
         run: |
           cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Run PyInstaller to generate the executable
       - name: Build executable with PyInstaller
         run: |
           cd backend
           pyinstaller main.py --name PictoPy_Server --onefile --distpath dist
 
-      # Copy the "app" folder into the same directory as the executable
       - name: Copy app folder
         run: |
           cd backend
@@ -139,62 +118,88 @@ jobs:
           mkdir -p dist/app
           cp -r app/* dist/app/
 
-      # Zip the folder containing the executable and the "app" folder
       - name: Create ZIP package
         run: |
           cd backend/dist
           zip -r PictoPy-MacOS.zip .
 
-      # Upload the ZIP file as an artifact
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: PictoPy-MacOS
           path: backend/dist/PictoPy-MacOS.zip
 
-  release:
-    runs-on: ubuntu-latest
+  publish-tauri:
+    permissions:
+      contents: write
     needs: [build-windows, build-ubuntu, build-macos]
-
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest"
+            args: "--target aarch64-apple-darwin"
+            artifact: "PictoPy-MacOS"
+          - platform: "ubuntu-22.04"
+            args: ""
+            artifact: "PictoPy-Ubuntu"
+          - platform: "windows-latest"
+            args: ""
+            artifact: "PictoPy-Windows"
+    runs-on: ${{ matrix.platform }}
     steps:
-      # Generate a unique tag and release name
-      - name: Generate unique tag and release name
-        id: generate_identifiers
+      - uses: actions/checkout@v4
+
+      - name: Create dist directory
+        shell: bash
+        run: mkdir -p backend/dist
+
+      - name: Download and extract server artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ matrix.artifact }}
+          path: backend/dist
+
+      - name: Extract server files
+        shell: bash
         run: |
-          DATE=$(date +'%d-%m-%Y-%H-%M-%S')
-          SHORT_HASH=$(echo $GITHUB_SHA | cut -c1-8)
-          TAG_NAME="v${DATE}-${SHORT_HASH}"
-          RELEASE_NAME="release-${DATE}-${SHORT_HASH}"
-          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
-          echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
-          echo "Generated Tag: $TAG_NAME"
-          echo "Generated Release Name: $RELEASE_NAME"
+          cd backend/dist
+          if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
+            tar -xf PictoPy-Windows.zip
+            rm PictoPy-Windows.zip
+          else
+            unzip -o *.zip
+            rm *.zip
+          fi
 
-      # Download artifacts from all jobs
-      - name: Download Windows artifact
-        uses: actions/download-artifact@v3
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          name: PictoPy-Windows
-          path: artifacts
-      - name: Download Ubuntu artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: PictoPy-Ubuntu
-          path: artifacts
-      - name: Download MacOS artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: PictoPy-MacOS
-          path: artifacts
+          node-version: lts/*
 
-      # Create GitHub release and upload assets
-      - name: Create GitHub release and upload assets
-        uses: ncipollo/release-action@v1
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
         with:
-          artifacts: |
-            artifacts/PictoPy-Windows.zip
-            artifacts/PictoPy-Ubuntu.zip
-            artifacts/PictoPy-MacOS.zip
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ env.TAG_NAME }}
-          name: ${{ env.RELEASE_NAME }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
+
+      - name: Install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: app-v__VERSION__
+          releaseName: "App v__VERSION__"
+          releaseBody: "See the assets to download this version and install."
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
