@@ -29,25 +29,25 @@ jobs:
       - name: Build executable with PyInstaller
         run: |
           cd backend
-          pyinstaller main.py --name PictoPy_Server --onefile --distpath dist
+          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
 
       - name: Copy app folder
         run: |
           cd backend
-          mkdir dist/images
-          robocopy app dist\app /e
+          mkdir dist/PictoPy_Server/images
+          robocopy app dist\PictoPy_Server\app /e
           if ($LASTEXITCODE -le 1) { exit 0 }
 
       - name: Create ZIP package
         run: |
-          cd backend/dist
+          cd backend/dist/PictoPy_Server
           tar -a -c -f PictoPy-Windows.zip .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: PictoPy-Windows
-          path: backend/dist/PictoPy-Windows.zip
+          path: backend/dist/PictoPy_Server/PictoPy-Windows.zip
 
   build-server-ubuntu:
     runs-on: ubuntu-22.04
@@ -69,25 +69,25 @@ jobs:
       - name: Build executable with PyInstaller
         run: |
           cd backend
-          pyinstaller main.py --name PictoPy_Server --onefile --distpath dist
+          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
 
       - name: Copy app folder
         run: |
           cd backend
-          mkdir -p dist/images
-          mkdir -p dist/app
-          cp -r app/* dist/app/
+          mkdir -p dist/PictoPy_Server/images
+          mkdir -p dist/PictoPy_Server/app
+          cp -r app/* dist/PictoPy_Server/app/
 
       - name: Create ZIP package
         run: |
-          cd backend/dist
+          cd backend/dist/PictoPy_Server
           zip -r PictoPy-Ubuntu.zip .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: PictoPy-Ubuntu
-          path: backend/dist/PictoPy-Ubuntu.zip
+          path: backend/dist/PictoPy_Server/PictoPy-Ubuntu.zip
 
   build-server-macos:
     runs-on: macos-latest
@@ -109,25 +109,25 @@ jobs:
       - name: Build executable with PyInstaller
         run: |
           cd backend
-          pyinstaller main.py --name PictoPy_Server --onefile --distpath dist
+          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
 
       - name: Copy app folder
         run: |
           cd backend
-          mkdir -p dist/images
-          mkdir -p dist/app
-          cp -r app/* dist/app/
+          mkdir -p dist/PictoPy_Server/images
+          mkdir -p dist/PictoPy_Server/app
+          cp -r app/* dist/PictoPy_Server/app/
 
       - name: Create ZIP package
         run: |
-          cd backend/dist
+          cd backend/dist/PictoPy_Server
           zip -r PictoPy-MacOS.zip .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: PictoPy-MacOS
-          path: backend/dist/PictoPy-MacOS.zip
+          path: backend/dist/PictoPy_Server/PictoPy-MacOS.zip
 
   publish-tauri:
     permissions:
