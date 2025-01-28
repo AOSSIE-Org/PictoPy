@@ -12,7 +12,7 @@ use std::num::NonZeroU32;
 use ring::rand::{SystemRandom, SecureRandom};
 use ring::digest;
 use ring::pbkdf2;
-use ring::aead::{self, Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
+use ring::aead::{ Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
 pub use file_service::FileService;
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
 use tauri::path::BaseDirectory;
@@ -31,7 +31,7 @@ pub struct SecureMedia {
     pub id: String,
     pub url: String,
     pub path: String,
-    // pub base64_image: BASE64,
+ } // pub base64_image: BASE64,
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MemoryImage {
@@ -338,7 +338,7 @@ pub async fn move_to_secure_folder(path: String, password: String) -> Result<(),
 
     let content = fs::read(&path).map_err(|e| e.to_string())?;
     let ciphertext_length = content.len() + AES_256_GCM.tag_len();
-    let expected_length = SALT_LENGTH + NONCE_LENGTH + ciphertext_length + 16;
+    let _expected_length = SALT_LENGTH + NONCE_LENGTH + ciphertext_length + 16;
     let encrypted = encrypt_data(&content, &password).map_err(|e| e.to_string())?;
     println!("Encrypted file size: {}", encrypted.len());
     fs::write(&dest_path, encrypted).map_err(|e| e.to_string())?;
