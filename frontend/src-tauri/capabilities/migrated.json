@@ -128,7 +128,7 @@
           "cmd": "bash",
           "args": [
             "-c",
-            "kill -SIGINT `pidof PictoPy_Server`"
+            "pkill -f PictoPy_Server"
           ],
           "sidecar": false
         }
