@@ -58,6 +58,7 @@ app.include_router(albums_router, prefix="/albums", tags=["Albums"])
 app.include_router(tagging_router, prefix="/tag", tags=["Tagging"])
 
 
+
 # Runs when we use this command: python3 main.py (As in production)
 if __name__ == "__main__":
     multiprocessing.freeze_support()  # Required for Windows.

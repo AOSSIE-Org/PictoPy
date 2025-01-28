@@ -164,14 +164,10 @@ jobs:
         shell: bash
         run: |
           cd backend/dist
-          if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
-            Expand-Archive -Path PictoPy-Windows.zip -DestinationPath . -Force
-            Remove-Item PictoPy-Windows.zip
-          else
-            unzip -o *.zip
-            rm *.zip
-            ls -l
-          fi
+          unzip -o *.zip
+          rm *.zip
+          ls -l
+
 
 
       - name: Setup Node
