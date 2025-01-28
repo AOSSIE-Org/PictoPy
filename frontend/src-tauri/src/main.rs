@@ -36,6 +36,13 @@ fn main() {
             services::share_file,
             services::save_edited_image,
             services::get_server_path,
+            services::move_to_secure_folder,
+            services::create_secure_folder,
+            services::unlock_secure_folder,
+            services::get_secure_media,
+            services::remove_from_secure_folder,
+            services::check_secure_folder_status,
+            services::get_random_memories,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
