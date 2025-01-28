@@ -24,7 +24,6 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "createUpdaterArtifacts": "v1Compatible",
     "resources": {
       "../../backend/dist/": "resources/server"
     }
@@ -35,14 +34,6 @@
   "plugins": {
     "fs": {
       "active": true
-    },
-    "updater": {
-      "active": true,
-      "endpoints": [
-        "https://server.com//api/v1/tauri/update"
-      ],
-      "dialog": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI3ODc5QjNDMERGMzlCMUEKUldRYW0vTU5QSnVIdHplYktOV3hKKzdmSGd6ZVN3eTg4Q2ExbmVTbk4yN0pMWjZLYXl1M1ZzN3AK"
     }
   },
   "app": {

@@ -18,21 +18,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 
-interface Image {
-  id: string;
-  url: string;
-  tags: string[];
-  imagePath: string;
-  // Add other properties relevant to your images
-}
-
-interface QueryResponse {
-  data: Image[];
-  success: boolean;
-  error?: string;
-  message?: string;
-}
-
 export default function AIGallery({
   title,
   type,
@@ -43,39 +28,39 @@ export default function AIGallery({
   folderPath: string;
 }) {
   const {
-    data: mediaItemsData = { data: [], success: false },
+    successData: mediaItems = [],
     isLoading: loading,
     isError,
-  } = usePictoQuery<QueryResponse>({
+  } = usePictoQuery({
     queryFn: getAllImageObjects,
     queryKey: ['ai-tagging-images', 'ai'],
   });
-
-  const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation({
-    mutationFn: generateThumbnails,
-    autoInvalidateTags: ['ai-tagging-images', 'ai'],
-  });
-
+  const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation(
+    {
+      mutationFn: generateThumbnails,
+      autoInvalidateTags: ['ai-tagging-images', 'ai'],
+    },
+  );
   const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
-  const [isVisibleSelectedImage, setIsVisibleSelectedImage] = useState<boolean>(true);
-  const itemsPerRow: number = 3;
-  const noOfPages: number[] = Array.from({ length: 41 }, (_, index) => index + 10);
+  const [isVisibleSelectedImage, setIsVisibleSelectedImage] =
+    useState<boolean>(true);
   const [pageNo, setPageNo] = useState<number>(20);
-
-  // Filter media items based on the selected filter tags
+  const itemsPerRow: number = 3;
+  const noOfPages: number[] = Array.from(
+    { length: 41 },
+    (_, index) => index + 10,
+  );
   const filteredMediaItems = useMemo(() => {
-    const mediaItems = mediaItemsData?.data ?? [];
     return filterTag.length > 0
-      ? mediaItems.filter((mediaItem: Image) =>
-          filterTag.some((tag) => mediaItem.tags.includes(tag))
+      ? mediaItems.filter((mediaItem: any) =>
+          filterTag.some((tag) => mediaItem.tags.includes(tag)),
         )
       : mediaItems;
-  }, [filterTag, mediaItemsData]);
+  }, [filterTag, mediaItems, loading]);
 
-  // Paginate the filtered items
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * pageNo;
     const indexOfFirstItem = indexOfLastItem - pageNo;
@@ -84,33 +69,27 @@ export default function AIGallery({
 
   const totalPages = Math.ceil(filteredMediaItems.length / pageNo);
 
-  // Open the media viewer for the selected media item
   const openMediaViewer = useCallback((index: number) => {
     setSelectedMediaIndex(index);
     setShowMediaViewer(true);
   }, []);
 
-  // Close the media viewer
   const closeMediaViewer = useCallback(() => {
     setShowMediaViewer(false);
   }, []);
 
-  // Generate thumbnail when a folder is added
   const handleFolderAdded = useCallback(async () => {
     await generateThumbnail(folderPath);
   }, [folderPath, generateThumbnail]);
 
-  // Effect to trigger the thumbnail generation when the folderPath changes
   useEffect(() => {
     handleFolderAdded();
   }, [folderPath, handleFolderAdded]);
 
-  // Show loading screen if media items are being created or fetched
   if (isCreating || loading) {
     return <LoadingScreen />;
   }
 
-  // Show error message if there is an issue fetching media items
   if (isError) {
     return <div>Error loading media items.</div>;
   }
@@ -119,10 +98,12 @@ export default function AIGallery({
     <div className="w-full">
       <div className="mx-auto px-2 pb-8 dark:bg-background dark:text-foreground">
         <div className="mb-2 flex items-center justify-between">
-          {isVisibleSelectedImage && <h1 className="text-2xl font-bold">{title}</h1>}
+          {isVisibleSelectedImage && (
+            <h1 className="text-2xl font-bold">{title}</h1>
+          )}
           <FilterControls
             setFilterTag={setFilterTag}
-            mediaItems={mediaItemsData.data}
+            mediaItems={mediaItems}
             onFolderAdded={handleFolderAdded}
             isLoading={loading}
             isVisibleSelectedImage={isVisibleSelectedImage}
@@ -167,7 +148,10 @@ export default function AIGallery({
                       onValueChange={(value) => setPageNo(Number(value))}
                     >
                       {noOfPages.map((itemsPerPage) => (
-                        <DropdownMenuRadioItem key={itemsPerPage} value={`${itemsPerPage}`}>
+                        <DropdownMenuRadioItem
+                          key={itemsPerPage}
+                          value={`${itemsPerPage}`}
+                        >
                           {itemsPerPage}
                         </DropdownMenuRadioItem>
                       ))}
@@ -183,7 +167,7 @@ export default function AIGallery({
           <MediaView
             initialIndex={selectedMediaIndex}
             onClose={closeMediaViewer}
-            allMedia={filteredMediaItems.map((item: Image) => ({
+            allMedia={filteredMediaItems.map((item: any) => ({
               url: item.url,
               path: item?.imagePath,
             }))}
