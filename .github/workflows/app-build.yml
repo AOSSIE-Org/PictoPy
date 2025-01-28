@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     branches:
-      - "**"
+      - "main"
     paths:
       - "backend/**"
       - "frontend/**"
@@ -45,7 +45,7 @@ jobs:
           tar -a -c -f PictoPy-Windows.zip .
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: PictoPy-Windows
           path: backend/dist/PictoPy_Server/PictoPy-Windows.zip
@@ -85,7 +85,7 @@ jobs:
           zip -r PictoPy-Ubuntu.zip .
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: PictoPy-Ubuntu
           path: backend/dist/PictoPy_Server/PictoPy-Ubuntu.zip
@@ -125,7 +125,7 @@ jobs:
           zip -r PictoPy-MacOS.zip .
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: PictoPy-MacOS
           path: backend/dist/PictoPy_Server/PictoPy-MacOS.zip
