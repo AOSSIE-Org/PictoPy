@@ -163,15 +163,16 @@ jobs:
       - name: Extract server files
         shell: bash
         run: |
-          cd backend/dist
-          if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
-            tar -xf PictoPy-Windows.zip
-            rm PictoPy-Windows.zip
-          else
+          if ("${{ matrix.platform }}" -eq "windows-latest") {
+            cd backend/dist
+            Expand-Archive -Path PictoPy-Windows.zip -DestinationPath . -Force
+            Remove-Item PictoPy-Windows.zip
+          } else {
+            cd backend/dist
             unzip -o *.zip
             rm *.zip
             ls -l
-          fi
+          }
 
       - name: Setup Node
         uses: actions/setup-node@v4
