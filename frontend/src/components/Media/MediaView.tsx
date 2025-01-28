@@ -17,7 +17,7 @@ import {
   Play,
   Pause,
   Lock,
-  Divide,
+  
 } from 'lucide-react';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -372,7 +372,6 @@ const MediaView: React.FC<MediaViewProps> = ({
             />
           </button>
         )}
-        <button
         {type==="image"?(
           <button
           onClick={() => setIsEditing(true)}
@@ -478,7 +477,7 @@ const MediaView: React.FC<MediaViewProps> = ({
         </button>
       </div>
           {
-            type=="image"?(
+            type==="image"?(
 
               <div className="absolute bottom-20 right-4 flex gap-2">
         <button

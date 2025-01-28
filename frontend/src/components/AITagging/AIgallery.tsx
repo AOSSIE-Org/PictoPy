@@ -41,7 +41,6 @@ export default function AIGallery({
       autoInvalidateTags: ['ai-tagging-images', 'ai'],
     },
   );
-  let mediaItems = successData ?? [];
   const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
@@ -54,17 +53,13 @@ export default function AIGallery({
     { length: 41 },
     (_, index) => index + 10,
   );
-  const filteredMediaItems = useMemo(() => { 
+  const filteredMediaItems = useMemo(() => {
     return filterTag.length > 0
       ? mediaItems.filter((mediaItem: any) =>
-          filterTag.some((tag) => mediaItem.tags.includes(tag))
+          filterTag.some((tag) => mediaItem.tags.includes(tag)),
         )
       : mediaItems;
-  }, [filterTag, mediaItems, loading])
-
-
-const [pageNo,setpageNo] = useState<number>(20);
-
+  }, [filterTag, mediaItems, loading]);
 
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * pageNo;

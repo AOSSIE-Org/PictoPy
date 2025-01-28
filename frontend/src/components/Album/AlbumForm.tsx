@@ -24,7 +24,7 @@ const CreateAlbumForm: React.FC<CreateAlbumFormProps> = ({
   const [newAlbumDescription, setNewAlbumDescription] = useState('');
   const [isHidden, setIsHidden] = useState(false);
   const [password, setPassword] = useState('');
-  
+
   const { mutate: createAlbum, isPending: isCreating } = usePictoMutation({
     mutationFn: createAlbums,
     autoInvalidateTags: ['all-albums'],

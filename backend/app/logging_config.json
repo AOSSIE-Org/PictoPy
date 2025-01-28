@@ -1,0 +1,10 @@
+{
+    "logger": {
+        "path": "app/logs/PictoPy.log",
+        "filename": "PictoPy.log",
+        "level": "info",
+        "rotation": "1 days",
+        "retention": "1 months",
+        "format": "<level>{level: <8}</level> <green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> request id: {extra[request_id]} - <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>"
+    }
+}
