@@ -1,3 +1,3 @@
-// Usage: import { isDev } from '@/utils/isProd';
+// Usage: import { isProd } from '@/utils/isProd';
 // Utility function to check if the environment is in production mode
-export const isProd = () => true || import.meta.env.PROD;
+export const isProd = () =>import.meta.env.PROD;
