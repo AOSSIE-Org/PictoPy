@@ -23,18 +23,19 @@ const Memories: React.FC = () => {
   const itemsPerPage = 12;
   const [currentPath] = useLocalStorage('folderPath', '');
   // const [currentPaths] = useLocalStorage<string[]>('folderPaths', []); Temporarily commented out, will be uncommented after open PR related to multiple folder support is merged.
-  const [currentPaths] = [''];
+  const currentPaths: string[] = []; // Temporarily added to avoid TypeScript error, will be removed after open PR related to multiple folder support is merged.
   const storyDuration = 3000; // 3 seconds per story
 
   useEffect(() => {
     fetchMemories();
-  }, [currentPath, currentPaths]);
+  }, [currentPath]);
 
   const fetchMemories = async () => {
     try {
       setIsLoading(true);
       const directories =
         currentPaths.length > 0 ? currentPaths : [currentPath];
+      console.log(directories);
       const result = await invoke<MemoryImage[]>('get_random_memories', {
         directories,
         count: 10,
