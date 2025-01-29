@@ -30,6 +30,7 @@ pub struct SecureMedia {
     pub url: String,
     pub path: String,
     // pub base64_image: BASE64,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MemoryImage {
