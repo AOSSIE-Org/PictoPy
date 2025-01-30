@@ -271,11 +271,17 @@ You can control the number of workers by setting the `WORKERS` environment varia
 cd frontend
 npm test
 ```
-#### Backend
-```bash
-cd backend
-pytest
-```
+#### Backend'
+- FastAPI
+    ```bash
+    cd backend
+    pytest
+    ```
+- Tauri
+    ```bash
+    cd frontend/src-tauri/
+    cargo test
+    ```
 
 ## Additional Resources
 
