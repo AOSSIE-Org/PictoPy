@@ -264,6 +264,18 @@ You can control the number of workers by setting the `WORKERS` environment varia
 - For setting up the frontend, follow the instructions in the [Frontend Setup Guide](./docs/frontend/docker-setup.md).
   </br>
 - For setting up the backend, follow the instructions in the [Backend Setup Guide](./docs/backend/docker-setup.md).
+  
+### Testing
+#### Frontend
+```bash
+cd frontend
+npm test
+```
+#### Backend
+```bash
+cd backend
+pytest
+```
 
 ## Additional Resources
 
