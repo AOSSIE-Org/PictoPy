@@ -154,6 +154,8 @@ const[isContrast,setisContrast]=useState(false);
     setFilter('');
     setBrightness(100);
     setContrast(100);
+    setHighlight(100);
+    setShadows(0);
     setPosition({ x: 0, y: 0 });
     setScale(1);
   };
@@ -242,6 +244,8 @@ const[isContrast,setisContrast]=useState(false);
         originalPath: allMedia[globalIndex].path,
         filter,
         brightness,
+        HighLight,
+        Shadows,
         contrast,
       });
 
