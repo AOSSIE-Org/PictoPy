@@ -1,5 +1,6 @@
-import { MediaViewProps } from '@/types/Media';
-import React, { useEffect, useState, useCallback } from 'react';
+import type { MediaViewProps } from '@/types/Media';
+import type React from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -26,7 +27,15 @@ import 'react-image-crop/dist/ReactCrop.css';
 import { invoke } from '@tauri-apps/api/core';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { cn } from '@/lib/utils';
-
+  Lock,
+  Divide,
+} from 'lucide-react';
+import ReactCrop, { type Crop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
+import { invoke } from '@tauri-apps/api/core';
+import { readFile } from '@tauri-apps/plugin-fs';
+import { useNavigate } from 'react-router-dom';
+import NetflixStylePlayer from '../VideoPlayer/NetflixStylePlayer';
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
   onClose,
@@ -34,6 +43,7 @@ const MediaView: React.FC<MediaViewProps> = ({
   currentPage,
   itemsPerPage,
   type,
+  isSecureFolder,
 }) => {
   // State management
   const [globalIndex, setGlobalIndex] = useState<number>(
@@ -69,6 +79,7 @@ const[isCroppping,setisCropping]=useState(false)
     const saved = localStorage.getItem('pictopy-favorites');
     return saved ? JSON.parse(saved) : [];
   });
+  const navigate = useNavigate();
 
   useEffect(() => {
     setGlobalIndex((currentPage - 1) * itemsPerPage + initialIndex);
@@ -221,11 +232,11 @@ const[isCroppping,setisCropping]=useState(false)
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
       }
-
       ctx.filter = `${filter} brightness(${brightness}%) contrast(${contrast}%) saturate(${HighLight}%)
       sepia(${Shadows}%)`;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
+      ctx.filter = `${filter} brightness(${brightness}%) contrast(${contrast}%)`;
+      ctx.drawImage(canvas, 0, 0);
       console.log('Canvas prepared, attempting to create blob');
 
       const editedBlob = await new Promise<Blob | null>((resolve) => {
@@ -241,14 +252,28 @@ const[isCroppping,setisCropping]=useState(false)
       const arrayBuffer = await editedBlob.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
 
-      console.log('Invoking save_edited_image');
-      await invoke('save_edited_image', {
-        imageData: Array.from(uint8Array),
-        originalPath: allMedia[globalIndex].path,
-        filter,
-        brightness,
-        contrast,
-      });
+      if (isSecureFolder) {
+        // Save the edited image to a temporary location
+        const tempPath = await invoke<string>('save_temp_image', {
+          imageData: Array.from(uint8Array),
+          originalPath: allMedia[globalIndex].path,
+        });
+
+        // Move the temporary file to the secure folder
+        await invoke('move_to_secure_folder', {
+          path: tempPath,
+          password: prompt('Enter your secure folder password:'),
+        });
+      } else {
+        console.log('Invoking save_edited_image');
+        await invoke('save_edited_image', {
+          imageData: Array.from(uint8Array),
+          originalPath: allMedia[globalIndex].path,
+          filter,
+          brightness,
+          contrast,
+        });
+      }
 
       console.log('Image saved successfully');
       showNotification('Image saved successfully', 'success');
@@ -268,6 +293,7 @@ const[isCroppping,setisCropping]=useState(false)
     allMedia,
     globalIndex,
     showNotification,
+    isSecureFolder,
   ]);
 
   const handleThumbnailClick = (index: number) => {
@@ -281,9 +307,91 @@ const[isCroppping,setisCropping]=useState(false)
 
   const isFavorite = (mediaUrl: string) => favorites.includes(mediaUrl);
 
+  const handleMoveToSecureFolder = async () => {
+    const currentMedia = allMedia[globalIndex];
+    if (!currentMedia || !currentMedia.path) return;
+
+    const secureFolderCreated = await invoke<boolean>(
+      'check_secure_folder_status',
+    );
+    if (!secureFolderCreated) {
+      navigate('/secure-folder');
+      return;
+    }
+
+    try {
+      const password = prompt('Enter your secure folder password:');
+      if (!password) return;
+
+      await invoke('move_to_secure_folder', {
+        path: currentMedia.path,
+        password,
+      });
+      showNotification('File moved to secure folder', 'success');
+      // Remove the moved item from allMedia
+      const newAllMedia = [...allMedia];
+      newAllMedia.splice(globalIndex, 1);
+      // Update allMedia state (you might need to lift this state up to a parent component)
+      // setAllMedia(newAllMedia);
+      if (newAllMedia.length === 0) {
+        onClose();
+      } else {
+        setGlobalIndex(Math.min(globalIndex, newAllMedia.length - 1));
+      }
+    } catch (error) {
+      showNotification(`Failed to move file: ${error}`, 'error');
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
       <div className="absolute right-4 top-4 z-50 flex items-center gap-2">
+        {!isSecureFolder && (
+          <button
+            onClick={handleShare}
+            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Share"
+          >
+            <Share2 className="h-6 w-6" />
+          </button>
+        )}
+        {!isSecureFolder && (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Edit"
+          >
+            <Edit className="h-6 w-6" />
+          </button>
+        )}
+        {!isSecureFolder && (
+          <button
+            onClick={handleMoveToSecureFolder}
+            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Move to Secure Folder"
+          >
+            <Lock className="h-6 w-6" />
+          </button>
+        )}
+        {!isSecureFolder && (
+          <button
+            onClick={toggleFavorite}
+            className={`rounded-full p-2 text-white transition-colors duration-300 ${
+              isFavorite(allMedia[globalIndex].path || '')
+                ? 'bg-red-500 hover:bg-red-600'
+                : 'bg-white/20 hover:bg-white/40'
+            }`}
+            aria-label={
+              isFavorite(allMedia[globalIndex].path || '')
+                ? 'Remove from favorites'
+                : 'Add to favorites'
+            }
+          >
+            <Heart
+              className={`h-6 w-6 ${isFavorite(allMedia[globalIndex].path || '') ? 'fill-current' : ''}`}
+            />
+          </button>
+        )}
         <button
           onClick={handleShare}
           className="rounded-full bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
@@ -292,6 +400,8 @@ const[isCroppping,setisCropping]=useState(false)
           <Share2 className="h-6 w-6" />
         </button>
         <button
+        {type==="image"?(
+          <button
           onClick={() => setIsEditing(true)}
           className="rounded-full bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Edit"
@@ -318,17 +428,25 @@ const[isCroppping,setisCropping]=useState(false)
           />
         </button>
         <button
+
+        ):null}
+
+        {type==="image"?(
+
+          <button
           onClick={toggleSlideshow}
           className="rounded-full flex items-center gap-2 bg-gray-500 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Toggle Slideshow"
-        >
+          >
           {isSlideshowActive ? (
             <Pause className="h-5 w-5" />
           ) : (
             <Play className="h-5 w-5" />
           )}
           {isSlideshowActive ? 'Pause' : 'Slideshow'}
-        </button>
+          </button>
+        ):null}
+        
         <button
           onClick={onClose}
           className="rounded-full bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
@@ -338,6 +456,7 @@ const[isCroppping,setisCropping]=useState(false)
         </button>
       </div>
 
+        
       <div
         className="relative flex h-full w-full items-center justify-center"
         onClick={(e) => {
@@ -361,7 +480,7 @@ const[isCroppping,setisCropping]=useState(false)
               >
                 <img
                   id="source-image"
-                  src={allMedia[globalIndex].url}
+                  src={allMedia[globalIndex].url || '/placeholder.svg'}
                   alt={`image-${globalIndex}`}
                   style={{
                     filter: `${filter} brightness(${brightness}%) contrast(${contrast}%) saturate(${HighLight}%) sepia(${Shadows}%)  `,
@@ -370,7 +489,7 @@ const[isCroppping,setisCropping]=useState(false)
               </ReactCrop>
             ) : (
               <img
-                src={allMedia[globalIndex].url}
+                src={allMedia[globalIndex].url || '/placeholder.svg'}
                 alt={`image-${globalIndex}`}
                 draggable={false}
                 className="h-full w-full select-none object-contain "
@@ -385,11 +504,10 @@ const[isCroppping,setisCropping]=useState(false)
             )}
           </div>
         ) : (
-          <video
-            src={allMedia[globalIndex].url}
-            className="h-full w-full object-contain"
-            controls
-            autoPlay
+          <NetflixStylePlayer
+          videoSrc= {allMedia[globalIndex].url}
+          description=''
+          title=''
           />
         )}
 
@@ -414,6 +532,10 @@ const[isCroppping,setisCropping]=useState(false)
     <div className={cn('hidden',{'block':isBrightness})}>Brightness</div>
   </div>
       <div className=" flex gap-2">
+          {
+            type=="image"?(
+
+              <div className="absolute bottom-20 right-4 flex gap-2">
         <button
           onClick={handleZoomOut}
           className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
@@ -565,8 +687,13 @@ const[isCroppping,setisCropping]=useState(false)
         )}
       </div>
       </div>
+
+            ):null
+          }
       {/* Thumbnails */}
-      <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2 opacity-0 transition-opacity duration-300 hover:opacity-100">
+      {type==="image"?(
+        <div>
+          <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2 opacity-0 transition-opacity duration-300 hover:opacity-100">
         {allMedia.map((media, index) => (
           <div
             key={index}
@@ -584,21 +711,17 @@ const[isCroppping,setisCropping]=useState(false)
             )}
             {type === 'image' ? (
               <img
-                src={media.url}
+                src={media.url || '/placeholder.svg'}
                 alt={`thumbnail-${index}`}
                 className="h-full w-full object-cover"
               />
-            ) : (
-              <video
-                src={media.url}
-                className="h-full w-full object-cover"
-                muted
-                playsInline
-              />
-            )}
+            ) : null}
           </div>
         ))}
       </div>
+        </div>
+      ):null}
+      
       {notification && (
         <div
           className={`fixed left-1/2 top-4 -translate-x-1/2 transform rounded-md p-4 ${
