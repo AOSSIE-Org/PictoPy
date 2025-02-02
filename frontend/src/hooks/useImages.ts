@@ -112,7 +112,7 @@ export const useImages = (folderPath: string) => {
                   title: `Image ${imagePath}`,
                   date,
                   tags: [],
-                  imagePath:''
+                  
                 };
               }),
             );
