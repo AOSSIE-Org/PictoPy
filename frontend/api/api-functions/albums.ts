@@ -8,6 +8,8 @@ interface ViewAlbumParams {
 export const createAlbums = async (payload: {
   name: string;
   description?: string;
+  is_hidden?: boolean;
+  password?: string;
 }) => {
   const response = await fetch(albumEndpoints.createAlbum, {
     method: 'POST',
@@ -22,7 +24,10 @@ export const createAlbums = async (payload: {
   return data;
 };
 
-export const viewYourAlbum = async ({ album_name, password }: ViewAlbumParams) => {
+export const viewYourAlbum = async ({
+  album_name,
+  password,
+}: ViewAlbumParams) => {
   const queryParams = new URLSearchParams({ album_name });
   if (password) {
     queryParams.append('password', password);
@@ -132,7 +137,6 @@ export const removeFromAlbum = async (payload: {
   const data = await response.json();
   return data;
 };
-
 
 export const editAlbumDescription = async (payload: {
   album_name: string;
