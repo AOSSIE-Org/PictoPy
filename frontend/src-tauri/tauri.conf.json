@@ -7,7 +7,16 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "nsis",
+      "deb",
+      "dmg"
+    ],
+    "linux": {
+      "deb": {
+        "postInstallScript": "./postinstall.sh"
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -15,7 +24,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "createUpdaterArtifacts": "v1Compatible"
+    "resources": {
+      "../../backend/dist/": "resources/server"
+    }
   },
   "productName": "PictoPy",
   "version": "0.0.0",
@@ -26,9 +37,11 @@
     },
     "updater": {
       "active": true,
-      "endpoints": ["https://server.com//api/v1/tauri/update"],
+      "endpoints": ["https://server.com/api/v1/tauri/update"],
       "dialog": true,
       "pubkey": " "
+    }
+
     }
   },
   "app": {
@@ -44,7 +57,9 @@
     ],
     "security": {
       "assetProtocol": {
-        "scope": ["**"],
+        "scope": [
+          "**"
+        ],
         "enable": true
       },
       "csp": null

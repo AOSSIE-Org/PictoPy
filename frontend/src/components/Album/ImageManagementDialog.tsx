@@ -24,8 +24,9 @@ const ImageGrid: React.FC<{
   albumName: string;
   onRemove: (image: string) => void;
   isRemoving: boolean;
-}> = ({ images, albumName, onRemove, isRemoving }) => {
-  const getImageName = (path: string) => path.split('\\').pop() || path.split('/').pop() || path;
+}> = ({ images, onRemove, isRemoving }) => {
+  const getImageName = (path: string) =>
+    path.split('\\').pop() || path.split('/').pop() || path;
 
   return (
     <div className="grid grid-cols-3 gap-4">
@@ -66,7 +67,7 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
     isLoading: isViewingAlbum,
     errorMessage: viewError,
   } = usePictoQuery({
-    queryFn: async () => await viewYourAlbum(albumName || ''),
+    queryFn: async () => await viewYourAlbum({ album_name: albumName || '' }),
     queryKey: ['view-album', albumName],
   });
 
@@ -124,17 +125,20 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Manage Images: {albumName}</DialogTitle>
         </DialogHeader>
+
         <div className="my-4">
           <Button onClick={() => setShowImageSelection(true)}>
             Add Images to Album
           </Button>
         </div>
+
         <ImageGrid
           images={viewedAlbum?.image_paths || []}
           albumName={albumName}
           onRemove={handleRemoveImage}
           isRemoving={isRemovingImage}
         />
+
         <DialogFooter>
           <Button onClick={onClose}>Close</Button>
         </DialogFooter>

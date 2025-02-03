@@ -30,13 +30,15 @@ export default function AIGallery({
   const itemsPerPage: number = 20;
   const itemsPerRow: number = 3;
 
+  const noOfPages: number[] = Array.from({ length: 41 }, (_, index) => index + 10);
+
   const filteredMediaItems = useMemo(() => {
     return filterTag.length > 0
       ? mediaItems.filter((mediaItem: any) =>
           filterTag.some((tag) => mediaItem.tags?.includes(tag))
         )
       : mediaItems;
-  }, [filterTag, mediaItems]);
+  }, [filterTag, mediaItems, loading]);
 
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * itemsPerPage;
@@ -114,5 +116,3 @@ export default function AIGallery({
     </div>
   );
 }
-
-

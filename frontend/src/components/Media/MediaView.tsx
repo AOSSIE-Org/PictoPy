@@ -1,6 +1,22 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, X, Play, Pause, RotateCw, Heart, Share2, Lock } from 'lucide-react';
-import ReactCrop, { Crop } from 'react-image-crop';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Edit,
+  Share2,
+  Check,
+  X,
+  SunMoon,
+  Contrast,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  Heart,
+  Play,
+  Pause,
+  Lock,
+} from 'lucide-react';
+import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { invoke } from '@tauri-apps/api/core';
 import { readFile } from '@tauri-apps/plugin-fs';
@@ -118,6 +134,15 @@ const MediaView: React.FC<MediaViewProps> = ({
     setRotation(0);
   };
 
+  const resetEditing = () => {
+    setIsEditing(false);
+    setFilter('');
+    setBrightness(100);
+    setContrast(100);
+    setCrop(undefined);
+    setCompletedCrop(undefined);
+  };
+
   const handlePrevItem = () => {
     setGlobalIndex(globalIndex > 0 ? globalIndex - 1 : allMedia.length - 1);
     resetZoom();
@@ -177,21 +202,23 @@ const MediaView: React.FC<MediaViewProps> = ({
             className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
             aria-label="Edit"
           >
-            <RotateCw className="h-6 w-6" />
+            <Edit className="h-6 w-6" />
           </button>
         )}
-        <button
-          onClick={toggleSlideshow}
-          className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Toggle Slideshow"
-        >
-          {isSlideshowActive ? (
-            <Pause className="h-5 w-5" />
-          ) : (
-            <Play className="h-5 w-5" />
-          )}
-          {isSlideshowActive ? 'Pause' : 'Slideshow'}
-        </button>
+        {type === 'image' && (
+          <button
+            onClick={toggleSlideshow}
+            className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Toggle Slideshow"
+          >
+            {isSlideshowActive ? (
+              <Pause className="h-5 w-5" />
+            ) : (
+              <Play className="h-5 w-5" />
+            )}
+            {isSlideshowActive ? 'Pause' : 'Slideshow'}
+          </button>
+        )}
         <button
           onClick={onClose}
           className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
@@ -211,6 +238,7 @@ const MediaView: React.FC<MediaViewProps> = ({
             style={{
               transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
               cursor: isDragging ? 'grabbing' : 'grab',
+              filter: `${filter} brightness(${brightness}%) contrast(${contrast}%)`,
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
@@ -225,7 +253,101 @@ const MediaView: React.FC<MediaViewProps> = ({
             className="h-full w-full object-contain"
           />
         )}
+
+        <button
+          onClick={handlePrevItem}
+          className="absolute left-4 top-1/2 z-50 flex items-center rounded-full bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </button>
+        <button
+          onClick={handleNextItem}
+          className="absolute right-4 top-1/2 z-50 flex items-center rounded-full bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+        >
+          <ChevronRight className="h-6 w-6" />
+        </button>
       </div>
+
+      {type === 'image' && (
+        <div className="absolute bottom-20 right-4 flex gap-2">
+          <button
+            onClick={handleZoomOut}
+            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Zoom Out"
+          >
+            <ZoomOut className="h-5 w-5" />
+          </button>
+          <button
+            onClick={resetZoom}
+            className="rounded-md bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+          >
+            Reset
+          </button>
+          <button
+            onClick={handleZoomIn}
+            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Zoom In"
+          >
+            <ZoomIn className="h-5 w-5" />
+          </button>
+          <button
+            onClick={handleRotate}
+            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Rotate"
+          >
+            <RotateCw className="h-5 w-5" />
+          </button>
+          {isEditing && (
+            <>
+              <button
+                onClick={handleEditComplete}
+                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                aria-label="Confirm Edit"
+              >
+                <Check className="h-5 w-5" />
+              </button>
+              <button
+                onClick={resetEditing}
+                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                aria-label="Cancel Edit"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <select
+                onChange={(e) => setFilter(e.target.value)}
+                className="rounded-md bg-white/20 px-2 py-2 text-white"
+              >
+                <option value="">No Filter</option>
+                <option value="grayscale(100%)">Grayscale</option>
+                <option value="sepia(100%)">Sepia</option>
+                <option value="invert(100%)">Invert</option>
+              </select>
+              <div className="flex items-center gap-2">
+                <SunMoon className="h-5 w-5 text-white" />
+                <input
+                  type="range"
+                  min="0"
+                  max="200"
+                  value={brightness}
+                  onChange={(e) => setBrightness(Number(e.target.value))}
+                  className="w-24"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Contrast className="h-5 w-5 text-white" />
+                <input
+                  type="range"
+                  min="0"
+                  max="200"
+                  value={contrast}
+                  onChange={(e) => setContrast(Number(e.target.value))}
+                  className="w-24"
+                />
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2">
         {allMedia.map((media, index) => (
