@@ -17,7 +17,6 @@ import {
   Play,
   Pause,
   Lock,
-  
 } from 'lucide-react';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -372,33 +371,31 @@ const MediaView: React.FC<MediaViewProps> = ({
             />
           </button>
         )}
-        {type==="image"?(
+        {type === 'image' ? (
           <button
-          onClick={() => setIsEditing(true)}
-          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Edit"
-        >
-          <Edit className="h-6 w-6" />
-        </button>
-
-        ):null}
-
-        {type==="image"?(
-
-          <button
-          onClick={toggleSlideshow}
-          className="rounded-full flex items-center gap-2 bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Toggle Slideshow"
+            onClick={() => setIsEditing(true)}
+            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Edit"
           >
-          {isSlideshowActive ? (
-            <Pause className="h-5 w-5" />
-          ) : (
-            <Play className="h-5 w-5" />
-          )}
-          {isSlideshowActive ? 'Pause' : 'Slideshow'}
+            <Edit className="h-6 w-6" />
           </button>
-        ):null}
-        
+        ) : null}
+
+        {type === 'image' ? (
+          <button
+            onClick={toggleSlideshow}
+            className="rounded-full flex items-center gap-2 bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Toggle Slideshow"
+          >
+            {isSlideshowActive ? (
+              <Pause className="h-5 w-5" />
+            ) : (
+              <Play className="h-5 w-5" />
+            )}
+            {isSlideshowActive ? 'Pause' : 'Slideshow'}
+          </button>
+        ) : null}
+
         <button
           onClick={onClose}
           className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
@@ -408,7 +405,6 @@ const MediaView: React.FC<MediaViewProps> = ({
         </button>
       </div>
 
-        
       <div
         className="relative flex h-full w-full items-center justify-center"
         onClick={(e) => {
@@ -418,6 +414,12 @@ const MediaView: React.FC<MediaViewProps> = ({
         {type === 'image' ? (
           <div
             id="zoomable-image"
+            //Close when clicked outside the image:
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                onClose();
+              }
+            }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -457,9 +459,9 @@ const MediaView: React.FC<MediaViewProps> = ({
           </div>
         ) : (
           <NetflixStylePlayer
-          videoSrc= {allMedia[globalIndex].url}
-          description=''
-          title=''
+            videoSrc={allMedia[globalIndex].url}
+            description=""
+            title=""
           />
         )}
 
@@ -476,123 +478,119 @@ const MediaView: React.FC<MediaViewProps> = ({
           <ChevronRight className="h-6 w-6" />
         </button>
       </div>
-          {
-            type==="image"?(
-
-              <div className="absolute bottom-20 right-4 flex gap-2">
-        <button
-          onClick={handleZoomOut}
-          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Zoom Out"
-        >
-          <ZoomOut className="h-5 w-5" />
-        </button>
-        <button
-          onClick={resetZoom}
-          className="rounded-md bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
-        >
-          Reset
-        </button>
-        <button
-          onClick={handleZoomIn}
-          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Zoom In"
-        >
-          <ZoomIn className="h-5 w-5" />
-        </button>
-        <button
-          onClick={handleRotate}
-          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Rotate"
-        >
-          <RotateCw className="h-5 w-5" />
-        </button>
-        {isEditing && (
-          <>
-            <button
-              onClick={handleEditComplete}
-              className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-              aria-label="Confirm Edit"
-            >
-              <Check className="h-5 w-5" />
-            </button>
-            <button
-              onClick={resetEditing}
-              className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-              aria-label="Cancel Edit"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <select
-              onChange={(e) => setFilter(e.target.value)}
-              className="rounded-md bg-white/20 px-2 py-2 text-white"
-            >
-              <option value="">No Filter</option>
-              <option value="grayscale(100%)">Grayscale</option>
-              <option value="sepia(100%)">Sepia</option>
-              <option value="invert(100%)">Invert</option>
-            </select>
-            <div className="flex items-center gap-2">
-              <SunMoon className="h-5 w-5 text-white" />
-              <input
-                type="range"
-                min="0"
-                max="200"
-                value={brightness}
-                onChange={(e) => setBrightness(Number(e.target.value))}
-                className="w-24"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Contrast className="h-5 w-5 text-white" />
-              <input
-                type="range"
-                min="0"
-                max="200"
-                value={contrast}
-                onChange={(e) => setContrast(Number(e.target.value))}
-                className="w-24"
-              />
-            </div>
-          </>
-        )}
-      </div>
-            ):null
-          }
-      
+      {type === 'image' ? (
+        <div className="absolute bottom-20 right-4 flex gap-2">
+          <button
+            onClick={handleZoomOut}
+            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Zoom Out"
+          >
+            <ZoomOut className="h-5 w-5" />
+          </button>
+          <button
+            onClick={resetZoom}
+            className="rounded-md bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+          >
+            Reset
+          </button>
+          <button
+            onClick={handleZoomIn}
+            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Zoom In"
+          >
+            <ZoomIn className="h-5 w-5" />
+          </button>
+          <button
+            onClick={handleRotate}
+            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Rotate"
+          >
+            <RotateCw className="h-5 w-5" />
+          </button>
+          {isEditing && (
+            <>
+              <button
+                onClick={handleEditComplete}
+                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                aria-label="Confirm Edit"
+              >
+                <Check className="h-5 w-5" />
+              </button>
+              <button
+                onClick={resetEditing}
+                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                aria-label="Cancel Edit"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <select
+                onChange={(e) => setFilter(e.target.value)}
+                className="rounded-md bg-white/20 px-2 py-2 text-white"
+              >
+                <option value="">No Filter</option>
+                <option value="grayscale(100%)">Grayscale</option>
+                <option value="sepia(100%)">Sepia</option>
+                <option value="invert(100%)">Invert</option>
+              </select>
+              <div className="flex items-center gap-2">
+                <SunMoon className="h-5 w-5 text-white" />
+                <input
+                  type="range"
+                  min="0"
+                  max="200"
+                  value={brightness}
+                  onChange={(e) => setBrightness(Number(e.target.value))}
+                  className="w-24"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Contrast className="h-5 w-5 text-white" />
+                <input
+                  type="range"
+                  min="0"
+                  max="200"
+                  value={contrast}
+                  onChange={(e) => setContrast(Number(e.target.value))}
+                  className="w-24"
+                />
+              </div>
+            </>
+          )}
+        </div>
+      ) : null}
 
       {/* Thumbnails */}
-      {type==="image"?(
+      {type === 'image' ? (
         <div>
           <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2 opacity-0 transition-opacity duration-300 hover:opacity-100">
-        {allMedia.map((media, index) => (
-          <div
-            key={index}
-            onClick={() => handleThumbnailClick(index)}
-            className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
-              index === globalIndex
-                ? 'border-blue-500 shadow-lg'
-                : 'border-transparent'
-            } cursor-pointer transition-transform hover:scale-105`}
-          >
-            {isFavorite(media.path || '') && (
-              <div className="absolute right-1 top-1 z-10">
-                <Heart className="h-4 w-4 fill-current text-red-500" />
+            {allMedia.map((media, index) => (
+              <div
+                key={index}
+                onClick={() => handleThumbnailClick(index)}
+                className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
+                  index === globalIndex
+                    ? 'border-blue-500 shadow-lg'
+                    : 'border-transparent'
+                } cursor-pointer transition-transform hover:scale-105`}
+              >
+                {isFavorite(media.path || '') && (
+                  <div className="absolute right-1 top-1 z-10">
+                    <Heart className="h-4 w-4 fill-current text-red-500" />
+                  </div>
+                )}
+                {type === 'image' ? (
+                  <img
+                    src={media.thumbnailUrl}
+                    alt={`thumbnail-${index}`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
               </div>
-            )}
-            {type === 'image' ? (
-              <img
-                src={media.url || '/placeholder.svg'}
-                alt={`thumbnail-${index}`}
-                className="h-full w-full object-cover"
-              />
-            ) : null}
+            ))}
           </div>
-        ))}
-      </div>
         </div>
-      ):null}
-      
+      ) : null}
+
       {notification && (
         <div
           className={`fixed left-1/2 top-4 -translate-x-1/2 transform rounded-md p-4 ${

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { MoreVertical, Images } from 'lucide-react';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { AlbumCardProps } from '@/types/Album';
-
+import { extractThumbnailPath } from '@/hooks/useImages';
 const AlbumCard: React.FC<AlbumCardProps> = ({
   album,
   onClick,
@@ -25,7 +25,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({
         )}
         {album.imageCount ? (
           <img
-            src={convertFileSrc(album.coverImage)}
+            src={convertFileSrc(extractThumbnailPath(album.coverImage))}
             alt={`Cover for ${album.title}`}
             className="h-full w-full object-cover"
           />

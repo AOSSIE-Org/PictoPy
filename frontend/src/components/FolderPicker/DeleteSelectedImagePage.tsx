@@ -29,7 +29,7 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
   setIsVisibleSelectedImage,
   onError,
   uniqueTags,
-  mediaItems
+  mediaItems,
 }) => {
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
 
@@ -38,16 +38,15 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
     queryKey: ['all-images'],
   });
 
-  
   const { mutate: deleteMultipleImages, isPending: isAddingImages } =
-  usePictoMutation({
-    mutationFn: delMultipleImages,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-images'] });
-    },
-    autoInvalidateTags: ['ai-tagging-images', 'ai'],
-  });
-  
+    usePictoMutation({
+      mutationFn: delMultipleImages,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['all-images'] });
+      },
+      autoInvalidateTags: ['ai-tagging-images', 'ai'],
+    });
+
   // Extract the array of image paths
   const allImages: string[] = response?.image_files || [];
   const toggleImageSelection = (imagePath: string) => {
@@ -73,33 +72,28 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
     }
   };
 
-
   const [filterTag, setFilterTag] = useState<string>(uniqueTags[0]);
 
   const handleFilterTag = (value: string) => {
-    setSelectedImages([]); 
-    setFilterTag(value); 
-    
-    if(value.length === 0) {
+    setSelectedImages([]);
+    setFilterTag(value);
+
+    if (value.length === 0) {
       setSelectedImages(allImages);
       return;
     }
 
     const selectedImagesPaths: string[] = [];
-    
+
     mediaItems.forEach((ele) => {
       if (ele.tags?.includes(value)) {
         ele.imagePath && selectedImagesPaths.push(ele.imagePath);
       }
     });
-  
-    console.log("Selected Images Path = ", selectedImagesPaths);
+
+    console.log('Selected Images Path = ', selectedImagesPaths);
     setSelectedImages(selectedImagesPaths);
   };
-  
-
-
-
 
   const getImageName = (path: string) => {
     return path.split('\\').pop() || path;
@@ -126,7 +120,7 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
               >
                 <Filter className="h-4 w-4 text-gray-700 dark:text-white" />
                 <p className="hidden text-sm text-gray-700 dark:text-white lg:inline">
-                  Select Tag :  {filterTag || 'tags'}
+                  Select Tag : {filterTag || 'tags'}
                 </p>
               </Button>
             </DropdownMenuTrigger>
@@ -138,7 +132,7 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
               <DropdownMenuRadioGroup
                 className="overflow-auto rounded-lg bg-gray-950 text-white"
                 value={filterTag}
-                onValueChange={(value)=>handleFilterTag(value)}
+                onValueChange={(value) => handleFilterTag(value)}
               >
                 <DropdownMenuRadioItem
                   value=""
@@ -175,7 +169,7 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
               />
               <img
                 src={thumbnailUrl}
-                alt={`Image ${ imagePath && getImageName(imagePath)}`}
+                alt={`Image ${imagePath && getImageName(imagePath)}`}
                 className="h-40 w-full rounded-lg object-cover"
               />
               <div className="absolute bottom-0 left-0 right-0 truncate rounded-b-lg bg-black bg-opacity-50 p-1 text-xs text-white">

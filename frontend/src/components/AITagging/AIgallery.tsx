@@ -27,20 +27,16 @@ export default function AIGallery({
   type: 'image' | 'video';
   folderPath: string;
 }) {
-  const {
-    successData: mediaItems = [],
-    isLoading: loading,
-    isError,
-  } = usePictoQuery({
-    queryFn: getAllImageObjects,
+  const { successData, isLoading: isGeneratingTags } = usePictoQuery({
+    queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
-  const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation(
-    {
+  const { mutate: generateThumbnailAPI, isPending: isGeneratingThumbnails } =
+    usePictoMutation({
       mutationFn: generateThumbnails,
       autoInvalidateTags: ['ai-tagging-images', 'ai'],
-    },
-  );
+    });
+  let mediaItems = successData ?? [];
   const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
@@ -59,7 +55,7 @@ export default function AIGallery({
           filterTag.some((tag) => mediaItem.tags.includes(tag)),
         )
       : mediaItems;
-  }, [filterTag, mediaItems, loading]);
+  }, [filterTag, mediaItems, isGeneratingTags]);
 
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * pageNo;
@@ -79,19 +75,19 @@ export default function AIGallery({
   }, []);
 
   const handleFolderAdded = useCallback(async () => {
-    await generateThumbnail(folderPath);
-  }, [folderPath, generateThumbnail]);
+    generateThumbnailAPI([folderPath]);
+  }, []);
 
   useEffect(() => {
-    handleFolderAdded();
-  }, [folderPath, handleFolderAdded]);
+    generateThumbnailAPI([folderPath]);
+  }, [folderPath]);
 
-  if (isCreating || loading) {
-    return <LoadingScreen />;
-  }
-
-  if (isError) {
-    return <div>Error loading media items.</div>;
+  if (isGeneratingThumbnails || isGeneratingTags) {
+    return (
+      <div>
+        <LoadingScreen />
+      </div>
+    );
   }
 
   return (
@@ -105,7 +101,7 @@ export default function AIGallery({
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
             onFolderAdded={handleFolderAdded}
-            isLoading={loading}
+            isLoading={isGeneratingTags}
             isVisibleSelectedImage={isVisibleSelectedImage}
             setIsVisibleSelectedImage={setIsVisibleSelectedImage}
           />
@@ -135,7 +131,7 @@ export default function AIGallery({
                       className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
                     >
                       <p className="hidden lg:inline">
-                        Num of images per page: {pageNo}
+                        Num of images per page : {pageNo}
                       </p>
                     </Button>
                   </DropdownMenuTrigger>
