@@ -23,7 +23,7 @@ const AlbumView: React.FC<AlbumViewProps> = ({
     isLoading,
     errorMessage: error,
   } = usePictoQuery({
-    queryFn: async () => await viewYourAlbum(albumName),
+    queryFn: async () => await viewYourAlbum({ album_name: albumName || '' }),
     queryKey: ['view-album', albumName],
   });
   const { mutate: removeImage, isPending: isRemovingImage } = usePictoMutation({

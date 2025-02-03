@@ -21,6 +21,9 @@ const CreateAlbumForm: React.FC<CreateAlbumFormProps> = ({
 }) => {
   const [newAlbumName, setNewAlbumName] = useState('');
   const [newAlbumDescription, setNewAlbumDescription] = useState('');
+  const [isHidden, setIsHidden] = useState(false);
+  const [password, setPassword] = useState('');
+
   const { mutate: createAlbum, isPending: isCreating } = usePictoMutation({
     mutationFn: createAlbums,
     onSuccess: (response) => {
@@ -42,7 +45,14 @@ const CreateAlbumForm: React.FC<CreateAlbumFormProps> = ({
         createAlbum({
           name: newAlbumName.trim(),
           description: newAlbumDescription.trim(),
+          is_hidden: isHidden,
+          password: isHidden ? password : '',
         });
+        setNewAlbumName('');
+        setNewAlbumDescription('');
+        setPassword('');
+        setIsHidden(false);
+        closeForm();
       } catch (err) {
         onError('Error Creating Album', err);
       }
@@ -70,6 +80,25 @@ const CreateAlbumForm: React.FC<CreateAlbumFormProps> = ({
             onChange={(e) => setNewAlbumDescription(e.target.value)}
             placeholder="Album description (optional)"
           />
+          <div>
+            <label>
+              <input
+                type="checkbox"
+                checked={isHidden}
+                onChange={() => setIsHidden(!isHidden)}
+              />
+              Mark as Hidden
+            </label>
+          </div>
+          {isHidden && (
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password for hidden album"
+              required
+            />
+          )}
         </div>
         <DialogFooter>
           <Button

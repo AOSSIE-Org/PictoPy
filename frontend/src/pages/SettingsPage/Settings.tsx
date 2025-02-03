@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
 import { deleteCache } from '@/services/cacheService';
 import { Button } from '@/components/ui/button';
-import { FolderSync, Trash2 } from 'lucide-react';
+import { restartServer } from '@/utils/serverUtils';
+import { isProd } from '@/utils/isProd';
+import { FolderSync, Trash2, Server } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/LocalStorage';
 import LoadingScreen from '@/components/ui/LoadingScreen/LoadingScreen';
 import ErrorDialog from '@/components/Album/Error';
@@ -12,6 +14,7 @@ import {
   generateThumbnails,
 } from '../../../api/api-functions/images.ts';
 const Settings: React.FC = () => {
+  const [isLoading, setIsLoading] = useState(false);
   const [currentPaths, setCurrentPaths] = useLocalStorage<string[]>(
     'folderPaths',
     [],
@@ -48,7 +51,6 @@ const Settings: React.FC = () => {
     setCurrentPaths([...currentPaths, ...newPaths]);
     await deleteCache();
   };
-
   const handleDeleteCache = async () => {
     try {
       const result = await deleteCache();
@@ -72,7 +74,7 @@ const Settings: React.FC = () => {
     }
   };
 
-  if (isGeneratingThumbnails || isDeletingThumbnails) {
+  if (isGeneratingThumbnails || isDeletingThumbnails || isLoading) {
     return (
       <div>
         <LoadingScreen />
@@ -130,6 +132,16 @@ const Settings: React.FC = () => {
             <FolderSync className="text-gray-5 mr-2 h-5 w-5 dark:text-gray-50" />
             Refresh Cache
           </Button>
+          {isProd() && (
+            <Button
+              onClick={() => restartServer(setIsLoading)}
+              variant="outline"
+              className="h-10 w-full border-gray-500 hover:bg-accent dark:hover:bg-white/10"
+            >
+              <Server className="text-gray-5 mr-2 h-5 w-5 dark:text-gray-50" />
+              Restart Server
+            </Button>
+          )}
         </div>
       </div>
       <ErrorDialog

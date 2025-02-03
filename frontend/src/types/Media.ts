@@ -31,6 +31,7 @@ export interface MediaViewProps {
   currentPage: number;
   itemsPerPage: number;
   type: 'image' | 'video';
+  isSecureFolder?: boolean;
 }
 
 export interface YearOption {
