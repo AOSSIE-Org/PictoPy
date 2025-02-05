@@ -26,6 +26,7 @@ data-encoding = "2.3.2"
 arrayref = "0.3.6"
 directories = "4.0"
 chrono = { version = "0.4.26", features = ["serde"] }
+fs2 = "0.4"
 
 base64 = "0.21.0"
 rand = "0.8.5"

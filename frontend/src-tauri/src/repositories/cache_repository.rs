@@ -1,6 +1,7 @@
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
+use fs2::FileExt;
 
 pub struct CacheRepository;
 
@@ -21,11 +22,18 @@ impl CacheRepository {
             .truncate(true)
             .open(cache_file_path)?;
 
+        file.lock_exclusive()?;
+
+        let mut writer = std::io::BufWriter::new(&file);
+
         for path in paths {
             if let Some(path_str) = path.to_str() {
-                writeln!(file, "{}", path_str)?;
+                writeln!(writer, "{}", path_str)?;
             }
         }
+
+        file.unlock()?;
+        
         Ok(())
     }
 
