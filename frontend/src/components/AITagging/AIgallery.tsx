@@ -1,74 +1,55 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import FilterControls from './FilterControls';
-import MediaGrid from '../Media/Mediagrid';
-import { LoadingScreen } from '@/components/ui/LoadingScreen/LoadingScreen';
+import MediaGrid from '../Media/MediaGrid';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+
+import { MediaGalleryProps } from '@/types/Media';
 import MediaView from '../Media/MediaView';
 import PaginationControls from '../ui/PaginationControls';
 import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtensio';
-import {
-  getAllImageObjects,
-  generateThumbnails,
-} from '../../../api/api-functions/images';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
+import { getAllImageObjects, generateThumbnails } from '../../../api/api-functions/images';
 
 export default function AIGallery({
   title,
   type,
-  folderPath,
-}: {
-  title: string;
-  type: 'image' | 'video';
-  folderPath: string;
-}) {
-  const {
-    successData: mediaItems = [],
-    isLoading: loading,
-    isError,
-  } = usePictoQuery({
+}: MediaGalleryProps) {
+  const { successData: mediaItems = [], isLoading: loading, isError } = usePictoQuery({
     queryFn: getAllImageObjects,
     queryKey: ['ai-tagging-images', 'ai'],
   });
-  const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation(
-    {
-      mutationFn: generateThumbnails,
-      autoInvalidateTags: ['ai-tagging-images', 'ai'],
-    },
-  );
+
+  const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation({
+    mutationFn: generateThumbnails,
+    autoInvalidateTags: ['ai-tagging-images', 'ai'],
+  });
+
   const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
-  const [isVisibleSelectedImage, setIsVisibleSelectedImage] =
-    useState<boolean>(true);
+  const [isVisibleSelectedImage, setIsVisibleSelectedImage] = useState<boolean>(true);
   const itemsPerRow: number = 3;
-  const noOfPages: number[] = Array.from(
-    { length: 41 },
-    (_, index) => index + 10,
-  );
+
+  const noOfPages: number[] = Array.from({ length: 41 }, (_, index) => index + 10);
+  const [pageNo, setpageNo] = useState<number>(20);
+  const itemsPerPage: number = pageNo;
+
   const filteredMediaItems = useMemo(() => {
     return filterTag.length > 0
       ? mediaItems.filter((mediaItem: any) =>
-          filterTag.some((tag) => mediaItem.tags.includes(tag)),
+          filterTag.some((tag) => mediaItem.tags?.includes(tag))
         )
       : mediaItems;
   }, [filterTag, mediaItems, loading]);
 
-  const [pageNo, setpageNo] = useState<number>(20);
-
   const currentItems = useMemo(() => {
-    const indexOfLastItem = currentPage * pageNo;
-    const indexOfFirstItem = indexOfLastItem - pageNo;
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     return filteredMediaItems.slice(indexOfFirstItem, indexOfLastItem);
-  }, [filteredMediaItems, currentPage, pageNo]);
+  }, [filteredMediaItems, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(filteredMediaItems.length / pageNo);
+  const totalPages = Math.ceil(filteredMediaItems.length / itemsPerPage);
 
   const openMediaViewer = useCallback((index: number) => {
     setSelectedMediaIndex(index);
@@ -80,15 +61,11 @@ export default function AIGallery({
   }, []);
 
   const handleFolderAdded = useCallback(async () => {
-    await generateThumbnail(folderPath);
-  }, [folderPath, generateThumbnail]);
+    // Implement folder logic if needed
+  }, []);
 
-  useEffect(() => {
-    handleFolderAdded();
-  }, [folderPath, handleFolderAdded]);
-
-  if (isCreating || loading) {
-    return <LoadingScreen />;
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
   if (isError) {
@@ -98,7 +75,7 @@ export default function AIGallery({
   return (
     <div className="w-full">
       <div className="mx-auto px-2 pb-8 dark:bg-background dark:text-foreground">
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between">
           {isVisibleSelectedImage && (
             <h1 className="text-2xl font-bold">{title}</h1>
           )}
@@ -168,12 +145,9 @@ export default function AIGallery({
           <MediaView
             initialIndex={selectedMediaIndex}
             onClose={closeMediaViewer}
-            allMedia={filteredMediaItems.map((item: any) => ({
-              url: item.url,
-              path: item?.imagePath,
-            }))}
+            allMedia={filteredMediaItems.map((item: any) => item.src)}
             currentPage={currentPage}
-            itemsPerPage={pageNo}
+            itemsPerPage={itemsPerPage}
             type={type}
           />
         )}

@@ -5,6 +5,7 @@ import { LoadingScreen } from '@/components/LoadingScreen/LoadingScreen';
 
 export const InitialPage: React.FC = () => {
   const { loading, handleFolderPathChange } = useInitialPageController();
+
   if (loading) {
     return <LoadingScreen />;
   }

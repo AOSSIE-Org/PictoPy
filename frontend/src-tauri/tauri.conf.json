@@ -34,6 +34,14 @@
   "plugins": {
     "fs": {
       "active": true
+    },
+    "updater": {
+      "active": true,
+      "endpoints": ["https://server.com/api/v1/tauri/update"],
+      "dialog": true,
+      "pubkey": " "
+    }
+
     }
   },
   "app": {

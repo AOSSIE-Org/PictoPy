@@ -101,11 +101,11 @@ module.exports = {
         'button-hover': 'button-hover 0.3s ease-in-out',
         'button-hover-dark': 'button-hover-dark 0.3s ease-in-out',
       },
-    },
-    borderRadius: {
-      lg: 'var(--radius)',
-      md: 'calc(var(--radius) - 2px)',
-      sm: 'calc(var(--radius) - 4px)',
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
+      },
     },
   },
   plugins: [tailwindcssAnimate],
