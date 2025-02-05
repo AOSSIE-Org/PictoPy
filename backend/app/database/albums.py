@@ -15,6 +15,7 @@ def create_albums_table():
         """
         CREATE TABLE IF NOT EXISTS albums (
             album_name TEXT PRIMARY KEY,
+            is_hidden BOOLEAN DEFAULT FALSE,
             image_ids TEXT,
             description TEXT,
             date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
