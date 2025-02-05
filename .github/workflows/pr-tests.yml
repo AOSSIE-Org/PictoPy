@@ -1,0 +1,52 @@
+name: PR Tests Workflow
+
+on:
+  pull_request:
+    branches:
+      - main  
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest 
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Frontend Tests
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'  
+
+      - name: Install and Test Frontend
+        run: |
+          cd frontend
+          npm install
+          npm test
+
+      # Backend Tests
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11' 
+
+      - name: Install Backend Dependencies and Run Tests
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
+          pytest
+
+      # Tauri (Rust) Tests
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run Tauri Tests
+        run: |
+          cd frontend/src-tauri
+          cargo test
