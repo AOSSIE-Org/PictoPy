@@ -119,7 +119,7 @@ export default function MediaCard({ item, type }: MediaCardProps) {
       {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
-      {/* Title and Info Section (Merged Correctly) */}
+      {/* Title and Info Section */}
       <div className="absolute bottom-0 left-0 w-full translate-y-full transform bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 transition-transform duration-500 group-hover:translate-y-0">
         <h3 className="text-lg font-semibold text-white line-clamp-1">
           {item.title}
