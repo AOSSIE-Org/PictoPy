@@ -17,6 +17,8 @@ from app.routes.albums import router as albums_router
 from app.routes.facetagging import router as tagging_router
 import multiprocessing
 from app.custom_logging import CustomizeLogger
+from app.database.ner import (ner_table)
+from app.routes.ner import router as ner_router
 
 
 @asynccontextmanager
@@ -28,6 +30,7 @@ async def lifespan(app: FastAPI):
     create_albums_table()
     cleanup_face_embeddings()
     init_face_cluster()
+    ner_table()
     yield
     face_cluster = get_face_cluster()
     if face_cluster:
@@ -56,6 +59,7 @@ app.include_router(test_router, prefix="/test", tags=["Test"])
 app.include_router(images_router, prefix="/images", tags=["Images"])
 app.include_router(albums_router, prefix="/albums", tags=["Albums"])
 app.include_router(tagging_router, prefix="/tag", tags=["Tagging"])
+app.include_router(ner_router, prefix="/ner", tags=["ner"])
 
 
 # Runs when we use this command: python3 main.py (As in production)
