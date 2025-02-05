@@ -57,6 +57,7 @@ jobs:
       - name: Install Dependencies for Tauri
         run: |
           sudo apt-get update -y
+          deb http://gb.archive.ubuntu.com/ubuntu jammy main
           sudo apt-get install -y \
             curl build-essential libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev \
             wget xz-utils libssl-dev libglib2.0-dev libgirepository1.0-dev pkg-config \
