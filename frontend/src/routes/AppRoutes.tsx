@@ -8,20 +8,22 @@ import { InitialPage } from '@/pages/Setupscreen/Setup';
 
 export const AppRoutes: React.FC = () => {
   const location = useLocation();
-  const isLayoutRoute = Object.values(ROUTES.LAYOUT).includes(
-    location.pathname,
-  );
+  const isLayoutRoute = Object.values(ROUTES.LAYOUT).includes(location.pathname);
 
   return (
-    <>
-      <Routes>
-        <Route path={ROUTES.INITIAL} element={<InitialPage />} />
-      </Routes>
+    <Routes>
+      <Route path={ROUTES.INITIAL} element={<InitialPage />} />
       {isLayoutRoute && (
-        <Layout>
-          <LayoutRoutes />
-        </Layout>
+        <Route
+          path="*"
+          element={
+            <Layout>
+              <LayoutRoutes />
+            </Layout>
+          }
+        />
       )}
-    </>
+    </Routes>
   );
 };
+
