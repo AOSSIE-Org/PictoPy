@@ -3,7 +3,8 @@ import torch
 
 # Pre-trained model name
 model_name = "dslim/bert-base-NER"
-model_path = r'C:\Users\sanid\Downloads\gsoc_@pictopy\PictoPy\backend\app\models\bert-base-NER.onnx'
+# should always be in models directory
+model_path = r'C:\Users\sanid\Downloads\gsoc\PictoPy\backend\app\models\bert-base-NER.onnx'
 
 # Load the pre-trained model for token classification
 model = AutoModelForTokenClassification.from_pretrained(model_name)
