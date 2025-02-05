@@ -59,3 +59,4 @@ watchfiles==0.21.0
 websockets==12.0
 wsproto==1.2.0
 pyinstaller==6.11
+pytest>=7.0,<8.0

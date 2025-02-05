@@ -3,35 +3,44 @@ name: PR Tests Workflow
 on:
   pull_request:
     branches:
-      - main  
+      - main 
 
 jobs:
-  run-tests:
-    runs-on: ubuntu-latest 
+  # -------------------- Frontend Tests --------------------
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Frontend Tests
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'  
+          node-version: '18'
 
-      - name: Install and Test Frontend
+      - name: Install Dependencies & Run Tests
         run: |
           cd frontend
           npm install
           npm test
 
-      # Backend Tests
+  # -------------------- Backend Tests --------------------
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11' 
+          python-version: '3.11'
 
-      - name: Install Backend Dependencies and Run Tests
+      - name: Install Dependencies & Run Tests
         run: |
           cd backend
           python -m pip install --upgrade pip
@@ -39,7 +48,15 @@ jobs:
           pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
           pytest
 
-      # Tauri (Rust) Tests
+  # -------------------- Tauri (Rust) Tests --------------------
+  tauri-tests:
+    name: Tauri Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
