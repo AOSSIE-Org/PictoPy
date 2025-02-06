@@ -13,8 +13,8 @@ dependencies = [
  "data-encoding",
  "directories",
  "image",
- "ring",
  "rand 0.8.5",
+ "ring",
  "serde",
  "serde_json",
  "tauri",
@@ -24,6 +24,7 @@ dependencies = [
  "tauri-plugin-shell",
  "tauri-plugin-store",
  "walkdir",
+ "winapi",
 ]
 
 [[package]]

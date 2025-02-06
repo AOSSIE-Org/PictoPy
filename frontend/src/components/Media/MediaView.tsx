@@ -20,6 +20,9 @@ import {
   Folder,
   ExternalLink,
   Sliders,
+  Ratio,
+  Instagram,
+  Square,
 } from 'lucide-react';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -48,6 +51,8 @@ const MediaView: React.FC<MediaViewProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<Crop>();
+  const[isCropmenu,setisCropmenu]=useState(false)
+  const[aspect,setaspect]=useState<number | undefined>(undefined)
   const [filter, setFilter] = useState('');
   const [brightness, setBrightness] = useState(0);
   const [contrast, setContrast] = useState(0);
@@ -57,6 +62,8 @@ const MediaView: React.FC<MediaViewProps> = ({
   const [sharpness, setSharpness] = useState(0);
   const [vignette, setVignette] = useState(0);
   const [highlights, setHighlights] = useState(0);
+  const[blur,setBlur]=useState(0)
+  const[huerotation,sethuerotation]=useState(0)
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'error';
@@ -169,6 +176,8 @@ const MediaView: React.FC<MediaViewProps> = ({
     setHighlights(0);
     setPosition({ x: 0, y: 0 });
     setScale(1);
+    setBlur(0)
+    sethuerotation(0)
   };
 
   const showNotification = useCallback(
@@ -268,6 +277,8 @@ const MediaView: React.FC<MediaViewProps> = ({
           filter,
           brightness,
           contrast,
+          blur,
+          huerotation,
           vibrance,
           exposure,
           temperature,
@@ -298,6 +309,8 @@ const MediaView: React.FC<MediaViewProps> = ({
     sharpness,
     vignette,
     highlights,
+    blur,
+    huerotation,
     allMedia,
     globalIndex,
     isSecureFolder,
@@ -504,6 +517,7 @@ const MediaView: React.FC<MediaViewProps> = ({
               <div className="relative inline-block">
                 <ReactCrop
                   crop={crop}
+                  aspect={aspect}
                   onChange={(c) => setCrop(c)}
                   onComplete={(c) => setCompletedCrop(c)}
                 >
@@ -514,20 +528,23 @@ const MediaView: React.FC<MediaViewProps> = ({
                     alt={`image-${globalIndex}`}
                     style={{
                       filter: `
-                      brightness(${100 + exposure + highlights / 2}%) 
-                      contrast(${100 + contrast}%) 
-                      saturate(${1 + vibrance / 100}) 
-                      hue-rotate(${temperature > 0 ? temperature * 0.25 : temperature * 0.8}deg) 
-                      sepia(${Math.abs(temperature) / 200}) 
-                      saturate(${temperature > 0 ? 1.2 : 1.0}) 
-                      brightness(${temperature > 0 ? 1.05 : 1.0}) 
-                      ${sharpness > 0 ? `url(#sharpness)` : ''} 
-                      ${filter} 
+                        brightness(${100 + exposure + highlights / 2}%) 
+                        contrast(${100 + contrast}%) 
+                        hue-rotate(${huerotation}deg)
+                        blur(${blur/10}px) /* Adjusted blur value */
+                        saturate(${1 + vibrance / 100}) 
+                        hue-rotate(${temperature > 0 ? temperature * 0.25 : temperature * 0.8}deg) 
+                        sepia(${Math.abs(temperature) / 200}) 
+                        saturate(${temperature > 0 ? 1.2 : 1.0}) 
+                        brightness(${temperature > 0 ? 1.05 : 1.0}) 
+                        ${sharpness > 0 ? `url(#sharpness)` : ''} 
+                        ${filter} 
                       `.trim(),
                       display: 'block',
                       width: '100%',
                     }}
-                  />
+                    
+                  />  
                   <svg width="0" height="0">
                     <filter id="sharpness">
                       <feConvolveMatrix
@@ -660,9 +677,9 @@ const MediaView: React.FC<MediaViewProps> = ({
                 <Sliders className="h-5 w-5" />
               </button>
               {showAdjustMenu && (
-                <div className="absolute bottom-full right-0 mb-2 w-64 rounded-md bg-white/20 p-4 backdrop-blur-md">
-                  <div className="mb-2">
-                    <label className="block text-sm font-medium text-white">
+                <div className="absolute bottom-full right-0 mb-2 w-64 rounded-md bg-white/20 p-4 backdrop-blur-md  ">
+                  <div className="mb-2 ">
+                    <label className="block text-sm font-medium text-white ">
                       Brightness
                     </label>
                     <input
@@ -671,10 +688,10 @@ const MediaView: React.FC<MediaViewProps> = ({
                       max="100"
                       value={brightness}
                       onChange={(e) => setBrightness(Number(e.target.value))}
-                      className="w-full"
+                      className="w-full cursor-pointer"
                     />
                   </div>
-                  <div className="mb-2">
+                  <div className="mb-2 ">
                     <label className="block text-sm font-medium text-white">
                       Contrast
                     </label>
@@ -684,7 +701,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                       max="100"
                       value={contrast}
                       onChange={(e) => setContrast(Number(e.target.value))}
-                      className="w-full"
+                      className="w-full cursor-pointer"
                     />
                   </div>
                   <div className="mb-2">
@@ -697,7 +714,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                       max="100"
                       value={vibrance}
                       onChange={(e) => setVibrance(Number(e.target.value))}
-                      className="w-full"
+                      className="w-full cursor-pointer"
                     />
                   </div>
                   <div className="mb-2">
@@ -710,10 +727,36 @@ const MediaView: React.FC<MediaViewProps> = ({
                       max="100"
                       value={exposure}
                       onChange={(e) => setExposure(Number(e.target.value))}
-                      className="w-full"
+                      className="w-full cursor-pointer"
                     />
                   </div>
                   <div className="mb-2">
+                    <label className="block text-sm font-medium text-white">
+                      Blur
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={blur}
+                      onChange={(e) => setBlur(Number(e.target.value))}
+                      className="w-full cursor-pointer"
+                    />
+                  </div>
+                  <div className="mb-2 ">
+                    <label className="block text-sm font-medium text-white">
+                      Hue
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="360"
+                      value={huerotation}
+                      onChange={(e) => sethuerotation(Number(e.target.value))}
+                      className="w-full cursor-pointer"
+                    />
+                  </div>
+                  <div className="mb-2 ">
                     <label className="block text-sm font-medium text-white">
                       Temperature
                     </label>
@@ -723,10 +766,10 @@ const MediaView: React.FC<MediaViewProps> = ({
                       max="100"
                       value={temperature}
                       onChange={(e) => setTemperature(Number(e.target.value))}
-                      className="w-full"
+                      className="w-full cursor-pointer"
                     />
                   </div>
-                  <div className="mb-2">
+                  <div className="mb-2 ">
                     <label className="block text-sm font-medium text-white">
                       Sharpness
                     </label>
@@ -736,10 +779,10 @@ const MediaView: React.FC<MediaViewProps> = ({
                       max="100"
                       value={sharpness}
                       onChange={(e) => setSharpness(Number(e.target.value))}
-                      className="w-full"
+                      className="w-full cursor-pointer"
                     />
                   </div>
-                  <div className="mb-2">
+                  <div className="mb-2 ">
                     <label className="block text-sm font-medium text-white">
                       Vignette
                     </label>
@@ -749,10 +792,10 @@ const MediaView: React.FC<MediaViewProps> = ({
                       max="100"
                       value={vignette}
                       onChange={(e) => setVignette(Number(e.target.value))}
-                      className="w-full"
+                      className="w-full cursor-pointer"
                     />
                   </div>
-                  <div className="mb-2">
+                  <div className="mb-2 " >
                     <label className="block text-sm font-medium text-white">
                       Highlights
                     </label>
@@ -762,16 +805,65 @@ const MediaView: React.FC<MediaViewProps> = ({
                       max="100"
                       value={highlights}
                       onChange={(e) => setHighlights(Number(e.target.value))}
-                      className="w-full"
+                      className="w-full cursor-pointer"
                     />
                   </div>
                 </div>
               )}
+              {/*CropMenu*/}
+         <button
+                onClick={()=>{
+                  setisCropmenu(!isCropmenu);
+                }}
+                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                aria-label="Adjust"
+              >
+                <Ratio className="h-5 w-5" />
+              </button>
+              {isCropmenu  && (
+              <>
+                <div className="absolute bottom-full right-0 mb-2 w-32 rounded-md bg-white/20  backdrop-blur-sm text-white  flex flex-col justify-center items-center ">
+                <div className='mb-2 w-full hover:bg-gray-700 text-center cursor-pointer p-2' onClick={()=>{
+                  setaspect(16/9)
+                   setisCropmenu(false)
+                }}>
+                  <button>16/9</button>
+                </div>
+                <div className='mb-2 w-full hover:bg-gray-700 text-center cursor-pointer p-2' onClick={()=>{
+                  setaspect(3/4)
+                  setisCropmenu(false)
+                }}>
+                  <button>3/4</button>
+                </div>
+                <div className='mb-2 w-full hover:bg-gray-700 text-center cursor-pointer p-2' onClick={()=>{
+                  setaspect(1/1)
+                  setisCropmenu(false)
+                }}>
+                  <button>  <Square className="h-5 w-5" /></button>
+                </div>
+                <div className='mb-2 w-full hover:bg-gray-700 text-center cursor-pointer p-2' onClick={()=>{
+                  setaspect(864/1080)
+                  setisCropmenu(false)
+                }}>
+                  <button>
+                    <Instagram className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className='mb-2 w-full hover:bg-gray-700 text-center cursor-pointer p-2' onClick={()=>{
+                  setaspect(undefined)
+                   setisCropmenu(false)
+                }}>
+                  <button>  <X className="h-5 w-5" /></button>
+                </div>
+                </div>
+              </>
+              )}
             </>
           )}
+           
         </div>
       ) : null}
-
+     
       {/* Thumbnails */}
       {type === 'image' ? (
         <div>

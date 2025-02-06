@@ -14,5 +14,8 @@
   },
   "devDependencies": {
     "husky": "^9.1.7"
+  },
+  "dependencies": {
+    "react-cropper": "^2.3.3"
   }
 }
