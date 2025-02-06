@@ -123,7 +123,7 @@ class YOLOv8:
 if __name__ == '__main__':
     from imread_from_url import imread_from_url
 
-    model_path = "../models/yolov8m.onnx"
+    model_path = "../models/yolov8n.onnx"
 
     # Initialize YOLOv8 object detector
     yolov8_detector = YOLOv8(model_path, conf_thres=0.3, iou_thres=0.5)
