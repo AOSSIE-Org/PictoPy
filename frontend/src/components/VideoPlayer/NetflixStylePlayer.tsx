@@ -1,5 +1,3 @@
-'use client';
-
 import type React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import {
@@ -12,7 +10,7 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react';
-import { Slider } from '../ui/Slider';
+import { Slider } from '../../components/ui/Slider';
 
 interface NetflixStylePlayerProps {
   videoSrc: string;
