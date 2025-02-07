@@ -74,7 +74,7 @@ export default function MediaGallery({
           type={type}
         />
         {totalPages >= 1 && (
-          <div className='relative flex items-center justify-center gap-4'>
+          <div className="relative flex items-center justify-center gap-4">
             <PaginationControls
               currentPage={currentPage}
               totalPages={totalPages}
