@@ -18,6 +18,6 @@ export const LayoutRoutes: React.FC = () => (
     <Route path={ROUTES.LAYOUT.AI} element={<AITagging />} />
     <Route path={ROUTES.LAYOUT.ALBUM} element={<Album />} />
     <Route path={ROUTES.LAYOUT.SECURE_FOLDER} element={<SecureFolder />} />
-    <Route path={ROUTES.LAYOUT.MEMORIES} element={<Memories/>} />
+    <Route path={ROUTES.LAYOUT.MEMORIES} element={<Memories />} />
   </Routes>
 );
