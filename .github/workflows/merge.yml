@@ -58,4 +58,4 @@ jobs:
         with:
           args: ${{ matrix.args }}
           # Run the Tauri build in the frontend directory
-          projectPath: frontend
+          projectPath: ./frontend
