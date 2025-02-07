@@ -22,17 +22,20 @@ const Memories: React.FC = () => {
   const [storyIndex, setStoryIndex] = useState(0);
   const itemsPerPage = 12;
   const [currentPath] = useLocalStorage('folderPath', '');
-  const [currentPaths] = useLocalStorage<string[]>('folderPaths', []);
+  // const [currentPaths] = useLocalStorage<string[]>('folderPaths', []); Temporarily commented out, will be uncommented after open PR related to multiple folder support is merged.
+  const currentPaths: string[] = []; // Temporarily added to avoid TypeScript error, will be removed after open PR related to multiple folder support is merged.
   const storyDuration = 3000; // 3 seconds per story
 
   useEffect(() => {
     fetchMemories();
-  }, [currentPath, currentPaths]);
+  }, [currentPath]);
 
   const fetchMemories = async () => {
     try {
       setIsLoading(true);
-      const directories = currentPaths.length > 0 ? currentPaths : [currentPath];
+      const directories =
+        currentPaths.length > 0 ? currentPaths : [currentPath];
+      console.log(directories);
       const result = await invoke<MemoryImage[]>('get_random_memories', {
         directories,
         count: 10,
@@ -87,8 +90,10 @@ const Memories: React.FC = () => {
       const diffMonths = Math.floor(diffDays / 30);
       const diffYears = Math.floor(diffDays / 365);
 
-      if (diffYears > 0) return `${diffYears} year${diffYears > 1 ? 's' : ''} ago`;
-      if (diffMonths > 0) return `${diffMonths} month${diffMonths > 1 ? 's' : ''} ago`;
+      if (diffYears > 0)
+        return `${diffYears} year${diffYears > 1 ? 's' : ''} ago`;
+      if (diffMonths > 0)
+        return `${diffMonths} month${diffMonths > 1 ? 's' : ''} ago`;
       if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
       return 'Today';
     } catch (error) {
@@ -102,7 +107,9 @@ const Memories: React.FC = () => {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-lg text-muted-foreground">Loading your memories...</p>
+          <p className="text-lg text-muted-foreground">
+            Loading your memories...
+          </p>
         </div>
       </div>
     );
@@ -113,7 +120,9 @@ const Memories: React.FC = () => {
       <div className="min-h-screen bg-background p-8">
         <h1 className="mb-8 text-center text-4xl font-bold">Your Memories</h1>
         <div className="flex items-center justify-center">
-          <p className="text-lg text-muted-foreground">No memories found in the selected folder.</p>
+          <p className="text-lg text-muted-foreground">
+            No memories found in the selected folder.
+          </p>
         </div>
       </div>
     );
@@ -184,7 +193,7 @@ const Memories: React.FC = () => {
                 />
               </div>
               {/* Show time ago under each memory */}
-              <div className="absolute bottom-2 left-2 bg-gray-800 bg-opacity-50 text-white p-2 rounded">
+              <div className="rounded absolute bottom-2 left-2 bg-gray-800 bg-opacity-50 p-2 text-white">
                 {getTimeAgo(memory.created_at)}
               </div>
             </motion.div>
