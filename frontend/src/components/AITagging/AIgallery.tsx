@@ -43,7 +43,6 @@ export default function AIGallery({
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
   const [isVisibleSelectedImage, setIsVisibleSelectedImage] =
     useState<boolean>(true);
-  const [pageNo, setPageNo] = useState<number>(20);
   const itemsPerRow: number = 3;
   const noOfPages: number[] = Array.from(
     { length: 41 },
@@ -56,6 +55,8 @@ export default function AIGallery({
         )
       : mediaItems;
   }, [filterTag, mediaItems, isGeneratingTags]);
+
+  const [pageNo, setpageNo] = useState<number>(20);
 
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * pageNo;
@@ -141,7 +142,7 @@ export default function AIGallery({
                   >
                     <DropdownMenuRadioGroup
                       className="cursor-pointer overflow-auto bg-gray-950 p-4"
-                      onValueChange={(value) => setPageNo(Number(value))}
+                      onValueChange={(value) => setpageNo(Number(value))}
                     >
                       {noOfPages.map((itemsPerPage) => (
                         <DropdownMenuRadioItem

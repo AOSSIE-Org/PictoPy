@@ -290,6 +290,7 @@ def delete_multiple_images(payload: dict):
         )
 
     except Exception as e:
+        print(e)
         return JSONResponse(
             status_code=500,
             content={

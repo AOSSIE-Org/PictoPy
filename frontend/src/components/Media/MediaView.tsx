@@ -580,7 +580,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                 )}
                 {type === 'image' ? (
                   <img
-                    src={media.thumbnailUrl}
+                    src={media.thumbnailUrl || '/placeholder.svg'}
                     alt={`thumbnail-${index}`}
                     className="h-full w-full object-cover"
                   />

@@ -3,8 +3,12 @@ name: Merge Check
 
 on:
   pull_request_review:
-      # Trigger this workflow when a pull request review is submitted
+    # Trigger this workflow when a pull request review is submitted
     types: [submitted]
+  pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
 
 jobs:
   build-tauri:
@@ -27,22 +31,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: 'npm'
-      
+          cache: "npm"
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-           # Cache Rust build artifacts for faster build times
-          workspaces: './src-tauri -> target'
-          
+          # Cache Rust build artifacts for faster build times
+          workspaces: "./src-tauri -> target"
+
       - name: Install frontend dependencies
         run: |
           cd frontend
           npm install
-        
+
       - name: Build Tauri
         uses: tauri-apps/tauri-action@v0
         with:
@@ -51,4 +55,4 @@ jobs:
         env:
           # Use secrets for signing the Tauri app
           TAURI_SIGNING_PRIVATE_KEY: dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5NlF2SjE3cWNXOVlQQ0JBTlNITEpOUVoyQ3ZuNTdOSkwyNE1NN2RmVWQ1a0FBQkFBQUFBQUFBQUFBQUlBQUFBQU9XOGpTSFNRd0Q4SjNSbm5Oc1E0OThIUGx6SS9lWXI3ZjJxN3BESEh1QTRiQXlkR2E5aG1oK1g0Tk5kcmFzc0IvZFZScEpubnptRkxlbDlUR2R1d1Y5OGRSYUVmUGoxNTFBcHpQZ1dSS2lHWklZVHNkV1Byd1VQSnZCdTZFWlVGOUFNVENBRlgweUU9Cg==
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD : pass
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: pass

@@ -2,9 +2,7 @@
   "identifier": "migrated",
   "description": "permissions that were migrated from v1",
   "local": true,
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "permissions": [
     "path:default",
     "event:default",
@@ -80,15 +78,11 @@
     "fs:write-files",
     {
       "identifier": "fs:scope",
-      "allow": [
-        "**"
-      ]
+      "allow": ["**"]
     },
     {
       "identifier": "fs:read-all",
-      "allow": [
-        "**"
-      ]
+      "allow": ["**"]
     },
     "shell:default",
     "dialog:default",
@@ -99,10 +93,7 @@
         {
           "name": "StartServerUnix",
           "cmd": "bash",
-          "args": [
-            "-c",
-            "./PictoPy_Server"
-          ],
+          "args": ["-c", "./PictoPy_Server"],
           "sidecar": false
         }
       ]
@@ -113,9 +104,7 @@
         {
           "name": "StartServerWindows",
           "cmd": "powershell",
-          "args": [
-            "./PictoPy_Server"
-          ],
+          "args": ["./PictoPy_Server"],
           "sidecar": false
         }
       ]
@@ -126,10 +115,7 @@
         {
           "name": "killProcessUnix",
           "cmd": "bash",
-          "args": [
-            "-c",
-            "pkill -f PictoPy_Server"
-          ],
+          "args": ["-c", "pkill -f PictoPy_Server"],
           "sidecar": false
         }
       ]
@@ -140,9 +126,7 @@
         {
           "name": "killProcessWindows",
           "cmd": "powershell",
-          "args": [
-            "taskkill /t /f /im PictoPy_Server.exe"
-          ],
+          "args": ["taskkill /t /f /im PictoPy_Server.exe"],
           "sidecar": false
         }
       ]
