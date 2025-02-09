@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState,  } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -14,12 +14,11 @@ import {
   Heart,
   Play,
   Pause,
-  Lock,
+  
 } from 'lucide-react';
-import ReactCrop, { type Crop } from 'react-image-crop';
+
 import 'react-image-crop/dist/ReactCrop.css';
-import { invoke } from '@tauri-apps/api/core';
-import { readFile } from '@tauri-apps/plugin-fs';
+
 import { useNavigate } from 'react-router-dom';
 
 interface MediaViewProps {
@@ -54,12 +53,12 @@ const MediaView: React.FC<MediaViewProps> = ({
     const saved = localStorage.getItem('pictopy-favorites');
     return saved ? JSON.parse(saved) : [];
   });
-  const [crop, setCrop] = useState<Crop | undefined>(undefined);
-  const [completedCrop, setCompletedCrop] = useState<Crop | undefined>(undefined);
+  const [, setCrop] = useState<Crop | undefined>(undefined);
+  const [, setCompletedCrop] = useState<Crop | undefined>(undefined);
   const [filter, setFilter] = useState('');
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
-  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const navigate = useNavigate();
 

@@ -24,9 +24,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": {
-      "../../backend/dist/": "resources/server"
-    }
+    "resources": [
+      "../../backend/dist"
+    ]
   },
   "productName": "PictoPy",
   "version": "0.0.0",
@@ -40,8 +40,6 @@
       "endpoints": ["https://server.com/api/v1/tauri/update"],
       "dialog": true,
       "pubkey": " "
-    }
-
     }
   },
   "app": {

@@ -81,4 +81,9 @@
     -ms-overflow-style: none; /* for Internet Explorer */
     scrollbar-width: none; /* for Firefox */
   }
+}@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
