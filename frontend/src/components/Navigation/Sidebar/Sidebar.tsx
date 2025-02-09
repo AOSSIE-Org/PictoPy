@@ -9,6 +9,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { useState } from 'react';
+import AvatarUploader from '@/components/ui/AvatarUploader';
 
 const Sidebar = () => {
   const location = useLocation();
@@ -28,9 +29,6 @@ const Sidebar = () => {
     return `${baseClasses} ${activeClasses}`;
   };
 
-  const iconClasses =
-    'h-5 w-5 transition-transform duration-200 ease-out group-hover:scale-110';
-
   return (
     <div
       className={`sidebar bg-theme-light rounded-2xl relative m-4 flex flex-col justify-between border border-gray-300 p-4 text-gray-900 shadow-md transition-all duration-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 ${
@@ -39,6 +37,11 @@ const Sidebar = () => {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
+      {/* Avatar Uploader */}
+      <div className="flex flex-col items-center py-2">
+        <AvatarUploader />
+      </div>
+
       <div className="mt-2 flex flex-col gap-2">
         {[
           { path: '/home', label: 'Home', Icon: Home },
@@ -57,7 +60,7 @@ const Sidebar = () => {
             key={path}
           >
             <Icon
-              className={`${iconClasses} ${
+              className={`h-5 w-5 transition-transform duration-200 ease-out group-hover:scale-110 ${
                 isActive(path) ? 'scale-110 text-gray-800' : ''
               }`}
               strokeWidth={isActive(path) ? 2.5 : 1.5}
