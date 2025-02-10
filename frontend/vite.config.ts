@@ -6,7 +6,7 @@ import EnivromentPlugin from 'vite-plugin-environment';
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
-  plugins: [react(), eslint(), EnivromentPlugin('all')],
+  plugins: [react(), eslint(), EnivromentPlugin(['PROD'])],
 
   resolve: {
     alias: {
