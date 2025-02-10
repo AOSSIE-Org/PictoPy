@@ -17,6 +17,9 @@ import {
   Play,
   Pause,
   Lock,
+  Ratio,
+  Square,
+  Instagram,
 } from 'lucide-react';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -44,6 +47,9 @@ const MediaView: React.FC<MediaViewProps> = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isEditing, setIsEditing] = useState(false);
   const [crop, setCrop] = useState<Crop>();
+  //aspect
+  const[aspect,setaspect]=useState<number | undefined>(undefined)
+  const[isCropmenu,setisCropmenu]=useState(false)
   const [completedCrop, setCompletedCrop] = useState<Crop>();
   const [filter, setFilter] = useState('');
   const [brightness, setBrightness] = useState(100);
@@ -548,6 +554,54 @@ const MediaView: React.FC<MediaViewProps> = ({
                   className="w-24"
                 />
               </div>
+                {/*CropMenu*/}
+         <button
+                onClick={()=>{
+                  setisCropmenu(!isCropmenu);
+                }}
+                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                aria-label="Adjust"
+              >
+                <Ratio className="h-5 w-5" />
+              </button>
+              {isCropmenu  && (
+              <>
+                <div className="absolute bottom-full right-0 mb-2 w-32 rounded-md bg-white/20  backdrop-blur-sm text-white  flex flex-col justify-center items-center ">
+                <div className='mb-2 w-full hover:bg-gray-700 text-center cursor-pointer p-2' onClick={()=>{
+                  setaspect(16/9)
+                   setisCropmenu(false)
+                }}>
+                  <button>16/9</button>
+                </div>
+                <div className='mb-2 w-full hover:bg-gray-700 text-center cursor-pointer p-2' onClick={()=>{
+                  setaspect(3/4)
+                  setisCropmenu(false)
+                }}>
+                  <button>3/4</button>
+                </div>
+                <div className='mb-2 w-full hover:bg-gray-700 text-center cursor-pointer p-2' onClick={()=>{
+                  setaspect(1/1)
+                  setisCropmenu(false)
+                }}>
+                  <button>  <Square className="h-5 w-5" /></button>
+                </div>
+                <div className='mb-2 w-full hover:bg-gray-700 text-center cursor-pointer p-2' onClick={()=>{
+                  setaspect(864/1080)
+                  setisCropmenu(false)
+                }}>
+                  <button>
+                    <Instagram className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className='mb-2 w-full hover:bg-gray-700 text-center cursor-pointer p-2' onClick={()=>{
+                  setaspect(undefined)
+                   setisCropmenu(false)
+                }}>
+                  <button>  <X className="h-5 w-5" /></button>
+                </div>
+                </div>
+              </>
+              )}
             </>
           )}
         </div>
