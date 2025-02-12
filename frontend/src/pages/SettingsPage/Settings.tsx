@@ -41,7 +41,7 @@ const Settings: React.FC = () => {
           <h2 className="text-theme-dark dark:text-theme-light mb-2 text-lg font-medium">
             Current Folder Path
           </h2>
-          <div className="text-theme-dark dark:text-theme-light rounded-md border bg-gray-100 px-4 py-3 backdrop-blur-sm dark:border-white/5 dark:bg-white/5">
+         <div className="text-theme-dark dark:text-theme-dark rounded-md border bg-gray-100 dark:bg-gray-800 px-4 py-3 backdrop-blur-sm dark:border-white/5">
             {currentPath && <>{currentPath}</>}
           </div>
         </div>
