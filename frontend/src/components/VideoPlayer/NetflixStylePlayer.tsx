@@ -147,7 +147,7 @@ export default function NetflixStylePlayer({videoSrc}: NetflixStylePlayerProps) 
           <button onClick={() => skipTime(-10)} className="p-2 text-white"><Rewind size={24} /></button>
           <button onClick={togglePlay} className="p-2 text-white">{isPlaying ? <Pause size={24} /> : <Play size={24} />}</button>
           <button onClick={() => skipTime(10)} className="p-2 text-white"><FastForward size={24} /></button>
-          <div>
+          <div className='text-white'>
             {formatTime(videoRef.current?.currentTime ?? 0) +" / " + 
             formatTime(videoRef.current?.duration ?? 0)}
           </div>
