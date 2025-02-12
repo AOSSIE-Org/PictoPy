@@ -17,6 +17,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import ErrorPage from '../ui/ErrorPage/ErrorPage';
+
 
 export default function AIGallery({
   title,
@@ -92,7 +94,15 @@ export default function AIGallery({
   }
 
   if (isError) {
-    return <div>Error loading media items.</div>;
+    return <div>
+      <ErrorPage
+          errorCode={500}
+          errorMessage="Error loading media items."
+          details="An unexpected error occurred while loading media items. This may be due to a server issue or database failure. Please try again later."
+          onRetry={() => window.location.reload()}
+        />
+
+    </div>;
   }
 
   return (
