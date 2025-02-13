@@ -472,7 +472,7 @@ const MediaView: React.FC<MediaViewProps> = ({
           <ChevronRight className="h-6 w-6" />
         </button>
       </div>
-      {type == 'image' ? (
+      {type === 'image' ? (
         <div className="absolute bottom-20 right-4 flex gap-2">
           <button
             onClick={handleZoomOut}
