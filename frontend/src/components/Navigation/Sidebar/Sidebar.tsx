@@ -62,13 +62,6 @@ const Sidebar = () => {
               }`}
               strokeWidth={isActive(path) ? 2.5 : 1.5}
             />
-            <span
-              className={`whitespace-nowrap text-sm font-medium transition-opacity duration-200 ${
-                isExpanded ? 'opacity-100' : 'opacity-0'
-              }`}
-            >
-              {label}
-            </span>
           </Link>
         ))}
       </div>
