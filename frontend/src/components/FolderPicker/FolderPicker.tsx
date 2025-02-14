@@ -52,7 +52,7 @@ const FolderPicker: React.FC<FolderPickerProps> = ({
     }
   };
   return (
-    <div className="flex w-full gap-3">
+    <div className="flex w-full gap-3 justify-center">
       <Button
         onClick={pickFolder}
         variant="outline"
