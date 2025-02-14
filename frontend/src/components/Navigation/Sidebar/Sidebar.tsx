@@ -23,7 +23,7 @@ const Sidebar = () => {
     const baseClasses =
       'group flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-200';
     const activeClasses = isActive(path)
-      ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
+      ? 'text-gray-900  dark:text-gray-100'
       : 'text-gray-500 dark:text-gray-300';
     return `${baseClasses} ${activeClasses}`;
   };
@@ -51,23 +51,31 @@ const Sidebar = () => {
         ].map(({ path, label, Icon }) => (
           <Link
             to={path}
-            className={linkClasses(path)}
+            className={`${linkClasses(path)} ${(isExpanded && isActive(path)) ? 'bg-gray-200 dark:bg-gray-700' : ''}`}
             tabIndex={0}
             aria-label={label}
             key={path}
           >
+          <div
+            className={`p-2 flex items-center justify-center ${
+              (isActive(path) && !isExpanded) ? 'bg-gray-200 dark:bg-gray-700 rounded-md' : ''
+            }`}
+          >
             <Icon
-              className={`${iconClasses} ${
-                isActive(path) ? 'scale-110 text-gray-800' : ''
-              }`}
+              className={`${iconClasses} ${isActive(path) ? 'scale-110 text-gray-800' : ''}`}
               strokeWidth={isActive(path) ? 2.5 : 1.5}
             />
-            {isExpanded && (
-                <span className="whitespace-nowrap text-sm font-medium transition-opacity duration-200">
-                  {label}
-                </span>
-              )}
-          </Link>
+          </div>
+
+          <span
+            className={`whitespace-nowrap text-sm font-medium transition-opacity duration-200 ${
+              isExpanded ? `opacity-100` : 'opacity-0'
+            }`}
+          >
+            {label}
+          </span>
+        </Link>
+
         ))}
       </div>
     </div>
