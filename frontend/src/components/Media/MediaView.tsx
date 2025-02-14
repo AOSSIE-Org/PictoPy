@@ -677,8 +677,8 @@ const MediaView: React.FC<MediaViewProps> = ({
                 <Sliders className="h-5 w-5" />
               </button>
               {showAdjustMenu && (
-                <div className="absolute bottom-full right-0 mb-2 w-64 rounded-md bg-white/20 p-4 backdrop-blur-md  ">
-                  <div className="mb-2 ">
+                <div className="absolute bottom-full h-[300px] overflow-y-auto right-0 mb-2 w-64 rounded-md bg-white/20 p-4 backdrop-blur-md ">
+                  <div className="mb-1 md:mb-2 ">
                     <label className="block text-sm font-medium text-white ">
                       Brightness
                     </label>

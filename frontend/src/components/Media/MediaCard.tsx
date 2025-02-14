@@ -39,7 +39,7 @@ export default function MediaCard({ item, type }: MediaCardProps) {
 
   return (
     <div
-      className="rounded-xl group relative h-full w-full overflow-hidden shadow-lg transition-all duration-500 ease-in-out hover:scale-105 hover:shadow-2xl dark:bg-card dark:text-card-foreground"
+      className="rounded-xl group relative h-full w-[90%] overflow-hidden shadow-lg transition-all duration-500 ease-in-out hover:scale-105 hover:shadow-2xl dark:bg-card dark:text-card-foreground"
       onClick={handleMediaClick}
       role={type === 'video' ? 'button' : 'img'}
       tabIndex={0}

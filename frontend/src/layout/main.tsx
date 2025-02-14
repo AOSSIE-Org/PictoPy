@@ -12,7 +12,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         >
           <Sidebar />
         </div>
-        <div className="flex flex-1 overflow-x-auto p-4">{children}</div>
+        <div className="flex flex-1 overflow-x-hidden p-4">{children}</div>
       </div>
     </div>
   );

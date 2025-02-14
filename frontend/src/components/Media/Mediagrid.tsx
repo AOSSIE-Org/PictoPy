@@ -27,7 +27,7 @@ export default function MediaGrid({
 
   return (
     <div
-      className={`grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4`}
+    className={`grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4 overflow-y-hidden`}
     >
       {mediaItems.map((item, index) => (
         <div
