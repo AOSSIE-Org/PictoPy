@@ -5,7 +5,7 @@ from app.utils.onnx_manager import onnx_session
 from app.utils.memory_monitor import get_current_memory_usage
 
 def test_onnx_session_context_manager():
-    # Replace with your test model path
+    # Test model path
     model_path = "app/models/yolov8n.onnx"
     
     if not os.path.exists(model_path):
