@@ -86,13 +86,6 @@ jobs:
           cd frontend
           npm install
 
-      - name: Build Backend for Tauri
-        run: |
-          cd backend
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
-
       - name: Run Tauri Tests
         run: |
           cd frontend/src-tauri
