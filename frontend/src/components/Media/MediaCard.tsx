@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 export default function MediaCard({ item, type }: MediaCardProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
+  const [fallbackImage, setFallbackImage] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -15,8 +16,12 @@ export default function MediaCard({ item, type }: MediaCardProps) {
   };
 
   const handleError = () => {
-    setIsLoading(false);
-    setIsError(true);
+    console.warn("Failed to load thumbnail, falling back to full image:", item.thumbnailUrl);
+    if (item.thumbnailUrl) {
+      setFallbackImage(item.url); 
+    } else {
+      setIsError(true);
+    }
   };
 
   const toggleMute = (e: React.MouseEvent) => {
@@ -45,6 +50,7 @@ export default function MediaCard({ item, type }: MediaCardProps) {
       tabIndex={0}
       aria-label={`${type === 'video' ? 'Play' : 'View'} ${item.title}`}
     >
+
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-900/20 backdrop-blur-sm">
           <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
@@ -65,15 +71,14 @@ export default function MediaCard({ item, type }: MediaCardProps) {
 
       {type === 'image' ? (
         <img
-          src={item.thumbnailUrl || item.url}
+          src={fallbackImage || item.thumbnailUrl || item.url}
           alt={item.title}
           className={cn(
             'rounded-xl h-full w-full object-cover transition-all duration-700 ease-in-out group-hover:rotate-1 group-hover:scale-110',
-            isLoading && 'opacity-0',
-            isError && 'hidden',
+            isLoading && 'opacity-0'
           )}
           onLoad={handleLoadComplete}
-          onError={handleError}
+          onError={handleError} // Triggers fallback mechanism
         />
       ) : (
         <>
@@ -82,8 +87,7 @@ export default function MediaCard({ item, type }: MediaCardProps) {
             src={item.url}
             className={cn(
               'rounded-xl h-full w-full object-cover transition-all duration-700 ease-in-out group-hover:rotate-1 group-hover:scale-110',
-              isLoading && 'opacity-0',
-              isError && 'hidden',
+              isLoading && 'opacity-0'
             )}
             playsInline
             muted={isMuted}
