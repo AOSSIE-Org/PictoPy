@@ -2,11 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import eslint from 'vite-plugin-eslint';
-import EnivromentPlugin from 'vite-plugin-environment';
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
-  plugins: [react(), eslint(), EnivromentPlugin(['PROD'])],
+  plugins: [react(), eslint()],
 
   resolve: {
     alias: {
