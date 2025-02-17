@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, Download, Trash2, RefreshCw } from 'lucide-react';
 
+// Define the CompressedImage interface
 interface CompressedImage {
   id: string;
   originalFile: File;
@@ -11,14 +12,17 @@ interface CompressedImage {
 }
 
 const ImageCompressor: React.FC = () => {
-  const [compressedImages, setCompressedImages] = useState<CompressedImage[]>(
-    [],
-  );
-  const [isCompressing, setIsCompressing] = useState(false);
-  const [compressionLevel, setCompressionLevel] = useState(0.7);
-  const [maxWidth, setMaxWidth] = useState(1920);
-  const [maxHeight, setMaxHeight] = useState(1080);
+  const [compressedImages, setCompressedImages] = useState<CompressedImage[]>([]);
+  const [isCompressing, setIsCompressing] = useState<boolean>(false);
+  const [compressionLevel, setCompressionLevel] = useState<number>(0.7);
+  const [maxWidth, setMaxWidth] = useState<number>(1920);
+  const [maxHeight, setMaxHeight] = useState<number>(1080);
 
+  /**
+   * Compresses an image file.
+   * @param file - The image file to compress.
+   * @returns A promise that resolves to the compressed image object.
+   */
   const compressImage = useCallback(
     async (file: File): Promise<CompressedImage> => {
       return new Promise((resolve, reject) => {
@@ -27,16 +31,20 @@ const ImageCompressor: React.FC = () => {
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d')!;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              reject('Failed to get canvas context');
+              return;
+            }
 
             let width = img.width;
             let height = img.height;
 
+            // Adjust dimensions to fit within maxWidth and maxHeight
             if (width > maxWidth) {
               height *= maxWidth / width;
               width = maxWidth;
             }
-
             if (height > maxHeight) {
               width *= maxHeight / height;
               height = maxHeight;
@@ -47,11 +55,12 @@ const ImageCompressor: React.FC = () => {
 
             ctx.drawImage(img, 0, 0, width, height);
 
+            // Convert canvas to Blob
             canvas.toBlob(
               (blob) => {
                 if (blob) {
                   const compressedImage: CompressedImage = {
-                    id: Math.random().toString(36).substr(2, 9),
+                    id: Math.random().toString(36).substring(2, 9),
                     originalFile: file,
                     originalSize: file.size,
                     compressedSize: blob.size,
@@ -77,28 +86,41 @@ const ImageCompressor: React.FC = () => {
     [compressionLevel, maxWidth, maxHeight],
   );
 
+  /**
+   * Handles file upload and compresses the selected images.
+   * @param event - The file input change event.
+   */
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const files = event.target.files;
-    if (files) {
+    if (files && files.length > 0) {
       setIsCompressing(true);
-      const compressedFiles = await Promise.all(
-        Array.from(files).map((file) =>
-          compressImage(file).catch((err) => {
-            console.error('Compression failed:', err);
-            return null;
-          }),
-        ),
-      );
-      setCompressedImages((prev) => [
-        ...prev,
-        ...compressedFiles.filter((file) => file !== null),
-      ]);
-      setIsCompressing(false);
+      try {
+        const compressedFiles = await Promise.all(
+          Array.from(files).map((file) =>
+            compressImage(file).catch((err) => {
+              console.error('Compression failed:', err);
+              return null;
+            }),
+          ),
+        );
+        setCompressedImages((prev) => [
+          ...prev,
+          ...compressedFiles.filter((file): file is CompressedImage => file !== null),
+        ]);
+      } catch (error) {
+        console.error('Error compressing images:', error);
+      } finally {
+        setIsCompressing(false);
+      }
     }
   };
 
+  /**
+   * Handles downloading a compressed image.
+   * @param image - The compressed image to download.
+   */
   const handleDownload = (image: CompressedImage) => {
     const url = URL.createObjectURL(image.compressedBlob);
     const a = document.createElement('a');
@@ -110,23 +132,37 @@ const ImageCompressor: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  /**
+   * Handles removing a compressed image from the list.
+   * @param id - The ID of the compressed image to remove.
+   */
   const handleRemove = (id: string) => {
     setCompressedImages((prev) => prev.filter((img) => img.id !== id));
   };
 
+  /**
+   * Handles recompressing an image.
+   * @param image - The compressed image to recompress.
+   */
   const handleRecompress = async (image: CompressedImage) => {
     setIsCompressing(true);
-    const recompressedImage = await compressImage(image.originalFile);
-    setCompressedImages((prev) =>
-      prev.map((img) => (img.id === image.id ? recompressedImage : img)),
-    );
-    setIsCompressing(false);
+    try {
+      const recompressedImage = await compressImage(image.originalFile);
+      setCompressedImages((prev) =>
+        prev.map((img) => (img.id === image.id ? recompressedImage : img)),
+      );
+    } catch (error) {
+      console.error('Error recompressing image:', error);
+    } finally {
+      setIsCompressing(false);
+    }
   };
 
   return (
     <div className="rounded-lg bg-white p-4 shadow">
       <h3 className="mb-4 text-lg font-semibold">Image Compressor</h3>
       <div className="mb-4 space-y-2">
+        {/* Compression Level Slider */}
         <div>
           <label
             htmlFor="compression-level"
@@ -145,6 +181,8 @@ const ImageCompressor: React.FC = () => {
             className="w-full"
           />
         </div>
+
+        {/* Max Width Slider */}
         <div>
           <label
             htmlFor="max-width"
@@ -163,6 +201,8 @@ const ImageCompressor: React.FC = () => {
             className="w-full"
           />
         </div>
+
+        {/* Max Height Slider */}
         <div>
           <label
             htmlFor="max-height"
@@ -182,6 +222,8 @@ const ImageCompressor: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* File Upload Button */}
       <div className="mb-4">
         <label
           htmlFor="file-upload"
@@ -199,7 +241,11 @@ const ImageCompressor: React.FC = () => {
           className="hidden"
         />
       </div>
+
+      {/* Compressing Indicator */}
       {isCompressing && <p className="text-gray-600">Compressing images...</p>}
+
+      {/* Compressed Images List */}
       <ul className="space-y-4">
         {compressedImages.map((image) => (
           <li key={image.id} className="rounded-lg bg-gray-100 p-4">
@@ -208,6 +254,7 @@ const ImageCompressor: React.FC = () => {
                 {image.originalFile.name}
               </span>
               <div className="flex space-x-2">
+                {/* Download Button */}
                 <button
                   onClick={() => handleDownload(image)}
                   className="text-blue-500 transition-colors hover:text-blue-700"
@@ -215,6 +262,8 @@ const ImageCompressor: React.FC = () => {
                 >
                   <Download size={20} />
                 </button>
+
+                {/* Recompress Button */}
                 <button
                   onClick={() => handleRecompress(image)}
                   className="text-green-500 transition-colors hover:text-green-700"
@@ -222,6 +271,8 @@ const ImageCompressor: React.FC = () => {
                 >
                   <RefreshCw size={20} />
                 </button>
+
+                {/* Remove Button */}
                 <button
                   onClick={() => handleRemove(image.id)}
                   className="text-red-500 transition-colors hover:text-red-700"
@@ -231,6 +282,8 @@ const ImageCompressor: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {/* Image Preview and Details */}
             <div className="flex items-center space-x-4">
               <img
                 src={image.previewUrl}
@@ -246,13 +299,10 @@ const ImageCompressor: React.FC = () => {
                 </p>
                 <p className="text-sm">
                   Saved:{' '}
-                  {((image.originalSize - image.compressedSize) / 1024).toFixed(
-                    2,
-                  )}{' '}
-                  KB (
+                  {((image.originalSize - image.compressedSize) / 1024).toFixed(2)} KB (
                   {(
                     ((image.originalSize - image.compressedSize) /
-                      image.originalSize) *
+                    image.originalSize) *
                     100
                   ).toFixed(2)}
                   %)
