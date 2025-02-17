@@ -163,14 +163,14 @@ npm run tauri build
 
     ```
 
+3.  **Activate the Virtual Environment:**
+
     Bash(Linux/MacOS)
 
     ```
     source .env/bin/activate
 
     ```
-
-    Activate it for Windows:
 
     Powershell(Windows)
 
@@ -183,7 +183,7 @@ npm run tauri build
 
     ![alt text](docs/assets/screenshots/virtualEnv.png)
 
-3.  **Install Dependencies:** The `requirements.txt` file lists required packages. Install them using pip:
+4.  **Install Dependencies:** The `requirements.txt` file lists required packages. Install them using pip:
 
     Bash
 
@@ -192,7 +192,7 @@ npm run tauri build
 
     ```
 
-4.  **Missing System Dependencies:** Some dependencies might need system-level libraries like `libGL.so.1` (often needed by OpenCV). Install the appropriate packages based on your distribution:
+5.  **Missing System Dependencies:** Some dependencies might need system-level libraries like `libGL.so.1` (often needed by OpenCV). Install the appropriate packages based on your distribution:
 
     **Debian/Ubuntu:**
 
@@ -206,7 +206,7 @@ npm run tauri build
 
     **Other Systems:** Consult your distribution's documentation for installation instructions.
 
-5.  **`gobject-2.0` Not Found Error:** Resolve this error by installing `libglib2.0-dev` (Debian/Ubuntu):
+6.  **`gobject-2.0` Not Found Error:** Resolve this error by installing `libglib2.0-dev` (Debian/Ubuntu):
 
     Bash
 
@@ -217,7 +217,7 @@ npm run tauri build
 
     For other systems, consult your distribution's documentation.
 
-6.  **Running the backend:**: To start the backend in development mode, run this command while being in the backend folder and the virtual environment activated:
+7.  **Running the backend:**: To start the backend in development mode, run this command while being in the backend folder and the virtual environment activated:
 
     Bash/Powershell
 
