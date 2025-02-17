@@ -12,9 +12,11 @@ use std::num::NonZeroU32;
 use ring::rand::{SystemRandom, SecureRandom};
 use ring::digest;
 use ring::pbkdf2;
-use ring::aead::{self, Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
+use ring::aead::{ Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
 pub use file_service::FileService;
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
+use tauri::path::BaseDirectory;
+use tauri::Manager;
 use std::fs;  
 use directories::ProjectDirs; 
 use rand::seq::SliceRandom;
@@ -29,7 +31,7 @@ pub struct SecureMedia {
     pub id: String,
     pub url: String,
     pub path: String,
-    // pub base64_image: BASE64,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MemoryImage {
@@ -257,7 +259,7 @@ pub async fn save_edited_image(
     let path = PathBuf::from(original_path);
     let file_stem = path.file_stem().unwrap_or_default();
     let extension = path.extension().unwrap_or_default();
-    
+
     let mut edited_path = path.clone();
     edited_path.set_file_name(format!(
         "{}_edited.{}",
@@ -336,7 +338,7 @@ pub async fn move_to_secure_folder(path: String, password: String) -> Result<(),
 
     let content = fs::read(&path).map_err(|e| e.to_string())?;
     let ciphertext_length = content.len() + AES_256_GCM.tag_len();
-    let expected_length = SALT_LENGTH + NONCE_LENGTH + ciphertext_length + 16;
+    let _expected_length = SALT_LENGTH + NONCE_LENGTH + ciphertext_length + 16;
     let encrypted = encrypt_data(&content, &password).map_err(|e| e.to_string())?;
     println!("Encrypted file size: {}", encrypted.len());
     fs::write(&dest_path, encrypted).map_err(|e| e.to_string())?;
@@ -625,4 +627,13 @@ fn is_image_file(path: &Path) -> bool {
 #[tauri::command]
 pub fn delete_cache(cache_service: State<'_, CacheService>) -> bool {
     cache_service.delete_all_caches()
+}
+
+#[tauri::command]
+pub fn get_server_path(handle: tauri::AppHandle) -> Result<String, String> {
+    let resource_path = handle
+        .path()
+        .resolve("resources/server", BaseDirectory::Resource)
+        .map_err(|e| e.to_string())?;
+    Ok(resource_path.to_string_lossy().to_string())
 }

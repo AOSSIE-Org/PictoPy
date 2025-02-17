@@ -16,19 +16,9 @@ import {
   Heart,
   Play,
   Pause,
-  Highlighter,
-  Moon,
+  Lock,
   FlipHorizontal,
   FlipVertical,
-  Crop,
-} from 'lucide-react';
-import ReactCrop from 'react-image-crop';
-import 'react-image-crop/dist/ReactCrop.css';
-import { invoke } from '@tauri-apps/api/core';
-import { readFile } from '@tauri-apps/plugin-fs';
-import { cn } from '@/lib/utils';
-  Lock,
-  Divide,
 } from 'lucide-react';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -36,6 +26,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { useNavigate } from 'react-router-dom';
 import NetflixStylePlayer from '../VideoPlayer/NetflixStylePlayer';
+
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
   onClose,
@@ -57,18 +48,11 @@ const MediaView: React.FC<MediaViewProps> = ({
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<Crop>();
   const [filter, setFilter] = useState('');
+  //flipImage
+  const[fliphorizontal,setfliphorizontal]=useState(false)
+  const[flipvertical,setflipvertical]=useState(false)
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
-  const[HighLight,setHighlight]=useState(100);
-  const[Shadows,setShadows]=useState(0);
-// set edit
-const[isBrightness,setisBrightness]=useState(false);
-const[isHighLight,setisHighLight]=useState(false)
-const[isShadows,setisShadow]=useState(false)
-const[isContrast,setisContrast]=useState(false);
-const[fliphorizontal,setfliphorizontal]=useState(false)
-const[flipvertical,setflipvertical]=useState(false)
-const[isCroppping,setisCropping]=useState(false)
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'error';
@@ -170,8 +154,11 @@ const[isCroppping,setisCropping]=useState(false)
     setCompletedCrop(undefined);
     setFilter('');
     setBrightness(100);
+    setfliphorizontal(false)
+    setflipvertical(false)
     setContrast(100);
     setPosition({ x: 0, y: 0 });
+    
     setScale(1);
   };
 
@@ -209,6 +196,7 @@ const[isCroppping,setisCropping]=useState(false)
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
+
       if (!ctx) {
         throw new Error('Unable to create image context');
       }
@@ -232,11 +220,10 @@ const[isCroppping,setisCropping]=useState(false)
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
       }
-      ctx.filter = `${filter} brightness(${brightness}%) contrast(${contrast}%) saturate(${HighLight}%)
-      sepia(${Shadows}%)`;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
       ctx.filter = `${filter} brightness(${brightness}%) contrast(${contrast}%)`;
       ctx.drawImage(canvas, 0, 0);
+
       console.log('Canvas prepared, attempting to create blob');
 
       const editedBlob = await new Promise<Blob | null>((resolve) => {
@@ -392,71 +379,40 @@ const[isCroppping,setisCropping]=useState(false)
             />
           </button>
         )}
-        <button
-          onClick={handleShare}
-          className="rounded-full bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Share"
-        >
-          <Share2 className="h-6 w-6" />
-        </button>
-        <button
-        {type==="image"?(
+        {type === 'image' && (
           <button
-          onClick={() => setIsEditing(true)}
-          className="rounded-full bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Edit"
-        >
-          <Edit className="h-6 w-6" />
-        </button>
-        <button
-          onClick={toggleFavorite}
-          className={`rounded-full p-2 text-white transition-colors duration-300 ${
-            isFavorite(allMedia[globalIndex].path || '')
-              ? 'bg-red-500 hover:bg-red-600'
-              : 'bg-gray-500 hover:bg-white/40'
-          }`}
-          aria-label={
-            isFavorite(allMedia[globalIndex].path || '')
-              ? 'Remove from favorites'
-              : 'Add to favorites'
-          }
-        >
-          <Heart
-            className={`h-6 w-6 ${
-              isFavorite(allMedia[globalIndex].path || '') ? 'fill-current' : ''
-            }`}
-          />
-        </button>
-        <button
-
-        ):null}
-
-        {type==="image"?(
-
-          <button
-          onClick={toggleSlideshow}
-          className="rounded-full flex items-center gap-2 bg-gray-500 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Toggle Slideshow"
+            onClick={() => setIsEditing(true)}
+            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Edit"
           >
-          {isSlideshowActive ? (
-            <Pause className="h-5 w-5" />
-          ) : (
-            <Play className="h-5 w-5" />
-          )}
-          {isSlideshowActive ? 'Pause' : 'Slideshow'}
+            <Edit className="h-6 w-6" />
           </button>
-        ):null}
-        
+        )}
+
+        {type === 'image' && (
+          <button
+            onClick={toggleSlideshow}
+            className="rounded-full flex items-center gap-2 bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Toggle Slideshow"
+          >
+            {isSlideshowActive ? (
+              <Pause className="h-5 w-5" />
+            ) : (
+              <Play className="h-5 w-5" />
+            )}
+            {isSlideshowActive ? 'Pause' : 'Slideshow'}
+          </button>
+        )}
+
         <button
           onClick={onClose}
-          className="rounded-full bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Close"
         >
           <X className="h-6 w-6" />
         </button>
       </div>
 
-        
       <div
         className="relative flex h-full w-full items-center justify-center"
         onClick={(e) => {
@@ -472,7 +428,7 @@ const[isCroppping,setisCropping]=useState(false)
             onMouseLeave={handleMouseUp}
             className="relative flex h-full w-full items-center justify-center overflow-hidden"
           >
-            {isEditing  && isCroppping? (
+            {isEditing ? (
               <ReactCrop
                 crop={crop}
                 onChange={(c) => setCrop(c)}
@@ -483,7 +439,7 @@ const[isCroppping,setisCropping]=useState(false)
                   src={allMedia[globalIndex].url || '/placeholder.svg'}
                   alt={`image-${globalIndex}`}
                   style={{
-                    filter: `${filter} brightness(${brightness}%) contrast(${contrast}%) saturate(${HighLight}%) sepia(${Shadows}%)  `,
+                    filter: `${filter} brightness(${brightness}%) contrast(${contrast}%)`,
                   }}
                 />
               </ReactCrop>
@@ -492,7 +448,7 @@ const[isCroppping,setisCropping]=useState(false)
                 src={allMedia[globalIndex].url || '/placeholder.svg'}
                 alt={`image-${globalIndex}`}
                 draggable={false}
-                className="h-full w-full select-none object-contain "
+                className="h-full w-full select-none object-contain"
                 style={{
                   transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)  ${fliphorizontal ? 'scaleX(-1)' : ''}  ${flipvertical ? 'scaleY(-1)' : ''} `,
                   transition: isDragging
@@ -505,70 +461,60 @@ const[isCroppping,setisCropping]=useState(false)
           </div>
         ) : (
           <NetflixStylePlayer
-          videoSrc= {allMedia[globalIndex].url}
-          description=''
-          title=''
+            videoSrc={allMedia[globalIndex].url}
+            description=""
+            title=""
           />
         )}
 
         <button
           onClick={handlePrevItem}
-          className="rounded-full absolute left-4 top-1/2 z-50 flex items-center bg-gray-500 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full absolute left-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
         <button
           onClick={handleNextItem}
-          className="rounded-full absolute right-4 top-1/2 z-50 flex items-center bg-gray-500 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full absolute right-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
         >
           <ChevronRight className="h-6 w-6" />
         </button>
       </div>
-<div className=' absolute bottom-20 right-4 flex flex-col gap-2 text-white'>
-  <div className='ml-auto'>
-    <div className={cn('hidden',{'block':isShadows})}>Shadows</div>
-    <div className={cn('hidden',{'block':isContrast})}>Contrast</div>
-    <div className={cn('hidden',{'block':isHighLight})}>HighLight</div>
-    <div className={cn('hidden',{'block':isBrightness})}>Brightness</div>
-  </div>
-      <div className=" flex gap-2">
-          {
-            type=="image"?(
-
-              <div className="absolute bottom-20 right-4 flex gap-2">
-        <button
-          onClick={handleZoomOut}
-          className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Zoom Out"
-        >
-          <ZoomOut className="h-5 w-5" />
-        </button>
-        <button
-          onClick={resetZoom}
-          className="rounded-md bg-gray-500 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
-        >
-          Reset
-        </button>
-        <button
-          onClick={handleZoomIn}
-          className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Zoom In"
-        >
-          <ZoomIn className="h-5 w-5" />
-        </button>
-        <button
-          onClick={handleRotate}
-          className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-          aria-label="Rotate"
-        >
-          <RotateCw className="h-5 w-5" />
-        </button>
-        <button
+      {type == 'image' ? (
+        <div className="absolute bottom-20 right-4 flex gap-2">
+          <button
+            onClick={handleZoomOut}
+            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Zoom Out"
+          >
+            <ZoomOut className="h-5 w-5" />
+          </button>
+          <button
+            onClick={resetZoom}
+            className="rounded-md bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+          >
+            Reset
+          </button>
+          <button
+            onClick={handleZoomIn}
+            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Zoom In"
+          >
+            <ZoomIn className="h-5 w-5" />
+          </button>
+          <button
+            onClick={handleRotate}
+            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Rotate"
+          >
+            <RotateCw className="h-5 w-5" />
+          </button>
+          <button
           onClick={()=>{
             setfliphorizontal(!fliphorizontal)
             console.log(fliphorizontal)
           }}
-          className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="flipHorizontal"
         >
           <FlipHorizontal className="h-5 w-5" />
@@ -578,150 +524,95 @@ const[isCroppping,setisCropping]=useState(false)
             setflipvertical(!flipvertical)
             console.log(flipvertical)
           }}
-          className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="flipvertical"
         >
           <FlipVertical className="h-5 w-5" />
         </button>
-        {isEditing && (
-          <>
-            <button
-              onClick={()=>{
-                setisCropping(!isCroppping)
-              }}
-              className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-              aria-label="Confirm Edit"
-            >
-              <Crop className="h-5 w-5" />
-            </button>
-            <button
-              onClick={handleEditComplete}
-              className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-              aria-label="Confirm Edit"
-            >
-              <Check className="h-5 w-5" />
-            </button>
-            <button
-              onClick={resetEditing}
-              className="rounded-md bg-gray-500 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-              aria-label="Cancel Edit"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <select
-              onChange={(e) => setFilter(e.target.value)}
-              className="rounded-md bg-gray-500 px-2 py-2 text-white"
-            >
-              <option value="">No Filter</option>
-              <option value="grayscale(100%)">Grayscale</option>
-              <option value="sepia(100%)">Sepia</option>
-              <option value="invert(100%)">Invert</option>
-            </select>
-            <div className="flex items-center gap-2 m-2">
-              <SunMoon className="h-5 w-5 text-white"  onClick={()=>{
-                setisBrightness(!isBrightness)
-                setisContrast(false)
-                setisShadow(false)
-                setisHighLight(false)
-              }}/>
-              <input
-                type="range"
-                min="0"
-                max="200"
-                value={brightness}
-                onChange={(e) => setBrightness(Number(e.target.value))}
-                className={cn('w-24 hidden cursor-pointer',{'block':isBrightness})}
-              />
-            </div>
-            <div className="flex items-center gap-2 m-2">
-              <Contrast className="h-5 w-5 text-white"  onClick={()=>{
-                setisBrightness(false)
-                setisContrast(!isContrast)
-                setisShadow(false)
-                setisHighLight(false)
-              }}/>
-              <input
-                type="range"
-                min="0"
-                max="200"
-                value={contrast}
-                onChange={(e) => setContrast(Number(e.target.value))}
-                className={cn('w-24 hidden cursor-pointer',{'block':isContrast})}
-              />
-            </div>
-            <div className="flex items-center gap-2 m-2">
-              <Highlighter className="h-5 w-5 text-white" onClick={()=>{
-                setisBrightness(false)
-                setisContrast(false)
-                setisShadow(false)
-                setisHighLight(!isHighLight)
-              }} />
-              <input
-                type="range"
-                min="0"
-                max="200"
-                value={HighLight}
-                onChange={(e) => setHighlight(Number(e.target.value))}
-                className={cn('w-24 hidden cursor-pointer',{'block':isHighLight})}
-              />
-            </div>
-            <div className="flex items-center gap-2 m-2">
-              <Moon className="h-5 w-5 text-white" onClick={()=>{
-                setisBrightness(false)
-                setisContrast(false)
-                setisShadow(!isShadows)
-                setisHighLight(false)
-              }} />
-              <div className='flex flex-col gap-2 text-white'>
-              <input
-                type="range"
-                min="0"
-                max="200"
-                value={Shadows}
-                onChange={(e) => setShadows(Number(e.target.value))}
-                className={cn('w-24 hidden cursor-pointer',{'block':isShadows})}
-              />
+          {isEditing && (
+            <>
+              <button
+                onClick={handleEditComplete}
+                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                aria-label="Confirm Edit"
+              >
+                <Check className="h-5 w-5" />
+              </button>
+              <button
+                onClick={resetEditing}
+                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                aria-label="Cancel Edit"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <select
+                onChange={(e) => setFilter(e.target.value)}
+                className="rounded-md bg-white/20 px-2 py-2 text-white"
+              >
+                <option value="">No Filter</option>
+                <option value="grayscale(100%)">Grayscale</option>
+                <option value="sepia(100%)">Sepia</option>
+                <option value="invert(100%)">Invert</option>
+              </select>
+              <div className="flex items-center gap-2">
+                <SunMoon className="h-5 w-5 text-white" />
+                <input
+                  type="range"
+                  min="0"
+                  max="200"
+                  value={brightness}
+                  onChange={(e) => setBrightness(Number(e.target.value))}
+                  className="w-24"
+                />
               </div>
-            </div>
-          </>
-        )}
-      </div>
-      </div>
+              <div className="flex items-center gap-2">
+                <Contrast className="h-5 w-5 text-white" />
+                <input
+                  type="range"
+                  min="0"
+                  max="200"
+                  value={contrast}
+                  onChange={(e) => setContrast(Number(e.target.value))}
+                  className="w-24"
+                />
+              </div>
+            </>
+          )}
+        </div>
+      ) : null}
 
-            ):null
-          }
       {/* Thumbnails */}
-      {type==="image"?(
+      {type === 'image' ? (
         <div>
           <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2 opacity-0 transition-opacity duration-300 hover:opacity-100">
-        {allMedia.map((media, index) => (
-          <div
-            key={index}
-            onClick={() => handleThumbnailClick(index)}
-            className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
-              index === globalIndex
-                ? 'border-blue-500 shadow-lg'
-                : 'border-transparent'
-            } cursor-pointer transition-transform hover:scale-105`}
-          >
-            {isFavorite(media.path || '') && (
-              <div className="absolute right-1 top-1 z-10">
-                <Heart className="h-4 w-4 fill-current text-red-500" />
+            {allMedia.map((media, index) => (
+              <div
+                key={index}
+                onClick={() => handleThumbnailClick(index)}
+                className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
+                  index === globalIndex
+                    ? 'border-blue-500 shadow-lg'
+                    : 'border-transparent'
+                } cursor-pointer transition-transform hover:scale-105`}
+              >
+                {isFavorite(media.path || '') && (
+                  <div className="absolute right-1 top-1 z-10">
+                    <Heart className="h-4 w-4 fill-current text-red-500" />
+                  </div>
+                )}
+                {type === 'image' ? (
+                  <img
+                    src={media.url || '/placeholder.svg'}
+                    alt={`thumbnail-${index}`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
               </div>
-            )}
-            {type === 'image' ? (
-              <img
-                src={media.url || '/placeholder.svg'}
-                alt={`thumbnail-${index}`}
-                className="h-full w-full object-cover"
-              />
-            ) : null}
+            ))}
           </div>
-        ))}
-      </div>
         </div>
-      ):null}
-      
+      ) : null}
+
       {notification && (
         <div
           className={`fixed left-1/2 top-4 -translate-x-1/2 transform rounded-md p-4 ${

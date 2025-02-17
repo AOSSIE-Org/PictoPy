@@ -1,13 +1,15 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod models;
 mod repositories;
 mod services;
-mod models;
 mod utils;
 
-use crate::services::{FileService, CacheService};
-use tauri::Manager; 
+use crate::services::{CacheService, FileService};
+use std::env;
+use tauri::path::BaseDirectory;
+use tauri::Manager;
 
 fn main() {
     tauri::Builder::default()
@@ -17,6 +19,10 @@ fn main() {
         .setup(|app| {
             let file_service = FileService::new();
             let cache_service = CacheService::new();
+            let resource_path = app
+                .path()
+                .resolve("resources/server", BaseDirectory::Resource)?;
+            println!("Resource path: {:?}", resource_path);
             app.manage(file_service);
             app.manage(cache_service);
             Ok(())
@@ -29,11 +35,12 @@ fn main() {
             services::delete_cache,
             services::share_file,
             services::save_edited_image,
+            services::get_server_path,
             services::move_to_secure_folder,
             services::create_secure_folder,
             services::unlock_secure_folder,
             services::get_secure_media,
-            services::remove_from_secure_folder, 
+            services::remove_from_secure_folder,
             services::check_secure_folder_status,
             services::get_random_memories,
         ])
