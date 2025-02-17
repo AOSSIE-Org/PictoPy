@@ -16,8 +16,7 @@ import { createAlbums } from '../../../api/api-functions/albums';
 
 const CreateAlbumForm: React.FC<CreateAlbumFormProps> = ({
   isOpen,
-  onClose,
-  onSuccess,
+  closeForm,
   onError,
 }) => {
   const [newAlbumName, setNewAlbumName] = useState('');
@@ -27,13 +26,23 @@ const CreateAlbumForm: React.FC<CreateAlbumFormProps> = ({
 
   const { mutate: createAlbum, isPending: isCreating } = usePictoMutation({
     mutationFn: createAlbums,
+    onSuccess: (response) => {
+      if (response.success) {
+        setNewAlbumName('');
+        setNewAlbumDescription('');
+        closeForm();
+      } else {
+        console.log(response.error);
+        onError('Error Creating Album', new Error(response.error));
+      }
+    },
     autoInvalidateTags: ['all-albums'],
   });
 
   const handleCreateAlbum = async () => {
     if (newAlbumName.trim()) {
       try {
-        await createAlbum({
+        createAlbum({
           name: newAlbumName.trim(),
           description: newAlbumDescription.trim(),
           is_hidden: isHidden,
@@ -43,8 +52,7 @@ const CreateAlbumForm: React.FC<CreateAlbumFormProps> = ({
         setNewAlbumDescription('');
         setPassword('');
         setIsHidden(false);
-        onSuccess();
-        onClose();
+        closeForm();
       } catch (err) {
         onError('Error Creating Album', err);
       }
@@ -54,7 +62,7 @@ const CreateAlbumForm: React.FC<CreateAlbumFormProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={closeForm}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create New Album</DialogTitle>
@@ -99,7 +107,7 @@ const CreateAlbumForm: React.FC<CreateAlbumFormProps> = ({
           >
             {isCreating ? 'Creating...' : 'Create Album'}
           </Button>
-          <Button onClick={onClose} variant="outline">
+          <Button onClick={closeForm} variant="outline">
             Cancel
           </Button>
         </DialogFooter>

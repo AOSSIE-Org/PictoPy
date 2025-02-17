@@ -5,6 +5,9 @@ import SortingControls from './SortningControls';
 import PaginationControls from '../ui/PaginationControls';
 import { MediaGalleryProps } from '@/types/Media';
 import { sortMedia } from '@/utils/Media';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
+import { deleteCache } from '@/services/cacheService';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +15,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@radix-ui/react-dropdown-menu';
-import { Button } from '../ui/button';
 
 export default function MediaGallery({
   mediaItems,
@@ -56,16 +58,37 @@ export default function MediaGallery({
   const closeMediaViewer = useCallback(() => {
     setShowMediaViewer(false);
   }, []);
+  const handleRefreshClick = async () => {
+    try {
+      const result = await deleteCache();
+      if (result) {
+        console.log('Cache deleted');
+      }
+      window.location.reload();
+    } catch (error) {
+      console.error('Error deleting cache:', error);
+    }
+  };
   return (
     <div className="w-full">
       <div className="mx-auto px-2 pb-8 pt-1 dark:bg-background dark:text-foreground">
         <div className="mb-2 flex items-center justify-between">
           <h1 className="text-2xl font-bold">{title || currentYear}</h1>
-          <SortingControls
-            sortBy={sortBy}
-            setSortBy={handleSetSortBy}
-            mediaItems={mediaItems}
-          />
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => handleRefreshClick()}
+              variant="outline"
+              className="border-gray-500 hover:bg-accent dark:hover:bg-white/10"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <p className="mb-[1px] ml-1 hidden lg:inline">Refresh</p>
+            </Button>
+            <SortingControls
+              sortBy={sortBy}
+              setSortBy={handleSetSortBy}
+              mediaItems={mediaItems}
+            />
+          </div>
         </div>
         <MediaGrid
           mediaItems={currentItems}
@@ -119,7 +142,11 @@ export default function MediaGallery({
             initialIndex={selectedMediaIndex}
             onClose={closeMediaViewer}
             allMedia={sortedMedia.map((item) => {
-              return { url: item.url, path: item?.imagePath };
+              return {
+                url: item.url,
+                path: item?.imagePath,
+                thumbnailUrl: item.thumbnailUrl,
+              };
             })}
             currentPage={currentPage}
             itemsPerPage={itemsPerPage}

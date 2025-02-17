@@ -251,41 +251,31 @@ def delete_multiple_images(payload: dict):
                     },
                 )
             path = os.path.normpath(path)
-            parts = path.split(os.sep)
-            if "images" in parts:
-                parts.insert(parts.index("images") + 1, "PictoPy.thumbnails")
-                thumb_nail_image_path = os.sep.join(parts)
+            folder_path, filename = os.path.split(path)
+            thumbnail_folder = os.path.join(folder_path, "PictoPy.thumbnails")
+            thumb_nail_image_path = os.path.join(thumbnail_folder, filename)
 
-                if os.path.exists(thumb_nail_image_path):
-                    print(f"Thumbnail found: {thumb_nail_image_path}")
-                else:
-                    print(f"Thumbnail not found: {thumb_nail_image_path}")
-            else:
-                thumb_nail_image_path = ""
-                print(f"'images' directory not found in path: {path}")
-
-           
-            if os.path.exists(path) :
-                try :
+            # Check and remove the original file
+            if os.path.exists(path):
+                try:
                     os.remove(path)
                 except PermissionError:
-                    print(f"Permission denied for file '{thumb_nail_image_path}'.")
+                    print(f"Permission denied for file '{path}'.")
                 except Exception as e:
                     print(f"An error occurred: {e}")
-            
             else:
                 print(f"File '{path}' does not exist.")
-            
-            if os.path.exists(thumb_nail_image_path) :
-                try :
+
+            # Check and remove the thumbnail file
+            if os.path.exists(thumb_nail_image_path):
+                try:
                     os.remove(thumb_nail_image_path)
                 except PermissionError:
                     print(f"Permission denied for file '{thumb_nail_image_path}'.")
                 except Exception as e:
                     print(f"An error occurred: {e}")
-            else : 
+            else:
                 print(f"File '{thumb_nail_image_path}' does not exist.")
-                    
 
             delete_image_db(path)
             deleted_paths.append(path)
@@ -489,6 +479,98 @@ async def add_folder(payload: dict):
 @router.post("/generate-thumbnails")
 @exception_handler_wrapper
 def generate_thumbnails(payload: dict):
+    if "folder_paths" not in payload or not isinstance(payload["folder_paths"], list):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status_code": 400,
+                "content": {
+                    "success": False,
+                    "error": "Invalid or missing 'folder_paths' in payload",
+                    "message": "'folder_paths' must be a list of folder paths",
+                },
+            },
+        )
+
+    folder_paths = payload["folder_paths"]
+    image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"]
+    failed_paths = []
+
+    for folder_path in folder_paths:
+        if not os.path.isdir(folder_path):
+            failed_paths.append(
+                {
+                    "folder_path": folder_path,
+                    "error": "Invalid folder path",
+                    "message": "The provided path is not a valid directory",
+                }
+            )
+            continue
+
+        for root, _, files in os.walk(folder_path):
+            # Do not generate thumbnails for the "PictoPy.thumbnails" folder
+            if "PictoPy.thumbnails" in root:
+                continue
+
+            # Create the "PictoPy.thumbnails" folder in the current directory (`root`)
+            thumbnail_folder = os.path.join(root, "PictoPy.thumbnails")
+            os.makedirs(thumbnail_folder, exist_ok=True)
+
+            for file in files:
+                file_path = os.path.join(root, file)
+                file_extension = os.path.splitext(file_path)[1].lower()
+                if file_extension in image_extensions:
+                    try:
+                        # Create a unique thumbnail name based on the file name
+                        thumbnail_name = file
+                        thumbnail_path = os.path.join(thumbnail_folder, thumbnail_name)
+
+                        # Skip if the thumbnail already exists
+                        if os.path.exists(thumbnail_path):
+                            continue
+
+                        # Generate the thumbnail
+                        img = Image.open(file_path)
+                        img.thumbnail((400, 400))
+                        img.save(thumbnail_path)
+                    except Exception as e:
+                        failed_paths.append(
+                            {
+                                "folder_path": folder_path,
+                                "file": file_path,
+                                "error": "Thumbnail generation error",
+                                "message": f"Error processing file {file}: {str(e)}",
+                            }
+                        )
+
+    if failed_paths:
+        return JSONResponse(
+            status_code=207,  # Multi-Status (some succeeded, some failed)
+            content={
+                "status_code": 207,
+                "content": {
+                    "success": False,
+                    "error": "Partial processing",
+                    "message": "Some folders or files could not be processed",
+                    "failed_paths": failed_paths,
+                },
+            },
+        )
+
+    return JSONResponse(
+        status_code=201,
+        content={
+            "data": "",
+            "message": "Thumbnails generated successfully for all valid folders",
+            "success": True,
+        },
+    )
+
+
+# Delete all the thumbnails present in the given folder
+@router.delete("/delete-thumbnails")
+@exception_handler_wrapper
+def delete_thumbnails(payload: dict):
     if "folder_path" not in payload:
         return JSONResponse(
             status_code=400,
@@ -516,53 +598,47 @@ def generate_thumbnails(payload: dict):
             },
         )
 
-    thumbnail_folder = os.path.join(folder_path, "PictoPy.thumbnails")
-    os.makedirs(thumbnail_folder, exist_ok=True)
+    # List to store any errors encountered while deleting thumbnails
+    failed_deletions = []
 
-    image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"]
-    for root, _, files in os.walk(folder_path):
-        if "PictoPy.thumbnails" in root:
-            continue
-        for file in files:
-            file_path = os.path.join(root, file)
-            file_extension = os.path.splitext(file_path)[1].lower()
-            if file_extension in image_extensions:
+    # Walk through the folder path and find all `PictoPy.thumbnails` folders
+    for root, dirs, _ in os.walk(folder_path):
+        for dir_name in dirs:
+            if dir_name == "PictoPy.thumbnails":
+                thumbnail_folder = os.path.join(root, dir_name)
                 try:
-                    # Create a unique name based on the relative folder structure
-                    relative_path = os.path.relpath(root, folder_path)
-                    sanitized_relative_path = relative_path.replace(
-                        os.sep, "."
-                    )  # Replace path separators
-                    thumbnail_name = (
-                        f"{sanitized_relative_path}.{file}"
-                        if relative_path != "."
-                        else file
-                    )
-                    thumbnail_path = os.path.join(thumbnail_folder, thumbnail_name)
-                    if os.path.exists(thumbnail_path):
-                        # print(f"Thumbnail {thumbnail_name} already exists. Skipping.")
-                        continue
-                    img = Image.open(file_path)
-                    img.thumbnail((400, 400))
-                    img.save(thumbnail_path)
+                    # Delete the thumbnail folder
+                    shutil.rmtree(thumbnail_folder)
+                    print(f"Deleted: {thumbnail_folder}")
                 except Exception as e:
-                    return JSONResponse(
-                        status_code=500,
-                        content={
-                            "status_code": 500,
-                            "content": {
-                                "success": False,
-                                "error": "Internal server error",
-                                "message": f"Error processing file {file}: {str(e)}",
-                            },
-                        },
+                    failed_deletions.append(
+                        {
+                            "folder": thumbnail_folder,
+                            "error": str(e),
+                        }
                     )
+
+    if failed_deletions:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status_code": 500,
+                "content": {
+                    "success": False,
+                    "error": "Some thumbnail folders could not be deleted",
+                    "message": "See the `failed_deletions` field for details.",
+                    "failed_deletions": failed_deletions,
+                },
+            },
+        )
 
     return JSONResponse(
-        status_code=201,
+        status_code=200,
         content={
-            "data": "",
-            "message": "Thumbnails generated successfully",
-            "success": True,
+            "status_code": 200,
+            "content": {
+                "success": True,
+                "message": "All PictoPy.thumbnails folders have been successfully deleted.",
+            },
         },
     )
