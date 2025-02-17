@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import Cropper from "react-easy-crop";
+import Cropper, { Area } from "react-easy-crop";
 
 interface AvatarCropperProps {
   image: string;
@@ -9,12 +9,16 @@ interface AvatarCropperProps {
 const AvatarCropper: React.FC<AvatarCropperProps> = ({ image, onCropComplete }) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [croppedPreview, setCroppedPreview] = useState<string | null>(null);
 
-  const handleCropComplete = useCallback((_, croppedAreaPixels) => {
-    setCroppedAreaPixels(croppedAreaPixels);
-  }, []);
+  // Add type annotations for parameters
+  const handleCropComplete = useCallback(
+    (_: Area, croppedAreaPixels: Area) => {
+      setCroppedAreaPixels(croppedAreaPixels);
+    },
+    []
+  );
 
   const createImage = (url: string): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
@@ -26,10 +30,16 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({ image, onCropComplete }) 
     });
   };
 
-  const getCroppedImg = async (imageSrc: string, crop) => {
+  // Add type annotation for crop parameter
+  const getCroppedImg = async (imageSrc: string, crop: Area) => {
     const image = await createImage(imageSrc);
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
+
+    // Add null check for canvas context
+    if (!ctx) {
+      throw new Error("Canvas context not available");
+    }
 
     canvas.width = crop.width;
     canvas.height = crop.height;
