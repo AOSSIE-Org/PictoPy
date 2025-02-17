@@ -13,10 +13,7 @@ import FolderPicker from '../FolderPicker/FolderPicker';
 import LoadingScreen from '../ui/LoadingScreen/LoadingScreen';
 import DeleteSelectedImagePage from '../FolderPicker/DeleteSelectedImagePage';
 import ErrorDialog from '../Album/Error';
-import {
-  Trash2,
-  Filter,
-} from 'lucide-react';
+import { Trash2, Filter } from 'lucide-react';
 import { queryClient, usePictoMutation } from '@/hooks/useQueryExtensio';
 import { addFolder } from '../../../api/api-functions/images';
 
@@ -77,24 +74,23 @@ export default function FilterControls({
     setSelectedFlags(updatedFlags);
   };
 
-
-  const handleFilterFlag = ()=>{
-    let flags : string[] = [];
-    if(selectedFlags[0].isChecked) {
+  const handleFilterFlag = () => {
+    let flags: string[] = [];
+    if (selectedFlags[0].isChecked) {
       setFilterTag([]);
       return;
     }
-    selectedFlags.forEach((ele)=>{
-      if(ele.isChecked) flags.push(ele.tag);
-    })
+    selectedFlags.forEach((ele) => {
+      if (ele.isChecked) flags.push(ele.tag);
+    });
 
-    console.log("Updated Filter Flags = ",flags);
+    console.log('Updated Filter Flags = ', flags);
     setFilterTag(flags);
-  }
+  };
 
-  const handleToggleDropdown = (event:Event) => {
+  const handleToggleDropdown = (event: Event) => {
     event.preventDefault();
-    setIsDropdownOpen((prevState) => !prevState);  // Toggle dropdown visibility
+    setIsDropdownOpen((prevState) => !prevState); // Toggle dropdown visibility
   };
   const handleFolderPick = async (path: string) => {
     try {
@@ -153,7 +149,7 @@ export default function FilterControls({
             <Button
               variant="outline"
               className="flex cursor-default items-center gap-2 border-gray-500 p-2 hover:bg-accent dark:hover:bg-white/10"
-              onClick={()=>handleToggleDropdown}
+              onClick={() => handleToggleDropdown}
             >
               <Filter className="h-4 w-4" />
               Filter by{' '}
@@ -165,7 +161,6 @@ export default function FilterControls({
                       className="flex items-center justify-center gap-1 rounded-lg border-white bg-gray-800 pb-1 pl-2 pr-2 pt-1"
                     >
                       {ele.tag}
-                     
                     </p>
                   ) : null,
                 )}
@@ -185,10 +180,12 @@ export default function FilterControls({
                   key={ele.tag}
                   value={ele.tag}
                   onSelect={(event) => {
-                    selectedFlags[index].isChecked ? handleRemoveFlag(index) : handleAddFlag(index);
+                    selectedFlags[index].isChecked
+                      ? handleRemoveFlag(index)
+                      : handleAddFlag(index);
                     event.preventDefault();
                   }}
-                  className='cursor-pointer'
+                  className="cursor-pointer"
                 >
                   <input
                     type="checkbox"
