@@ -1,5 +1,6 @@
-import { MediaViewProps } from '@/types/Media';
-import React, { useEffect, useState, useCallback } from 'react';
+import type { MediaViewProps } from '@/types/Media';
+import type React from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -9,23 +10,20 @@ import {
   X,
   SunMoon,
   Contrast,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  Heart,
+  Play,
+  Pause,
+  Lock,
 } from 'lucide-react';
-import ReactCrop, { Crop } from 'react-image-crop';
+import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { invoke } from '@tauri-apps/api/core';
 import { readFile } from '@tauri-apps/plugin-fs';
-
-import React, { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, X, Play, Pause, RotateCw, Heart, Share2, ZoomIn, ZoomOut } from 'lucide-react';
-
-interface MediaViewProps {
-  initialIndex: number;
-  onClose: () => void;
-  allMedia: string[];
-  currentPage: number;
-  itemsPerPage: number;
-  type: 'image' | 'video';
-}
+import { useNavigate } from 'react-router-dom';
+import NetflixStylePlayer from '../VideoPlayer/NetflixStylePlayer';
 
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
@@ -34,10 +32,11 @@ const MediaView: React.FC<MediaViewProps> = ({
   currentPage,
   itemsPerPage,
   type,
+  isSecureFolder,
 }) => {
   // State management
   const [globalIndex, setGlobalIndex] = useState<number>(
-    (currentPage - 1) * itemsPerPage + initialIndex
+    (currentPage - 1) * itemsPerPage + initialIndex,
   );
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -59,13 +58,12 @@ const MediaView: React.FC<MediaViewProps> = ({
     const saved = localStorage.getItem('pictopy-favorites');
     return saved ? JSON.parse(saved) : [];
   });
+  const navigate = useNavigate();
 
-  
   useEffect(() => {
     setGlobalIndex((currentPage - 1) * itemsPerPage + initialIndex);
   }, [initialIndex, currentPage, itemsPerPage]);
 
-  
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -81,52 +79,34 @@ const MediaView: React.FC<MediaViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [globalIndex, onClose, favorites]);
 
-  
   useEffect(() => {
     let slideshowInterval: NodeJS.Timeout | null = null;
 
     if (isSlideshowActive) {
       slideshowInterval = setInterval(() => {
-        handleNextItem();
+        setGlobalIndex((prevIndex) => (prevIndex + 1) % allMedia.length);
       }, 3000);
     }
 
     return () => {
       if (slideshowInterval) clearInterval(slideshowInterval);
     };
-  }, [isSlideshowActive, globalIndex]);
+  }, [isSlideshowActive, allMedia.length]);
 
-  
   const handleZoomIn = () => setScale((s) => Math.min(4, s + 0.1));
   const handleZoomOut = () => setScale((s) => Math.max(0.5, s - 0.1));
   const handleRotate = () => setRotation((prev) => (prev + 90) % 360);
 
   const toggleFavorite = () => {
-    const currentMedia = allMedia[globalIndex];
-    setFavorites(prev => {
+    const currentMedia = allMedia[globalIndex].path || '';
+    setFavorites((prev) => {
       const newFavorites = prev.includes(currentMedia)
-        ? prev.filter(f => f !== currentMedia)
+        ? prev.filter((f) => f !== currentMedia)
         : [...prev, currentMedia];
-      
+
       localStorage.setItem('pictopy-favorites', JSON.stringify(newFavorites));
       return newFavorites;
     });
-  };
-
-  const handleShare = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `Shared Image ${globalIndex + 1}`,
-          url: allMedia[globalIndex]
-        });
-      } else {
-        await navigator.clipboard.writeText(allMedia[globalIndex]);
-        console.log('Link copied to clipboard!');
-      }
-    } catch (error) {
-      console.error('Share failed:', error);
-    }
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -151,31 +131,17 @@ const MediaView: React.FC<MediaViewProps> = ({
     setRotation(0);
   };
 
-  useEffect(() => {
-    const element = document.getElementById('zoomable-image');
-    element?.addEventListener('wheel', handleWheel, { passive: false });
-    return () => element?.removeEventListener('wheel', handleWheel);
-  }, [scale]);
-
-  function handlePrevItem() {
-    if (globalIndex > 0) {
-      setGlobalIndex(globalIndex - 1);
-    } else {
-      setGlobalIndex(allMedia.length - 1);
-    }
+  const handlePrevItem = () => {
+    setGlobalIndex(globalIndex > 0 ? globalIndex - 1 : allMedia.length - 1);
     resetZoom();
     resetEditing();
-  }
+  };
 
-  function handleNextItem() {
-    if (globalIndex < allMedia.length - 1) {
-      setGlobalIndex(globalIndex + 1);
-    } else {
-      setGlobalIndex(0);
-    }
+  const handleNextItem = () => {
+    setGlobalIndex(globalIndex < allMedia.length - 1 ? globalIndex + 1 : 0);
     resetZoom();
     resetEditing();
-  }
+  };
 
   const resetEditing = () => {
     setIsEditing(false);
@@ -191,7 +157,7 @@ const MediaView: React.FC<MediaViewProps> = ({
   const showNotification = (message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 5000);
-    console.log(`Notification: ${type} - ${message}`); // Add console logging for debugging
+    console.log(`Notification: ${type} - ${message}`);
   };
 
   const handleShare = async () => {
@@ -208,15 +174,12 @@ const MediaView: React.FC<MediaViewProps> = ({
     console.log('Starting handleEditComplete');
 
     try {
-      // Read the image file using Tauri's filesystem API
       const imageData = await readFile(allMedia[globalIndex].path || '');
       console.log('Image file read successfully');
 
-      // Create a Blob from the file data
       const blob = new Blob([imageData], { type: 'image/png' });
       const imageUrl = URL.createObjectURL(blob);
 
-      // Create an image element to load the file
       const img = new Image();
       img.src = imageUrl;
       await new Promise((resolve) => {
@@ -251,7 +214,7 @@ const MediaView: React.FC<MediaViewProps> = ({
       }
 
       ctx.filter = `${filter} brightness(${brightness}%) contrast(${contrast}%)`;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(canvas, 0, 0);
 
       console.log('Canvas prepared, attempting to create blob');
 
@@ -268,19 +231,32 @@ const MediaView: React.FC<MediaViewProps> = ({
       const arrayBuffer = await editedBlob.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
 
-      console.log('Invoking save_edited_image');
-      await invoke('save_edited_image', {
-        imageData: Array.from(uint8Array),
-        originalPath: allMedia[globalIndex].path,
-        filter,
-        brightness,
-        contrast,
-      });
+      if (isSecureFolder) {
+        // Save the edited image to a temporary location
+        const tempPath = await invoke<string>('save_temp_image', {
+          imageData: Array.from(uint8Array),
+          originalPath: allMedia[globalIndex].path,
+        });
+
+        // Move the temporary file to the secure folder
+        await invoke('move_to_secure_folder', {
+          path: tempPath,
+          password: prompt('Enter your secure folder password:'),
+        });
+      } else {
+        console.log('Invoking save_edited_image');
+        await invoke('save_edited_image', {
+          imageData: Array.from(uint8Array),
+          originalPath: allMedia[globalIndex].path,
+          filter,
+          brightness,
+          contrast,
+        });
+      }
 
       console.log('Image saved successfully');
       showNotification('Image saved successfully', 'success');
 
-      // Clean up the object URL
       URL.revokeObjectURL(imageUrl);
     } catch (error) {
       console.error('Error in handleEditComplete:', error);
@@ -296,20 +272,8 @@ const MediaView: React.FC<MediaViewProps> = ({
     allMedia,
     globalIndex,
     showNotification,
+    isSecureFolder,
   ]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black bg-opacity-90" />
-  const handlePrevItem = () => {
-    setGlobalIndex(globalIndex > 0 ? globalIndex - 1 : allMedia.length - 1);
-    resetZoom();
-  };
-
-  const handleNextItem = () => {
-    setGlobalIndex(globalIndex < allMedia.length - 1 ? globalIndex + 1 : 0);
-    resetZoom();
-  };
 
   const handleThumbnailClick = (index: number) => {
     setGlobalIndex(index);
@@ -317,55 +281,130 @@ const MediaView: React.FC<MediaViewProps> = ({
   };
 
   const toggleSlideshow = () => {
-    setIsSlideshowActive(prev => !prev);
+    setIsSlideshowActive((prev) => !prev);
   };
 
   const isFavorite = (mediaUrl: string) => favorites.includes(mediaUrl);
 
+  const handleMoveToSecureFolder = async () => {
+    const currentMedia = allMedia[globalIndex];
+    if (!currentMedia || !currentMedia.path) return;
+
+    const secureFolderCreated = await invoke<boolean>(
+      'check_secure_folder_status',
+    );
+    if (!secureFolderCreated) {
+      navigate('/secure-folder');
+      return;
+    }
+
+    try {
+      const password = prompt('Enter your secure folder password:');
+      if (!password) return;
+
+      await invoke('move_to_secure_folder', {
+        path: currentMedia.path,
+        password,
+      });
+      showNotification('File moved to secure folder', 'success');
+      // Remove the moved item from allMedia
+      const newAllMedia = [...allMedia];
+      newAllMedia.splice(globalIndex, 1);
+      // Update allMedia state (you might need to lift this state up to a parent component)
+      // setAllMedia(newAllMedia);
+      if (newAllMedia.length === 0) {
+        onClose();
+      } else {
+        setGlobalIndex(Math.min(globalIndex, newAllMedia.length - 1));
+      }
+    } catch (error) {
+      showNotification(`Failed to move file: ${error}`, 'error');
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
-      
-      <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
-        <button
-          onClick={handleShare}
-          className="rounded-full bg-white/20 p-2 text-white hover:bg-white/40 transition-colors duration-200"
-          aria-label="Share"
-        >
-          <Share2 className="h-6 w-6" />
-        </button>
-        <button
-          onClick={toggleFavorite}
-          className={`rounded-full p-2 text-white transition-colors duration-300 ${
-            isFavorite(allMedia[globalIndex])
-              ? 'bg-red-500 hover:bg-red-600'
-              : 'bg-white/20 hover:bg-white/40'
-          }`}
-          aria-label={isFavorite(allMedia[globalIndex]) ? 'Remove from favorites' : 'Add to favorites'}
-        >
-          <Heart
-            className={`h-6 w-6 ${
-              isFavorite(allMedia[globalIndex]) ? 'fill-current' : ''
+      <div className="absolute right-4 top-4 z-50 flex items-center gap-2">
+        {!isSecureFolder && (
+          <button
+            onClick={handleShare}
+            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Share"
+          >
+            <Share2 className="h-6 w-6" />
+          </button>
+        )}
+        {!isSecureFolder && (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Edit"
+          >
+            <Edit className="h-6 w-6" />
+          </button>
+        )}
+        {!isSecureFolder && (
+          <button
+            onClick={handleMoveToSecureFolder}
+            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Move to Secure Folder"
+          >
+            <Lock className="h-6 w-6" />
+          </button>
+        )}
+        {!isSecureFolder && (
+          <button
+            onClick={toggleFavorite}
+            className={`rounded-full p-2 text-white transition-colors duration-300 ${
+              isFavorite(allMedia[globalIndex].path || '')
+                ? 'bg-red-500 hover:bg-red-600'
+                : 'bg-white/20 hover:bg-white/40'
             }`}
-          />
-        </button>
-        <button
-          onClick={toggleSlideshow}
-          className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-white hover:bg-white/40 transition-colors duration-200"
-          aria-label="Toggle Slideshow"
-        >
-          {isSlideshowActive ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-          {isSlideshowActive ? 'Pause' : 'Slideshow'}
-        </button>
+            aria-label={
+              isFavorite(allMedia[globalIndex].path || '')
+                ? 'Remove from favorites'
+                : 'Add to favorites'
+            }
+          >
+            <Heart
+              className={`h-6 w-6 ${isFavorite(allMedia[globalIndex].path || '') ? 'fill-current' : ''}`}
+            />
+          </button>
+        )}
+        {type === 'image' && (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Edit"
+          >
+            <Edit className="h-6 w-6" />
+          </button>
+        )}
+
+        {type === 'image' && (
+          <button
+            onClick={toggleSlideshow}
+            className="rounded-full flex items-center gap-2 bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Toggle Slideshow"
+          >
+            {isSlideshowActive ? (
+              <Pause className="h-5 w-5" />
+            ) : (
+              <Play className="h-5 w-5" />
+            )}
+            {isSlideshowActive ? 'Pause' : 'Slideshow'}
+          </button>
+        )}
+
         <button
           onClick={onClose}
-          className="rounded-full bg-white/20 p-2 text-white hover:bg-white/40 transition-colors duration-200"
+          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
           aria-label="Close"
         >
           <X className="h-6 w-6" />
         </button>
       </div>
 
-      
       <div
         className="relative flex h-full w-full items-center justify-center"
         onClick={(e) => {
@@ -375,16 +414,11 @@ const MediaView: React.FC<MediaViewProps> = ({
         {type === 'image' ? (
           <div
             id="zoomable-image"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                onClose();
-              }
-            }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            className="relative h-full w-full flex items-center justify-center overflow-hidden"
+            className="relative flex h-full w-full items-center justify-center overflow-hidden"
           >
             {isEditing ? (
               <ReactCrop
@@ -394,7 +428,7 @@ const MediaView: React.FC<MediaViewProps> = ({
               >
                 <img
                   id="source-image"
-                  src={allMedia[globalIndex].url}
+                  src={allMedia[globalIndex].url || '/placeholder.svg'}
                   alt={`image-${globalIndex}`}
                   style={{
                     filter: `${filter} brightness(${brightness}%) contrast(${contrast}%)`,
@@ -403,215 +437,154 @@ const MediaView: React.FC<MediaViewProps> = ({
               </ReactCrop>
             ) : (
               <img
-                src={allMedia[globalIndex].url}
+                src={allMedia[globalIndex].url || '/placeholder.svg'}
                 alt={`image-${globalIndex}`}
                 draggable={false}
-                className="max-h-full select-none"
+                className="h-full w-full select-none object-contain"
                 style={{
-                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-                  transition: isDragging ? 'none' : 'transform 0.1s',
+                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
+                  transition: isDragging
+                    ? 'none'
+                    : 'transform 0.2s ease-in-out',
                   cursor: isDragging ? 'grabbing' : 'grab',
                 }}
               />
             )}
-            <div className="absolute bottom-4 right-4 flex gap-2">
-              {isEditing ? (
-                <>
-                  <button
-                    onClick={handleEditComplete}
-                    className="rounded-md border border-black bg-white px-4 py-2 text-sm text-black transition duration-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)]"
-                  >
-                    <Check className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={resetEditing}
-                    className="rounded-md border border-black bg-white px-4 py-2 text-sm text-black transition duration-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)]"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                  <select
-                    onChange={(e) => setFilter(e.target.value)}
-                    className="rounded-md border border-black bg-white px-4 py-2 text-sm text-black"
-                  >
-                    <option value="">No Filter</option>
-                    <option value="grayscale(100%)">Grayscale</option>
-                    <option value="sepia(100%)">Sepia</option>
-                    <option value="invert(100%)">Invert</option>
-                  </select>
-                  <div className="flex items-center gap-2">
-                    <SunMoon />
-                    <input
-                      type="range"
-                      min="0"
-                      max="200"
-                      value={brightness}
-                      onChange={(e) => setBrightness(Number(e.target.value))}
-                      className="w-24"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Contrast />
-                    <input
-                      type="range"
-                      min="0"
-                      max="200"
-                      value={contrast}
-                      onChange={(e) => setContrast(Number(e.target.value))}
-                      className="w-24"
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={handelZoomOut}
-                    className="rounded-md border border-black bg-white px-4 py-2 text-sm text-black transition duration-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)]"
-                  >
-                    -
-                  </button>
-                  <button
-                    onClick={resetZoom}
-                    className="rounded-md border border-black bg-white px-4 py-2 text-sm text-black transition duration-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)]"
-                  >
-                    Reset
-                  </button>
-                  <button
-                    onClick={handelZoomIn}
-                    className="rounded-md border border-black bg-white px-4 py-2 text-sm text-black transition duration-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)]"
-                  >
-                    +
-                  </button>
-                  {allMedia[globalIndex]?.path && (
-                    <>
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="rounded-md border border-black bg-white px-4 py-2 text-sm text-black transition duration-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)]"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={handleShare}
-                        className="rounded-md border border-black bg-white px-4 py-2 text-sm text-black transition duration-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)]"
-                      >
-                        <Share2 className="h-4 w-4" />
-                      </button>
-                    </>
-                  )}
-                </>
-              )}
-            <img
-              src={allMedia[globalIndex].url}
-              alt={`media-${globalIndex}`}
-              draggable={false}
-              className="h-full w-full object-contain"
-              style={{
-                transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
-                cursor: isDragging ? 'grabbing' : 'grab',
-                transition: isDragging ? 'none' : 'transform 0.2s ease-in-out',
-              }}
-            />
-
-            
-            <div className="absolute bottom-20 right-4 flex gap-2">
-              <button
-                onClick={handleZoomOut}
-                className="rounded-md bg-white/20 p-2 text-white hover:bg-white/40 transition-colors duration-200"
-                aria-label="Zoom Out"
-              >
-                <ZoomOut className="h-5 w-5" />
-              </button>
-              <button
-                onClick={resetZoom}
-                className="rounded-md bg-white/20 px-4 py-2 text-white hover:bg-white/40 transition-colors duration-200"
-              >
-                Reset
-              </button>
-              <button
-                onClick={handleZoomIn}
-                className="rounded-md bg-white/20 p-2 text-white hover:bg-white/40 transition-colors duration-200"
-                aria-label="Zoom In"
-              >
-                <ZoomIn className="h-5 w-5" />
-              </button>
-              <button
-                onClick={handleRotate}
-                className="rounded-md bg-white/20 p-2 text-white hover:bg-white/40 transition-colors duration-200"
-                aria-label="Rotate"
-              >
-                <RotateCw className="h-5 w-5" />
-              </button>
-            </div>
           </div>
         ) : (
-          <video
-            src={allMedia[globalIndex].url}
-            className="max-h-full"
-            className="h-full w-full object-contain"
-            controls
-            autoPlay
+          <NetflixStylePlayer
+            videoSrc={allMedia[globalIndex].url}
+            description=""
+            title=""
           />
         )}
 
         <button
           onClick={handlePrevItem}
-          className="absolute left-4 top-1/2 z-50 flex items-center rounded-[50%] border border-black bg-white p-2 text-black transition duration-100 hover:bg-slate-800 hover:text-white"
-        >
-          <ChevronLeft className="h-6 w-4" />
-        </button>
-        <button
-          onClick={handleNextItem}
-          className="absolute right-4 top-1/2 z-50 flex items-center rounded-[50%] border border-black bg-white p-2 text-black transition duration-100 hover:bg-slate-800 hover:text-white"
-        >
-          <ChevronRight className="h-6 w-4" />
-        </button>        
-        <button
-          onClick={handlePrevItem}
-          className="absolute left-4 top-1/2 z-50 flex items-center rounded-full bg-white/20 p-3 text-white hover:bg-white/40 transition-colors duration-200"
+          className="rounded-full absolute left-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
         <button
           onClick={handleNextItem}
-          className="absolute right-4 top-1/2 z-50 flex items-center rounded-full bg-white/20 p-3 text-white hover:bg-white/40 transition-colors duration-200"
+          className="rounded-full absolute right-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
         >
           <ChevronRight className="h-6 w-6" />
         </button>
       </div>
+      {type == 'image' ? (
+        <div className="absolute bottom-20 right-4 flex gap-2">
+          <button
+            onClick={handleZoomOut}
+            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Zoom Out"
+          >
+            <ZoomOut className="h-5 w-5" />
+          </button>
+          <button
+            onClick={resetZoom}
+            className="rounded-md bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+          >
+            Reset
+          </button>
+          <button
+            onClick={handleZoomIn}
+            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Zoom In"
+          >
+            <ZoomIn className="h-5 w-5" />
+          </button>
+          <button
+            onClick={handleRotate}
+            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Rotate"
+          >
+            <RotateCw className="h-5 w-5" />
+          </button>
+          {isEditing && (
+            <>
+              <button
+                onClick={handleEditComplete}
+                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                aria-label="Confirm Edit"
+              >
+                <Check className="h-5 w-5" />
+              </button>
+              <button
+                onClick={resetEditing}
+                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                aria-label="Cancel Edit"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <select
+                onChange={(e) => setFilter(e.target.value)}
+                className="rounded-md bg-white/20 px-2 py-2 text-white"
+              >
+                <option value="">No Filter</option>
+                <option value="grayscale(100%)">Grayscale</option>
+                <option value="sepia(100%)">Sepia</option>
+                <option value="invert(100%)">Invert</option>
+              </select>
+              <div className="flex items-center gap-2">
+                <SunMoon className="h-5 w-5 text-white" />
+                <input
+                  type="range"
+                  min="0"
+                  max="200"
+                  value={brightness}
+                  onChange={(e) => setBrightness(Number(e.target.value))}
+                  className="w-24"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Contrast className="h-5 w-5 text-white" />
+                <input
+                  type="range"
+                  min="0"
+                  max="200"
+                  value={contrast}
+                  onChange={(e) => setContrast(Number(e.target.value))}
+                  className="w-24"
+                />
+              </div>
+            </>
+          )}
+        </div>
+      ) : null}
 
       {/* Thumbnails */}
-      <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2 opacity-0 transition-opacity duration-300 hover:opacity-100">
-        {allMedia.map((media, index) => (
-          <div
-            key={index}
-            onClick={() => handleThumbnailClick(index)}
-            className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
-              index === globalIndex
-                ? 'border-blue-500 shadow-lg'
-                : 'border-transparent'
-            } cursor-pointer transition-transform hover:scale-105`}
-          >
-            {isFavorite(media) && (
-              <div className="absolute top-1 right-1 z-10">
-                <Heart className="h-4 w-4 text-red-500 fill-current" />
+      {type === 'image' ? (
+        <div>
+          <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2 opacity-0 transition-opacity duration-300 hover:opacity-100">
+            {allMedia.map((media, index) => (
+              <div
+                key={index}
+                onClick={() => handleThumbnailClick(index)}
+                className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
+                  index === globalIndex
+                    ? 'border-blue-500 shadow-lg'
+                    : 'border-transparent'
+                } cursor-pointer transition-transform hover:scale-105`}
+              >
+                {isFavorite(media.path || '') && (
+                  <div className="absolute right-1 top-1 z-10">
+                    <Heart className="h-4 w-4 fill-current text-red-500" />
+                  </div>
+                )}
+                {type === 'image' ? (
+                  <img
+                    src={media.url || '/placeholder.svg'}
+                    alt={`thumbnail-${index}`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
               </div>
-            )}
-            {type === 'image' ? (
-              <img
-                src={media.url}
-                alt={`thumbnail-${index}`}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <video
-                src={media.url}
-                className="h-full w-full object-cover"
-                muted
-                playsInline
-              />
-            )}
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      ) : null}
+
       {notification && (
         <div
           className={`fixed left-1/2 top-4 -translate-x-1/2 transform rounded-md p-4 ${

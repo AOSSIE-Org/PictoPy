@@ -5,7 +5,7 @@ export interface MediaItem {
   date?: string;
   title?: string;
   tags?: string[];
-  imagePath: string;
+  imagePath?: string;
 }
 export interface MediaCardProps {
   item: MediaItem;
@@ -31,6 +31,7 @@ export interface MediaViewProps {
   currentPage: number;
   itemsPerPage: number;
   type: 'image' | 'video';
+  isSecureFolder?: boolean;
 }
 
 export interface YearOption {
