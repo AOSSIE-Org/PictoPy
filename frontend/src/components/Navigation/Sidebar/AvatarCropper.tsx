@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from "react";
 import Cropper from "react-easy-crop";
-import type { Point, Area } from "react-easy-crop/types";
 
 interface AvatarCropperProps {
   image: string;
@@ -8,12 +7,12 @@ interface AvatarCropperProps {
 }
 
 const AvatarCropper: React.FC<AvatarCropperProps> = ({ image, onCropComplete }) => {
-  const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [croppedPreview, setCroppedPreview] = useState<string | null>(null);
 
-  const handleCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {
+  const handleCropComplete = useCallback((_, croppedAreaPixels) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
@@ -27,12 +26,10 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({ image, onCropComplete }) 
     });
   };
 
-  const getCroppedImg = async (imageSrc: string, crop: Area): Promise<string> => {
+  const getCroppedImg = async (imageSrc: string, crop) => {
     const image = await createImage(imageSrc);
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-
-    if (!ctx) throw new Error("Failed to get canvas context");
 
     canvas.width = crop.width;
     canvas.height = crop.height;
@@ -57,7 +54,7 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({ image, onCropComplete }) 
       try {
         const croppedImage = await getCroppedImg(image, croppedAreaPixels);
         onCropComplete(croppedImage);
-        setCroppedPreview(croppedImage); // For preview
+        setCroppedPreview(croppedImage);
       } catch (error) {
         console.error("Cropping failed:", error);
       }
@@ -75,6 +72,10 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({ image, onCropComplete }) 
           onCropChange={setCrop}
           onZoomChange={setZoom}
           onCropComplete={handleCropComplete}
+          classes={{
+            containerClassName: "rounded",
+            mediaClassName: "rounded",
+          }}
         />
       </div>
 
@@ -101,7 +102,7 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({ image, onCropComplete }) 
           <img
             src={croppedPreview}
             alt="Cropped Preview"
-            className="border rounded shadow-md mt-2"
+            className="border rounded shadow-md mt-2 w-32 h-32 object-cover"
           />
         </div>
       )}

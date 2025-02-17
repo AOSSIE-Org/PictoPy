@@ -33,7 +33,7 @@ type CustomCSSProperties = React.CSSProperties & {
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
-  const [ setIsExpanded] = useState<boolean>(false);
+  const [ ] = useState<boolean>(false);
   const [showCustomize, setShowCustomize] = useState<boolean>(false);
   const [showImageCompressor, setShowImageCompressor] = useState<boolean>(false);
   const [styles, setStyles] = useState<CustomStyles>(defaultStyles);
