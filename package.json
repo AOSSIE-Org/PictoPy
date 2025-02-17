@@ -15,5 +15,11 @@
   },
   "devDependencies": {
     "husky": "^9.1.7"
+  },
+  "dependencies": {
+    "crop": "^0.1.0",
+    "easy": "^21.2.6",
+    "react": "^19.0.0",
+    "react-easy-crop": "^5.2.0"
   }
 }
