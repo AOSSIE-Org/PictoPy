@@ -22,7 +22,7 @@ use directories::ProjectDirs;
 use rand::seq::SliceRandom;
 use std::collections::HashSet; 
 
-const SECURE_FOLDER_NAME: &str = "secure_folder";
+pub const SECURE_FOLDER_NAME: &str = "secure_folder";
 const SALT_LENGTH: usize = 16;
 const NONCE_LENGTH: usize = 12;
 
@@ -272,7 +272,7 @@ pub async fn save_edited_image(
     Ok(())
 }
 
-fn apply_sepia(img: &DynamicImage) -> DynamicImage {
+pub fn apply_sepia(img: &DynamicImage) -> DynamicImage {
     let (width, height) = img.dimensions();
     let mut sepia_img = ImageBuffer::new(width, height);
 
@@ -291,7 +291,7 @@ fn apply_sepia(img: &DynamicImage) -> DynamicImage {
     DynamicImage::ImageRgba8(sepia_img)
 }
 
-fn adjust_brightness_contrast(img: &DynamicImage, brightness: i32, contrast: i32) -> DynamicImage {
+pub fn adjust_brightness_contrast(img: &DynamicImage, brightness: i32, contrast: i32) -> DynamicImage {
     let (width, height) = img.dimensions();
     let mut adjusted_img = ImageBuffer::new(width, height);
 
@@ -316,7 +316,7 @@ fn adjust_brightness_contrast(img: &DynamicImage, brightness: i32, contrast: i32
     DynamicImage::ImageRgba8(adjusted_img)
 }
 
-fn get_secure_folder_path() -> Result<PathBuf, String> {
+pub fn get_secure_folder_path() -> Result<PathBuf, String> {
     let project_dirs = ProjectDirs::from("com", "AOSSIE", "Pictopy")
         .ok_or_else(|| "Failed to get project directories".to_string())?;
     let mut path = project_dirs.data_dir().to_path_buf();
@@ -324,7 +324,7 @@ fn get_secure_folder_path() -> Result<PathBuf, String> {
     Ok(path)
 }
 
-fn generate_salt() -> [u8; SALT_LENGTH] {
+pub fn generate_salt() -> [u8; SALT_LENGTH] {
     let mut salt = [0u8; SALT_LENGTH];
     SystemRandom::new().fill(&mut salt).unwrap();
     salt
@@ -451,7 +451,7 @@ pub async fn get_secure_media(password: String) -> Result<Vec<SecureMedia>, Stri
     Ok(secure_media)
 }
 
-fn hash_password(password: &str, salt: &[u8]) -> Vec<u8> {
+pub fn hash_password(password: &str, salt: &[u8]) -> Vec<u8> {
     let mut hash = [0u8; digest::SHA256_OUTPUT_LEN];
     pbkdf2::derive(
         pbkdf2::PBKDF2_HMAC_SHA256,
@@ -463,7 +463,7 @@ fn hash_password(password: &str, salt: &[u8]) -> Vec<u8> {
     hash.to_vec()
 }
 
-fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, ring::error::Unspecified> {
+pub fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, ring::error::Unspecified> {
     let salt = generate_salt();
     let key = derive_key(password, &salt);
     let nonce = generate_nonce();
@@ -484,7 +484,7 @@ fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, ring::error::Uns
     Ok(result)
 }
 
-fn decrypt_data(encrypted: &[u8], password: &str) -> Result<Vec<u8>, String> {
+pub fn decrypt_data(encrypted: &[u8], password: &str) -> Result<Vec<u8>, String> {
     println!("Decrypting data...");
     
     if encrypted.len() < SALT_LENGTH + NONCE_LENGTH + 16 {
@@ -535,7 +535,7 @@ pub async fn unlock_secure_folder(password: String) -> Result<bool, String> {
     Ok(input_hash == stored_hash)
 }
 
-fn derive_key(password: &str, salt: &[u8]) -> LessSafeKey {
+pub fn derive_key(password: &str, salt: &[u8]) -> LessSafeKey {
     let mut key_bytes = [0u8; 32];
     pbkdf2::derive(
         pbkdf2::PBKDF2_HMAC_SHA256,
@@ -556,7 +556,7 @@ pub async fn check_secure_folder_status() -> Result<bool, String> {
     Ok(config_path.exists())
 }
 
-fn generate_nonce() -> [u8; NONCE_LENGTH] {
+pub fn generate_nonce() -> [u8; NONCE_LENGTH] {
     let mut nonce = [0u8; NONCE_LENGTH];
     SystemRandom::new().fill(&mut nonce).unwrap();
     nonce
@@ -584,7 +584,7 @@ pub fn get_random_memories(directories: Vec<String>, count: usize) -> Result<Vec
     Ok(selected_images)
 }
 
-fn get_images_from_directory(dir: &str) -> Result<Vec<MemoryImage>, String> {
+pub fn get_images_from_directory(dir: &str) -> Result<Vec<MemoryImage>, String> {
     let path = Path::new(dir);
     if !path.is_dir() {
         return Err(format!("{} is not a directory", dir));
@@ -616,7 +616,7 @@ fn get_images_from_directory(dir: &str) -> Result<Vec<MemoryImage>, String> {
     Ok(images)
 }
 
-fn is_image_file(path: &Path) -> bool {
+pub fn is_image_file(path: &Path) -> bool {
     let extensions = ["jpg", "jpeg", "png", "gif"];
     path.extension()
         .and_then(|ext| ext.to_str())
