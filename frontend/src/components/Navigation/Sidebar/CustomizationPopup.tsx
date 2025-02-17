@@ -2,21 +2,32 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { CustomStyles, presetThemes } from './styles';
 
+// Define the props interface for the CustomizationPopup component
 interface CustomizationPopupProps {
-  styles: CustomStyles;
-  setStyles: React.Dispatch<React.SetStateAction<CustomStyles>>;
-  onClose: () => void;
+  styles: CustomStyles; // Current styles
+  setStyles: React.Dispatch<React.SetStateAction<CustomStyles>>; // Function to update styles
+  onClose: () => void; // Function to close the popup
 }
 
-function CustomizationPopup({
+const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
   styles,
   setStyles,
   onClose,
-}: CustomizationPopupProps) {
+}) => {
+  /**
+   * Updates a specific style property in the `styles` state.
+   * @param key - The key of the style property to update.
+   * @param value - The new value for the style property.
+   */
   const updateStyle = (key: keyof CustomStyles, value: string | number) => {
     setStyles((prev) => ({ ...prev, [key]: value }));
   };
 
+  /**
+   * Handles file upload for background images or videos.
+   * @param event - The file input change event.
+   * @param type - The type of file being uploaded ('image' or 'video').
+   */
   const handleFileUpload = (
     event: React.ChangeEvent<HTMLInputElement>,
     type: 'image' | 'video',
@@ -34,6 +45,13 @@ function CustomizationPopup({
     }
   };
 
+  /**
+   * Renders a control input for customizing a specific style property.
+   * @param label - The label for the control.
+   * @param key - The key of the style property being controlled.
+   * @param type - The type of input control ('color', 'range', 'select', or 'file').
+   * @param options - Additional options for the input control (e.g., min, max, choices, accept).
+   */
   const renderControl = (
     label: string,
     key: keyof CustomStyles,
@@ -194,7 +212,7 @@ function CustomizationPopup({
               'Inter, sans-serif',
               "'SF Pro Display', sans-serif",
               "'Roboto', sans-serif",
-              "'Open Sans', sansserif",
+              "'Open Sans', sans-serif",
             ],
           })}
           {renderControl('Background Image', 'backgroundImage', 'file', {
@@ -207,6 +225,6 @@ function CustomizationPopup({
       </div>
     </div>
   );
-}
+};
 
 export default CustomizationPopup;

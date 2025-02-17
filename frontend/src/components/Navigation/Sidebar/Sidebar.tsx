@@ -1,6 +1,5 @@
-import type React from "react"
-import { useState, useEffect, useCallback } from "react"
-import { Link, useLocation } from "react-router-dom"
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Home,
   Sparkles,
@@ -12,99 +11,123 @@ import {
   BookImage,
   Lock,
   User,
-} from "lucide-react"
-import CustomizationPopup from "./CustomizationPopup"
-import ImageCompressor from "./ImageCompressor"
-import AvatarCropper from "./AvatarCropper"
-import { defaultStyles, type CustomStyles } from "./styles"
+} from 'lucide-react';
+import CustomizationPopup from './CustomizationPopup';
+import ImageCompressor from './ImageCompressor';
+import AvatarCropper from './AvatarCropper';
+import { defaultStyles, type CustomStyles } from './styles';
 
-const Sidebar = () => {
-  const location = useLocation()
-  const [isExpanded, setIsExpanded] = useState(false)
-  const [showCustomize, setShowCustomize] = useState(false)
-  const [showImageCompressor, setShowImageCompressor] = useState(false)
-  const [styles, setStyles] = useState<CustomStyles>(defaultStyles)
-  const [avatar, setAvatar] = useState<string | null>(null)
-  const [isAvatarLoading, setIsAvatarLoading] = useState(false)
-  const [avatarError, setAvatarError] = useState<string | null>(null)
-  const [showAvatarCropper, setShowAvatarCropper] = useState(false)
-  const [croppedAvatar, setCroppedAvatar] = useState<string | null>(null)
+// Define the NavItem interface for navigation items
+interface NavItem {
+  path: string;
+  label: string;
+  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+}
 
-  const isActive = (path: string) => location.pathname === path
+// Extend CSSProperties to support custom CSS variables
+type CustomCSSProperties = React.CSSProperties & {
+  '--bg-active'?: string;
+  '--text-active'?: string;
+  '--bg-hover'?: string;
+};
 
+const Sidebar: React.FC = () => {
+  const location = useLocation();
+  const [ setIsExpanded] = useState<boolean>(false);
+  const [showCustomize, setShowCustomize] = useState<boolean>(false);
+  const [showImageCompressor, setShowImageCompressor] = useState<boolean>(false);
+  const [styles, setStyles] = useState<CustomStyles>(defaultStyles);
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [isAvatarLoading, setIsAvatarLoading] = useState<boolean>(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [showAvatarCropper, setShowAvatarCropper] = useState<boolean>(false);
+  const [croppedAvatar, setCroppedAvatar] = useState<string | null>(null);
+
+  // Check if the current path matches the given path
+  const isActive = (path: string): boolean => location.pathname === path;
+
+  // Update the body background color when the UI background color changes
   useEffect(() => {
-    document.body.style.backgroundColor = styles.uiBackgroundColor
-  }, [styles.uiBackgroundColor])
+    document.body.style.backgroundColor = styles.uiBackgroundColor;
+  }, [styles.uiBackgroundColor]);
 
-  const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault()
-      ;(event.target as HTMLElement).click()
+  // Handle keyboard events for accessibility
+  const handleKeyDown = useCallback((event: React.KeyboardEvent): void => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      (event.target as HTMLElement).click();
     }
-  }, [])
+  }, []);
 
-  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    setAvatarError(null)
+  // Handle avatar file upload
+  const handleAvatarChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ): Promise<void> => {
+    const file = event.target.files?.[0];
+    setAvatarError(null);
 
-    if (!file) return
+    if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setAvatarError("Please upload a valid image file (JPEG, PNG, GIF)")
-      return
+    if (!file.type.startsWith('image/')) {
+      setAvatarError('Please upload a valid image file (JPEG, PNG, GIF)');
+      return;
     }
 
-    setIsAvatarLoading(true)
+    setIsAvatarLoading(true);
 
     try {
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onloadend = () => {
-        setAvatar(reader.result as string)
-        setIsAvatarLoading(false)
-        setShowAvatarCropper(true)
-      }
+        setAvatar(reader.result as string);
+        setIsAvatarLoading(false);
+        setShowAvatarCropper(true);
+      };
       reader.onerror = () => {
-        setAvatarError("Error reading file. Please try again.")
-        setIsAvatarLoading(false)
-      }
-      reader.readAsDataURL(file)
+        setAvatarError('Error reading file. Please try again.');
+        setIsAvatarLoading(false);
+      };
+      reader.readAsDataURL(file);
     } catch (error) {
-      setAvatarError("An unexpected error occurred. Please try again.")
-      setIsAvatarLoading(false)
+      setAvatarError('An unexpected error occurred. Please try again.');
+      setIsAvatarLoading(false);
     }
-  }
+  };
 
-  const handleCropComplete = (croppedImage: string) => {
-    setCroppedAvatar(croppedImage)
-    setShowAvatarCropper(false)
-  }
+  // Handle avatar crop completion
+  const handleCropComplete = (croppedImage: string): void => {
+    setCroppedAvatar(croppedImage);
+    setShowAvatarCropper(false);
+  };
 
-  const sidebarStyle = {
+  // Define the sidebar style
+  const sidebarStyle: CustomCSSProperties = {
     background: styles.bgColor,
     color: styles.textColor,
     borderColor: styles.borderColor,
     borderRadius: `${styles.borderRadius}px`,
-    backgroundSize: "cover",
+    backgroundSize: 'cover',
     fontFamily: styles.fontFamily,
     fontSize: `${styles.fontSize}px`,
-    width: isExpanded ? `${styles.expandedWidth}px` : `${styles.sidebarWidth}px`,
-    "--bg-active": styles.activeBackgroundColor,
-    "--text-active": styles.activeTextColor,
-    "--bg-hover": styles.hoverBackgroundColor,
-  } as React.CSSProperties
+    
+    '--bg-active': styles.activeBackgroundColor,
+    '--text-active': styles.activeTextColor,
+    '--bg-hover': styles.hoverBackgroundColor,
+  };
 
-  const navItems = [
-    { path: "/home", label: "Home", Icon: Home },
-    { path: "/ai-tagging", label: "AI Tagging", Icon: Sparkles },
-    { path: "/videos", label: "Videos", Icon: Video },
-    { path: "/albums", label: "Albums", Icon: Images },
-    { path: "/settings", label: "Settings", Icon: Settings },
-    { path: "/secure-folder", label: "Secure Folder", Icon: Lock },
-    { path: "/memories", label: "Memories", Icon: BookImage },
-  ]
+  // Define the navigation items
+  const navItems: NavItem[] = [
+    { path: '/home', label: 'Home', Icon: Home },
+    { path: '/ai-tagging', label: 'AI Tagging', Icon: Sparkles },
+    { path: '/videos', label: 'Videos', Icon: Video },
+    { path: '/albums', label: 'Albums', Icon: Images },
+    { path: '/settings', label: 'Settings', Icon: Settings },
+    { path: '/secure-folder', label: 'Secure Folder', Icon: Lock },
+    { path: '/memories', label: 'Memories', Icon: BookImage },
+  ];
 
   return (
     <>
+      {/* Background Video */}
       {styles.backgroundVideo && (
         <div className="fixed inset-0 z-[-1] h-full w-full overflow-hidden">
           <video
@@ -120,22 +143,22 @@ const Sidebar = () => {
         </div>
       )}
 
+      {/* Sidebar */}
       <div className="p-4">
         <nav
           className="sidebar relative z-10 flex h-[calc(90vh-2rem)] flex-col justify-between rounded-3xl border-r transition-all duration-300 ease-in-out"
           style={sidebarStyle}
-          onMouseEnter={() => setIsExpanded(true)}
-          onMouseLeave={() => setIsExpanded(false)}
+          
           aria-label="Main Navigation"
         >
           <div className="mt-2 flex flex-col items-center">
-            {/* Enhanced Avatar Section */}
+            {/* Avatar Section */}
             <div className="relative group mb-6">
               <div
                 className={`avatar-container relative cursor-pointer transition-all duration-300 ${
-                  isAvatarLoading ? "opacity-50 pointer-events-none" : ""
+                  isAvatarLoading ? 'opacity-50 pointer-events-none' : ''
                 }`}
-                onClick={() => document.getElementById("avatarUpload")?.click()}
+                onClick={() => document.getElementById('avatarUpload')?.click()}
                 onKeyDown={handleKeyDown}
                 tabIndex={0}
                 role="button"
@@ -144,13 +167,13 @@ const Sidebar = () => {
                 <div className="relative h-24 w-24 rounded-full border-4 border-white/20 hover:border-primary transition-colors duration-300 shadow-lg overflow-hidden">
                   {croppedAvatar ? (
                     <img
-                      src={croppedAvatar || "/placeholder.svg"}
+                      src={croppedAvatar || '/placeholder.svg'}
                       alt="User Avatar"
                       className="h-full w-full object-cover transform group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : avatar ? (
                     <img
-                      src={avatar || "/placeholder.svg"}
+                      src={avatar || '/placeholder.svg'}
                       alt="User Avatar"
                       className="h-full w-full object-cover transform group-hover:scale-105 transition-transform duration-300"
                     />
@@ -195,10 +218,10 @@ const Sidebar = () => {
                 to={path}
                 className={`group m-1 flex flex-col items-center gap-1 rounded-lg p-4 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
                   isActive(path)
-                    ? "bg-[var(--bg-active)] text-[var(--text-active)] shadow-md"
-                    : "text-default hover:bg-[var(--bg-hover)]"
+                    ? 'bg-[var(--bg-active)] text-[var(--text-active)] shadow-md'
+                    : 'text-default hover:bg-[var(--bg-hover)]'
                 }`}
-                aria-current={isActive(path) ? "page" : undefined}
+                aria-current={isActive(path) ? 'page' : undefined}
               >
                 <Icon
                   style={{
@@ -212,6 +235,7 @@ const Sidebar = () => {
               </Link>
             ))}
 
+            {/* Image Compressor Button */}
             <button
               onClick={() => setShowImageCompressor(true)}
               className="group m-1 flex w-full flex-col items-center gap-1 rounded-lg p-4 text-default transition-all duration-300 hover:scale-[1.02] hover:bg-[var(--bg-hover)] active:scale-[0.98]"
@@ -230,6 +254,7 @@ const Sidebar = () => {
             </button>
           </div>
 
+          {/* Customize Button */}
           <div className="flex items-center justify-center p-4">
             <button
               onClick={() => setShowCustomize(true)}
@@ -243,6 +268,7 @@ const Sidebar = () => {
         </nav>
       </div>
 
+      {/* Customization Popup */}
       {showCustomize && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 dark:bg-gray-800">
@@ -251,6 +277,7 @@ const Sidebar = () => {
         </div>
       )}
 
+      {/* Image Compressor Popup */}
       {showImageCompressor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity duration-300">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 dark:bg-gray-800">
@@ -262,6 +289,7 @@ const Sidebar = () => {
         </div>
       )}
 
+      {/* Avatar Cropper Popup */}
       {showAvatarCropper && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity duration-300">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 dark:bg-gray-800">
@@ -273,7 +301,7 @@ const Sidebar = () => {
         </div>
       )}
     </>
-  )
-}
+  );
+};
 
-export default Sidebar
+export default Sidebar;
