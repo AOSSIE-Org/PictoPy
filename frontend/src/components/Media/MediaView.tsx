@@ -17,6 +17,8 @@ import {
   Play,
   Pause,
   Lock,
+  FlipHorizontal,
+  FlipVertical,
 } from 'lucide-react';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -46,6 +48,9 @@ const MediaView: React.FC<MediaViewProps> = ({
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<Crop>();
   const [filter, setFilter] = useState('');
+  //flipImage
+  const[fliphorizontal,setfliphorizontal]=useState(false)
+  const[flipvertical,setflipvertical]=useState(false)
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
   const [notification, setNotification] = useState<{
@@ -149,8 +154,11 @@ const MediaView: React.FC<MediaViewProps> = ({
     setCompletedCrop(undefined);
     setFilter('');
     setBrightness(100);
+    setfliphorizontal(false)
+    setflipvertical(false)
     setContrast(100);
     setPosition({ x: 0, y: 0 });
+    
     setScale(1);
   };
 
@@ -442,7 +450,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                 draggable={false}
                 className="h-full w-full select-none object-contain"
                 style={{
-                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
+                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)  ${fliphorizontal ? 'scaleX(-1)' : ''}  ${flipvertical ? 'scaleY(-1)' : ''} `,
                   transition: isDragging
                     ? 'none'
                     : 'transform 0.2s ease-in-out',
@@ -501,6 +509,26 @@ const MediaView: React.FC<MediaViewProps> = ({
           >
             <RotateCw className="h-5 w-5" />
           </button>
+          <button
+          onClick={()=>{
+            setfliphorizontal(!fliphorizontal)
+            console.log(fliphorizontal)
+          }}
+          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          aria-label="flipHorizontal"
+        >
+          <FlipHorizontal className="h-5 w-5" />
+        </button>
+        <button
+          onClick={()=>{
+            setflipvertical(!flipvertical)
+            console.log(flipvertical)
+          }}
+          className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          aria-label="flipvertical"
+        >
+          <FlipVertical className="h-5 w-5" />
+        </button>
           {isEditing && (
             <>
               <button
