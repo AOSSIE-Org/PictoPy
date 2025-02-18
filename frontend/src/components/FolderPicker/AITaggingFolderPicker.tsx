@@ -2,31 +2,35 @@ import React from 'react';
 import { Button } from '../ui/button';
 import { open } from '@tauri-apps/plugin-dialog';
 import { FolderPlus } from 'lucide-react';
-
 interface FolderPickerProps {
-  setFolderPaths: (paths: string[]) => void;
+  setFolderPath: (path: string) => void;
   className?: string;
+  handleDeleteCache?: () => void;
 }
 
-const FolderPicker: React.FC<FolderPickerProps> = ({
-  setFolderPaths,
+const AITaggingFolderPicker: React.FC<FolderPickerProps> = ({
+  setFolderPath,
   className,
+  handleDeleteCache,
 }) => {
   const pickFolder = async () => {
     try {
       const selected = await open({
         directory: true,
-        multiple: true, // Allow multiple folder selection
-        title: 'Select folders',
+        multiple: false,
+        title: 'Select a folder',
       });
-      if (selected && Array.isArray(selected)) {
-        setFolderPaths(selected);
+      if (selected && typeof selected === 'string') {
+        setFolderPath(selected);
+        console.log('Selected folder:', selected);
+        if (handleDeleteCache) {
+          handleDeleteCache();
+        }
       }
     } catch (error) {
-      console.error('Error picking folders:', error);
+      console.error('Error picking folder:', error);
     }
   };
-
   return (
     <div className="flex w-full gap-3">
       <Button
@@ -35,10 +39,10 @@ const FolderPicker: React.FC<FolderPickerProps> = ({
         className={`flex items-center justify-center border-gray-500 text-gray-700 hover:bg-accent dark:text-gray-50 dark:hover:bg-white/10 ${className} `}
       >
         <FolderPlus className="h-[18px] w-[18px]" />
-        <p className={`ml-2 inline`}>Add folders</p>
+        <p className={`ml-2 inline`}>Add folder</p>
       </Button>
     </div>
   );
 };
 
-export default FolderPicker;
+export default AITaggingFolderPicker;

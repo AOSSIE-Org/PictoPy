@@ -22,8 +22,7 @@ const Memories: React.FC = () => {
   const [storyIndex, setStoryIndex] = useState(0);
   const itemsPerPage = 12;
   const [currentPath] = useLocalStorage('folderPath', '');
-  // const [currentPaths] = useLocalStorage<string[]>('folderPaths', []); Temporarily commented out, will be uncommented after open PR related to multiple folder support is merged.
-  const currentPaths: string[] = []; // Temporarily added to avoid TypeScript error, will be removed after open PR related to multiple folder support is merged.
+  const [currentPaths] = useLocalStorage<string[]>('folderPaths', []);
   const storyDuration = 3000; // 3 seconds per story
 
   useEffect(() => {

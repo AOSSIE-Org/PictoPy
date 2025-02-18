@@ -157,7 +157,11 @@ def get_objects_db(path):
 
     class_ids_json = result[0]
     class_ids = json.loads(class_ids_json)
-    class_ids = class_ids.split(",")
+    if isinstance(class_ids, list):
+        class_ids = [str(class_id) for class_id in class_ids]  
+    else:
+        class_ids = class_ids.split(",") 
+
 
     conn_mappings = sqlite3.connect(MAPPINGS_DATABASE_PATH)
     cursor_mappings = conn_mappings.cursor()

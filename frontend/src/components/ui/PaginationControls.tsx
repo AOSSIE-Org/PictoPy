@@ -64,11 +64,14 @@ export default function PaginationControls({
             {getPageNumbers().map((page, index) =>
               page === '...' ? (
                 <PaginationItem key={index}>
-                  <PaginationLink className='cursor-pointer'>{page}</PaginationLink>
+                  <PaginationLink className="cursor-pointer">
+                    {page}
+                  </PaginationLink>
                 </PaginationItem>
               ) : (
                 <PaginationItem key={index}>
-                  <PaginationLink className='cursor-pointer'
+                  <PaginationLink
+                    className="cursor-pointer"
                     isActive={page === currentPage}
                     onClick={() => onPageChange(Number(page))}
                   >
