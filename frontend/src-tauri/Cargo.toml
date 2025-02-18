@@ -23,6 +23,8 @@ tauri-plugin-dialog = "2.0.0-beta.9"
 tauri-plugin-store = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v2" }
 ring = "0.16.20"
 data-encoding = "2.3.2"
+tokio = { version = "1", features = ["macros"] }
+tempfile = "3"
 arrayref = "0.3.6"
 directories = "4.0"
 chrono = { version = "0.4.26", features = ["serde"] }
