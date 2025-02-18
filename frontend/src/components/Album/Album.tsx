@@ -60,11 +60,8 @@ const AlbumsView: React.FC = () => {
         <div className="text-center">No albums found.</div>
         <CreateAlbumForm
           isOpen={isCreateFormOpen}
-          onClose={() => setIsCreateFormOpen(false)}
-          onSuccess={() => {
-            setIsCreateFormOpen(false);
-          }}
-          onError={(err) => showErrorDialog('Error', err)}
+          closeForm={() => setIsCreateFormOpen(false)}
+          onError={(title, err) => showErrorDialog(title, err)}
         />
         <ErrorDialog
           content={errorDialogContent}
@@ -143,11 +140,8 @@ const AlbumsView: React.FC = () => {
 
       <CreateAlbumForm
         isOpen={isCreateFormOpen}
-        onClose={() => setIsCreateFormOpen(false)}
-        onSuccess={() => {
-          setIsCreateFormOpen(false);
-        }}
-        onError={(err) => showErrorDialog('Error', err)}
+        closeForm={() => setIsCreateFormOpen(false)}
+        onError={(title, err) => showErrorDialog(title, err)}
       />
 
       <EditAlbumDialog
