@@ -1,12 +1,6 @@
 name: Build and Release
 
 on:
-  push:
-    branches:
-      - "main"
-    paths:
-      - "backend/**"
-      - "frontend/**"
   workflow_dispatch: # Ability to manually trigger the workflow
 
 jobs:
