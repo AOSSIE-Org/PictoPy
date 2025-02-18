@@ -10,7 +10,7 @@ on:
 
 # This workflow will build your tauri app without uploading it anywhere.
 jobs:
-  test-tauri:
+  tauri-build-check:
     strategy:
       fail-fast: false
       matrix:
