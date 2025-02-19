@@ -27,6 +27,14 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 use lazy_static::lazy_static;
+use lru::LruCache;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::num::NonZeroUsize;
+
+// Constants for cache configuration
+const MAX_CACHE_SIZE: usize = 100;  // Maximum number of cached images
+const MAX_IMAGE_DIM: u32 = 4096;    // Maximum cached image dimension
+const MAX_CACHE_MEMORY: usize = 1024 * 1024 * 1024;  // 1GB max cache size
 
 const SECURE_FOLDER_NAME: &str = "secure_folder";
 const SALT_LENGTH: usize = 16;
@@ -46,7 +54,14 @@ impl Hash for ImageAdjustment {
 }
 
 lazy_static! {
-    static ref IMAGE_CACHE: Mutex<HashMap<u64, DynamicImage>> = Mutex::new(HashMap::new());
+    static ref IMAGE_CACHE: Mutex<LruCache<u64, DynamicImage>> = Mutex::new(
+        LruCache::new(NonZeroUsize::new(MAX_CACHE_SIZE).unwrap())
+    );
+    static ref CURRENT_CACHE_MEMORY: AtomicUsize = AtomicUsize::new(0);
+}
+
+fn calculate_image_memory_size(img: &DynamicImage) -> usize {
+    img.width() as usize * img.height() as usize * 4  // 4 bytes per pixel (RGBA)
 }
 
 #[derive(Serialize, Deserialize)]
@@ -319,28 +334,36 @@ fn apply_sepia(img: &DynamicImage) -> DynamicImage {
 }
 
 fn adjust_brightness_contrast(img: &DynamicImage, brightness: i32, contrast: i32) -> DynamicImage {
-    // Calculate cache key
-    let adjustment = ImageAdjustment { brightness, contrast };
+    // Skip processing for extreme dimensions
+    if img.width() > MAX_IMAGE_DIM || img.height() > MAX_IMAGE_DIM {
+        return img.clone();
+    }
+
+    // Generate more robust cache key
     let mut hasher = DefaultHasher::new();
     let img_dimensions = format!("{}x{}", img.width(), img.height());
-    format!("{}{:?}", img_dimensions, adjustment).hash(&mut hasher);
+    let first_pixel = img.get_pixel(0, 0);
+    format!("{}{:?}{}_{}", img_dimensions, first_pixel, brightness, contrast).hash(&mut hasher);
     let cache_key = hasher.finish();
 
-    // Check cache first
-    if let Some(cached_img) = IMAGE_CACHE.lock().unwrap().get(&cache_key) {
-        return cached_img.clone();
+    // Try cache first
+    {
+        let cache = IMAGE_CACHE.lock().unwrap();
+        if let Some(cached_img) = cache.get(&cache_key) {
+            return cached_img.clone();
+        }
     }
 
     let (width, height) = img.dimensions();
     let mut adjusted_img = ImageBuffer::new(width, height);
 
-    // Pre-calculate factors for better performance
+    // Pre-calculate LUT using SIMD-friendly approach
     let brightness_factor = brightness as f32 / 100.0;
     let contrast_factor = (contrast as f32 + 100.0) / 100.0;
     let contrast_offset = 128.0 * (1.0 - contrast_factor);
 
-    // Create lookup table for faster calculations
     let lut: Vec<u8> = (0..256)
+        .into_par_iter()
         .map(|i| {
             let color = i as f32;
             let adjusted = color * contrast_factor + contrast_offset;
@@ -349,25 +372,53 @@ fn adjust_brightness_contrast(img: &DynamicImage, brightness: i32, contrast: i32
         })
         .collect();
 
-    // Process pixels in parallel using rayon
+    // Process image in parallel chunks
+    let chunk_size = (width * height / rayon::current_num_threads() as u32) as usize;
     adjusted_img
-        .par_chunks_mut(4)
+        .chunks_mut(chunk_size * 4)
         .enumerate()
-        .for_each(|(i, chunk)| {
-            let x = (i as u32) % width;
-            let y = (i as u32) / width;
-            let pixel = img.get_pixel(x, y);
-
-            chunk[0] = lut[pixel[0] as usize];
-            chunk[1] = lut[pixel[1] as usize];
-            chunk[2] = lut[pixel[2] as usize];
-            chunk[3] = pixel[3]; // Keep alpha unchanged
+        .par_bridge()
+        .for_each(|(chunk_idx, chunk)| {
+            let start_idx = chunk_idx * chunk_size;
+            chunk
+                .chunks_mut(4)
+                .enumerate()
+                .for_each(|(i, pixel_chunk)| {
+                    let abs_idx = start_idx + i;
+                    let x = (abs_idx as u32) % width;
+                    let y = (abs_idx as u32) / width;
+                    
+                    if y < height {
+                        let pixel = img.get_pixel(x, y);
+                        pixel_chunk[0] = lut[pixel[0] as usize];
+                        pixel_chunk[1] = lut[pixel[1] as usize];
+                        pixel_chunk[2] = lut[pixel[2] as usize];
+                        pixel_chunk[3] = pixel[3];
+                    }
+                });
         });
 
     let result = DynamicImage::ImageRgba8(adjusted_img);
     
-    // Cache the result
-    IMAGE_CACHE.lock().unwrap().insert(cache_key, result.clone());
+    // Cache management
+    let img_size = calculate_image_memory_size(&result);
+    let mut cache = IMAGE_CACHE.lock().unwrap();
+    
+    // Check if we need to make space
+    while CURRENT_CACHE_MEMORY.load(Ordering::Relaxed) + img_size > MAX_CACHE_MEMORY {
+        if let Some((_, removed_img)) = cache.pop_lru() {
+            let removed_size = calculate_image_memory_size(&removed_img);
+            CURRENT_CACHE_MEMORY.fetch_sub(removed_size, Ordering::Relaxed);
+        } else {
+            break;
+        }
+    }
+    
+    // Add to cache if there's space
+    if img_size <= MAX_CACHE_MEMORY {
+        cache.put(cache_key, result.clone());
+        CURRENT_CACHE_MEMORY.fetch_add(img_size, Ordering::Relaxed);
+    }
     
     result
 }
@@ -696,7 +747,9 @@ pub fn get_server_path(handle: tauri::AppHandle) -> Result<String, String> {
 
 #[tauri::command]
 pub fn clear_image_cache() {
-    IMAGE_CACHE.lock().unwrap().clear();
+    let mut cache = IMAGE_CACHE.lock().unwrap();
+    cache.clear();
+    CURRENT_CACHE_MEMORY.store(0, Ordering::Relaxed);
 }
 
 #[cfg(test)]
