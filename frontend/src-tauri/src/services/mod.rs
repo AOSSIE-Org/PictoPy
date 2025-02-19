@@ -20,11 +20,34 @@ use tauri::Manager;
 use std::fs;  
 use directories::ProjectDirs; 
 use rand::seq::SliceRandom;
-use std::collections::HashSet; 
+use std::collections::HashSet;
+use rayon::prelude::*;
+use std::sync::Mutex;
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+use std::collections::hash_map::DefaultHasher;
+use lazy_static::lazy_static;
 
 const SECURE_FOLDER_NAME: &str = "secure_folder";
 const SALT_LENGTH: usize = 16;
 const NONCE_LENGTH: usize = 12;
+
+#[derive(Clone)]
+struct ImageAdjustment {
+    brightness: i32,
+    contrast: i32,
+}
+
+impl Hash for ImageAdjustment {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.brightness.hash(state);
+        self.contrast.hash(state);
+    }
+}
+
+lazy_static! {
+    static ref IMAGE_CACHE: Mutex<HashMap<u64, DynamicImage>> = Mutex::new(HashMap::new());
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct SecureMedia {
@@ -296,28 +319,57 @@ fn apply_sepia(img: &DynamicImage) -> DynamicImage {
 }
 
 fn adjust_brightness_contrast(img: &DynamicImage, brightness: i32, contrast: i32) -> DynamicImage {
+    // Calculate cache key
+    let adjustment = ImageAdjustment { brightness, contrast };
+    let mut hasher = DefaultHasher::new();
+    let img_dimensions = format!("{}x{}", img.width(), img.height());
+    format!("{}{:?}", img_dimensions, adjustment).hash(&mut hasher);
+    let cache_key = hasher.finish();
+
+    // Check cache first
+    if let Some(cached_img) = IMAGE_CACHE.lock().unwrap().get(&cache_key) {
+        return cached_img.clone();
+    }
+
     let (width, height) = img.dimensions();
     let mut adjusted_img = ImageBuffer::new(width, height);
 
+    // Pre-calculate factors for better performance
     let brightness_factor = brightness as f32 / 100.0;
-    let contrast_factor = contrast as f32 / 100.0;
+    let contrast_factor = (contrast as f32 + 100.0) / 100.0;
+    let contrast_offset = 128.0 * (1.0 - contrast_factor);
 
-    for (x, y, pixel) in img.pixels() {
-        let mut new_pixel = [0; 4];
-        for c in 0..3 {
-            let mut color = pixel[c] as f32;
-            // Apply brightness
-            color += 255.0 * (brightness_factor - 1.0);
-            // Apply contrast
-            color = (color - 128.0) * contrast_factor + 128.0;
-            new_pixel[c] = color.max(0.0).min(255.0) as u8;
-        }
-        new_pixel[3] = pixel[3]; // Keep original alpha
+    // Create lookup table for faster calculations
+    let lut: Vec<u8> = (0..256)
+        .map(|i| {
+            let color = i as f32;
+            let adjusted = color * contrast_factor + contrast_offset;
+            let with_brightness = adjusted + (255.0 * brightness_factor);
+            with_brightness.max(0.0).min(255.0) as u8
+        })
+        .collect();
 
-        adjusted_img.put_pixel(x, y, Rgba(new_pixel));
-    }
+    // Process pixels in parallel using rayon
+    adjusted_img
+        .par_chunks_mut(4)
+        .enumerate()
+        .for_each(|(i, chunk)| {
+            let x = (i as u32) % width;
+            let y = (i as u32) / width;
+            let pixel = img.get_pixel(x, y);
 
-    DynamicImage::ImageRgba8(adjusted_img)
+            chunk[0] = lut[pixel[0] as usize];
+            chunk[1] = lut[pixel[1] as usize];
+            chunk[2] = lut[pixel[2] as usize];
+            chunk[3] = pixel[3]; // Keep alpha unchanged
+        });
+
+    let result = DynamicImage::ImageRgba8(adjusted_img);
+    
+    // Cache the result
+    IMAGE_CACHE.lock().unwrap().insert(cache_key, result.clone());
+    
+    result
 }
 
 fn get_secure_folder_path() -> Result<PathBuf, String> {
@@ -641,3 +693,11 @@ pub fn get_server_path(handle: tauri::AppHandle) -> Result<String, String> {
         .map_err(|e| e.to_string())?;
     Ok(resource_path.to_string_lossy().to_string())
 }
+
+#[tauri::command]
+pub fn clear_image_cache() {
+    IMAGE_CACHE.lock().unwrap().clear();
+}
+
+#[cfg(test)]
+mod tests;
