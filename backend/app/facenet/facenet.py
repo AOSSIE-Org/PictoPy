@@ -6,6 +6,8 @@ from app.config.settings import DEFAULT_FACE_DETECTION_MODEL, DEFAULT_FACENET_MO
 from app.facenet.preprocess import normalize_embedding, preprocess_image
 from app.yolov8.YOLOv8 import YOLOv8
 from app.database.faces import insert_face_embeddings
+from typing import Optional
+from app.utils.progress import ProgressTracker
 
 session = onnxruntime.InferenceSession(
     DEFAULT_FACENET_MODEL, providers=["CPUExecutionProvider"]
@@ -21,20 +23,31 @@ def get_face_embedding(image):
     return normalize_embedding(embedding)
 
 
-def detect_faces(img_path):
+def detect_faces(img_path: str, progress_tracker: Optional[ProgressTracker] = None):
+    """Modified to support progress tracking"""
     yolov8_detector = YOLOv8(
         DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.2, iou_thres=0.3
     )
+    
+    if progress_tracker:
+        progress_tracker.update(status="Loading image")
+    
     img = cv2.imread(img_path)
     if img is None:
         print(f"Failed to load image: {img_path}")
         return None
 
+    if progress_tracker:
+        progress_tracker.update(status="Detecting faces")
+    
     boxes, scores, class_ids = yolov8_detector(img)
 
     processed_faces, embeddings = [], []
     for box, score in zip(boxes, scores):
         if score > 0.5:
+            if progress_tracker:
+                progress_tracker.update(status="Processing face")
+            
             x1, y1, x2, y2 = map(int, box)
             face_img = img[y1:y2, x1:x2]
             processed_face = preprocess_image(face_img)
@@ -43,6 +56,9 @@ def detect_faces(img_path):
             embeddings.append(embedding)
 
     if embeddings:
+        if progress_tracker:
+            progress_tracker.update(status="Saving embeddings")
+            
         insert_face_embeddings(img_path, embeddings)
         clusters = get_face_cluster()
         for embedding in embeddings:
