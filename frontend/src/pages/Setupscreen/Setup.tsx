@@ -1,13 +1,13 @@
 import React from 'react';
-import { useInitialPageController } from '@/controllers/SetupController';
-import { SetupScreen } from '@/features/Setup/Setup';
+import { useInitialPageController } from '@/controllers/InitialPageController';
+import { SetupScreen } from '@/features/Setup/SetupScreen';
 import { LoadingScreen } from '@/components/LoadingScreen/LoadingScreen';
 
 export const InitialPage: React.FC = () => {
-  const { loading, handleFolderPathChange } = useInitialPageController();
+  const { loading, handleFolderPathsChange } = useInitialPageController();
   if (loading) {
     return <LoadingScreen />;
   }
 
-  return <SetupScreen onFolderPathChange={handleFolderPathChange} />;
+  return <SetupScreen onFolderPathsChange={handleFolderPathsChange} />;
 };

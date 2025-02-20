@@ -1,5 +1,6 @@
 {
   "extends": ["react-app", "eslint-config-prettier"],
+  "ignorePatterns": ["src-tauri/target"],
   "rules": {
     // Accessibility rules
     "jsx-a11y/click-events-have-key-events": "off",

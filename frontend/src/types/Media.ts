@@ -27,7 +27,7 @@ export interface MediaGridProps {
 export interface MediaViewProps {
   initialIndex: number;
   onClose: () => void;
-  allMedia: { url: string; path?: string }[];
+  allMedia: { url: string; path?: string; thumbnailUrl?: string }[];
   currentPage: number;
   itemsPerPage: number;
   type: 'image' | 'video';

@@ -10,10 +10,27 @@ from app.database.images import (
     insert_image_db,
     extract_metadata,
 )
+from app.database.images import create_image_id_mapping_table, create_images_table
+from app.database.albums import create_albums_table
+from app.database.yolo_mapping import create_YOLO_mappings
+from app.database.faces import cleanup_face_embeddings, create_faces_table
+from app.facecluster.init_face_cluster import get_face_cluster, init_face_cluster
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 client = TestClient(app)
+
+@pytest.fixture(scope="session", autouse=True)
+def initialize_database_and_services():
+    # Run your initialization functions before any tests are executed
+    create_YOLO_mappings()
+    create_faces_table()
+    create_image_id_mapping_table()
+    create_images_table()
+    create_albums_table()
+    cleanup_face_embeddings()
+    init_face_cluster()
+    yield
 
 @pytest.fixture(scope="module")
 def test_images(tmp_path_factory):

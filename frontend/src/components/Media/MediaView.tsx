@@ -371,7 +371,7 @@ const MediaView: React.FC<MediaViewProps> = ({
             />
           </button>
         )}
-        {type === 'image' && (
+        {type === 'image' ? (
           <button
             onClick={() => setIsEditing(true)}
             className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
@@ -379,9 +379,9 @@ const MediaView: React.FC<MediaViewProps> = ({
           >
             <Edit className="h-6 w-6" />
           </button>
-        )}
+        ) : null}
 
-        {type === 'image' && (
+        {type === 'image' ? (
           <button
             onClick={toggleSlideshow}
             className="rounded-full flex items-center gap-2 bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
@@ -394,7 +394,7 @@ const MediaView: React.FC<MediaViewProps> = ({
             )}
             {isSlideshowActive ? 'Pause' : 'Slideshow'}
           </button>
-        )}
+        ) : null}
 
         <button
           onClick={onClose}
@@ -414,6 +414,12 @@ const MediaView: React.FC<MediaViewProps> = ({
         {type === 'image' ? (
           <div
             id="zoomable-image"
+            //Close when clicked outside the image:
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                onClose();
+              }
+            }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -472,7 +478,7 @@ const MediaView: React.FC<MediaViewProps> = ({
           <ChevronRight className="h-6 w-6" />
         </button>
       </div>
-      {type == 'image' ? (
+      {type === 'image' ? (
         <div className="absolute bottom-20 right-4 flex gap-2">
           <button
             onClick={handleZoomOut}
@@ -574,7 +580,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                 )}
                 {type === 'image' ? (
                   <img
-                    src={media.url || '/placeholder.svg'}
+                    src={media.thumbnailUrl || '/placeholder.svg'}
                     alt={`thumbnail-${index}`}
                     className="h-full w-full object-cover"
                   />
