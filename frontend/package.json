@@ -16,6 +16,12 @@
     "format:fix": "prettier --write \"**/*.{ts,tsx,json}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,json}\""
   },
+  "lint-staged": {
+      "*.{js,jsx,ts,tsx}": [
+        "eslint --fix",
+        "prettier --write"
+      ]
+  },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@radix-ui/react-dialog": "^1.1.1",

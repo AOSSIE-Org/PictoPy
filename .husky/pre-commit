@@ -1,2 +1,4 @@
-npm run format:check
-npm run lint:check
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+./scripts/pre-commit.sh
