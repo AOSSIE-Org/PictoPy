@@ -6,6 +6,38 @@ on:
       - main
 
 jobs:
+  linting:
+    runs-on: ubuntu-latest
+    name: Linting
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: |
+          cd frontend
+          npm install
+          cd ..
+          cd backend
+          pip install pre-commit ruff black
+          cd ..
+      - name: Run Linters
+        run: |
+          cd frontend/
+          npm run lint:check
+          npm run format:check
+          cd ..
+          cd backend/
+          pre-commit run --config ../.pre-commit-config.yaml --all-files || exit 1
+          cd ..
+          cd frontend/src-tauri/
+          cargo fmt -- --check
+
   # Frontend Test Job
   frontend:
     runs-on: ubuntu-latest

@@ -1,7 +1,6 @@
 from app.facecluster.init_face_cluster import get_face_cluster
 import cv2
 import onnxruntime
-import numpy as np
 from app.config.settings import DEFAULT_FACE_DETECTION_MODEL, DEFAULT_FACENET_MODEL
 from app.facenet.preprocess import normalize_embedding, preprocess_image
 from app.yolov8.YOLOv8 import YOLOv8

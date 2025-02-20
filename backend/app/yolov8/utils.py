@@ -1,14 +1,88 @@
 import numpy as np
 import cv2
-class_names = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
-               'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
-               'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
-               'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard',
-               'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
-               'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
-               'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard',
-               'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase',
-               'scissors', 'teddy bear', 'hair drier', 'toothbrush']
+
+class_names = [
+    "person",
+    "bicycle",
+    "car",
+    "motorcycle",
+    "airplane",
+    "bus",
+    "train",
+    "truck",
+    "boat",
+    "traffic light",
+    "fire hydrant",
+    "stop sign",
+    "parking meter",
+    "bench",
+    "bird",
+    "cat",
+    "dog",
+    "horse",
+    "sheep",
+    "cow",
+    "elephant",
+    "bear",
+    "zebra",
+    "giraffe",
+    "backpack",
+    "umbrella",
+    "handbag",
+    "tie",
+    "suitcase",
+    "frisbee",
+    "skis",
+    "snowboard",
+    "sports ball",
+    "kite",
+    "baseball bat",
+    "baseball glove",
+    "skateboard",
+    "surfboard",
+    "tennis racket",
+    "bottle",
+    "wine glass",
+    "cup",
+    "fork",
+    "knife",
+    "spoon",
+    "bowl",
+    "banana",
+    "apple",
+    "sandwich",
+    "orange",
+    "broccoli",
+    "carrot",
+    "hot dog",
+    "pizza",
+    "donut",
+    "cake",
+    "chair",
+    "couch",
+    "potted plant",
+    "bed",
+    "dining table",
+    "toilet",
+    "tv",
+    "laptop",
+    "mouse",
+    "remote",
+    "keyboard",
+    "cell phone",
+    "microwave",
+    "oven",
+    "toaster",
+    "sink",
+    "refrigerator",
+    "book",
+    "clock",
+    "vase",
+    "scissors",
+    "teddy bear",
+    "hair drier",
+    "toothbrush",
+]
 
 # Create a list of colors for each class where each color is a tuple of 3 integer values
 rng = np.random.default_rng(3)
@@ -36,6 +110,7 @@ def nms(boxes, scores, iou_threshold):
 
     return keep_boxes
 
+
 def multiclass_nms(boxes, scores, class_ids, iou_threshold):
 
     unique_class_ids = np.unique(class_ids)
@@ -43,13 +118,14 @@ def multiclass_nms(boxes, scores, class_ids, iou_threshold):
     keep_boxes = []
     for class_id in unique_class_ids:
         class_indices = np.where(class_ids == class_id)[0]
-        class_boxes = boxes[class_indices,:]
+        class_boxes = boxes[class_indices, :]
         class_scores = scores[class_indices]
 
         class_keep_boxes = nms(class_boxes, class_scores, iou_threshold)
         keep_boxes.extend(class_indices[class_keep_boxes])
 
     return keep_boxes
+
 
 def compute_iou(box, boxes):
     # Compute xmin, ymin, xmax, ymax for both boxes
@@ -98,31 +174,56 @@ def draw_detections(image, boxes, scores, class_ids, mask_alpha=0.3):
         draw_box(det_img, box, color)
 
         label = class_names[class_id]
-        caption = f'{label} {int(score * 100)}%'
+        caption = f"{label} {int(score * 100)}%"
         draw_text(det_img, caption, box, color, font_size, text_thickness)
 
     return det_img
 
 
-def draw_box( image: np.ndarray, box: np.ndarray, color: tuple[int, int, int] = (0, 0, 255),
-             thickness: int = 2) -> np.ndarray:
+def draw_box(
+    image: np.ndarray,
+    box: np.ndarray,
+    color: tuple[int, int, int] = (0, 0, 255),
+    thickness: int = 2,
+) -> np.ndarray:
     x1, y1, x2, y2 = box.astype(int)
     return cv2.rectangle(image, (x1, y1), (x2, y2), color, thickness)
 
 
-def draw_text(image: np.ndarray, text: str, box: np.ndarray, color: tuple[int, int, int] = (0, 0, 255),
-              font_size: float = 0.001, text_thickness: int = 2) -> np.ndarray:
+def draw_text(
+    image: np.ndarray,
+    text: str,
+    box: np.ndarray,
+    color: tuple[int, int, int] = (0, 0, 255),
+    font_size: float = 0.001,
+    text_thickness: int = 2,
+) -> np.ndarray:
     x1, y1, x2, y2 = box.astype(int)
-    (tw, th), _ = cv2.getTextSize(text=text, fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                                  fontScale=font_size, thickness=text_thickness)
+    (tw, th), _ = cv2.getTextSize(
+        text=text,
+        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+        fontScale=font_size,
+        thickness=text_thickness,
+    )
     th = int(th * 1.2)
 
-    cv2.rectangle(image, (x1, y1),
-                  (x1 + tw, y1 - th), color, -1)
+    cv2.rectangle(image, (x1, y1), (x1 + tw, y1 - th), color, -1)
 
-    return cv2.putText(image, text, (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, font_size, (255, 255, 255), text_thickness, cv2.LINE_AA)
+    return cv2.putText(
+        image,
+        text,
+        (x1, y1),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        font_size,
+        (255, 255, 255),
+        text_thickness,
+        cv2.LINE_AA,
+    )
 
-def draw_masks(image: np.ndarray, boxes: np.ndarray, classes: np.ndarray, mask_alpha: float = 0.3) -> np.ndarray:
+
+def draw_masks(
+    image: np.ndarray, boxes: np.ndarray, classes: np.ndarray, mask_alpha: float = 0.3
+) -> np.ndarray:
     mask_img = image.copy()
 
     # Draw bounding boxes and labels of detections

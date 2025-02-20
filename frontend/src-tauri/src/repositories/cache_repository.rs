@@ -8,7 +8,8 @@ impl CacheRepository {
     pub fn read_cache(cache_file_path: &str) -> Option<Vec<PathBuf>> {
         File::open(cache_file_path).ok().map(|file| {
             let reader = BufReader::new(file);
-            reader.lines()
+            reader
+                .lines()
                 .filter_map(|line| line.ok().map(PathBuf::from))
                 .collect()
         })

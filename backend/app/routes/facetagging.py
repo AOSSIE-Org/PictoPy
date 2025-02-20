@@ -8,6 +8,7 @@ from app.utils.path_id_mapping import get_id_from_path
 
 router = APIRouter()
 
+
 @router.get("/match")
 def face_matching():
     try:
@@ -43,8 +44,8 @@ def face_matching():
             content={
                 "data": {"similar_pairs": similar_pairs},
                 "message": "Successfully matched face embeddings",
-                "success": True
-            }
+                "success": True,
+            },
         )
 
     except Exception as e:
@@ -55,10 +56,11 @@ def face_matching():
                 "content": {
                     "success": False,
                     "error": "Internal server error",
-                    "message": str(e)
-                }
-            }
+                    "message": str(e),
+                },
+            },
         )
+
 
 @router.get("/clusters")
 def face_clusters():
@@ -78,8 +80,8 @@ def face_clusters():
             content={
                 "data": {"clusters": formatted_clusters},
                 "message": "Successfully retrieved face clusters",
-                "success": True
-            }
+                "success": True,
+            },
         )
     except Exception as e:
         return JSONResponse(
@@ -89,10 +91,11 @@ def face_clusters():
                 "content": {
                     "success": False,
                     "error": "Internal server error",
-                    "message": str(e)
-                }
-            }
+                    "message": str(e),
+                },
+            },
         )
+
 
 @router.get("/related-images")
 def get_related_images(path: str = Query(..., description="full path to the image")):
@@ -101,14 +104,14 @@ def get_related_images(path: str = Query(..., description="full path to the imag
         image_id = get_id_from_path(path)
         related_image_ids = cluster.get_related_images(image_id)
         related_image_paths = [get_path_from_id(id) for id in related_image_ids]
-        
+
         return JSONResponse(
             status_code=200,
             content={
                 "data": {"related_images": related_image_paths},
                 "message": f"Successfully retrieved related images for {path}",
-                "success": True
-            }
+                "success": True,
+            },
         )
     except Exception as e:
         return JSONResponse(
@@ -118,7 +121,7 @@ def get_related_images(path: str = Query(..., description="full path to the imag
                 "content": {
                     "success": False,
                     "error": "Internal server error",
-                    "message": str(e)
-                }
-            }
+                    "message": str(e),
+                },
+            },
         )
