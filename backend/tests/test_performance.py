@@ -6,11 +6,11 @@ import psutil
 import os
 from app.database.faces import batch_insert_face_embeddings, insert_face_embeddings
 
-# Set up logging
+# Set up logging with more visible formatting
 logger = logging.getLogger(__name__)
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='\n%(message)s\n'  # Simplified format for better readability
 )
 
 def get_memory_usage():
@@ -20,7 +20,6 @@ def get_memory_usage():
 
 def test_embedding_insertion_performance():
     """Compare performance of batch vs single insertions"""
-    # Add memory tracking
     initial_memory = get_memory_usage()
     
     # Test configuration
@@ -40,16 +39,17 @@ def test_embedding_insertion_performance():
         for i in range(test_config["num_images"])
     ]
     
-    # Execution and timing
     results = {}
     
     # Test single insertions
+    print("\n🔄 Running single insertion tests...")
     start_time = time.perf_counter()
     for image_path, embeddings in test_data:
         insert_face_embeddings(image_path, embeddings)
     results["single_insert_time"] = time.perf_counter() - start_time
     
     # Test batch insertions
+    print("🔄 Running batch insertion tests...")
     start_time = time.perf_counter()
     batch_insert_face_embeddings(test_data)
     results["batch_insert_time"] = time.perf_counter() - start_time
@@ -60,30 +60,56 @@ def test_embedding_insertion_performance():
         / results["single_insert_time"] * 100
     )
     
-    # Log detailed results
-    logger.info(f"""
-    Performance Test Results:
-    Configuration:
-    - Number of images: {test_config["num_images"]}
-    - Embeddings per image: {test_config["embeddings_per_image"]}
-    - Embedding size: {test_config["embedding_size"]}
-    - Batch size: {test_config["batch_size"]}
-    
-    Timing:
-    - Single insertion time: {results["single_insert_time"]:.2f}s
-    - Batch insertion time: {results["batch_insert_time"]:.2f}s
-    - Performance improvement: {results["improvement"]:.1f}%
-    """)
-    
     final_memory = get_memory_usage()
     memory_diff = final_memory - initial_memory
     
-    logger.info(f"""
-    Memory Usage:
-    - Initial: {initial_memory:.2f} MB
-    - Final: {final_memory:.2f} MB
-    - Difference: {memory_diff:.2f} MB
+    # Print detailed results
+    print(f"""
+╔════════════════════════════════════════════════════════════════╗
+║                    PERFORMANCE TEST RESULTS                     ║
+╠════════════════════════════════════════════════════════════════╣
+║ Configuration:                                                 ║
+║ • Images: {test_config["num_images"]:,}                                              ║
+║ • Embeddings per image: {test_config["embeddings_per_image"]}                                    ║
+║ • Embedding size: {test_config["embedding_size"]}                                        ║
+║ • Batch size: {test_config["batch_size"]:,}                                          ║
+╟────────────────────────────────────────────────────────────────╢
+║ Timing Results:                                               ║
+║ • Single insertion: {results["single_insert_time"]:.2f}s                                   ║
+║ • Batch insertion: {results["batch_insert_time"]:.2f}s                                    ║
+╟────────────────────────────────────────────────────────────────╢
+║ Performance Improvement:                                      ║
+║ • Improvement: {results["improvement"]:.1f}%                                          ║
+╟────────────────────────────────────────────────────────────────╢
+║ Memory Usage:                                                 ║
+║ • Initial: {initial_memory:.2f} MB                                           ║
+║ • Final: {final_memory:.2f} MB                                             ║
+║ • Difference: {memory_diff:.2f} MB                                        ║
+╚════════════════════════════════════════════════════════════════╝
     """)
+    
+    # Add summary section
+    print("\n" + "-" * 80)
+    print("PERFORMANCE TEST SUMMARY")
+    print("-" * 80)
+    print(f"""
+    🚀 Overall Results:
+    ==================
+    ✅ Performance Improvement: {results["improvement"]:.1f}%
+    ⚡ Speed-up Factor: {results["single_insert_time"] / results["batch_insert_time"]:.1f}x
+    
+    📊 Timing Details:
+    ================
+    • Single Mode: {results["single_insert_time"]:.2f}s
+    • Batch Mode: {results["batch_insert_time"]:.2f}s
+    
+    💾 Memory Impact:
+    ===============
+    • Start: {initial_memory:.1f} MB
+    • End: {final_memory:.1f} MB
+    • Delta: {memory_diff:.1f} MB ({(memory_diff/initial_memory)*100:.1f}% change)
+    """)
+    print("-" * 80)
     
     # Assertions
     assert results["improvement"] > 0, "Batch processing should be faster than single insertions"
