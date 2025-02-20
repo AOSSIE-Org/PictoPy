@@ -17,10 +17,10 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,json}\""
   },
   "lint-staged": {
-      "*.{js,jsx,ts,tsx}": [
-        "eslint --fix",
-        "prettier --write"
-      ]
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

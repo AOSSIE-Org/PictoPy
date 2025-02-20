@@ -60,4 +60,6 @@ websockets==12.0
 wsproto==1.2.0
 pyinstaller==6.11
 pytest>=8.2
-pre-commit>=2.0
+pre-commit>=2.21.0
+black>=23.3.0
+ruff>=0.0.241

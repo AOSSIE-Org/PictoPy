@@ -6,6 +6,29 @@ on:
       - main
 
 jobs:
+  linting:
+    runs-on: ubuntu-latest
+    name: Linting
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: |
+          cd frontend
+          npm install
+          cd ..
+          cd backend
+          pip install pre-commit ruff black
+          cd ..
+      - name: Run Linters
+        run: |
+          ./scripts/pre-commit.sh
   # Frontend Test Job
   frontend:
     runs-on: ubuntu-latest

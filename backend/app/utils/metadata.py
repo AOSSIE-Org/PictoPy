@@ -26,9 +26,9 @@ def extract_metadata(image_path):
             tag = TAGS.get(tag_id, tag_id)
             data = exifdata.get(tag_id)
 
-            if isinstance(data,tuple) or isinstance(data,list) : 
-                data = [float(d) if isinstance(d,IFDRational) else d for d in data ]
-            elif isinstance(data,IFDRational) : 
+            if isinstance(data, tuple) or isinstance(data, list):
+                data = [float(d) if isinstance(d, IFDRational) else d for d in data]
+            elif isinstance(data, IFDRational):
                 data = float(data)
 
             if isinstance(data, bytes):
