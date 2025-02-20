@@ -28,7 +28,16 @@ jobs:
           cd ..
       - name: Run Linters
         run: |
-          ./scripts/pre-commit.sh
+          cd frontend/
+          npm run lint:check
+          npm run format:check
+          cd ..
+          cd backend/
+          pre-commit run --config ../.pre-commit-config.yaml --all-files || exit 1
+          cd ..
+          cd frontend/src-tauri/
+          cargo fmt -- --check
+
   # Frontend Test Job
   frontend:
     runs-on: ubuntu-latest
