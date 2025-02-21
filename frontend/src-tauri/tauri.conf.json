@@ -30,6 +30,12 @@
   "plugins": {
     "fs": {
       "active": true
+    },
+    "shell": {
+      "active": true
+    },
+    "dialog": {
+      "active": true
     }
   },
   "app": {
@@ -39,16 +45,16 @@
         "width": 800,
         "height": 600,
         "resizable": true,
-        "fullscreen": false,
-        "maximized": false
+        "fullscreen": false
       }
     ],
     "security": {
+      "csp": null,
+      "capabilities": ["main-capability"],
       "assetProtocol": {
-        "scope": ["**"],
-        "enable": true
-      },
-      "csp": null
+        "enable": true,
+        "scope": ["**"]
+      }
     }
   }
 }

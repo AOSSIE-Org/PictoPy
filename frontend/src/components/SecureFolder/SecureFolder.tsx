@@ -10,6 +10,22 @@ interface SecureMedia {
   path: string;
 }
 
+const validatePassword = (password: string): string | null => {
+  if (password.length < 8) {
+    return 'Password must be at least 8 characters long';
+  }
+  
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must contain at least one uppercase letter';
+  }
+  
+  if (!/[0-9]/.test(password)) {
+    return 'Password must contain at least one number';
+  }
+  
+  return null;
+};
+
 const SecureFolder: React.FC = () => {
   const [isSetup, setIsSetup] = useState<boolean>(false);
   const [password, setPassword] = useState<string>('');
@@ -40,8 +56,9 @@ const SecureFolder: React.FC = () => {
       return;
     }
 
-    if (password.length < 4) {
-      setError('Password must be at least 4 characters long');
+    const validationError = validatePassword(password);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
