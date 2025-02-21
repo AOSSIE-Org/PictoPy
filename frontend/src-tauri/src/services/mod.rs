@@ -8,19 +8,25 @@ pub use cache_service::CacheService;
 use chrono::{DateTime, Datelike, Utc};
 use data_encoding::BASE64;
 use serde::{Serialize, Deserialize};
-use std::num::NonZeroU32;
-use ring::rand::{SystemRandom, SecureRandom};
-use ring::digest;
-use ring::pbkdf2;
+use argon2::{
+    password_hash::{
+        rand_core::OsRng,
+        SaltString
+    },
+    Argon2
+};
 use ring::aead::{ Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
+use ring::rand::{SystemRandom, SecureRandom}; // Add SecureRandom trait
 pub use file_service::FileService;
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
 use tauri::path::BaseDirectory;
 use tauri::Manager;
-use std::fs;  
-use directories::ProjectDirs; 
+use std::fs;
+use directories::ProjectDirs;
 use rand::seq::SliceRandom;
-use std::collections::HashSet; 
+use std::collections::HashSet;
+use std::fs::OpenOptions;
+use std::io::{Seek, SeekFrom, Write};
 
 const SECURE_FOLDER_NAME: &str = "secure_folder";
 const SALT_LENGTH: usize = 16;
@@ -329,48 +335,47 @@ fn get_secure_folder_path() -> Result<PathBuf, String> {
 }
 
 fn generate_salt() -> [u8; SALT_LENGTH] {
+    let salt_string = SaltString::generate(&mut OsRng);
     let mut salt = [0u8; SALT_LENGTH];
-    SystemRandom::new().fill(&mut salt).unwrap();
+    salt.copy_from_slice(&salt_string.as_ref().as_bytes()[..SALT_LENGTH]);
     salt
 }
 
 #[tauri::command]
 pub async fn move_to_secure_folder(path: String, password: String) -> Result<(), String> {
+    // Validate password first
+    validate_password(&password)?;
+
+    let path_clone = path.clone(); // Clone path for later use
     let secure_folder = get_secure_folder_path()?;
-    let file_name = Path::new(&path).file_name().ok_or("Invalid file name")?;
+    let file_name = Path::new(&path_clone).file_name().ok_or("Invalid file name")?;
     let dest_path = secure_folder.join(file_name);
 
-    let content = fs::read(&path).map_err(|e| e.to_string())?;
-    let ciphertext_length = content.len() + AES_256_GCM.tag_len();
-    let _expected_length = SALT_LENGTH + NONCE_LENGTH + ciphertext_length + 16;
+    let content = fs::read(&path_clone).map_err(|e| e.to_string())?;
     let encrypted = encrypt_data(&content, &password).map_err(|e| e.to_string())?;
-    println!("Encrypted file size: {}", encrypted.len());
-    fs::write(&dest_path, encrypted).map_err(|e| e.to_string())?;
-    println!("Encrypted file saved to: {:?}", secure_folder);
-    fs::remove_file(&path).map_err(|e| e.to_string())?;
+    
+    // Write to temporary file first
+    let temp_path = dest_path.with_extension("tmp");
+    fs::write(&temp_path, &encrypted).map_err(|e| e.to_string())?;
+    
+    // Rename temporary file to final destination
+    fs::rename(&temp_path, &dest_path).map_err(|e| e.to_string())?;
 
-    let thumbnails_folder = Path::new(&path)
-    .parent() // Get parent directory of the original file
-    .and_then(|parent| parent.join("PictoPy.thumbnails").canonicalize().ok()) // Navigate to PictoPy.thumbnails
-    .ok_or("Unable to locate thumbnails directory")?;
-    let thumbnail_path = thumbnails_folder.join(file_name);
+    // Securely delete the original file
+    secure_delete_file(path_clone.clone()).await?;
 
-    if thumbnail_path.exists() {
-        fs::remove_file(&thumbnail_path).map_err(|e| e.to_string())?;
-        println!("Thumbnail deleted: {:?}", thumbnail_path);
-    } else {
-        println!("Thumbnail not found: {:?}", thumbnail_path);
-    }
-
-    // Store the original path
+    // Update metadata
     let metadata_path = secure_folder.join("metadata.json");
     let mut metadata: HashMap<String, String> = if metadata_path.exists() {
         serde_json::from_str(&fs::read_to_string(&metadata_path).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?
     } else {
         HashMap::new()
     };
-    metadata.insert(file_name.to_string_lossy().to_string(), path);
-    fs::write(&metadata_path, serde_json::to_string(&metadata).unwrap()).map_err(|e| e.to_string())?;
+
+    metadata.insert(file_name.to_string_lossy().to_string(), path); // Use original path here
+
+    fs::write(&metadata_path, serde_json::to_string(&metadata).unwrap())
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -383,20 +388,30 @@ pub async fn remove_from_secure_folder(file_name: String, password: String) -> R
 
     // Read and decrypt the file
     let encrypted_content = fs::read(&file_path).map_err(|e| e.to_string())?;
-    let decrypted_content = decrypt_data(&encrypted_content, &password).map_err(|e| e.to_string())?;
+    let decrypted_content = decrypt_data(&encrypted_content, &password)?;
 
     // Get the original path
-    let metadata: HashMap<String, String> = serde_json::from_str(&fs::read_to_string(&metadata_path).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+    let metadata: HashMap<String, String> = serde_json::from_str(
+        &fs::read_to_string(&metadata_path).map_err(|e| e.to_string())?
+    ).map_err(|e| e.to_string())?;
+    
     let original_path = metadata.get(&file_name).ok_or("Original path not found")?;
 
-    // Write the decrypted content back to the original path
-    fs::write(original_path, decrypted_content).map_err(|e| e.to_string())?;
+    // Write to temporary file first
+    let temp_path = PathBuf::from(original_path).with_extension("tmp");
+    fs::write(&temp_path, &decrypted_content).map_err(|e| e.to_string())?;
+    
+    // Rename temporary file to final destination
+    fs::rename(&temp_path, original_path).map_err(|e| e.to_string())?;
 
-    // Remove the file from the secure folder and update metadata
-    fs::remove_file(&file_path).map_err(|e| e.to_string())?;
+    // Securely delete the encrypted file
+    secure_delete_file(file_path.to_string_lossy().to_string()).await?;
+
+    // Update metadata
     let mut updated_metadata = metadata;
     updated_metadata.remove(&file_name);
-    fs::write(&metadata_path, serde_json::to_string(&updated_metadata).unwrap()).map_err(|e| e.to_string())?;
+    fs::write(&metadata_path, serde_json::to_string(&updated_metadata).unwrap())
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -456,14 +471,24 @@ pub async fn get_secure_media(password: String) -> Result<Vec<SecureMedia>, Stri
 }
 
 fn hash_password(password: &str, salt: &[u8]) -> Vec<u8> {
-    let mut hash = [0u8; digest::SHA256_OUTPUT_LEN];
-    pbkdf2::derive(
-        pbkdf2::PBKDF2_HMAC_SHA256,
-        NonZeroU32::new(100_000).unwrap(),
-        salt,
-        password.as_bytes(),
-        &mut hash, 
+    let mut hash = [0u8; 32]; // 32 bytes for the hash
+    let config = Argon2::new(
+        argon2::Algorithm::Argon2id,
+        argon2::Version::V0x13,
+        argon2::Params::new(
+            65536,     // 64MB memory cost
+            2,         // 2 iterations
+            1,         // 1 degree of parallelism (good for desktop apps)
+            Some(32)   // output length
+        ).unwrap()
     );
+    
+    config.hash_password_into(
+        password.as_bytes(),
+        salt,
+        &mut hash
+    ).expect("Argon2id hashing failed");
+    
     hash.to_vec()
 }
 
@@ -489,10 +514,9 @@ fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, ring::error::Uns
 }
 
 fn decrypt_data(encrypted: &[u8], password: &str) -> Result<Vec<u8>, String> {
-    println!("Decrypting data...");
-    
     if encrypted.len() < SALT_LENGTH + NONCE_LENGTH + 16 {
-        return Err(format!("Encrypted data too short: {} bytes", encrypted.len()));
+        println!("Technical error: Data length {} is invalid", encrypted.len());
+        return Err("Unable to decrypt file - data appears to be corrupted".to_string());
     }
 
     let salt = &encrypted[..SALT_LENGTH];
@@ -511,11 +535,12 @@ fn decrypt_data(encrypted: &[u8], password: &str) -> Result<Vec<u8>, String> {
 
     match key.open_in_place(nonce, Aad::empty(), &mut plaintext) {
         Ok(decrypted) => {
-            println!("Decryption successful! Decrypted length: {}", decrypted.len());
+            println!("Decryption successful! Length: {}", decrypted.len());
             Ok(decrypted.to_vec())
         },
         Err(e) => {
-            Err(format!("Decryption error: {:?}", e))
+            println!("Decryption technical error: {:?}", e);
+            Err("Unable to decrypt file - incorrect password or corrupted data".to_string())
         }
     }
 }
@@ -541,13 +566,22 @@ pub async fn unlock_secure_folder(password: String) -> Result<bool, String> {
 
 fn derive_key(password: &str, salt: &[u8]) -> LessSafeKey {
     let mut key_bytes = [0u8; 32];
-    pbkdf2::derive(
-        pbkdf2::PBKDF2_HMAC_SHA256,
-        NonZeroU32::new(100_000).unwrap(),
-        salt,
-        password.as_bytes(),
-        &mut key_bytes,
+    let config = Argon2::new(
+        argon2::Algorithm::Argon2id,
+        argon2::Version::V0x13,
+        argon2::Params::new(
+            65536,     // 64MB memory cost
+            2,         // 2 iterations
+            1,         // 1 degree of parallelism (good for desktop apps)
+            Some(32)   // output length
+        ).unwrap()
     );
+    
+    config.hash_password_into(
+        password.as_bytes(),
+        salt,
+        &mut key_bytes
+    ).expect("Argon2id hashing failed");
     
     let unbound_key = UnboundKey::new(&AES_256_GCM, &key_bytes).unwrap();
     LessSafeKey::new(unbound_key)
@@ -562,7 +596,8 @@ pub async fn check_secure_folder_status() -> Result<bool, String> {
 
 fn generate_nonce() -> [u8; NONCE_LENGTH] {
     let mut nonce = [0u8; NONCE_LENGTH];
-    SystemRandom::new().fill(&mut nonce).unwrap();
+    let rng = SystemRandom::new();
+    rng.fill(&mut nonce).unwrap();
     nonce
 }
 
@@ -640,4 +675,62 @@ pub fn get_server_path(handle: tauri::AppHandle) -> Result<String, String> {
         .resolve("resources/server", BaseDirectory::Resource)
         .map_err(|e| e.to_string())?;
     Ok(resource_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub async fn secure_delete_file(path: String) -> Result<(), String> {
+    let path = Path::new(&path);
+    let metadata = fs::metadata(&path).map_err(|e| e.to_string())?;
+    let file_size = metadata.len() as usize;
+    
+    // Multiple overwrite passes with different patterns
+    let patterns: &[&[u8]] = &[
+        &[0x00], // zeros
+        &[0xFF], // ones
+        &[0x55], // alternating 01
+        &[0xAA], // alternating 10
+        &[0xF0], // random-like pattern
+    ];
+    
+    for pattern in patterns {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .open(&path)
+            .map_err(|e| e.to_string())?;
+            
+        file.seek(SeekFrom::Start(0))
+            .map_err(|e| e.to_string())?;
+            
+        let buffer = vec![pattern[0]; 8192]; // 8KB buffer
+        let mut remaining = file_size;
+        
+        while remaining > 0 {
+            let to_write = remaining.min(buffer.len());
+            file.write_all(&buffer[..to_write])
+                .map_err(|e| e.to_string())?;
+            remaining = remaining.saturating_sub(to_write);
+        }
+    }
+    
+    fs::remove_file(path).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn validate_password(password: &str) -> Result<(), String> {
+    if password.len() < 8 {
+        return Err("Password must be at least 8 characters long".to_string());
+    }
+    
+    let has_uppercase = password.chars().any(|c| c.is_uppercase());
+    let has_digit = password.chars().any(|c| c.is_digit(10));
+    
+    if !has_uppercase {
+        return Err("Password must contain at least one uppercase letter".to_string());
+    }
+    
+    if !has_digit {
+        return Err("Password must contain at least one number".to_string());
+    }
+    
+    Ok(())
 }
