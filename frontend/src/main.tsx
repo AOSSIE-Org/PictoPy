@@ -18,8 +18,11 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   </React.StrictMode>,
 );
 
+// Set up close listener regardless of environment
+onCloseListener();
+
+// Only start the server in production
 if (isProd()) {
-  onCloseListener();
   console.log('Starting PictoPy Server');
   startServer();
 }
