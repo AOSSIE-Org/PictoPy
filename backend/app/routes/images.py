@@ -23,7 +23,8 @@ from app.schemas.images import (
     GetImagesResponse,ErrorResponse,
     AddMultipleImagesRequest,AddMultipleImagesResponse,
     DeleteImageRequest,DeleteImageResponse,
-    DeleteMultipleImagesRequest,DeleteMultipleImagesResponse
+    DeleteMultipleImagesRequest,DeleteMultipleImagesResponse,
+    GetAllImageObjectsResponse,ImageDataResponse
 )
 
 router = APIRouter()
@@ -258,11 +259,10 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
         )
 
 
-@router.get("/all-image-objects")
+@router.get("/all-image-objects",response_model=GetAllImageObjectsResponse)
 def get_all_image_objects():
     try:
         folder_path = os.path.abspath(IMAGES_PATH)
-        print(folder_path)
         image_ids = get_all_image_ids_from_db()
         data = {}
         for image_id in image_ids:
@@ -271,14 +271,10 @@ def get_all_image_objects():
             data[image_path] = classes if classes else "None"
             print(image_path)
 
-        return JSONResponse(
-            status_code=200,
-            content={
-                # "data": data,
-                "data": {"images": data, "folder_path": folder_path},
-                "message": "Successfully retrieved all image objects",
-                "success": True,
-            },
+        return GetAllImageObjectsResponse(
+            data=ImageDataResponse(images=data, folder_path=folder_path),
+            message="Successfully retrieved all image objects",
+            success=True
         )
 
     except Exception as e:
@@ -286,11 +282,11 @@ def get_all_image_objects():
             status_code=500,
             content={
                 "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e),
-                },
+                "content": ErrorResponse(
+                    success=False,
+                    error="Internal server error",
+                    message=str(e)
+                ),
             },
         )
 

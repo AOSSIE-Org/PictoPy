@@ -16,6 +16,7 @@ class DeleteMultipleImagesRequest(BaseModel) :
     paths : List[str]
 
 
+
 # Response Model 
 class GetImagesResponse(BaseModel) : 
     success : bool
@@ -32,6 +33,8 @@ class AddMultipleImagesResponse(BaseModel) :
     message : str
     success : bool
 
+
+
 class DeleteImageResponse(BaseModel) : 
     data : str
     message : str
@@ -41,3 +44,12 @@ class DeleteMultipleImagesResponse(BaseModel) :
     data : List[str]
     message : str
     success : bool
+
+class ImageDataResponse(BaseModel) : 
+    images: Dict[str, str]  # Mapping image paths to class names or "None"
+    folder_path: str
+
+class GetAllImageObjectsResponse(BaseModel) : 
+    success: bool
+    message: str
+    data: ImageDataResponse
