@@ -46,6 +46,10 @@ def validate_view_album_request(
     
 
 
+class UpdateAlbumDescriptionRequest(BaseModel) :
+    album_name : str 
+    description : str 
+
 # Response Handler
 
 class AlbumCreateResponse(BaseModel) : 
@@ -75,6 +79,12 @@ class ViewAlbumResponse(BaseModel) :
     success: bool
     message: str
     data: Optional[dict] = None
+
+class UpdateAlbumDescriptionResponse(BaseModel) : 
+    success: bool
+    message: str
+    data: Optional[dict] = None
+
 
 
 class ErrorResponse(BaseModel) :
