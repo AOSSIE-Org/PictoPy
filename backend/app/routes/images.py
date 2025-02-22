@@ -22,6 +22,7 @@ from app.database.images import (
 from app.schemas.images import (
     GetImagesResponse,ErrorResponse,
     AddMultipleImagesRequest,AddMultipleImagesResponse,
+    DeleteImageRequest,DeleteImageResponse,
 )
 
 router = APIRouter()
@@ -146,59 +147,42 @@ async def process_images(tasks):
     await asyncio.gather(*tasks)
 
 
-@router.delete("/delete-image")
-def delete_image(payload: dict):
+@router.delete("/delete-image",response_model=DeleteImageResponse)
+def delete_image(payload: DeleteImageRequest):
     try:
-        if "path" not in payload:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Missing 'path' in payload",
-                        "message": "Image path is required",
-                    },
-                },
-            )
-
-        filename = payload["path"]
+        filename = payload.path
         file_path = os.path.join(IMAGES_PATH, filename)
-
         if not os.path.isfile(file_path):
             return JSONResponse(
                 status_code=404,
                 content={
                     "status_code": 404,
-                    "content": {
-                        "success": False,
-                        "error": "Image not found",
-                        "message": "Image file not found",
-                    },
+                    "content":ErrorResponse(
+                        success=False,
+                        error="Image not found",
+                        message="Image file not found"
+                    ),
                 },
             )
 
         os.remove(file_path)
         delete_image_db(file_path)
-        return JSONResponse(
-            status_code=200,
-            content={
-                "data": file_path,
-                "message": "Image deleted successfully",
-                "success": True,
-            },
+        return DeleteImageResponse(
+            data=file_path,
+            message="Image deleted successfully",
+            success=True
         )
-
+        
     except Exception as e:
         return JSONResponse(
             status_code=500,
             content={
                 "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e),
-                },
+                "content":ErrorResponse(
+                    success=False,
+                    error="Internal server error",
+                    message=str(e),
+                )
             },
         )
 
