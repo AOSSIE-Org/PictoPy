@@ -50,6 +50,8 @@ class UpdateAlbumDescriptionRequest(BaseModel) :
     album_name : str 
     description : str 
 
+
+
 # Response Handler
 
 class AlbumCreateResponse(BaseModel) : 
@@ -85,6 +87,16 @@ class UpdateAlbumDescriptionResponse(BaseModel) :
     message: str
     data: Optional[dict] = None
 
+class AlbumResponse(BaseModel):
+    album_name: str
+    image_paths: List[str]  # Updated to return image paths
+    description: str
+    is_hidden: bool  # Added to match `is_hidden` from the database
+
+class GetAllAlbumsResponse(BaseModel) : 
+    success: bool
+    message: str 
+    data: List[AlbumResponse]
 
 
 class ErrorResponse(BaseModel) :

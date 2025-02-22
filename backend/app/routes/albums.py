@@ -1,8 +1,8 @@
 import os
 from fastapi import (
     APIRouter, status, 
-    Query,Depends,
-    HTTPException , 
+    Depends,
+    HTTPException 
 )
 from fastapi.responses import JSONResponse
 from app.database.albums import (
@@ -24,7 +24,8 @@ from app.schemas.album import (
     RemoveFromAlbumRequest,RemoveFromAlbumResponse,
     ViewAlbumRequest,ViewAlbumResponse,
     UpdateAlbumDescriptionRequest,UpdateAlbumDescriptionResponse,
-    validate_view_album_request,ErrorResponse
+    GetAllAlbumsResponse,ErrorResponse,
+    validate_view_album_request
 )
 from pydantic import ValidationError
 
@@ -165,15 +166,13 @@ def update_album_description(payload: UpdateAlbumDescriptionRequest = Depends())
     )
 
 
-@router.get("/view-all")
+@router.get("/view-all",response_model=GetAllAlbumsResponse)
 @exception_handler_wrapper
 def get_albums():
+    """Retrieves all albums with structured response validation."""
     albums = get_all_albums()
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "data": albums,
-            "message": "Successfully retrieved all albums",
-            "success": True,
-        },
+    return GetAllAlbumsResponse(
+        success=True,
+        message="Successfully retrieved all albums",
+        data=albums
     )
