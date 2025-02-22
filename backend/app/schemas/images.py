@@ -6,8 +6,8 @@ from pydantic_core.core_schema import ValidationInfo
 
 # Request Model
 
-# class AddMultipleImagesRequest(BaseModel) : 
-
+class AddMultipleImagesRequest(BaseModel) : 
+    paths : List[str]
 
 
 # Response Model 
@@ -20,3 +20,8 @@ class ErrorResponse(BaseModel) :
     success: bool = False
     message: str
     error: str
+
+class AddMultipleImagesResponse(BaseModel) : 
+    data : int
+    message : str
+    success : bool

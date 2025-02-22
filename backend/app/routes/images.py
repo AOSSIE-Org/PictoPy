@@ -20,7 +20,8 @@ from app.database.images import (
 )
 
 from app.schemas.images import (
-    GetImagesResponse,ErrorResponse
+    GetImagesResponse,ErrorResponse,
+    AddMultipleImagesRequest,AddMultipleImagesResponse,
 )
 
 router = APIRouter()
@@ -68,33 +69,20 @@ def get_images():
 
 
 
-@router.post("/images")
-async def add_multiple_images(payload: dict):
+@router.post("/images",response_model=AddMultipleImagesResponse)
+async def add_multiple_images(payload: AddMultipleImagesRequest):
     try:
-        if "paths" not in payload:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Missing 'paths' in payload",
-                        "message": "Image paths are required",
-                    },
-                },
-            )
-
-        image_paths = payload["paths"]
+        image_paths = payload.paths
         if not isinstance(image_paths, list):
             return JSONResponse(
                 status_code=400,
                 content={
                     "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Invalid 'paths' format",
-                        "message": "'paths' should be a list",
-                    },
+                    "content":ErrorResponse(
+                        success=False,
+                        error="Invalid 'paths' format",
+                        message="'paths' should be a list"
+                    ),
                 },
             )
 
@@ -105,11 +93,11 @@ async def add_multiple_images(payload: dict):
                     status_code=400,
                     content={
                         "status_code": 400,
-                        "content": {
-                            "success": False,
-                            "error": "Invalid file path",
-                            "message": f"Invalid file path: {image_path}",
-                        },
+                        "content": ErrorResponse(
+                            success = False,
+                            error = "Invalid file path",
+                            message = f"Invalid file path: {image_path}",
+                        )
                     },
                 )
 
@@ -120,11 +108,11 @@ async def add_multiple_images(payload: dict):
                     status_code=400,
                     content={
                         "status_code": 400,
-                        "content": {
-                            "success": False,
-                            "error": "Invalid file type",
-                            "message": f"File is not an image: {image_path}",
-                        },
+                        "content": ErrorResponse(
+                            success=False,
+                            error="Invalid file type",
+                            message=f"File is not an image: {image_path}",
+                        ),
                     },
                 )
 
@@ -134,13 +122,10 @@ async def add_multiple_images(payload: dict):
 
         asyncio.create_task(process_images(tasks))
 
-        return JSONResponse(
-            status_code=202,
-            content={
-                "data": len(tasks),
-                "message": "Images are being processed in the background",
-                "success": True,
-            },
+        return  AddMultipleImagesResponse(
+            data=len(tasks),
+            message="Images are being processed in the background",
+            success=True
         )
 
     except Exception as e:
@@ -148,11 +133,11 @@ async def add_multiple_images(payload: dict):
             status_code=500,
             content={
                 "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e),
-                },
+                "content": ErrorResponse(
+                    success=False,
+                    error="Internal server error",
+                    message=str(e),
+                ),
             },
         )
 
