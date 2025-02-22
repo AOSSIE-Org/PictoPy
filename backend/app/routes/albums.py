@@ -49,19 +49,26 @@ def create_new_album(payload:AlbumCreate):
         )
 
     except ValidationError as e:
-        # Handle Pydantic validation errors
-        raise HTTPException(
+        return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"success": False, "error": "Validation Error", "message": str(e)}
+            content=ErrorResponse(
+                success=False,
+                error="Validation Error",
+                message= e.errors() 
+            ) 
+           
         )
 
     except Exception as e:
-        # Catch unexpected errors
-        raise HTTPException(
+        return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"success": False, "error": "Server Error", "message": "An unexpected error occurred"}
+            content=ErrorResponse(
+                success=False,
+                error="Server Error",
+                message= e.errors() 
+            ) 
         )
-
+    
 
 
 @router.delete("/delete-album",response_model=AlbumDeleteResponse)
