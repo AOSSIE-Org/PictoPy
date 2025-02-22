@@ -1,6 +1,6 @@
 from fastapi import Query,Depends
 from pydantic import BaseModel,Field, field_validator
-from typing import Optional,List,Dict
+from typing import Optional,List,Dict,Union
 from pydantic_core.core_schema import ValidationInfo
 
 
@@ -53,3 +53,8 @@ class GetAllImageObjectsResponse(BaseModel) :
     success: bool
     message: str
     data: ImageDataResponse
+
+class ClassIDsResponse(BaseModel):
+    success: bool
+    message: str
+    data: Union[List[int], str]

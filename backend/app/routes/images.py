@@ -24,7 +24,8 @@ from app.schemas.images import (
     AddMultipleImagesRequest,AddMultipleImagesResponse,
     DeleteImageRequest,DeleteImageResponse,
     DeleteMultipleImagesRequest,DeleteMultipleImagesResponse,
-    GetAllImageObjectsResponse,ImageDataResponse
+    GetAllImageObjectsResponse,ImageDataResponse,
+    ClassIDsResponse
 )
 
 router = APIRouter()
@@ -291,54 +292,31 @@ def get_all_image_objects():
         )
 
 
-@router.get("/class-ids")
-def get_class_ids(path: str = Query(...)):
+@router.get("/class-ids",response_model=ClassIDsResponse)
+@exception_handler_wrapper
+def get_class_ids(path: str = Query(...,description="Path of the image file")):
     try:
-        if not path:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Missing 'path' parameter",
-                        "message": "Image path is required",
-                    },
-                },
-            )
-
+        """Retrieves class IDs for a given image path."""
         class_ids = get_objects_db(path)
-        if not class_ids:
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "data": {"class_ids": "None"},
-                    "message": "No class IDs found for the image",
-                    "success": True,
-                },
-            )
-
-        return JSONResponse(
-            status_code=200,
-            content={
-                "data": class_ids,
-                "message": "Successfully retrieved class IDs",
-                "success": True,
-            },
+        return ClassIDsResponse(
+            success=True,
+            message="Successfully retrieved class IDs" if class_ids else "No class IDs found for the image",
+            data=class_ids if class_ids else "None"   
         )
-
+    
     except Exception as e:
         return JSONResponse(
             status_code=500,
             content={
                 "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e),
-                },
+                "content":ErrorResponse(
+                    success=False,
+                    error="Internal server error",
+                    message=str(e)
+                ),
             },
         )
+
 
 
 @router.post("/add-folder")
