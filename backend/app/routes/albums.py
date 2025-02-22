@@ -15,6 +15,7 @@ from app.utils.wrappers import exception_handler_wrapper
 from app.config.settings import IMAGES_PATH
 from app.schemas.album import (
     AlbumCreate,AlbumCreateResponse,
+    AlbumDeleteRequest,AlbumDeleteResponse,
     ErrorResponse
 )
 from pydantic import ValidationError
@@ -54,34 +55,29 @@ def create_new_album(payload:AlbumCreate):
 
 
 
-
-@router.delete("/delete-album")
+@router.delete("/delete-album",response_model=AlbumDeleteResponse)
 @exception_handler_wrapper
-def delete_existing_album(payload: dict):
-    if "name" not in payload:
+def delete_existing_album(payload: AlbumDeleteRequest):
+    
+    album_name = payload.name 
+    delete_album(album_name)
+    try :
+        return AlbumDeleteResponse(
+            success=True,
+            message=f"Album '{album_name}' deleted successfully",
+            data=album_name
+        )
+    except Exception as e:
+
         return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "status_code": status.HTTP_400_BAD_REQUEST,
-                "content": {
-                    "success": False,
-                    "error": "Missing 'name' in payload",
-                    "message": "Album name is required",
-                },
-            },
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=AlbumDeleteResponse(
+                success=False,
+                message="Failed to delete album",
+                data=None
+            ).dict()
         )
 
-    album_name = payload["name"]
-    delete_album(album_name)
-
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "data": album_name,
-            "message": f"Album '{album_name}' deleted successfully",
-            "success": True,
-        },
-    )
 
 
 @router.post("/add-multiple-to-album")
