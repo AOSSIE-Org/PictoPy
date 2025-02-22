@@ -1,5 +1,5 @@
 import os
-from fastapi import APIRouter, status, Query
+from fastapi import APIRouter, status, Query, HTTPException
 from fastapi.responses import JSONResponse
 from app.database.albums import (
     add_photo_to_album,
@@ -13,57 +13,46 @@ from app.database.albums import (
 from app.utils.APIError import APIError
 from app.utils.wrappers import exception_handler_wrapper
 from app.config.settings import IMAGES_PATH
+from app.schemas.album import (
+    AlbumCreate,AlbumCreateResponse,
+    ErrorResponse
+)
+from pydantic import ValidationError
 
 router = APIRouter()
 
-
-@router.post("/create-album")
+@router.post("/create-album",response_model=AlbumCreateResponse,responses={400: {"model": ErrorResponse}})
 @exception_handler_wrapper
-def create_new_album(payload: dict):
-    if "name" not in payload:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "status_code": status.HTTP_400_BAD_REQUEST,
-                "content": {
-                    "success": False,
-                    "error": "Missing 'name' in payload",
-                    "message": "Album name is required",
-                },
-            },
-        )
-    
-    album_name = payload["name"]
-    description = payload.get("description")
-    is_hidden = payload.get("is_hidden", False)
-    password = payload.get("password")
-
-    if is_hidden and not password:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "status_code": status.HTTP_400_BAD_REQUEST,
-                "content": {
-                    "success": False,
-                    "error": "Password required for hidden album",
-                    "message": "Password is required when creating a hidden album",
-                },
-            },
+def create_new_album(payload:AlbumCreate):
+    try:
+        # Call the function to create an album
+        create_album(payload.name, payload.description, payload.is_hidden, payload.password)
+        # Success Response
+        return AlbumCreateResponse(
+            success=True,
+            message=f"Album '{payload.name}' created successfully",
+            data={
+                "album_name": payload.name,
+                "description": payload.description,
+                "is_hidden": payload.is_hidden
+            }
         )
 
-    create_album(album_name, description, is_hidden, password)
-    return JSONResponse(
-        status_code=status.HTTP_201_CREATED,
-        content={
-            "data": {
-                "album_name": album_name,
-                "description": description,
-                "is_hidden": is_hidden
-            },
-            "message": f"Album '{album_name}' created successfully",
-            "success": True,
-        },
-    )
+    except ValidationError as e:
+        # Handle Pydantic validation errors
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"success": False, "error": "Validation Error", "message": str(e)}
+        )
+
+    except Exception as e:
+        # Catch unexpected errors
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"success": False, "error": "Server Error", "message": "An unexpected error occurred"}
+        )
+
+
 
 
 @router.delete("/delete-album")
