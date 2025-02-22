@@ -19,6 +19,10 @@ from app.database.images import (
     extract_metadata,
 )
 
+from app.schemas.images import (
+    GetImagesResponse,ErrorResponse
+)
+
 router = APIRouter()
 
 
@@ -32,7 +36,7 @@ async def run_get_classes(img_path):
             detect_faces(img_path)
 
 
-@router.get("/all-images")
+@router.get("/all-images",response_model=GetImagesResponse)
 def get_images():
     try:
         files = os.listdir(IMAGES_PATH)
@@ -42,31 +46,26 @@ def get_images():
             for file in files
             if os.path.splitext(file)[1].lower() in image_extensions
         ]
-
-        return JSONResponse(
-            status_code=200,
-            content={
-                "data": {
-                    "image_files": image_files,
-                    "folder_path": os.path.abspath(IMAGES_PATH),
-                },
-                "message": "Successfully retrieved all images",
-                "success": True,
-            },
+        
+        return GetImagesResponse(
+            success=True,
+            message="Successfully retrieved all images",
+            data={
+                "image_files": image_files,
+                "folder_path": os.path.abspath(IMAGES_PATH),
+            }
         )
 
     except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={
-                "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e),
-                },
-            },
+            content=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=str(e),
+            ),
         )
+
 
 
 @router.post("/images")

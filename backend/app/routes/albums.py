@@ -2,7 +2,6 @@ import os
 from fastapi import (
     APIRouter, status, 
     Depends,
-    HTTPException 
 )
 from fastapi.responses import JSONResponse
 from app.database.albums import (
