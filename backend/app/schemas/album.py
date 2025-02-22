@@ -49,6 +49,7 @@ def validate_view_album_request(
 class UpdateAlbumDescriptionRequest(BaseModel) :
     album_name : str 
     description : str 
+    password : Optional[str] = None
 
 
 

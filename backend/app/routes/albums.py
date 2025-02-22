@@ -154,8 +154,10 @@ def view_album_photos(payload: ViewAlbumRequest = Depends(validate_view_album_re
 
 @router.put("/edit-album-description", response_model=UpdateAlbumDescriptionResponse)
 @exception_handler_wrapper
-def update_album_description(payload: UpdateAlbumDescriptionRequest = Depends()):
+def update_album_description(payload: UpdateAlbumDescriptionRequest):
     """Handles updating album descriptions with Pydantic validation."""
+
+    print("Payload = ",payload)
     
     edit_album_description(payload.album_name, payload.description)
 
