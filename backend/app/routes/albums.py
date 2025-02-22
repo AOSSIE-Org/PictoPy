@@ -23,6 +23,7 @@ from app.schemas.album import (
     AddMultipleImagesRequest,AddMultipleImagesResponse,
     RemoveFromAlbumRequest,RemoveFromAlbumResponse,
     ViewAlbumRequest,ViewAlbumResponse,
+    UpdateAlbumDescriptionRequest,UpdateAlbumDescriptionResponse,
     validate_view_album_request,ErrorResponse
 )
 from pydantic import ValidationError
@@ -150,47 +151,17 @@ def view_album_photos(payload: ViewAlbumRequest = Depends(validate_view_album_re
     )
 
 
-
-@router.put("/edit-album-description")
+@router.put("/edit-album-description", response_model=UpdateAlbumDescriptionResponse)
 @exception_handler_wrapper
-def update_album_description(payload: dict):
-    if "album_name" not in payload:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "status_code": status.HTTP_400_BAD_REQUEST,
-                "content": {
-                    "success": False,
-                    "error": "Missing 'album_name' in payload",
-                    "message": "Album name is required",
-                },
-            },
-        )
-    if "description" not in payload:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "status_code": status.HTTP_400_BAD_REQUEST,
-                "content": {
-                    "success": False,
-                    "error": "Missing 'description' in payload",
-                    "message": "New description is required",
-                },
-            },
-        )
+def update_album_description(payload: UpdateAlbumDescriptionRequest = Depends()):
+    """Handles updating album descriptions with Pydantic validation."""
+    
+    edit_album_description(payload.album_name, payload.description)
 
-    album_name = payload["album_name"]
-    new_description = payload["description"]
-
-    edit_album_description(album_name, new_description)
-
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "data": {"album_name": album_name, "new_description": new_description},
-            "message": f"Description for album '{album_name}' updated successfully",
-            "success": True,
-        },
+    return UpdateAlbumDescriptionResponse(
+        success=True,
+        message=f"Description for album '{payload.album_name}' updated successfully",
+        data={"album_name": payload.album_name, "new_description": payload.description}
     )
 
 
