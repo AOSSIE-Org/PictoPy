@@ -1,5 +1,9 @@
 import os
-from fastapi import APIRouter, status, Query, HTTPException
+from fastapi import (
+    APIRouter, status, 
+    Query,Depends,
+    HTTPException , 
+)
 from fastapi.responses import JSONResponse
 from app.database.albums import (
     add_photo_to_album,
@@ -17,7 +21,9 @@ from app.schemas.album import (
     AlbumCreate,AlbumCreateResponse,
     AlbumDeleteRequest,AlbumDeleteResponse,
     AddMultipleImagesRequest,AddMultipleImagesResponse,
-    ErrorResponse
+    RemoveFromAlbumRequest,RemoveFromAlbumResponse,
+    ViewAlbumRequest,ViewAlbumResponse,
+    validate_view_album_request,ErrorResponse
 )
 from pydantic import ValidationError
 
@@ -110,95 +116,39 @@ def add_multiple_images_to_album(payload: AddMultipleImagesRequest):
 
 
 
-@router.delete("/remove-from-album")
+@router.delete("/remove-from-album", response_model=RemoveFromAlbumResponse)
 @exception_handler_wrapper
-def remove_image_from_album(payload: dict):
-    if "album_name" not in payload:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "status_code": status.HTTP_400_BAD_REQUEST,
-                "content": {
-                    "success": False,
-                    "error": "Missing 'album_name' in payload",
-                    "message": "Album name is required",
-                },
-            },
-        )
-    if "path" not in payload:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "status_code": status.HTTP_400_BAD_REQUEST,
-                "content": {
-                    "success": False,
-                    "error": "Missing 'path' in payload",
-                    "message": "Image path is required",
-                },
-            },
-        )
-    album_name = payload["album_name"]
-    path = payload["path"]
+def remove_image_from_album(payload: RemoveFromAlbumRequest):
+    remove_photo_from_album(payload.album_name, payload.path)
 
-    remove_photo_from_album(album_name, path)
-
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "data": {"album_name": album_name, "path": path},
-            "message": f"Image '{path}' removed from album '{album_name}' successfully",
-            "success": True,
-        },
+    return RemoveFromAlbumResponse(
+        success=True,
+        message=f"Image '{payload.path}' removed from album '{payload.album_name}' successfully",
+        data={"album_name": payload.album_name, "path": payload.path},
     )
+
 
 
 @router.get("/view-album")
 @exception_handler_wrapper
-def view_album_photos(
-    album_name: str = Query(..., description="Name of the album to view"),
-    password: str = Query(None, description="Password for hidden albums"),
-):
-    if not album_name:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "status_code": status.HTTP_400_BAD_REQUEST,
-                "content": {
-                    "success": False,
-                    "error": "Missing album_name parameter",
-                    "message": "Album name is required",
-                },
-            },
-        )
-
-    photos = get_album_photos(album_name, password)
+def view_album_photos(payload: ViewAlbumRequest = Depends(validate_view_album_request)):
+    """Handles album photo retrieval with Pydantic validation."""
+    photos = get_album_photos(payload.album_name, payload.password)
 
     if photos is None:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "status_code": status.HTTP_404_NOT_FOUND,
-                "content": {
-                    "success": False,
-                    "error": f"Album '{album_name}' does not exist",
-                    "message": "Album not found",
-                },
-            },
+        return ViewAlbumResponse(
+            success=False,
+            message=f"Album '{payload.album_name}' does not exist",
+            data=None
         )
 
     folder_path = os.path.abspath(IMAGES_PATH)
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "data": {
-                "album_name": album_name,
-                "photos": photos,
-                "folder_path": folder_path,
-            },
-            "message": f"Successfully retrieved photos for album '{album_name}'",
-            "success": True,
-        },
+    return ViewAlbumResponse(
+        success=True,
+        message=f"Successfully retrieved photos for album '{payload.album_name}'",
+        data={"album_name": payload.album_name, "photos": photos, "folder_path": folder_path}
     )
+
 
 
 @router.put("/edit-album-description")

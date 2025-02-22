@@ -1,6 +1,8 @@
+from fastapi import Query,Depends
 from pydantic import BaseModel,Field, field_validator
-from typing import Optional,List
+from typing import Optional,List,Dict
 from pydantic_core.core_schema import ValidationInfo
+
 
 
 # Request Handler
@@ -26,10 +28,27 @@ class AddMultipleImagesRequest(BaseModel) :
     paths: List[str]
 
 
+class RemoveFromAlbumRequest(BaseModel) :
+    album_name : str
+    path : str
+
+
+class ViewAlbumRequest(BaseModel) :
+    album_name: str
+    password: Optional[str] = None
+
+
+def validate_view_album_request(
+    album_name: str = Query(..., description="Name of the album to view"),
+    password: Optional[str] = Query(None, description="Password for hidden albums")
+) -> ViewAlbumRequest:
+    return ViewAlbumRequest(album_name=album_name, password=password)
+    
+
 
 # Response Handler
 
-class AlbumCreateResponse(BaseModel) :
+class AlbumCreateResponse(BaseModel) : 
     success : bool
     message : str
     data : dict 
@@ -40,12 +59,22 @@ class AlbumDeleteResponse(BaseModel):
     data: str | None = None  # Data can be None if an error occurs
 
 
-
 class AddMultipleImagesResponse(BaseModel) : 
     success: bool
     message: str
     data: Optional[dict] = None
 
+
+class RemoveFromAlbumResponse(BaseModel) : 
+    success : bool
+    message: str
+    data: Optional[Dict[str, str]] = None
+
+
+class ViewAlbumResponse(BaseModel) : 
+    success: bool
+    message: str
+    data: Optional[dict] = None
 
 
 class ErrorResponse(BaseModel) :
