@@ -16,6 +16,7 @@ from app.config.settings import IMAGES_PATH
 from app.schemas.album import (
     AlbumCreate,AlbumCreateResponse,
     AlbumDeleteRequest,AlbumDeleteResponse,
+    AddMultipleImagesRequest,AddMultipleImagesResponse,
     ErrorResponse
 )
 from pydantic import ValidationError
@@ -80,74 +81,33 @@ def delete_existing_album(payload: AlbumDeleteRequest):
 
 
 
-@router.post("/add-multiple-to-album")
+@router.post("/add-multiple-to-album",response_model=AddMultipleImagesResponse)
 @exception_handler_wrapper
-def add_multiple_images_to_album(payload: dict):
-    if "album_name" not in payload:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "status_code": status.HTTP_400_BAD_REQUEST,
-                "content": {
-                    "success": False,
-                    "error": "Missing 'album_name' in payload",
-                    "message": "Album name is required",
-                },
-            },
-        )
-    if "paths" not in payload:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "status_code": status.HTTP_400_BAD_REQUEST,
-                "content": {
-                    "success": False,
-                    "error": "Missing 'paths' in payload",
-                    "message": "Image paths are required",
-                },
-            },
-        )
+def add_multiple_images_to_album(payload: AddMultipleImagesRequest):
+    
+    album_name = payload.album_name
+    paths = payload.paths 
 
-    album_name = payload["album_name"]
-    paths = payload["paths"]
-
-    if not isinstance(paths, list):
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "status_code": status.HTTP_400_BAD_REQUEST,
-                "content": {
-                    "success": False,
-                    "error": "Invalid 'paths' format",
-                    "message": "Paths should be a list",
-                },
-            },
-        )
-
-    for path in paths:
-        try:
+    for path in paths : 
+        try : 
             add_photo_to_album(album_name, path)
         except Exception as e:
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={
-                    "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    "content": {
-                        "success": False,
-                        "error": f"Error adding image '{path}' to album '{album_name}'",
-                        "message": str(e),
-                    },
-                },
+                content=AddMultipleImagesResponse(
+                    success=False,
+                    message=f"Error adding image '{path}' to album '{album_name}'",
+                    data={"error": str(e)}
+                ).dict()
             )
 
-    return JSONResponse(
-        status_code=status.HTTP_201_CREATED,
-        content={
-            "data": {"album_name": album_name, "paths": paths},
-            "message": f"Images added to album '{album_name}' successfully",
-            "success": True,
-        },
+    return AddMultipleImagesResponse(
+        success=True,
+        message=f"Images added to album '{album_name}' successfully",
+        data={"album_name": album_name, "paths": paths}
     )
+
+
 
 
 @router.delete("/remove-from-album")

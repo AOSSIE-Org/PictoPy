@@ -21,6 +21,10 @@ class AlbumDeleteRequest(BaseModel) :
     name : str
 
 
+class AddMultipleImagesRequest(BaseModel) :
+    album_name: str
+    paths: List[str]
+
 
 
 # Response Handler
@@ -36,7 +40,16 @@ class AlbumDeleteResponse(BaseModel):
     data: str | None = None  # Data can be None if an error occurs
 
 
+
+class AddMultipleImagesResponse(BaseModel) : 
+    success: bool
+    message: str
+    data: Optional[dict] = None
+
+
+
 class ErrorResponse(BaseModel) :
     success: bool = False
     message: str
     error: str
+
