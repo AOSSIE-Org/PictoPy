@@ -27,42 +27,36 @@ export default function AIGallery({
   type: 'image' | 'video';
   folderPath: string;
 }) {
-  const {
-    successData: mediaItems = [],
-    isLoading: loading,
-    isError,
-  } = usePictoQuery({
-    queryFn: getAllImageObjects,
+  const { successData, isLoading: isGeneratingTags } = usePictoQuery({
+    queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
-
-  const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation(
-    {
+  const { mutate: generateThumbnailAPI, isPending: isGeneratingThumbnails } =
+    usePictoMutation({
       mutationFn: generateThumbnails,
       autoInvalidateTags: ['ai-tagging-images', 'ai'],
-    },
-  );
-
-  const [filterTag, setFilterTag] = useState<string>('');
+    });
+  let mediaItems = successData ?? [];
+  const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
   const [isVisibleSelectedImage, setIsVisibleSelectedImage] =
     useState<boolean>(true);
-  const [pageNo, setPageNo] = useState<number>(20);
   const itemsPerRow: number = 3;
   const noOfPages: number[] = Array.from(
     { length: 41 },
     (_, index) => index + 10,
   );
-
   const filteredMediaItems = useMemo(() => {
-    return filterTag
+    return filterTag.length > 0
       ? mediaItems.filter((mediaItem: any) =>
-          mediaItem.tags?.includes(filterTag),
+          filterTag.some((tag) => mediaItem.tags.includes(tag)),
         )
       : mediaItems;
-  }, [filterTag, mediaItems]);
+  }, [filterTag, mediaItems, isGeneratingTags]);
+
+  const [pageNo, setpageNo] = useState<number>(20);
 
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * pageNo;
@@ -82,19 +76,19 @@ export default function AIGallery({
   }, []);
 
   const handleFolderAdded = useCallback(async () => {
-    await generateThumbnail(folderPath);
-  }, [folderPath, generateThumbnail]);
+    generateThumbnailAPI([folderPath]);
+  }, []);
 
   useEffect(() => {
-    handleFolderAdded();
-  }, [folderPath, handleFolderAdded]);
+    generateThumbnailAPI([folderPath]);
+  }, [folderPath]);
 
-  if (isCreating || loading) {
-    return <LoadingScreen />;
-  }
-
-  if (isError) {
-    return <div>Error loading media items.</div>;
+  if (isGeneratingThumbnails || isGeneratingTags) {
+    return (
+      <div>
+        <LoadingScreen />
+      </div>
+    );
   }
 
   return (
@@ -105,11 +99,10 @@ export default function AIGallery({
             <h1 className="text-2xl font-bold">{title}</h1>
           )}
           <FilterControls
-            filterTag={filterTag}
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
             onFolderAdded={handleFolderAdded}
-            isLoading={loading}
+            isLoading={isGeneratingTags}
             isVisibleSelectedImage={isVisibleSelectedImage}
             setIsVisibleSelectedImage={setIsVisibleSelectedImage}
           />
@@ -139,7 +132,7 @@ export default function AIGallery({
                       className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
                     >
                       <p className="hidden lg:inline">
-                        Num of images per page: {pageNo}
+                        Num of images per page : {pageNo}
                       </p>
                     </Button>
                   </DropdownMenuTrigger>
@@ -149,7 +142,7 @@ export default function AIGallery({
                   >
                     <DropdownMenuRadioGroup
                       className="cursor-pointer overflow-auto bg-gray-950 p-4"
-                      onValueChange={(value) => setPageNo(Number(value))}
+                      onValueChange={(value) => setpageNo(Number(value))}
                     >
                       {noOfPages.map((itemsPerPage) => (
                         <DropdownMenuRadioItem
