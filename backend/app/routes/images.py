@@ -23,6 +23,7 @@ from app.schemas.images import (
     GetImagesResponse,ErrorResponse,
     AddMultipleImagesRequest,AddMultipleImagesResponse,
     DeleteImageRequest,DeleteImageResponse,
+    DeleteMultipleImagesRequest,DeleteMultipleImagesResponse
 )
 
 router = APIRouter()
@@ -187,23 +188,10 @@ def delete_image(payload: DeleteImageRequest):
         )
 
 
-@router.delete("/multiple-images")
-def delete_multiple_images(payload: dict):
+@router.delete("/multiple-images",response_model=DeleteMultipleImagesResponse)
+def delete_multiple_images(payload: DeleteMultipleImagesRequest):
     try:
-        paths = payload["paths"]
-        if not isinstance(paths, list):
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Invalid 'paths' format",
-                        "message": "'paths' should be a list",
-                    },
-                },
-            )
-
+        paths = payload.paths
         deleted_paths = []
         for path in paths:
             if not os.path.isfile(path):
@@ -211,11 +199,11 @@ def delete_multiple_images(payload: dict):
                     status_code=404,
                     content={
                         "status_code": 404,
-                        "content": {
-                            "success": False,
-                            "error": "Image not found",
-                            "message": f"Image file not found: {path}",
-                        },
+                        "content":ErrorResponse(
+                            success=False,
+                            error="Image not found",
+                            message=f"Image file not found: {path}"
+                        ),
                     },
                 )
             path = os.path.normpath(path)
@@ -248,13 +236,11 @@ def delete_multiple_images(payload: dict):
             delete_image_db(path)
             deleted_paths.append(path)
 
-        return JSONResponse(
-            status_code=200,
-            content={
-                "data": deleted_paths,
-                "message": "Images deleted successfully",
-                "success": True,
-            },
+        
+        return DeleteMultipleImagesResponse(
+            data=deleted_paths,
+            message="Images deleted successfully",
+            success=True
         )
 
     except Exception as e:
@@ -263,11 +249,11 @@ def delete_multiple_images(payload: dict):
             status_code=500,
             content={
                 "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e),
-                },
+                "content":ErrorResponse(
+                    success=False,
+                    error="Internal server error",
+                    message=str(e),
+                )
             },
         )
 

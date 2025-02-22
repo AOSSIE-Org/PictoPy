@@ -12,6 +12,10 @@ class AddMultipleImagesRequest(BaseModel) :
 class DeleteImageRequest(BaseModel) : 
     path : str
 
+class DeleteMultipleImagesRequest(BaseModel) : 
+    paths : List[str]
+
+
 # Response Model 
 class GetImagesResponse(BaseModel) : 
     success : bool
@@ -30,5 +34,10 @@ class AddMultipleImagesResponse(BaseModel) :
 
 class DeleteImageResponse(BaseModel) : 
     data : str
+    message : str
+    success : bool
+
+class DeleteMultipleImagesResponse(BaseModel) : 
+    data : List[str]
     message : str
     success : bool
