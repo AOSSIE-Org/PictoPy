@@ -13,11 +13,23 @@ class GetRelatedImagesRequest(BaseModel) :
     pass
 
 # Response Model 
-class FaceMatchingResponse(BaseModel) : 
-    pass
+class SimilarPair(BaseModel):
+    image1: str
+    image2: str
+    similarity: float
+
+class FaceMatchingResponse(BaseModel):
+    success: bool
+    message: str
+    similar_pairs: List[SimilarPair]
 
 class FaceClustersResponse(BaseModel) : 
     pass
 
 class GetRelatedImagesResponse(BaseModel) : 
     pass
+
+class ErrorResponse(BaseModel) :
+    success: bool = False
+    message: str
+    error: str

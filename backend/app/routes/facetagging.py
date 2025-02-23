@@ -5,10 +5,18 @@ from app.database.images import get_path_from_id
 from app.facecluster.init_face_cluster import get_face_cluster
 from app.facenet.preprocess import cosine_similarity
 from app.utils.path_id_mapping import get_id_from_path
+from app.utils.wrappers import exception_handler_wrapper
+from app.schemas.facetagging import (
+    SimilarPair,ErrorResponse,
+    FaceMatchingRequest,FaceMatchingResponse,
+    FaceClustersRequest,FaceClustersResponse,
+    GetRelatedImagesRequest,GetRelatedImagesResponse
+)
 
 router = APIRouter()
 
-@router.get("/match")
+@router.get("/match",response_model=FaceMatchingResponse)
+@exception_handler_wrapper
 def face_matching():
     try:
         all_embeddings = get_all_face_embeddings()
@@ -27,24 +35,21 @@ def face_matching():
                             img1 = img1_data["image_path"].split("/")[-1]
                             img2 = img2_data["image_path"].split("/")[-1]
                             similar_pairs.append(
-                                {
-                                    "image1": img1,
-                                    "image2": img2,
-                                    "similarity": float(similarity),
-                                }
+                                SimilarPair(
+                                    image1=img1_data["image_path"].split("/")[-1],
+                                    image2=img2_data["image_path"].split("/")[-1],
+                                    similarity=float(similarity)
+                                )
                             )
                             break
                     else:
                         continue
                     break
 
-        return JSONResponse(
-            status_code=200,
-            content={
-                "data": {"similar_pairs": similar_pairs},
-                "message": "Successfully matched face embeddings",
-                "success": True
-            }
+        return FaceMatchingResponse(
+            success=True,
+            message="Successfully matched face embeddings",
+            similar_pairs=similar_pairs
         )
 
     except Exception as e:
@@ -52,15 +57,16 @@ def face_matching():
             status_code=500,
             content={
                 "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e)
-                }
+                "content":ErrorResponse(
+                    success=False,
+                    error="Internal server error",
+                    message=str(e)
+                ),
             }
         )
 
-@router.get("/clusters")
+@router.get("/clusters",response_model=FaceClustersResponse)
+@exception_handler_wrapper
 def face_clusters():
     try:
         cluster = get_face_cluster()
@@ -94,7 +100,8 @@ def face_clusters():
             }
         )
 
-@router.get("/related-images")
+@router.get("/related-images",response_model=GetRelatedImagesResponse)
+@exception_handler_wrapper
 def get_related_images(path: str = Query(..., description="full path to the image")):
     try:
         cluster = get_face_cluster()
