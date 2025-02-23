@@ -53,19 +53,16 @@ class DeleteMultipleImagesResponse(BaseModel) :
     message : str
     success : bool
 
-class ImageDataResponse(BaseModel) : 
-    images: Dict[str, str]  # Mapping image paths to class names or "None"
-    folder_path: str
 
 class GetAllImageObjectsResponse(BaseModel) : 
     success: bool
     message: str
-    data: ImageDataResponse
+    data: dict
 
 class ClassIDsResponse(BaseModel):
     success: bool
     message: str
-    data: Union[List[int], str]
+    data: Union[List[str], str]
 
 class AddFolderResponse(BaseModel) : 
     data: int
