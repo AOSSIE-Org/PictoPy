@@ -14,7 +14,7 @@ import time
 from functools import wraps
 from numpy.typing import NDArray
 
-from app.config.settings import CLUSTERS_DATABASE_PATH
+from app.config.settings import DATABASE_PATH
 from app.utils.path_id_mapping import get_path_from_id, get_id_from_path
 from app.database.faces import get_face_embeddings, get_all_face_embeddings
 
@@ -116,7 +116,7 @@ class FaceCluster:
         eps: float = 0.3,
         min_samples: int = 2,
         metric: str = "cosine",
-        db_path: Union[str, Path] = CLUSTERS_DATABASE_PATH
+        db_path: Union[str, Path] = DATABASE_PATH
     ) -> None:
         """
         Initialize the face cluster manager.
@@ -316,7 +316,7 @@ class FaceCluster:
         """Save current state to the database."""
         with database_connection(self.db_path) as conn:
             state = {
-                'image_ids': json.dumps(self.image_ids),
+                'image_ids': json.dumps(self.image_ids, default=lambda x: int(x)),
                 'labels': json.dumps(
                     self.labels.tolist() if self.labels is not None else []
                 )
@@ -325,14 +325,14 @@ class FaceCluster:
             conn.execute("DELETE FROM face_clusters")
             conn.execute(
                 """INSERT INTO face_clusters (image_ids, labels)
-                   VALUES (:image_ids, :labels)""",
+                VALUES (:image_ids, :labels)""",
                 state
             )
 
     @classmethod
     def load_from_db(
         cls,
-        db_path: Union[str, Path] = CLUSTERS_DATABASE_PATH
+        db_path: Union[str, Path] = DATABASE_PATH
     ) -> 'FaceCluster':
         """
         Load clustering state from database.

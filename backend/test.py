@@ -2,26 +2,24 @@ import sqlite3
 import json
 import numpy as np
 from sklearn.cluster import DBSCAN
-from app.config.settings import FACES_DATABASE_PATH, IMAGES_DATABASE_PATH
+from app.config.settings import DATABASE_PATH
 
 
 def get_all_face_embeddings():
-    conn_faces = sqlite3.connect(FACES_DATABASE_PATH)
-    conn_images = sqlite3.connect(IMAGES_DATABASE_PATH)
-    cursor_faces = conn_faces.cursor()
-    cursor_images = conn_images.cursor()
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor= conn.cursor()
 
-    cursor_faces.execute("SELECT image_id, embeddings FROM faces")
-    results = cursor_faces.fetchall()
+    cursor.execute("SELECT image_id, embeddings FROM faces")
+    results = cursor.fetchall()
 
     all_embeddings = []
     image_paths = []
     skipped_images = []
     for image_id, embeddings_json in results:
-        cursor_images.execute(
+        cursor.execute(
             "SELECT path FROM image_id_mapping WHERE id = ?", (image_id,)
         )
-        image_path = cursor_images.fetchone()[0]
+        image_path = cursor.fetchone()[0]
         embeddings = np.array(json.loads(embeddings_json))
 
         # Skip images with more than 10 faces
@@ -32,8 +30,7 @@ def get_all_face_embeddings():
         all_embeddings.extend(embeddings)
         image_paths.extend([image_path] * len(embeddings))
 
-    conn_faces.close()
-    conn_images.close()
+    conn.close()
     return np.array(all_embeddings), image_paths, skipped_images
 
 
