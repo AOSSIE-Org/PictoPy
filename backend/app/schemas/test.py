@@ -6,9 +6,6 @@ from typing import Optional,List,Dict,Union
 class TestRouteRequest(BaseModel):
     path: str  
 
-class GetImagesRequest(BaseModel) : 
-    pass
-
 class AddSingleImageRequest(BaseModel) : 
     path: str
 

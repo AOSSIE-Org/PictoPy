@@ -13,8 +13,8 @@ from app.utils.wrappers import exception_handler_wrapper
 from app.schemas.test import (
     TestRouteRequest,TestRouteResponse,
     DetectionData,ErrorResponse,
-    GetImagesRequest,GetImagesResponse,
     AddSingleImageRequest,AddSingleImageResponse,
+    GetImagesResponse
 )
 
 router = APIRouter()
