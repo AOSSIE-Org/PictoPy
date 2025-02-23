@@ -5,7 +5,7 @@ import asyncio
 from fastapi import APIRouter, status, Request
 from fastapi.responses import JSONResponse
 
-from app.config.settings import DEFAULT_OBJ_DETECTION_MODEL, DEFAULT_FACE_DETECTION_MODEL, IMAGES_PATH
+from app.config.settings import DEFAULT_FACE_DETECTION_MODEL, IMAGES_PATH
 from app.yolov8 import YOLOv8
 from app.yolov8.utils import class_names
 from app.utils.classification import get_classes
@@ -101,33 +101,21 @@ def get_images():
             }
         )
 
-@router.post("/single-image")
-def add_single_image(payload: dict):
+@router.post("/single-image",response_model=AddSingleImageResponse)
+@exception_handler_wrapper
+def add_single_image(payload: AddSingleImageRequest):
     try:
-        if 'path' not in payload:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={
-                    "status_code": status.HTTP_400_BAD_REQUEST,
-                    "content": {
-                        "success": False,
-                        "error": "Missing 'path' in payload",
-                        "message": "Image path is required"
-                    }
-                }
-            )
-
-        image_path = payload['path']
+        image_path = payload.path
         if not os.path.isfile(image_path):
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={
                     "status_code": status.HTTP_400_BAD_REQUEST,
-                    "content": {
-                        "success": False,
-                        "error": "Invalid file path",
-                        "message": "The provided path is not a valid file"
-                    }
+                    "content" : ErrorResponse(
+                        success=True,
+                        error="Invalid file path",
+                        message="The provided path is not a valid file"
+                    ),
                 }
             )
 
@@ -138,35 +126,31 @@ def add_single_image(payload: dict):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={
                     "status_code": status.HTTP_400_BAD_REQUEST,
-                    "content": {
-                        "success": False,
-                        "error": "Invalid file type",
-                        "message": "The file is not a supported image type"
-                    }
+                    "content": ErrorResponse(
+                        success=False,
+                        error="Invalid file type",
+                        message="The file is not a supported image type"
+                    ),
                 }
             )
 
         destination_path = os.path.join(IMAGES_PATH, os.path.basename(image_path))
         shutil.copy(image_path, destination_path)
 
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "data": {"destination_path": destination_path},
-                "message": "Image copied to the gallery successfully",
-                "success": True
-            }
-        )
-
+        return AddSingleImageResponse(
+            success=True,
+            message="Image copied to the gallery successfully",
+            data={"destination_path": destination_path}
+        ),
     except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e)
-                }
+                "content": ErrorResponse(
+                    success=False,
+                    error="Internal server error",
+                    message=str(e)
+                ),
             }
         )

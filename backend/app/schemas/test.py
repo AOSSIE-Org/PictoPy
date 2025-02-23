@@ -10,7 +10,7 @@ class GetImagesRequest(BaseModel) :
     pass
 
 class AddSingleImageRequest(BaseModel) : 
-    pass
+    path: str
 
 
 # Response Model
@@ -30,7 +30,9 @@ class GetImagesResponse(BaseModel) :
     data: Dict[str,List[str]]
 
 class AddSingleImageResponse(BaseModel) : 
-    pass
+    success: bool
+    message: str
+    data: Dict[str,str]
 
 class ErrorResponse(BaseModel) :
     success: bool = False
