@@ -32,8 +32,6 @@ def face_matching():
                     for embedding2 in img2_data["embeddings"]:
                         similarity = cosine_similarity(embedding1, embedding2)
                         if similarity >= 0.5:
-                            img1 = img1_data["image_path"].split("/")[-1]
-                            img2 = img2_data["image_path"].split("/")[-1]
                             similar_pairs.append(
                                 SimilarPair(
                                     image1=img1_data["image_path"].split("/")[-1],
@@ -73,30 +71,27 @@ def face_clusters():
         raw_clusters = cluster.get_clusters()
 
         # Convert image IDs to paths
-        formatted_clusters = {}
-        for cluster_id, image_ids in raw_clusters.items():
-            formatted_clusters[int(cluster_id)] = [
-                get_path_from_id(image_id) for image_id in image_ids
-            ]
-
-        return JSONResponse(
-            status_code=200,
-            content={
-                "data": {"clusters": formatted_clusters},
-                "message": "Successfully retrieved face clusters",
-                "success": True
-            }
+        formatted_clusters = {
+            int(cluster_id): [get_path_from_id(image_id) for image_id in image_ids]
+            for cluster_id, image_ids in raw_clusters.items()
+        }
+        
+        return FaceClustersResponse(
+            success=True,
+            message="Successfully retrieved face clusters",
+            clusters=formatted_clusters
         )
+    
     except Exception as e:
         return JSONResponse(
             status_code=500,
             content={
                 "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e)
-                }
+                "content" : ErrorResponse(
+                    success=False,
+                    error="Internal server error",
+                    message=str(e)
+                ),
             }
         )
 

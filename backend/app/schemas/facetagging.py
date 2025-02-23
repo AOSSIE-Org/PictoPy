@@ -24,7 +24,9 @@ class FaceMatchingResponse(BaseModel):
     similar_pairs: List[SimilarPair]
 
 class FaceClustersResponse(BaseModel) : 
-    pass
+    success: bool
+    message: str
+    clusters: Dict[int, List[str]]
 
 class GetRelatedImagesResponse(BaseModel) : 
     pass
