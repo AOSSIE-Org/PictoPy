@@ -25,6 +25,7 @@ from app.schemas.images import (
     DeleteImageRequest,DeleteImageResponse,
     DeleteMultipleImagesRequest,DeleteMultipleImagesResponse,
     GetAllImageObjectsResponse,ImageDataResponse,
+    AddFolderRequest,AddFolderResponse,
     ClassIDsResponse
 )
 
@@ -319,33 +320,24 @@ def get_class_ids(path: str = Query(...,description="Path of the image file")):
 
 
 
-@router.post("/add-folder")
-async def add_folder(payload: dict):
+@router.post("/add-folder",response_model=AddFolderResponse)
+@exception_handler_wrapper
+async def add_folder(payload: AddFolderRequest):
     try:
-        if "folder_path" not in payload:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Missing 'folder_path' in payload",
-                        "message": "Folder path is required",
-                    },
-                },
-            )
+        
+        folder_path = payload.folder_path
 
-        folder_path = payload["folder_path"]
         if not os.path.isdir(folder_path):
             return JSONResponse(
                 status_code=400,
                 content={
                     "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Invalid folder path",
-                        "message": "The provided path is not a valid directory",
-                    },
+                    "content" : ErrorResponse(
+                        success=False,
+                        error="Invalid folder path",
+                        message="The provided path is not a valid directory",
+                    )
+                  
                 },
             )
 
@@ -368,25 +360,20 @@ async def add_folder(payload: dict):
                     tasks.append(asyncio.create_task(run_get_classes(destination_path)))
 
         if not tasks:
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "data": 0,
-                    "message": "No valid images found in the specified folder",
-                    "success": True,
-                },
+            return AddFolderResponse(
+                data=0,
+                message="No valid images found in the specified folder",
+                success=True
             )
-
+        
         await asyncio.create_task(process_images(tasks))
-
-        return JSONResponse(
-            status_code=200,
-            content={
-                "data": len(tasks),
-                "message": f"Processing {len(tasks)} images from the folder in the background",
-                "success": True,
-            },
+        
+        return AddFolderResponse(
+            data=len(tasks),
+            message=f"Processing {len(tasks)} images from the folder in the background",
+            success=True
         )
+
 
     except Exception as e:
         print(e)
@@ -394,11 +381,11 @@ async def add_folder(payload: dict):
             status_code=500,
             content={
                 "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e),
-                },
+                "content" : ErrorResponse(
+                    success=False,
+                    error="Internal server error",
+                    message=str(e)
+                )
             },
         )
 

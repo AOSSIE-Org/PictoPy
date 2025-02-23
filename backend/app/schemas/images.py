@@ -16,6 +16,9 @@ class DeleteMultipleImagesRequest(BaseModel) :
     paths : List[str]
 
 
+class AddFolderRequest(BaseModel) : 
+    folder_path : str
+
 
 # Response Model 
 class GetImagesResponse(BaseModel) : 
@@ -58,3 +61,9 @@ class ClassIDsResponse(BaseModel):
     success: bool
     message: str
     data: Union[List[int], str]
+
+class AddFolderResponse(BaseModel) : 
+    data: int
+    message: str
+    success: bool
+
