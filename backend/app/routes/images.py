@@ -26,7 +26,8 @@ from app.schemas.images import (
     DeleteMultipleImagesRequest,DeleteMultipleImagesResponse,
     GetAllImageObjectsResponse,ImageDataResponse,
     AddFolderRequest,AddFolderResponse,
-    ClassIDsResponse
+    GenerateThumbnailsRequest,GenerateThumbnailsResponse,
+    FailedPathResponse,ClassIDsResponse
 )
 
 router = APIRouter()
@@ -391,34 +392,22 @@ async def add_folder(payload: AddFolderRequest):
 
 
 # generate 400px width or height thumbnails for all the images present the given folder using pillow library
-@router.post("/generate-thumbnails")
+@router.post("/generate-thumbnails",response_model=GenerateThumbnailsResponse)
 @exception_handler_wrapper
-def generate_thumbnails(payload: dict):
-    if "folder_paths" not in payload or not isinstance(payload["folder_paths"], list):
-        return JSONResponse(
-            status_code=400,
-            content={
-                "status_code": 400,
-                "content": {
-                    "success": False,
-                    "error": "Invalid or missing 'folder_paths' in payload",
-                    "message": "'folder_paths' must be a list of folder paths",
-                },
-            },
-        )
-
-    folder_paths = payload["folder_paths"]
+def generate_thumbnails(payload: GenerateThumbnailsRequest):
+    
+    folder_paths = payload.folder_paths
     image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"]
     failed_paths = []
 
     for folder_path in folder_paths:
         if not os.path.isdir(folder_path):
             failed_paths.append(
-                {
-                    "folder_path": folder_path,
-                    "error": "Invalid folder path",
-                    "message": "The provided path is not a valid directory",
-                }
+                FailedPathResponse(
+                    folder_path=folder_path,
+                    error="Invalid folder path",
+                    message="The provided path is not a valid directory"
+                )
             )
             continue
 
@@ -450,35 +439,24 @@ def generate_thumbnails(payload: dict):
                         img.save(thumbnail_path)
                     except Exception as e:
                         failed_paths.append(
-                            {
-                                "folder_path": folder_path,
-                                "file": file_path,
-                                "error": "Thumbnail generation error",
-                                "message": f"Error processing file {file}: {str(e)}",
-                            }
+                            FailedPathResponse(
+                                folder_path=folder_path,
+                                file=file_path,
+                                error="Thumbnail generation error",
+                                message=f"Error processing file {file}: {str(e)}"
+                            )
                         )
 
     if failed_paths:
-        return JSONResponse(
-            status_code=207,  # Multi-Status (some succeeded, some failed)
-            content={
-                "status_code": 207,
-                "content": {
-                    "success": False,
-                    "error": "Partial processing",
-                    "message": "Some folders or files could not be processed",
-                    "failed_paths": failed_paths,
-                },
-            },
+        return GenerateThumbnailsResponse(
+            success=False,
+            message="Some folders or files could not be processed",
+            failed_paths=failed_paths
         )
-
-    return JSONResponse(
-        status_code=201,
-        content={
-            "data": "",
-            "message": "Thumbnails generated successfully for all valid folders",
-            "success": True,
-        },
+        
+    return GenerateThumbnailsResponse(
+        success=True,
+        message="Thumbnails generated successfully for all valid folders"
     )
 
 

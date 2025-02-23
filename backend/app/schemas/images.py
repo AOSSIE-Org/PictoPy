@@ -19,6 +19,11 @@ class DeleteMultipleImagesRequest(BaseModel) :
 class AddFolderRequest(BaseModel) : 
     folder_path : str
 
+class GenerateThumbnailsRequest(BaseModel) : 
+    folder_paths : List[str]
+
+
+
 
 # Response Model 
 class GetImagesResponse(BaseModel) : 
@@ -35,7 +40,6 @@ class AddMultipleImagesResponse(BaseModel) :
     data : int
     message : str
     success : bool
-
 
 
 class DeleteImageResponse(BaseModel) : 
@@ -67,3 +71,13 @@ class AddFolderResponse(BaseModel) :
     message: str
     success: bool
 
+class FailedPathResponse(BaseModel):
+    folder_path: str
+    error: str
+    message: str
+    file: Optional[str] = None
+
+class GenerateThumbnailsResponse(BaseModel) : 
+    success : bool
+    message : str 
+    failed_paths : Optional[List[FailedPathResponse]] = None
