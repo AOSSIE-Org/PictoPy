@@ -29,7 +29,9 @@ class FaceClustersResponse(BaseModel) :
     clusters: Dict[int, List[str]]
 
 class GetRelatedImagesResponse(BaseModel) : 
-    pass
+    success: bool
+    message: str
+    data: Dict[str, List[str]]
 
 class ErrorResponse(BaseModel) :
     success: bool = False

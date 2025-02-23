@@ -104,23 +104,22 @@ def get_related_images(path: str = Query(..., description="full path to the imag
         related_image_ids = cluster.get_related_images(image_id)
         related_image_paths = [get_path_from_id(id) for id in related_image_ids]
         
-        return JSONResponse(
-            status_code=200,
-            content={
-                "data": {"related_images": related_image_paths},
-                "message": f"Successfully retrieved related images for {path}",
-                "success": True
-            }
+
+        return GetRelatedImagesResponse(
+            success=True,
+            message=f"Successfully retrieved related images for {path}",
+            data={"related_images": related_image_paths}  # Wrapped inside "data"
         )
     except Exception as e:
         return JSONResponse(
             status_code=500,
             content={
                 "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e)
-                }
+                "content":ErrorResponse(
+                    success=False,
+                    error="Internal server error",
+                    message=str(e)
+                ),
             }
+
         )
