@@ -1,16 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional,List,Dict,Union
-
-
-# Request Model 
-class FaceMatchingRequest(BaseModel) : 
-    pass 
-
-class FaceClustersRequest(BaseModel) : 
-    pass
-
-class GetRelatedImagesRequest(BaseModel) : 
-    pass
+from typing import List,Dict
 
 # Response Model 
 class SimilarPair(BaseModel):

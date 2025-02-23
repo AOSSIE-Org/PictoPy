@@ -8,9 +8,9 @@ from app.utils.path_id_mapping import get_id_from_path
 from app.utils.wrappers import exception_handler_wrapper
 from app.schemas.facetagging import (
     SimilarPair,ErrorResponse,
-    FaceMatchingRequest,FaceMatchingResponse,
-    FaceClustersRequest,FaceClustersResponse,
-    GetRelatedImagesRequest,GetRelatedImagesResponse
+    FaceMatchingResponse,
+    FaceClustersResponse,
+    GetRelatedImagesResponse
 )
 
 router = APIRouter()
