@@ -9,6 +9,13 @@ from app.config.settings import DEFAULT_OBJ_DETECTION_MODEL, DEFAULT_FACE_DETECT
 from app.yolov8 import YOLOv8
 from app.yolov8.utils import class_names
 from app.utils.classification import get_classes
+from app.utils.wrappers import exception_handler_wrapper
+from app.schemas.test import (
+    TestRouteRequest,TestRouteResponse,
+    DetectionData,ErrorResponse,
+    GetImagesRequest,GetImagesResponse,
+    AddSingleImageRequest,AddSingleImageResponse,
+)
 
 router = APIRouter()
 
@@ -17,27 +24,13 @@ async def run_get_classes(img_path):
     result = await loop.run_in_executor(None, get_classes, img_path)
     print(result)
 
-@router.post("/return")
-async def test_route(payload: dict):
+@router.post("/return",response_model=TestRouteResponse)
+@exception_handler_wrapper
+async def test_route(payload: TestRouteRequest):
     try:
         model_path = DEFAULT_FACE_DETECTION_MODEL
-        yolov8_detector = YOLOv8(model_path, conf_thres=0.2, iou_thres=0.3)
-        print(payload)
-        
-        if 'path' not in payload:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={
-                    "status_code": status.HTTP_400_BAD_REQUEST,
-                    "content": {
-                        "success": False,
-                        "error": "Missing 'path' in payload",
-                        "message": "Image path is required"
-                    }
-                }
-            )
-        
-        img_path = payload['path']
+        yolov8_detector = YOLOv8(model_path, conf_thres=0.2, iou_thres=0.3)        
+        img_path = payload.path
         img = cv2.imread(img_path)
 
         if img is None:
@@ -45,11 +38,11 @@ async def test_route(payload: dict):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={
                     "status_code": status.HTTP_400_BAD_REQUEST,
-                    "content": {
-                        "success": False,
-                        "error": "Failed to load image",
-                        "message": f"Failed to load image: {img_path}"
-                    }
+                    "content": ErrorResponse(
+                        success=True,
+                        error="Failed to load image",
+                        message=f"Failed to load image: {img_path}"
+                    ),
                 }
             )
 
@@ -59,16 +52,13 @@ async def test_route(payload: dict):
         
         asyncio.create_task(run_get_classes(img_path))
         
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "data": {
-                    "class_ids": class_ids.tolist(),
-                    "detected_classes": detected_classes
-                },
-                "message": "Object detection completed successfully",
-                "success": True
-            }
+        return TestRouteResponse(
+            success=True,
+            message="Object detection completed successfully",
+            data=DetectionData(
+                class_ids=class_ids.tolist(),
+                detected_classes=detected_classes
+            )
         )
     
     except Exception as e:
@@ -76,11 +66,11 @@ async def test_route(payload: dict):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e)
-                }
+                "content" : ErrorResponse(
+                    success=False,
+                    error="Internal server error",
+                    message=str(e)
+                ),
             }
         )
 
