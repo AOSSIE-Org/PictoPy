@@ -27,7 +27,9 @@ from app.schemas.images import (
     GetAllImageObjectsResponse,ImageDataResponse,
     AddFolderRequest,AddFolderResponse,
     GenerateThumbnailsRequest,GenerateThumbnailsResponse,
-    FailedPathResponse,ClassIDsResponse
+    FailedPathResponse,ClassIDsResponse,
+    DeleteThumbnailsRequest,DeleteThumbnailsResponse,
+    FailedDeletionThumbnailResponse
 )
 
 router = APIRouter()
@@ -461,34 +463,16 @@ def generate_thumbnails(payload: GenerateThumbnailsRequest):
 
 
 # Delete all the thumbnails present in the given folder
-@router.delete("/delete-thumbnails")
+@router.delete("/delete-thumbnails",response_model=DeleteThumbnailsResponse)
 @exception_handler_wrapper
-def delete_thumbnails(payload: dict):
-    if "folder_path" not in payload:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "status_code": 400,
-                "content": {
-                    "success": False,
-                    "error": "Missing 'folder_path' in payload",
-                    "message": "Folder path is required",
-                },
-            },
-        )
+def delete_thumbnails(payload: DeleteThumbnailsRequest):
+   
+    folder_path = payload.folder_path
 
-    folder_path = payload["folder_path"]
     if not os.path.isdir(folder_path):
-        return JSONResponse(
-            status_code=400,
-            content={
-                "status_code": 400,
-                "content": {
-                    "success": False,
-                    "error": "Invalid folder path",
-                    "message": "The provided path is not a valid directory",
-                },
-            },
+        return DeleteThumbnailsResponse(
+            success=False,
+            message="The provided path is not a valid directory"
         )
 
     # List to store any errors encountered while deleting thumbnails
@@ -505,33 +489,21 @@ def delete_thumbnails(payload: dict):
                     print(f"Deleted: {thumbnail_folder}")
                 except Exception as e:
                     failed_deletions.append(
-                        {
-                            "folder": thumbnail_folder,
-                            "error": str(e),
-                        }
+                        FailedDeletionThumbnailResponse(
+                            folder=thumbnail_folder,
+                            error=str(e)
+                        )
                     )
 
+   
     if failed_deletions:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Some thumbnail folders could not be deleted",
-                    "message": "See the `failed_deletions` field for details.",
-                    "failed_deletions": failed_deletions,
-                },
-            },
+        return DeleteThumbnailsResponse(
+            success=False,
+            message="Some thumbnail folders could not be deleted",
+            failed_deletions=failed_deletions
         )
 
-    return JSONResponse(
-        status_code=200,
-        content={
-            "status_code": 200,
-            "content": {
-                "success": True,
-                "message": "All PictoPy.thumbnails folders have been successfully deleted.",
-            },
-        },
+    return DeleteThumbnailsResponse(
+        success=True,
+        message="All `PictoPy.thumbnails` folders have been successfully deleted."
     )

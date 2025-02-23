@@ -23,6 +23,9 @@ class GenerateThumbnailsRequest(BaseModel) :
     folder_paths : List[str]
 
 
+class DeleteThumbnailsRequest(BaseModel) :
+    folder_path : str
+
 
 
 # Response Model 
@@ -81,3 +84,13 @@ class GenerateThumbnailsResponse(BaseModel) :
     success : bool
     message : str 
     failed_paths : Optional[List[FailedPathResponse]] = None
+
+
+class FailedDeletionThumbnailResponse(BaseModel):
+    folder: str
+    error: str
+
+class DeleteThumbnailsResponse(BaseModel):
+    success: bool
+    message: str
+    failed_deletions: Optional[List[FailedDeletionThumbnailResponse]] = None
