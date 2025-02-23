@@ -74,20 +74,18 @@ async def test_route(payload: TestRouteRequest):
             }
         )
 
-@router.get("/images")
+@router.get("/images",response_model=GetImagesResponse)
+@exception_handler_wrapper
 def get_images():
     try:
         files = os.listdir(IMAGES_PATH)
         image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.gif'] 
         image_files = [os.path.abspath(os.path.join(IMAGES_PATH, file)) for file in files if os.path.splitext(file)[1].lower() in image_extensions]
         
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "data": {"images": image_files},
-                "message": "Successfully retrieved all images",
-                "success": True
-            }
+        return GetImagesResponse(
+            success=True,
+            message="Successfully retrieved all images",
+            data= { "images": image_files }
         )
     
     except Exception as e:
@@ -95,11 +93,11 @@ def get_images():
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e)
-                }
+                "content": ErrorResponse(
+                    success=False,
+                    error="Internal server error",
+                    message=str(e)
+                ),
             }
         )
 

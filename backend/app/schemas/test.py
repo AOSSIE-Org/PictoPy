@@ -25,7 +25,9 @@ class TestRouteResponse(BaseModel):
     data: DetectionData
 
 class GetImagesResponse(BaseModel) : 
-    pass 
+    success: bool
+    message: str
+    data: Dict[str,List[str]]
 
 class AddSingleImageResponse(BaseModel) : 
     pass
