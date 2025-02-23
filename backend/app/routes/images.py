@@ -5,7 +5,6 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from PIL import Image
 
-# hello
 from app.config.settings import IMAGES_PATH
 from app.facenet.facenet import detect_faces
 from app.utils.classification import get_classes
