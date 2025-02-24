@@ -5,7 +5,7 @@ start_backend() {
   echo "Starting backend server..."
   # Navigate to the backend directory if needed
   
-
+  cd ..
   cd backend || exit
   # Start the backend server
   ./run.sh &
