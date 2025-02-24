@@ -13,8 +13,8 @@ class AddSingleImageRequest(BaseModel) :
 # Response Model
 
 class DetectionData(BaseModel):
-    class_ids: List[int]  # List of detected class IDs
-    detected_classes: List[str]  # List of class names
+    class_ids: List[str | None]  # List of detected class IDs
+    detected_classes: List[str | None]  # List of class names
 
 class TestRouteResponse(BaseModel):
     success: bool

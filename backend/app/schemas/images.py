@@ -27,10 +27,15 @@ class DeleteThumbnailsRequest(BaseModel) :
 
 
 # Response Model 
+
+class ImagesResponse(BaseModel) : 
+    image_files : List[str]
+    folder_path: str
+
 class GetImagesResponse(BaseModel) : 
     success : bool
     message: str 
-    data : dict
+    data : ImagesResponse
 
 class ErrorResponse(BaseModel) :
     success: bool = False

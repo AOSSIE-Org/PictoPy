@@ -25,11 +25,12 @@ async def run_get_classes(img_path):
     print(result)
 
 @router.post("/return",response_model=TestRouteResponse)
-@exception_handler_wrapper
 async def test_route(payload: TestRouteRequest):
     try:
         model_path = DEFAULT_FACE_DETECTION_MODEL
-        yolov8_detector = YOLOv8(model_path, conf_thres=0.2, iou_thres=0.3)        
+        yolov8_detector = YOLOv8(model_path, conf_thres=0.2, iou_thres=0.3)   
+
+
         img_path = payload.path
         img = cv2.imread(img_path)
 
@@ -49,6 +50,8 @@ async def test_route(payload: TestRouteRequest):
         boxes, scores, class_ids = yolov8_detector(img)
         print(scores, "\n", class_ids)
         detected_classes = [class_names[x] for x in class_ids]
+
+
         
         asyncio.create_task(run_get_classes(img_path))
         
@@ -56,11 +59,13 @@ async def test_route(payload: TestRouteRequest):
             success=True,
             message="Object detection completed successfully",
             data=DetectionData(
-                class_ids=class_ids.tolist(),
+                class_ids=class_ids,
                 detected_classes=detected_classes
             )
         )
     
+        
+
     except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
