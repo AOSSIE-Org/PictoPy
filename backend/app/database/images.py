@@ -91,12 +91,12 @@ def delete_image_db(path):
         # Instead of calling delete_face_embeddings directly, for circular import error
         remove_image_from_all_albums(image_id)
         from app.database.faces import delete_face_embeddings
-
-    conn.commit()
+        conn.commit()
+        conn.close()
+        clusters = get_face_cluster()
+        clusters.remove_image(image_id)
+        delete_face_embeddings(image_id)
     conn.close()
-    clusters = get_face_cluster()
-    clusters.remove_image(image_id)
-    delete_face_embeddings(image_id)
 
 
 

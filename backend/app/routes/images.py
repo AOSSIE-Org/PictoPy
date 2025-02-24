@@ -385,21 +385,20 @@ def generate_thumbnails(payload: dict):
 # Delete all the thumbnails present in the given folder
 @router.delete("/delete-thumbnails")
 @exception_handler_wrapper
-def delete_thumbnails(payload: dict):
-    if "folder_path" not in payload:
+def delete_thumbnails(folder_path: str | None = None):
+    if not folder_path:
         return JSONResponse(
             status_code=400,
             content={
                 "status_code": 400,
                 "content": {
                     "success": False,
-                    "error": "Missing 'folder_path' in payload",
+                    "error": "Missing 'folder_path' parameter",
                     "message": "Folder path is required",
                 },
             },
         )
 
-    folder_path = payload["folder_path"]
     if not os.path.isdir(folder_path):
         return JSONResponse(
             status_code=400,
