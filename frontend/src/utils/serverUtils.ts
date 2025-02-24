@@ -1,11 +1,11 @@
 import { Command } from '@tauri-apps/plugin-shell';
 import { invoke } from '@tauri-apps/api/core';
-import { BACKED_URL } from '../Config/Backend.ts';
+import { BACKEND_URL } from '../Config/Backend.ts';
 const isWindows = () => navigator.platform.startsWith('Win');
 
 const isServerRunning = async (): Promise<boolean> => {
   try {
-    const response = await fetch(BACKED_URL);
+    const response = await fetch(BACKEND_URL);
     if (response.ok) {
       console.log('Server is Running!');
       return true;

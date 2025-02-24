@@ -5,10 +5,11 @@ import asyncio
 from fastapi import APIRouter, status, Request
 from fastapi.responses import JSONResponse
 
-from app.config.settings import DEFAULT_OBJ_DETECTION_MODEL, DEFAULT_FACE_DETECTION_MODEL, IMAGES_PATH
+from app.config.settings import DEFAULT_OBJ_DETECTION_MODEL, DEFAULT_FACE_DETECTION_MODEL
 from app.yolov8 import YOLOv8
 from app.yolov8.utils import class_names
 from app.utils.classification import get_classes
+from app.routes.images import get_all_image_paths
 
 router = APIRouter()
 
@@ -87,98 +88,26 @@ async def test_route(payload: dict):
 @router.get("/images")
 def get_images():
     try:
-        files = os.listdir(IMAGES_PATH)
-        image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.gif'] 
-        image_files = [os.path.abspath(os.path.join(IMAGES_PATH, file)) for file in files if os.path.splitext(file)[1].lower() in image_extensions]
-        
+        image_files = get_all_image_paths()
+
         return JSONResponse(
-            status_code=status.HTTP_200_OK,
+            status_code=200,
             content={
-                "data": {"images": image_files},
+                "data": {
+                    "image_files": image_files
+                },
                 "message": "Successfully retrieved all images",
-                "success": True
-            }
-        )
-    
-    except Exception as e:
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
-                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e)
-                }
-            }
-        )
-
-@router.post("/single-image")
-def add_single_image(payload: dict):
-    try:
-        if 'path' not in payload:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={
-                    "status_code": status.HTTP_400_BAD_REQUEST,
-                    "content": {
-                        "success": False,
-                        "error": "Missing 'path' in payload",
-                        "message": "Image path is required"
-                    }
-                }
-            )
-
-        image_path = payload['path']
-        if not os.path.isfile(image_path):
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={
-                    "status_code": status.HTTP_400_BAD_REQUEST,
-                    "content": {
-                        "success": False,
-                        "error": "Invalid file path",
-                        "message": "The provided path is not a valid file"
-                    }
-                }
-            )
-
-        image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.gif']
-        file_extension = os.path.splitext(image_path)[1].lower()
-        if file_extension not in image_extensions:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={
-                    "status_code": status.HTTP_400_BAD_REQUEST,
-                    "content": {
-                        "success": False,
-                        "error": "Invalid file type",
-                        "message": "The file is not a supported image type"
-                    }
-                }
-            )
-
-        destination_path = os.path.join(IMAGES_PATH, os.path.basename(image_path))
-        shutil.copy(image_path, destination_path)
-
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "data": {"destination_path": destination_path},
-                "message": "Image copied to the gallery successfully",
-                "success": True
-            }
+                "success": True,
+            },
         )
 
     except Exception as e:
         return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             content={
-                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e)
-                }
-            }
+                "success": False,
+                "error": "Internal server error",
+                "message": str(e),
+            },
         )
+
