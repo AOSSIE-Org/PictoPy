@@ -9,6 +9,7 @@ from app.database.albums import create_albums_table
 from app.database.yolo_mapping import create_YOLO_mappings
 from app.database.faces import cleanup_face_embeddings, create_faces_table
 from app.facecluster.init_face_cluster import get_face_cluster, init_face_cluster
+from app.database.folders import create_folders_table
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -25,6 +26,7 @@ def initialize_database_and_services():
     create_faces_table()
     create_image_id_mapping_table()
     create_images_table()
+    create_folders_table()
     create_albums_table()
     cleanup_face_embeddings()
     init_face_cluster()
