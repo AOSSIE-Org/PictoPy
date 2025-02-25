@@ -2,9 +2,7 @@ import os
 import cv2
 import shutil
 import asyncio
-from fastapi import APIRouter, status, Request
-from fastapi.responses import JSONResponse
-
+from fastapi import APIRouter, status, HTTPException
 from app.config.settings import DEFAULT_FACE_DETECTION_MODEL, IMAGES_PATH
 from app.yolov8 import YOLOv8
 from app.yolov8.utils import class_names
@@ -22,9 +20,13 @@ router = APIRouter()
 async def run_get_classes(img_path):
     loop = asyncio.get_event_loop()
     result = await loop.run_in_executor(None, get_classes, img_path)
-    print(result)
 
-@router.post("/return",response_model=TestRouteResponse)
+
+@router.post(
+    "/return",
+    response_model=TestRouteResponse,
+    responses={ code : { "model" : ErrorResponse } for code in [ 400,500 ] }
+)
 async def test_route(payload: TestRouteRequest):
     try:
         model_path = DEFAULT_FACE_DETECTION_MODEL
@@ -35,18 +37,17 @@ async def test_route(payload: TestRouteRequest):
         img = cv2.imread(img_path)
 
         if img is None:
-            return JSONResponse(
+            
+            raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                content={
-                    "status_code": status.HTTP_400_BAD_REQUEST,
-                    "content": ErrorResponse(
-                        success=True,
-                        error="Failed to load image",
-                        message=f"Failed to load image: {img_path}"
-                    ),
-                }
+                detail=ErrorResponse(
+                    success=False,
+                    message=f"Failed to load image: {img_path}",
+                    error="Failed to load image"
+                ).model_dump()
             )
 
+            
         boxes, scores, class_ids = yolov8_detector(img)
         print(scores, "\n", class_ids)
         detected_classes = [class_names[x] for x in class_ids]
@@ -64,22 +65,23 @@ async def test_route(payload: TestRouteRequest):
             )
         )
     
-        
-
     except Exception as e:
-        return JSONResponse(
+
+        raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
-                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "content" : ErrorResponse(
-                    success=False,
-                    error="Internal server error",
-                    message=str(e)
-                ),
-            }
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=str(e)
+            ).model_dump()
         )
 
-@router.get("/images",response_model=GetImagesResponse)
+
+@router.get(
+    "/images",
+    response_model=GetImagesResponse,
+    responses={ code : { "model" : ErrorResponse } for code in  [ 500 ] }
+)
 @exception_handler_wrapper
 def get_images():
     try:
@@ -94,51 +96,53 @@ def get_images():
         )
     
     except Exception as e:
-        return JSONResponse(
+
+        raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
-                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "content": ErrorResponse(
-                    success=False,
-                    error="Internal server error",
-                    message=str(e)
-                ),
-            }
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=str(e)
+            ).model_dump()
         )
 
-@router.post("/single-image",response_model=AddSingleImageResponse)
+
+@router.post(
+    "/single-image",
+    response_model=AddSingleImageResponse,
+    responses={ code : { "model" : ErrorResponse } for code in [ 400,500 ] }
+)
 @exception_handler_wrapper
 def add_single_image(payload: AddSingleImageRequest):
     try:
         image_path = payload.path
         if not os.path.isfile(image_path):
-            return JSONResponse(
+
+            raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                content={
-                    "status_code": status.HTTP_400_BAD_REQUEST,
-                    "content" : ErrorResponse(
-                        success=True,
-                        error="Invalid file path",
-                        message="The provided path is not a valid file"
-                    ),
-                }
+                detail=ErrorResponse(
+                    success=False,
+                    error="Invalid file path",
+                    message="The provided path is not a valid file"
+
+                ).model_dump()
             )
+
 
         image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.gif']
         file_extension = os.path.splitext(image_path)[1].lower()
         if file_extension not in image_extensions:
-            return JSONResponse(
+
+            raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                content={
-                    "status_code": status.HTTP_400_BAD_REQUEST,
-                    "content": ErrorResponse(
-                        success=False,
-                        error="Invalid file type",
-                        message="The file is not a supported image type"
-                    ),
-                }
+                detail=ErrorResponse(
+                    success=False,
+                    error="Invalid file type",
+                    message="The file is not a supported image type"
+                )
             )
 
+        
         destination_path = os.path.join(IMAGES_PATH, os.path.basename(image_path))
         shutil.copy(image_path, destination_path)
 
@@ -148,14 +152,13 @@ def add_single_image(payload: AddSingleImageRequest):
             data={"destination_path": destination_path}
         ),
     except Exception as e:
-        return JSONResponse(
+
+        raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
-                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "content": ErrorResponse(
-                    success=False,
-                    error="Internal server error",
-                    message=str(e)
-                ),
-            }
+            detail=ErrorResponse(
+                success=False,
+                message="Internal server error",
+                error=str(e)
+            ).model_dump()
         )
+
