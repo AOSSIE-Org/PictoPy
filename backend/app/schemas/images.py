@@ -25,7 +25,6 @@ class DeleteThumbnailsRequest(BaseModel) :
     folder_path : str
 
 
-
 # Response Model 
 
 class ImagesResponse(BaseModel) : 
@@ -41,6 +40,7 @@ class ErrorResponse(BaseModel) :
     success: bool = False
     message: str
     error: str
+
 
 class AddMultipleImagesResponse(BaseModel) : 
     data : int
@@ -89,6 +89,12 @@ class GenerateThumbnailsResponse(BaseModel) :
 class FailedDeletionThumbnailResponse(BaseModel):
     folder: str
     error: str
+
+class DeleteThumbnailsFailedResponse(BaseModel) : 
+    success: bool = False
+    message: str
+    error: str
+    failed_deletions : List[dict | None]
 
 class DeleteThumbnailsResponse(BaseModel):
     success: bool
