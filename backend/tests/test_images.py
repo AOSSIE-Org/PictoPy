@@ -85,7 +85,7 @@ async def test_add_folder(test_images):
     assert response.status_code == 200
 
 def test_generate_thumbnails(test_images):
-    payload = {"folder_path": test_images}
+    payload = {"folder_paths": test_images}
     response = client.post("/images/generate-thumbnails", json=payload)
     assert response.status_code == 201
 
