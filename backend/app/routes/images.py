@@ -1,11 +1,9 @@
 import os
 import shutil
 import asyncio
-from fastapi import APIRouter, Query
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Query, HTTPException, status
 from PIL import Image
 
-# hello
 from app.config.settings import IMAGES_PATH
 from app.facenet.facenet import detect_faces
 from app.utils.classification import get_classes
@@ -17,6 +15,19 @@ from app.database.images import (
     delete_image_db,
     get_objects_db,
     extract_metadata,
+)
+
+from app.schemas.images import (
+    DeleteImageRequest,DeleteImageResponse,
+    DeleteMultipleImagesRequest,DeleteMultipleImagesResponse,
+    GetAllImageObjectsResponse,ErrorResponse,
+    ClassIDsResponse,ImagesResponse,
+    AddFolderRequest,AddFolderResponse,
+    GenerateThumbnailsRequest,GenerateThumbnailsResponse,
+    FailedPathResponse,ClassIDsResponse,
+    GetImagesResponse,AddMultipleImagesRequest,
+    DeleteThumbnailsRequest,DeleteThumbnailsResponse,
+    FailedDeletionThumbnailResponse,AddMultipleImagesResponse
 )
 
 router = APIRouter()
@@ -32,7 +43,11 @@ async def run_get_classes(img_path):
             detect_faces(img_path)
 
 
-@router.get("/all-images")
+@router.get(
+    "/all-images",
+    response_model=GetImagesResponse,
+    responses = { code : { "model" : ErrorResponse } for code in [ 500 ] }
+)
 def get_images():
     try:
         files = os.listdir(IMAGES_PATH)
@@ -43,213 +58,169 @@ def get_images():
             if os.path.splitext(file)[1].lower() in image_extensions
         ]
 
-        return JSONResponse(
-            status_code=200,
-            content={
-                "data": {
-                    "image_files": image_files,
-                    "folder_path": os.path.abspath(IMAGES_PATH),
-                },
-                "message": "Successfully retrieved all images",
-                "success": True,
-            },
+        return GetImagesResponse(
+            data = ImagesResponse(
+                image_files=image_files,
+                folder_path=os.path.abspath(IMAGES_PATH)
+            ),
+            message="Successfully retrieved all images",
+            success=True,
         )
 
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e),
-                },
-            },
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message="Failed to get all images"
+            ).model_dump()
         )
 
 
-@router.post("/images")
-async def add_multiple_images(payload: dict):
-    try:
-        if "paths" not in payload:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Missing 'paths' in payload",
-                        "message": "Image paths are required",
-                    },
-                },
-            )
 
-        image_paths = payload["paths"]
+@router.post(
+    "/images",
+    response_model=AddMultipleImagesResponse,
+    responses = { code : { "model" : ErrorResponse } for code in [ 400,500 ] }
+)
+async def add_multiple_images(payload: AddMultipleImagesRequest):
+    try:
+        
+        image_paths = payload.paths
         if not isinstance(image_paths, list):
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Invalid 'paths' format",
-                        "message": "'paths' should be a list",
-                    },
-                },
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Invalid 'paths' format",
+                    message="'paths' should be a list"
+                ).model_dump()
             )
 
         tasks = []
         for image_path in image_paths:
             if not os.path.isfile(image_path):
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "status_code": 400,
-                        "content": {
-                            "success": False,
-                            "error": "Invalid file path",
-                            "message": f"Invalid file path: {image_path}",
-                        },
-                    },
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ErrorResponse(
+                        success = False,
+                        error = "Invalid file path",
+                        message = f"Invalid file path: {image_path}",
+                    ).model_dump()
                 )
+                
+                
 
             image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
             file_extension = os.path.splitext(image_path)[1].lower()
             if file_extension not in image_extensions:
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "status_code": 400,
-                        "content": {
-                            "success": False,
-                            "error": "Invalid file type",
-                            "message": f"File is not an image: {image_path}",
-                        },
-                    },
+
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ErrorResponse(
+                        success=False,
+                        error="Invalid file type",
+                        message=f"File is not an image: {image_path}"
+                    ).model_dump()
                 )
 
+    
             destination_path = os.path.join(IMAGES_PATH, os.path.basename(image_path))
             shutil.copy(image_path, destination_path)
             tasks.append(asyncio.create_task(run_get_classes(destination_path)))
 
         asyncio.create_task(process_images(tasks))
 
-        return JSONResponse(
-            status_code=202,
-            content={
-                "data": len(tasks),
-                "message": "Images are being processed in the background",
-                "success": True,
-            },
+        return  AddMultipleImagesResponse(
+            data=len(tasks),
+            message="Images are being processed in the background",
+            success=True
         )
 
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e),
-                },
-            },
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message="Failed to add Images",
+            ).model_dump()
         )
 
-
+       
 async def process_images(tasks):
     await asyncio.gather(*tasks)
 
 
-@router.delete("/delete-image")
-def delete_image(payload: dict):
+@router.delete(
+    "/delete-image",
+    response_model=DeleteImageResponse,
+    responses={ code : { "model" : ErrorResponse } for code in [ 404,500 ] }
+)
+def delete_image(payload: DeleteImageRequest):
     try:
-        if "path" not in payload:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Missing 'path' in payload",
-                        "message": "Image path is required",
-                    },
-                },
-            )
-
-        filename = payload["path"]
+        
+        filename = payload.path
         file_path = os.path.join(IMAGES_PATH, filename)
+        
 
         if not os.path.isfile(file_path):
-            return JSONResponse(
-                status_code=404,
-                content={
-                    "status_code": 404,
-                    "content": {
-                        "success": False,
-                        "error": "Image not found",
-                        "message": "Image file not found",
-                    },
-                },
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Image not found",
+                    message="Image file not found"
+                ).model_dump()
             )
+
 
         os.remove(file_path)
         delete_image_db(file_path)
-        return JSONResponse(
-            status_code=200,
-            content={
-                "data": file_path,
-                "message": "Image deleted successfully",
-                "success": True,
-            },
-        )
+        return DeleteImageResponse(
+            data=file_path,
+            message="Image deleted successfully",
+            success=True
+         )
 
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e),
-                },
-            },
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=str(e)
+            ).model_dump()
         )
 
 
-@router.delete("/multiple-images")
-def delete_multiple_images(payload: dict):
+@router.delete(
+    "/multiple-images",
+    response_model=DeleteMultipleImagesResponse,
+    responses = { code : { "model":ErrorResponse } for code in [ 404,500 ] }
+)
+def delete_multiple_images(payload: DeleteMultipleImagesRequest):
     try:
-        paths = payload["paths"]
-        if not isinstance(paths, list):
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Invalid 'paths' format",
-                        "message": "'paths' should be a list",
-                    },
-                },
-            )
-
+        paths = payload.paths
         deleted_paths = []
         for path in paths:
             if not os.path.isfile(path):
-                return JSONResponse(
-                    status_code=404,
-                    content={
-                        "status_code": 404,
-                        "content": {
-                            "success": False,
-                            "error": "Image not found",
-                            "message": f"Image file not found: {path}",
-                        },
-                    },
+
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ErrorResponse(
+                        success=False,
+                        error="Image not found",
+                        message=f"Image file not found : {path}"
+                    ).model_dump()
                 )
+
+    
             path = os.path.normpath(path)
             folder_path, filename = os.path.split(path)
             thumbnail_folder = os.path.join(folder_path, "PictoPy.thumbnails")
@@ -279,32 +250,31 @@ def delete_multiple_images(payload: dict):
 
             delete_image_db(path)
             deleted_paths.append(path)
-
-        return JSONResponse(
-            status_code=200,
-            content={
-                "data": deleted_paths,
-                "message": "Images deleted successfully",
-                "success": True,
-            },
+        
+        return DeleteMultipleImagesResponse(
+            data=deleted_paths,
+            message="Images deleted successfully",
+            success=True
         )
 
     except Exception as e:
-        print(e)
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e),
-                },
-            },
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message="Failed to delete images"
+            ).model_dump()
         )
 
 
-@router.get("/all-image-objects")
+
+@router.get(
+    "/all-image-objects",
+    response_model=GetAllImageObjectsResponse,
+    responses = { code : { "model" : ErrorResponse } for code in [ 500 ] }
+)
 def get_all_image_objects():
     try:
         folder_path = os.path.abspath(IMAGES_PATH)
@@ -316,109 +286,85 @@ def get_all_image_objects():
             classes = get_objects_db(image_path)
             data[image_path] = classes if classes else "None"
             print(image_path)
-
-        return JSONResponse(
-            status_code=200,
-            content={
-                # "data": data,
-                "data": {"images": data, "folder_path": folder_path},
-                "message": "Successfully retrieved all image objects",
-                "success": True,
-            },
+        
+        return GetAllImageObjectsResponse(
+            data={"images": data, "folder_path": folder_path},
+            message="Successfully retrieved all image objects",
+            success=True
         )
 
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e),
-                },
-            },
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message="Failed to get all images"
+            ).model_dump()
+            
         )
 
 
-@router.get("/class-ids")
+
+@router.get(
+    "/class-ids",
+    response_model=ClassIDsResponse,
+    responses = { code : { "model" : ErrorResponse } for code in [ 400,500 ] }
+)
 def get_class_ids(path: str = Query(...)):
     try:
         if not path:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Missing 'path' parameter",
-                        "message": "Image path is required",
-                    },
-                },
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Missing 'path' parameter",
+                    message="Image path is required"
+                ).model_dump()
             )
+
 
         class_ids = get_objects_db(path)
-        if not class_ids:
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "data": {"class_ids": "None"},
-                    "message": "No class IDs found for the image",
-                    "success": True,
-                },
-            )
-
-        return JSONResponse(
-            status_code=200,
-            content={
-                "data": class_ids,
-                "message": "Successfully retrieved class IDs",
-                "success": True,
-            },
+        return ClassIDsResponse(
+            success=True,
+            message="Successfully retrieved class IDs" if class_ids else "No class IDs found for the image",
+            data=class_ids if class_ids else "None"   
         )
 
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e),
-                },
-            },
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message="Failed to get class IDs"
+            ).model_dump()
         )
 
 
-@router.post("/add-folder")
-async def add_folder(payload: dict):
-    try:
-        if "folder_path" not in payload:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Missing 'folder_path' in payload",
-                        "message": "Folder path is required",
-                    },
-                },
-            )
 
-        folder_path = payload["folder_path"]
+
+@router.post(
+    "/add-folder",
+    response_model=AddFolderResponse,
+    responses={ code : { "model" : ErrorResponse } for code in [ 400,500 ] }
+)
+async def add_folder(payload: AddFolderRequest):
+    try:
+        
+        folder_path = payload.folder_path
         if not os.path.isdir(folder_path):
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Invalid folder path",
-                        "message": "The provided path is not a valid directory",
-                    },
-                },
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Invalid folder path",
+                    message="The provided path is not a valid directory"
+                ).model_dump()
             )
 
         image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
@@ -440,70 +386,53 @@ async def add_folder(payload: dict):
                     tasks.append(asyncio.create_task(run_get_classes(destination_path)))
 
         if not tasks:
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "data": 0,
-                    "message": "No valid images found in the specified folder",
-                    "success": True,
-                },
-            )
+            return AddFolderResponse(
+                data=0,
+                message="No valid images found in the specified folder",
+                success=True
+             )
 
         await asyncio.create_task(process_images(tasks))
 
-        return JSONResponse(
-            status_code=200,
-            content={
-                "data": len(tasks),
-                "message": f"Processing {len(tasks)} images from the folder in the background",
-                "success": True,
-            },
+        return AddFolderResponse(
+            data=len(tasks),
+            message=f"Processing {len(tasks)} images from the folder in the background",
+            success=True
         )
 
     except Exception as e:
-        print(e)
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e),
-                },
-            },
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message="Failed to add a folder"
+            ).model_dump()
         )
 
+    
 
 # generate 400px width or height thumbnails for all the images present the given folder using pillow library
-@router.post("/generate-thumbnails")
+@router.post(
+    "/generate-thumbnails",
+    response_model=GenerateThumbnailsResponse,
+)
 @exception_handler_wrapper
-def generate_thumbnails(payload: dict):
-    if "folder_paths" not in payload or not isinstance(payload["folder_paths"], list):
-        return JSONResponse(
-            status_code=400,
-            content={
-                "status_code": 400,
-                "content": {
-                    "success": False,
-                    "error": "Invalid or missing 'folder_paths' in payload",
-                    "message": "'folder_paths' must be a list of folder paths",
-                },
-            },
-        )
-
-    folder_paths = payload["folder_paths"]
+def generate_thumbnails(payload: GenerateThumbnailsRequest):
+    
+    folder_paths = payload.folder_paths
     image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"]
     failed_paths = []
 
     for folder_path in folder_paths:
         if not os.path.isdir(folder_path):
             failed_paths.append(
-                {
-                    "folder_path": folder_path,
-                    "error": "Invalid folder path",
-                    "message": "The provided path is not a valid directory",
-                }
+                FailedPathResponse(
+                    folder_path=folder_path,
+                    error="Invalid folder path",
+                    message="The provided path is not a valid directory"
+                )
             )
             continue
 
@@ -535,67 +464,49 @@ def generate_thumbnails(payload: dict):
                         img.save(thumbnail_path)
                     except Exception as e:
                         failed_paths.append(
-                            {
-                                "folder_path": folder_path,
-                                "file": file_path,
-                                "error": "Thumbnail generation error",
-                                "message": f"Error processing file {file}: {str(e)}",
-                            }
+                            FailedPathResponse(
+                                folder_path=folder_path,
+                                file=file_path,
+                                error="Thumbnail generation error",
+                                message=f"Error processing file {file}: {str(e)}"
+                            )
                         )
 
     if failed_paths:
-        return JSONResponse(
-            status_code=207,  # Multi-Status (some succeeded, some failed)
-            content={
-                "status_code": 207,
-                "content": {
-                    "success": False,
-                    "error": "Partial processing",
-                    "message": "Some folders or files could not be processed",
-                    "failed_paths": failed_paths,
-                },
-            },
-        )
+        return GenerateThumbnailsResponse(
+            success=False,
+            message="Some folders or files could not be processed",
+            failed_paths=failed_paths
+         )
 
-    return JSONResponse(
-        status_code=201,
-        content={
-            "data": "",
-            "message": "Thumbnails generated successfully for all valid folders",
-            "success": True,
-        },
+    return GenerateThumbnailsResponse(
+       success=True,
+       message="Thumbnails generated successfully for all valid folders"
     )
 
 
 # Delete all the thumbnails present in the given folder
-@router.delete("/delete-thumbnails")
+@router.delete(
+    "/delete-thumbnails",
+    response_model=DeleteThumbnailsResponse,
+    responses = { 
+        500 : { "model" : FailedDeletionThumbnailResponse },
+        400 : { "model" : ErrorResponse }
+    }
+)
 @exception_handler_wrapper
-def delete_thumbnails(payload: dict):
-    if "folder_path" not in payload:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "status_code": 400,
-                "content": {
-                    "success": False,
-                    "error": "Missing 'folder_path' in payload",
-                    "message": "Folder path is required",
-                },
-            },
-        )
+def delete_thumbnails(payload: DeleteThumbnailsRequest):
 
-    folder_path = payload["folder_path"]
+    folder_path = payload.folder_path
     if not os.path.isdir(folder_path):
-        return JSONResponse(
-            status_code=400,
-            content={
-                "status_code": 400,
-                "content": {
-                    "success": False,
-                    "error": "Invalid folder path",
-                    "message": "The provided path is not a valid directory",
-                },
-            },
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="Invalid folder path",
+                message="The provided path is not a valid directory"
+            ).model_dump()
         )
 
     # List to store any errors encountered while deleting thumbnails
@@ -619,26 +530,19 @@ def delete_thumbnails(payload: dict):
                     )
 
     if failed_deletions:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Some thumbnail folders could not be deleted",
-                    "message": "See the `failed_deletions` field for details.",
-                    "failed_deletions": failed_deletions,
-                },
-            },
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=FailedDeletionThumbnailResponse(
+                success=False,
+                message="See the `failed_deletions` field for details.",
+                error="Some thumbnail folders could not be deleted",
+                failed_deletions=failed_deletions
+            ).model_dump()
         )
 
-    return JSONResponse(
-        status_code=200,
-        content={
-            "status_code": 200,
-            "content": {
-                "success": True,
-                "message": "All PictoPy.thumbnails folders have been successfully deleted.",
-            },
-        },
+
+    return DeleteThumbnailsResponse(
+        success=True,
+        message="All PictoPy.thumbnails folders have been successfully deleted."
     )
