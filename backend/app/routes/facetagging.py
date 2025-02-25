@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException, status
 from fastapi.responses import JSONResponse
 from app.database.faces import get_all_face_embeddings
 from app.database.images import get_path_from_id
@@ -15,7 +15,11 @@ from app.schemas.facetagging import (
 
 router = APIRouter()
 
-@router.get("/match",response_model=FaceMatchingResponse)
+@router.get(
+    "/match",
+    response_model = FaceMatchingResponse,
+    responses= { code: { "model" : ErrorResponse } for code in [ 500 ] }
+)
 @exception_handler_wrapper
 def face_matching():
     try:
@@ -51,19 +55,22 @@ def face_matching():
         )
 
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status_code": 500,
-                "content":ErrorResponse(
-                    success=False,
-                    error="Internal server error",
-                    message=str(e)
-                ),
-            }
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message="Unable to get face embedding"
+            )
         )
 
-@router.get("/clusters",response_model=FaceClustersResponse)
+
+@router.get(
+    "/clusters",
+    response_model = FaceClustersResponse,
+    responses = { code : { "model" : ErrorResponse } for code in [ 500 ] }
+)
 @exception_handler_wrapper
 def face_clusters():
     try:
@@ -83,19 +90,23 @@ def face_clusters():
         )
     
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status_code": 500,
-                "content" : ErrorResponse(
-                    success=False,
-                    error="Internal server error",
-                    message=str(e)
-                ),
-            }
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message="Unable to get face clusters"
+            ).model_dump()
         )
 
-@router.get("/related-images",response_model=GetRelatedImagesResponse)
+        
+
+@router.get(
+    "/related-images",
+    response_model = GetRelatedImagesResponse,
+    responses = { code : { "model" : ErrorResponse } for code in [ 500 ] }
+)
 @exception_handler_wrapper
 def get_related_images(path: str = Query(..., description="full path to the image")):
     try:
@@ -111,15 +122,12 @@ def get_related_images(path: str = Query(..., description="full path to the imag
             data={"related_images": related_image_paths}  # Wrapped inside "data"
         )
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status_code": 500,
-                "content":ErrorResponse(
-                    success=False,
-                    error="Internal server error",
-                    message=str(e)
-                ),
-            }
 
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message="Uanble to get related images"
+            ).model_dump()
         )
