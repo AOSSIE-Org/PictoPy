@@ -33,8 +33,9 @@ def insert_folder(folder_path):
     existing_folder = cursor.fetchone()
 
     if existing_folder:
+        result = existing_folder[0]
         conn.close()
-        raise FileExistsError(f"Error: Folder '{folder_path}' already exists in the database.")
+        return result
 
     # Time is in Unix format
     last_modified_time = int(os.path.getmtime(abs_folder_path))

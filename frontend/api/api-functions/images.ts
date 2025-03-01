@@ -58,7 +58,7 @@ export const getAllImageObjects = async () => {
   return newObj;
 };
 
-export const addFolder = async (folderPath: string) => {
+export const addFolder = async (folderPath: string[]) => {
   const response = await fetch(imagesEndpoints.addFolder, {
     method: 'POST',
     headers: {
@@ -104,3 +104,9 @@ export const deleteThumbnails = async (folderPath: string) => {
   const data = await response.json();
   return data;
 };
+
+export const getProgress = async ()=>{
+  const response = await fetch(imagesEndpoints.progress);
+  const data = await response.json();
+  return data;
+}

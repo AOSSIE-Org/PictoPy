@@ -22,6 +22,7 @@ from app.database.folders import(
 )
 router = APIRouter()
 
+progress_status = {}
 
 async def run_get_classes(img_path,folder_id=None):
     loop = asyncio.get_event_loop()
@@ -60,8 +61,18 @@ def get_images():
             },
         )
 
-async def process_images(tasks):
-    await asyncio.gather(*tasks)
+async def process_images(tasks, folder_id):
+    total = len(tasks)
+    completed = 0
+    progress_status[folder_id] = {"total": total, "completed": 0, "status": "pending"}
+
+    for coro in asyncio.as_completed(tasks):
+        await coro
+        completed += 1
+        progress_status[folder_id]["completed"] = completed
+
+    progress_status[folder_id]["status"] = "completed"
+
 
 @router.delete("/multiple-images")
 def delete_multiple_images(payload: dict):
@@ -234,7 +245,6 @@ def get_class_ids(path: str = Query(...)):
             },
         )
 
-
 @router.post("/add-folder")
 async def add_folder(payload: dict):
     try:
@@ -252,68 +262,68 @@ async def add_folder(payload: dict):
             )
 
         folder_path = payload["folder_path"]
-        if not os.path.isdir(folder_path):
-            return JSONResponse(
+        for folder in folder_path:
+            if not os.path.isdir(folder):
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "status_code": 400,
+                        "content": {
+                            "success": False,
+                            "error": "Invalid folder path",
+                            "message": "The provided path is not a valid directory",
+                        },
+                    },
+                )
+            if not os.access(folder, os.R_OK) or not os.access(folder, os.W_OK) or not os.access(folder, os.X_OK):
+                return JSONResponse(
+                status_code=403,
+                content={
+                    "status_code": 403,
+                    "content": {
+                    "success": False,
+                    "error": "Permission denied",
+                    "message": "The app does not have read and write permissions for the specified folder",
+                    },
+                },
+                )
+            folder_id = insert_folder(folder)
+            if folder_id is None:
+                return JSONResponse(
                 status_code=400,
                 content={
                     "status_code": 400,
                     "content": {
-                        "success": False,
-                        "error": "Invalid folder path",
-                        "message": "The provided path is not a valid directory",
+                    "success": False,
+                    "error": "Folder not inserted",
+                    "message": "Could not insert folder",
                     },
                 },
-            )
-        if not os.access(folder_path, os.R_OK) or not os.access(folder_path, os.W_OK) or not os.access(folder_path, os.X_OK):
-            return JSONResponse(
-            status_code=403,
-            content={
-                "status_code": 403,
-                "content": {
-                "success": False,
-                "error": "Permission denied",
-                "message": "The app does not have read and write permissions for the specified folder",
-                },
-            },
-            )
-        folder_id = insert_folder(folder_path)
-        if folder_id is None:
-            return JSONResponse(
-            status_code=400,
-            content={
-                "status_code": 400,
-                "content": {
-                "success": False,
-                "error": "Folder not inserted",
-                "message": "Could not insert folder",
-                },
-            },
-            )
+                )
 
-        image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
-        tasks = []
+            image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
+            tasks = []
 
-        for root, _, files in os.walk(folder_path):
-            if "PictoPy.thumbnails" in root:
-                continue
-            for file in files:
-                file_path = os.path.join(root, file)
-                file_extension = os.path.splitext(file_path)[1].lower()
-                if file_extension in image_extensions:
-                    tasks.append(asyncio.create_task(run_get_classes(file_path, folder_id=folder_id)))
+            for root, _, files in os.walk(folder):
+                if "PictoPy.thumbnails" in root:
+                    continue
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    file_extension = os.path.splitext(file_path)[1].lower()
+                    if file_extension in image_extensions:
+                        tasks.append(asyncio.create_task(run_get_classes(file_path, folder_id=folder_id)))
 
-        if not tasks:
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "data": 0,
-                    "message": "No valid images found in the specified folder",
-                    "success": True,
-                },
-            )
-
-        await asyncio.create_task(process_images(tasks))
-
+            if not tasks:
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "data": 0,
+                        "message": "No valid images found in the specified folder",
+                        "success": True,
+                    },
+                )
+            progress_status[folder_id] = {"total": len(tasks), "completed": 0, "status": "pending"}
+            asyncio.create_task(process_images(tasks, folder_id))
         return JSONResponse(
             status_code=200,
             content={
@@ -456,3 +466,20 @@ def delete_thumbnails(folder_path: str | None = None):
             },
         },
     )
+
+@router.get("/add-folder-progress")
+async def combined_progress():
+    total_tasks = 0
+    total_completed = 0
+    for status in progress_status.values():
+        total_tasks += status["total"]
+        total_completed += status["completed"]
+    progress = 100 if total_tasks == 0 else int((total_completed / total_tasks) * 100)
+    print(progress)
+    return JSONResponse(
+        status_code=200,
+        content={
+            "data": progress, 
+            "message": progress_status,
+            "success": True,
+    })

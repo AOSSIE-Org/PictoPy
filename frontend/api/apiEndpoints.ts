@@ -8,6 +8,7 @@ export const imagesEndpoints = {
   addMultipleImages: `${BACKEND_URL}/images/multiple-images`,
   generateThumbnails: `${BACKEND_URL}/images/generate-thumbnails`,
   deleteThumbnails: `${BACKEND_URL}/images/delete-thumbnails`,
+  progress: `${BACKEND_URL}/images/add-folder-progress`,
 };
 
 export const albumEndpoints = {

@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import ProgressiveFolderLoader from '../ui/ProgressiveLoader';
 
 export default function AIGallery({
   title,
@@ -36,6 +37,7 @@ export default function AIGallery({
       mutationFn: generateThumbnails,
       autoInvalidateTags: ['ai-tagging-images', 'ai'],
     });
+  const [addedFolders, setAddedFolders] = useState<string[]>([]);
   let mediaItems = successData ?? [];
   const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -75,15 +77,16 @@ export default function AIGallery({
     setShowMediaViewer(false);
   }, []);
 
-  const handleFolderAdded = useCallback(async () => {
-    generateThumbnailAPI([folderPath]);
+  const handleFolderAdded = useCallback(async (newPaths:string[]) => {
+    generateThumbnailAPI([folderPath, ...newPaths]);
+    setAddedFolders(newPaths);
   }, []);
 
   useEffect(() => {
     generateThumbnailAPI([folderPath]);
   }, [folderPath]);
 
-  if (isGeneratingThumbnails || isGeneratingTags) {
+  if (isGeneratingTags) {
     return (
       <div>
         <LoadingScreen />
@@ -106,6 +109,7 @@ export default function AIGallery({
             isVisibleSelectedImage={isVisibleSelectedImage}
             setIsVisibleSelectedImage={setIsVisibleSelectedImage}
           />
+          <ProgressiveFolderLoader additionalFolders={addedFolders} />
         </div>
 
         {isVisibleSelectedImage && (
