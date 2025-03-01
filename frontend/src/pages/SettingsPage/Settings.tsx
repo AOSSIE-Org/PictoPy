@@ -78,6 +78,7 @@ const Settings: React.FC = () => {
       const updatedPaths = currentPaths.filter((path) => path !== pathToRemove);
       setCurrentPaths(updatedPaths);
       setAddedFolders(updatedPaths);
+      addedFolders
       deleteThumbnail(pathToRemove);
       await deleteCache();
       console.log(`Removed folder path: ${pathToRemove}`);

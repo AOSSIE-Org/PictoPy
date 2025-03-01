@@ -32,7 +32,7 @@ export default function AIGallery({
     queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
-  const { mutate: generateThumbnailAPI, isPending: isGeneratingThumbnails } =
+  const { mutate: generateThumbnailAPI } =
     usePictoMutation({
       mutationFn: generateThumbnails,
       autoInvalidateTags: ['ai-tagging-images', 'ai'],
