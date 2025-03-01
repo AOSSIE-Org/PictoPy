@@ -10,17 +10,14 @@ import {
 import { Button } from '../ui/button';
 import { MediaItem } from '@/types/Media';
 import AITaggingFolderPicker from '../FolderPicker/AITaggingFolderPicker';
-import LoadingScreen from '../ui/LoadingScreen/LoadingScreen';
 import DeleteSelectedImagePage from '../FolderPicker/DeleteSelectedImagePage';
 import ErrorDialog from '../Album/Error';
 import { Trash2, Filter } from 'lucide-react';
-import { queryClient, usePictoMutation } from '@/hooks/useQueryExtensio';
-import { addFolder } from '../../../api/api-functions/images';
 
 interface FilterControlsProps {
   setFilterTag: (tag: string[]) => void;
   mediaItems: MediaItem[];
-  onFolderAdded: () => Promise<void>;
+  onFolderAdded: (newPaths: string[]) => Promise<void>;
   isLoading: boolean;
   isVisibleSelectedImage: boolean;
   setIsVisibleSelectedImage: (value: boolean) => void;
@@ -30,21 +27,9 @@ export default function FilterControls({
   setFilterTag,
   mediaItems,
   onFolderAdded,
-  isLoading,
   isVisibleSelectedImage,
   setIsVisibleSelectedImage,
 }: FilterControlsProps) {
-  const {
-    mutate: addFolderAPI,
-    isPending: isAddingFolder,
-    errorMessage,
-  } = usePictoMutation({
-    mutationFn: addFolder,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-images'] });
-    },
-    autoInvalidateTags: ['ai-tagging-images', 'ai'],
-  });
 
   const uniqueTags = React.useMemo(() => {
     const allTags = mediaItems.flatMap((item) => item.tags);
@@ -92,10 +77,10 @@ export default function FilterControls({
     event.preventDefault();
     setIsDropdownOpen((prevState) => !prevState); // Toggle dropdown visibility
   };
-  const handleFolderPick = async (path: string) => {
+  const handleFolderPick = async (paths: string[]) => {
+    //set addiitional paths here
     try {
-      addFolderAPI(path);
-      await onFolderAdded();
+      await onFolderAdded(paths);
     } catch (error) {
       console.error('Error adding folder:', error);
     }
@@ -129,10 +114,6 @@ export default function FilterControls({
 
   return (
     <>
-      {(isLoading || isAddingFolder) && <LoadingScreen />}
-      {errorMessage && errorMessage !== 'Something went wrong' && (
-        <div className="text-red-500">Error: {errorMessage}</div>
-      )}
       <div className="flex items-center gap-4 overflow-auto">
         <AITaggingFolderPicker setFolderPath={handleFolderPick} />
 
