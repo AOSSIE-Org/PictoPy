@@ -70,7 +70,7 @@ def test_get_all_image_objects():
 
 
 def test_add_folder(test_images):
-    payload = {"folder_path": test_images}
+    payload = {"folder_path": [test_images]}
     response = client.post("/images/add-folder", json=payload)
     assert response.status_code == 200
 
