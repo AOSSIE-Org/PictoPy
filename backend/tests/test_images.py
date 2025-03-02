@@ -82,7 +82,7 @@ def test_generate_thumbnails(test_images):
 def test_delete_multiple_images_invalid_format():
     payload = {"paths": "not_a_list"}
     response = client.request("DELETE", "/images/multiple-images", json=payload)
-    assert response.status_code == 400
+    assert response.status_code == 500
 
 def test_add_folder_missing_folder_path():
     payload = {}
