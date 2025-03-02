@@ -1,11 +1,11 @@
 import sqlite3
 import json
 import numpy as np
-from app.config.settings import FACES_DATABASE_PATH, IMAGES_DATABASE_PATH
+from app.config.settings import DATABASE_PATH
 
 
 def create_faces_table():
-    conn = sqlite3.connect(FACES_DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute(
         """
@@ -24,7 +24,7 @@ def create_faces_table():
 def insert_face_embeddings(image_path, embeddings):
     from app.database.images import get_id_from_path
 
-    conn = sqlite3.connect(FACES_DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     image_id = get_id_from_path(image_path)
@@ -49,7 +49,7 @@ def insert_face_embeddings(image_path, embeddings):
 def get_face_embeddings(image_path):
     from app.database.images import get_id_from_path
 
-    conn = sqlite3.connect(FACES_DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     image_id = get_id_from_path(image_path)
@@ -79,7 +79,7 @@ def get_face_embeddings(image_path):
 def get_all_face_embeddings():
     from app.database.images import get_path_from_id
 
-    conn = sqlite3.connect(FACES_DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     cursor.execute(
@@ -100,7 +100,7 @@ def get_all_face_embeddings():
 
 
 def delete_face_embeddings(image_id):
-    conn = sqlite3.connect(FACES_DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     cursor.execute("DELETE FROM faces WHERE image_id = ?", (image_id,))
@@ -110,22 +110,19 @@ def delete_face_embeddings(image_id):
 
 
 def cleanup_face_embeddings():
-    conn_images = sqlite3.connect(IMAGES_DATABASE_PATH)
-    conn_faces = sqlite3.connect(FACES_DATABASE_PATH)
-    cursor_images = conn_images.cursor()
-    cursor_faces = conn_faces.cursor()
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
 
-    cursor_faces.execute("SELECT DISTINCT image_id FROM faces")
-    face_image_ids = set(row[0] for row in cursor_faces.fetchall())
+    cursor.execute("SELECT DISTINCT image_id FROM faces")
+    face_image_ids = set(row[0] for row in cursor.fetchall())
 
-    cursor_images.execute("SELECT id FROM image_id_mapping")
-    valid_image_ids = set(row[0] for row in cursor_images.fetchall())
+    cursor.execute("SELECT id FROM image_id_mapping")
+    valid_image_ids = set(row[0] for row in cursor.fetchall())
 
     orphaned_ids = face_image_ids - valid_image_ids
 
     for orphaned_id in orphaned_ids:
-        cursor_faces.execute("DELETE FROM faces WHERE image_id = ?", (orphaned_id,))
+        cursor.execute("DELETE FROM faces WHERE image_id = ?", (orphaned_id,))
 
-    conn_faces.commit()
-    conn_images.close()
-    conn_faces.close()
+    conn.commit()
+    conn.close()

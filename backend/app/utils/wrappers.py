@@ -2,7 +2,7 @@ import sqlite3
 import os
 from functools import wraps
 
-from app.config.settings import ALBUM_DATABASE_PATH, IMAGES_DATABASE_PATH
+from app.config.settings import DATABASE_PATH
 from app.utils.APIError import APIError
 from fastapi import status
 from fastapi.responses import JSONResponse
@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 def album_exists(func):
     @wraps(func)
     def wrapper(album_name, *args, **kwargs):
-        conn = sqlite3.connect(ALBUM_DATABASE_PATH)
+        conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "SELECT COUNT(*) FROM albums WHERE album_name = ?", (album_name,)
@@ -35,7 +35,7 @@ def image_exists(func):
         if not image_path:
             raise APIError("Image path not provided", status.HTTP_400_BAD_REQUEST)
 
-        conn = sqlite3.connect(IMAGES_DATABASE_PATH)
+        conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
         abs_path = os.path.abspath(image_path)
 

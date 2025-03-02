@@ -22,11 +22,10 @@ interface ResponseData {
 }
 
 export const extractThumbnailPath = (imagePath: string) => {
+  const thumbnailPath=localStorage.getItem("thumbnailPath");
   const cleanedImagePath = imagePath.replace(/\\/g, '/'); // Replaces all '\' with '/'
   const thumbnailImageName = cleanedImagePath.split('/').pop() || '';
-  //Extract folder path from the image path
-  const folderPath = cleanedImagePath.replace(thumbnailImageName, '');
-  return `${folderPath}/PictoPy.thumbnails/${thumbnailImageName}`;
+  return `${thumbnailPath}/${thumbnailImageName}`;
 };
 
 export const useImages = (folderPaths: string[]) => {

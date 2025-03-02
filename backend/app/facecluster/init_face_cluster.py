@@ -1,12 +1,12 @@
 import os
-from app.config.settings import CLUSTERS_DATABASE_PATH
+from app.config.settings import DATABASE_PATH
 from app.database.faces import get_all_face_embeddings
 from app.facecluster.facecluster import FaceCluster
 
 face_cluster = None
 
 
-def init_face_cluster(db_path=CLUSTERS_DATABASE_PATH):
+def init_face_cluster(db_path=DATABASE_PATH):
     global face_cluster
     if face_cluster is not None:
         return face_cluster

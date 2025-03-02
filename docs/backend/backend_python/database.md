@@ -11,7 +11,7 @@ All databases in PictoPy use SQLite, a lightweight, serverless database engine.
 
 ### File Location
 
-The database path is defined in the configuration file as `ALBUM_DATABASE_PATH`.
+The database path is defined in the configuration file as `DATABASE_PATH`.
 
 ### Table Structure
 
@@ -33,7 +33,7 @@ The `image_ids` field uses JSON encoding to store lists in a TEXT field.
 
 ### File Location
 
-The database path is defined in the configuration file as `FACES_DATABASE_PATH`.
+The database path is defined in the configuration file as `DATABASE_PATH`.
 
 ### Table Structure
 
@@ -54,7 +54,7 @@ The `image_id` column maintains referential integrity with the Images database.
 
 ### File Location
 
-The database path is defined in the configuration file as `IMAGES_DATABASE_PATH`.
+The database path is defined in the configuration file as `DATABASE_PATH`.
 
 ### Table Structures
 
@@ -84,7 +84,7 @@ The system uses absolute paths for image files to ensure consistency across diff
 
 ### File Location
 
-The database path is defined in the configuration file as `MAPPINGS_DATABASE_PATH`.
+The database path is defined in the configuration file as `DATABASE_PATH`.
 
 ### Table Structure
 
