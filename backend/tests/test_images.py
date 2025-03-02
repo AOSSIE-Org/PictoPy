@@ -77,7 +77,7 @@ def test_add_folder(test_images):
 def test_generate_thumbnails(test_images):
     payload = {"folder_paths": [test_images]}
     response = client.post("/images/generate-thumbnails", json=payload)
-    assert response.status_code == 201
+    assert response.status_code == 207
 
 def test_delete_multiple_images_invalid_format():
     payload = {"paths": "not_a_list"}
