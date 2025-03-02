@@ -18,7 +18,8 @@ from app.database.images import (
     delete_image_db,
     get_objects_db,
     extract_metadata,
-    get_all_image_paths
+    get_all_image_paths,
+    get_all_images_from_folder_id
 )
 from app.database.folders import(
     insert_folder,delete_folder,
@@ -88,10 +89,12 @@ def delete_multiple_images(payload: dict):
 
 
         deleted_paths = []
+        folder_paths = set()
         for path in paths:
            
             path = os.path.normpath(path)
             folder_path, filename = os.path.split(path)
+            folder_paths.add(folder_path)
 
             thumbnail_folder = os.path.abspath(os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails"))
             thumb_nail_image_path = os.path.join(thumbnail_folder, filename)
@@ -125,6 +128,15 @@ def delete_multiple_images(payload: dict):
 
             delete_image_db(path)
             deleted_paths.append(path)
+        
+        
+        # Delete those folders , no image left
+        for folder_path in folder_paths : 
+            folder_id = get_folder_id_from_path(folder_path)
+            images = get_all_images_from_folder_id(folder_id)
+            if not len(images) : 
+                delete_folder(folder_path)
+            
 
         return JSONResponse(
             status_code=200,
@@ -387,6 +399,7 @@ def generate_thumbnails(payload: dict):
 def get_thumbnail_path() :
     print("GET request Received!") 
     thumbnail_path = os.path.abspath(os.path.join(THUMBNAIL_IMAGES_PATH,"PictoPy.thumbnails"))
+    print("Thumbnail Path = ",thumbnail_path)
     return JSONResponse(
         status_code=200,    
         content = {
