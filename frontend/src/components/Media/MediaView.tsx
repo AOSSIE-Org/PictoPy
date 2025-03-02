@@ -445,8 +445,13 @@ const MediaView: React.FC<MediaViewProps> = ({
               >
                 <img
                   id="source-image"
-                  src={allMedia[globalIndex].url || '/placeholder.svg'}
+                  src={allMedia[globalIndex].url}
                   alt={`image-${globalIndex}`}
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    img.onerror = null; // Prevent infinite loop
+                    img.src = allMedia[globalIndex].thumbnailUrl ||  allMedia[globalIndex].url ;
+                  }}
                   style={{
                     filter: `${filter} brightness(${brightness}%) contrast(${contrast}%)`,
                   }}
@@ -454,7 +459,7 @@ const MediaView: React.FC<MediaViewProps> = ({
               </ReactCrop>
             ) : (
               <img
-                src={allMedia[globalIndex].url || '/placeholder.svg'}
+                src={allMedia[globalIndex].url || allMedia[globalIndex].thumbnailUrl}
                 alt={`image-${globalIndex}`}
                 draggable={false}
                 className="h-full w-full select-none object-contain"

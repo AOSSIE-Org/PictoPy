@@ -89,18 +89,7 @@ def delete_multiple_images(payload: dict):
 
         deleted_paths = []
         for path in paths:
-            if not os.path.isfile(path):
-                return JSONResponse(
-                    status_code=404,
-                    content={
-                        "status_code": 404,
-                        "content": {
-                            "success": False,
-                            "error": "Image not found",
-                            "message": f"Image file not found: {path}",
-                        },
-                    },
-                )
+           
             path = os.path.normpath(path)
             folder_path, filename = os.path.split(path)
 
@@ -438,23 +427,15 @@ def delete_thumbnails(folder_path: str | None = None):
 
     # List to store any errors encountered while deleting thumbnails
     failed_deletions = []
+    
+    for file in os.listdir(folder_path) : 
+        try : 
+            thumbnail_image_path = os.path.join(THUMBNAIL_IMAGES_PATH,"PictoPy.thumbnails",file)
+            if os.path.exists(thumbnail_image_path) : 
+                os.remove(thumbnail_image_path)
+        except Exception as e : 
+            failed_deletions.append(thumbnail_image_path)
 
-    # Walk through the folder path and find all `PictoPy.thumbnails` folders
-    for root, dirs, _ in os.walk(folder_path):
-        for dir_name in dirs:
-            if dir_name == "PictoPy.thumbnails":
-                thumbnail_folder = os.path.join(root, dir_name)
-                try:
-                    # Delete the thumbnail folder
-                    shutil.rmtree(thumbnail_folder)
-                    print(f"Deleted: {thumbnail_folder}")
-                except Exception as e:
-                    failed_deletions.append(
-                        {
-                            "folder": thumbnail_folder,
-                            "error": str(e),
-                        }
-                    )
 
     if failed_deletions:
         return JSONResponse(
