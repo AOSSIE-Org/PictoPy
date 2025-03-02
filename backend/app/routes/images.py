@@ -396,6 +396,22 @@ def generate_thumbnails(payload: dict):
     )
 
 
+
+@router.get("/get-thumbnail-path")
+@exception_handler_wrapper
+def get_thumbnail_path() :
+    print("GET request Received!") 
+    thumbnail_path = os.path.abspath(os.path.join(THUMBNAIL_IMAGES_PATH,"PictoPy.thumbnails"))
+    return JSONResponse(
+        status_code=200,    
+        content = {
+            "success" : True,
+            "thumbnailPath": thumbnail_path,
+        }
+    )
+
+
+
 # Delete all the thumbnails present in the given folder
 @router.delete("/delete-thumbnails")
 @exception_handler_wrapper
