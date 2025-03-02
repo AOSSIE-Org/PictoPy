@@ -20,6 +20,7 @@ from app.database.images import (
 from app.database.folders import(
     insert_folder,delete_folder,
     get_all_folders,
+    get_folder_id_from_path
 )
 router = APIRouter()
 
@@ -174,12 +175,14 @@ def get_all_image_objects():
             classes = get_objects_db(image_path)
             data[image_path] = classes if classes else "None"
             # print(image_path)
+        
+        thubnail_image_path = os.path.abspath(os.path.join(THUMBNAIL_IMAGES_PATH,"PictoPy.thumbnails"))
 
         return JSONResponse(
             status_code=200,
             content={
                 # "data": data,
-                "data": {"images": data},
+                "data": {"images": data , "image_path": thubnail_image_path},
                 "message": "Successfully retrieved all image objects",
                 "success": True,
             },
@@ -290,20 +293,12 @@ async def add_folder(payload: dict):
                 },
             },
             )
-        folder_id = insert_folder(folder_path)
-        if folder_id is None:
-            return JSONResponse(
-            status_code=400,
-            content={
-                "status_code": 400,
-                "content": {
-                "success": False,
-                "error": "Folder not inserted",
-                "message": "Could not insert folder",
-                },
-            },
-            )
 
+
+        folder_id = get_folder_id_from_path(folder_path)
+        if folder_id is None : 
+            folder_id = insert_folder(folder_path)
+       
         image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
         tasks = []
 
@@ -372,6 +367,8 @@ def generate_thumbnails(payload: dict):
     folder_paths = payload["folder_paths"]
     failed_paths = generate_thumbnails_for_folders(folder_paths)
 
+    thumbnail_image_path = os.path.abspath(os.path.join(THUMBNAIL_IMAGES_PATH,"PictoPy.thumbnails"))
+
     if failed_paths:
         return JSONResponse(
             status_code=207,  # Multi-Status (some succeeded, some failed)
@@ -382,6 +379,7 @@ def generate_thumbnails(payload: dict):
                     "error": "Partial processing",
                     "message": "Some folders or files could not be processed",
                     "failed_paths": failed_paths,
+                    "thumbnail_path" : thumbnail_image_path
                 },
             },
         )
@@ -392,9 +390,9 @@ def generate_thumbnails(payload: dict):
             "data": "",
             "message": "Thumbnails generated successfully for all valid folders",
             "success": True,
+            "thumbnail_path" : thumbnail_image_path
         },
     )
-
 
 
 @router.get("/get-thumbnail-path")
@@ -409,8 +407,6 @@ def get_thumbnail_path() :
             "thumbnailPath": thumbnail_path,
         }
     )
-
-
 
 # Delete all the thumbnails present in the given folder
 @router.delete("/delete-thumbnails")
