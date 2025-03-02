@@ -7,6 +7,7 @@ from app.facenet.facenet import detect_faces
 from app.utils.classification import get_classes
 from app.utils.wrappers import exception_handler_wrapper
 from app.utils.generateThumbnails import generate_thumbnails_for_folders
+from app.config.settings import THUMBNAIL_IMAGES_PATH
 from app.database.images import (
     get_all_image_ids_from_db,
     get_path_from_id,
@@ -67,6 +68,11 @@ async def process_images(tasks):
 def delete_multiple_images(payload: dict):
     try:
         paths = payload["paths"]
+        is_from_device = payload["isFromDevice"]
+
+        print("Paths = ",paths)
+        print("Is From Device = ",is_from_device)
+
         if not isinstance(paths, list):
             return JSONResponse(
                 status_code=400,
@@ -79,6 +85,7 @@ def delete_multiple_images(payload: dict):
                     },
                 },
             )
+
 
         deleted_paths = []
         for path in paths:
@@ -96,13 +103,17 @@ def delete_multiple_images(payload: dict):
                 )
             path = os.path.normpath(path)
             folder_path, filename = os.path.split(path)
-            thumbnail_folder = os.path.join(folder_path, "PictoPy.thumbnails")
+
+            thumbnail_folder = os.path.abspath(os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails"))
             thumb_nail_image_path = os.path.join(thumbnail_folder, filename)
+
+            print("File = ",filename)
 
             # Check and remove the original file
             if os.path.exists(path):
                 try:
-                    os.remove(path)
+                    if is_from_device : 
+                        os.remove(path)
                 except PermissionError:
                     print(f"Permission denied for file '{path}'.")
                 except Exception as e:
@@ -110,10 +121,13 @@ def delete_multiple_images(payload: dict):
             else:
                 print(f"File '{path}' does not exist.")
 
+
+            print("Thumbnail Image Path = ",thumb_nail_image_path)
             # Check and remove the thumbnail file
             if os.path.exists(thumb_nail_image_path):
                 try:
                     os.remove(thumb_nail_image_path)
+                    print("Successfully removed!")
                 except PermissionError:
                     print(f"Permission denied for file '{thumb_nail_image_path}'.")
                 except Exception as e:
@@ -127,7 +141,7 @@ def delete_multiple_images(payload: dict):
         return JSONResponse(
             status_code=200,
             content={
-                "data": deleted_paths,
+                "data": "Images",
                 "message": "Images deleted successfully",
                 "success": True,
             },

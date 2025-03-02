@@ -14,18 +14,19 @@ export const fetchAllImages = async () => {
   return data;
 };
 
-export const delMultipleImages = async (paths: string[]) => {
+export const delMultipleImages = async (paths: string[],isFromDevice: boolean) => {
   const response = await fetch(imagesEndpoints.deleteMultipleImages, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ paths }),
+    body: JSON.stringify({ paths,isFromDevice }),
   });
 
   const data: APIResponse = await response.json();
   return data;
 };
+
 
 const parseAndSortImageData = (data: APIResponse['data']): Image[] => {
   const parsedImages: Image[] = Object.entries(data.images).map(
