@@ -24,6 +24,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { useNavigate } from 'react-router-dom';
 import NetflixStylePlayer from '../VideoPlayer/NetflixStylePlayer';
+import { save } from '@tauri-apps/plugin-dialog';
+
 
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
@@ -244,10 +246,19 @@ const MediaView: React.FC<MediaViewProps> = ({
           password: prompt('Enter your secure folder password:'),
         });
       } else {
-        console.log('Invoking save_edited_image');
+        const selectedPath = await save({
+          defaultPath: `${allMedia[globalIndex].path?.replace(/\.\w+$/, '_edited.png')}`,
+          filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg'] }],
+        });
+
+        if (!selectedPath) {
+          console.log('User cancelled save dialog');
+          return;
+        }
+
         await invoke('save_edited_image', {
           imageData: Array.from(uint8Array),
-          originalPath: allMedia[globalIndex].path,
+          savePath: selectedPath,
           filter,
           brightness,
           contrast,
