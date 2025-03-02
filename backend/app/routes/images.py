@@ -90,6 +90,7 @@ def delete_multiple_images(payload: dict):
 
         deleted_paths = []
         folder_paths = set()
+
         for path in paths:
            
             path = os.path.normpath(path)
@@ -132,10 +133,13 @@ def delete_multiple_images(payload: dict):
         
         # Delete those folders , no image left
         for folder_path in folder_paths : 
-            folder_id = get_folder_id_from_path(folder_path)
-            images = get_all_images_from_folder_id(folder_id)
-            if not len(images) : 
-                delete_folder(folder_path)
+            try : 
+                folder_id = get_folder_id_from_path(folder_path)
+                images = get_all_images_from_folder_id(folder_id)
+                if not len(images) : 
+                    delete_folder(folder_path)
+            except Exception as e : 
+                print("Folder deletion Unsuccessful")
             
 
         return JSONResponse(
