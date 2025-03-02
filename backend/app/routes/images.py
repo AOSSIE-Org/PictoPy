@@ -73,10 +73,6 @@ def delete_multiple_images(payload: dict):
     try:
         paths = payload["paths"]
         is_from_device = payload["isFromDevice"]
-
-        print("Paths = ",paths)
-        print("Is From Device = ",is_from_device)
-
         if not isinstance(paths, list):
             return JSONResponse(
                 status_code=400,
@@ -126,7 +122,6 @@ def delete_multiple_images(payload: dict):
                 print(f"File '{path}' does not exist.")
 
 
-            print("Thumbnail Image Path = ",thumb_nail_image_path)
             # Check and remove the thumbnail file
             if os.path.exists(thumb_nail_image_path):
                 try:
