@@ -92,7 +92,8 @@ def test_remove_image_from_album(test_images):
         assert response.status_code == 200
         assert response.json()["success"] == True
         payload2 = {
-            "paths": [str(Path(test_images) / "000000000009.jpg")]
+            "paths": [str(Path(test_images) / "000000000009.jpg")],
+            "isFromDevice" : False,
         }
         response2 = client.request("DELETE", "/images/multiple-images", json=payload2)
         assert response2.status_code == 200
