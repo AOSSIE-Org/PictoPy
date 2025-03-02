@@ -238,14 +238,19 @@ pub async fn share_file(path: String) -> Result<(), String> {
     Ok(())
 }
 
+
+
 #[tauri::command]
 pub async fn save_edited_image(
     image_data: Vec<u8>,
-    original_path: String,
+    save_path: String,
     filter: String,
     brightness: i32,
     contrast: i32,
 ) -> Result<(), String> {
+    use std::path::PathBuf;
+    use image::DynamicImage;
+
     let mut img = image::load_from_memory(&image_data).map_err(|e| e.to_string())?;
 
     // Apply filter
@@ -259,22 +264,15 @@ pub async fn save_edited_image(
     // Apply brightness and contrast
     img = adjust_brightness_contrast(&img, brightness, contrast);
 
-    // Save the edited image
-    let path = PathBuf::from(original_path);
-    let file_stem = path.file_stem().unwrap_or_default();
-    let extension = path.extension().unwrap_or_default();
+    // Convert the selected save path to PathBuf
+    let save_path = PathBuf::from(save_path);
 
-    let mut edited_path = path.clone();
-    edited_path.set_file_name(format!(
-        "{}_edited.{}",
-        file_stem.to_string_lossy(),
-        extension.to_string_lossy()
-    ));
-
-    img.save(&edited_path).map_err(|e| e.to_string())?;
+    // Save the edited image to the selected path
+    img.save(&save_path).map_err(|e| e.to_string())?;
 
     Ok(())
 }
+
 
 fn apply_sepia(img: &DynamicImage) -> DynamicImage {
     let (width, height) = img.dimensions();
