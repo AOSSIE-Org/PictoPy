@@ -1,13 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import FilterControls from './FilterControls';
 import MediaGrid from '../Media/Mediagrid';
-import { LoadingScreen } from '@/components/ui/LoadingScreen/LoadingScreen';
 import MediaView from '../Media/MediaView';
 import PaginationControls from '../ui/PaginationControls';
-import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtensio';
+import { usePictoQuery } from '@/hooks/useQueryExtensio';
 import {
   getAllImageObjects,
-  generateThumbnails,
 } from '../../../api/api-functions/images';
 import {
   DropdownMenu,
@@ -21,21 +19,15 @@ import { Button } from '@/components/ui/button';
 export default function AIGallery({
   title,
   type,
-  folderPath,
 }: {
   title: string;
   type: 'image' | 'video';
-  folderPath: string;
 }) {
   const { successData, isLoading: isGeneratingTags } = usePictoQuery({
     queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
-  const { mutate: generateThumbnailAPI, isPending: isGeneratingThumbnails } =
-    usePictoMutation({
-      mutationFn: generateThumbnails,
-      autoInvalidateTags: ['ai-tagging-images', 'ai'],
-    });
+ 
   let mediaItems = successData ?? [];
   const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -75,21 +67,8 @@ export default function AIGallery({
     setShowMediaViewer(false);
   }, []);
 
-  const handleFolderAdded = useCallback(async () => {
-    generateThumbnailAPI([folderPath]);
-  }, []);
-
-  useEffect(() => {
-    generateThumbnailAPI([folderPath]);
-  }, [folderPath]);
-
-  if (isGeneratingThumbnails || isGeneratingTags) {
-    return (
-      <div>
-        <LoadingScreen />
-      </div>
-    );
-  }
+  
+  
 
   return (
     <div className="w-full">
@@ -101,7 +80,6 @@ export default function AIGallery({
           <FilterControls
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
-            onFolderAdded={handleFolderAdded}
             isLoading={isGeneratingTags}
             isVisibleSelectedImage={isVisibleSelectedImage}
             setIsVisibleSelectedImage={setIsVisibleSelectedImage}

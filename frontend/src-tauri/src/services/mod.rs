@@ -249,8 +249,6 @@ pub async fn save_edited_image(
     contrast: i32,
 ) -> Result<(), String> {
     use std::path::PathBuf;
-    use image::DynamicImage;
-
     let mut img = image::load_from_memory(&image_data).map_err(|e| e.to_string())?;
 
     // Apply filter
