@@ -167,6 +167,7 @@ export default function AIGallery({
             allMedia={filteredMediaItems.map((item: any) => ({
               url: item.url,
               path: item?.imagePath,
+              thumbnailUrl : item.thumbnailUrl
             }))}
             currentPage={currentPage}
             itemsPerPage={pageNo}
