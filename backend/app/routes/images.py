@@ -6,7 +6,10 @@ from fastapi.responses import JSONResponse
 from app.facenet.facenet import detect_faces
 from app.utils.classification import get_classes
 from app.utils.wrappers import exception_handler_wrapper
-from app.utils.generateThumbnails import generate_thumbnails_for_folders
+from app.utils.generateThumbnails import (
+    generate_thumbnails_for_folders,
+    generate_thumbnails_for_existing_folders
+)
 from app.config.settings import THUMBNAIL_IMAGES_PATH
 from app.database.images import (
     get_all_image_ids_from_db,
@@ -167,7 +170,7 @@ def delete_multiple_images(payload: dict):
 def get_all_image_objects():
     try:
         folder_paths = get_all_folders()
-        generate_thumbnails_for_folders(folder_paths)
+        generate_thumbnails_for_existing_folders()
         image_ids = get_all_image_ids_from_db()
         data = {}
         for image_id in image_ids:
