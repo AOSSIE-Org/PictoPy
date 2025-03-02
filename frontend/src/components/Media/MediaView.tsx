@@ -449,8 +449,10 @@ const MediaView: React.FC<MediaViewProps> = ({
                   alt={`image-${globalIndex}`}
                   onError={(e) => {
                     const img = e.target as HTMLImageElement;
-                    img.onerror = null; // Prevent infinite loop
-                    img.src = allMedia[globalIndex].thumbnailUrl ||  allMedia[globalIndex].url ;
+                    img.onerror = null; 
+                    img.src = allMedia[globalIndex].thumbnailUrl ||
+                    allMedia[globalIndex].url ||
+                    "/PictoPy_Logo.png"; // Ensure a valid fallback
                   }}
                   style={{
                     filter: `${filter} brightness(${brightness}%) contrast(${contrast}%)`,
@@ -463,6 +465,13 @@ const MediaView: React.FC<MediaViewProps> = ({
                 alt={`image-${globalIndex}`}
                 draggable={false}
                 className="h-full w-full select-none object-contain"
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  img.onerror = null; 
+                  img.src = allMedia[globalIndex].thumbnailUrl ||
+                  allMedia[globalIndex].url ||
+                  "/PictoPy_Logo.png"; // Ensure a valid fallback
+                }}
                 style={{
                   transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
                   transition: isDragging

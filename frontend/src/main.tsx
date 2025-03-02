@@ -4,6 +4,7 @@ import App from './App';
 import { isProd } from './utils/isProd';
 import { stopServer, startServer } from './utils/serverUtils';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { imagesEndpoints } from '../api/apiEndpoints';
 
 //Listen for window close event and stop server
 const onCloseListener = async () => {
@@ -15,11 +16,14 @@ const onCloseListener = async () => {
 const fetchFilePath = async () => {
   try {
     // Fetch file path from backend
-    const response = await fetch("http://localhost:8000/images/get-thumbnail-path");
+    const response = await fetch(imagesEndpoints.getThumbnailPath);
     const data = await response.json();
-
+    if(localStorage.getItem("thumbnailPath")) {
+      localStorage.removeItem("thumbnailPath");
+    }
     if (data.thumbnailPath) {
       // Store in localStorage
+      console.log("Thumbnail Path = ",data.thumbnailPath);
       localStorage.setItem("thumbnailPath", data.thumbnailPath);
       return data.thumbnailPath;
     }
@@ -35,6 +39,7 @@ const Main = () => {
   useEffect(() => {
     const init = async () => {
       const storedPath = localStorage.getItem("thumbnailPath");
+      console.log("Thumbnail Path = ",storedPath);
       if (!storedPath) {
         await fetchFilePath();
       }
