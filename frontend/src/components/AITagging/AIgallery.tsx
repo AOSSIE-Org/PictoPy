@@ -124,14 +124,14 @@ export default function AIGallery({
               />
 
               {/* Dropdown Menu - Right-Aligned */}
-              <div className="absolute right-0 mt-5">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+              <div className="absolute right-0 mt-5" >
+                <DropdownMenu  >
+                  <DropdownMenuTrigger  asChild>
                     <Button
                       variant="outline"
                       className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
                     >
-                      <p className="hidden lg:inline">
+                      <p className="hidden lg:inline ">
                         Num of images per page : {pageNo}
                       </p>
                     </Button>
@@ -141,7 +141,7 @@ export default function AIGallery({
                     align="end"
                   >
                     <DropdownMenuRadioGroup
-                      className="cursor-pointer overflow-auto bg-gray-950 p-4"
+                      className="cursor-pointer overflow-auto  p-4"
                       onValueChange={(value) => setpageNo(Number(value))}
                     >
                       {noOfPages.map((itemsPerPage) => (
