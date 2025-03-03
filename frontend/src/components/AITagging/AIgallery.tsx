@@ -131,17 +131,19 @@ export default function AIGallery({
                       variant="outline"
                       className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
                     >
-                      <p className="hidden lg:inline ">
+                      <p className="hidden max-[890px]:hidden lg:inline">
                         Num of images per page : {pageNo}
                       </p>
+                      <p className="max-[890px]:block lg:hidden">{pageNo}</p>
                     </Button>
                   </DropdownMenuTrigger>
+
                   <DropdownMenuContent
                     className="max-h-[500px] w-[200px] overflow-y-auto"
                     align="end"
                   >
                     <DropdownMenuRadioGroup
-                      className="cursor-pointer overflow-auto  p-4"
+                      className="cursor-pointer overflow-auto p-4"
                       onValueChange={(value) => setpageNo(Number(value))}
                     >
                       {noOfPages.map((itemsPerPage) => (
