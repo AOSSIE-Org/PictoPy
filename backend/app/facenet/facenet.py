@@ -21,6 +21,31 @@ def get_face_embedding(image):
     return normalize_embedding(embedding)
 
 
+def extract_face_embeddings(img_path):
+    # Return face embeddings from the image but do not add them to the db.
+    yolov8_detector = YOLOv8(
+        DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.2, iou_thres=0.3
+    )
+
+    img = cv2.imread(img_path)
+    if img is None:
+        print(f"Failed to load image: {img_path}")
+        return None
+
+    boxes, scores, class_ids = yolov8_detector(img)
+
+    embeddings = []
+    for box, score in zip(boxes, scores):
+        if score > 0.5:
+            x1, y1, x2, y2 = map(int, box)
+            face_img = img[y1:y2, x1:x2]
+            processed_face = preprocess_image(face_img)
+            embedding = get_face_embedding(processed_face)
+            embeddings.append(embedding)
+
+    return embeddings
+
+
 def detect_faces(img_path):
     yolov8_detector = YOLOv8(
         DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.2, iou_thres=0.3
