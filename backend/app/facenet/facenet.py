@@ -3,6 +3,7 @@ import cv2
 import onnxruntime
 import numpy as np
 from app.config.settings import DEFAULT_FACE_DETECTION_MODEL, DEFAULT_FACENET_MODEL
+from app.utils.classification import get_classes
 from app.facenet.preprocess import normalize_embedding, preprocess_image
 from app.yolov8.YOLOv8 import YOLOv8
 from app.database.faces import insert_face_embeddings
@@ -31,6 +32,12 @@ def extract_face_embeddings(img_path):
     if img is None:
         print(f"Failed to load image: {img_path}")
         return None
+
+    # If "person" `class_id` is not found in the image, return early
+    class_ids = get_classes(img_path)
+    if not class_ids or "0" not in class_ids.split(","):
+        print(f"No person detected in image: {img_path}")
+        return "no_person"
 
     boxes, scores, class_ids = yolov8_detector(img)
 

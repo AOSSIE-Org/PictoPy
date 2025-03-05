@@ -11,11 +11,12 @@ export const searchByFace = async (file: File, threshold: number = 0.5) => {
       body: formData,
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error(`Request failed with status ${response.status}`);
+      throw new Error(data.message || `Request failed with status ${response.status}`);
     }
 
-    const data = await response.json();
     return data;
   } catch (error) {
     console.error("Error searching by face:", error);

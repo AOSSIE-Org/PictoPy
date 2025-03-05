@@ -13,12 +13,12 @@ import AITaggingFolderPicker from '../FolderPicker/AITaggingFolderPicker';
 import LoadingScreen from '../ui/LoadingScreen/LoadingScreen';
 import DeleteSelectedImagePage from '../FolderPicker/DeleteSelectedImagePage';
 import ErrorDialog from '../Album/Error';
-import { 
-  Trash2, 
-  Filter, 
-  UserSearch, 
-  Upload, 
-  Camera 
+import {
+  Trash2,
+  Filter,
+  UserSearch,
+  Upload,
+  Camera
 } from 'lucide-react';
 import { queryClient, usePictoMutation } from '@/hooks/useQueryExtensio';
 import { addFolder } from '../../../api/api-functions/images';
@@ -75,9 +75,9 @@ export default function FilterControls({
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState<boolean>(false);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [selectedFlags, setSelectedFlags] = useState<
     { tag: string; isChecked: boolean }[]
   >([
@@ -135,17 +135,17 @@ export default function FilterControls({
         err instanceof Error ? err.message : 'An unknown error occurred',
     });
   };
-  
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
+
     try {
       setIsSearching(true);
       setSearchError(null);
-      
+
       const result = await searchByFace(file);
-      
+
       if (result.success && result.data) {
         const matchedPaths = result.data.matches.map((match: any) => match.path);
         setFaceSearchResults(matchedPaths);
@@ -153,18 +153,22 @@ export default function FilterControls({
       } else {
         setSearchError(result.message || "Failed to search by face");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in face search:", error);
-      setSearchError(error instanceof Error ? error.message : "An unknown error occurred");
+      if (error.message?.includes('400')) {
+        setSearchError("No person detected in the image");
+      } else {
+        setSearchError(error.message || "An unknown error occurred");
+      }
     } finally {
       setIsSearching(false);
     }
   };
-  
+
   const triggerFileInput = () => {
     fileInputRef.current?.click();
   };
-  
+
   const clearFaceSearch = () => {
     setFaceSearchResults([]);
     if (fileInputRef.current) {
@@ -172,8 +176,15 @@ export default function FilterControls({
     }
   };
 
-  const handleCameraCapture = (matchedPaths: string[]) => {
+  const handleCameraCapture = (matchedPaths: string[], errorMessage?: string) => {
+    if (errorMessage) {
+      setIsSearching(false);
+      setSearchError(errorMessage);
+      return;
+    }
+
     setFaceSearchResults(matchedPaths);
+    setShowCamera(false);
     setIsFaceDialogOpen(false);
   };
 
@@ -207,7 +218,7 @@ export default function FilterControls({
           <Trash2 className="h-4 w-4" />
           <p className="ml-1 hidden lg:inline">Delete Images</p>
         </Button>
-        
+
         <Dialog open={isFaceDialogOpen} onOpenChange={setIsFaceDialogOpen}>
           <DialogTrigger asChild>
             <Button
@@ -229,39 +240,39 @@ export default function FilterControls({
                   {searchError}
                 </div>
               )}
-              
+
               {showCamera ? (
-                <WebcamCapture 
-                  onCapture={handleCameraCapture} 
-                  onClose={() => setShowCamera(false)} 
+                <WebcamCapture
+                  onCapture={handleCameraCapture}
+                  onClose={() => setShowCamera(false)}
                 />
               ) : (
                 <>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    className="hidden" 
-                    accept="image/*" 
-                    onChange={handleFileUpload} 
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleFileUpload}
                   />
-                  
-                  <Button 
+
+                  <Button
                     onClick={triggerFileInput}
                     className="flex items-center justify-center gap-2"
                   >
                     <Upload size={18} />
                     Upload Photo
                   </Button>
-                  
-                  <Button 
+
+                  <Button
                     onClick={() => setShowCamera(true)}
                     className="flex items-center justify-center gap-2"
                   >
                     <Camera size={18} />
                     Use Camera
                   </Button>
-                  
-                  <Button 
+
+                  <Button
                     variant="outline"
                     onClick={clearFaceSearch}
                     className="mt-2"
@@ -273,7 +284,7 @@ export default function FilterControls({
             </div>
           </DialogContent>
         </Dialog>
-        
+
         <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
           <DropdownMenuTrigger asChild>
             <Button

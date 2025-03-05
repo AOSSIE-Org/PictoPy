@@ -144,6 +144,9 @@ async def process_face_search(image_path, threshold=0.5):
     try:
         query_embeddings = extract_face_embeddings(image_path)
 
+        if query_embeddings == "no_person":
+            return False, None, "No person detected in the image"
+
         if not query_embeddings or len(query_embeddings) == 0:
             return False, None, "No faces detected in the image"
 
@@ -347,7 +350,6 @@ async def webcam_feed(websocket: WebSocket, client_id: str):
                         break
 
                     elif command.get("action") == "capture":
-                        print(f"Client {client_id} requested capture")
                         success, frame = cap.read()
                         if success:
                             # Save the captured frame to a temp file

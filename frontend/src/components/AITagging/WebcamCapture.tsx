@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { BACKED_URL } from '../../Config/Backend';
 
 interface WebcamCaptureProps {
-    onCapture: (matchedPaths: string[]) => void;
+    onCapture: (matchedPaths: string[], errorMessage?: string) => void;
     onClose: () => void;
 }
 
@@ -101,7 +101,7 @@ const WebcamCapture: React.FC<WebcamCaptureProps> = ({ onCapture, onClose }) => 
             const socket = new WebSocket(wsFullUrl);
             socketRef.current = socket;
 
-            // Connection timeout - increased to 10 seconds
+            // Connection timeout 10 seconds
             const connectionTimeout = setTimeout(() => {
                 if (!isMountedRef.current || socketRef.current !== socket) return;
 
@@ -120,7 +120,7 @@ const WebcamCapture: React.FC<WebcamCaptureProps> = ({ onCapture, onClose }) => 
 
             socket.onopen = () => {
                 console.log(`WebSocket connection opened (attempt #${attemptRef.current})`);
-                // isConnecting will be set to false when we receive 'connected' event
+                // isConnecting will be set to false when 'connected' event is received
             };
 
             socket.onmessage = (event) => {
@@ -136,7 +136,6 @@ const WebcamCapture: React.FC<WebcamCaptureProps> = ({ onCapture, onClose }) => 
                         clearTimeout(connectionTimeout); // Clear timeout on successful connection
                     }
                     else if (data.event === 'frame' && imageRef.current) {
-                        // Only log every 30 frames to avoid console spam
                         if (framesReceived.current === 0 || framesReceived.current % 30 === 0) {
                             console.log(`Received frame #${framesReceived.current}`);
                         }
@@ -157,6 +156,8 @@ const WebcamCapture: React.FC<WebcamCaptureProps> = ({ onCapture, onClose }) => 
                             const matchedPaths = data.matches.map((match: any) => match.path);
                             onCapture(matchedPaths);
                         } else {
+                            onCapture([], data.message || 'No faces detected in captured image');
+
                             setError(data.message || 'No faces detected in captured image');
                             setTimeout(() => {
                                 if (isMountedRef.current) {
@@ -186,7 +187,6 @@ const WebcamCapture: React.FC<WebcamCaptureProps> = ({ onCapture, onClose }) => 
                 console.log(`WebSocket closed: code=${event.code}, reason=${event.reason || "none"}`);
 
                 if (framesReceived.current === 0) {
-                    // Only show error if we haven't received any frames
                     setError('Connection closed before receiving camera feed. Please try again.');
                     setIsConnecting(false);
                 }
@@ -201,18 +201,15 @@ const WebcamCapture: React.FC<WebcamCaptureProps> = ({ onCapture, onClose }) => 
         }
     };
 
-    // Connect on mount - make async to properly handle the sequential cleanup
     useEffect(() => {
         console.log("Component mounted");
         isMountedRef.current = true;
         attemptRef.current = 0;
 
-        // Create a self-invoking async function to handle the connection
         (async () => {
             if (isMountedRef.current) {
                 const cleanup = await connectWebSocket();
 
-                // Store the cleanup function to call on unmount
                 if (typeof cleanup === 'function') {
                     cleanupFnRef.current = cleanup;
                 }
@@ -243,14 +240,12 @@ const WebcamCapture: React.FC<WebcamCaptureProps> = ({ onCapture, onClose }) => 
         await connectWebSocket();
     };
 
-    // Add auto-retry for specific errors
     useEffect(() => {
         if (error === 'Connection closed before receiving camera feed. Please try again.' &&
             attemptRef.current < 3) {
 
             console.log(`Auto-retrying connection (attempt ${attemptRef.current + 1} of 3)...`);
 
-            // Add a small delay before retrying
             const retryTimeout = setTimeout(() => {
                 if (isMountedRef.current) {
                     handleRetry();
