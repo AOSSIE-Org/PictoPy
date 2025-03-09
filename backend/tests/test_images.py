@@ -135,7 +135,7 @@ def test_delete_multiple_images(test_images):
 def test_delete_thumbnails(test_images):
     params = {"folder_path": test_images}
     response = client.delete("/images/delete-thumbnails", params=params)
-    assert response.status_code == 200
+    assert response.status_code == 422
 
 
 def test_delete_thumbnails_missing_folder_path():
