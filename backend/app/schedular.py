@@ -8,7 +8,8 @@ from app.routes.images import get_all_image_paths, delete_image_db
 from app.database.folders import get_all_folders, get_folder_id_from_path
 from app.config.settings import THUMBNAIL_IMAGES_PATH
 from app.facenet.facenet import detect_faces
-from app.database.images import insert_image_db, extract_metadata
+from app.database.images import insert_image_db
+from app.utils.metadata import extract_metadata
 from app.database.folders import delete_folder
 
 async def process_images(tasks):
@@ -86,7 +87,7 @@ def run_async_task():
     asyncio.run(my_scheduled_task())
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(run_async_task, "interval", minutes=15)
+scheduler.add_job(run_async_task, "interval", minutes=1)
 
 def start_scheduler():
     scheduler.start()

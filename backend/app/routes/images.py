@@ -17,7 +17,6 @@ from app.database.images import (
     insert_image_db,
     delete_image_db,
     get_objects_db,
-    extract_metadata,
     get_all_image_paths,
     get_all_images_from_folder_id
 

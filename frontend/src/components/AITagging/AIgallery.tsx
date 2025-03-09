@@ -83,18 +83,7 @@ export default function AIGallery({
   }, []);
 
 
-  const handleFolderAdded = useCallback(async () => {
-    generateThumbnailAPI([folderPath]);
-  }, []);
-
-  useEffect(() => {
-    generateThumbnailAPI([folderPath]);
-  }, [folderPath]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filterTag, faceSearchResults]);
-
+  
   if (error) {
     return (
       <ErrorPage
@@ -106,13 +95,6 @@ export default function AIGallery({
     );
   }
 
-  if (isGeneratingThumbnails || isGeneratingTags) {
-    return (
-      <div>
-        <LoadingScreen />
-      </div>
-    );
-  }
 
   return (
     <div className="w-full">
