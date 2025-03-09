@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/button';
 import { Camera } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import { BACKED_URL } from '../../Config/Backend';
+import { BACKEND_URL } from '../../Config/Backend';
 
 interface WebcamCaptureProps {
   onCapture: (matchedPaths: string[], errorMessage?: string) => void;
@@ -101,7 +101,7 @@ const WebcamCapture: React.FC<WebcamCaptureProps> = ({
     }
 
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = BACKED_URL.replace(/^https?:\/\//, '');
+    const wsUrl = BACKEND_URL.replace(/^https?:\/\//, '');
     const wsFullUrl = `${wsProtocol}//${wsUrl}/tag/webcam-feed/${connectionClientId}`;
 
     console.log(`Connecting to WebSocket at: ${wsFullUrl}`);

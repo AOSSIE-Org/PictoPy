@@ -14,7 +14,7 @@ import time
 from functools import wraps
 from numpy.typing import NDArray
 
-from app.config.settings import CLUSTERS_DATABASE_PATH
+from app.config.settings import DATABASE_PATH
 from app.utils.path_id_mapping import get_id_from_path
 from app.database.faces import get_all_face_embeddings
 
@@ -116,7 +116,7 @@ class FaceCluster:
         eps: float = 0.3,
         min_samples: int = 2,
         metric: str = "cosine",
-        db_path: Union[str, Path] = CLUSTERS_DATABASE_PATH,
+        db_path: Union[str, Path] = DATABASE_PATH,
     ) -> None:
         """
         Initialize the face cluster manager.
@@ -330,9 +330,7 @@ class FaceCluster:
             )
 
     @classmethod
-    def load_from_db(
-        cls, db_path: Union[str, Path] = CLUSTERS_DATABASE_PATH
-    ) -> "FaceCluster":
+    def load_from_db(cls, db_path: Union[str, Path] = DATABASE_PATH) -> "FaceCluster":
         """
         Load clustering state from database.
 
