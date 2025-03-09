@@ -140,4 +140,4 @@ def test_delete_thumbnails(test_images):
 
 def test_delete_thumbnails_missing_folder_path():
     response = client.delete("/images/delete-thumbnails")
-    assert response.status_code == 400
+    assert response.status_code == 422
