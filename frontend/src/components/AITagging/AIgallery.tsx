@@ -17,7 +17,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-
+import { UserSearch } from 'lucide-react';
+import ErrorPage from '@/components/ui/ErrorPage/ErrorPage';
 export default function AIGallery({
   title,
   type,
@@ -27,7 +28,11 @@ export default function AIGallery({
   type: 'image' | 'video';
   folderPath: string;
 }) {
-  const { successData, isLoading: isGeneratingTags } = usePictoQuery({
+  const {
+    successData,
+    error,
+    isLoading: isGeneratingTags,
+  } = usePictoQuery({
     queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
@@ -43,18 +48,28 @@ export default function AIGallery({
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
   const [isVisibleSelectedImage, setIsVisibleSelectedImage] =
     useState<boolean>(true);
+  const [faceSearchResults, setFaceSearchResults] = useState<string[]>([]);
+
   const itemsPerRow: number = 3;
   const noOfPages: number[] = Array.from(
     { length: 41 },
     (_, index) => index + 10,
   );
+
   const filteredMediaItems = useMemo(() => {
+    let filtered = mediaItems;
+    if (faceSearchResults.length > 0) {
+      filtered = filtered.filter((item: any) =>
+        faceSearchResults.includes(item.imagePath),
+      );
+    }
+
     return filterTag.length > 0
-      ? mediaItems.filter((mediaItem: any) =>
+      ? filtered.filter((mediaItem: any) =>
           filterTag.some((tag) => mediaItem.tags.includes(tag)),
         )
-      : mediaItems;
-  }, [filterTag, mediaItems, isGeneratingTags]);
+      : filtered;
+  }, [filterTag, mediaItems, isGeneratingTags, faceSearchResults]);
 
   const [pageNo, setpageNo] = useState<number>(20);
 
@@ -83,6 +98,21 @@ export default function AIGallery({
     generateThumbnailAPI([folderPath]);
   }, [folderPath]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterTag, faceSearchResults]);
+
+  if (error) {
+    return (
+      <ErrorPage
+        errorCode={500}
+        errorMessage="Error loading media items."
+        details="An unexpected error occurred while loading media items. This may be due to a server issue or database failure. Please try again later."
+        onRetry={() => window.location.reload()}
+      />
+    );
+  }
+
   if (isGeneratingThumbnails || isGeneratingTags) {
     return (
       <div>
@@ -96,7 +126,25 @@ export default function AIGallery({
       <div className="mx-auto px-2 pb-8 dark:bg-background dark:text-foreground">
         <div className="mb-2 flex items-center justify-between">
           {isVisibleSelectedImage && (
-            <h1 className="text-2xl font-bold">{title}</h1>
+            <div className="flex items-center">
+              <h1 className="text-2xl font-bold">{title}</h1>
+              {faceSearchResults.length > 0 && (
+                <div className="ml-4 flex items-center gap-2 rounded-lg bg-blue-100 px-3 py-1 dark:bg-blue-900/30">
+                  <UserSearch size={16} />
+                  <span className="text-sm">
+                    Face filter active ({faceSearchResults.length} matches)
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => setFaceSearchResults([])}
+                  >
+                    ×
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
           <FilterControls
             setFilterTag={setFilterTag}
@@ -105,6 +153,7 @@ export default function AIGallery({
             isLoading={isGeneratingTags}
             isVisibleSelectedImage={isVisibleSelectedImage}
             setIsVisibleSelectedImage={setIsVisibleSelectedImage}
+            setFaceSearchResults={setFaceSearchResults}
           />
         </div>
 
@@ -123,7 +172,6 @@ export default function AIGallery({
                 onPageChange={setCurrentPage}
               />
 
-              {/* Dropdown Menu - Right-Aligned */}
               <div className="absolute right-0 mt-5">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

@@ -1,0 +1,472 @@
+﻿\---PictoPy
+    |   .env.example
+    |   .gitignore
+    |   docker-compose.yml
+    |   mkdocs.yml
+    |   package-lock.json
+    |   package.json
+    |   README.md
+    |   
+    +---.github
+    |   +---ISSUE_TEMPLATE
+    |   |       bug.yml
+    |   |       documentation.yml
+    |   |       feature.yml
+    |   |       
+    |   \---workflows
+    |           app-build.yml
+    |           ci.yml
+    |           merge.yml
+    |           pr-tests.yml
+    |           
+    +---.husky
+    |       pre-commit
+    |       
+    +---backend
+    |   |   .dockerignore
+    |   |   .gitignore
+    |   |   Dockerfile
+    |   |   main.py
+    |   |   pytest.ini
+    |   |   requirements.txt
+    |   |   run-server.ps1
+    |   |   run.bat
+    |   |   run.sh
+    |   |   test.py
+    |   |   
+    |   +---app
+    |   |   |   custom_logging.py
+    |   |   |   logging_config.json
+    |   |   |   
+    |   |   +---config
+    |   |   |       settings.py
+    |   |   |       
+    |   |   +---database
+    |   |   |       albums.py
+    |   |   |       faces.py
+    |   |   |       images.py
+    |   |   |       yolo_mapping.py
+    |   |   |       
+    |   |   +---facecluster
+    |   |   |       facecluster.py
+    |   |   |       init_face_cluster.py
+    |   |   |       
+    |   |   +---facenet
+    |   |   |       facenet.py
+    |   |   |       preprocess.py
+    |   |   |       
+    |   |   +---models
+    |   |   |       facenet.onnx
+    |   |   |       yolov8n-face.onnx
+    |   |   |       yolov8n.onnx
+    |   |   |       
+    |   |   +---ner
+    |   |   |       haarcascade_frontalface_default.xml
+    |   |   |       ner_onnx.py
+    |   |   |       test.py
+    |   |   |       
+    |   |   +---routes
+    |   |   |       albums.py
+    |   |   |       facetagging.py
+    |   |   |       images.py
+    |   |   |       test.py
+    |   |   |       
+    |   |   +---utils
+    |   |   |       APIError.py
+    |   |   |       classification.py
+    |   |   |       metadata.py
+    |   |   |       path_id_mapping.py
+    |   |   |       wrappers.py
+    |   |   |       
+    |   |   \---yolov8
+    |   |           utils.py
+    |   |           YOLOv8.py
+    |   |           __init__.py
+    |   |           
+    |   +---dist
+    |   |       README.md
+    |   |       
+    |   +---images
+    |   |   |   PictoPy_Logo.png
+    |   |   |   
+    |   |   \---PictoPy.thumbnails
+    |   |           PictoPy_Logo.png
+    |   |           
+    |   \---tests
+    |       |   test_albums.py
+    |       |   test_images.py
+    |       |   __init__.py
+    |       |   
+    |       +---inputs
+    |       |       000000000009.jpg
+    |       |       000000000025.jpg
+    |       |       000000000030.jpg
+    |       |       000000000034.jpg
+    |       |       004.png
+    |       |       137083-765727898_medium.mp4
+    |       |       160398-821086395_medium.mp4
+    |       |       Aaron_Peirsol_0001.jpg
+    |       |       Aaron_Peirsol_0002.jpg
+    |       |       Abdullah_0002.jpg
+    |       |       Abdullah_0003.jpg
+    |       |       Abdullah_0004.jpg
+    |       |       Aicha_El_Ouafi_0001.jpg
+    |       |       Aicha_El_Ouafi_0003.jpg
+    |       |       amir_khan.png
+    |       |       cat (copy).png
+    |       |       cat.png
+    |       |       empty spaces.png
+    |       |       empty.png
+    |       |       Frank_Solich_0001.jpg
+    |       |       Frank_Solich_0002.jpg
+    |       |       Frank_Solich_0004.jpg
+    |       |       salman_khan.png
+    |       |       test_2_faces.png
+    |       |       three_khans.png
+    |       |       zidane.jpg
+    |       |       
+    |       \---outputs
+    |               001.jpg
+    |               002.jpg
+    |               detected_objects.jpg
+    |               
+    +---docs
+    |   |   index.md
+    |   |   postcss.config.js
+    |   |   tailwind.config.js
+    |   |   
+    |   +---assets
+    |   |       AOSSIE-logo.png
+    |   |       backend-architecture.jpeg
+    |   |       PictoPy-logo.png
+    |   |       
+    |   +---backend
+    |   |   |   docker-setup.md
+    |   |   |   
+    |   |   +---backend_python
+    |   |   |       api.md
+    |   |   |       database.md
+    |   |   |       directory-structure.md
+    |   |   |       image-processing.md
+    |   |   |       setup.md
+    |   |   |       
+    |   |   \---backend_rust
+    |   |           api.md
+    |   |           setup.md
+    |   |           
+    |   +---docker-compose
+    |   |       redme.md
+    |   |       
+    |   +---frontend
+    |   |       docker-setup.md
+    |   |       gallery-view.md
+    |   |       setup.md
+    |   |       state-management.md
+    |   |       ui-components.md
+    |   |       
+    |   +---overview
+    |   |       architecture.md
+    |   |       features.md
+    |   |       
+    |   \---stylesheets
+    |           extra.css
+    |           output.css
+    |           tailwind.css
+    |           
+    +---frontend
+    |   |   .dockerignore
+    |   |   .eslintignore
+    |   |   .eslintrc.json
+    |   |   .prettierignore
+    |   |   .prettierrc
+    |   |   babel.config.cjs
+    |   |   components.json
+    |   |   Dockerfile
+    |   |   index.html
+    |   |   jest.config.ts
+    |   |   jest.setup.ts
+    |   |   package-lock.json
+    |   |   package.json
+    |   |   postcss.config.js
+    |   |   README.md
+    |   |   tailwind.config.cjs
+    |   |   tailwind.config.js
+    |   |   tsconfig.json
+    |   |   tsconfig.node.json
+    |   |   vite.config.ts
+    |   |   
+    |   +---api
+    |   |   |   apiEndpoints.ts
+    |   |   |   
+    |   |   \---api-functions
+    |   |           albums.ts
+    |   |           images.ts
+    |   |           
+    |   +---public
+    |   |       PictoPy_Logo.png
+    |   |       tauri.svg
+    |   |       vite.svg
+    |   |       
+    |   +---scripts
+    |   |       setup_env.sh
+    |   |       setup_win.ps1
+    |   |       
+    |   +---src
+    |   |   |   App.css
+    |   |   |   App.tsx
+    |   |   |   main.tsx
+    |   |   |   vite-env.d.ts
+    |   |   |   
+    |   |   +---components
+    |   |   |   |   ThemeToggle.tsx
+    |   |   |   |   
+    |   |   |   +---AITagging
+    |   |   |   |       AIgallery.tsx
+    |   |   |   |       FilterControls.tsx
+    |   |   |   |       
+    |   |   |   +---Album
+    |   |   |   |       Album.tsx
+    |   |   |   |       AlbumCard.tsx
+    |   |   |   |       AlbumDialog.tsx
+    |   |   |   |       AlbumForm.tsx
+    |   |   |   |       AlbumList.tsx
+    |   |   |   |       Albumpick.tsx
+    |   |   |   |       Albumview.tsx
+    |   |   |   |       Error.tsx
+    |   |   |   |       ImageManagementDialog.tsx
+    |   |   |   |       ImageSelection.tsx
+    |   |   |   |       
+    |   |   |   +---FolderPicker
+    |   |   |   |       AITaggingFolderPicker.tsx
+    |   |   |   |       DeleteSelectedImagePage.tsx
+    |   |   |   |       FolderPicker.tsx
+    |   |   |   |       
+    |   |   |   +---LoadingScreen
+    |   |   |   |       LoadingScreen.tsx
+    |   |   |   |       
+    |   |   |   +---Media
+    |   |   |   |       MediaCard.tsx
+    |   |   |   |       MediaGallery.tsx
+    |   |   |   |       Mediagrid.tsx
+    |   |   |   |       MediaView.tsx
+    |   |   |   |       SortningControls.tsx
+    |   |   |   |       
+    |   |   |   +---Memories
+    |   |   |   |       Memories.tsx
+    |   |   |   |       
+    |   |   |   +---Navigation
+    |   |   |   |   +---Navbar
+    |   |   |   |   |       Navbar.tsx
+    |   |   |   |   |       
+    |   |   |   |   \---Sidebar
+    |   |   |   |           Sidebar.tsx
+    |   |   |   |           
+    |   |   |   +---SecureFolder
+    |   |   |   |       SecureFolder.tsx
+    |   |   |   |       
+    |   |   |   +---ui
+    |   |   |   |   |   button.tsx
+    |   |   |   |   |   dialog copy.tsx
+    |   |   |   |   |   dialog.tsx
+    |   |   |   |   |   dropdown-menu.tsx
+    |   |   |   |   |   input.tsx
+    |   |   |   |   |   pagination.tsx
+    |   |   |   |   |   PaginationControls.tsx
+    |   |   |   |   |   Slider.tsx
+    |   |   |   |   |   textarea.tsx
+    |   |   |   |   |   
+    |   |   |   |   +---404
+    |   |   |   |   |       404.tsx
+    |   |   |   |   |       
+    |   |   |   |   +---Icons
+    |   |   |   |   |       Icons.tsx
+    |   |   |   |   |       
+    |   |   |   |   \---LoadingScreen
+    |   |   |   |           LoadingScreen.tsx
+    |   |   |   |           
+    |   |   |   \---VideoPlayer
+    |   |   |           NetflixStylePlayer.tsx
+    |   |   |           
+    |   |   +---Config
+    |   |   |       Backend.ts
+    |   |   |       QueryClientProvider.tsx
+    |   |   |       
+    |   |   +---constants
+    |   |   |       routes.ts
+    |   |   |       
+    |   |   +---contexts
+    |   |   |       ThemeContext.tsx
+    |   |   |       
+    |   |   +---controllers
+    |   |   |       InitialPageController.tsx
+    |   |   |       
+    |   |   +---features
+    |   |   |   \---Setup
+    |   |   |           SetupScreen.tsx
+    |   |   |           
+    |   |   +---hooks
+    |   |   |       folderService.ts
+    |   |   |       LocalStorage.ts
+    |   |   |       Sortimage.ts
+    |   |   |       useFolderPath.ts
+    |   |   |       useImages.ts
+    |   |   |       useQueryExtensio.ts
+    |   |   |       UseVideos.ts
+    |   |   |       
+    |   |   +---layout
+    |   |   |       main.tsx
+    |   |   |       
+    |   |   +---lib
+    |   |   |       utils.ts
+    |   |   |       
+    |   |   +---pages
+    |   |   |   +---AITagging
+    |   |   |   |       AITaging.tsx
+    |   |   |   |       
+    |   |   |   +---Album
+    |   |   |   |       Album.tsx
+    |   |   |   |       
+    |   |   |   +---Dashboard
+    |   |   |   |       Dashboard.tsx
+    |   |   |   |       
+    |   |   |   +---Memories
+    |   |   |   |       Memories.tsx
+    |   |   |   |       
+    |   |   |   +---SecureFolderPage
+    |   |   |   |       SecureFolder.tsx
+    |   |   |   |       
+    |   |   |   +---SettingsPage
+    |   |   |   |       Settings.tsx
+    |   |   |   |       
+    |   |   |   +---Setupscreen
+    |   |   |   |       Setup.tsx
+    |   |   |   |       
+    |   |   |   +---VideosPage
+    |   |   |   |       Videos.tsx
+    |   |   |   |       
+    |   |   |   \---__tests__
+    |   |   |           allPages.test.tsx
+    |   |   |           
+    |   |   +---routes
+    |   |   |   |   AppRoutes.tsx
+    |   |   |   |   
+    |   |   |   \---LayoutRoutes
+    |   |   |           LayoutRoutes.tsx
+    |   |   |           
+    |   |   +---services
+    |   |   |       cacheService.ts
+    |   |   |       
+    |   |   +---types
+    |   |   |       Album.ts
+    |   |   |       Icons.ts
+    |   |   |       image.ts
+    |   |   |       Media.ts
+    |   |   |       
+    |   |   \---utils
+    |   |           isProd.ts
+    |   |           Media.ts
+    |   |           serverUtils.ts
+    |   |           
+    |   \---src-tauri
+    |       |   .gitignore
+    |       |   build.rs
+    |       |   Cargo.lock
+    |       |   Cargo.toml
+    |       |   postinstall.sh
+    |       |   tauri.conf.json
+    |       |   
+    |       +---.cargo
+    |       |       config.toml
+    |       |       
+    |       +---assets
+    |       |       PictoPy_Logo.png
+    |       |       
+    |       +---capabilities
+    |       |       migrated.json
+    |       |       
+    |       +---icons
+    |       |   |   128x128.png
+    |       |   |   128x128@2x.png
+    |       |   |   32x32.png
+    |       |   |   icon.icns
+    |       |   |   icon.ico
+    |       |   |   icon.png
+    |       |   |   Square107x107Logo.png
+    |       |   |   Square142x142Logo.png
+    |       |   |   Square150x150Logo.png
+    |       |   |   Square284x284Logo.png
+    |       |   |   Square30x30Logo.png
+    |       |   |   Square310x310Logo.png
+    |       |   |   Square44x44Logo.png
+    |       |   |   Square71x71Logo.png
+    |       |   |   Square89x89Logo.png
+    |       |   |   StoreLogo.png
+    |       |   |   
+    |       |   +---android
+    |       |   |   +---mipmap-hdpi
+    |       |   |   |       ic_launcher.png
+    |       |   |   |       ic_launcher_foreground.png
+    |       |   |   |       ic_launcher_round.png
+    |       |   |   |       
+    |       |   |   +---mipmap-mdpi
+    |       |   |   |       ic_launcher.png
+    |       |   |   |       ic_launcher_foreground.png
+    |       |   |   |       ic_launcher_round.png
+    |       |   |   |       
+    |       |   |   +---mipmap-xhdpi
+    |       |   |   |       ic_launcher.png
+    |       |   |   |       ic_launcher_foreground.png
+    |       |   |   |       ic_launcher_round.png
+    |       |   |   |       
+    |       |   |   +---mipmap-xxhdpi
+    |       |   |   |       ic_launcher.png
+    |       |   |   |       ic_launcher_foreground.png
+    |       |   |   |       ic_launcher_round.png
+    |       |   |   |       
+    |       |   |   \---mipmap-xxxhdpi
+    |       |   |           ic_launcher.png
+    |       |   |           ic_launcher_foreground.png
+    |       |   |           ic_launcher_round.png
+    |       |   |           
+    |       |   \---ios
+    |       |           AppIcon-20x20@1x.png
+    |       |           AppIcon-20x20@2x-1.png
+    |       |           AppIcon-20x20@2x.png
+    |       |           AppIcon-20x20@3x.png
+    |       |           AppIcon-29x29@1x.png
+    |       |           AppIcon-29x29@2x-1.png
+    |       |           AppIcon-29x29@2x.png
+    |       |           AppIcon-29x29@3x.png
+    |       |           AppIcon-40x40@1x.png
+    |       |           AppIcon-40x40@2x-1.png
+    |       |           AppIcon-40x40@2x.png
+    |       |           AppIcon-40x40@3x.png
+    |       |           AppIcon-512@2x.png
+    |       |           AppIcon-60x60@2x.png
+    |       |           AppIcon-60x60@3x.png
+    |       |           AppIcon-76x76@1x.png
+    |       |           AppIcon-76x76@2x.png
+    |       |           AppIcon-83.5x83.5@2x.png
+    |       |           
+    |       \---src
+    |           |   main.rs
+    |           |   models.rs
+    |           |   
+    |           +---repositories
+    |           |       cache_repository.rs
+    |           |       file_repository.rs
+    |           |       mod.rs
+    |           |       
+    |           +---services
+    |           |       cache_service.rs
+    |           |       file_service.rs
+    |           |       mod.rs
+    |           |       
+    |           \---utils
+    |                   file_utils.rs
+    |                   mod.rs
+    |                   
+    \---scripts
+            linux-dev.sh
+            win-dev.bat
+            

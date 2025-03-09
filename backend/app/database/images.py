@@ -6,9 +6,6 @@ from app.config.settings import (
     DATABASE_PATH,
 )
 from app.facecluster.init_face_cluster import get_face_cluster
-from app.facenet.facenet import detect_faces
-from app.utils.classification import get_classes
-from app.utils.metadata import extract_metadata
 from app.database.albums import remove_image_from_all_albums
 
 
@@ -91,13 +88,13 @@ def delete_image_db(path):
         # Instead of calling delete_face_embeddings directly, for circular import error
         remove_image_from_all_albums(image_id)
         from app.database.faces import delete_face_embeddings
+
         conn.commit()
         conn.close()
         clusters = get_face_cluster()
         clusters.remove_image(image_id)
         delete_face_embeddings(image_id)
     conn.close()
-
 
 
 def get_all_image_ids_from_db():
@@ -146,10 +143,9 @@ def get_objects_db(path):
     class_ids_json = result[0]
     class_ids = json.loads(class_ids_json)
     if isinstance(class_ids, list):
-        class_ids = [str(class_id) for class_id in class_ids]  
+        class_ids = [str(class_id) for class_id in class_ids]
     else:
-        class_ids = class_ids.split(",") 
-
+        class_ids = class_ids.split(",")
 
     conn_mappings = sqlite3.connect(DATABASE_PATH)
     cursor_mappings = conn_mappings.cursor()
@@ -175,6 +171,7 @@ def is_image_in_database(path):
     count = cursor.fetchone()[0]
     conn.close()
     return count > 0
+
 
 def get_all_image_paths():
     with sqlite3.connect(DATABASE_PATH) as conn:
