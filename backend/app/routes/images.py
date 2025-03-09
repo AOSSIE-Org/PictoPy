@@ -59,6 +59,8 @@ def get_images():
     try:
         image_files = get_all_image_paths()
 
+        print("Image Files = ",image_files)
+
         return GetImagesResponse(
             data = ImagesResponse(
                 image_files=image_files,
@@ -291,7 +293,7 @@ def get_all_image_objects():
             print(image_path)
         
         return GetAllImageObjectsResponse(
-            data={"images": data, "folder_path": folder_path},
+            data={"images": data},
             message="Successfully retrieved all image objects",
             success=True
 

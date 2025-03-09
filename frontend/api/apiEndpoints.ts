@@ -1,4 +1,4 @@
-import { BACKEND_URL } from '../src/Config/Backend';
+import { BACKEND_URL } from "@/Config/Backend";
 
 export const imagesEndpoints = {
   allImages: `${BACKEND_URL}/images/all-images`,
