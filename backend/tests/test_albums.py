@@ -6,9 +6,9 @@ import sys
 import os
 from pathlib import Path
 import shutil
+from app.utils.metadata import extract_metadata
 from app.database.images import (
     insert_image_db,
-    extract_metadata,
 )
 from app.database.images import create_image_id_mapping_table, create_images_table
 from app.database.albums import create_albums_table
