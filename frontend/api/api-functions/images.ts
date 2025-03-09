@@ -99,9 +99,12 @@ export const generateThumbnails = async (folderPath: string[]) => {
 
 export const deleteThumbnails = async (folderPath: string) => {
   const queryParams = new URLSearchParams({ folder_path: folderPath });
-  const response = await fetch(`${imagesEndpoints.deleteThumbnails}?${queryParams}`, {
-    method: 'DELETE',
-  });
+  const response = await fetch(
+    `${imagesEndpoints.deleteThumbnails}?${queryParams}`,
+    {
+      method: 'DELETE',
+    },
+  );
   const data = await response.json();
   return data;
 };

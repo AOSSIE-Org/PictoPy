@@ -61,3 +61,7 @@ wsproto==1.2.0
 pyinstaller==6.11
 pytest>=8.2
 APScheduler==3.11.0
+pre-commit>=2.21.0
+black>=23.3.0
+ruff>=0.0.241
+psutil>=5.9.5

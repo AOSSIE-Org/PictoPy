@@ -4,6 +4,7 @@ from app.database.folders import get_all_folder_ids
 from app.database.images import get_all_images_from_folder_id
 from app.config.settings import THUMBNAIL_IMAGES_PATH
 
+
 def generate_thumbnails_for_folders(folder_paths: list):
     image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"]
     failed_paths = []
