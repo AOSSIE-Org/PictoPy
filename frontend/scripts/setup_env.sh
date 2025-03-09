@@ -29,6 +29,7 @@ packages=(
     libwebkit2gtk-4.1-dev
     librsvg2-dev
     file 
+    libgl1-mesa-glx
 )
 
 # check and install required packages

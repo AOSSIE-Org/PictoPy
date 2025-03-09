@@ -68,6 +68,10 @@ Handles file system operations and provides a secure bridge between the frontend
 
 1. Clone the repository to your local system:
 
+## Automatic Setup:
+```bash
+npm run setup
+```
    ```bash
    git clone git@github.com:AOSSIE-Org/PictoPy.git
    ```
@@ -76,6 +80,7 @@ Handles file system operations and provides a secure bridge between the frontend
    cd PictoPy
    ```
 
+## Manual Setup:
 1. Navigate to the frontend directory:
    ```bash
    cd frontend
