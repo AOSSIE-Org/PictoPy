@@ -13,13 +13,7 @@ import AITaggingFolderPicker from '../FolderPicker/AITaggingFolderPicker';
 import LoadingScreen from '../ui/LoadingScreen/LoadingScreen';
 import DeleteSelectedImagePage from '../FolderPicker/DeleteSelectedImagePage';
 import ErrorDialog from '../Album/Error';
-import {
-  Trash2,
-  Filter,
-  UserSearch,
-  Upload,
-  Camera
-} from 'lucide-react';
+import { Trash2, Filter, UserSearch, Upload, Camera } from 'lucide-react';
 import { queryClient, usePictoMutation } from '@/hooks/useQueryExtensio';
 import { addFolder } from '../../../api/api-functions/images';
 import { searchByFace } from '../../../api/api-functions/faceTagging';
@@ -136,7 +130,9 @@ export default function FilterControls({
     });
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -147,18 +143,20 @@ export default function FilterControls({
       const result = await searchByFace(file);
 
       if (result.success && result.data) {
-        const matchedPaths = result.data.matches.map((match: any) => match.path);
+        const matchedPaths = result.data.matches.map(
+          (match: any) => match.path,
+        );
         setFaceSearchResults(matchedPaths);
         setIsFaceDialogOpen(false);
       } else {
-        setSearchError(result.message || "Failed to search by face");
+        setSearchError(result.message || 'Failed to search by face');
       }
     } catch (error: any) {
-      console.error("Error in face search:", error);
+      console.error('Error in face search:', error);
       if (error.message?.includes('400')) {
-        setSearchError("No person detected in the image");
+        setSearchError('No person detected in the image');
       } else {
-        setSearchError(error.message || "An unknown error occurred");
+        setSearchError(error.message || 'An unknown error occurred');
       }
     } finally {
       setIsSearching(false);
@@ -176,7 +174,10 @@ export default function FilterControls({
     }
   };
 
-  const handleCameraCapture = (matchedPaths: string[], errorMessage?: string) => {
+  const handleCameraCapture = (
+    matchedPaths: string[],
+    errorMessage?: string,
+  ) => {
     if (errorMessage) {
       setIsSearching(false);
       setSearchError(errorMessage);

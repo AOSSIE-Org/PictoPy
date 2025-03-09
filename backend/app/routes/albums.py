@@ -1,4 +1,3 @@
-import os
 from fastapi import APIRouter, status, Query
 from fastapi.responses import JSONResponse
 from app.database.albums import (
@@ -11,7 +10,6 @@ from app.database.albums import (
     edit_album_description,
 )
 from app.utils.wrappers import exception_handler_wrapper
-from app.config.settings import IMAGES_PATH
 
 router = APIRouter()
 
@@ -124,6 +122,7 @@ def add_multiple_images_to_album(payload: dict):
 
     album_name = payload["album_name"]
     paths = payload["paths"]
+    print(paths)
 
     if not isinstance(paths, list):
         return JSONResponse(
@@ -142,6 +141,7 @@ def add_multiple_images_to_album(payload: dict):
         try:
             add_photo_to_album(album_name, path)
         except Exception as e:
+            print(e)
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 content={
@@ -240,14 +240,12 @@ def view_album_photos(
             },
         )
 
-    folder_path = os.path.abspath(IMAGES_PATH)
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
             "data": {
                 "album_name": album_name,
                 "photos": photos,
-                "folder_path": folder_path,
             },
             "message": f"Successfully retrieved photos for album '{album_name}'",
             "success": True,

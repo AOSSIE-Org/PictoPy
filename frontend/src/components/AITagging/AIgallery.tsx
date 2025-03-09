@@ -28,7 +28,11 @@ export default function AIGallery({
   type: 'image' | 'video';
   folderPath: string;
 }) {
-  const { successData, error, isLoading: isGeneratingTags } = usePictoQuery({
+  const {
+    successData,
+    error,
+    isLoading: isGeneratingTags,
+  } = usePictoQuery({
     queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
@@ -45,21 +49,21 @@ export default function AIGallery({
   const [isVisibleSelectedImage, setIsVisibleSelectedImage] =
     useState<boolean>(true);
   const [faceSearchResults, setFaceSearchResults] = useState<string[]>([]);
-    
+
   const itemsPerRow: number = 3;
   const noOfPages: number[] = Array.from(
     { length: 41 },
     (_, index) => index + 10,
   );
-  
+
   const filteredMediaItems = useMemo(() => {
     let filtered = mediaItems;
     if (faceSearchResults.length > 0) {
-      filtered = filtered.filter((item: any) => 
-        faceSearchResults.includes(item.imagePath)
+      filtered = filtered.filter((item: any) =>
+        faceSearchResults.includes(item.imagePath),
       );
     }
-    
+
     return filterTag.length > 0
       ? filtered.filter((mediaItem: any) =>
           filterTag.some((tag) => mediaItem.tags.includes(tag)),
@@ -93,18 +97,20 @@ export default function AIGallery({
   useEffect(() => {
     generateThumbnailAPI([folderPath]);
   }, [folderPath]);
-  
+
   useEffect(() => {
     setCurrentPage(1);
   }, [filterTag, faceSearchResults]);
 
   if (error) {
-    return <ErrorPage
-    errorCode={500}
-    errorMessage="Error loading media items."
-    details="An unexpected error occurred while loading media items. This may be due to a server issue or database failure. Please try again later."
-    onRetry={() => window.location.reload()}
-  />;
+    return (
+      <ErrorPage
+        errorCode={500}
+        errorMessage="Error loading media items."
+        details="An unexpected error occurred while loading media items. This may be due to a server issue or database failure. Please try again later."
+        onRetry={() => window.location.reload()}
+      />
+    );
   }
 
   if (isGeneratingThumbnails || isGeneratingTags) {
@@ -113,7 +119,6 @@ export default function AIGallery({
         <LoadingScreen />
       </div>
     );
-    
   }
 
   return (
@@ -126,10 +131,12 @@ export default function AIGallery({
               {faceSearchResults.length > 0 && (
                 <div className="ml-4 flex items-center gap-2 rounded-lg bg-blue-100 px-3 py-1 dark:bg-blue-900/30">
                   <UserSearch size={16} />
-                  <span className="text-sm">Face filter active ({faceSearchResults.length} matches)</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <span className="text-sm">
+                    Face filter active ({faceSearchResults.length} matches)
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="h-6 w-6 p-0"
                     onClick={() => setFaceSearchResults([])}
                   >

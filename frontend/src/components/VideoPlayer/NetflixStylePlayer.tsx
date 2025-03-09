@@ -18,7 +18,9 @@ interface NetflixStylePlayerProps {
   description: string;
 }
 
-export default function NetflixStylePlayer({videoSrc}: NetflixStylePlayerProps) {
+export default function NetflixStylePlayer({
+  videoSrc,
+}: NetflixStylePlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(1);
@@ -28,7 +30,6 @@ export default function NetflixStylePlayer({videoSrc}: NetflixStylePlayerProps) 
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     const showControlsTemporarily = () => {
@@ -56,7 +57,7 @@ export default function NetflixStylePlayer({videoSrc}: NetflixStylePlayerProps) 
     const hours = Math.floor(timeInSeconds / 3600);
     const minutes = Math.floor((timeInSeconds % 3600) / 60);
     const seconds = Math.floor(timeInSeconds % 60);
-  
+
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
@@ -72,14 +73,18 @@ export default function NetflixStylePlayer({videoSrc}: NetflixStylePlayerProps) 
 
   const handleProgress = () => {
     if (videoRef.current) {
-      setProgress((videoRef.current.currentTime / videoRef.current.duration) * 100);
+      setProgress(
+        (videoRef.current.currentTime / videoRef.current.duration) * 100,
+      );
     }
   };
 
   const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (videoRef.current) {
       const progressBar = e.currentTarget;
-      const clickPosition = (e.clientX - progressBar.getBoundingClientRect().left) / progressBar.offsetWidth;
+      const clickPosition =
+        (e.clientX - progressBar.getBoundingClientRect().left) /
+        progressBar.offsetWidth;
       videoRef.current.currentTime = clickPosition * videoRef.current.duration;
     }
   };
@@ -118,9 +123,11 @@ export default function NetflixStylePlayer({videoSrc}: NetflixStylePlayerProps) 
 
   return (
     <div ref={containerRef} className="relative aspect-video w-full bg-black">
-      
       {/* Clickable play/pause area above progress bar */}
-      <div className="absolute inset-0 flex items-center justify-center" onClick={togglePlay}>
+      <div
+        className="absolute inset-0 flex items-center justify-center"
+        onClick={togglePlay}
+      >
         <video
           ref={videoRef}
           src={videoSrc}
@@ -128,36 +135,60 @@ export default function NetflixStylePlayer({videoSrc}: NetflixStylePlayerProps) 
           onTimeUpdate={handleProgress}
           preload="auto"
         />
-       
       </div>
 
-      
-      
       {/* Progress Bar */}
-      <div className={`absolute bottom-16 left-0 right-0 px-4 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-     
-        <div className="h-1 w-full cursor-pointer bg-gray-600" onClick={handleProgressBarClick}>
-          <div className="h-full bg-red-600" style={{ width: `${progress}%` }} />
+      <div
+        className={`absolute bottom-16 left-0 right-0 px-4 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}
+      >
+        <div
+          className="h-1 w-full cursor-pointer bg-gray-600"
+          onClick={handleProgressBarClick}
+        >
+          <div
+            className="h-full bg-red-600"
+            style={{ width: `${progress}%` }}
+          />
         </div>
       </div>
 
       {/* Controls */}
-      <div className={`absolute bottom-4 left-0 right-0 flex items-center justify-between px-4 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+      <div
+        className={`absolute bottom-4 left-0 right-0 flex items-center justify-between px-4 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}
+      >
         <div className="flex items-center space-x-4">
-          <button onClick={() => skipTime(-10)} className="p-2 text-white"><Rewind size={24} /></button>
-          <button onClick={togglePlay} className="p-2 text-white">{isPlaying ? <Pause size={24} /> : <Play size={24} />}</button>
-          <button onClick={() => skipTime(10)} className="p-2 text-white"><FastForward size={24} /></button>
-          <div className='text-white'>
-            {formatTime(videoRef.current?.currentTime ?? 0) +" / " + 
-            formatTime(videoRef.current?.duration ?? 0)}
+          <button onClick={() => skipTime(-10)} className="p-2 text-white">
+            <Rewind size={24} />
+          </button>
+          <button onClick={togglePlay} className="p-2 text-white">
+            {isPlaying ? <Pause size={24} /> : <Play size={24} />}
+          </button>
+          <button onClick={() => skipTime(10)} className="p-2 text-white">
+            <FastForward size={24} />
+          </button>
+          <div className="text-white">
+            {formatTime(videoRef.current?.currentTime ?? 0) +
+              ' / ' +
+              formatTime(videoRef.current?.duration ?? 0)}
           </div>
         </div>
 
         {/* Volume and Fullscreen */}
         <div className="flex items-center space-x-4">
-          <button onClick={toggleMute} className="text-white">{isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}</button>
-          <Slider min={0} max={1} step={0.01} value={[isMuted ? 0 : volume]} onValueChange={handleVolumeChange} className="w-24" />
-          <button onClick={toggleFullScreen} className="text-white">{isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}</button>
+          <button onClick={toggleMute} className="text-white">
+            {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+          </button>
+          <Slider
+            min={0}
+            max={1}
+            step={0.01}
+            value={[isMuted ? 0 : volume]}
+            onValueChange={handleVolumeChange}
+            className="w-24"
+          />
+          <button onClick={toggleFullScreen} className="text-white">
+            {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+          </button>
         </div>
       </div>
     </div>

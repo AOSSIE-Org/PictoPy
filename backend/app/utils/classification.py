@@ -1,6 +1,6 @@
 import cv2
 from app.config.settings import DEFAULT_OBJ_DETECTION_MODEL
-from app.yolov8 import YOLOv8
+from app.yolov8.YOLOv8 import YOLOv8
 
 
 def get_classes(img_path):

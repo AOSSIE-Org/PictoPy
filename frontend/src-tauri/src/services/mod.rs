@@ -295,7 +295,11 @@ pub fn apply_sepia(img: &DynamicImage) -> DynamicImage {
     DynamicImage::ImageRgba8(sepia_img)
 }
 
-pub fn adjust_brightness_contrast(img: &DynamicImage, brightness: i32, contrast: i32) -> DynamicImage {
+pub fn adjust_brightness_contrast(
+    img: &DynamicImage,
+    brightness: i32,
+    contrast: i32,
+) -> DynamicImage {
     let (width, height) = img.dimensions();
     let mut adjusted_img = ImageBuffer::new(width, height);
 

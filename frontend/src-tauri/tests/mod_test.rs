@@ -1,40 +1,20 @@
-use std::path::{Path, PathBuf};
 use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::SystemTime;
 
-use chrono::{Utc, Datelike};
-use tempfile::tempdir;
+use chrono::{Datelike, Utc};
+use image::{DynamicImage, GenericImageView, ImageOutputFormat};
 use tauri::State;
-use image::{DynamicImage, ImageOutputFormat, GenericImageView};
+use tempfile::tempdir;
 
 use PictoPy::services::{
-    get_folders_with_images,
-    get_images_in_folder,
-    get_all_images_with_cache,
-    get_all_videos_with_cache,
-    share_file,
-    save_edited_image,
-    delete_cache,
-    move_to_secure_folder,
-    remove_from_secure_folder,
-    create_secure_folder,
-    unlock_secure_folder,
-    get_secure_media,
-    check_secure_folder_status,
-    get_random_memories,
-    apply_sepia,
-    adjust_brightness_contrast,
-    get_secure_folder_path,
-    generate_salt,
-    hash_password,
-    encrypt_data,
-    decrypt_data,
-    derive_key,
-    is_image_file,
-    SECURE_FOLDER_NAME,
-    FileService,
-    CacheService,
+    adjust_brightness_contrast, apply_sepia, check_secure_folder_status, create_secure_folder,
+    decrypt_data, delete_cache, derive_key, encrypt_data, generate_salt, get_all_images_with_cache,
+    get_all_videos_with_cache, get_folders_with_images, get_images_in_folder, get_random_memories,
+    get_secure_folder_path, get_secure_media, hash_password, is_image_file, move_to_secure_folder,
+    remove_from_secure_folder, save_edited_image, share_file, unlock_secure_folder, CacheService,
+    FileService, SECURE_FOLDER_NAME,
 };
 
 /// This unsafe helper is for testing only.

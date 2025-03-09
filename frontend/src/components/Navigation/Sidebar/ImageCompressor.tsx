@@ -12,7 +12,9 @@ interface CompressedImage {
 }
 
 const ImageCompressor: React.FC = () => {
-  const [compressedImages, setCompressedImages] = useState<CompressedImage[]>([]);
+  const [compressedImages, setCompressedImages] = useState<CompressedImage[]>(
+    [],
+  );
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
   const [compressionLevel, setCompressionLevel] = useState<number>(0.7);
   const [maxWidth, setMaxWidth] = useState<number>(1920);
@@ -107,7 +109,9 @@ const ImageCompressor: React.FC = () => {
         );
         setCompressedImages((prev) => [
           ...prev,
-          ...compressedFiles.filter((file): file is CompressedImage => file !== null),
+          ...compressedFiles.filter(
+            (file): file is CompressedImage => file !== null,
+          ),
         ]);
       } catch (error) {
         console.error('Error compressing images:', error);
@@ -227,7 +231,7 @@ const ImageCompressor: React.FC = () => {
       <div className="mb-4">
         <label
           htmlFor="file-upload"
-          className="inline-flex cursor-pointer items-center rounded bg-blue-500 px-4 py-2 text-white transition-colors hover:bg-blue-600"
+          className="rounded inline-flex cursor-pointer items-center bg-blue-500 px-4 py-2 text-white transition-colors hover:bg-blue-600"
         >
           <Upload className="mr-2" size={16} />
           Upload Images
@@ -288,7 +292,7 @@ const ImageCompressor: React.FC = () => {
               <img
                 src={image.previewUrl}
                 alt="Preview"
-                className="h-20 w-20 rounded object-cover"
+                className="rounded h-20 w-20 object-cover"
               />
               <div>
                 <p className="text-sm">
@@ -299,10 +303,13 @@ const ImageCompressor: React.FC = () => {
                 </p>
                 <p className="text-sm">
                   Saved:{' '}
-                  {((image.originalSize - image.compressedSize) / 1024).toFixed(2)} KB (
+                  {((image.originalSize - image.compressedSize) / 1024).toFixed(
+                    2,
+                  )}{' '}
+                  KB (
                   {(
                     ((image.originalSize - image.compressedSize) /
-                    image.originalSize) *
+                      image.originalSize) *
                     100
                   ).toFixed(2)}
                   %)

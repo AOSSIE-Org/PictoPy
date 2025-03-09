@@ -73,7 +73,7 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
           type="color"
           value={styles[key] as string}
           onChange={(e) => updateStyle(key, e.target.value)}
-          className="h-8 w-full rounded"
+          className="rounded h-8 w-full"
         />
       )}
       {type === 'range' && (
@@ -94,7 +94,7 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
         <select
           value={styles[key] as string}
           onChange={(e) => updateStyle(key, e.target.value)}
-          className="w-full rounded border bg-white p-2 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
+          className="rounded w-full border bg-white p-2 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
         >
           {options?.choices?.map((choice) => (
             <option key={choice} value={choice}>
@@ -111,12 +111,12 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
             onChange={(e) =>
               handleFileUpload(e, key === 'backgroundImage' ? 'image' : 'video')
             }
-            className="w-full rounded border bg-white p-2 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
+            className="rounded w-full border bg-white p-2 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
           />
           {styles.backgroundImage && (
             <button
               onClick={() => updateStyle('backgroundImage', '')}
-              className="mt-2 rounded bg-red-500 px-2 py-1 text-white transition-colors hover:bg-red-600"
+              className="rounded mt-2 bg-red-500 px-2 py-1 text-white transition-colors hover:bg-red-600"
             >
               Clear Background Image
             </button>
@@ -124,7 +124,7 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
           {styles.backgroundVideo && (
             <button
               onClick={() => updateStyle('backgroundVideo', '')}
-              className="mt-2 rounded bg-red-500 px-2 py-1 text-white transition-colors hover:bg-red-600"
+              className="rounded mt-2 bg-red-500 px-2 py-1 text-white transition-colors hover:bg-red-600"
             >
               Clear Background Video
             </button>
@@ -175,7 +175,7 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
                 presetThemes[e.target.value as keyof typeof presetThemes],
               )
             }
-            className="w-full rounded border bg-white p-2 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
+            className="rounded w-full border bg-white p-2 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
           >
             <option value="">Custom</option>
             {Object.keys(presetThemes).map((theme) => (

@@ -1,29 +1,29 @@
-import React, { useState, useCallback } from "react";
-import Cropper, { Area } from "react-easy-crop";
+import React, { useState, useCallback } from 'react';
+import Cropper, { Area } from 'react-easy-crop';
 
 interface AvatarCropperProps {
   image: string;
   onCropComplete: (croppedImage: string) => void;
 }
 
-const AvatarCropper: React.FC<AvatarCropperProps> = ({ image, onCropComplete }) => {
+const AvatarCropper: React.FC<AvatarCropperProps> = ({
+  image,
+  onCropComplete,
+}) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [croppedPreview, setCroppedPreview] = useState<string | null>(null);
 
   // Add type annotations for parameters
-  const handleCropComplete = useCallback(
-    (_: Area, croppedAreaPixels: Area) => {
-      setCroppedAreaPixels(croppedAreaPixels);
-    },
-    []
-  );
+  const handleCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
 
   const createImage = (url: string): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.crossOrigin = "anonymous";
+      img.crossOrigin = 'anonymous';
       img.src = url;
       img.onload = () => resolve(img);
       img.onerror = (error) => reject(error);
@@ -33,12 +33,12 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({ image, onCropComplete }) 
   // Add type annotation for crop parameter
   const getCroppedImg = async (imageSrc: string, crop: Area) => {
     const image = await createImage(imageSrc);
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
 
     // Add null check for canvas context
     if (!ctx) {
-      throw new Error("Canvas context not available");
+      throw new Error('Canvas context not available');
     }
 
     canvas.width = crop.width;
@@ -53,10 +53,10 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({ image, onCropComplete }) 
       0,
       0,
       crop.width,
-      crop.height
+      crop.height,
     );
 
-    return canvas.toDataURL("image/jpeg");
+    return canvas.toDataURL('image/jpeg');
   };
 
   const handleCropImage = async () => {
@@ -66,14 +66,14 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({ image, onCropComplete }) 
         onCropComplete(croppedImage);
         setCroppedPreview(croppedImage);
       } catch (error) {
-        console.error("Cropping failed:", error);
+        console.error('Cropping failed:', error);
       }
     }
   };
 
   return (
     <div className="flex flex-col items-center gap-4 p-4">
-      <div className="relative w-64 h-64 bg-gray-800">
+      <div className="relative h-64 w-64 bg-gray-800">
         <Cropper
           image={image}
           crop={crop}
@@ -83,8 +83,8 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({ image, onCropComplete }) 
           onZoomChange={setZoom}
           onCropComplete={handleCropComplete}
           classes={{
-            containerClassName: "rounded",
-            mediaClassName: "rounded",
+            containerClassName: 'rounded',
+            mediaClassName: 'rounded',
           }}
         />
       </div>
@@ -101,7 +101,7 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({ image, onCropComplete }) 
 
       <button
         onClick={handleCropImage}
-        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow"
+        className="rounded bg-blue-500 px-4 py-2 text-white shadow hover:bg-blue-600"
       >
         Crop
       </button>
@@ -112,7 +112,7 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({ image, onCropComplete }) 
           <img
             src={croppedPreview}
             alt="Cropped Preview"
-            className="border rounded shadow-md mt-2 w-32 h-32 object-cover"
+            className="rounded mt-2 h-32 w-32 border object-cover shadow-md"
           />
         </div>
       )}
