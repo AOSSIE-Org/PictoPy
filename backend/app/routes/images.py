@@ -455,7 +455,8 @@ async def add_folder(payload: dict):
             status_code=200,
             content={
                 "data": len(tasks),
-                "message": f"Processing {len(tasks)} images from the folder in the background",
+                "message": f"""Processing {len(tasks)} images from 
+                the folder in the background""",
                 "success": True,
             },
         )
@@ -475,7 +476,6 @@ async def add_folder(payload: dict):
         )
 
 
-# generate 400px width or height thumbnails for all the images present the given folder using pillow library
 @router.post("/generate-thumbnails")
 @exception_handler_wrapper
 def generate_thumbnails(payload: dict):
@@ -638,7 +638,8 @@ def delete_thumbnails(payload: dict):
             "status_code": 200,
             "content": {
                 "success": True,
-                "message": "All PictoPy.thumbnails folders have been successfully deleted.",
+                "message": """All PictoPy.thumbnails folders 
+                have been successfully deleted.""",
             },
         },
     )
