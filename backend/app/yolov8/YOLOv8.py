@@ -1,39 +1,48 @@
 import time
 import cv2
 import numpy as np
-import onnxruntime
-
+from app.utils.onnx_manager import onnx_session
 from app.yolov8.utils import xywh2xyxy, draw_detections, multiclass_nms
+from app.utils.memory_monitor import log_memory_usage
 
 
 class YOLOv8:
     def __init__(self, path, conf_thres=0.7, iou_thres=0.5):
+        self.model_path = path
         self.conf_threshold = conf_thres
         self.iou_threshold = iou_thres
 
-        # Initialize model
-        self.initialize_model(path)
+        # Initialize model info
+        with onnx_session(self.model_path) as session:
+            self.get_input_details(session)
+            self.get_output_details(session)
 
     def __call__(self, image):
         return self.detect_objects(image)
 
-    def initialize_model(self, path):
-        self.session = onnxruntime.InferenceSession(
-            path, providers=onnxruntime.get_available_providers()
-        )
-        # Get model info
-        self.get_input_details()
-        self.get_output_details()
-
+    @log_memory_usage
     def detect_objects(self, image):
-        input_tensor = self.prepare_input(image)
+        with onnx_session(self.model_path) as session:
+            input_tensor = self.prepare_input(image)
+            outputs = self.inference(session, input_tensor)
+            self.boxes, self.scores, self.class_ids = self.process_output(outputs)
+            return self.boxes, self.scores, self.class_ids
 
-        # Perform inference on the image
-        outputs = self.inference(input_tensor)
+    def inference(self, session, input_tensor):
+        time.perf_counter()
+        outputs = session.run(self.output_names, {self.input_names[0]: input_tensor})
+        return outputs
 
-        self.boxes, self.scores, self.class_ids = self.process_output(outputs)
+    def get_input_details(self, session):
+        model_inputs = session.get_inputs()
+        self.input_names = [model_inputs[i].name for i in range(len(model_inputs))]
+        self.input_shape = model_inputs[0].shape
+        self.input_height = self.input_shape[2]
+        self.input_width = self.input_shape[3]
 
-        return self.boxes, self.scores, self.class_ids
+    def get_output_details(self, session):
+        model_outputs = session.get_outputs()
+        self.output_names = [model_outputs[i].name for i in range(len(model_outputs))]
 
     def prepare_input(self, image):
         self.img_height, self.img_width = image.shape[:2]
@@ -49,15 +58,6 @@ class YOLOv8:
         input_tensor = input_img[np.newaxis, :, :, :].astype(np.float32)
 
         return input_tensor
-
-    def inference(self, input_tensor):
-        time.perf_counter()
-        outputs = self.session.run(
-            self.output_names, {self.input_names[0]: input_tensor}
-        )
-
-        # print(f"Inference time: {(time.perf_counter() - start)*1000:.2f} ms")
-        return outputs
 
     def process_output(self, output):
         predictions = np.squeeze(output[0]).T
@@ -111,18 +111,6 @@ class YOLOv8:
         return draw_detections(
             image, self.boxes, self.scores, self.class_ids, mask_alpha
         )
-
-    def get_input_details(self):
-        model_inputs = self.session.get_inputs()
-        self.input_names = [model_inputs[i].name for i in range(len(model_inputs))]
-
-        self.input_shape = model_inputs[0].shape
-        self.input_height = self.input_shape[2]
-        self.input_width = self.input_shape[3]
-
-    def get_output_details(self):
-        model_outputs = self.session.get_outputs()
-        self.output_names = [model_outputs[i].name for i in range(len(model_outputs))]
 
 
 if __name__ == "__main__":
