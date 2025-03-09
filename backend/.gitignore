@@ -132,3 +132,9 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+
+images/
+
+dist/
+tests/inputs/PictoPy.thumbnails/

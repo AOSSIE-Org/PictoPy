@@ -22,6 +22,7 @@ from app.schemas.album import (
 )
 
 
+
 router = APIRouter()
 
 
@@ -41,7 +42,6 @@ def create_new_album(payload:AlbumCreate):
             }
         )
     
-
 
 @router.delete(
     "/delete-album",
@@ -89,6 +89,7 @@ def add_multiple_images_to_album(payload: AddMultipleImagesRequest):
         except Exception as e:
 
             raise HTTPException(
+
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=ErrorResponse(
                     success=False,

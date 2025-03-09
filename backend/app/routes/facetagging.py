@@ -13,6 +13,8 @@ from app.schemas.facetagging import (
     GetRelatedImagesResponse
 )
 
+webcam_locks = {}
+
 router = APIRouter()
 
 @router.get(
@@ -21,10 +23,10 @@ router = APIRouter()
     responses= { code: { "model" : ErrorResponse } for code in [ 500 ] }
 )
 @exception_handler_wrapper
+
 def face_matching():
     try:
         all_embeddings = get_all_face_embeddings()
-
         similar_pairs = []
 
         for i, img1_data in enumerate(all_embeddings):
@@ -72,12 +74,14 @@ def face_matching():
     responses = { code : { "model" : ErrorResponse } for code in [ 500 ] }
 )
 @exception_handler_wrapper
+
 def face_clusters():
     try:
         cluster = get_face_cluster()
         raw_clusters = cluster.get_clusters()
 
         # Convert image IDs to paths
+
         formatted_clusters = {
             int(cluster_id): [get_path_from_id(image_id) for image_id in image_ids]
             for cluster_id, image_ids in raw_clusters.items()

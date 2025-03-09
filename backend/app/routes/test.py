@@ -1,6 +1,4 @@
-import os
 import cv2
-import shutil
 import asyncio
 from fastapi import APIRouter, status, HTTPException
 from app.config.settings import DEFAULT_FACE_DETECTION_MODEL, IMAGES_PATH
@@ -15,7 +13,9 @@ from app.schemas.test import (
     GetImagesResponse
 )
 
+
 router = APIRouter()
+
 
 async def run_get_classes(img_path):
     loop = asyncio.get_event_loop()
@@ -34,6 +34,7 @@ async def test_route(payload: TestRouteRequest):
 
 
         img_path = payload.path
+
         img = cv2.imread(img_path)
 
         if img is None:
@@ -45,14 +46,13 @@ async def test_route(payload: TestRouteRequest):
                     message=f"Failed to load image: {img_path}",
                     error="Failed to load image"
                 ).model_dump()
+
             )
 
             
         boxes, scores, class_ids = yolov8_detector(img)
         print(scores, "\n", class_ids)
         detected_classes = [class_names[x] for x in class_ids]
-
-
         
         asyncio.create_task(run_get_classes(img_path))
         
@@ -63,8 +63,9 @@ async def test_route(payload: TestRouteRequest):
                 class_ids=class_ids,
                 detected_classes=detected_classes
             )
+
         )
-    
+
     except Exception as e:
 
         raise HTTPException(

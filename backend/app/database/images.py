@@ -3,25 +3,22 @@ import os
 import json
 
 from app.config.settings import (
-    IMAGES_PATH,
-    IMAGES_DATABASE_PATH,
-    MAPPINGS_DATABASE_PATH,
+    DATABASE_PATH,
 )
 from app.facecluster.init_face_cluster import get_face_cluster
-from app.facenet.facenet import detect_faces
-from app.utils.classification import get_classes
-from app.utils.metadata import extract_metadata
 from app.database.albums import remove_image_from_all_albums
 
 
 def create_image_id_mapping_table():
-    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS image_id_mapping (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            path TEXT UNIQUE
+            path TEXT UNIQUE,
+            folder_id INTEGER,
+            FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
     """
     )
@@ -30,7 +27,7 @@ def create_image_id_mapping_table():
 
 
 def create_images_table():
-    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     create_image_id_mapping_table()
@@ -41,37 +38,25 @@ def create_images_table():
             id INTEGER PRIMARY KEY,
             class_ids TEXT,
             metadata TEXT,
-            FOREIGN KEY (id) REFERENCES image_id_mapping(id)
+            FOREIGN KEY (id) REFERENCES image_id_mapping(id) ON DELETE CASCADE
         )
     """
     )
 
-    # cursor.execute("SELECT path FROM image_id_mapping")
-    # db_paths = [row[0] for row in cursor.fetchall()]
-
-    # for filename in os.listdir(IMAGES_PATH):
-    #     file_path = os.path.abspath(os.path.join(IMAGES_PATH, filename))
-    #     if file_path not in db_paths:
-    #         print(f"Not in database: {file_path}")
-    #         class_ids = get_classes(file_path)
-    #         metadata = extract_metadata(file_path)
-    #         insert_image_db(file_path, class_ids, metadata)
-    #         detect_faces(file_path)
-    #     else:
-    #         print(f"Already in database: {file_path}")
     conn.commit()
     conn.close()
 
 
-def insert_image_db(path, class_ids, metadata):
-    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
+def insert_image_db(path, class_ids, metadata, folder_id=None):
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_path = os.path.abspath(path)
     class_ids_json = json.dumps(class_ids)
     metadata_json = json.dumps(metadata)
 
     cursor.execute(
-        "INSERT OR IGNORE INTO image_id_mapping (path) VALUES (?)", (abs_path,)
+        "INSERT OR IGNORE INTO image_id_mapping (path, folder_id) VALUES (?, ?)",
+        (abs_path, folder_id),
     )
     cursor.execute("SELECT id FROM image_id_mapping WHERE path = ?", (abs_path,))
     image_id = cursor.fetchone()[0]
@@ -89,7 +74,7 @@ def insert_image_db(path, class_ids, metadata):
 
 
 def delete_image_db(path):
-    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_path = os.path.abspath(path)
 
@@ -104,16 +89,16 @@ def delete_image_db(path):
         remove_image_from_all_albums(image_id)
         from app.database.faces import delete_face_embeddings
 
+        conn.commit()
+        conn.close()
         clusters = get_face_cluster()
         clusters.remove_image(image_id)
         delete_face_embeddings(image_id)
-
-    conn.commit()
     conn.close()
 
 
 def get_all_image_ids_from_db():
-    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM image_id_mapping")
     ids = [row[0] for row in cursor.fetchall()]
@@ -122,7 +107,7 @@ def get_all_image_ids_from_db():
 
 
 def get_path_from_id(image_id):
-    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT path FROM image_id_mapping WHERE id = ?", (image_id,))
     result = cursor.fetchone()
@@ -131,7 +116,7 @@ def get_path_from_id(image_id):
 
 
 def get_id_from_path(path):
-    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_path = os.path.abspath(path)
     cursor.execute("SELECT id FROM image_id_mapping WHERE path = ?", (abs_path,))
@@ -141,7 +126,7 @@ def get_id_from_path(path):
 
 
 def get_objects_db(path):
-    conn_images = sqlite3.connect(IMAGES_DATABASE_PATH)
+    conn_images = sqlite3.connect(DATABASE_PATH)
     cursor_images = conn_images.cursor()
     image_id = get_id_from_path(path)
 
@@ -158,12 +143,11 @@ def get_objects_db(path):
     class_ids_json = result[0]
     class_ids = json.loads(class_ids_json)
     if isinstance(class_ids, list):
-        class_ids = [str(class_id) for class_id in class_ids]  
+        class_ids = [str(class_id) for class_id in class_ids]
     else:
-        class_ids = class_ids.split(",") 
+        class_ids = class_ids.split(",")
 
-
-    conn_mappings = sqlite3.connect(MAPPINGS_DATABASE_PATH)
+    conn_mappings = sqlite3.connect(DATABASE_PATH)
     cursor_mappings = conn_mappings.cursor()
     class_names = []
     for class_id in class_ids:
@@ -180,10 +164,18 @@ def get_objects_db(path):
 
 
 def is_image_in_database(path):
-    conn = sqlite3.connect(IMAGES_DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_path = os.path.abspath(path)
     cursor.execute("SELECT COUNT(*) FROM image_id_mapping WHERE path = ?", (abs_path,))
     count = cursor.fetchone()[0]
     conn.close()
     return count > 0
+
+
+def get_all_image_paths():
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT path FROM image_id_mapping")
+        paths = [row[0] for row in cursor.fetchall()]
+        return paths if paths else []

@@ -5,16 +5,23 @@ from fastapi import APIRouter, Query, HTTPException, status
 from PIL import Image
 
 from app.config.settings import IMAGES_PATH
+
 from app.facenet.facenet import detect_faces
 from app.utils.classification import get_classes
 from app.utils.wrappers import exception_handler_wrapper
+from app.utils.generateThumbnails import generate_thumbnails_for_folders
 from app.database.images import (
     get_all_image_ids_from_db,
     get_path_from_id,
     insert_image_db,
     delete_image_db,
     get_objects_db,
-    extract_metadata,
+    get_all_image_paths,
+)
+from app.utils.metadata import extract_metadata
+from app.database.folders import (
+    insert_folder,
+    get_all_folders,
 )
 
 from app.schemas.images import (
@@ -33,10 +40,10 @@ from app.schemas.images import (
 router = APIRouter()
 
 
-async def run_get_classes(img_path):
+async def run_get_classes(img_path, folder_id=None):
     loop = asyncio.get_event_loop()
     result = await loop.run_in_executor(None, get_classes, img_path)
-    insert_image_db(img_path, result, extract_metadata(img_path))
+    insert_image_db(img_path, result, extract_metadata(img_path), folder_id)
     if result:
         classes = result.split(",")
         if "0" in classes and classes.count("0") < 8:
@@ -50,13 +57,7 @@ async def run_get_classes(img_path):
 )
 def get_images():
     try:
-        files = os.listdir(IMAGES_PATH)
-        image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
-        image_files = [
-            os.path.abspath(os.path.join(IMAGES_PATH, file))
-            for file in files
-            if os.path.splitext(file)[1].lower() in image_extensions
-        ]
+        image_files = get_all_image_paths()
 
         return GetImagesResponse(
             data = ImagesResponse(
@@ -142,6 +143,7 @@ async def add_multiple_images(payload: AddMultipleImagesRequest):
 
     except Exception as e:
 
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
@@ -205,6 +207,7 @@ def delete_image(payload: DeleteImageRequest):
     responses = { code : { "model":ErrorResponse } for code in [ 404,500 ] }
 )
 def delete_multiple_images(payload: DeleteMultipleImagesRequest):
+
     try:
         paths = payload.paths
         deleted_paths = []
@@ -277,8 +280,8 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
 )
 def get_all_image_objects():
     try:
-        folder_path = os.path.abspath(IMAGES_PATH)
-        print(folder_path)
+        folder_paths = get_all_folders()
+        generate_thumbnails_for_folders(folder_paths)
         image_ids = get_all_image_ids_from_db()
         data = {}
         for image_id in image_ids:
@@ -291,6 +294,7 @@ def get_all_image_objects():
             data={"images": data, "folder_path": folder_path},
             message="Successfully retrieved all image objects",
             success=True
+
         )
 
     except Exception as e:
@@ -366,6 +370,35 @@ async def add_folder(payload: AddFolderRequest):
                     message="The provided path is not a valid directory"
                 ).model_dump()
             )
+        if (
+            not os.access(folder_path, os.R_OK)
+            or not os.access(folder_path, os.W_OK)
+            or not os.access(folder_path, os.X_OK)
+        ):
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "status_code": 403,
+                    "content": {
+                        "success": False,
+                        "error": "Permission denied",
+                        "message": "The app does not have read and write permissions for the specified folder",
+                    },
+                },
+            )
+        folder_id = insert_folder(folder_path)
+        if folder_id is None:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "status_code": 400,
+                    "content": {
+                        "success": False,
+                        "error": "Folder not inserted",
+                        "message": "Could not insert folder",
+                    },
+                },
+            )
 
         image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
         tasks = []
@@ -377,13 +410,11 @@ async def add_folder(payload: AddFolderRequest):
                 file_path = os.path.join(root, file)
                 file_extension = os.path.splitext(file_path)[1].lower()
                 if file_extension in image_extensions:
-                    destination_path = os.path.join(IMAGES_PATH, file)
-
-                    if os.path.exists(destination_path):
-                        continue
-
-                    shutil.copy(file_path, destination_path)
-                    tasks.append(asyncio.create_task(run_get_classes(destination_path)))
+                    tasks.append(
+                        asyncio.create_task(
+                            run_get_classes(file_path, folder_id=folder_id)
+                        )
+                    )
 
         if not tasks:
             return AddFolderResponse(
@@ -498,6 +529,7 @@ def generate_thumbnails(payload: GenerateThumbnailsRequest):
 def delete_thumbnails(payload: DeleteThumbnailsRequest):
 
     folder_path = payload.folder_path
+
     if not os.path.isdir(folder_path):
 
         raise HTTPException(
@@ -540,7 +572,6 @@ def delete_thumbnails(payload: DeleteThumbnailsRequest):
                 failed_deletions=failed_deletions
             ).model_dump()
         )
-
 
     return DeleteThumbnailsResponse(
         success=True,
