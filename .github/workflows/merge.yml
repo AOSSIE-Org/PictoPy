@@ -6,12 +6,11 @@ on:
     types: [submitted]
   pull_request:
     paths:
-      - "backend/**"
       - "frontend/**"
 
 # This workflow will build your tauri app without uploading it anywhere.
 jobs:
-  test-tauri:
+  tauri-build-check:
     strategy:
       fail-fast: false
       matrix:

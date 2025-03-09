@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { UserSearch } from 'lucide-react';
-
+import ErrorPage from '@/components/ui/ErrorPage/ErrorPage';
 export default function AIGallery({
   title,
   type,
@@ -28,7 +28,7 @@ export default function AIGallery({
   type: 'image' | 'video';
   folderPath: string;
 }) {
-  const { successData, isLoading: isGeneratingTags } = usePictoQuery({
+  const { successData, error, isLoading: isGeneratingTags } = usePictoQuery({
     queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
@@ -98,12 +98,22 @@ export default function AIGallery({
     setCurrentPage(1);
   }, [filterTag, faceSearchResults]);
 
+  if (error) {
+    return <ErrorPage
+    errorCode={500}
+    errorMessage="Error loading media items."
+    details="An unexpected error occurred while loading media items. This may be due to a server issue or database failure. Please try again later."
+    onRetry={() => window.location.reload()}
+  />;
+  }
+
   if (isGeneratingThumbnails || isGeneratingTags) {
     return (
       <div>
         <LoadingScreen />
       </div>
     );
+    
   }
 
   return (

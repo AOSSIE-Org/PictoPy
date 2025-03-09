@@ -10,7 +10,6 @@ from app.database.albums import (
     get_album_photos,
     edit_album_description,
 )
-from app.utils.APIError import APIError
 from app.utils.wrappers import exception_handler_wrapper
 from app.config.settings import IMAGES_PATH
 
@@ -32,7 +31,7 @@ def create_new_album(payload: dict):
                 },
             },
         )
-    
+
     album_name = payload["name"]
     description = payload.get("description")
     is_hidden = payload.get("is_hidden", False)
@@ -58,7 +57,7 @@ def create_new_album(payload: dict):
             "data": {
                 "album_name": album_name,
                 "description": description,
-                "is_hidden": is_hidden
+                "is_hidden": is_hidden,
             },
             "message": f"Album '{album_name}' created successfully",
             "success": True,
