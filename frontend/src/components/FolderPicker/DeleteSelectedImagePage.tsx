@@ -42,7 +42,8 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
 
   const { mutate: deleteMultipleImages, isPending: isAddingImages } =
     usePictoMutation({
-      mutationFn: ( variables : { paths: string[],isFromDevice: boolean }) => delMultipleImages(variables.paths,variables.isFromDevice),
+      mutationFn: (variables: { paths: string[]; isFromDevice: boolean }) =>
+        delMultipleImages(variables.paths, variables.isFromDevice),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['all-images'] });
       },
@@ -59,20 +60,19 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
     );
   };
 
-  const [openDialog,setOpenDialog] = useState<boolean>(false);
+  const [openDialog, setOpenDialog] = useState<boolean>(false);
 
-  const handleAddSelectedImages = async (isFromDevice:boolean) => {
-
+  const handleAddSelectedImages = async (isFromDevice: boolean) => {
     setOpenDialog(true);
-    console.log("Selected Images = ",selectedImages);
-    if(isFromDevice) {
-      console.log("Yes , Want to delete from this Device too");
+    console.log('Selected Images = ', selectedImages);
+    if (isFromDevice) {
+      console.log('Yes , Want to delete from this Device too');
     } else {
-      console.log("Only want to delete from this Application");
+      console.log('Only want to delete from this Application');
     }
     if (selectedImages.length > 0) {
       try {
-        await deleteMultipleImages({paths:selectedImages,isFromDevice});
+        await deleteMultipleImages({ paths: selectedImages, isFromDevice });
         console.log('Selected Images : ', selectedImages);
         setSelectedImages([]);
         if (!isLoading) {
@@ -191,13 +191,13 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
           );
         })}
       </div>
-      { openDialog && 
+      {openDialog && (
         <DeleteImagesDialog
           isOpen={openDialog}
           setIsOpen={setOpenDialog}
           executeDeleteImages={handleAddSelectedImages}
         />
-      }
+      )}
       <div className="fixed bottom-0 left-0 right-0 z-50 mb-4 flex justify-evenly bg-transparent p-4 shadow-lg">
         <Button
           variant="secondary"
@@ -206,7 +206,7 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
           Cancel
         </Button>
         <Button
-          onClick={()=>setOpenDialog(true)}
+          onClick={() => setOpenDialog(true)}
           variant="destructive"
           disabled={isAddingImages || selectedImages.length === 0}
         >

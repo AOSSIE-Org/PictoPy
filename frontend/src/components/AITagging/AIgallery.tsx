@@ -4,9 +4,7 @@ import MediaGrid from '../Media/Mediagrid';
 import MediaView from '../Media/MediaView';
 import PaginationControls from '../ui/PaginationControls';
 import { usePictoQuery } from '@/hooks/useQueryExtensio';
-import {
-  getAllImageObjects,
-} from '../../../api/api-functions/images';
+import { getAllImageObjects } from '../../../api/api-functions/images';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +30,7 @@ export default function AIGallery({
     queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
- 
+
   let mediaItems = successData ?? [];
   const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -82,8 +80,6 @@ export default function AIGallery({
     setShowMediaViewer(false);
   }, []);
 
-
-  
   if (error) {
     return (
       <ErrorPage
@@ -94,7 +90,6 @@ export default function AIGallery({
       />
     );
   }
-
 
   return (
     <div className="w-full">
@@ -189,7 +184,7 @@ export default function AIGallery({
             allMedia={filteredMediaItems.map((item: any) => ({
               url: item.url,
               path: item?.imagePath,
-              thumbnailUrl : item.thumbnailUrl
+              thumbnailUrl: item.thumbnailUrl,
             }))}
             currentPage={currentPage}
             itemsPerPage={pageNo}

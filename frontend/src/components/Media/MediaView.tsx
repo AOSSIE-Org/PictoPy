@@ -26,7 +26,6 @@ import { useNavigate } from 'react-router-dom';
 import NetflixStylePlayer from '../VideoPlayer/NetflixStylePlayer';
 import { save } from '@tauri-apps/plugin-dialog';
 
-
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
   onClose,
@@ -449,10 +448,11 @@ const MediaView: React.FC<MediaViewProps> = ({
                   alt={`image-${globalIndex}`}
                   onError={(e) => {
                     const img = e.target as HTMLImageElement;
-                    img.onerror = null; 
-                    img.src = allMedia[globalIndex].thumbnailUrl ||
-                    allMedia[globalIndex].url ||
-                    "/PictoPy_Logo.png"; // Ensure a valid fallback
+                    img.onerror = null;
+                    img.src =
+                      allMedia[globalIndex].thumbnailUrl ||
+                      allMedia[globalIndex].url ||
+                      '/PictoPy_Logo.png'; // Ensure a valid fallback
                   }}
                   style={{
                     filter: `${filter} brightness(${brightness}%) contrast(${contrast}%)`,
@@ -461,16 +461,20 @@ const MediaView: React.FC<MediaViewProps> = ({
               </ReactCrop>
             ) : (
               <img
-                src={allMedia[globalIndex].url || allMedia[globalIndex].thumbnailUrl}
+                src={
+                  allMedia[globalIndex].url ||
+                  allMedia[globalIndex].thumbnailUrl
+                }
                 alt={`image-${globalIndex}`}
                 draggable={false}
                 className="h-full w-full select-none object-contain"
                 onError={(e) => {
                   const img = e.target as HTMLImageElement;
-                  img.onerror = null; 
-                  img.src = allMedia[globalIndex].thumbnailUrl ||
-                  allMedia[globalIndex].url ||
-                  "/PictoPy_Logo.png"; // Ensure a valid fallback
+                  img.onerror = null;
+                  img.src =
+                    allMedia[globalIndex].thumbnailUrl ||
+                    allMedia[globalIndex].url ||
+                    '/PictoPy_Logo.png'; // Ensure a valid fallback
                 }}
                 style={{
                   transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,

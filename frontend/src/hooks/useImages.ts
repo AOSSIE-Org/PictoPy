@@ -22,7 +22,7 @@ interface ResponseData {
 }
 
 export const extractThumbnailPath = (imagePath: string) => {
-  const thumbnailPath=localStorage.getItem("thumbnailPath");
+  const thumbnailPath = localStorage.getItem('thumbnailPath');
   const cleanedImagePath = imagePath.replace(/\\/g, '/'); // Replaces all '\' with '/'
   const thumbnailImageName = cleanedImagePath.split('/').pop() || '';
   return `${thumbnailPath}/${thumbnailImageName}`;
