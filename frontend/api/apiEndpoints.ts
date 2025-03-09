@@ -21,3 +21,10 @@ export const albumEndpoints = {
   editAlbumDescription: `${BACKED_URL}/albums/edit-album-description`,
   addMultipleToAlbums: `${BACKED_URL}/albums/multiple-images`,
 };
+
+export const faceTaggingEndpoints = {
+  match: `${BACKED_URL}/tag/match`,
+  clusters: `${BACKED_URL}/tag/clusters`,
+  relatedImages: `${BACKED_URL}/tag/related-images`,
+  searchByFace: `${BACKED_URL}/tag/search-by-face`,
+};

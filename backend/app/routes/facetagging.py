@@ -1,10 +1,22 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, File, UploadFile, Form, WebSocket
 from fastapi.responses import JSONResponse
 from app.database.faces import get_all_face_embeddings
 from app.database.images import get_path_from_id
 from app.facecluster.init_face_cluster import get_face_cluster
 from app.facenet.preprocess import cosine_similarity
 from app.utils.path_id_mapping import get_id_from_path
+from app.facenet.facenet import extract_face_embeddings, detect_faces
+from app.yolov8.YOLOv8 import YOLOv8
+from app.config.settings import DEFAULT_FACE_DETECTION_MODEL
+import os
+import tempfile
+import uuid
+import cv2
+import base64
+import json
+import asyncio
+
+webcam_locks = {}
 
 router = APIRouter()
 
@@ -12,14 +24,13 @@ router = APIRouter()
 def face_matching():
     try:
         all_embeddings = get_all_face_embeddings()
-
         similar_pairs = []
-
+        
         for i, img1_data in enumerate(all_embeddings):
             for j, img2_data in enumerate(all_embeddings):
                 if i >= j:
                     continue
-
+                
                 for embedding1 in img1_data["embeddings"]:
                     for embedding2 in img2_data["embeddings"]:
                         similarity = cosine_similarity(embedding1, embedding2)
@@ -43,21 +54,18 @@ def face_matching():
             content={
                 "data": {"similar_pairs": similar_pairs},
                 "message": "Successfully matched face embeddings",
-                "success": True
-            }
+                "success": True,
+            },
         )
 
     except Exception as e:
         return JSONResponse(
             status_code=500,
             content={
-                "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e)
-                }
-            }
+                "success": False,
+                "error": "Internal server error",
+                "message": str(e),
+            },
         )
 
 @router.get("/clusters")
@@ -65,33 +73,25 @@ def face_clusters():
     try:
         cluster = get_face_cluster()
         raw_clusters = cluster.get_clusters()
-
-        # Convert image IDs to paths
-        formatted_clusters = {}
-        for cluster_id, image_ids in raw_clusters.items():
-            formatted_clusters[int(cluster_id)] = [
-                get_path_from_id(image_id) for image_id in image_ids
-            ]
-
+        
+        formatted_clusters = {int(cluster_id): [get_path_from_id(image_id) for image_id in image_ids] for cluster_id, image_ids in raw_clusters.items()}
+        
         return JSONResponse(
             status_code=200,
             content={
                 "data": {"clusters": formatted_clusters},
                 "message": "Successfully retrieved face clusters",
-                "success": True
-            }
+                "success": True,
+            },
         )
     except Exception as e:
         return JSONResponse(
             status_code=500,
             content={
-                "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e)
-                }
-            }
+                "success": False,
+                "error": "Internal server error",
+                "message": str(e),
+            },
         )
 
 @router.get("/related-images")
@@ -107,18 +107,15 @@ def get_related_images(path: str = Query(..., description="full path to the imag
             content={
                 "data": {"related_images": related_image_paths},
                 "message": f"Successfully retrieved related images for {path}",
-                "success": True
-            }
+                "success": True,
+            },
         )
     except Exception as e:
         return JSONResponse(
             status_code=500,
             content={
-                "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e)
-                }
-            }
+                "success": False,
+                "error": "Internal server error",
+                "message": str(e),
+            },
         )
