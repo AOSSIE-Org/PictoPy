@@ -3,7 +3,7 @@ import FolderPicker from '@/components/FolderPicker/FolderPicker';
 import { deleteCache } from '@/services/cacheService';
 import { Button } from '@/components/ui/button';
 import { restartServer } from '@/utils/serverUtils';
-import { isProd } from '@/utils/isProd';
+import { isProd } from '../../utils/isProd';
 import { FolderSync, Trash2, Server } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/LocalStorage';
 import LoadingScreen from '@/components/ui/LoadingScreen/LoadingScreen';
