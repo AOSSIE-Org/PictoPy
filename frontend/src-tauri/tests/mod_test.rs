@@ -1,18 +1,14 @@
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use std::time::SystemTime;
+use std::path::Path;
 
-use chrono::{Datelike, Utc};
 use image::{DynamicImage, GenericImageView, ImageOutputFormat};
 use tauri::State;
 use tempfile::tempdir;
 
 use PictoPy::services::{
     adjust_brightness_contrast, apply_sepia, check_secure_folder_status, create_secure_folder,
-    decrypt_data, delete_cache, derive_key, encrypt_data, generate_salt, get_all_images_with_cache,
-    get_all_videos_with_cache, get_folders_with_images, get_images_in_folder, get_random_memories,
-    get_secure_folder_path, get_secure_media, hash_password, is_image_file, move_to_secure_folder,
+    decrypt_data, derive_key, encrypt_data, generate_salt, get_folders_with_images, get_images_in_folder, get_random_memories,
+    get_secure_folder_path, hash_password, is_image_file, move_to_secure_folder,
     remove_from_secure_folder, save_edited_image, share_file, unlock_secure_folder, CacheService,
     FileService, SECURE_FOLDER_NAME,
 };
