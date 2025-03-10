@@ -103,5 +103,5 @@ def run_async_task():
 
 def start_scheduler():
     scheduler = BackgroundScheduler()
-    scheduler.add_job(run_async_task, "interval", seconds=1)
+    scheduler.add_job(run_async_task, "interval", minutes=15)
     scheduler.start()
