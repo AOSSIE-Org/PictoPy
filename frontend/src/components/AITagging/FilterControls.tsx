@@ -29,7 +29,6 @@ import WebcamCapture from './WebcamCapture';
 interface FilterControlsProps {
   setFilterTag: (tag: string[]) => void;
   mediaItems: MediaItem[];
-  onFolderAdded: () => Promise<void>;
   isLoading: boolean;
   isVisibleSelectedImage: boolean;
   setIsVisibleSelectedImage: (value: boolean) => void;
@@ -39,7 +38,6 @@ interface FilterControlsProps {
 export default function FilterControls({
   setFilterTag,
   mediaItems,
-  onFolderAdded,
   isLoading,
   isVisibleSelectedImage,
   setIsVisibleSelectedImage,
@@ -111,7 +109,7 @@ export default function FilterControls({
   const handleFolderPick = async (path: string) => {
     try {
       addFolderAPI(path);
-      await onFolderAdded();
+      // await onFolderAdded();
     } catch (error) {
       console.error('Error adding folder:', error);
     }

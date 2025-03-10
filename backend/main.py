@@ -17,7 +17,9 @@ from app.routes.images import router as images_router
 from app.routes.albums import router as albums_router
 from app.routes.facetagging import router as tagging_router
 import multiprocessing
+from app.scheduler import start_scheduler
 from app.custom_logging import CustomizeLogger
+
 
 
 @asynccontextmanager
@@ -37,6 +39,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+start_scheduler()
 
 
 # Add CORS middleware
