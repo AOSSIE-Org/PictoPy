@@ -320,7 +320,11 @@ pub fn apply_saturation(img: &DynamicImage, factor: f32) -> DynamicImage {
     DynamicImage::ImageRgb8(saturated)
 }
 
-pub fn adjust_brightness_contrast(img: &DynamicImage, brightness: i32, contrast: i32) -> DynamicImage {
+pub fn adjust_brightness_contrast(
+    img: &DynamicImage,
+    brightness: i32,
+    contrast: i32,
+) -> DynamicImage {
     let mut adjusted = img.to_rgb8();
     for pixel in adjusted.pixels_mut() {
         for c in 0..3 {
