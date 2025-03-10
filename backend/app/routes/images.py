@@ -25,7 +25,8 @@ from app.utils.metadata import extract_metadata
 from app.database.folders import (
     insert_folder,
     get_all_folders,
-    get_folder_id_from_path
+    get_folder_id_from_path,
+    delete_folder
 )
 
 router = APIRouter()
