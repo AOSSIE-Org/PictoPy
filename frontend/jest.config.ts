@@ -9,6 +9,7 @@ const config: Config.InitialOptions = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|less|sass|scss)$': 'identity-obj-proxy',
+    'utils/isProd$': '<rootDir>/__mocks__/isProd.ts',
   },
   transformIgnorePatterns: ['/node_modules/(?!(ldrs)/)'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],

@@ -11,9 +11,10 @@ def preprocess_image(image):
     image /= 255.0
     return image
 
+
 def normalize_embedding(embedding):
     return embedding / np.linalg.norm(embedding)
 
+
 def cosine_similarity(embedding1, embedding2):
     return np.dot(embedding1, embedding2)
-

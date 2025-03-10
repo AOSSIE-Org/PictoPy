@@ -17,7 +17,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-
+import { UserSearch } from 'lucide-react';
+import ErrorPage from '@/components/ui/ErrorPage/ErrorPage';
 export default function AIGallery({
   title,
   type,
@@ -28,19 +29,18 @@ export default function AIGallery({
   folderPath: string;
 }) {
   const {
-    successData: mediaItems = [],
-    isLoading: loading,
-    isError,
+    successData,
+    error,
+    isLoading: isGeneratingTags,
   } = usePictoQuery({
-    queryFn: getAllImageObjects,
+    queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
-  const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation(
-    {
+  const { mutate: generateThumbnailAPI, isPending: isGeneratingThumbnails } =
+    usePictoMutation({
       mutationFn: generateThumbnails,
       autoInvalidateTags: ['ai-tagging-images', 'ai'],
-    },
-  );
+    });
   let mediaItems = successData ?? [];
   const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -48,23 +48,30 @@ export default function AIGallery({
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
   const [isVisibleSelectedImage, setIsVisibleSelectedImage] =
     useState<boolean>(true);
-  const [pageNo, setPageNo] = useState<number>(20);
+  const [faceSearchResults, setFaceSearchResults] = useState<string[]>([]);
+
   const itemsPerRow: number = 3;
   const noOfPages: number[] = Array.from(
     { length: 41 },
     (_, index) => index + 10,
   );
-  const filteredMediaItems = useMemo(() => { 
+
+  const filteredMediaItems = useMemo(() => {
+    let filtered = mediaItems;
+    if (faceSearchResults.length > 0) {
+      filtered = filtered.filter((item: any) =>
+        faceSearchResults.includes(item.imagePath),
+      );
+    }
+
     return filterTag.length > 0
-      ? mediaItems.filter((mediaItem: any) =>
-          filterTag.some((tag) => mediaItem.tags.includes(tag))
+      ? filtered.filter((mediaItem: any) =>
+          filterTag.some((tag) => mediaItem.tags.includes(tag)),
         )
-      : mediaItems;
-  }, [filterTag, mediaItems, loading])
+      : filtered;
+  }, [filterTag, mediaItems, isGeneratingTags, faceSearchResults]);
 
-
-const [pageNo,setpageNo] = useState<number>(20);
-
+  const [pageNo, setpageNo] = useState<number>(20);
 
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * pageNo;
@@ -84,19 +91,34 @@ const [pageNo,setpageNo] = useState<number>(20);
   }, []);
 
   const handleFolderAdded = useCallback(async () => {
-    await generateThumbnail(folderPath);
-  }, [folderPath, generateThumbnail]);
+    generateThumbnailAPI([folderPath]);
+  }, []);
 
   useEffect(() => {
-    handleFolderAdded();
-  }, [folderPath, handleFolderAdded]);
+    generateThumbnailAPI([folderPath]);
+  }, [folderPath]);
 
-  if (isCreating || loading) {
-    return <LoadingScreen />;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterTag, faceSearchResults]);
+
+  if (error) {
+    return (
+      <ErrorPage
+        errorCode={500}
+        errorMessage="Error loading media items."
+        details="An unexpected error occurred while loading media items. This may be due to a server issue or database failure. Please try again later."
+        onRetry={() => window.location.reload()}
+      />
+    );
   }
 
-  if (isError) {
-    return <div>Error loading media items.</div>;
+  if (isGeneratingThumbnails || isGeneratingTags) {
+    return (
+      <div>
+        <LoadingScreen />
+      </div>
+    );
   }
 
   return (
@@ -104,15 +126,34 @@ const [pageNo,setpageNo] = useState<number>(20);
       <div className="mx-auto px-2 pb-8 dark:bg-background dark:text-foreground">
         <div className="mb-2 flex items-center justify-between">
           {isVisibleSelectedImage && (
-            <h1 className="text-2xl font-bold">{title}</h1>
+            <div className="flex items-center">
+              <h1 className="text-2xl font-bold">{title}</h1>
+              {faceSearchResults.length > 0 && (
+                <div className="ml-4 flex items-center gap-2 rounded-lg bg-blue-100 px-3 py-1 dark:bg-blue-900/30">
+                  <UserSearch size={16} />
+                  <span className="text-sm">
+                    Face filter active ({faceSearchResults.length} matches)
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => setFaceSearchResults([])}
+                  >
+                    ×
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
           <FilterControls
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
             onFolderAdded={handleFolderAdded}
-            isLoading={loading}
+            isLoading={isGeneratingTags}
             isVisibleSelectedImage={isVisibleSelectedImage}
             setIsVisibleSelectedImage={setIsVisibleSelectedImage}
+            setFaceSearchResults={setFaceSearchResults}
           />
         </div>
 
@@ -131,7 +172,6 @@ const [pageNo,setpageNo] = useState<number>(20);
                 onPageChange={setCurrentPage}
               />
 
-              {/* Dropdown Menu - Right-Aligned */}
               <div className="absolute right-0 mt-5">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -140,7 +180,7 @@ const [pageNo,setpageNo] = useState<number>(20);
                       className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
                     >
                       <p className="hidden lg:inline">
-                        Num of images per page: {pageNo}
+                        Num of images per page : {pageNo}
                       </p>
                     </Button>
                   </DropdownMenuTrigger>
@@ -150,7 +190,7 @@ const [pageNo,setpageNo] = useState<number>(20);
                   >
                     <DropdownMenuRadioGroup
                       className="cursor-pointer overflow-auto bg-gray-950 p-4"
-                      onValueChange={(value) => setPageNo(Number(value))}
+                      onValueChange={(value) => setpageNo(Number(value))}
                     >
                       {noOfPages.map((itemsPerPage) => (
                         <DropdownMenuRadioItem

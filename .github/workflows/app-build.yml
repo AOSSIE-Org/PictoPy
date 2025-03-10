@@ -1,0 +1,199 @@
+name: Build and Release
+
+on:
+  workflow_dispatch: # Ability to manually trigger the workflow
+
+jobs:
+  build-server-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build executable with PyInstaller
+        run: |
+          cd backend
+          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
+
+      - name: Copy app folder
+        run: |
+          cd backend
+          mkdir dist/PictoPy_Server/images
+          robocopy app dist\PictoPy_Server\app /e
+          if ($LASTEXITCODE -le 1) { exit 0 }
+
+      - name: Create ZIP package
+        run: |
+          cd backend/dist/PictoPy_Server
+          tar -a -c -f PictoPy-Windows.zip .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PictoPy-Windows
+          path: backend/dist/PictoPy_Server/PictoPy-Windows.zip
+
+  build-server-ubuntu:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build executable with PyInstaller
+        run: |
+          cd backend
+          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
+
+      - name: Copy app folder
+        run: |
+          cd backend
+          mkdir -p dist/PictoPy_Server/images
+          mkdir -p dist/PictoPy_Server/app
+          cp -r app/* dist/PictoPy_Server/app/
+
+      - name: Create ZIP package
+        run: |
+          cd backend/dist/PictoPy_Server
+          zip -r PictoPy-Ubuntu.zip .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PictoPy-Ubuntu
+          path: backend/dist/PictoPy_Server/PictoPy-Ubuntu.zip
+
+  build-server-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build executable with PyInstaller
+        run: |
+          cd backend
+          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
+
+      - name: Copy app folder
+        run: |
+          cd backend
+          mkdir -p dist/PictoPy_Server/images
+          mkdir -p dist/PictoPy_Server/app
+          cp -r app/* dist/PictoPy_Server/app/
+
+      - name: Create ZIP package
+        run: |
+          cd backend/dist/PictoPy_Server
+          zip -r PictoPy-MacOS.zip .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PictoPy-MacOS
+          path: backend/dist/PictoPy_Server/PictoPy-MacOS.zip
+
+  publish-tauri:
+    permissions:
+      contents: write
+    needs: [build-server-windows, build-server-ubuntu, build-server-macos]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest"
+            args: "--target aarch64-apple-darwin"
+            artifact: "PictoPy-MacOS"
+          - platform: "ubuntu-22.04"
+            args: ""
+            artifact: "PictoPy-Ubuntu"
+          - platform: "windows-latest"
+            args: ""
+            artifact: "PictoPy-Windows"
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create dist directory
+        shell: bash
+        run: mkdir -p backend/dist
+
+      - name: Download and extract server artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: backend/dist
+
+      - name: Extract server files
+        shell: bash
+        run: |
+          cd backend/dist
+          unzip -o *.zip
+          rm *.zip
+          ls -l
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
+
+      - name: Install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5NlF2SjE3cWNXOVlQQ0JBTlNITEpOUVoyQ3ZuNTdOSkwyNE1NN2RmVWQ1a0FBQkFBQUFBQUFBQUFBQUlBQUFBQU9XOGpTSFNRd0Q4SjNSbm5Oc1E0OThIUGx6SS9lWXI3ZjJxN3BESEh1QTRiQXlkR2E5aG1oK1g0Tk5kcmFzc0IvZFZScEpubnptRkxlbDlUR2R1d1Y5OGRSYUVmUGoxNTFBcHpQZ1dSS2lHWklZVHNkV1Byd1VQSnZCdTZFWlVGOUFNVENBRlgweUU9Cg==
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: pass
+        with:
+          projectPath: ./frontend
+          tagName: app-v__VERSION__
+          releaseName: "PictoPy v__VERSION__"
+          releaseBody: "See the assets to download this version and install."
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

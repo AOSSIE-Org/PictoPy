@@ -4,22 +4,23 @@
   "local": true,
   "windows": ["main"],
   "permissions": [
-    "path:default",
-    "event:default",
-    "window:default",
-    "app:default",
-    "resources:default",
-    "menu:default",
-    "tray:default",
+    "core:path:default",
+    "core:event:default",
+    "core:window:default",
+    "core:app:default",
+    "core:resources:default",
+    "core:menu:default",
+    "core:tray:default",
     "shell:allow-open",
-    "path:default",
-    "event:default",
-    "window:default",
-    "app:default",
-    "resources:default",
-    "menu:default",
-    "tray:default",
-    "window:allow-set-title",
+    "core:path:default",
+    "core:event:default",
+    "core:window:default",
+    "core:window:allow-destroy",
+    "core:app:default",
+    "core:resources:default",
+    "core:menu:default",
+    "core:tray:default",
+    "core:window:allow-set-title",
     "dialog:allow-open",
     "fs:default",
     "fs:allow-app-write",
@@ -85,6 +86,54 @@
     },
     "shell:default",
     "dialog:default",
-    "dialog:default"
+    "dialog:default",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "StartServerUnix",
+          "cmd": "bash",
+          "args": ["-c", "./PictoPy_Server"],
+          "sidecar": false
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "StartServerWindows",
+          "cmd": "powershell",
+          "args": ["./PictoPy_Server"],
+          "sidecar": false
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "killProcessUnix",
+          "cmd": "bash",
+          "args": ["-c", "pkill -f PictoPy_Server"],
+          "sidecar": false
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "killProcessWindows",
+          "cmd": "powershell",
+          "args": ["taskkill /t /f /im PictoPy_Server.exe"],
+          "sidecar": false
+        }
+      ]
+    },
+    "shell:default",
+    "fs:default",
+    "dialog:default",
+    "store:default"
   ]
 }

@@ -15,12 +15,8 @@ import {
 } from '../../../api/api-functions/albums';
 
 const AlbumsView: React.FC = () => {
-  const {
-    successData: albums,
-    isLoading,
-    error,
-  } = usePictoQuery({
-    queryFn: fetchAllAlbums,
+  const { successData: albums, isLoading } = usePictoQuery({
+    queryFn: async () => await fetchAllAlbums(false),
     queryKey: ['all-albums'],
   });
 
@@ -64,11 +60,8 @@ const AlbumsView: React.FC = () => {
         <div className="text-center">No albums found.</div>
         <CreateAlbumForm
           isOpen={isCreateFormOpen}
-          onClose={() => setIsCreateFormOpen(false)}
-          onSuccess={() => {
-            setIsCreateFormOpen(false);
-          }}
-          onError={(err) => showErrorDialog('Error', err)}
+          closeForm={() => setIsCreateFormOpen(false)}
+          onError={(title, err) => showErrorDialog(title, err)}
         />
         <ErrorDialog
           content={errorDialogContent}
@@ -86,18 +79,18 @@ const AlbumsView: React.FC = () => {
   }));
 
   const handleAlbumClick = (albumId: string) => {
-    const album = albums.find((a) => a.album_name === albumId);
+    const album = albums.find((a: Album) => a.album_name === albumId);
     if (album?.is_hidden) {
-      const password = prompt("Enter the password for this hidden album:");
+      const password = prompt('Enter the password for this hidden album:');
       if (password === album.password) {
         setCurrentAlbum(albumId);
       } else {
-        alert("Incorrect password.");
+        alert('Incorrect password.');
       }
     } else {
       setCurrentAlbum(albumId);
     }
-  };  
+  };
 
   const handleDeleteAlbum = async (albumId: string) => {
     try {
@@ -147,11 +140,8 @@ const AlbumsView: React.FC = () => {
 
       <CreateAlbumForm
         isOpen={isCreateFormOpen}
-        onClose={() => setIsCreateFormOpen(false)}
-        onSuccess={() => {
-          setIsCreateFormOpen(false);
-        }}
-        onError={(err) => showErrorDialog('Error', err)}
+        closeForm={() => setIsCreateFormOpen(false)}
+        onError={(title, err) => showErrorDialog(title, err)}
       />
 
       <EditAlbumDialog

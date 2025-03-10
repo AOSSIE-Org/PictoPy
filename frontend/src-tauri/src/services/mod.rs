@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use tauri::State;
 mod cache_service;
@@ -7,21 +7,23 @@ mod file_service;
 pub use cache_service::CacheService;
 use chrono::{DateTime, Datelike, Utc};
 use data_encoding::BASE64;
-use serde::{Serialize, Deserialize};
-use std::num::NonZeroU32;
-use ring::rand::{SystemRandom, SecureRandom};
+use directories::ProjectDirs;
+pub use file_service::FileService;
+use std::fs;  
+use rand::seq::SliceRandom;
+use std::process::Command;
+use image::{DynamicImage, Rgba, RgbaImage};
+use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
 use ring::digest;
 use ring::pbkdf2;
-use ring::aead::{self, Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
-pub use file_service::FileService;
-use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba, RgbaImage};
-use std::fs;  
-use directories::ProjectDirs; 
-use rand::seq::SliceRandom;
-use std::collections::HashSet; 
-use std::process::Command;
+use ring::rand::{SecureRandom, SystemRandom};
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::num::NonZeroU32;
+use tauri::path::BaseDirectory;
+use tauri::Manager;
 
-const SECURE_FOLDER_NAME: &str = "secure_folder";
+pub const SECURE_FOLDER_NAME: &str = "secure_folder";
 const SALT_LENGTH: usize = 16;
 const NONCE_LENGTH: usize = 12;
 
@@ -30,7 +32,6 @@ pub struct SecureMedia {
     pub id: String,
     pub url: String,
     pub path: String,
-    // pub base64_image: BASE64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -67,7 +68,7 @@ pub fn get_images_in_folder(
 pub fn get_all_images_with_cache(
     state: tauri::State<FileService>,
     cache_state: tauri::State<CacheService>,
-    directory: &str,
+    directories: Vec<String>,
 ) -> Result<HashMap<u32, HashMap<u32, Vec<String>>>, String> {
     let cached_images = cache_state.get_cached_images();
 
@@ -92,35 +93,35 @@ pub fn get_all_images_with_cache(
         }
         map
     } else {
-        let all_images = state.get_all_images(directory);
         let mut map: HashMap<u32, HashMap<u32, Vec<String>>> = HashMap::new();
+        let mut all_image_paths: Vec<PathBuf> = Vec::new();
 
-        for path in all_images {
-            if let Ok(metadata) = std::fs::metadata(&path) {
-                let date = metadata
-                    .created()
-                    .or_else(|_| metadata.modified())
-                    .unwrap_or_else(|_| SystemTime::now());
+        for directory in directories {
+            let all_images = state.get_all_images(&directory);
 
-                let datetime: DateTime<Utc> = date.into();
-                let year = datetime.year() as u32;
-                let month = datetime.month();
-                map.entry(year)
-                    .or_insert_with(HashMap::new)
-                    .entry(month)
-                    .or_insert_with(Vec::new)
-                    .push(path.to_str().unwrap_or_default().to_string());
+            for path in all_images {
+                if let Ok(metadata) = std::fs::metadata(&path) {
+                    let date = metadata
+                        .created()
+                        .or_else(|_| metadata.modified())
+                        .unwrap_or_else(|_| SystemTime::now());
+
+                    let datetime: DateTime<Utc> = date.into();
+                    let year = datetime.year() as u32;
+                    let month = datetime.month();
+                    map.entry(year)
+                        .or_insert_with(HashMap::new)
+                        .entry(month)
+                        .or_insert_with(Vec::new)
+                        .push(path.to_str().unwrap_or_default().to_string());
+
+                    all_image_paths.push(path); // Collect all paths for caching
+                }
             }
         }
 
         // Cache the flattened list of image paths
-        let flattened: Vec<PathBuf> = map
-            .values()
-            .flat_map(|year_map| year_map.values())
-            .flatten()
-            .map(|s| PathBuf::from(s))
-            .collect();
-        if let Err(e) = cache_state.cache_images(&flattened) {
+        if let Err(e) = cache_state.cache_images(&all_image_paths) {
             eprintln!("Failed to cache images: {}", e);
         }
 
@@ -141,59 +142,63 @@ pub fn get_all_images_with_cache(
 pub fn get_all_videos_with_cache(
     state: tauri::State<FileService>,
     cache_state: tauri::State<CacheService>,
-    directory: &str,
+    directories: Vec<String>, // Updated to take an array of directories
 ) -> Result<HashMap<u32, HashMap<u32, Vec<String>>>, String> {
     let cached_videos = cache_state.get_cached_videos();
 
-    let mut videos_by_year_month = if let Some(cached) = cached_videos {
-        let mut map: HashMap<u32, HashMap<u32, Vec<String>>> = HashMap::new();
-        for path in cached {
-            if let Ok(metadata) = std::fs::metadata(&path) {
-                if let Ok(created) = metadata.created() {
-                    let datetime: DateTime<Utc> = created.into();
-                    let year = datetime.year() as u32;
-                    let month = datetime.month();
-                    map.entry(year)
-                        .or_insert_with(HashMap::new)
-                        .entry(month)
-                        .or_insert_with(Vec::new)
-                        .push(path.to_str().unwrap_or_default().to_string());
+    let mut videos_by_year_month: HashMap<u32, HashMap<u32, Vec<String>>> =
+        if let Some(cached) = cached_videos {
+            let mut map: HashMap<u32, HashMap<u32, Vec<String>>> = HashMap::new();
+            for path in cached {
+                if let Ok(metadata) = std::fs::metadata(&path) {
+                    if let Ok(created) = metadata.created() {
+                        let datetime: DateTime<Utc> = created.into();
+                        let year = datetime.year() as u32;
+                        let month = datetime.month();
+                        map.entry(year)
+                            .or_insert_with(HashMap::new)
+                            .entry(month)
+                            .or_insert_with(Vec::new)
+                            .push(path.to_str().unwrap_or_default().to_string());
+                    }
                 }
             }
-        }
-        map
-    } else {
-        let all_videos = state.get_all_videos(directory);
-        let mut map: HashMap<u32, HashMap<u32, Vec<String>>> = HashMap::new();
-
-        for path in all_videos {
-            if let Ok(metadata) = std::fs::metadata(&path) {
-                if let Ok(created) = metadata.created() {
-                    let datetime: DateTime<Utc> = created.into();
-                    let year = datetime.year() as u32;
-                    let month = datetime.month();
-                    map.entry(year)
-                        .or_insert_with(HashMap::new)
-                        .entry(month)
-                        .or_insert_with(Vec::new)
-                        .push(path.to_str().unwrap_or_default().to_string());
+            map
+        } else {
+            let mut map: HashMap<u32, HashMap<u32, Vec<String>>> = HashMap::new();
+            for directory in directories {
+                let all_videos = state.get_all_videos(&directory);
+                for path in all_videos {
+                    if let Ok(metadata) = std::fs::metadata(&path) {
+                        if let Ok(created) = metadata.created() {
+                            let datetime: DateTime<Utc> = created.into();
+                            let year = datetime.year() as u32;
+                            let month = datetime.month();
+                            map.entry(year)
+                                .or_insert_with(HashMap::new)
+                                .entry(month)
+                                .or_insert_with(Vec::new)
+                                .push(path.to_str().unwrap_or_default().to_string());
+                        }
+                    }
                 }
             }
-        }
 
-        let flattened: Vec<PathBuf> = map
-            .values()
-            .flat_map(|year_map| year_map.values())
-            .flatten()
-            .map(|s| PathBuf::from(s))
-            .collect();
-        if let Err(e) = cache_state.cache_videos(&flattened) {
-            eprintln!("Failed to cache videos: {}", e);
-        }
+            // Cache the aggregated video paths
+            let flattened: Vec<PathBuf> = map
+                .values()
+                .flat_map(|year_map| year_map.values())
+                .flatten()
+                .map(|s| PathBuf::from(s))
+                .collect();
+            if let Err(e) = cache_state.cache_videos(&flattened) {
+                eprintln!("Failed to cache videos: {}", e);
+            }
 
-        map
-    };
+            map
+        };
 
+    // Sort the videos within each month
     for year_map in videos_by_year_month.values_mut() {
         for month_vec in year_map.values_mut() {
             month_vec.sort();
@@ -277,7 +282,6 @@ pub async fn save_edited_image(
     let new_filename = format!("edited_{}", filename.to_string_lossy());
     let new_path = parent_dir.join(new_filename);
 
-    // Save the edited image
     img.save(&new_path).map_err(|e| e.to_string())?;
 
     Ok(())
@@ -455,7 +459,7 @@ fn apply_highlights(img: &DynamicImage, highlights: i32) -> DynamicImage {
     DynamicImage::ImageRgb8(highlighted)
 }
 
-fn get_secure_folder_path() -> Result<PathBuf, String> {
+pub fn get_secure_folder_path() -> Result<PathBuf, String> {
     let project_dirs = ProjectDirs::from("com", "AOSSIE", "Pictopy")
         .ok_or_else(|| "Failed to get project directories".to_string())?;
     let mut path = project_dirs.data_dir().to_path_buf();
@@ -463,7 +467,7 @@ fn get_secure_folder_path() -> Result<PathBuf, String> {
     Ok(path)
 }
 
-fn generate_salt() -> [u8; SALT_LENGTH] {
+pub fn generate_salt() -> [u8; SALT_LENGTH] {
     let mut salt = [0u8; SALT_LENGTH];
     SystemRandom::new().fill(&mut salt).unwrap();
     salt
@@ -477,7 +481,7 @@ pub async fn move_to_secure_folder(path: String, password: String) -> Result<(),
 
     let content = fs::read(&path).map_err(|e| e.to_string())?;
     let ciphertext_length = content.len() + AES_256_GCM.tag_len();
-    let expected_length = SALT_LENGTH + NONCE_LENGTH + ciphertext_length + 16;
+    let _expected_length = SALT_LENGTH + NONCE_LENGTH + ciphertext_length + 16;
     let encrypted = encrypt_data(&content, &password).map_err(|e| e.to_string())?;
     println!("Encrypted file size: {}", encrypted.len());
     fs::write(&dest_path, encrypted).map_err(|e| e.to_string())?;
@@ -485,9 +489,9 @@ pub async fn move_to_secure_folder(path: String, password: String) -> Result<(),
     fs::remove_file(&path).map_err(|e| e.to_string())?;
 
     let thumbnails_folder = Path::new(&path)
-    .parent() // Get parent directory of the original file
-    .and_then(|parent| parent.join("PictoPy.thumbnails").canonicalize().ok()) // Navigate to PictoPy.thumbnails
-    .ok_or("Unable to locate thumbnails directory")?;
+        .parent() // Get parent directory of the original file
+        .and_then(|parent| parent.join("PictoPy.thumbnails").canonicalize().ok()) // Navigate to PictoPy.thumbnails
+        .ok_or("Unable to locate thumbnails directory")?;
     let thumbnail_path = thumbnails_folder.join(file_name);
 
     if thumbnail_path.exists() {
@@ -500,12 +504,14 @@ pub async fn move_to_secure_folder(path: String, password: String) -> Result<(),
     // Store the original path
     let metadata_path = secure_folder.join("metadata.json");
     let mut metadata: HashMap<String, String> = if metadata_path.exists() {
-        serde_json::from_str(&fs::read_to_string(&metadata_path).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?
+        serde_json::from_str(&fs::read_to_string(&metadata_path).map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())?
     } else {
         HashMap::new()
     };
     metadata.insert(file_name.to_string_lossy().to_string(), path);
-    fs::write(&metadata_path, serde_json::to_string(&metadata).unwrap()).map_err(|e| e.to_string())?;
+    fs::write(&metadata_path, serde_json::to_string(&metadata).unwrap())
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -518,10 +524,13 @@ pub async fn remove_from_secure_folder(file_name: String, password: String) -> R
 
     // Read and decrypt the file
     let encrypted_content = fs::read(&file_path).map_err(|e| e.to_string())?;
-    let decrypted_content = decrypt_data(&encrypted_content, &password).map_err(|e| e.to_string())?;
+    let decrypted_content =
+        decrypt_data(&encrypted_content, &password).map_err(|e| e.to_string())?;
 
     // Get the original path
-    let metadata: HashMap<String, String> = serde_json::from_str(&fs::read_to_string(&metadata_path).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+    let metadata: HashMap<String, String> =
+        serde_json::from_str(&fs::read_to_string(&metadata_path).map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())?;
     let original_path = metadata.get(&file_name).ok_or("Original path not found")?;
 
     // Write the decrypted content back to the original path
@@ -531,7 +540,11 @@ pub async fn remove_from_secure_folder(file_name: String, password: String) -> R
     fs::remove_file(&file_path).map_err(|e| e.to_string())?;
     let mut updated_metadata = metadata;
     updated_metadata.remove(&file_name);
-    fs::write(&metadata_path, serde_json::to_string(&updated_metadata).unwrap()).map_err(|e| e.to_string())?;
+    fs::write(
+        &metadata_path,
+        serde_json::to_string(&updated_metadata).unwrap(),
+    )
+    .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -567,7 +580,11 @@ pub async fn get_secure_media(password: String) -> Result<Vec<SecureMedia>, Stri
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
 
-        if path.is_file() && path.extension().map_or(false, |ext| ext == "jpg" || ext == "png") {
+        if path.is_file()
+            && path
+                .extension()
+                .map_or(false, |ext| ext == "jpg" || ext == "png")
+        {
             let content = fs::read(&path).map_err(|e| e.to_string())?;
             let decrypted = decrypt_data(&content, &password).map_err(|e| e.to_string())?;
 
@@ -576,33 +593,33 @@ pub async fn get_secure_media(password: String) -> Result<Vec<SecureMedia>, Stri
             fs::write(&temp_file, decrypted).map_err(|e| e.to_string())?;
             println!("SecureMedia: {:?}", path.to_string_lossy().to_string());
             println!("SecureMedia: {:?}", temp_file.to_string_lossy().to_string());
-            
+
             secure_media.push(SecureMedia {
                 id: path.file_name().unwrap().to_string_lossy().to_string(),
-                url: format!("file://{}" , temp_file.to_string_lossy().to_string()),
+                url: format!("file://{}", temp_file.to_string_lossy().to_string()),
                 path: path.to_string_lossy().to_string(),
             });
         }
     }
 
-    println!("SECURE MEDIA: {:?}" , secure_media.len());
+    println!("SECURE MEDIA: {:?}", secure_media.len());
 
     Ok(secure_media)
 }
 
-fn hash_password(password: &str, salt: &[u8]) -> Vec<u8> {
+pub fn hash_password(password: &str, salt: &[u8]) -> Vec<u8> {
     let mut hash = [0u8; digest::SHA256_OUTPUT_LEN];
     pbkdf2::derive(
         pbkdf2::PBKDF2_HMAC_SHA256,
         NonZeroU32::new(100_000).unwrap(),
         salt,
         password.as_bytes(),
-        &mut hash, 
+        &mut hash,
     );
     hash.to_vec()
 }
 
-fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, ring::error::Unspecified> {
+pub fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, ring::error::Unspecified> {
     let salt = generate_salt();
     let key = derive_key(password, &salt);
     let nonce = generate_nonce();
@@ -611,7 +628,7 @@ fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, ring::error::Uns
     let tag = key.seal_in_place_separate_tag(
         Nonce::assume_unique_for_key(nonce),
         Aad::empty(),
-        &mut in_out
+        &mut in_out,
     )?;
 
     let mut result = Vec::new();
@@ -623,17 +640,21 @@ fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, ring::error::Uns
     Ok(result)
 }
 
-fn decrypt_data(encrypted: &[u8], password: &str) -> Result<Vec<u8>, String> {
+pub fn decrypt_data(encrypted: &[u8], password: &str) -> Result<Vec<u8>, String> {
     println!("Decrypting data...");
-    
+
     if encrypted.len() < SALT_LENGTH + NONCE_LENGTH + 16 {
-        return Err(format!("Encrypted data too short: {} bytes", encrypted.len()));
+        return Err(format!(
+            "Encrypted data too short: {} bytes",
+            encrypted.len()
+        ));
     }
 
     let salt = &encrypted[..SALT_LENGTH];
     let nonce = &encrypted[SALT_LENGTH..SALT_LENGTH + NONCE_LENGTH];
     let tag_len = 16;
-    let (ciphertext, tag) = encrypted[SALT_LENGTH + NONCE_LENGTH..].split_at(encrypted.len() - SALT_LENGTH - NONCE_LENGTH - tag_len);
+    let (ciphertext, tag) = encrypted[SALT_LENGTH + NONCE_LENGTH..]
+        .split_at(encrypted.len() - SALT_LENGTH - NONCE_LENGTH - tag_len);
 
     let key = derive_key(password, salt);
     let nonce = match Nonce::try_assume_unique_for_key(nonce) {
@@ -646,12 +667,13 @@ fn decrypt_data(encrypted: &[u8], password: &str) -> Result<Vec<u8>, String> {
 
     match key.open_in_place(nonce, Aad::empty(), &mut plaintext) {
         Ok(decrypted) => {
-            println!("Decryption successful! Decrypted length: {}", decrypted.len());
+            println!(
+                "Decryption successful! Decrypted length: {}",
+                decrypted.len()
+            );
             Ok(decrypted.to_vec())
-        },
-        Err(e) => {
-            Err(format!("Decryption error: {:?}", e))
         }
+        Err(e) => Err(format!("Decryption error: {:?}", e)),
     }
 }
 
@@ -664,17 +686,28 @@ pub async fn unlock_secure_folder(password: String) -> Result<bool, String> {
         return Err("Secure folder not set up".to_string());
     }
 
-    let config: serde_json::Value = serde_json::from_str(&fs::read_to_string(config_path).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+    let config: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(config_path).map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())?;
 
-    let salt = BASE64.decode(config["salt"].as_str().ok_or("Invalid salt")?.as_bytes()).map_err(|e| e.to_string())?;
-    let stored_hash = BASE64.decode(config["hashed_password"].as_str().ok_or("Invalid hash")?.as_bytes()).map_err(|e| e.to_string())?;
+    let salt = BASE64
+        .decode(config["salt"].as_str().ok_or("Invalid salt")?.as_bytes())
+        .map_err(|e| e.to_string())?;
+    let stored_hash = BASE64
+        .decode(
+            config["hashed_password"]
+                .as_str()
+                .ok_or("Invalid hash")?
+                .as_bytes(),
+        )
+        .map_err(|e| e.to_string())?;
 
     let input_hash = hash_password(&password, &salt);
 
     Ok(input_hash == stored_hash)
 }
 
-fn derive_key(password: &str, salt: &[u8]) -> LessSafeKey {
+pub fn derive_key(password: &str, salt: &[u8]) -> LessSafeKey {
     let mut key_bytes = [0u8; 32];
     pbkdf2::derive(
         pbkdf2::PBKDF2_HMAC_SHA256,
@@ -683,7 +716,7 @@ fn derive_key(password: &str, salt: &[u8]) -> LessSafeKey {
         password.as_bytes(),
         &mut key_bytes,
     );
-    
+
     let unbound_key = UnboundKey::new(&AES_256_GCM, &key_bytes).unwrap();
     LessSafeKey::new(unbound_key)
 }
@@ -695,14 +728,17 @@ pub async fn check_secure_folder_status() -> Result<bool, String> {
     Ok(config_path.exists())
 }
 
-fn generate_nonce() -> [u8; NONCE_LENGTH] {
+pub fn generate_nonce() -> [u8; NONCE_LENGTH] {
     let mut nonce = [0u8; NONCE_LENGTH];
     SystemRandom::new().fill(&mut nonce).unwrap();
     nonce
 }
 
 #[tauri::command]
-pub fn get_random_memories(directories: Vec<String>, count: usize) -> Result<Vec<MemoryImage>, String> {
+pub fn get_random_memories(
+    directories: Vec<String>,
+    count: usize,
+) -> Result<Vec<MemoryImage>, String> {
     let mut all_images = Vec::new();
     let mut used_paths = HashSet::new();
 
@@ -723,7 +759,7 @@ pub fn get_random_memories(directories: Vec<String>, count: usize) -> Result<Vec
     Ok(selected_images)
 }
 
-fn get_images_from_directory(dir: &str) -> Result<Vec<MemoryImage>, String> {
+pub fn get_images_from_directory(dir: &str) -> Result<Vec<MemoryImage>, String> {
     let path = Path::new(dir);
     if !path.is_dir() {
         return Err(format!("{} is not a directory", dir));
@@ -755,7 +791,7 @@ fn get_images_from_directory(dir: &str) -> Result<Vec<MemoryImage>, String> {
     Ok(images)
 }
 
-fn is_image_file(path: &Path) -> bool {
+pub fn is_image_file(path: &Path) -> bool {
     let extensions = ["jpg", "jpeg", "png", "gif"];
     path.extension()
         .and_then(|ext| ext.to_str())
@@ -907,4 +943,13 @@ pub async fn open_with(path: String) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_server_path(handle: tauri::AppHandle) -> Result<String, String> {
+    let resource_path = handle
+        .path()
+        .resolve("resources/server", BaseDirectory::Resource)
+        .map_err(|e| e.to_string())?;
+    Ok(resource_path.to_string_lossy().to_string())
 }
