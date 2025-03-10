@@ -9,17 +9,17 @@ use chrono::{DateTime, Datelike, Utc};
 use data_encoding::BASE64;
 use directories::ProjectDirs;
 pub use file_service::FileService;
-use std::fs;  
-use rand::seq::SliceRandom;
-use std::process::Command;
 use image::{DynamicImage, Rgba, RgbaImage};
+use rand::seq::SliceRandom;
 use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
 use ring::digest;
 use ring::pbkdf2;
 use ring::rand::{SecureRandom, SystemRandom};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::fs;
 use std::num::NonZeroU32;
+use std::process::Command;
 use tauri::path::BaseDirectory;
 use tauri::Manager;
 
@@ -239,7 +239,6 @@ pub async fn share_file(path: String) -> Result<(), String> {
     Ok(())
 }
 
-
 #[tauri::command]
 pub async fn save_edited_image(
     image_data: Vec<u8>,
@@ -278,14 +277,15 @@ pub async fn save_edited_image(
 
     let original_path = Path::new(&original_path);
     let parent_dir = original_path.parent().unwrap_or_else(|| Path::new("."));
-    let filename = original_path.file_name().unwrap_or_else(|| std::ffi::OsStr::new("image.png"));
+    let filename = original_path
+        .file_name()
+        .unwrap_or_else(|| std::ffi::OsStr::new("image.png"));
     let new_filename = format!("edited_{}", filename.to_string_lossy());
     let new_path = parent_dir.join(new_filename);
 
     img.save(&new_path).map_err(|e| e.to_string())?;
 
     Ok(())
-
 }
 
 fn apply_sepia(img: &DynamicImage) -> DynamicImage {
@@ -343,11 +343,11 @@ fn apply_vibrance(img: &DynamicImage, vibrance: i32) -> DynamicImage {
         let r = pixel[0] as f32 / 255.0;
         let g = pixel[1] as f32 / 255.0;
         let b = pixel[2] as f32 / 255.0;
-        
+
         let max = r.max(g).max(b);
         let avg = (r + g + b) / 3.0;
 
-        let amt = (max - avg) * 2.0 * vibrance_factor; 
+        let amt = (max - avg) * 2.0 * vibrance_factor;
 
         pixel[0] = ((r + (max - r) * amt) * 255.0).clamp(0.0, 255.0) as u8;
         pixel[1] = ((g + (max - g) * amt) * 255.0).clamp(0.0, 255.0) as u8;
@@ -357,10 +357,9 @@ fn apply_vibrance(img: &DynamicImage, vibrance: i32) -> DynamicImage {
     DynamicImage::ImageRgb8(vibrant)
 }
 
-
 fn apply_exposure(img: &DynamicImage, exposure: i32) -> DynamicImage {
     let mut exposed = img.to_rgb8();
-    let factor = 2.0f32.powf(exposure as f32 / 100.0); 
+    let factor = 2.0f32.powf(exposure as f32 / 100.0);
 
     for pixel in exposed.pixels_mut() {
         for c in 0..3 {
@@ -388,16 +387,12 @@ fn apply_sharpness(img: &DynamicImage, sharpness: i32) -> DynamicImage {
     let (width, height) = rgba_img.dimensions();
     let mut sharpened = RgbaImage::new(width, height);
 
-    let kernel: [f32; 9] = [
-        -1.0, -1.0, -1.0,
-        -1.0,  9.0, -1.0,
-        -1.0, -1.0, -1.0,
-    ];
+    let kernel: [f32; 9] = [-1.0, -1.0, -1.0, -1.0, 9.0, -1.0, -1.0, -1.0, -1.0];
 
     let sharpness_factor = sharpness as f32 / 100.0;
 
-    for y in 1..height-1 {
-        for x in 1..width-1 {
+    for y in 1..height - 1 {
+        for x in 1..width - 1 {
             let mut new_pixel = [0.0; 4];
             for ky in 0..3 {
                 for kx in 0..3 {
@@ -409,11 +404,21 @@ fn apply_sharpness(img: &DynamicImage, sharpness: i32) -> DynamicImage {
             }
             let original = rgba_img.get_pixel(x, y);
             for c in 0..3 {
-                new_pixel[c] = original[c] as f32 * (1.0 - sharpness_factor) + new_pixel[c] * sharpness_factor;
+                new_pixel[c] =
+                    original[c] as f32 * (1.0 - sharpness_factor) + new_pixel[c] * sharpness_factor;
                 new_pixel[c] = new_pixel[c].max(0.0).min(255.0);
             }
             new_pixel[3] = original[3] as f32;
-            sharpened.put_pixel(x, y, Rgba([new_pixel[0] as u8, new_pixel[1] as u8, new_pixel[2] as u8, new_pixel[3] as u8]));
+            sharpened.put_pixel(
+                x,
+                y,
+                Rgba([
+                    new_pixel[0] as u8,
+                    new_pixel[1] as u8,
+                    new_pixel[2] as u8,
+                    new_pixel[3] as u8,
+                ]),
+            );
         }
     }
 
@@ -810,9 +815,11 @@ pub async fn set_wallpaper(path: String) -> Result<(), String> {
     println!("Setting wallpaper to: {}", uri);
     #[cfg(target_os = "windows")]
     {
-        use winapi::um::winuser::{SystemParametersInfoW, SPIF_UPDATEINIFILE, SPIF_SENDCHANGE, SPI_SETDESKWALLPAPER};
-        use std::os::windows::ffi::OsStrExt;
         use std::ffi::OsStr;
+        use std::os::windows::ffi::OsStrExt;
+        use winapi::um::winuser::{
+            SystemParametersInfoW, SPIF_SENDCHANGE, SPIF_UPDATEINIFILE, SPI_SETDESKWALLPAPER,
+        };
 
         let wide: Vec<u16> = OsStr::new(&path).encode_wide().chain(Some(0)).collect();
         let result = unsafe {
@@ -820,7 +827,7 @@ pub async fn set_wallpaper(path: String) -> Result<(), String> {
                 SPI_SETDESKWALLPAPER,
                 0,
                 wide.as_ptr() as *mut _,
-                SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
+                SPIF_UPDATEINIFILE | SPIF_SENDCHANGE,
             )
         };
 
@@ -849,14 +856,21 @@ pub async fn set_wallpaper(path: String) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     {
         // This assumes a GNOME-based desktop environment
-        let desktop_env = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default().to_lowercase();
+        let desktop_env = std::env::var("XDG_CURRENT_DESKTOP")
+            .unwrap_or_default()
+            .to_lowercase();
 
         if desktop_env.contains("gnome") {
             let output = Command::new("gsettings")
-                .args(&["set", "org.gnome.desktop.background", "picture-uri", &format!("file://{}", path)])
+                .args(&[
+                    "set",
+                    "org.gnome.desktop.background",
+                    "picture-uri",
+                    &format!("file://{}", path),
+                ])
                 .output()
                 .map_err(|e| e.to_string())?;
-    
+
             if !output.status.success() {
                 return Err(String::from_utf8_lossy(&output.stderr).to_string());
             }
@@ -870,14 +884,13 @@ pub async fn set_wallpaper(path: String) -> Result<(), String> {
                 .arg(&script)
                 .output()
                 .map_err(|e| e.to_string())?;
-    
+
             if !output.status.success() {
                 return Err(String::from_utf8_lossy(&output.stderr).to_string());
             }
         } else {
             return Err("Unsupported desktop environment".to_string());
         }
-
     }
 
     Ok(())
