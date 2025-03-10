@@ -101,9 +101,7 @@ def run_async_task():
     asyncio.run(my_scheduled_task())
 
 
-scheduler = BackgroundScheduler()
-scheduler.add_job(run_async_task, "interval", minutes=1)
-
-
 def start_scheduler():
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(run_async_task, "interval", minutes=1)
     scheduler.start()

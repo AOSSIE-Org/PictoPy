@@ -17,7 +17,7 @@ from app.routes.images import router as images_router
 from app.routes.albums import router as albums_router
 from app.routes.facetagging import router as tagging_router
 import multiprocessing
-from app.schedular import start_scheduler
+from app.scheduler import start_scheduler
 from app.custom_logging import CustomizeLogger
 
 
