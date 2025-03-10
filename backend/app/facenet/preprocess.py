@@ -8,7 +8,7 @@ def preprocess_image(image):
     image = image.transpose((2, 0, 1))
     image = np.expand_dims(image, axis=0)
     image = image.astype(np.float32)
-    image /= 255.0
+    image = (image - 127.5) / 128.0
     return image
 
 
@@ -17,4 +17,6 @@ def normalize_embedding(embedding):
 
 
 def cosine_similarity(embedding1, embedding2):
-    return np.dot(embedding1, embedding2)
+    return np.dot(embedding1, embedding2) / (
+        np.linalg.norm(embedding1) * np.linalg.norm(embedding2)
+    )

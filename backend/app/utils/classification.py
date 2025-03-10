@@ -4,7 +4,7 @@ from app.yolov8.YOLOv8 import YOLOv8
 
 
 def get_classes(img_path):
-    yolov8_detector = YOLOv8(DEFAULT_OBJ_DETECTION_MODEL, conf_thres=0.2, iou_thres=0.3)
+    yolov8_detector = YOLOv8(DEFAULT_OBJ_DETECTION_MODEL, conf_thres=0.4, iou_thres=0.5)
     img = cv2.imread(img_path)
     if img is None:
         print(f"Failed to load image: {img_path}")
