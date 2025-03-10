@@ -58,41 +58,31 @@ def generate_thumbnails_for_folders(folder_paths: list):
     return failed_paths
 
 
-def generate_thumbnails_for_existing_folders() : 
-    try : 
+def generate_thumbnails_for_existing_folders():
+    try:
         folder_ids = get_all_folder_ids()
         thumbnail_folder = os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails")
         failed_paths = []
-        for folder_id in folder_ids : 
-            try : 
+        for folder_id in folder_ids:
+            try:
                 curr_image_paths = get_all_images_from_folder_id(folder_id)
-                for image_path in curr_image_paths : 
+                for image_path in curr_image_paths:
                     if not os.path.exists(image_path):
                         continue
-                    
-                    image_name = os.path.basename(image_path)
-                    thumbnail_path = os.path.join(thumbnail_folder,image_name)
 
-                    if os.path.exists(thumbnail_path) : 
+                    image_name = os.path.basename(image_path)
+                    thumbnail_path = os.path.join(thumbnail_folder, image_name)
+
+                    if os.path.exists(thumbnail_path):
                         continue
-                    
+
                     img = Image.open(image_path)
-                    img.thumbnail((400,400))
+                    img.thumbnail((400, 400))
                     img.save(thumbnail_path)
-            except Exception as e : 
+            except Exception:
                 failed_paths.append(image_path)
 
         return failed_paths
-            
-    except Exception as e : 
+
+    except Exception:
         return []
-            
-            
-
-            
-
-
-            
-
-
-    

@@ -98,10 +98,11 @@ def test_generate_thumbnails_missing_folder_path():
 
 def test_delete_multiple_images(test_images):
     payload = {
-        "paths": [str(Path(test_images) / "000000000025.jpg"),
-                 str(Path(test_images) / "000000000030.jpg")],
-        "isFromDevice" : False,
-
+        "paths": [
+            str(Path(test_images) / "000000000025.jpg"),
+            str(Path(test_images) / "000000000030.jpg"),
+        ],
+        "isFromDevice": False,
     }
     response = client.request("DELETE", "/images/multiple-images", json=payload)
     assert response.status_code == 200

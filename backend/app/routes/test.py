@@ -8,12 +8,8 @@ from app.yolov8 import YOLOv8
 from app.yolov8.utils import class_names
 from app.utils.classification import get_classes
 from app.routes.images import get_all_image_paths
-from app.database.images import (
-    get_all_images_from_folder_id
-)
-from app.database.folders import (
-   get_all_folder_ids
-)
+from app.database.images import get_all_images_from_folder_id
+from app.database.folders import get_all_folder_ids
 
 router = APIRouter()
 
@@ -118,20 +114,13 @@ def get_images():
 
 
 @router.get("/test-image")
-def test_images() : 
+def test_images():
     folder_ids = get_all_folder_ids()
 
-    for folder_id in folder_ids : 
-        print("Current Folder ID = ",folder_id)
+    for folder_id in folder_ids:
+        print("Current Folder ID = ", folder_id)
         image_paths = get_all_images_from_folder_id(folder_id)
-        print("Image Paths = ",image_paths)
+        print("Image Paths = ", image_paths)
 
-
-    print("Folder IDS = ",folder_ids)
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "message":"Success"
-        }
-    )
-
+    print("Folder IDS = ", folder_ids)
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Success"})

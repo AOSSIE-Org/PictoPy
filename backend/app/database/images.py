@@ -181,10 +181,11 @@ def get_all_image_paths():
         return paths if paths else []
 
 
-def get_all_images_from_folder_id(folder_id) : 
+def get_all_images_from_folder_id(folder_id):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT path FROM image_id_mapping WHERE folder_id = ?",(folder_id,))
+    cursor.execute(
+        "SELECT path FROM image_id_mapping WHERE folder_id = ?", (folder_id,)
+    )
     image_paths = cursor.fetchall()
     return [row[0] for row in image_paths] if image_paths else []
-    
