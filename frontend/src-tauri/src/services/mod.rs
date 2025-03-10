@@ -288,7 +288,7 @@ pub async fn save_edited_image(
     Ok(())
 }
 
-fn apply_sepia(img: &DynamicImage) -> DynamicImage {
+pub fn apply_sepia(img: &DynamicImage) -> DynamicImage {
     let mut sepia = img.to_rgb8();
     for pixel in sepia.pixels_mut() {
         let r = pixel[0] as f32;
@@ -301,7 +301,7 @@ fn apply_sepia(img: &DynamicImage) -> DynamicImage {
     DynamicImage::ImageRgb8(sepia)
 }
 
-fn apply_saturation(img: &DynamicImage, factor: f32) -> DynamicImage {
+pub fn apply_saturation(img: &DynamicImage, factor: f32) -> DynamicImage {
     let mut saturated = img.to_rgb8();
     for pixel in saturated.pixels_mut() {
         let r = pixel[0] as f32 / 255.0;
@@ -320,7 +320,7 @@ fn apply_saturation(img: &DynamicImage, factor: f32) -> DynamicImage {
     DynamicImage::ImageRgb8(saturated)
 }
 
-fn adjust_brightness_contrast(img: &DynamicImage, brightness: i32, contrast: i32) -> DynamicImage {
+pub fn adjust_brightness_contrast(img: &DynamicImage, brightness: i32, contrast: i32) -> DynamicImage {
     let mut adjusted = img.to_rgb8();
     for pixel in adjusted.pixels_mut() {
         for c in 0..3 {
@@ -335,7 +335,7 @@ fn adjust_brightness_contrast(img: &DynamicImage, brightness: i32, contrast: i32
     DynamicImage::ImageRgb8(adjusted)
 }
 
-fn apply_vibrance(img: &DynamicImage, vibrance: i32) -> DynamicImage {
+pub fn apply_vibrance(img: &DynamicImage, vibrance: i32) -> DynamicImage {
     let mut vibrant = img.to_rgb8();
     let vibrance_factor = vibrance as f32 / 100.0;
 
@@ -357,7 +357,7 @@ fn apply_vibrance(img: &DynamicImage, vibrance: i32) -> DynamicImage {
     DynamicImage::ImageRgb8(vibrant)
 }
 
-fn apply_exposure(img: &DynamicImage, exposure: i32) -> DynamicImage {
+pub fn apply_exposure(img: &DynamicImage, exposure: i32) -> DynamicImage {
     let mut exposed = img.to_rgb8();
     let factor = 2.0f32.powf(exposure as f32 / 100.0);
 
@@ -370,7 +370,7 @@ fn apply_exposure(img: &DynamicImage, exposure: i32) -> DynamicImage {
     DynamicImage::ImageRgb8(exposed)
 }
 
-fn apply_temperature(img: &DynamicImage, temperature: i32) -> DynamicImage {
+pub fn apply_temperature(img: &DynamicImage, temperature: i32) -> DynamicImage {
     let mut temp_adjusted = img.to_rgb8();
     let factor = temperature as f32 / 100.0;
     for pixel in temp_adjusted.pixels_mut() {
@@ -382,7 +382,7 @@ fn apply_temperature(img: &DynamicImage, temperature: i32) -> DynamicImage {
     DynamicImage::ImageRgb8(temp_adjusted)
 }
 
-fn apply_sharpness(img: &DynamicImage, sharpness: i32) -> DynamicImage {
+pub fn apply_sharpness(img: &DynamicImage, sharpness: i32) -> DynamicImage {
     let rgba_img = img.to_rgba8();
     let (width, height) = rgba_img.dimensions();
     let mut sharpened = RgbaImage::new(width, height);
@@ -425,7 +425,7 @@ fn apply_sharpness(img: &DynamicImage, sharpness: i32) -> DynamicImage {
     DynamicImage::ImageRgba8(sharpened)
 }
 
-fn apply_vignette(img: &DynamicImage, vignette: i32) -> DynamicImage {
+pub fn apply_vignette(img: &DynamicImage, vignette: i32) -> DynamicImage {
     let mut vignetted = img.to_rgba8();
     let (width, height) = vignetted.dimensions();
     let center_x = width as f32 / 2.0;
@@ -445,7 +445,7 @@ fn apply_vignette(img: &DynamicImage, vignette: i32) -> DynamicImage {
     DynamicImage::ImageRgba8(vignetted)
 }
 
-fn apply_highlights(img: &DynamicImage, highlights: i32) -> DynamicImage {
+pub fn apply_highlights(img: &DynamicImage, highlights: i32) -> DynamicImage {
     let mut highlighted = img.to_rgb8();
     let factor = highlights as f32 / 100.0;
 
