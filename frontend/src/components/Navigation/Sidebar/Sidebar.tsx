@@ -287,8 +287,28 @@ const Sidebar: React.FC = () => {
       {showImageCompressor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity duration-300">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 dark:bg-gray-800">
-            <div className="mb-4">
+            <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold">Image Compressor</h2>
+              <button
+                onClick={() => setShowImageCompressor(false)}
+                className="rounded-full p-1 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                aria-label="Close image compressor"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
             </div>
             <ImageCompressor />
           </div>
