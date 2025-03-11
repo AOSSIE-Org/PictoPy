@@ -113,3 +113,16 @@ export const getProgress = async () => {
   const data = await response.json();
   return data;
 };
+
+export const deleteFolder = async (folderPath: string) => {
+  const response = await fetch(imagesEndpoints.deleteFolder, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ folder_path: folderPath }),
+  });
+
+  const data = await response.json();
+  return data;
+};

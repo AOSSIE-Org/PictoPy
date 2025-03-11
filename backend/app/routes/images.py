@@ -19,6 +19,7 @@ from app.utils.metadata import extract_metadata
 from app.database.folders import (
     insert_folder,
     get_all_folders,
+    delete_folder,
 )
 
 router = APIRouter()
@@ -362,6 +363,55 @@ async def add_folder(payload: dict):
         )
 
 
+@router.delete("/delete-folder")
+@exception_handler_wrapper
+def delete_folder_ai_tagging(payload: dict):
+    if "folder_path" not in payload:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status_code": 400,
+                "content": {
+                    "success": False,
+                    "error": "Missing 'folder_path' in payload",
+                    "message": "Folder path is required",
+                },
+            },
+        )
+
+    folder_path = payload["folder_path"]
+    if not os.path.isdir(folder_path):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status_code": 400,
+                "content": {
+                    "success": False,
+                    "error": "Invalid folder path",
+                    "message": "The provided path is not a valid directory",
+                },
+            },
+        )
+
+    image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".webp"}
+
+    for root, _, files in os.walk(folder_path):
+        for file in files:
+            if any(file.lower().endswith(ext) for ext in image_extensions):
+                delete_image_db(os.path.join(root, file))
+
+    delete_folder(folder_path)
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "data": "",
+            "message": "Folder deleted successfully",
+            "success": True,
+        },
+    )
+
+
 @router.post("/generate-thumbnails")
 @exception_handler_wrapper
 def generate_thumbnails(payload: dict):
@@ -490,7 +540,6 @@ async def combined_progress():
         total_tasks += status["total"]
         total_completed += status["completed"]
     progress = 100 if total_tasks == 0 else int((total_completed / total_tasks) * 100)
-    print(progress)
     return JSONResponse(
         status_code=200,
         content={

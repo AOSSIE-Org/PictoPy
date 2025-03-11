@@ -117,14 +117,6 @@ export default function AIGallery({
     );
   }
 
-  if (isGeneratingTags) {
-    return (
-      <div>
-        <LoadingScreen />
-      </div>
-    );
-  }
-
   return (
     <div className="w-full">
       <div className="mx-auto px-2 pb-8 dark:bg-background dark:text-foreground">
@@ -213,18 +205,25 @@ export default function AIGallery({
           </>
         )}
 
-        {showMediaViewer && (
-          <MediaView
-            initialIndex={selectedMediaIndex}
-            onClose={closeMediaViewer}
-            allMedia={filteredMediaItems.map((item: any) => ({
-              url: item.url,
-              path: item?.imagePath,
-            }))}
-            currentPage={currentPage}
-            itemsPerPage={pageNo}
-            type={type}
+        {isGeneratingTags ? (
+          <LoadingScreen
+            isLoading={isGeneratingTags}
+            message="Generating tags..."
           />
+        ) : (
+          showMediaViewer && (
+            <MediaView
+              initialIndex={selectedMediaIndex}
+              onClose={closeMediaViewer}
+              allMedia={filteredMediaItems.map((item: any) => ({
+                url: item.url,
+                path: item?.imagePath,
+              }))}
+              currentPage={currentPage}
+              itemsPerPage={pageNo}
+              type={type}
+            />
+          )
         )}
       </div>
     </div>
