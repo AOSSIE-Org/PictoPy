@@ -109,7 +109,8 @@ const Sidebar: React.FC = () => {
     backgroundSize: 'cover',
     fontFamily: styles.fontFamily,
     fontSize: `${styles.fontSize}px`,
-    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    boxShadow:
+      '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
     '--bg-active': styles.activeBackgroundColor,
     '--text-active': styles.activeTextColor,
     '--bg-hover': styles.hoverBackgroundColor,
@@ -147,7 +148,7 @@ const Sidebar: React.FC = () => {
       {/* Sidebar */}
       <div className="p-4">
         <nav
-          className="sidebar relative z-10 flex h-[calc(90vh-2rem)] flex-col justify-between rounded-3xl border-r backdrop-blur-sm transition-all duration-300 ease-in-out"
+          className="sidebar rounded-3xl relative z-10 flex h-[calc(90vh-2rem)] flex-col justify-between border-r backdrop-blur-sm transition-all duration-300 ease-in-out"
           style={sidebarStyle}
           aria-label="Main Navigation"
         >
@@ -214,12 +215,12 @@ const Sidebar: React.FC = () => {
             </div>
 
             {/* Navigation Items */}
-            <div className="space-y-1 w-full px-2">
+            <div className="w-full space-y-1 px-2">
               {navItems.map(({ path, label, Icon }) => (
                 <Link
                   key={path}
                   to={path}
-                  className={`group flex flex-col items-center gap-1 rounded-xl p-4 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
+                  className={`rounded-xl group flex flex-col items-center gap-1 p-4 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
                     isActive(path)
                       ? 'bg-[var(--bg-active)] text-[var(--text-active)] shadow-lg'
                       : 'text-default hover:bg-[var(--bg-hover)]'
@@ -230,19 +231,23 @@ const Sidebar: React.FC = () => {
                     style={{
                       width: styles.iconSize,
                       height: styles.iconSize,
-                      color: isActive(path) ? styles.activeTextColor : styles.iconColor,
+                      color: isActive(path)
+                        ? styles.activeTextColor
+                        : styles.iconColor,
                     }}
                     aria-hidden="true"
                     className="transition-transform duration-300 group-hover:scale-110"
                   />
-                  <span className="whitespace-nowrap font-medium text-xs tracking-wide mt-1">{label}</span>
+                  <span className="mt-1 whitespace-nowrap text-xs font-medium tracking-wide">
+                    {label}
+                  </span>
                 </Link>
               ))}
 
               {/* Image Compressor Button */}
               <button
                 onClick={() => setShowImageCompressor(true)}
-                className="text-default group flex w-full flex-col items-center gap-1 rounded-xl p-4 transition-all duration-300 hover:scale-[1.02] hover:bg-[var(--bg-hover)] active:scale-[0.98]"
+                className="text-default rounded-xl group flex w-full flex-col items-center gap-1 p-4 transition-all duration-300 hover:scale-[1.02] hover:bg-[var(--bg-hover)] active:scale-[0.98]"
                 aria-label="Open Image Compressor"
                 onKeyDown={handleKeyDown}
               >
@@ -255,7 +260,9 @@ const Sidebar: React.FC = () => {
                   aria-hidden="true"
                   className="transition-transform duration-300 group-hover:scale-110"
                 />
-                <span className="font-medium text-xs tracking-wide mt-1">Compressor</span>
+                <span className="mt-1 text-xs font-medium tracking-wide">
+                  Compressor
+                </span>
               </button>
             </div>
           </div>
@@ -264,7 +271,7 @@ const Sidebar: React.FC = () => {
           <div className="flex items-center justify-center p-4">
             <button
               onClick={() => setShowCustomize(true)}
-              className="rounded-full p-3 bg-[var(--bg-hover)] shadow-md transition-all duration-300 hover:bg-[var(--bg-active)] hover:shadow-lg focus:outline-none"
+              className="rounded-full bg-[var(--bg-hover)] p-3 shadow-md transition-all duration-300 hover:bg-[var(--bg-active)] hover:shadow-lg focus:outline-none"
               aria-label="Customize sidebar"
               onKeyDown={handleKeyDown}
             >
@@ -277,7 +284,7 @@ const Sidebar: React.FC = () => {
       {/* Customization Popup */}
       {showCustomize && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm transition-opacity duration-300">
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white/90 dark:bg-gray-800/90 shadow-2xl p-4">
+          <div className="rounded-2xl max-h-[90vh] w-full max-w-md overflow-y-auto bg-white/90 p-4 shadow-2xl dark:bg-gray-800/90">
             <CustomizationPopup
               styles={styles}
               setStyles={setStyles}
@@ -290,12 +297,14 @@ const Sidebar: React.FC = () => {
       {/* Image Compressor Popup */}
       {showImageCompressor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm transition-opacity duration-300">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white/90 dark:bg-gray-800/90 shadow-2xl p-6">
+          <div className="rounded-2xl max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-white/90 p-6 shadow-2xl dark:bg-gray-800/90">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">Image Compressor</h2>
+              <h2 className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-2xl font-bold text-transparent">
+                Image Compressor
+              </h2>
               <button
                 onClick={() => setShowImageCompressor(false)}
-                className="rounded-full p-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                className="rounded-full p-2 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
                 aria-label="Close image compressor"
               >
                 <svg
@@ -322,9 +331,11 @@ const Sidebar: React.FC = () => {
       {/* Avatar Cropper Popup */}
       {showAvatarCropper && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm transition-opacity duration-300">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white/90 dark:bg-gray-800/90 shadow-2xl p-6">
+          <div className="rounded-2xl max-h-[90vh] w-full max-w-lg overflow-y-auto bg-white/90 p-6 shadow-2xl dark:bg-gray-800/90">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">Crop Avatar</h2>
+              <h2 className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-2xl font-bold text-transparent">
+                Crop Avatar
+              </h2>
             </div>
             <AvatarCropper
               image={avatar as string}
