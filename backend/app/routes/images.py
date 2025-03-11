@@ -13,26 +13,27 @@ from app.database.images import (
     insert_image_db,
     delete_image_db,
     get_objects_db,
-    extract_metadata,
-    get_all_image_paths
+    get_all_image_paths,
 )
-from app.database.folders import(
-    insert_folder,delete_folder,
+from app.utils.metadata import extract_metadata
+from app.database.folders import (
+    insert_folder,
     get_all_folders,
 )
+
 router = APIRouter()
 
 progress_status = {}
 
-async def run_get_classes(img_path,folder_id=None):
+
+async def run_get_classes(img_path, folder_id=None):
     loop = asyncio.get_event_loop()
     result = await loop.run_in_executor(None, get_classes, img_path)
-    insert_image_db(img_path, result, extract_metadata(img_path),folder_id)
+    insert_image_db(img_path, result, extract_metadata(img_path), folder_id)
     if result:
         classes = result.split(",")
         if "0" in classes and classes.count("0") < 8:
             detect_faces(img_path)
-
 
 
 @router.get("/all-images")
@@ -43,9 +44,7 @@ def get_images():
         return JSONResponse(
             status_code=200,
             content={
-                "data": {
-                    "image_files": image_files
-                },
+                "data": {"image_files": image_files},
                 "message": "Successfully retrieved all images",
                 "success": True,
             },
@@ -60,6 +59,7 @@ def get_images():
                 "message": str(e),
             },
         )
+
 
 async def process_images(tasks, folder_id):
     total = len(tasks)
@@ -245,6 +245,7 @@ def get_class_ids(path: str = Query(...)):
             },
         )
 
+
 @router.post("/add-folder")
 async def add_folder(payload: dict):
     try:
@@ -275,30 +276,34 @@ async def add_folder(payload: dict):
                         },
                     },
                 )
-            if not os.access(folder, os.R_OK) or not os.access(folder, os.W_OK) or not os.access(folder, os.X_OK):
+            if (
+                not os.access(folder, os.R_OK)
+                or not os.access(folder, os.W_OK)
+                or not os.access(folder, os.X_OK)
+            ):
                 return JSONResponse(
-                status_code=403,
-                content={
-                    "status_code": 403,
-                    "content": {
-                    "success": False,
-                    "error": "Permission denied",
-                    "message": "The app does not have read and write permissions for the specified folder",
+                    status_code=403,
+                    content={
+                        "status_code": 403,
+                        "content": {
+                            "success": False,
+                            "error": "Permission denied",
+                            "message": "The app does not have read and write permissions for the specified folder",
+                        },
                     },
-                },
                 )
             folder_id = insert_folder(folder)
             if folder_id is None:
                 return JSONResponse(
-                status_code=400,
-                content={
-                    "status_code": 400,
-                    "content": {
-                    "success": False,
-                    "error": "Folder not inserted",
-                    "message": "Could not insert folder",
+                    status_code=400,
+                    content={
+                        "status_code": 400,
+                        "content": {
+                            "success": False,
+                            "error": "Folder not inserted",
+                            "message": "Could not insert folder",
+                        },
                     },
-                },
                 )
 
             image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
@@ -311,7 +316,11 @@ async def add_folder(payload: dict):
                     file_path = os.path.join(root, file)
                     file_extension = os.path.splitext(file_path)[1].lower()
                     if file_extension in image_extensions:
-                        tasks.append(asyncio.create_task(run_get_classes(file_path, folder_id=folder_id)))
+                        tasks.append(
+                            asyncio.create_task(
+                                run_get_classes(file_path, folder_id=folder_id)
+                            )
+                        )
 
             if not tasks:
                 return JSONResponse(
@@ -322,13 +331,18 @@ async def add_folder(payload: dict):
                         "success": True,
                     },
                 )
-            progress_status[folder_id] = {"total": len(tasks), "completed": 0, "status": "pending"}
+            progress_status[folder_id] = {
+                "total": len(tasks),
+                "completed": 0,
+                "status": "pending",
+            }
             asyncio.create_task(process_images(tasks, folder_id))
         return JSONResponse(
             status_code=200,
             content={
                 "data": len(tasks),
-                "message": f"Processing {len(tasks)} images from the folder in the background",
+                "message": f"""Processing {len(tasks)} images from 
+                the folder in the background""",
                 "success": True,
             },
         )
@@ -348,7 +362,6 @@ async def add_folder(payload: dict):
         )
 
 
-# generate 400px width or height thumbnails for all the images present the given folder using pillow library
 @router.post("/generate-thumbnails")
 @exception_handler_wrapper
 def generate_thumbnails(payload: dict):
@@ -462,10 +475,12 @@ def delete_thumbnails(folder_path: str | None = None):
             "status_code": 200,
             "content": {
                 "success": True,
-                "message": "All PictoPy.thumbnails folders have been successfully deleted.",
+                "message": """All PictoPy.thumbnails folders 
+                have been successfully deleted.""",
             },
         },
     )
+
 
 @router.get("/add-folder-progress")
 async def combined_progress():
@@ -479,7 +494,8 @@ async def combined_progress():
     return JSONResponse(
         status_code=200,
         content={
-            "data": progress, 
+            "data": progress,
             "message": progress_status,
             "success": True,
-    })
+        },
+    )

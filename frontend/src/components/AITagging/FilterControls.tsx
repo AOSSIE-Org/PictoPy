@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -6,13 +6,22 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-
 import { Button } from '../ui/button';
 import { MediaItem } from '@/types/Media';
 import AITaggingFolderPicker from '../FolderPicker/AITaggingFolderPicker';
 import DeleteSelectedImagePage from '../FolderPicker/DeleteSelectedImagePage';
 import ErrorDialog from '../Album/Error';
-import { Trash2, Filter } from 'lucide-react';
+import { Trash2, Filter, UserSearch, Upload, Camera } from 'lucide-react';
+import { searchByFace } from '../../../api/api-functions/faceTagging';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../ui/dialog';
+import WebcamCapture from './WebcamCapture';
+import { LoadingScreen } from '../LoadingScreen/LoadingScreen';
 
 interface FilterControlsProps {
   setFilterTag: (tag: string[]) => void;
@@ -21,6 +30,7 @@ interface FilterControlsProps {
   isLoading: boolean;
   isVisibleSelectedImage: boolean;
   setIsVisibleSelectedImage: (value: boolean) => void;
+  setFaceSearchResults: (paths: string[]) => void;
 }
 
 export default function FilterControls({
@@ -29,8 +39,8 @@ export default function FilterControls({
   onFolderAdded,
   isVisibleSelectedImage,
   setIsVisibleSelectedImage,
+  setFaceSearchResults,
 }: FilterControlsProps) {
-
   const uniqueTags = React.useMemo(() => {
     const allTags = mediaItems.flatMap((item) => item.tags);
     return Array.from(new Set(allTags))
@@ -39,6 +49,12 @@ export default function FilterControls({
   }, [mediaItems]);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [isFaceDialogOpen, setIsFaceDialogOpen] = useState<boolean>(false);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState<boolean>(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedFlags, setSelectedFlags] = useState<
     { tag: string; isChecked: boolean }[]
@@ -68,7 +84,6 @@ export default function FilterControls({
     selectedFlags.forEach((ele) => {
       if (ele.isChecked) flags.push(ele.tag);
     });
-
     console.log('Updated Filter Flags = ', flags);
     setFilterTag(flags);
   };
@@ -99,6 +114,65 @@ export default function FilterControls({
     });
   };
 
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsSearching(true);
+      setSearchError(null);
+
+      const result = await searchByFace(file);
+
+      if (result.success && result.data) {
+        const matchedPaths = result.data.matches.map(
+          (match: any) => match.path,
+        );
+        setFaceSearchResults(matchedPaths);
+        setIsFaceDialogOpen(false);
+      } else {
+        setSearchError(result.message || 'Failed to search by face');
+      }
+    } catch (error: any) {
+      console.error('Error in face search:', error);
+      if (error.message?.includes('400')) {
+        setSearchError('No person detected in the image');
+      } else {
+        setSearchError(error.message || 'An unknown error occurred');
+      }
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+  const clearFaceSearch = () => {
+    setFaceSearchResults([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCameraCapture = (
+    matchedPaths: string[],
+    errorMessage?: string,
+  ) => {
+    if (errorMessage) {
+      setIsSearching(false);
+      setSearchError(errorMessage);
+      return;
+    }
+
+    setFaceSearchResults(matchedPaths);
+    setShowCamera(false);
+    setIsFaceDialogOpen(false);
+  };
+
   if (!isVisibleSelectedImage) {
     return (
       <div>
@@ -125,6 +199,73 @@ export default function FilterControls({
           <Trash2 className="h-4 w-4" />
           <p className="ml-1 hidden lg:inline">Delete Images</p>
         </Button>
+
+        <Dialog open={isFaceDialogOpen} onOpenChange={setIsFaceDialogOpen}>
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              className="border-gray-500 hover:bg-accent dark:hover:bg-white/10"
+            >
+              <UserSearch className="h-4 w-4" />
+              <p className="ml-1 hidden lg:inline">Sort by Face</p>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Sort by Face</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4 flex flex-col gap-4">
+              {isSearching && <LoadingScreen />}
+              {searchError && (
+                <div className="rounded-md bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-200">
+                  {searchError}
+                </div>
+              )}
+
+              {showCamera ? (
+                <WebcamCapture
+                  onCapture={handleCameraCapture}
+                  onClose={() => setShowCamera(false)}
+                />
+              ) : (
+                <>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                  />
+
+                  <Button
+                    onClick={triggerFileInput}
+                    className="flex items-center justify-center gap-2"
+                  >
+                    <Upload size={18} />
+                    Upload Photo
+                  </Button>
+
+                  <Button
+                    onClick={() => setShowCamera(true)}
+                    className="flex items-center justify-center gap-2"
+                  >
+                    <Camera size={18} />
+                    Use Camera
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={clearFaceSearch}
+                    className="mt-2"
+                  >
+                    Clear Face Search
+                  </Button>
+                </>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
           <DropdownMenuTrigger asChild>
             <Button

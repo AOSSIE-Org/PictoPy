@@ -1,6 +1,7 @@
 import os
 from PIL import Image
 
+
 def generate_thumbnails_for_folders(folder_paths: list):
     image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"]
     failed_paths = []

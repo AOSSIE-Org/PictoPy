@@ -7,7 +7,7 @@ from app.config.settings import DATABASE_PATH
 
 def get_all_face_embeddings():
     conn = sqlite3.connect(DATABASE_PATH)
-    cursor= conn.cursor()
+    cursor = conn.cursor()
 
     cursor.execute("SELECT image_id, embeddings FROM faces")
     results = cursor.fetchall()
@@ -16,9 +16,7 @@ def get_all_face_embeddings():
     image_paths = []
     skipped_images = []
     for image_id, embeddings_json in results:
-        cursor.execute(
-            "SELECT path FROM image_id_mapping WHERE id = ?", (image_id,)
-        )
+        cursor.execute("SELECT path FROM image_id_mapping WHERE id = ?", (image_id,))
         image_path = cursor.fetchone()[0]
         embeddings = np.array(json.loads(embeddings_json))
 

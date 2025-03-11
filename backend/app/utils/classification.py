@@ -1,6 +1,6 @@
 import cv2
 from app.config.settings import DEFAULT_OBJ_DETECTION_MODEL
-from app.yolov8 import YOLOv8
+from app.yolov8.YOLOv8 import YOLOv8
 
 
 def get_classes(img_path):
@@ -12,6 +12,6 @@ def get_classes(img_path):
 
     _, _, class_ids = yolov8_detector(img)
     id_str = [str(x) for x in class_ids]
-    id_str = ','.join(id_str)
+    id_str = ",".join(id_str)
     print(id_str, flush=True)
     return id_str

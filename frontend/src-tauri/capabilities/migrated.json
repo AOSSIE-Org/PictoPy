@@ -4,23 +4,23 @@
   "local": true,
   "windows": ["main"],
   "permissions": [
-    "path:default",
-    "event:default",
-    "window:default",
-    "app:default",
-    "resources:default",
-    "menu:default",
-    "tray:default",
+    "core:path:default",
+    "core:event:default",
+    "core:window:default",
+    "core:app:default",
+    "core:resources:default",
+    "core:menu:default",
+    "core:tray:default",
     "shell:allow-open",
-    "path:default",
-    "event:default",
-    "window:default",
-    "window:allow-destroy",
-    "app:default",
-    "resources:default",
-    "menu:default",
-    "tray:default",
-    "window:allow-set-title",
+    "core:path:default",
+    "core:event:default",
+    "core:window:default",
+    "core:window:allow-destroy",
+    "core:app:default",
+    "core:resources:default",
+    "core:menu:default",
+    "core:tray:default",
+    "core:window:allow-set-title",
     "dialog:allow-open",
     "fs:default",
     "fs:allow-app-write",
@@ -130,6 +130,10 @@
           "sidecar": false
         }
       ]
-    }
+    },
+    "shell:default",
+    "fs:default",
+    "dialog:default",
+    "store:default"
   ]
 }
