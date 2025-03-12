@@ -146,7 +146,6 @@ def delete_multiple_images(payload: dict):
         )
 
     except Exception as e:
-        print(e)
         return JSONResponse(
             status_code=500,
             content={
@@ -251,6 +250,7 @@ def get_class_ids(path: str = Query(...)):
 async def add_folder(payload: dict):
     try:
         if "folder_path" not in payload:
+            print("Folder path is required")
             return JSONResponse(
                 status_code=400,
                 content={
@@ -266,6 +266,7 @@ async def add_folder(payload: dict):
         folder_path = payload["folder_path"]
         for folder in folder_path:
             if not os.path.isdir(folder):
+                print("Invalid folder path", folder)
                 return JSONResponse(
                     status_code=400,
                     content={
@@ -295,6 +296,7 @@ async def add_folder(payload: dict):
                 )
             folder_id = insert_folder(folder)
             if folder_id is None:
+                print("Could not insert folder", folder_id)
                 return JSONResponse(
                     status_code=400,
                     content={
@@ -349,7 +351,6 @@ async def add_folder(payload: dict):
         )
 
     except Exception as e:
-        print(e)
         return JSONResponse(
             status_code=500,
             content={
@@ -533,7 +534,8 @@ def delete_thumbnails(folder_path: str | None = None):
 
 
 @router.get("/add-folder-progress")
-async def combined_progress():
+@exception_handler_wrapper
+def combined_progress():
     total_tasks = 0
     total_completed = 0
     for status in progress_status.values():

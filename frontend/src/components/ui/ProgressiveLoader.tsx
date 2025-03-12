@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocalStorage } from '@/hooks/LocalStorage';
 import {
@@ -12,28 +12,42 @@ import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
 interface ProgressiveFolderLoaderProps {
   additionalFolders?: string[];
+  setAdditionalFolders?: (folders: string[]) => void;
 }
 
 const ProgressiveFolderLoader: React.FC<ProgressiveFolderLoaderProps> = ({
   additionalFolders = [],
+  setAdditionalFolders,
 }) => {
   const [storedFolderPaths] = useLocalStorage<string[]>('folderPaths', []);
   const [addedFolders, setAddedFolders] = useLocalStorage<string[]>(
     'addedFolders',
     [],
   );
+  const [isComplete, setIsComplete] = useState(true);
   const [autoAdd] = useLocalStorage('auto-add-folder', 'false');
   const [showError, setShowError] = useState(false);
-  let isComplete = false;
-  const combinedFolderPaths = Array.from(
-    new Set([...storedFolderPaths, ...additionalFolders]),
-  );
+  const isProcessingRef = useRef(false);
+
+  const combinedFolderPaths =
+    additionalFolders.length > 0 ? additionalFolders : storedFolderPaths;
+
   const { mutate: addFolderAPI, errorMessage } = usePictoMutation({
     mutationFn: addFolder,
     onSuccess: () => {
-      setAddedFolders([...storedFolderPaths]);
+      const newAddedFolders = Array.from(
+        new Set([...combinedFolderPaths, ...addedFolders]),
+      );
+      setAddedFolders(newAddedFolders);
+      if (setAdditionalFolders) {
+        setAdditionalFolders([]);
+      }
+      isProcessingRef.current = false;
+      setIsComplete(true);
+      queryClient.invalidateQueries({ queryKey: ['all-images'] });
     },
     onError: () => {
+      isProcessingRef.current = false;
       queryClient.invalidateQueries({ queryKey: ['all-images'] });
       queryClient.invalidateQueries({ queryKey: ['ai-tagging-images', 'ai'] });
       setShowError(true);
@@ -42,124 +56,111 @@ const ProgressiveFolderLoader: React.FC<ProgressiveFolderLoaderProps> = ({
     autoInvalidateTags: ['ai-tagging-images', 'ai'],
   });
 
-  const { successData: progress, isLoading } = usePictoQuery({
+  const { successData: progress } = usePictoQuery({
     queryFn: async () => await getProgress(),
     queryKey: ['ai-tagging-images', 'ai', 'progress'],
-    refetchInterval: isComplete ? false : 1000,
-    enabled: !showError,
+    refetchInterval: !isComplete ? 1000 : false,
+    enabled: !showError && !isComplete,
   });
 
-  const autoAddFolders = useCallback(() => {
-    if (autoAdd === 'true') {
-      const foldersToAdd = combinedFolderPaths.filter(
-        (folder) => !addedFolders.includes(folder),
-      );
-      if (foldersToAdd.length > 0) {
+  const processFolder = useCallback(
+    (foldersToAdd: string[]) => {
+      if (!isProcessingRef.current && foldersToAdd.length > 0) {
+        isProcessingRef.current = true;
+        setIsComplete(false);
         addFolderAPI(foldersToAdd);
       }
+    },
+    [addFolderAPI],
+  );
+
+  const autoAddFolders = useCallback(() => {
+    if (autoAdd === 'true' && !isProcessingRef.current) {
+      const foldersToAdd = combinedFolderPaths.filter(
+        (folderPath) => !addedFolders.includes(folderPath),
+      );
+      processFolder(foldersToAdd);
     }
-  }, [autoAdd, combinedFolderPaths]);
+  }, [autoAdd, addedFolders, combinedFolderPaths, processFolder]);
 
   useEffect(() => {
-    autoAddFolders();
-  }, [autoAddFolders]);
+    if (autoAdd === 'true') {
+      autoAddFolders();
+    }
+  }, [autoAdd, autoAddFolders]);
 
   useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ['all-images'] });
-    queryClient.invalidateQueries({ queryKey: ['ai-tagging-images', 'ai'] });
-  }, [progress, addedFolders, autoAdd, addFolderAPI]);
+    if (additionalFolders.length > 0 && !isProcessingRef.current) {
+      processFolder(additionalFolders);
+    }
+  }, [additionalFolders, processFolder]);
 
   const progressPercentage = typeof progress === 'number' ? progress : 0;
-  isComplete = progressPercentage >= 100;
 
   return (
-    <>
-      <div className="fixed left-0 right-0 top-0 z-[1000]">
+    <div className="fixed left-0 right-0 top-0 z-[1000]">
+      <AnimatePresence>
         {/* Progress bar */}
-        <AnimatePresence>
-          {(isLoading || progressPercentage > 0) &&
-            progressPercentage < 100 && (
-              <motion.div
-                className="h-1 w-full overflow-hidden bg-gray-200"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0, transition: { duration: 0.5, delay: 0.5 } }}
-              >
-                <motion.div
-                  className="h-full bg-gradient-to-r from-sky-400 to-blue-500"
-                  initial={{ width: 0 }}
-                  animate={{
-                    width: `${progressPercentage}%`,
-                    transition: { ease: 'easeInOut' },
-                  }}
-                />
-              </motion.div>
-            )}
-        </AnimatePresence>
+        {!isComplete && (
+          <motion.div
+            className="h-1 w-full overflow-hidden bg-gray-200"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.5, delay: 0.5 } }}
+          >
+            <motion.div
+              className="h-full bg-gradient-to-r from-sky-400 to-blue-500"
+              initial={{ width: 0 }}
+              animate={{
+                width: `${progressPercentage}%`,
+                transition: { ease: 'easeInOut' },
+              }}
+            />
+          </motion.div>
+        )}
 
         {/* Loading indicator */}
-        <AnimatePresence>
-          {(isLoading || progressPercentage > 0) &&
-            progressPercentage < 100 && (
-              <motion.div
-                className="rounded-full fixed right-4 top-4 flex items-center gap-2 bg-white px-3 py-1.5 text-sm shadow-md dark:bg-gray-800"
-                initial={{ y: -50, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -50, opacity: 0 }}
-              >
-                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                <span>
-                  Processing folders... {progressPercentage.toFixed(0)}%
-                </span>
-              </motion.div>
-            )}
-        </AnimatePresence>
+        {!isComplete && (
+          <motion.div
+            className="rounded-full fixed right-4 top-4 flex items-center gap-2 bg-white px-3 py-1.5 text-sm shadow-md dark:bg-gray-800"
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -50, opacity: 0 }}
+          >
+            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+            <span>Processing folders... {progressPercentage.toFixed(0)}%</span>
+          </motion.div>
+        )}
 
         {/* Completion indicator */}
-        <AnimatePresence>
-          {isComplete && (
-            <motion.div
-              className="rounded-full fixed right-4 top-4 flex items-center gap-2 bg-white px-3 py-1.5 text-sm shadow-md dark:bg-gray-800"
-              initial={{ y: -50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -50, opacity: 0 }}
-              onAnimationComplete={() => {
-                if (isComplete) {
-                  setTimeout(() => {
-                    queryClient.invalidateQueries({ queryKey: ['all-images'] });
-                    queryClient.invalidateQueries({
-                      queryKey: ['ai-tagging-images', 'ai'],
-                    });
-                  }, 1000);
-                }
-              }}
-            >
-              <CheckCircle className="h-4 w-4 text-green-500" />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {isComplete && !isProcessingRef.current && (
+          <motion.div
+            className="rounded-full fixed right-4 top-4 flex items-center gap-2 bg-white px-3 py-1.5 text-sm shadow-md dark:bg-gray-800"
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -50, opacity: 0 }}
+          >
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </motion.div>
+        )}
 
         {/* Error message */}
-        <AnimatePresence>
-          {showError && errorMessage && (
-            <motion.div
-              className="fixed left-1/2 top-4 flex max-w-md -translate-x-1/2 transform items-center gap-2 rounded-lg border-l-4 border-red-500 bg-white px-4 py-2 text-sm shadow-md dark:bg-gray-800"
-              initial={{ y: -50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -50, opacity: 0 }}
-            >
-              <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-500" />
-              <div>
-                <p className="font-medium text-red-500">Error</p>
-                <p className="text-gray-600 dark:text-gray-300">
-                  {errorMessage}
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </>
+        {showError && errorMessage && (
+          <motion.div
+            className="fixed left-1/2 top-4 flex max-w-md -translate-x-1/2 transform items-center gap-2 rounded-lg border-l-4 border-red-500 bg-white px-4 py-2 text-sm shadow-md dark:bg-gray-800"
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -50, opacity: 0 }}
+          >
+            <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-500" />
+            <div>
+              <p className="font-medium text-red-500">Error</p>
+              <p className="text-gray-600 dark:text-gray-300">{errorMessage}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 

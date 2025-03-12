@@ -86,7 +86,7 @@ const Settings: React.FC = () => {
     try {
       const updatedPaths = currentPaths.filter((path) => path !== pathToRemove);
       setCurrentPaths(updatedPaths);
-      setAddedFolders([...updatedPaths, ...addedFolders]);
+      setAddedFolders(addedFolders.filter((path) => path !== pathToRemove));
       deleteThumbnail(pathToRemove);
       deleteFolderAITagging(pathToRemove);
       await deleteCache();

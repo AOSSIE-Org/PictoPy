@@ -151,7 +151,10 @@ export default function AIGallery({
             setIsVisibleSelectedImage={setIsVisibleSelectedImage}
             setFaceSearchResults={setFaceSearchResults}
           />
-          <ProgressiveFolderLoader additionalFolders={addedFolders} />
+          <ProgressiveFolderLoader
+            additionalFolders={addedFolders}
+            setAdditionalFolders={setAddedFolders}
+          />
         </div>
 
         {isVisibleSelectedImage && (
