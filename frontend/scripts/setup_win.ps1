@@ -3,10 +3,16 @@
 # Function to check if a command exists
 function Test-Command($command) {
     $oldPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'stop'
-    try { if (Get-Command $command) { return $true } }
-    catch { return $false }
-    finally { $ErrorActionPreference = $oldPreference }
+    $ErrorActionPreference = 'Stop'
+
+    try {
+        Get-Command -Name $command -ErrorAction Stop | Out-Null
+        return $true
+    } catch {
+        return $false
+    } finally {
+        $ErrorActionPreference = $oldPreference
+    }
 }
 
 # Function to install Chocolatey

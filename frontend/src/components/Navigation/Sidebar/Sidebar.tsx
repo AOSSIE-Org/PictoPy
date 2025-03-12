@@ -147,7 +147,7 @@ const Sidebar: React.FC = () => {
       {/* Sidebar */}
       <div className="p-4">
         <nav
-          className="sidebar rounded-3xl relative z-10 flex h-[calc(90vh-2rem)] flex-col justify-between border-r transition-all duration-300 ease-in-out"
+          className="sidebar rounded-3xl relative z-10 flex  flex-col justify-between border-r transition-all duration-300 ease-in-out"
           style={sidebarStyle}
           aria-label="Main Navigation"
         >
