@@ -42,12 +42,11 @@ const ProgressiveFolderLoader: React.FC<ProgressiveFolderLoaderProps> = ({
       if (setAdditionalFolders) {
         setAdditionalFolders([]);
       }
-      isProcessingRef.current = false;
-      setIsComplete(true);
       queryClient.invalidateQueries({ queryKey: ['all-images'] });
     },
     onError: () => {
       isProcessingRef.current = false;
+      setIsComplete(true);
       queryClient.invalidateQueries({ queryKey: ['all-images'] });
       queryClient.invalidateQueries({ queryKey: ['ai-tagging-images', 'ai'] });
       setShowError(true);
@@ -90,6 +89,19 @@ const ProgressiveFolderLoader: React.FC<ProgressiveFolderLoaderProps> = ({
   }, [autoAdd, autoAddFolders]);
 
   useEffect(() => {
+    if (typeof progress === 'number') {
+      if (progress === 100) {
+        setTimeout(() => {
+          isProcessingRef.current = false;
+          setIsComplete(true);
+        }, 1000);
+      } else {
+        setIsComplete(false);
+      }
+    }
+  }, [progress]);
+
+  useEffect(() => {
     if (additionalFolders.length > 0 && !isProcessingRef.current) {
       processFolder(additionalFolders);
     }
@@ -101,7 +113,7 @@ const ProgressiveFolderLoader: React.FC<ProgressiveFolderLoaderProps> = ({
     <div className="fixed left-0 right-0 top-0 z-[1000]">
       <AnimatePresence>
         {/* Progress bar */}
-        {!isComplete && (
+        {!isComplete && progressPercentage < 100 && (
           <motion.div
             className="h-1 w-full overflow-hidden bg-gray-200"
             initial={{ opacity: 0 }}
@@ -120,7 +132,7 @@ const ProgressiveFolderLoader: React.FC<ProgressiveFolderLoaderProps> = ({
         )}
 
         {/* Loading indicator */}
-        {!isComplete && (
+        {!isComplete && progressPercentage < 100 && (
           <motion.div
             className="rounded-full fixed right-4 top-4 flex items-center gap-2 bg-white px-3 py-1.5 text-sm shadow-md dark:bg-gray-800"
             initial={{ y: -50, opacity: 0 }}
