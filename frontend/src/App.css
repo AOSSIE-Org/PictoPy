@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  @apply bg-background !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -68,11 +72,11 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border text-foreground;
   }
   body {
-    @apply bg-background text-foreground;
-  }
+    @apply bg-background ;
+  }  
 }
 
 .scrollbar-hide::-webkit-scrollbar {
