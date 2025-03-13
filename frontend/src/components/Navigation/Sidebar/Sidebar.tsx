@@ -11,7 +11,6 @@ import {
   BookImage,
   Lock,
   User,
-  Cross,
   X,
 } from 'lucide-react';
 import CustomizationPopup from './CustomizationPopup';
