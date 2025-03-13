@@ -11,6 +11,8 @@ import {
   BookImage,
   Lock,
   User,
+  Cross,
+  X,
 } from 'lucide-react';
 import CustomizationPopup from './CustomizationPopup';
 import ImageCompressor from './ImageCompressor';
@@ -287,8 +289,16 @@ const Sidebar: React.FC = () => {
       {showImageCompressor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity duration-300">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 dark:bg-gray-800">
-            <div className="mb-4">
+            <div className="mb-4 flex justify-around">
               <h2 className="text-xl font-bold">Image Compressor</h2>
+              <div
+                className="p-1 hover:bg-red-500"
+                onClick={() => {
+                  setShowImageCompressor(false);
+                }}
+              >
+                <X width={24}></X>
+              </div>
             </div>
             <ImageCompressor />
           </div>

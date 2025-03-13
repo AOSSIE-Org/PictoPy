@@ -164,7 +164,6 @@ const ImageCompressor: React.FC = () => {
 
   return (
     <div className="rounded-lg bg-white p-4 shadow">
-      <h3 className="mb-4 text-lg font-semibold">Image Compressor</h3>
       <div className="mb-4 space-y-2">
         {/* Compression Level Slider */}
         <div>
@@ -254,7 +253,7 @@ const ImageCompressor: React.FC = () => {
         {compressedImages.map((image) => (
           <li key={image.id} className="rounded-lg bg-gray-100 p-4">
             <div className="mb-2 flex items-center justify-between">
-              <span className="mr-2 flex-grow truncate text-sm font-medium">
+              <span className="mr-2 flex-grow truncate text-sm font-medium text-gray-500">
                 {image.originalFile.name}
               </span>
               <div className="flex space-x-2">
@@ -266,7 +265,6 @@ const ImageCompressor: React.FC = () => {
                 >
                   <Download size={20} />
                 </button>
-
                 {/* Recompress Button */}
                 <button
                   onClick={() => handleRecompress(image)}
@@ -294,7 +292,7 @@ const ImageCompressor: React.FC = () => {
                 alt="Preview"
                 className="rounded h-20 w-20 object-cover"
               />
-              <div>
+              <div className="text-gray-500">
                 <p className="text-sm">
                   Original: {(image.originalSize / 1024).toFixed(2)} KB
                 </p>
