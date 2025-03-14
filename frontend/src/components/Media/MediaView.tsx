@@ -1,3 +1,5 @@
+'use client';
+
 import type { MediaViewProps } from '@/types/Media';
 import type React from 'react';
 import { useEffect, useState, useCallback } from 'react';
@@ -8,8 +10,6 @@ import {
   Share2,
   Check,
   X,
-  SunMoon,
-  Contrast,
   ZoomIn,
   ZoomOut,
   RotateCw,
@@ -17,6 +17,13 @@ import {
   Play,
   Pause,
   Lock,
+  Info,
+  ImageIcon,
+  Folder,
+  ExternalLink,
+  Sliders,
+  SunIcon,
+  ContrastIcon,
 } from 'lucide-react';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -24,6 +31,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { useNavigate } from 'react-router-dom';
 import NetflixStylePlayer from '../VideoPlayer/NetflixStylePlayer';
+import { save } from '@tauri-apps/plugin-dialog';
 
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
@@ -46,8 +54,14 @@ const MediaView: React.FC<MediaViewProps> = ({
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<Crop>();
   const [filter, setFilter] = useState('');
-  const [brightness, setBrightness] = useState(100);
-  const [contrast, setContrast] = useState(100);
+  const [brightness, setBrightness] = useState(0);
+  const [contrast, setContrast] = useState(0);
+  const [vibrance, setVibrance] = useState(0);
+  const [exposure, setExposure] = useState(0);
+  const [temperature, setTemperature] = useState(0);
+  const [sharpness, setSharpness] = useState(0);
+  const [vignette, setVignette] = useState(0);
+  const [highlights, setHighlights] = useState(0);
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'error';
@@ -58,6 +72,8 @@ const MediaView: React.FC<MediaViewProps> = ({
     const saved = localStorage.getItem('pictopy-favorites');
     return saved ? JSON.parse(saved) : [];
   });
+  const [showInfo, setShowInfo] = useState(false);
+  const [showAdjustMenu, setShowAdjustMenu] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -77,7 +93,7 @@ const MediaView: React.FC<MediaViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [globalIndex, onClose, favorites]);
+  }, [onClose]);
 
   useEffect(() => {
     let slideshowInterval: NodeJS.Timeout | null = null;
@@ -148,17 +164,26 @@ const MediaView: React.FC<MediaViewProps> = ({
     setCrop(undefined);
     setCompletedCrop(undefined);
     setFilter('');
-    setBrightness(100);
-    setContrast(100);
+    setBrightness(0);
+    setContrast(0);
+    setVibrance(0);
+    setExposure(0);
+    setTemperature(0);
+    setSharpness(0);
+    setVignette(0);
+    setHighlights(0);
     setPosition({ x: 0, y: 0 });
     setScale(1);
   };
 
-  const showNotification = (message: string, type: 'success' | 'error') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 5000);
-    console.log(`Notification: ${type} - ${message}`);
-  };
+  const showNotification = useCallback(
+    (message: string, type: 'success' | 'error') => {
+      setNotification({ message, type });
+      setTimeout(() => setNotification(null), 5000);
+      console.log(`Notification: ${type} - ${message}`);
+    },
+    [],
+  );
 
   const handleShare = async () => {
     try {
@@ -213,9 +238,6 @@ const MediaView: React.FC<MediaViewProps> = ({
         ctx.drawImage(img, 0, 0);
       }
 
-      ctx.filter = `${filter} brightness(${brightness}%) contrast(${contrast}%)`;
-      ctx.drawImage(canvas, 0, 0);
-
       console.log('Canvas prepared, attempting to create blob');
 
       const editedBlob = await new Promise<Blob | null>((resolve) => {
@@ -244,13 +266,28 @@ const MediaView: React.FC<MediaViewProps> = ({
           password: prompt('Enter your secure folder password:'),
         });
       } else {
-        console.log('Invoking save_edited_image');
+        const selectedPath = await save({
+          defaultPath: `${allMedia[globalIndex].path?.replace(/\.\w+$/, '_edited.png')}`,
+          filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg'] }],
+        });
+
+        if (!selectedPath) {
+          console.log('User cancelled save dialog');
+          return;
+        }
+
         await invoke('save_edited_image', {
           imageData: Array.from(uint8Array),
-          originalPath: allMedia[globalIndex].path,
+          savePath: selectedPath,
           filter,
           brightness,
           contrast,
+          vibrance,
+          exposure,
+          temperature,
+          sharpness,
+          vignette,
+          highlights,
         });
       }
 
@@ -269,10 +306,16 @@ const MediaView: React.FC<MediaViewProps> = ({
     filter,
     brightness,
     contrast,
+    vibrance,
+    exposure,
+    temperature,
+    sharpness,
+    vignette,
+    highlights,
     allMedia,
     globalIndex,
-    showNotification,
     isSecureFolder,
+    showNotification,
   ]);
 
   const handleThumbnailClick = (index: number) => {
@@ -322,13 +365,74 @@ const MediaView: React.FC<MediaViewProps> = ({
     }
   };
 
+  const handleSetWallpaper = async () => {
+    try {
+      await invoke('set_wallpaper', { path: allMedia[globalIndex].path });
+      showNotification('Wallpaper set successfully', 'success');
+    } catch (err: any) {
+      showNotification(`Failed to set wallpaper: ${err}`, 'error');
+    }
+  };
+
+  const handleOpenFolder = async () => {
+    try {
+      await invoke('open_folder', { path: allMedia[globalIndex].path });
+    } catch (err: any) {
+      showNotification(`Failed to open folder: ${err}`, 'error');
+    }
+  };
+
+  const handleOpenWith = async () => {
+    try {
+      await invoke('open_with', { path: allMedia[globalIndex].path });
+    } catch (err: any) {
+      showNotification(`Failed to open file: ${err}`, 'error');
+    }
+  };
+
+  const toggleInfo = () => {
+    setShowInfo((prev) => !prev);
+  };
+
+  const toggleAdjustMenu = () => {
+    setShowAdjustMenu((prev) => !prev);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-sm transition-all duration-300">
-      <div className="absolute right-4 top-4 z-50 flex items-center gap-2.5 rounded-full bg-black/30 p-1.5 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-black/95 to-black/98 backdrop-blur-lg">
+      <div className="absolute right-4 top-4 z-50 flex items-center gap-3">
+        <button
+          onClick={toggleInfo}
+          className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
+          aria-label="Show Info"
+        >
+          <Info className="h-5 w-5" />
+        </button>
+        <button
+          onClick={handleSetWallpaper}
+          className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
+          aria-label="Set as Wallpaper"
+        >
+          <ImageIcon className="h-5 w-5" />
+        </button>
+        <button
+          onClick={handleOpenFolder}
+          className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
+          aria-label="Open Folder"
+        >
+          <Folder className="h-5 w-5" />
+        </button>
+        <button
+          onClick={handleOpenWith}
+          className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
+          aria-label="Open With"
+        >
+          <ExternalLink className="h-5 w-5" />
+        </button>
         {!isSecureFolder && (
           <button
             onClick={handleShare}
-            className="rounded-full bg-white/15 p-2 text-white transition-all duration-200 hover:bg-white/30 hover:shadow-lg hover:shadow-white/10"
+            className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
             aria-label="Share"
           >
             <Share2 className="h-5 w-5" />
@@ -336,30 +440,12 @@ const MediaView: React.FC<MediaViewProps> = ({
         )}
         {!isSecureFolder && (
           <button
-            onClick={() => setIsEditing(true)}
-            className="rounded-full bg-white/15 p-2 text-white transition-all duration-200 hover:bg-white/30 hover:shadow-lg hover:shadow-white/10"
-            aria-label="Edit"
-          >
-            <Edit className="h-5 w-5" />
-          </button>
-        )}
-        {!isSecureFolder && (
-          <button
-            onClick={handleMoveToSecureFolder}
-            className="rounded-full bg-white/15 p-2 text-white transition-all duration-200 hover:bg-white/30 hover:shadow-lg hover:shadow-white/10"
-            aria-label="Move to Secure Folder"
-          >
-            <Lock className="h-5 w-5" />
-          </button>
-        )}
-        {!isSecureFolder && (
-          <button
             onClick={toggleFavorite}
-            className={`rounded-full p-2 text-white transition-all duration-300 ${
+            className={`rounded-full p-2.5 text-white transition-all duration-300 ${
               isFavorite(allMedia[globalIndex].path || '')
-                ? 'bg-red-500/80 hover:bg-red-600/80'
-                : 'bg-white/15 hover:bg-white/30'
-            } hover:shadow-lg hover:shadow-white/10`}
+                ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
+                : 'bg-white/10 hover:bg-white/20 hover:text-white hover:shadow-lg'
+            }`}
             aria-label={
               isFavorite(allMedia[globalIndex].path || '')
                 ? 'Remove from favorites'
@@ -371,20 +457,29 @@ const MediaView: React.FC<MediaViewProps> = ({
             />
           </button>
         )}
-        {type === 'image' ? (
+        {type === 'image' && !isSecureFolder && (
           <button
             onClick={() => setIsEditing(true)}
-            className="rounded-full bg-white/15 p-2 text-white transition-all duration-200 hover:bg-white/30 hover:shadow-lg hover:shadow-white/10"
+            className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
             aria-label="Edit"
           >
             <Edit className="h-5 w-5" />
           </button>
-        ) : null}
+        )}
+        {!isSecureFolder && (
+          <button
+            onClick={handleMoveToSecureFolder}
+            className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
+            aria-label="Move to Secure Folder"
+          >
+            <Lock className="h-5 w-5" />
+          </button>
+        )}
 
-        {type === 'image' ? (
+        {type === 'image' && (
           <button
             onClick={toggleSlideshow}
-            className="rounded-full flex items-center gap-2 bg-white/15 px-4 py-2 text-white transition-all duration-200 hover:bg-white/30 hover:shadow-lg hover:shadow-white/10"
+            className="rounded-full flex items-center gap-2 bg-indigo-500/70 px-4 py-2 text-white transition-all duration-200 hover:bg-indigo-600/80 hover:shadow-lg"
             aria-label="Toggle Slideshow"
           >
             {isSlideshowActive ? (
@@ -396,11 +491,11 @@ const MediaView: React.FC<MediaViewProps> = ({
               {isSlideshowActive ? 'Pause' : 'Slideshow'}
             </span>
           </button>
-        ) : null}
+        )}
 
         <button
           onClick={onClose}
-          className="rounded-full bg-white/15 p-2 text-white transition-all duration-200 hover:bg-red-500/80 hover:shadow-lg hover:shadow-red-500/20"
+          className="ml-2 rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
           aria-label="Close"
         >
           <X className="h-5 w-5" />
@@ -428,32 +523,95 @@ const MediaView: React.FC<MediaViewProps> = ({
             className="relative flex h-full w-full items-center justify-center overflow-hidden"
           >
             {isEditing ? (
-              <ReactCrop
-                crop={crop}
-                onChange={(c) => setCrop(c)}
-                onComplete={(c) => setCompletedCrop(c)}
-                className="max-h-[90vh] max-w-[90vw]"
-              >
-                <img
-                  id="source-image"
-                  src={allMedia[globalIndex].url || '/placeholder.svg'}
-                  alt={`image-${globalIndex}`}
-                  style={{
-                    filter: `${filter} brightness(${brightness}%) contrast(${contrast}%)`,
-                  }}
-                />
-              </ReactCrop>
+              <div className="relative inline-block">
+                <ReactCrop
+                  crop={crop}
+                  onChange={(c) => setCrop(c)}
+                  onComplete={(c) => setCompletedCrop(c)}
+                >
+                  <TemperatureFilter temperature={temperature} />
+                  <img
+                    id="source-image"
+                    src={allMedia[globalIndex].url || allMedia[globalIndex].url || '/placeholder.svg'}
+                    alt={`image-${globalIndex}`}
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      img.onerror = null;
+                      img.src =
+                        allMedia[globalIndex].thumbnailUrl ||
+                        allMedia[globalIndex].url ||
+                        '/PictoPy_Logo.png'; // Ensure a valid fallback
+                    }}
+                    style={{
+                      filter: `
+                      brightness(${100 + exposure + highlights / 2}%) 
+                      contrast(${100 + contrast}%) 
+                      saturate(${1 + vibrance / 100}) 
+                      hue-rotate(${temperature > 0 ? temperature * 0.25 : temperature * 0.8}deg) 
+                      sepia(${Math.abs(temperature) / 200}) 
+                      saturate(${temperature > 0 ? 1.2 : 1.0}) 
+                      brightness(${temperature > 0 ? 1.05 : 1.0}) 
+                      ${sharpness > 0 ? `url(#sharpness)` : ''} 
+                      ${filter} 
+                      `.trim(),
+                      display: 'block',
+                      width: '100%',
+                    }}
+                  />
+                  <svg width="0" height="0">
+                    <filter id="sharpness">
+                      <feConvolveMatrix
+                        order="3"
+                        kernelMatrix="0 -1 0 -1 5 -1 0 -1 0"
+                      />
+                    </filter>
+                  </svg>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      background: `radial-gradient(circle, rgba(0,0,0,0) 50%, rgba(0,0,0,${vignette / 100}))`,
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      background: `radial-gradient(circle, rgba(255, 255, 255, ${Math.min(highlights / 1000, 0.8)}) 30%, rgba(255, 255, 255, 0) 80%)`,
+                      pointerEvents: 'none',
+                    }}
+                  />
+                </ReactCrop>
+              </div>
             ) : (
               <img
-                src={allMedia[globalIndex].url || '/placeholder.svg'}
+                src={
+                  allMedia[globalIndex].url ||
+                  allMedia[globalIndex].thumbnailUrl
+                }
                 alt={`image-${globalIndex}`}
                 draggable={false}
-                className="h-full w-full max-h-[90vh] max-w-[90vw] select-none object-contain"
+                className="h-full w-full select-none object-contain"
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  img.onerror = null;
+                  img.src =
+                    allMedia[globalIndex].thumbnailUrl ||
+                    allMedia[globalIndex].url ||
+                    '/PictoPy_Logo.png'; // Ensure a valid fallback
+                }}
                 style={{
                   transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
                   transition: isDragging
                     ? 'none'
-                    : 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                    : 'transform 0.2s ease-in-out',
                   cursor: isDragging ? 'grabbing' : 'grab',
                 }}
               />
@@ -469,140 +627,295 @@ const MediaView: React.FC<MediaViewProps> = ({
 
         <button
           onClick={handlePrevItem}
-          className="absolute left-4 top-1/2 z-50 flex h-12 w-12 -translate-y-1/2 transform items-center justify-center rounded-full bg-black/40 text-white shadow-lg backdrop-blur-md transition-all duration-200 hover:bg-black/60"
+          className="absolute left-4 top-1/2 z-50 flex -translate-y-1/2 transform items-center rounded-full bg-black/30 p-3 text-white transition-all duration-200 backdrop-blur-md hover:bg-black/50 hover:shadow-lg"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
         <button
           onClick={handleNextItem}
-          className="absolute right-4 top-1/2 z-50 flex h-12 w-12 -translate-y-1/2 transform items-center justify-center rounded-full bg-black/40 text-white shadow-lg backdrop-blur-md transition-all duration-200 hover:bg-black/60"
+          className="absolute right-4 top-1/2 z-50 flex -translate-y-1/2 transform items-center rounded-full bg-black/30 p-3 text-white transition-all duration-200 backdrop-blur-md hover:bg-black/50 hover:shadow-lg"
         >
           <ChevronRight className="h-6 w-6" />
         </button>
       </div>
-      
+
       {type === 'image' ? (
-        <div className="absolute bottom-20 right-4 flex gap-2 rounded-2xl bg-black/40 p-2 backdrop-blur-md">
-          <button
-            onClick={handleZoomOut}
-            className="rounded-xl bg-white/15 p-2 text-white transition-all duration-200 hover:bg-white/30"
-            aria-label="Zoom Out"
-          >
-            <ZoomOut className="h-5 w-5" />
-          </button>
-          <button
-            onClick={resetZoom}
-            className="rounded-xl bg-white/15 px-4 py-2 text-white transition-all duration-200 hover:bg-white/30"
-          >
-            <span className="text-sm font-medium">Reset</span>
-          </button>
-          <button
-            onClick={handleZoomIn}
-            className="rounded-xl bg-white/15 p-2 text-white transition-all duration-200 hover:bg-white/30"
-            aria-label="Zoom In"
-          >
-            <ZoomIn className="h-5 w-5" />
-          </button>
-          <button
-            onClick={handleRotate}
-            className="rounded-xl bg-white/15 p-2 text-white transition-all duration-200 hover:bg-white/30"
-            aria-label="Rotate"
-          >
-            <RotateCw className="h-5 w-5" />
-          </button>
+        <div className="absolute bottom-32 right-4 flex flex-col gap-4 rounded-xl bg-black/30 p-3 backdrop-blur-md">
+          <div className="flex gap-2">
+            <button
+              onClick={handleZoomOut}
+              className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
+              aria-label="Zoom Out"
+            >
+              <ZoomOut className="h-5 w-5" />
+            </button>
+            <button
+              onClick={resetZoom}
+              className="rounded-md bg-white/10 px-3 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
+            >
+              Reset
+            </button>
+            <button
+              onClick={handleZoomIn}
+              className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
+              aria-label="Zoom In"
+            >
+              <ZoomIn className="h-5 w-5" />
+            </button>
+            <button
+              onClick={handleRotate}
+              className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
+              aria-label="Rotate"
+            >
+              <RotateCw className="h-5 w-5" />
+            </button>
+          </div>
+
           {isEditing && (
-            <>
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={handleEditComplete}
-                className="rounded-xl bg-green-500/80 p-2 text-white transition-all duration-200 hover:bg-green-600/80"
+                className="rounded-md bg-emerald-500/70 p-2 text-white transition-all duration-200 hover:bg-emerald-600 hover:shadow-md"
                 aria-label="Confirm Edit"
               >
                 <Check className="h-5 w-5" />
               </button>
               <button
                 onClick={resetEditing}
-                className="rounded-xl bg-red-500/80 p-2 text-white transition-all duration-200 hover:bg-red-600/80"
+                className="rounded-md bg-rose-500/70 p-2 text-white transition-all duration-200 hover:bg-rose-600 hover:shadow-md"
                 aria-label="Cancel Edit"
               >
                 <X className="h-5 w-5" />
               </button>
               <select
                 onChange={(e) => setFilter(e.target.value)}
-                className="rounded-xl bg-white/15 px-3 py-2 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-white/30"
+                className="rounded-md bg-white/10 px-2 py-2 text-sm text-white transition-all duration-200 hover:bg-white/20"
               >
                 <option value="">No Filter</option>
                 <option value="grayscale(100%)">Grayscale</option>
                 <option value="sepia(100%)">Sepia</option>
                 <option value="invert(100%)">Invert</option>
+                <option value="saturate(200%)">Saturate</option>
               </select>
-              <div className="flex items-center gap-2 rounded-xl bg-white/15 px-3">
-                <SunMoon className="h-4 w-4 text-white" />
+              <button
+                onClick={toggleAdjustMenu}
+                className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
+                aria-label="Adjust"
+              >
+                <Sliders className="h-5 w-5" />
+              </button>
+              
+              {/* Quick adjustment controls */}
+              <div className="mt-2 flex w-full items-center gap-2">
+                <SunIcon className="h-4 w-4 text-white/80" />
                 <input
                   type="range"
                   min="0"
                   max="200"
                   value={brightness}
                   onChange={(e) => setBrightness(Number(e.target.value))}
-                  className="w-24 accent-white"
+                  className="h-2 w-24 appearance-none rounded-lg bg-white/20"
                 />
               </div>
-              <div className="flex items-center gap-2 rounded-xl bg-white/15 px-3">
-                <Contrast className="h-4 w-4 text-white" />
+              <div className="flex w-full items-center gap-2">
+                <ContrastIcon className="h-4 w-4 text-white/80" />
                 <input
                   type="range"
                   min="0"
                   max="200"
                   value={contrast}
                   onChange={(e) => setContrast(Number(e.target.value))}
-                  className="w-24 accent-white"
+                  className="h-2 w-24 appearance-none rounded-lg bg-white/20"
                 />
               </div>
-            </>
+            </div>
           )}
         </div>
       ) : null}
 
-      {/* Thumbnails */}
-      {type === 'image' ? (
-        <div>
-          <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 py-4 opacity-0 transition-opacity duration-300 hover:opacity-100">
-            <div className="flex items-center justify-center gap-2 overflow-x-auto rounded-2xl bg-black/50 p-2 backdrop-blur-md">
-              {allMedia.map((media, index) => (
-                <div
-                  key={index}
-                  onClick={() => handleThumbnailClick(index)}
-                  className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
-                    index === globalIndex
-                      ? 'border-blue-500 shadow-lg shadow-blue-500/30'
-                      : 'border-transparent'
-                  } cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg`}
-                >
-                  {isFavorite(media.path || '') && (
-                    <div className="absolute right-1 top-1 z-10">
-                      <Heart className="h-4 w-4 fill-current text-red-500 drop-shadow-md" />
-                    </div>
-                  )}
-                  {type === 'image' ? (
-                    <img
-                      src={media.thumbnailUrl || '/placeholder.svg'}
-                      alt={`thumbnail-${index}`}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : null}
-                </div>
-              ))}
+      {/* Adjust menu popup with improved styling */}
+      {showAdjustMenu && (
+        <div className="absolute bottom-32 right-24 w-72 rounded-xl bg-black/50 p-5 shadow-xl backdrop-blur-lg">
+          <h4 className="mb-4 text-center text-sm font-medium text-white/90">Image Adjustments</h4>
+          <div className="mb-3">
+            <label className="mb-1 block text-xs font-medium text-white/80">
+              Brightness
+            </label>
+            <input
+              type="range"
+              min="-100"
+              max="100"
+              value={brightness}
+              onChange={(e) => setBrightness(Number(e.target.value))}
+              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+            />
+            <div className="mt-1 flex justify-between text-xs text-white/60">
+              <span>-100</span>
+              <span>0</span>
+              <span>+100</span>
             </div>
           </div>
+          
+          <div className="mb-3">
+            <label className="mb-1 block text-xs font-medium text-white/80">
+              Contrast
+            </label>
+            <input
+              type="range"
+              min="-100"
+              max="100"
+              value={contrast}
+              onChange={(e) => setContrast(Number(e.target.value))}
+              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+            />
+          </div>
+          
+          <div className="mb-3">
+            <label className="mb-1 block text-xs font-medium text-white/80">
+              Vibrance
+            </label>
+            <input
+              type="range"
+              min="-100"
+              max="100"
+              value={vibrance}
+              onChange={(e) => setVibrance(Number(e.target.value))}
+              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+            />
+          </div>
+          
+          <div className="mb-3">
+            <label className="mb-1 block text-xs font-medium text-white/80">
+              Exposure
+            </label>
+            <input
+              type="range"
+              min="-100"
+              max="100"
+              value={exposure}
+              onChange={(e) => setExposure(Number(e.target.value))}
+              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+            />
+          </div>
+          
+          <div className="mb-3">
+            <label className="mb-1 block text-xs font-medium text-white/80">
+              Temperature
+            </label>
+            <input
+              type="range"
+              min="-100"
+              max="100"
+              value={temperature}
+              onChange={(e) => setTemperature(Number(e.target.value))}
+              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+            />
+          </div>
+          
+          <div className="mb-3">
+            <label className="mb-1 block text-xs font-medium text-white/80">
+              Sharpness
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={sharpness}
+              onChange={(e) => setSharpness(Number(e.target.value))}
+              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+            />
+          </div>
+          
+          <div className="mb-3">
+            <label className="mb-1 block text-xs font-medium text-white/80">
+              Vignette
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={vignette}
+              onChange={(e) => setVignette(Number(e.target.value))}
+              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+            />
+          </div>
+          
+          <div className="mb-3">
+            <label className="mb-1 block text-xs font-medium text-white/80">
+              Highlights
+            </label>
+            <input
+              type="range"
+              min="-100"
+              max="100"
+              value={highlights}
+              onChange={(e) => setHighlights(Number(e.target.value))}
+              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+            />
+          </div>
+          
+          <button 
+            onClick={toggleAdjustMenu}
+            className="mt-2 w-full rounded-md bg-white/20 py-1.5 text-xs font-medium text-white transition-all hover:bg-white/30"
+          >
+            Close
+          </button>
         </div>
-      ) : null}
+      )}
 
+      {/* Thumbnails with improved styling */}
+      {type === 'image' && (
+        <div className="absolute bottom-0 w-full">
+          <div className="flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-3 opacity-0 transition-all duration-300 hover:opacity-100">
+            {allMedia.map((media, index) => (
+              <div
+                key={index}
+                onClick={() => handleThumbnailClick(index)}
+                className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg ${
+                  index === globalIndex
+                    ? 'ring-2 ring-blue-500 ring-offset-1 ring-offset-black'
+                    : 'opacity-70 hover:opacity-100'
+                } cursor-pointer transition-all duration-200 hover:scale-105`}
+              >
+                {isFavorite(media.path || '') && (
+                  <div className="absolute right-1 top-1 z-10 rounded-full bg-black/30 p-0.5">
+                    <Heart className="h-3 w-3 fill-current text-rose-500" />
+                  </div>
+                )}
+                {type === 'image' ? (
+                  <img
+                    src={media.thumbnailUrl || '/placeholder.svg'}
+                    alt={`thumbnail-${index}`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Improved notification */}
       {notification && (
         <div
-          className={`fixed left-1/2 top-4 z-50 -translate-x-1/2 transform rounded-xl p-4 shadow-lg ${
-            notification.type === 'success' ? 'bg-green-500/90' : 'bg-red-500/90'
-          } backdrop-blur-sm text-lg font-bold text-white transition-all duration-300 animate-fadeIn`}
+          className={`fixed left-1/2 top-4 -translate-x-1/2 transform rounded-full ${
+            notification.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'
+          } px-6 py-2 text-sm font-medium text-white shadow-lg transition-all duration-300 animate-in fade-in`}
         >
           {notification.message}
+        </div>
+      )}
+
+      {/* Improved info panel */}
+      {showInfo && (
+        <div className="absolute left-4 top-4 z-50 max-w-md rounded-xl bg-black/50 p-4 backdrop-blur-lg transition-all duration-300 animate-in slide-in-from-left">
+          <h3 className="mb-3 text-lg font-medium text-white">File Information</h3>
+          <div className="space-y-1.5 text-sm text-white/80">
+            <p className="truncate"><span className="text-white/60">Path:</span> {allMedia[globalIndex].path}</p>
+            <p><span className="text-white/60">Type:</span> {type}</p>
+            <p><span className="text-white/60">Secure:</span> {isSecureFolder ? 'Yes' : 'No'}</p>
+            <p><span className="text-white/60">Index:</span> {globalIndex + 1} of {allMedia.length}</p>
+          </div>
         </div>
       )}
     </div>
@@ -610,3 +923,30 @@ const MediaView: React.FC<MediaViewProps> = ({
 };
 
 export default MediaView;
+
+const TemperatureFilter = ({
+  temperature,
+  intensity = 1.5,
+}: {
+  temperature: number;
+  intensity?: number;
+}) => {
+  // Amplify the temperature value
+  const factor = (temperature * intensity) / 100;
+  // Calculate red and blue multipliers.
+  // For positive temperature, red increases and blue decreases.
+  // For negative temperature, red decreases and blue increases.
+  const rMult = (1 + factor).toFixed(2);
+  const bMult = (1 - factor).toFixed(2);
+
+  return (
+    <svg width="0" height="0" style={{ position: 'absolute' }}>
+      <filter id="temp">
+        <feColorMatrix
+          type="matrix"
+          values={`${rMult} 0 0 0 0  0 1 0 0 0  0 0 ${bMult} 0 0  0 0 0 1 0`}
+        />
+      </filter>
+    </svg>
+  );
+};
