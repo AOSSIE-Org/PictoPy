@@ -322,4 +322,3 @@ const ImageCompressor: React.FC = () => {
 };
 
 export default ImageCompressor;
-
