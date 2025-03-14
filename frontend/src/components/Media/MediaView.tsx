@@ -323,43 +323,43 @@ const MediaView: React.FC<MediaViewProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black">
-      <div className="absolute right-4 top-4 z-50 flex items-center gap-2">
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-sm transition-all duration-300">
+      <div className="absolute right-4 top-4 z-50 flex items-center gap-2.5 rounded-full bg-black/30 p-1.5 backdrop-blur-md">
         {!isSecureFolder && (
           <button
             onClick={handleShare}
-            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            className="rounded-full bg-white/15 p-2 text-white transition-all duration-200 hover:bg-white/30 hover:shadow-lg hover:shadow-white/10"
             aria-label="Share"
           >
-            <Share2 className="h-6 w-6" />
+            <Share2 className="h-5 w-5" />
           </button>
         )}
         {!isSecureFolder && (
           <button
             onClick={() => setIsEditing(true)}
-            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            className="rounded-full bg-white/15 p-2 text-white transition-all duration-200 hover:bg-white/30 hover:shadow-lg hover:shadow-white/10"
             aria-label="Edit"
           >
-            <Edit className="h-6 w-6" />
+            <Edit className="h-5 w-5" />
           </button>
         )}
         {!isSecureFolder && (
           <button
             onClick={handleMoveToSecureFolder}
-            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            className="rounded-full bg-white/15 p-2 text-white transition-all duration-200 hover:bg-white/30 hover:shadow-lg hover:shadow-white/10"
             aria-label="Move to Secure Folder"
           >
-            <Lock className="h-6 w-6" />
+            <Lock className="h-5 w-5" />
           </button>
         )}
         {!isSecureFolder && (
           <button
             onClick={toggleFavorite}
-            className={`rounded-full p-2 text-white transition-colors duration-300 ${
+            className={`rounded-full p-2 text-white transition-all duration-300 ${
               isFavorite(allMedia[globalIndex].path || '')
-                ? 'bg-red-500 hover:bg-red-600'
-                : 'bg-white/20 hover:bg-white/40'
-            }`}
+                ? 'bg-red-500/80 hover:bg-red-600/80'
+                : 'bg-white/15 hover:bg-white/30'
+            } hover:shadow-lg hover:shadow-white/10`}
             aria-label={
               isFavorite(allMedia[globalIndex].path || '')
                 ? 'Remove from favorites'
@@ -367,41 +367,43 @@ const MediaView: React.FC<MediaViewProps> = ({
             }
           >
             <Heart
-              className={`h-6 w-6 ${isFavorite(allMedia[globalIndex].path || '') ? 'fill-current' : ''}`}
+              className={`h-5 w-5 ${isFavorite(allMedia[globalIndex].path || '') ? 'fill-current' : ''}`}
             />
           </button>
         )}
         {type === 'image' ? (
           <button
             onClick={() => setIsEditing(true)}
-            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            className="rounded-full bg-white/15 p-2 text-white transition-all duration-200 hover:bg-white/30 hover:shadow-lg hover:shadow-white/10"
             aria-label="Edit"
           >
-            <Edit className="h-6 w-6" />
+            <Edit className="h-5 w-5" />
           </button>
         ) : null}
 
         {type === 'image' ? (
           <button
             onClick={toggleSlideshow}
-            className="rounded-full flex items-center gap-2 bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+            className="rounded-full flex items-center gap-2 bg-white/15 px-4 py-2 text-white transition-all duration-200 hover:bg-white/30 hover:shadow-lg hover:shadow-white/10"
             aria-label="Toggle Slideshow"
           >
             {isSlideshowActive ? (
-              <Pause className="h-5 w-5" />
+              <Pause className="h-4 w-4" />
             ) : (
-              <Play className="h-5 w-5" />
+              <Play className="h-4 w-4" />
             )}
-            {isSlideshowActive ? 'Pause' : 'Slideshow'}
+            <span className="text-sm font-medium">
+              {isSlideshowActive ? 'Pause' : 'Slideshow'}
+            </span>
           </button>
         ) : null}
 
         <button
           onClick={onClose}
-          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full bg-white/15 p-2 text-white transition-all duration-200 hover:bg-red-500/80 hover:shadow-lg hover:shadow-red-500/20"
           aria-label="Close"
         >
-          <X className="h-6 w-6" />
+          <X className="h-5 w-5" />
         </button>
       </div>
 
@@ -414,7 +416,6 @@ const MediaView: React.FC<MediaViewProps> = ({
         {type === 'image' ? (
           <div
             id="zoomable-image"
-            //Close when clicked outside the image:
             onClick={(e) => {
               if (e.target === e.currentTarget) {
                 onClose();
@@ -431,6 +432,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                 crop={crop}
                 onChange={(c) => setCrop(c)}
                 onComplete={(c) => setCompletedCrop(c)}
+                className="max-h-[90vh] max-w-[90vw]"
               >
                 <img
                   id="source-image"
@@ -446,12 +448,12 @@ const MediaView: React.FC<MediaViewProps> = ({
                 src={allMedia[globalIndex].url || '/placeholder.svg'}
                 alt={`image-${globalIndex}`}
                 draggable={false}
-                className="h-full w-full select-none object-contain"
+                className="h-full w-full max-h-[90vh] max-w-[90vw] select-none object-contain"
                 style={{
                   transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
                   transition: isDragging
                     ? 'none'
-                    : 'transform 0.2s ease-in-out',
+                    : 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                   cursor: isDragging ? 'grabbing' : 'grab',
                 }}
               />
@@ -467,42 +469,43 @@ const MediaView: React.FC<MediaViewProps> = ({
 
         <button
           onClick={handlePrevItem}
-          className="rounded-full absolute left-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+          className="absolute left-4 top-1/2 z-50 flex h-12 w-12 -translate-y-1/2 transform items-center justify-center rounded-full bg-black/40 text-white shadow-lg backdrop-blur-md transition-all duration-200 hover:bg-black/60"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
         <button
           onClick={handleNextItem}
-          className="rounded-full absolute right-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+          className="absolute right-4 top-1/2 z-50 flex h-12 w-12 -translate-y-1/2 transform items-center justify-center rounded-full bg-black/40 text-white shadow-lg backdrop-blur-md transition-all duration-200 hover:bg-black/60"
         >
           <ChevronRight className="h-6 w-6" />
         </button>
       </div>
+      
       {type === 'image' ? (
-        <div className="absolute bottom-20 right-4 flex gap-2">
+        <div className="absolute bottom-20 right-4 flex gap-2 rounded-2xl bg-black/40 p-2 backdrop-blur-md">
           <button
             onClick={handleZoomOut}
-            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            className="rounded-xl bg-white/15 p-2 text-white transition-all duration-200 hover:bg-white/30"
             aria-label="Zoom Out"
           >
             <ZoomOut className="h-5 w-5" />
           </button>
           <button
             onClick={resetZoom}
-            className="rounded-md bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+            className="rounded-xl bg-white/15 px-4 py-2 text-white transition-all duration-200 hover:bg-white/30"
           >
-            Reset
+            <span className="text-sm font-medium">Reset</span>
           </button>
           <button
             onClick={handleZoomIn}
-            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            className="rounded-xl bg-white/15 p-2 text-white transition-all duration-200 hover:bg-white/30"
             aria-label="Zoom In"
           >
             <ZoomIn className="h-5 w-5" />
           </button>
           <button
             onClick={handleRotate}
-            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            className="rounded-xl bg-white/15 p-2 text-white transition-all duration-200 hover:bg-white/30"
             aria-label="Rotate"
           >
             <RotateCw className="h-5 w-5" />
@@ -511,47 +514,47 @@ const MediaView: React.FC<MediaViewProps> = ({
             <>
               <button
                 onClick={handleEditComplete}
-                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                className="rounded-xl bg-green-500/80 p-2 text-white transition-all duration-200 hover:bg-green-600/80"
                 aria-label="Confirm Edit"
               >
                 <Check className="h-5 w-5" />
               </button>
               <button
                 onClick={resetEditing}
-                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                className="rounded-xl bg-red-500/80 p-2 text-white transition-all duration-200 hover:bg-red-600/80"
                 aria-label="Cancel Edit"
               >
                 <X className="h-5 w-5" />
               </button>
               <select
                 onChange={(e) => setFilter(e.target.value)}
-                className="rounded-md bg-white/20 px-2 py-2 text-white"
+                className="rounded-xl bg-white/15 px-3 py-2 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-white/30"
               >
                 <option value="">No Filter</option>
                 <option value="grayscale(100%)">Grayscale</option>
                 <option value="sepia(100%)">Sepia</option>
                 <option value="invert(100%)">Invert</option>
               </select>
-              <div className="flex items-center gap-2">
-                <SunMoon className="h-5 w-5 text-white" />
+              <div className="flex items-center gap-2 rounded-xl bg-white/15 px-3">
+                <SunMoon className="h-4 w-4 text-white" />
                 <input
                   type="range"
                   min="0"
                   max="200"
                   value={brightness}
                   onChange={(e) => setBrightness(Number(e.target.value))}
-                  className="w-24"
+                  className="w-24 accent-white"
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <Contrast className="h-5 w-5 text-white" />
+              <div className="flex items-center gap-2 rounded-xl bg-white/15 px-3">
+                <Contrast className="h-4 w-4 text-white" />
                 <input
                   type="range"
                   min="0"
                   max="200"
                   value={contrast}
                   onChange={(e) => setContrast(Number(e.target.value))}
-                  className="w-24"
+                  className="w-24 accent-white"
                 />
               </div>
             </>
@@ -562,40 +565,42 @@ const MediaView: React.FC<MediaViewProps> = ({
       {/* Thumbnails */}
       {type === 'image' ? (
         <div>
-          <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2 opacity-0 transition-opacity duration-300 hover:opacity-100">
-            {allMedia.map((media, index) => (
-              <div
-                key={index}
-                onClick={() => handleThumbnailClick(index)}
-                className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
-                  index === globalIndex
-                    ? 'border-blue-500 shadow-lg'
-                    : 'border-transparent'
-                } cursor-pointer transition-transform hover:scale-105`}
-              >
-                {isFavorite(media.path || '') && (
-                  <div className="absolute right-1 top-1 z-10">
-                    <Heart className="h-4 w-4 fill-current text-red-500" />
-                  </div>
-                )}
-                {type === 'image' ? (
-                  <img
-                    src={media.thumbnailUrl || '/placeholder.svg'}
-                    alt={`thumbnail-${index}`}
-                    className="h-full w-full object-cover"
-                  />
-                ) : null}
-              </div>
-            ))}
+          <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 py-4 opacity-0 transition-opacity duration-300 hover:opacity-100">
+            <div className="flex items-center justify-center gap-2 overflow-x-auto rounded-2xl bg-black/50 p-2 backdrop-blur-md">
+              {allMedia.map((media, index) => (
+                <div
+                  key={index}
+                  onClick={() => handleThumbnailClick(index)}
+                  className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
+                    index === globalIndex
+                      ? 'border-blue-500 shadow-lg shadow-blue-500/30'
+                      : 'border-transparent'
+                  } cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg`}
+                >
+                  {isFavorite(media.path || '') && (
+                    <div className="absolute right-1 top-1 z-10">
+                      <Heart className="h-4 w-4 fill-current text-red-500 drop-shadow-md" />
+                    </div>
+                  )}
+                  {type === 'image' ? (
+                    <img
+                      src={media.thumbnailUrl || '/placeholder.svg'}
+                      alt={`thumbnail-${index}`}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : null}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       ) : null}
 
       {notification && (
         <div
-          className={`fixed left-1/2 top-4 -translate-x-1/2 transform rounded-md p-4 ${
-            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-          } z-50 text-lg font-bold text-white shadow-lg`}
+          className={`fixed left-1/2 top-4 z-50 -translate-x-1/2 transform rounded-xl p-4 shadow-lg ${
+            notification.type === 'success' ? 'bg-green-500/90' : 'bg-red-500/90'
+          } backdrop-blur-sm text-lg font-bold text-white transition-all duration-300 animate-fadeIn`}
         >
           {notification.message}
         </div>

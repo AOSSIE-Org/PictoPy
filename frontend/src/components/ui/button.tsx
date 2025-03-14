@@ -5,20 +5,20 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shadow-sm',
   {
     variants: {
       variant: {
         default:
-          'bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80 focus:ring-primary dark:bg-primary-dark dark:text-primary-foreground-dark dark:hover:bg-primary-dark/90 dark:active:bg-primary-dark/80',
+          'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md active:bg-primary/80 active:scale-[0.98] focus:ring-primary dark:bg-primary-dark dark:text-primary-foreground-dark dark:hover:bg-primary-dark/90 dark:active:bg-primary-dark/80',
         destructive:
-          'bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive/80 focus:ring-destructive dark:bg-destructive-dark dark:text-destructive-foreground-dark dark:hover:bg-destructive-dark/90 dark:active:bg-destructive-dark/80',
+          'bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:shadow-md active:bg-destructive/80 active:scale-[0.98] focus:ring-destructive dark:bg-destructive-dark dark:text-destructive-foreground-dark dark:hover:bg-destructive-dark/90 dark:active:bg-destructive-dark/80',
         outline:
-          'border border-input hover:bg-accent hover:text-accent-foreground active:bg-accent/90 focus:ring-accent dark:bg-accent-dark dark:text-accent-foreground-dark dark:border-input-dark',
+          'border border-input hover:bg-accent hover:text-accent-foreground hover:shadow-sm active:bg-accent/90 active:scale-[0.98] focus:ring-accent dark:bg-accent-dark dark:text-accent-foreground-dark dark:border-input-dark',
         secondary:
-          'bg-secondary text-secondary-foreground hover:bg-secondary/80 active:bg-secondary/70 focus:ring-secondary dark:bg-secondary-dark dark:text-secondary-foreground-dark dark:hover:bg-secondary-dark/80 dark:active:bg-secondary-dark/70',
+          'bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-sm active:bg-secondary/70 active:scale-[0.98] focus:ring-secondary dark:bg-secondary-dark dark:text-secondary-foreground-dark dark:hover:bg-secondary-dark/80 dark:active:bg-secondary-dark/70',
         ghost:
-          'hover:bg-accent hover:text-accent-foreground active:bg-accent/90 focus:ring-accent dark:hover:bg-accent-dark dark:text-accent-foreground-dark',
+          'hover:bg-accent hover:text-accent-foreground active:bg-accent/90 active:scale-[0.98] focus:ring-accent dark:hover:bg-accent-dark dark:text-accent-foreground-dark',
         link: 'text-primary underline-offset-4 hover:underline active:text-primary/80 focus:ring-primary dark:text-primary-dark dark:hover:underline',
       },
       size: {

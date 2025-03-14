@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { motion } from 'framer-motion';
 
 interface NavbarProps {
   title?: string;
@@ -58,16 +59,22 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
 
   return (
     <header className="flex w-full flex-row items-center justify-center align-middle">
-      <div className="rounded-2xl mb-4 mt-3 flex h-16 w-[90%] transform items-center justify-between border border-gray-200 bg-gradient-to-r from-blue-500 to-purple-600 px-4 shadow-lg backdrop-blur-lg backdrop-saturate-150 transition-all duration-300 ease-in-out hover:scale-105 dark:border-white/10 dark:bg-gradient-to-r dark:from-gray-800 dark:to-black sm:w-[70%] sm:px-8 md:w-[55%] md:px-16">
+      <motion.div 
+        initial={{ y: -10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="rounded-2xl mb-4 mt-3 flex h-16 w-[90%] transform items-center justify-between border border-gray-200/30 bg-gradient-to-r from-blue-600 to-purple-700 px-4 shadow-lg backdrop-blur-xl backdrop-saturate-200 transition-all duration-300 ease-in-out hover:shadow-blue-500/10 dark:border-white/5 dark:bg-gradient-to-r dark:from-gray-800 dark:to-black sm:w-[70%] sm:px-8 md:w-[55%] md:px-16"
+      >
         {/* Logo Section */}
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <img
+          <div className="flex items-center gap-2 group">
+            <motion.img
+              whileHover={{ rotate: 10 }}
               src="/PictoPy_Logo.png"
-              className="h-7 transition-opacity duration-200 hover:opacity-80"
+              className="h-8 transition-all duration-300 hover:opacity-90"
               alt="PictoPy Logo"
             />
-            <span className="text-theme-dark dark:text-theme-light font-sans text-base font-bold drop-shadow-sm sm:text-lg">
+            <span className="text-white dark:text-white font-sans text-lg font-bold drop-shadow-md sm:text-xl bg-clip-text">
               PictoPy
             </span>
           </div>
@@ -76,7 +83,7 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
         {/* Welcome Section and Theme Toggle */}
         <div className="flex items-center gap-4">
           <div className="flex items-center">
-            <span className="font-sans text-lg font-medium text-white">
+            <span className="font-sans text-lg font-medium text-white/90 drop-shadow-sm">
               Welcome{' '}
             </span>
             {isEditing || showPlaceholder ? (
@@ -86,23 +93,25 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
                 defaultValue={name}
                 onKeyDown={handleNameSubmit}
                 onBlur={handleBlur}
-                className="ml-2 w-32 rounded-md border border-white/20 bg-white/10 px-2 py-1 text-white placeholder-white/50 transition-colors duration-200 focus:border-yellow-300 focus:outline-none"
+                className="ml-2 w-32 rounded-lg border border-white/30 bg-white/10 px-3 py-1 text-white placeholder-white/60 backdrop-blur-sm transition-colors duration-200 focus:border-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-300/50"
                 autoFocus
                 aria-label="Enter your name"
               />
             ) : (
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleNameClick}
-                className="rounded ml-2 px-2 text-white transition-colors duration-200 hover:text-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-offset-2 focus:ring-offset-transparent"
+                className="rounded-lg ml-2 px-3 py-0.5 text-white bg-white/10 border border-white/20 transition-all duration-200 hover:bg-white/20 hover:border-white/30 focus:outline-none focus:ring-2 focus:ring-yellow-300/50 focus:ring-offset-2 focus:ring-offset-transparent"
                 aria-label="Click to edit name"
               >
                 {name || 'User'}
-              </button>
+              </motion.button>
             )}
           </div>
           <ThemeToggle />
         </div>
-      </div>
+      </motion.div>
     </header>
   );
 }
