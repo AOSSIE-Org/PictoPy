@@ -115,6 +115,12 @@ async fn test_save_edited_image() {
         "grayscale(100%)".to_string(),
         100,
         100,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
     )
     .await;
     
