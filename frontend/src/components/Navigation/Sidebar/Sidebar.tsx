@@ -110,7 +110,8 @@ const Sidebar: React.FC = () => {
     backgroundSize: 'cover',
     fontFamily: styles.fontFamily,
     fontSize: `${styles.fontSize}px`,
-
+    boxShadow:
+      '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
     '--bg-active': styles.activeBackgroundColor,
     '--text-active': styles.activeTextColor,
     '--bg-hover': styles.hoverBackgroundColor,
@@ -148,13 +149,13 @@ const Sidebar: React.FC = () => {
       {/* Sidebar */}
       <div className="p-4">
         <nav
-          className="sidebar rounded-3xl relative z-10 flex flex-col justify-between border-r transition-all duration-300 ease-in-out"
+          className="sidebar rounded-3xl relative z-10 flex h-[calc(90vh-2rem)] flex-col justify-between border-r backdrop-blur-sm transition-all duration-300 ease-in-out"
           style={sidebarStyle}
           aria-label="Main Navigation"
         >
-          <div className="mt-2 flex flex-col items-center">
+          <div className="mt-4 flex flex-col items-center">
             {/* Avatar Section */}
-            <div className="group relative mb-6">
+            <div className="group relative mb-8">
               <div
                 className={`avatar-container relative cursor-pointer transition-all duration-300 ${
                   isAvatarLoading ? 'pointer-events-none opacity-50' : ''
@@ -165,27 +166,27 @@ const Sidebar: React.FC = () => {
                 role="button"
                 aria-label="Change profile picture"
               >
-                <div className="rounded-full relative h-24 w-24 overflow-hidden border-4 border-white/20 shadow-lg transition-colors duration-300 hover:border-primary">
+                <div className="rounded-full relative h-24 w-24 overflow-hidden border-4 border-white/30 shadow-xl transition-all duration-300 hover:border-primary hover:shadow-2xl">
                   {croppedAvatar ? (
                     <img
                       src={croppedAvatar || '/placeholder.svg'}
                       alt="User Avatar"
-                      className="h-full w-full transform object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="h-full w-full transform object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                   ) : avatar ? (
                     <img
                       src={avatar || '/placeholder.svg'}
                       alt="User Avatar"
-                      className="h-full w-full transform object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="h-full w-full transform object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-600 to-gray-800">
-                      <User className="h-12 w-12 text-white/80" />
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900">
+                      <User className="h-12 w-12 text-white/90" />
                     </div>
                   )}
 
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                    <span className="text-center text-sm font-medium text-white">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                    <span className="text-center text-sm font-medium text-white drop-shadow-md">
                       Change Photo
                     </span>
                   </div>
@@ -215,57 +216,67 @@ const Sidebar: React.FC = () => {
             </div>
 
             {/* Navigation Items */}
-            {navItems.map(({ path, label, Icon }) => (
-              <Link
-                key={path}
-                to={path}
-                className={`group m-1 flex flex-col items-center gap-1 rounded-lg p-4 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
-                  isActive(path)
-                    ? 'bg-[var(--bg-active)] text-[var(--text-active)] shadow-md'
-                    : 'text-default hover:bg-[var(--bg-hover)]'
-                }`}
-                aria-current={isActive(path) ? 'page' : undefined}
+            <div className="w-full space-y-1 px-2">
+              {navItems.map(({ path, label, Icon }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  className={`rounded-xl group flex flex-col items-center gap-1 p-4 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
+                    isActive(path)
+                      ? 'bg-[var(--bg-active)] text-[var(--text-active)] shadow-lg'
+                      : 'text-default hover:bg-[var(--bg-hover)]'
+                  }`}
+                  aria-current={isActive(path) ? 'page' : undefined}
+                >
+                  <Icon
+                    style={{
+                      width: styles.iconSize,
+                      height: styles.iconSize,
+                      color: isActive(path)
+                        ? styles.activeTextColor
+                        : styles.iconColor,
+                    }}
+                    aria-hidden="true"
+                    className="transition-transform duration-300 group-hover:scale-110"
+                  />
+                  <span className="mt-1 whitespace-nowrap text-xs font-medium tracking-wide">
+                    {label}
+                  </span>
+                </Link>
+              ))}
+
+              {/* Image Compressor Button */}
+              <button
+                onClick={() => setShowImageCompressor(true)}
+                className="text-default rounded-xl group flex w-full flex-col items-center gap-1 p-4 transition-all duration-300 hover:scale-[1.02] hover:bg-[var(--bg-hover)] active:scale-[0.98]"
+                aria-label="Open Image Compressor"
+                onKeyDown={handleKeyDown}
               >
-                <Icon
+                <FileCompress
                   style={{
                     width: styles.iconSize,
                     height: styles.iconSize,
                     color: styles.iconColor,
                   }}
                   aria-hidden="true"
+                  className="transition-transform duration-300 group-hover:scale-110"
                 />
-                <span className="whitespace-nowrap font-medium">{label}</span>
-              </Link>
-            ))}
-
-            {/* Image Compressor Button */}
-            <button
-              onClick={() => setShowImageCompressor(true)}
-              className="text-default group m-1 flex w-full flex-col items-center gap-1 rounded-lg p-4 transition-all duration-300 hover:scale-[1.02] hover:bg-[var(--bg-hover)] active:scale-[0.98]"
-              aria-label="Open Image Compressor"
-              onKeyDown={handleKeyDown}
-            >
-              <FileCompress
-                style={{
-                  width: styles.iconSize,
-                  height: styles.iconSize,
-                  color: styles.iconColor,
-                }}
-                aria-hidden="true"
-              />
-              <span className="font-medium">Compressor</span>
-            </button>
+                <span className="mt-1 text-xs font-medium tracking-wide">
+                  Compressor
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Customize Button */}
           <div className="flex items-center justify-center p-4">
             <button
               onClick={() => setShowCustomize(true)}
-              className="rounded-lg bg-[var(--bg-hover)] p-2 transition-all duration-300 hover:bg-[var(--bg-active)] focus:outline-none"
+              className="rounded-full bg-[var(--bg-hover)] p-3 shadow-md transition-all duration-300 hover:bg-[var(--bg-active)] hover:shadow-lg focus:outline-none"
               aria-label="Customize sidebar"
               onKeyDown={handleKeyDown}
             >
-              <Palette size={20} />
+              <Palette size={20} className="text-[var(--text-active)]" />
             </button>
           </div>
         </nav>
@@ -273,8 +284,8 @@ const Sidebar: React.FC = () => {
 
       {/* Customization Popup */}
       {showCustomize && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 dark:bg-gray-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm transition-opacity duration-300">
+          <div className="rounded-2xl max-h-[90vh] w-full max-w-md overflow-y-auto bg-white/90 p-4 shadow-2xl dark:bg-gray-800/90">
             <CustomizationPopup
               styles={styles}
               setStyles={setStyles}
@@ -306,10 +317,12 @@ const Sidebar: React.FC = () => {
 
       {/* Avatar Cropper Popup */}
       {showAvatarCropper && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity duration-300">
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 dark:bg-gray-800">
-            <div className="mb-4">
-              <h2 className="text-xl font-bold">Crop Avatar</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm transition-opacity duration-300">
+          <div className="rounded-2xl max-h-[90vh] w-full max-w-lg overflow-y-auto bg-white/90 p-6 shadow-2xl dark:bg-gray-800/90">
+            <div className="mb-6">
+              <h2 className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-2xl font-bold text-transparent">
+                Crop Avatar
+              </h2>
             </div>
             <AvatarCropper
               image={avatar as string}
