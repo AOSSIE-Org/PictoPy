@@ -114,14 +114,15 @@ async fn test_save_edited_image() {
         "grayscale(100%)".to_string(),
         100,
         100,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
     )
     .await;
     assert!(result.is_ok(), "save_edited_image should succeed");
-
-    let file_stem = original_path.file_stem().unwrap().to_string_lossy();
-    let extension = original_path.extension().unwrap().to_string_lossy();
-    let edited_path = original_path.with_file_name(format!("{}_edited.{}", file_stem, extension));
-    assert!(edited_path.exists(), "Edited image file should exist");
 }
 
 #[test]

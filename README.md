@@ -76,6 +76,12 @@ Handles file system operations and provides a secure bridge between the frontend
    cd PictoPy
    ```
 
+## Automatic Setup:
+```bash
+npm run setup
+```
+
+## Manual Setup:
 1. Navigate to the frontend directory:
    ```bash
    cd frontend

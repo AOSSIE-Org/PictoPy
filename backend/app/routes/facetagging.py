@@ -37,7 +37,10 @@ def face_matching():
                 for embedding1 in img1_data["embeddings"]:
                     for embedding2 in img2_data["embeddings"]:
                         similarity = cosine_similarity(embedding1, embedding2)
-                        if similarity >= 0.5:
+
+                        if similarity >= 0.7:
+                            img1 = img1_data["image_path"].split("/")[-1]
+                            img2 = img2_data["image_path"].split("/")[-1]
                             similar_pairs.append(
                                 SimilarPair(
                                     image1=img1_data["image_path"].split("/")[-1],
