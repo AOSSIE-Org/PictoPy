@@ -399,7 +399,7 @@ const MediaView: React.FC<MediaViewProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-black/95 to-black/98 backdrop-blur-lg">
+    <div className="to-black/98 fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-black/95 backdrop-blur-lg">
       <div className="absolute right-4 top-4 z-50 flex items-center gap-3">
         <button
           onClick={toggleInfo}
@@ -495,7 +495,7 @@ const MediaView: React.FC<MediaViewProps> = ({
 
         <button
           onClick={onClose}
-          className="ml-2 rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
+          className="rounded-full ml-2 bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
           aria-label="Close"
         >
           <X className="h-5 w-5" />
@@ -532,7 +532,11 @@ const MediaView: React.FC<MediaViewProps> = ({
                   <TemperatureFilter temperature={temperature} />
                   <img
                     id="source-image"
-                    src={allMedia[globalIndex].url || allMedia[globalIndex].url || '/placeholder.svg'}
+                    src={
+                      allMedia[globalIndex].url ||
+                      allMedia[globalIndex].url ||
+                      '/placeholder.svg'
+                    }
                     alt={`image-${globalIndex}`}
                     onError={(e) => {
                       const img = e.target as HTMLImageElement;
@@ -627,20 +631,20 @@ const MediaView: React.FC<MediaViewProps> = ({
 
         <button
           onClick={handlePrevItem}
-          className="absolute left-4 top-1/2 z-50 flex -translate-y-1/2 transform items-center rounded-full bg-black/30 p-3 text-white transition-all duration-200 backdrop-blur-md hover:bg-black/50 hover:shadow-lg"
+          className="rounded-full absolute left-4 top-1/2 z-50 flex -translate-y-1/2 transform items-center bg-black/30 p-3 text-white backdrop-blur-md transition-all duration-200 hover:bg-black/50 hover:shadow-lg"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
         <button
           onClick={handleNextItem}
-          className="absolute right-4 top-1/2 z-50 flex -translate-y-1/2 transform items-center rounded-full bg-black/30 p-3 text-white transition-all duration-200 backdrop-blur-md hover:bg-black/50 hover:shadow-lg"
+          className="rounded-full absolute right-4 top-1/2 z-50 flex -translate-y-1/2 transform items-center bg-black/30 p-3 text-white backdrop-blur-md transition-all duration-200 hover:bg-black/50 hover:shadow-lg"
         >
           <ChevronRight className="h-6 w-6" />
         </button>
       </div>
 
       {type === 'image' ? (
-        <div className="absolute bottom-32 right-4 flex flex-col gap-4 rounded-xl bg-black/30 p-3 backdrop-blur-md">
+        <div className="rounded-xl absolute bottom-32 right-4 flex flex-col gap-4 bg-black/30 p-3 backdrop-blur-md">
           <div className="flex gap-2">
             <button
               onClick={handleZoomOut}
@@ -704,7 +708,7 @@ const MediaView: React.FC<MediaViewProps> = ({
               >
                 <Sliders className="h-5 w-5" />
               </button>
-              
+
               {/* Quick adjustment controls */}
               <div className="mt-2 flex w-full items-center gap-2">
                 <SunIcon className="h-4 w-4 text-white/80" />
@@ -735,8 +739,10 @@ const MediaView: React.FC<MediaViewProps> = ({
 
       {/* Adjust menu popup with improved styling */}
       {showAdjustMenu && (
-        <div className="absolute bottom-32 right-24 w-72 rounded-xl bg-black/50 p-5 shadow-xl backdrop-blur-lg">
-          <h4 className="mb-4 text-center text-sm font-medium text-white/90">Image Adjustments</h4>
+        <div className="rounded-xl absolute bottom-32 right-24 w-72 bg-black/50 p-5 shadow-xl backdrop-blur-lg">
+          <h4 className="mb-4 text-center text-sm font-medium text-white/90">
+            Image Adjustments
+          </h4>
           <div className="mb-3">
             <label className="mb-1 block text-xs font-medium text-white/80">
               Brightness
@@ -747,7 +753,7 @@ const MediaView: React.FC<MediaViewProps> = ({
               max="100"
               value={brightness}
               onChange={(e) => setBrightness(Number(e.target.value))}
-              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
             />
             <div className="mt-1 flex justify-between text-xs text-white/60">
               <span>-100</span>
@@ -755,7 +761,7 @@ const MediaView: React.FC<MediaViewProps> = ({
               <span>+100</span>
             </div>
           </div>
-          
+
           <div className="mb-3">
             <label className="mb-1 block text-xs font-medium text-white/80">
               Contrast
@@ -766,10 +772,10 @@ const MediaView: React.FC<MediaViewProps> = ({
               max="100"
               value={contrast}
               onChange={(e) => setContrast(Number(e.target.value))}
-              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
             />
           </div>
-          
+
           <div className="mb-3">
             <label className="mb-1 block text-xs font-medium text-white/80">
               Vibrance
@@ -780,10 +786,10 @@ const MediaView: React.FC<MediaViewProps> = ({
               max="100"
               value={vibrance}
               onChange={(e) => setVibrance(Number(e.target.value))}
-              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
             />
           </div>
-          
+
           <div className="mb-3">
             <label className="mb-1 block text-xs font-medium text-white/80">
               Exposure
@@ -794,10 +800,10 @@ const MediaView: React.FC<MediaViewProps> = ({
               max="100"
               value={exposure}
               onChange={(e) => setExposure(Number(e.target.value))}
-              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
             />
           </div>
-          
+
           <div className="mb-3">
             <label className="mb-1 block text-xs font-medium text-white/80">
               Temperature
@@ -808,10 +814,10 @@ const MediaView: React.FC<MediaViewProps> = ({
               max="100"
               value={temperature}
               onChange={(e) => setTemperature(Number(e.target.value))}
-              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
             />
           </div>
-          
+
           <div className="mb-3">
             <label className="mb-1 block text-xs font-medium text-white/80">
               Sharpness
@@ -822,10 +828,10 @@ const MediaView: React.FC<MediaViewProps> = ({
               max="100"
               value={sharpness}
               onChange={(e) => setSharpness(Number(e.target.value))}
-              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
             />
           </div>
-          
+
           <div className="mb-3">
             <label className="mb-1 block text-xs font-medium text-white/80">
               Vignette
@@ -836,10 +842,10 @@ const MediaView: React.FC<MediaViewProps> = ({
               max="100"
               value={vignette}
               onChange={(e) => setVignette(Number(e.target.value))}
-              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
             />
           </div>
-          
+
           <div className="mb-3">
             <label className="mb-1 block text-xs font-medium text-white/80">
               Highlights
@@ -850,11 +856,11 @@ const MediaView: React.FC<MediaViewProps> = ({
               max="100"
               value={highlights}
               onChange={(e) => setHighlights(Number(e.target.value))}
-              className="h-1.5 w-full appearance-none rounded-full bg-white/30"
+              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
             />
           </div>
-          
-          <button 
+
+          <button
             onClick={toggleAdjustMenu}
             className="mt-2 w-full rounded-md bg-white/20 py-1.5 text-xs font-medium text-white transition-all hover:bg-white/30"
           >
@@ -878,7 +884,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                 } cursor-pointer transition-all duration-200 hover:scale-105`}
               >
                 {isFavorite(media.path || '') && (
-                  <div className="absolute right-1 top-1 z-10 rounded-full bg-black/30 p-0.5">
+                  <div className="rounded-full absolute right-1 top-1 z-10 bg-black/30 p-0.5">
                     <Heart className="h-3 w-3 fill-current text-rose-500" />
                   </div>
                 )}
@@ -898,7 +904,7 @@ const MediaView: React.FC<MediaViewProps> = ({
       {/* Improved notification */}
       {notification && (
         <div
-          className={`fixed left-1/2 top-4 -translate-x-1/2 transform rounded-full ${
+          className={`rounded-full fixed left-1/2 top-4 -translate-x-1/2 transform ${
             notification.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'
           } px-6 py-2 text-sm font-medium text-white shadow-lg transition-all duration-300 animate-in fade-in`}
         >
@@ -908,13 +914,26 @@ const MediaView: React.FC<MediaViewProps> = ({
 
       {/* Improved info panel */}
       {showInfo && (
-        <div className="absolute left-4 top-4 z-50 max-w-md rounded-xl bg-black/50 p-4 backdrop-blur-lg transition-all duration-300 animate-in slide-in-from-left">
-          <h3 className="mb-3 text-lg font-medium text-white">File Information</h3>
+        <div className="rounded-xl absolute left-4 top-4 z-50 max-w-md bg-black/50 p-4 backdrop-blur-lg transition-all duration-300 animate-in slide-in-from-left">
+          <h3 className="mb-3 text-lg font-medium text-white">
+            File Information
+          </h3>
           <div className="space-y-1.5 text-sm text-white/80">
-            <p className="truncate"><span className="text-white/60">Path:</span> {allMedia[globalIndex].path}</p>
-            <p><span className="text-white/60">Type:</span> {type}</p>
-            <p><span className="text-white/60">Secure:</span> {isSecureFolder ? 'Yes' : 'No'}</p>
-            <p><span className="text-white/60">Index:</span> {globalIndex + 1} of {allMedia.length}</p>
+            <p className="truncate">
+              <span className="text-white/60">Path:</span>{' '}
+              {allMedia[globalIndex].path}
+            </p>
+            <p>
+              <span className="text-white/60">Type:</span> {type}
+            </p>
+            <p>
+              <span className="text-white/60">Secure:</span>{' '}
+              {isSecureFolder ? 'Yes' : 'No'}
+            </p>
+            <p>
+              <span className="text-white/60">Index:</span> {globalIndex + 1} of{' '}
+              {allMedia.length}
+            </p>
           </div>
         </div>
       )}

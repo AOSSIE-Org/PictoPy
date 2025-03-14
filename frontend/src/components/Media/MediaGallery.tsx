@@ -58,7 +58,7 @@ export default function MediaGallery({
   const closeMediaViewer = useCallback(() => {
     setShowMediaViewer(false);
   }, []);
-  
+
   const handleRefreshClick = async () => {
     try {
       const result = await deleteCache();
@@ -70,20 +70,22 @@ export default function MediaGallery({
       console.error('Error deleting cache:', error);
     }
   };
-  
+
   return (
     <div className="container mx-auto w-full max-w-7xl px-4">
-      <div className="mx-auto px-0 md:px-2 pb-12 pt-3 dark:bg-background dark:text-foreground">
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b dark:border-gray-800 pb-4">
-          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent dark:from-gray-100 dark:to-gray-300">{title || currentYear}</h1>
+      <div className="mx-auto px-0 pb-12 pt-3 dark:bg-background dark:text-foreground md:px-2">
+        <div className="mb-6 flex flex-col gap-4 border-b pb-4 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-2xl font-bold text-transparent dark:from-gray-100 dark:to-gray-300 sm:text-3xl">
+            {title || currentYear}
+          </h1>
           <div className="flex flex-wrap items-center gap-3">
             <Button
               onClick={() => handleRefreshClick()}
               variant="outline"
               className="border-gray-200/80 bg-white/90 shadow-sm transition-all duration-200 hover:bg-gray-50/90 hover:shadow-md dark:border-gray-800/80 dark:bg-gray-800/80 dark:text-gray-100 dark:hover:bg-gray-700/90 dark:hover:text-white"
             >
-              <RefreshCw className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-              <span className="hidden md:inline text-sm">Refresh</span>
+              <RefreshCw className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <span className="hidden text-sm md:inline">Refresh</span>
             </Button>
             <SortingControls
               sortBy={sortBy}
@@ -92,14 +94,14 @@ export default function MediaGallery({
             />
           </div>
         </div>
-        
+
         <MediaGrid
           mediaItems={currentItems}
           itemsPerRow={itemsPerRow}
           openMediaViewer={openMediaViewer}
           type={type}
         />
-        
+
         {totalPages >= 1 && (
           <div className="mt-8 flex flex-col items-center justify-between gap-4 sm:flex-row">
             <PaginationControls
@@ -107,7 +109,7 @@ export default function MediaGallery({
               totalPages={totalPages}
               onPageChange={setCurrentPage}
             />
-            
+
             <div className="mt-4 sm:mt-0">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -115,14 +117,14 @@ export default function MediaGallery({
                     variant="outline"
                     className="border-gray-200/80 bg-white/90 shadow-sm transition-all duration-200 hover:bg-gray-50/90 hover:shadow-md dark:border-gray-800/80 dark:bg-gray-800/80 dark:text-gray-100 dark:hover:bg-gray-700/90 dark:hover:text-white"
                   >
-                    <span className="truncate max-w-[180px] text-sm">
+                    <span className="max-w-[180px] truncate text-sm">
                       {pageNo} images per page
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
-                
+
                 <DropdownMenuContent
-                  className="max-h-[500px] w-[200px] overflow-y-auto rounded-xl border border-gray-200/80 bg-white/95 shadow-lg backdrop-blur-sm dark:border-gray-800/80 dark:bg-gray-800/95"
+                  className="rounded-xl max-h-[500px] w-[200px] overflow-y-auto border border-gray-200/80 bg-white/95 shadow-lg backdrop-blur-sm dark:border-gray-800/80 dark:bg-gray-800/95"
                   align="end"
                   sideOffset={5}
                 >
@@ -145,7 +147,7 @@ export default function MediaGallery({
             </div>
           </div>
         )}
-        
+
         {showMediaViewer && (
           <MediaView
             initialIndex={selectedMediaIndex}

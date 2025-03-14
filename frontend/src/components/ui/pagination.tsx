@@ -71,7 +71,7 @@ const PaginationPrevious = ({
     {...props}
   >
     <ChevronLeft className="h-4 w-4" />
-    <span className="cursor-pointer hidden sm:inline">Previous</span>
+    <span className="hidden cursor-pointer sm:inline">Previous</span>
   </PaginationLink>
 );
 PaginationPrevious.displayName = 'PaginationPrevious';
@@ -86,7 +86,7 @@ const PaginationNext = ({
     className={cn('gap-1 pr-2.5 shadow-sm', className)}
     {...props}
   >
-    <span className="cursor-pointer hidden sm:inline">Next</span>
+    <span className="hidden cursor-pointer sm:inline">Next</span>
     <ChevronRight className="h-4 w-4" />
   </PaginationLink>
 );

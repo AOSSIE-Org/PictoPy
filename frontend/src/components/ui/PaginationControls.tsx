@@ -56,7 +56,7 @@ export default function PaginationControls({
         {currentPage === 1 ? null : (
           <PaginationPrevious
             onClick={handlePrevious}
-            className="mr-2 border border-white/20 hover:border-white/50 hover:bg-white/10 transition-all duration-200 hover:scale-105 active:scale-95"
+            className="mr-2 border border-white/20 transition-all duration-200 hover:scale-105 hover:border-white/50 hover:bg-white/10 active:scale-95"
           />
         )}
         {totalPages === 1 ? null : (
@@ -86,7 +86,7 @@ export default function PaginationControls({
         {currentPage === totalPages ? null : (
           <PaginationNext
             onClick={handleNext}
-            className="ml-2 border border-white/20 hover:border-white/50 hover:bg-white/10 transition-all duration-200 hover:scale-105 active:scale-95"
+            className="ml-2 border border-white/20 transition-all duration-200 hover:scale-105 hover:border-white/50 hover:bg-white/10 active:scale-95"
           />
         )}
       </Pagination>

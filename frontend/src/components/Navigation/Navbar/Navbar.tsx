@@ -59,7 +59,7 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
 
   return (
     <header className="flex w-full flex-row items-center justify-center align-middle">
-      <motion.div 
+      <motion.div
         initial={{ y: -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
@@ -67,14 +67,14 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
       >
         {/* Logo Section */}
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 group">
+          <div className="group flex items-center gap-2">
             <motion.img
               whileHover={{ rotate: 10 }}
               src="/PictoPy_Logo.png"
               className="h-8 transition-all duration-300 hover:opacity-90"
               alt="PictoPy Logo"
             />
-            <span className="text-white dark:text-white font-sans text-lg font-bold drop-shadow-md sm:text-xl bg-clip-text">
+            <span className="bg-clip-text font-sans text-lg font-bold text-white drop-shadow-md dark:text-white sm:text-xl">
               PictoPy
             </span>
           </div>
@@ -102,7 +102,7 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleNameClick}
-                className="rounded-lg ml-2 px-3 py-0.5 text-white bg-white/10 border border-white/20 transition-all duration-200 hover:bg-white/20 hover:border-white/30 focus:outline-none focus:ring-2 focus:ring-yellow-300/50 focus:ring-offset-2 focus:ring-offset-transparent"
+                className="ml-2 rounded-lg border border-white/20 bg-white/10 px-3 py-0.5 text-white transition-all duration-200 hover:border-white/30 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-yellow-300/50 focus:ring-offset-2 focus:ring-offset-transparent"
                 aria-label="Click to edit name"
               >
                 {name || 'User'}
