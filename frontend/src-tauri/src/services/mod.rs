@@ -9,7 +9,7 @@ use chrono::{DateTime, Datelike, Utc};
 use data_encoding::BASE64;
 use directories::ProjectDirs;
 pub use file_service::FileService;
-use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
+use image::{DynamicImage, Rgba, RgbaImage};
 use rand::seq::SliceRandom;
 use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
 use ring::digest;
@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
 use std::num::NonZeroU32;
+use std::process::Command;
 use tauri::path::BaseDirectory;
 use tauri::Manager;
 
@@ -245,6 +246,12 @@ pub async fn save_edited_image(
     filter: String,
     brightness: i32,
     contrast: i32,
+    vibrance: i32,
+    exposure: i32,
+    temperature: i32,
+    sharpness: i32,
+    vignette: i32,
+    highlights: i32,
 ) -> Result<(), String> {
     let mut img = image::load_from_memory(&image_data).map_err(|e| e.to_string())?;
 
@@ -252,47 +259,65 @@ pub async fn save_edited_image(
     match filter.as_str() {
         "grayscale(100%)" => img = img.grayscale(),
         "sepia(100%)" => img = apply_sepia(&img),
-        "invert(100%)" => img.invert(),
+        "invert(100%)" => {
+            img.invert();
+        }
+        "saturate(200%)" => img = apply_saturation(&img, 2.0),
         _ => {}
     }
 
-    // Apply brightness and contrast
+    // Apply adjustments
     img = adjust_brightness_contrast(&img, brightness, contrast);
+    img = apply_vibrance(&img, vibrance);
+    img = apply_exposure(&img, exposure);
+    img = apply_temperature(&img, temperature);
+    img = apply_sharpness(&img, sharpness);
+    img = apply_vignette(&img, vignette);
+    img = apply_highlights(&img, highlights);
 
-    // Save the edited image
-    let path = PathBuf::from(original_path);
-    let file_stem = path.file_stem().unwrap_or_default();
-    let extension = path.extension().unwrap_or_default();
+    let original_path = Path::new(&original_path);
+    let parent_dir = original_path.parent().unwrap_or_else(|| Path::new("."));
+    let filename = original_path
+        .file_name()
+        .unwrap_or_else(|| std::ffi::OsStr::new("image.png"));
+    let new_filename = format!("edited_{}", filename.to_string_lossy());
+    let new_path = parent_dir.join(new_filename);
 
-    let mut edited_path = path.clone();
-    edited_path.set_file_name(format!(
-        "{}_edited.{}",
-        file_stem.to_string_lossy(),
-        extension.to_string_lossy()
-    ));
-
-    img.save(&edited_path).map_err(|e| e.to_string())?;
+    img.save(&new_path).map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
 pub fn apply_sepia(img: &DynamicImage) -> DynamicImage {
-    let (width, height) = img.dimensions();
-    let mut sepia_img = ImageBuffer::new(width, height);
-
-    for (x, y, pixel) in img.pixels() {
+    let mut sepia = img.to_rgb8();
+    for pixel in sepia.pixels_mut() {
         let r = pixel[0] as f32;
         let g = pixel[1] as f32;
         let b = pixel[2] as f32;
-
-        let sepia_r = (0.393 * r + 0.769 * g + 0.189 * b).min(255.0) as u8;
-        let sepia_g = (0.349 * r + 0.686 * g + 0.168 * b).min(255.0) as u8;
-        let sepia_b = (0.272 * r + 0.534 * g + 0.131 * b).min(255.0) as u8;
-
-        sepia_img.put_pixel(x, y, Rgba([sepia_r, sepia_g, sepia_b, pixel[3]]));
+        pixel[0] = ((r * 0.393) + (g * 0.769) + (b * 0.189)).min(255.0) as u8;
+        pixel[1] = ((r * 0.349) + (g * 0.686) + (b * 0.168)).min(255.0) as u8;
+        pixel[2] = ((r * 0.272) + (g * 0.534) + (b * 0.131)).min(255.0) as u8;
     }
+    DynamicImage::ImageRgb8(sepia)
+}
 
-    DynamicImage::ImageRgba8(sepia_img)
+pub fn apply_saturation(img: &DynamicImage, factor: f32) -> DynamicImage {
+    let mut saturated = img.to_rgb8();
+    for pixel in saturated.pixels_mut() {
+        let r = pixel[0] as f32 / 255.0;
+        let g = pixel[1] as f32 / 255.0;
+        let b = pixel[2] as f32 / 255.0;
+        let max = r.max(g).max(b);
+        let min = r.min(g).min(b);
+        let delta = max - min;
+        if delta != 0.0 {
+            let sat = (delta / max) * factor;
+            pixel[0] = (((r - 0.5) * sat + 0.5).max(0.0).min(1.0) * 255.0) as u8;
+            pixel[1] = (((g - 0.5) * sat + 0.5).max(0.0).min(1.0) * 255.0) as u8;
+            pixel[2] = (((b - 0.5) * sat + 0.5).max(0.0).min(1.0) * 255.0) as u8;
+        }
+    }
+    DynamicImage::ImageRgb8(saturated)
 }
 
 pub fn adjust_brightness_contrast(
@@ -300,28 +325,147 @@ pub fn adjust_brightness_contrast(
     brightness: i32,
     contrast: i32,
 ) -> DynamicImage {
-    let (width, height) = img.dimensions();
-    let mut adjusted_img = ImageBuffer::new(width, height);
-
-    let brightness_factor = brightness as f32 / 100.0;
-    let contrast_factor = contrast as f32 / 100.0;
-
-    for (x, y, pixel) in img.pixels() {
-        let mut new_pixel = [0; 4];
+    let mut adjusted = img.to_rgb8();
+    for pixel in adjusted.pixels_mut() {
         for c in 0..3 {
             let mut color = pixel[c] as f32;
             // Apply brightness
-            color += 255.0 * (brightness_factor - 1.0);
+            color += brightness as f32 * 2.55;
             // Apply contrast
-            color = (color - 128.0) * contrast_factor + 128.0;
-            new_pixel[c] = color.max(0.0).min(255.0) as u8;
+            color = ((color - 128.0) * (contrast as f32 / 100.0 + 1.0)) + 128.0;
+            pixel[c] = color.max(0.0).min(255.0) as u8;
         }
-        new_pixel[3] = pixel[3]; // Keep original alpha
+    }
+    DynamicImage::ImageRgb8(adjusted)
+}
 
-        adjusted_img.put_pixel(x, y, Rgba(new_pixel));
+pub fn apply_vibrance(img: &DynamicImage, vibrance: i32) -> DynamicImage {
+    let mut vibrant = img.to_rgb8();
+    let vibrance_factor = vibrance as f32 / 100.0;
+
+    for pixel in vibrant.pixels_mut() {
+        let r = pixel[0] as f32 / 255.0;
+        let g = pixel[1] as f32 / 255.0;
+        let b = pixel[2] as f32 / 255.0;
+
+        let max = r.max(g).max(b);
+        let avg = (r + g + b) / 3.0;
+
+        let amt = (max - avg) * 2.0 * vibrance_factor;
+
+        pixel[0] = ((r + (max - r) * amt) * 255.0).clamp(0.0, 255.0) as u8;
+        pixel[1] = ((g + (max - g) * amt) * 255.0).clamp(0.0, 255.0) as u8;
+        pixel[2] = ((b + (max - b) * amt) * 255.0).clamp(0.0, 255.0) as u8;
     }
 
-    DynamicImage::ImageRgba8(adjusted_img)
+    DynamicImage::ImageRgb8(vibrant)
+}
+
+pub fn apply_exposure(img: &DynamicImage, exposure: i32) -> DynamicImage {
+    let mut exposed = img.to_rgb8();
+    let factor = 2.0f32.powf(exposure as f32 / 100.0);
+
+    for pixel in exposed.pixels_mut() {
+        for c in 0..3 {
+            pixel[c] = ((pixel[c] as f32 * factor).clamp(0.0, 255.0)) as u8;
+        }
+    }
+
+    DynamicImage::ImageRgb8(exposed)
+}
+
+pub fn apply_temperature(img: &DynamicImage, temperature: i32) -> DynamicImage {
+    let mut temp_adjusted = img.to_rgb8();
+    let factor = temperature as f32 / 100.0;
+    for pixel in temp_adjusted.pixels_mut() {
+        let r = (pixel[0] as f32 * (1.0 + factor)).min(255.0) as u8;
+        let b = (pixel[2] as f32 * (1.0 - factor)).max(0.0) as u8;
+        pixel[0] = r;
+        pixel[2] = b;
+    }
+    DynamicImage::ImageRgb8(temp_adjusted)
+}
+
+pub fn apply_sharpness(img: &DynamicImage, sharpness: i32) -> DynamicImage {
+    let rgba_img = img.to_rgba8();
+    let (width, height) = rgba_img.dimensions();
+    let mut sharpened = RgbaImage::new(width, height);
+
+    let kernel: [f32; 9] = [-1.0, -1.0, -1.0, -1.0, 9.0, -1.0, -1.0, -1.0, -1.0];
+
+    let sharpness_factor = sharpness as f32 / 100.0;
+
+    for y in 1..height - 1 {
+        for x in 1..width - 1 {
+            let mut new_pixel = [0.0; 4];
+            for ky in 0..3 {
+                for kx in 0..3 {
+                    let pixel = rgba_img.get_pixel(x + kx - 1, y + ky - 1);
+                    for c in 0..3 {
+                        new_pixel[c] += pixel[c] as f32 * kernel[(ky * 3 + kx) as usize];
+                    }
+                }
+            }
+            let original = rgba_img.get_pixel(x, y);
+            for c in 0..3 {
+                new_pixel[c] =
+                    original[c] as f32 * (1.0 - sharpness_factor) + new_pixel[c] * sharpness_factor;
+                new_pixel[c] = new_pixel[c].max(0.0).min(255.0);
+            }
+            new_pixel[3] = original[3] as f32;
+            sharpened.put_pixel(
+                x,
+                y,
+                Rgba([
+                    new_pixel[0] as u8,
+                    new_pixel[1] as u8,
+                    new_pixel[2] as u8,
+                    new_pixel[3] as u8,
+                ]),
+            );
+        }
+    }
+
+    DynamicImage::ImageRgba8(sharpened)
+}
+
+pub fn apply_vignette(img: &DynamicImage, vignette: i32) -> DynamicImage {
+    let mut vignetted = img.to_rgba8();
+    let (width, height) = vignetted.dimensions();
+    let center_x = width as f32 / 2.0;
+    let center_y = height as f32 / 2.0;
+    let max_dist = (center_x.powi(2) + center_y.powi(2)).sqrt();
+    let factor = vignette as f32 / 100.0;
+
+    for (x, y, pixel) in vignetted.enumerate_pixels_mut() {
+        let dist = ((x as f32 - center_x).powi(2) + (y as f32 - center_y).powi(2)).sqrt();
+        let vignette_factor = 1.0 - (dist / max_dist * factor).clamp(0.0, 1.0); // Smooth falloff
+
+        for c in 0..3 {
+            pixel[c] = ((pixel[c] as f32 * vignette_factor).clamp(0.0, 255.0)) as u8;
+        }
+    }
+
+    DynamicImage::ImageRgba8(vignetted)
+}
+
+pub fn apply_highlights(img: &DynamicImage, highlights: i32) -> DynamicImage {
+    let mut highlighted = img.to_rgb8();
+    let factor = highlights as f32 / 100.0;
+
+    for pixel in highlighted.pixels_mut() {
+        for c in 0..3 {
+            let value = pixel[c] as f32;
+            if value > 128.0 {
+                let alpha = ((value - 128.0) / 127.0) * factor;
+                // Blend the original value with white (255) based on alpha
+                let new_value = value * (1.0 - alpha) + 255.0 * alpha;
+                pixel[c] = new_value.clamp(0.0, 255.0) as u8;
+            }
+        }
+    }
+
+    DynamicImage::ImageRgb8(highlighted)
 }
 
 pub fn get_secure_folder_path() -> Result<PathBuf, String> {
@@ -667,6 +811,155 @@ pub fn is_image_file(path: &Path) -> bool {
 #[tauri::command]
 pub fn delete_cache(cache_service: State<'_, CacheService>) -> bool {
     cache_service.delete_all_caches()
+}
+
+#[tauri::command]
+pub async fn set_wallpaper(path: String) -> Result<(), String> {
+    let uri = format!("file://{}", path);
+    println!("Setting wallpaper to: {}", uri);
+    #[cfg(target_os = "windows")]
+    {
+        use std::ffi::OsStr;
+        use std::os::windows::ffi::OsStrExt;
+        use winapi::um::winuser::{
+            SystemParametersInfoW, SPIF_SENDCHANGE, SPIF_UPDATEINIFILE, SPI_SETDESKWALLPAPER,
+        };
+
+        let wide: Vec<u16> = OsStr::new(&path).encode_wide().chain(Some(0)).collect();
+        let result = unsafe {
+            SystemParametersInfoW(
+                SPI_SETDESKWALLPAPER,
+                0,
+                wide.as_ptr() as *mut _,
+                SPIF_UPDATEINIFILE | SPIF_SENDCHANGE,
+            )
+        };
+
+        if result == 0 {
+            return Err("Failed to set wallpaper".to_string());
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let script = format!(
+            r#"tell application "Finder" to set desktop picture to POSIX file "{}""#,
+            path
+        );
+        let output = Command::new("osascript")
+            .arg("-e")
+            .arg(&script)
+            .output()
+            .map_err(|e| e.to_string())?;
+
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        // This assumes a GNOME-based desktop environment
+        let desktop_env = std::env::var("XDG_CURRENT_DESKTOP")
+            .unwrap_or_default()
+            .to_lowercase();
+
+        if desktop_env.contains("gnome") {
+            let output = Command::new("gsettings")
+                .args(&[
+                    "set",
+                    "org.gnome.desktop.background",
+                    "picture-uri",
+                    &format!("file://{}", path),
+                ])
+                .output()
+                .map_err(|e| e.to_string())?;
+
+            if !output.status.success() {
+                return Err(String::from_utf8_lossy(&output.stderr).to_string());
+            }
+        } else if desktop_env.contains("kde") {
+            let script = format!(
+                r#"qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript 'var allDesktops = desktops(); for (i=0; i<allDesktops.length; i++) {{ allDesktops[i].wallpaperPlugin = "org.kde.image"; allDesktops[i].currentConfigGroup = Array("Wallpaper", "org.kde.image", "General"); allDesktops[i].writeConfig("Image", "file://{}"); }}'"#,
+                path
+            );
+            let output = Command::new("sh")
+                .arg("-c")
+                .arg(&script)
+                .output()
+                .map_err(|e| e.to_string())?;
+
+            if !output.status.success() {
+                return Err(String::from_utf8_lossy(&output.stderr).to_string());
+            }
+        } else {
+            return Err("Unsupported desktop environment".to_string());
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn open_folder(path: String) -> Result<(), String> {
+    let parent = std::path::Path::new(&path)
+        .parent()
+        .ok_or_else(|| "Unable to get parent directory".to_string())?;
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer")
+            .arg(parent)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(parent)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(parent)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn open_with(path: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("rundll32.exe")
+            .args(&["shell32.dll,OpenAs_RunDLL", &path])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .args(&["-a", &path])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
