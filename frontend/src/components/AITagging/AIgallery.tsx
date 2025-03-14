@@ -25,11 +25,9 @@ import ErrorPage from '@/components/ui/ErrorPage/ErrorPage';
 export default function AIGallery({
   title,
   type,
-  folderPath,
 }: {
   title: string;
   type: 'image' | 'video';
-  folderPath: string;
 }) {
   const {
     successData,
@@ -94,13 +92,9 @@ export default function AIGallery({
   }, []);
 
   const handleFolderAdded = useCallback(async (newPaths: string[]) => {
-    generateThumbnailAPI([folderPath, ...newPaths]);
+    generateThumbnailAPI([...newPaths]);
     setAddedFolders(newPaths);
   }, []);
-
-  useEffect(() => {
-    generateThumbnailAPI([folderPath]);
-  }, [folderPath]);
 
   useEffect(() => {
     setCurrentPage(1);

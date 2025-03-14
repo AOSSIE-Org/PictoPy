@@ -283,6 +283,8 @@ async def add_folder(payload: dict):
             )
 
         folder_path = payload["folder_path"]
+        if isinstance(folder_path, str):
+            folder_path = [folder_path]
         for folder in folder_path:
             if not os.path.isdir(folder):
                 print("Invalid folder path", folder)
@@ -313,8 +315,8 @@ async def add_folder(payload: dict):
                         },
                     },
                 )
-            folder_id = get_folder_id_from_path(folder_path)
-            if folder_id is not None:
+            folder_id = get_folder_id_from_path(folder)
+            if folder_id is None:
                 folder_id = insert_folder(folder)
             if folder_id is None:
                 print("Could not insert folder", folder_id)
@@ -372,6 +374,7 @@ async def add_folder(payload: dict):
         )
 
     except Exception as e:
+        print(e)
         return JSONResponse(
             status_code=500,
             content={
