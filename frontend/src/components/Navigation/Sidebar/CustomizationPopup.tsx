@@ -188,7 +188,9 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
           : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
       }`}
     >
-      <div className={`flex items-center justify-center ${active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
+      <div
+        className={`flex items-center justify-center ${active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
+      >
         {icon}
       </div>
       <span className="ml-2">{label}</span>
@@ -216,26 +218,27 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
             }`}
           >
             <div
-              className="mb-2 flex h-12 items-center justify-center rounded-md relative overflow-hidden"
+              className="relative mb-2 flex h-12 items-center justify-center overflow-hidden rounded-md"
               style={{
                 backgroundColor: theme.bgColor,
                 boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.1)',
               }}
             >
-              <div 
+              <div
                 className="absolute inset-0 opacity-10"
-                style={{ 
-                  backgroundImage: 'linear-gradient(45deg, #ddd 25%, transparent 25%, transparent 75%, #ddd 75%, #ddd), linear-gradient(45deg, #ddd 25%, transparent 25%, transparent 75%, #ddd 75%, #ddd)',
+                style={{
+                  backgroundImage:
+                    'linear-gradient(45deg, #ddd 25%, transparent 25%, transparent 75%, #ddd 75%, #ddd), linear-gradient(45deg, #ddd 25%, transparent 25%, transparent 75%, #ddd 75%, #ddd)',
                   backgroundSize: '8px 8px',
                   backgroundPosition: '0 0, 4px 4px',
                 }}
               ></div>
-              <div 
-                className="relative z-10 rounded-full p-2"
-                style={{ 
+              <div
+                className="rounded-full relative z-10 p-2"
+                style={{
                   backgroundColor: theme.activeBackgroundColor,
                   color: theme.activeTextColor,
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                 }}
               >
                 <Palette size={18} />
@@ -360,7 +363,7 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
             active={activeTab === 'colors'}
             onClick={() => setActiveTab('colors')}
             icon={
-              <div className="h-4 w-4 rounded-full overflow-hidden border border-gray-300 dark:border-gray-500">
+              <div className="rounded-full h-4 w-4 overflow-hidden border border-gray-300 dark:border-gray-500">
                 <div className="h-full w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
               </div>
             }
