@@ -522,28 +522,6 @@ const MediaView: React.FC<MediaViewProps> = ({
             className="relative flex h-full w-full items-center justify-center overflow-hidden"
           >
             {isEditing ? (
-<!--               <ReactCrop
-                crop={crop}
-                onChange={(c) => setCrop(c)}
-                onComplete={(c) => setCompletedCrop(c)}
-              >
-                <img
-                  id="source-image"
-                  src={allMedia[globalIndex].url}
-                  alt={`image-${globalIndex}`}
-                  onError={(e) => {
-                    const img = e.target as HTMLImageElement;
-                    img.onerror = null;
-                    img.src =
-                      allMedia[globalIndex].thumbnailUrl ||
-                      allMedia[globalIndex].url ||
-                      '/PictoPy_Logo.png'; // Ensure a valid fallback
-                  }}
-                  style={{
-                    filter: `${filter} brightness(${brightness}%) contrast(${contrast}%)`,
-                  }}
-                />
-              </ReactCrop> -->
               <div className="relative inline-block">
                 <ReactCrop
                   crop={crop}
