@@ -239,10 +239,12 @@ pub async fn share_file(path: String) -> Result<(), String> {
     Ok(())
 }
 
+
+
 #[tauri::command]
 pub async fn save_edited_image(
     image_data: Vec<u8>,
-    original_path: String,
+    save_path: String,
     filter: String,
     brightness: i32,
     contrast: i32,
@@ -253,6 +255,7 @@ pub async fn save_edited_image(
     vignette: i32,
     highlights: i32,
 ) -> Result<(), String> {
+    use std::path::PathBuf;
     let mut img = image::load_from_memory(&image_data).map_err(|e| e.to_string())?;
 
     // Apply filter
@@ -265,9 +268,13 @@ pub async fn save_edited_image(
         "saturate(200%)" => img = apply_saturation(&img, 2.0),
         _ => {}
     }
-
+    
+    // Convert the selected save path to PathBuf
+    let save_path = PathBuf::from(save_path);
     // Apply adjustments
     img = adjust_brightness_contrast(&img, brightness, contrast);
+    
+    // Save the edited image to the selected path
     img = apply_vibrance(&img, vibrance);
     img = apply_exposure(&img, exposure);
     img = apply_temperature(&img, temperature);
@@ -275,18 +282,11 @@ pub async fn save_edited_image(
     img = apply_vignette(&img, vignette);
     img = apply_highlights(&img, highlights);
 
-    let original_path = Path::new(&original_path);
-    let parent_dir = original_path.parent().unwrap_or_else(|| Path::new("."));
-    let filename = original_path
-        .file_name()
-        .unwrap_or_else(|| std::ffi::OsStr::new("image.png"));
-    let new_filename = format!("edited_{}", filename.to_string_lossy());
-    let new_path = parent_dir.join(new_filename);
-
-    img.save(&new_path).map_err(|e| e.to_string())?;
+    img.save(&save_path).map_err(|e| e.to_string())?;
 
     Ok(())
 }
+
 
 pub fn apply_sepia(img: &DynamicImage) -> DynamicImage {
     let mut sepia = img.to_rgb8();

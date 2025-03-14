@@ -31,6 +31,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { useNavigate } from 'react-router-dom';
 import NetflixStylePlayer from '../VideoPlayer/NetflixStylePlayer';
+import { save } from '@tauri-apps/plugin-dialog';
 
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
@@ -265,10 +266,19 @@ const MediaView: React.FC<MediaViewProps> = ({
           password: prompt('Enter your secure folder password:'),
         });
       } else {
-        console.log('Invoking save_edited_image');
+        const selectedPath = await save({
+          defaultPath: `${allMedia[globalIndex].path?.replace(/\.\w+$/, '_edited.png')}`,
+          filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg'] }],
+        });
+
+        if (!selectedPath) {
+          console.log('User cancelled save dialog');
+          return;
+        }
+
         await invoke('save_edited_image', {
           imageData: Array.from(uint8Array),
-          originalPath: allMedia[globalIndex].path,
+          savePath: selectedPath,
           filter,
           brightness,
           contrast,
@@ -521,8 +531,16 @@ const MediaView: React.FC<MediaViewProps> = ({
                   <TemperatureFilter temperature={temperature} />
                   <img
                     id="source-image"
-                    src={allMedia[globalIndex].url || '/placeholder.svg'}
+                    src={allMedia[globalIndex].url || allMedia[globalIndex].url || '/placeholder.svg'}
                     alt={`image-${globalIndex}`}
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      img.onerror = null;
+                      img.src =
+                        allMedia[globalIndex].thumbnailUrl ||
+                        allMedia[globalIndex].url ||
+                        '/PictoPy_Logo.png'; // Ensure a valid fallback
+                    }}
                     style={{
                       filter: `
                       brightness(${100 + exposure + highlights / 2}%) 
@@ -573,10 +591,21 @@ const MediaView: React.FC<MediaViewProps> = ({
               </div>
             ) : (
               <img
-                src={allMedia[globalIndex].url || '/placeholder.svg'}
+                src={
+                  allMedia[globalIndex].url ||
+                  allMedia[globalIndex].thumbnailUrl
+                }
                 alt={`image-${globalIndex}`}
                 draggable={false}
                 className="h-full w-full select-none object-contain"
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  img.onerror = null;
+                  img.src =
+                    allMedia[globalIndex].thumbnailUrl ||
+                    allMedia[globalIndex].url ||
+                    '/PictoPy_Logo.png'; // Ensure a valid fallback
+                }}
                 style={{
                   transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
                   transition: isDragging

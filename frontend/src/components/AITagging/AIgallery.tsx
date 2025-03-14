@@ -1,14 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import FilterControls from './FilterControls';
 import MediaGrid from '../Media/Mediagrid';
-import { LoadingScreen } from '@/components/ui/LoadingScreen/LoadingScreen';
 import MediaView from '../Media/MediaView';
 import PaginationControls from '../ui/PaginationControls';
-import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtensio';
-import {
-  getAllImageObjects,
-  generateThumbnails,
-} from '../../../api/api-functions/images';
+import { usePictoQuery } from '@/hooks/useQueryExtensio';
+import { getAllImageObjects } from '../../../api/api-functions/images';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,11 +18,9 @@ import ErrorPage from '@/components/ui/ErrorPage/ErrorPage';
 export default function AIGallery({
   title,
   type,
-  folderPath,
 }: {
   title: string;
   type: 'image' | 'video';
-  folderPath: string;
 }) {
   const {
     successData,
@@ -36,11 +30,7 @@ export default function AIGallery({
     queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
-  const { mutate: generateThumbnailAPI, isPending: isGeneratingThumbnails } =
-    usePictoMutation({
-      mutationFn: generateThumbnails,
-      autoInvalidateTags: ['ai-tagging-images', 'ai'],
-    });
+
   let mediaItems = successData ?? [];
   const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -90,18 +80,6 @@ export default function AIGallery({
     setShowMediaViewer(false);
   }, []);
 
-  const handleFolderAdded = useCallback(async () => {
-    generateThumbnailAPI([folderPath]);
-  }, []);
-
-  useEffect(() => {
-    generateThumbnailAPI([folderPath]);
-  }, [folderPath]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filterTag, faceSearchResults]);
-
   if (error) {
     return (
       <ErrorPage
@@ -110,14 +88,6 @@ export default function AIGallery({
         details="An unexpected error occurred while loading media items. This may be due to a server issue or database failure. Please try again later."
         onRetry={() => window.location.reload()}
       />
-    );
-  }
-
-  if (isGeneratingThumbnails || isGeneratingTags) {
-    return (
-      <div>
-        <LoadingScreen />
-      </div>
     );
   }
 
@@ -149,7 +119,6 @@ export default function AIGallery({
           <FilterControls
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
-            onFolderAdded={handleFolderAdded}
             isLoading={isGeneratingTags}
             isVisibleSelectedImage={isVisibleSelectedImage}
             setIsVisibleSelectedImage={setIsVisibleSelectedImage}
@@ -215,6 +184,7 @@ export default function AIGallery({
             allMedia={filteredMediaItems.map((item: any) => ({
               url: item.url,
               path: item?.imagePath,
+              thumbnailUrl: item.thumbnailUrl,
             }))}
             currentPage={currentPage}
             itemsPerPage={pageNo}
