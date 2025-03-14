@@ -72,48 +72,72 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 p-4">
-      <div className="relative h-64 w-64 bg-gray-800">
-        <Cropper
-          image={image}
-          crop={crop}
-          zoom={zoom}
-          aspect={1}
-          onCropChange={setCrop}
-          onZoomChange={setZoom}
-          onCropComplete={handleCropComplete}
-          classes={{
-            containerClassName: 'rounded',
-            mediaClassName: 'rounded',
-          }}
-        />
+    <div className="flex flex-col items-center gap-6 p-4">
+      {/* Cropper Container with Stylish Border */}
+      <div className="rounded-xl relative h-72 w-72 bg-gradient-to-r from-blue-500 to-purple-600 p-1 shadow-xl">
+        <div className="h-full w-full overflow-hidden rounded-lg bg-gray-900">
+          <Cropper
+            image={image}
+            crop={crop}
+            zoom={zoom}
+            aspect={1}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={handleCropComplete}
+            classes={{
+              containerClassName: 'rounded-lg',
+              mediaClassName: 'rounded-lg',
+            }}
+          />
+        </div>
       </div>
 
-      <input
-        type="range"
-        min={1}
-        max={3}
-        step={0.1}
-        value={zoom}
-        onChange={(e) => setZoom(Number(e.target.value))}
-        className="w-48"
-      />
-
-      <button
-        onClick={handleCropImage}
-        className="rounded bg-blue-500 px-4 py-2 text-white shadow hover:bg-blue-600"
-      >
-        Crop
-      </button>
-
-      {croppedPreview && (
-        <div className="mt-4">
-          <h3 className="text-sm font-semibold">Cropped Preview:</h3>
-          <img
-            src={croppedPreview}
-            alt="Cropped Preview"
-            className="rounded mt-2 h-32 w-32 border object-cover shadow-md"
+      {/* Zoom Control with Labels */}
+      <div className="w-full max-w-xs space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+            Zoom
+          </span>
+          <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+            {zoom.toFixed(1)}x
+          </span>
+        </div>
+        <div className="rounded-lg bg-white/50 p-2 shadow-sm dark:bg-gray-700/50">
+          <input
+            type="range"
+            min={1}
+            max={3}
+            step={0.1}
+            value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-500 dark:bg-gray-600"
           />
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-4">
+        <button
+          onClick={handleCropImage}
+          className="rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-2.5 text-white shadow-lg transition-all duration-300 hover:translate-y-[-1px] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 active:translate-y-[1px]"
+        >
+          Apply Crop
+        </button>
+      </div>
+
+      {/* Cropped Preview */}
+      {croppedPreview && (
+        <div className="mt-2 w-full max-w-xs">
+          <h3 className="mb-2 text-center text-sm font-semibold text-gray-600 dark:text-gray-300">
+            Preview
+          </h3>
+          <div className="rounded-full mx-auto h-32 w-32 overflow-hidden border-4 border-white shadow-md dark:border-gray-700">
+            <img
+              src={croppedPreview}
+              alt="Cropped Preview"
+              className="h-full w-full object-cover"
+            />
+          </div>
         </div>
       )}
     </div>

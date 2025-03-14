@@ -10,6 +10,7 @@ export const imagesEndpoints = {
   deleteThumbnails: `${BACKEND_URL}/images/delete-thumbnails`,
   progress: `${BACKEND_URL}/images/add-folder-progress`,
   deleteFolder: `${BACKEND_URL}/images/delete-folder`,
+  getThumbnailPath: `${BACKEND_URL}/images/get-thumbnail-path`,
 };
 
 export const albumEndpoints = {

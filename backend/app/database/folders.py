@@ -89,6 +89,14 @@ def get_all_folders():
         return [row[0] for row in rows] if rows else []
 
 
+def get_all_folder_ids():
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT folder_id from folders")
+    rows = cursor.fetchall()
+    return [row[0] for row in rows] if rows else []
+
+
 def delete_folder(folder_path):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
