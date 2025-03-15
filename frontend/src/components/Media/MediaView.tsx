@@ -682,154 +682,154 @@ const MediaView: React.FC<MediaViewProps> = ({
           </div>
           {isEditing && (
             <>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={handleEditComplete}
-                className="rounded-md bg-emerald-500/70 p-2 text-white transition-all duration-200 hover:bg-emerald-600 hover:shadow-md"
-                aria-label="Confirm Edit"
-              >
-                <Check className="h-5 w-5" />
-              </button>
-              <button
-                onClick={resetEditing}
-                className="rounded-md bg-rose-500/70 p-2 text-white transition-all duration-200 hover:bg-rose-600 hover:shadow-md"
-                aria-label="Cancel Edit"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              <select
-                onChange={(e) => setFilter(e.target.value)}
-                className="rounded-md bg-white/10 px-2 py-2 text-sm text-white transition-all duration-200 hover:bg-white/20"
-              >
-                <option value="">No Filter</option>
-                <option value="grayscale(100%)">Grayscale</option>
-                <option value="sepia(100%)">Sepia</option>
-                <option value="invert(100%)">Invert</option>
-                <option value="saturate(200%)">Saturate</option>
-              </select>
-              <button
-                onClick={toggleAdjustMenu}
-                className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
-                aria-label="Adjust"
-              >
-                <Sliders className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setonaspect(!onaspect)}
-                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-                aria-label="Adjust"
-              >
-                <Crops/>
-              </button>
-              {showAdjustMenu && (
-                <div className="absolute bottom-full right-5 mb-2 grid w-64 grid-cols-2 gap-2 rounded-md border-2 bg-white/10 p-4 backdrop-blur-md hover:border-white lg:grid-cols-1">
-                  <div className="mb-1">
-                    <label className="block text-sm font-medium text-white">
-                      Brightness
-                    </label>
-                    <input
-                      type="range"
-                      min="-100"
-                      max="100"
-                      value={brightness}
-                      onChange={(e) => setBrightness(Number(e.target.value))}
-                      className="h-1 w-full cursor-pointer accent-blue-500"
-                    />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleEditComplete}
+                  className="rounded-md bg-emerald-500/70 p-2 text-white transition-all duration-200 hover:bg-emerald-600 hover:shadow-md"
+                  aria-label="Confirm Edit"
+                >
+                  <Check className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={resetEditing}
+                  className="rounded-md bg-rose-500/70 p-2 text-white transition-all duration-200 hover:bg-rose-600 hover:shadow-md"
+                  aria-label="Cancel Edit"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <select
+                  onChange={(e) => setFilter(e.target.value)}
+                  className="rounded-md bg-white/10 px-2 py-2 text-sm text-white transition-all duration-200 hover:bg-white/20"
+                >
+                  <option value="">No Filter</option>
+                  <option value="grayscale(100%)">Grayscale</option>
+                  <option value="sepia(100%)">Sepia</option>
+                  <option value="invert(100%)">Invert</option>
+                  <option value="saturate(200%)">Saturate</option>
+                </select>
+                <button
+                  onClick={toggleAdjustMenu}
+                  className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
+                  aria-label="Adjust"
+                >
+                  <Sliders className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setonaspect(!onaspect)}
+                  className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                  aria-label="Adjust"
+                >
+                  <Crops />
+                </button>
+                {showAdjustMenu && (
+                  <div className="absolute bottom-full right-5 mb-2 grid w-64 grid-cols-2 gap-2 rounded-md border-2 bg-white/10 p-4 backdrop-blur-md hover:border-white lg:grid-cols-1">
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Brightness
+                      </label>
+                      <input
+                        type="range"
+                        min="-100"
+                        max="100"
+                        value={brightness}
+                        onChange={(e) => setBrightness(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Contrast
+                      </label>
+                      <input
+                        type="range"
+                        min="-100"
+                        max="100"
+                        value={contrast}
+                        onChange={(e) => setContrast(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Vibrance
+                      </label>
+                      <input
+                        type="range"
+                        min="-100"
+                        max="100"
+                        value={vibrance}
+                        onChange={(e) => setVibrance(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Exposure
+                      </label>
+                      <input
+                        type="range"
+                        min="-100"
+                        max="100"
+                        value={exposure}
+                        onChange={(e) => setExposure(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Temperature
+                      </label>
+                      <input
+                        type="range"
+                        min="-100"
+                        max="100"
+                        value={temperature}
+                        onChange={(e) => setTemperature(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Sharpness
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={sharpness}
+                        onChange={(e) => setSharpness(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Vignette
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={vignette}
+                        onChange={(e) => setVignette(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Highlights
+                      </label>
+                      <input
+                        type="range"
+                        min="-100"
+                        max="100"
+                        value={highlights}
+                        onChange={(e) => setHighlights(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
                   </div>
-                  <div className="mb-1">
-                    <label className="block text-sm font-medium text-white">
-                      Contrast
-                    </label>
-                    <input
-                      type="range"
-                      min="-100"
-                      max="100"
-                      value={contrast}
-                      onChange={(e) => setContrast(Number(e.target.value))}
-                      className="h-1 w-full cursor-pointer accent-blue-500"
-                    />
-                  </div>
-                  <div className="mb-1">
-                    <label className="block text-sm font-medium text-white">
-                      Vibrance
-                    </label>
-                    <input
-                      type="range"
-                      min="-100"
-                      max="100"
-                      value={vibrance}
-                      onChange={(e) => setVibrance(Number(e.target.value))}
-                      className="h-1 w-full cursor-pointer accent-blue-500"
-                    />
-                  </div>
-                  <div className="mb-1">
-                    <label className="block text-sm font-medium text-white">
-                      Exposure
-                    </label>
-                    <input
-                      type="range"
-                      min="-100"
-                      max="100"
-                      value={exposure}
-                      onChange={(e) => setExposure(Number(e.target.value))}
-                      className="h-1 w-full cursor-pointer accent-blue-500"
-                    />
-                  </div>
-                  <div className="mb-1">
-                    <label className="block text-sm font-medium text-white">
-                      Temperature
-                    </label>
-                    <input
-                      type="range"
-                      min="-100"
-                      max="100"
-                      value={temperature}
-                      onChange={(e) => setTemperature(Number(e.target.value))}
-                      className="h-1 w-full cursor-pointer accent-blue-500"
-                    />
-                  </div>
-                  <div className="mb-1">
-                    <label className="block text-sm font-medium text-white">
-                      Sharpness
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={sharpness}
-                      onChange={(e) => setSharpness(Number(e.target.value))}
-                      className="h-1 w-full cursor-pointer accent-blue-500"
-                    />
-                  </div>
-                  <div className="mb-1">
-                    <label className="block text-sm font-medium text-white">
-                      Vignette
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={vignette}
-                      onChange={(e) => setVignette(Number(e.target.value))}
-                      className="h-1 w-full cursor-pointer accent-blue-500"
-                    />
-                  </div>
-                  <div className="mb-1">
-                    <label className="block text-sm font-medium text-white">
-                      Highlights
-                    </label>
-                    <input
-                      type="range"
-                      min="-100"
-                      max="100"
-                      value={highlights}
-                      onChange={(e) => setHighlights(Number(e.target.value))}
-                      className="h-1 w-full cursor-pointer accent-blue-500"
-                    />
-                  </div>
-                </div>
-              )}
-              {onaspect && (
+                )}
+                {onaspect && (
                   <div className="absolute bottom-full mb-2 w-32 rounded-md bg-white/20 backdrop-blur-md sm:right-1">
                     <div className="mb-1 mt-1 flex flex-col justify-center gap-1">
                       <div
@@ -864,7 +864,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                       </div>
                     </div>
                   </div>
-              )}
+                )}
               </div>
             </>
           )}
@@ -873,7 +873,7 @@ const MediaView: React.FC<MediaViewProps> = ({
 
       {/* Adjust menu popup with improved styling */}
       {showAdjustMenu && (
-          <button
+        <button
           onClick={toggleAdjustMenu}
           className="mt-2 w-full rounded-md bg-white/20 py-1.5 text-xs font-medium text-white transition-all hover:bg-white/30"
         >
