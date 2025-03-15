@@ -531,7 +531,11 @@ const MediaView: React.FC<MediaViewProps> = ({
                   <TemperatureFilter temperature={temperature} />
                   <img
                     id="source-image"
-                    src={allMedia[globalIndex].url || allMedia[globalIndex].url || '/placeholder.svg'}
+                    src={
+                      allMedia[globalIndex].url ||
+                      allMedia[globalIndex].url ||
+                      '/placeholder.svg'
+                    }
                     alt={`image-${globalIndex}`}
                     onError={(e) => {
                       const img = e.target as HTMLImageElement;

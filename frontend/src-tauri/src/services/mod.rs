@@ -239,8 +239,6 @@ pub async fn share_file(path: String) -> Result<(), String> {
     Ok(())
 }
 
-
-
 #[tauri::command]
 pub async fn save_edited_image(
     image_data: Vec<u8>,
@@ -268,12 +266,12 @@ pub async fn save_edited_image(
         "saturate(200%)" => img = apply_saturation(&img, 2.0),
         _ => {}
     }
-    
+
     // Convert the selected save path to PathBuf
     let save_path = PathBuf::from(save_path);
     // Apply adjustments
     img = adjust_brightness_contrast(&img, brightness, contrast);
-    
+
     // Save the edited image to the selected path
     img = apply_vibrance(&img, vibrance);
     img = apply_exposure(&img, exposure);
@@ -286,7 +284,6 @@ pub async fn save_edited_image(
 
     Ok(())
 }
-
 
 pub fn apply_sepia(img: &DynamicImage) -> DynamicImage {
     let mut sepia = img.to_rgb8();

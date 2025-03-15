@@ -29,6 +29,8 @@ from app.database.folders import (
 
 router = APIRouter()
 
+progress_status = {}
+
 
 async def run_get_classes(img_path, folder_id=None):
     loop = asyncio.get_event_loop()
@@ -65,8 +67,18 @@ def get_images():
         )
 
 
-async def process_images(tasks):
-    await asyncio.gather(*tasks)
+async def process_images(tasks, folder_id):
+    total = len(tasks)
+    completed = 0
+    progress_status[folder_id] = {"total": total, "completed": 0, "status": "pending"}
+
+    for coro in asyncio.as_completed(tasks):
+        await coro
+        completed += 1
+        progress_status[folder_id]["completed"] = completed
+        await asyncio.sleep(0)
+
+    progress_status[folder_id]["status"] = "completed"
 
 
 @router.delete("/multiple-images")
@@ -150,7 +162,6 @@ def delete_multiple_images(payload: dict):
         )
 
     except Exception as e:
-        print(e)
         return JSONResponse(
             status_code=500,
             content={
@@ -259,6 +270,7 @@ def get_class_ids(path: str = Query(...)):
 async def add_folder(payload: dict):
     try:
         if "folder_path" not in payload:
+            print("Folder path is required")
             return JSONResponse(
                 status_code=400,
                 content={
@@ -272,67 +284,86 @@ async def add_folder(payload: dict):
             )
 
         folder_path = payload["folder_path"]
-        if not os.path.isdir(folder_path):
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Invalid folder path",
-                        "message": "The provided path is not a valid directory",
+        if isinstance(folder_path, str):
+            folder_path = [folder_path]
+        for folder in folder_path:
+            if not os.path.isdir(folder):
+                print("Invalid folder path", folder)
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "status_code": 400,
+                        "content": {
+                            "success": False,
+                            "error": "Invalid folder path",
+                            "message": "The provided path is not a valid directory",
+                        },
                     },
-                },
-            )
-        if (
-            not os.access(folder_path, os.R_OK)
-            or not os.access(folder_path, os.W_OK)
-            or not os.access(folder_path, os.X_OK)
-        ):
-            return JSONResponse(
-                status_code=403,
-                content={
-                    "status_code": 403,
-                    "content": {
-                        "success": False,
-                        "error": "Permission denied",
-                        "message": "The app does not have read and write permissions for the specified folder",
+                )
+            if (
+                not os.access(folder, os.R_OK)
+                or not os.access(folder, os.W_OK)
+                or not os.access(folder, os.X_OK)
+            ):
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "status_code": 403,
+                        "content": {
+                            "success": False,
+                            "error": "Permission denied",
+                            "message": "The app does not have read and write permissions for the specified folder",
+                        },
                     },
-                },
-            )
+                )
+            folder_id = get_folder_id_from_path(folder)
+            if folder_id is None:
+                folder_id = insert_folder(folder)
+            if folder_id is None:
+                print("Could not insert folder", folder_id)
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "status_code": 400,
+                        "content": {
+                            "success": False,
+                            "error": "Folder not inserted",
+                            "message": "Could not insert folder",
+                        },
+                    },
+                )
 
-        folder_id = get_folder_id_from_path(folder_path)
-        if folder_id is None:
-            folder_id = insert_folder(folder_path)
+            image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
+            tasks = []
 
-        image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
-        tasks = []
-
-        for root, _, files in os.walk(folder_path):
-            if "PictoPy.thumbnails" in root:
-                continue
-            for file in files:
-                file_path = os.path.join(root, file)
-                file_extension = os.path.splitext(file_path)[1].lower()
-                if file_extension in image_extensions:
-                    tasks.append(
-                        asyncio.create_task(
-                            run_get_classes(file_path, folder_id=folder_id)
+            for root, _, files in os.walk(folder):
+                if "PictoPy.thumbnails" in root:
+                    continue
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    file_extension = os.path.splitext(file_path)[1].lower()
+                    if file_extension in image_extensions:
+                        tasks.append(
+                            asyncio.create_task(
+                                run_get_classes(file_path, folder_id=folder_id)
+                            )
                         )
-                    )
 
-        if not tasks:
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "data": 0,
-                    "message": "No valid images found in the specified folder",
-                    "success": True,
-                },
-            )
-
-        await asyncio.create_task(process_images(tasks))
-
+            if not tasks:
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "data": 0,
+                        "message": "No valid images found in the specified folder",
+                        "success": True,
+                    },
+                )
+            progress_status[folder_id] = {
+                "total": len(tasks),
+                "completed": 0,
+                "status": "pending",
+            }
+            asyncio.create_task(process_images(tasks, folder_id))
         return JSONResponse(
             status_code=200,
             content={
@@ -356,6 +387,55 @@ async def add_folder(payload: dict):
                 },
             },
         )
+
+
+@router.delete("/delete-folder")
+@exception_handler_wrapper
+def delete_folder_ai_tagging(payload: dict):
+    if "folder_path" not in payload:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status_code": 400,
+                "content": {
+                    "success": False,
+                    "error": "Missing 'folder_path' in payload",
+                    "message": "Folder path is required",
+                },
+            },
+        )
+
+    folder_path = payload["folder_path"]
+    if not os.path.isdir(folder_path):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status_code": 400,
+                "content": {
+                    "success": False,
+                    "error": "Invalid folder path",
+                    "message": "The provided path is not a valid directory",
+                },
+            },
+        )
+
+    image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".webp"}
+
+    for root, _, files in os.walk(folder_path):
+        for file in files:
+            if any(file.lower().endswith(ext) for ext in image_extensions):
+                delete_image_db(os.path.join(root, file))
+
+    delete_folder(folder_path)
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "data": "",
+            "message": "Folder deleted successfully",
+            "success": True,
+        },
+    )
 
 
 @router.post("/generate-thumbnails")
@@ -490,5 +570,24 @@ def delete_thumbnails(folder_path: str | None = None):
                 "message": """All PictoPy.thumbnails folders 
                 have been successfully deleted.""",
             },
+        },
+    )
+
+
+@router.get("/add-folder-progress")
+@exception_handler_wrapper
+def combined_progress():
+    total_tasks = 0
+    total_completed = 0
+    for status in progress_status.values():
+        total_tasks += status["total"]
+        total_completed += status["completed"]
+    progress = 100 if total_tasks == 0 else int((total_completed / total_tasks) * 100)
+    return JSONResponse(
+        status_code=200,
+        content={
+            "data": progress,
+            "message": progress_status,
+            "success": True,
         },
     )
