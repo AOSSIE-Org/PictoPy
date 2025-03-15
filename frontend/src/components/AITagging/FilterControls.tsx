@@ -6,16 +6,12 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-
 import { Button } from '../ui/button';
 import { MediaItem } from '@/types/Media';
 import AITaggingFolderPicker from '../FolderPicker/AITaggingFolderPicker';
-import LoadingScreen from '../ui/LoadingScreen/LoadingScreen';
 import DeleteSelectedImagePage from '../FolderPicker/DeleteSelectedImagePage';
 import ErrorDialog from '../Album/Error';
 import { Trash2, Filter, UserSearch, Upload, Camera } from 'lucide-react';
-import { queryClient, usePictoMutation } from '@/hooks/useQueryExtensio';
-import { addFolder } from '../../../api/api-functions/images';
 import { searchByFace } from '../../../api/api-functions/faceTagging';
 import {
   Dialog,
@@ -25,10 +21,12 @@ import {
   DialogTrigger,
 } from '../ui/dialog';
 import WebcamCapture from './WebcamCapture';
+import { LoadingScreen } from '../LoadingScreen/LoadingScreen';
 
 interface FilterControlsProps {
   setFilterTag: (tag: string[]) => void;
   mediaItems: MediaItem[];
+  onFolderAdded: (newPaths: string[]) => Promise<void>;
   isLoading: boolean;
   isVisibleSelectedImage: boolean;
   setIsVisibleSelectedImage: (value: boolean) => void;
@@ -38,23 +36,11 @@ interface FilterControlsProps {
 export default function FilterControls({
   setFilterTag,
   mediaItems,
-  isLoading,
+  onFolderAdded,
   isVisibleSelectedImage,
   setIsVisibleSelectedImage,
   setFaceSearchResults,
 }: FilterControlsProps) {
-  const {
-    mutate: addFolderAPI,
-    isPending: isAddingFolder,
-    errorMessage,
-  } = usePictoMutation({
-    mutationFn: addFolder,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-images'] });
-    },
-    autoInvalidateTags: ['ai-tagging-images', 'ai'],
-  });
-
   const uniqueTags = React.useMemo(() => {
     const allTags = mediaItems.flatMap((item) => item.tags);
     return Array.from(new Set(allTags))
@@ -106,10 +92,10 @@ export default function FilterControls({
     event.preventDefault();
     setIsDropdownOpen((prevState) => !prevState); // Toggle dropdown visibility
   };
-  const handleFolderPick = async (path: string) => {
+  const handleFolderPick = async (paths: string[]) => {
+    //set addiitional paths here
     try {
-      addFolderAPI(path);
-      // await onFolderAdded();
+      await onFolderAdded(paths);
     } catch (error) {
       console.error('Error adding folder:', error);
     }
@@ -202,10 +188,6 @@ export default function FilterControls({
 
   return (
     <>
-      {(isLoading || isAddingFolder) && <LoadingScreen />}
-      {errorMessage && errorMessage !== 'Something went wrong' && (
-        <div className="text-red-500">Error: {errorMessage}</div>
-      )}
       <div className="flex items-center gap-4 overflow-auto">
         <AITaggingFolderPicker setFolderPath={handleFolderPick} />
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
 import { deleteCache } from '@/services/cacheService';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import LoadingScreen from '@/components/ui/LoadingScreen/LoadingScreen';
 import ErrorDialog from '@/components/Album/Error';
 import { usePictoMutation } from '@/hooks/useQueryExtensio';
 import {
+  deleteFolder,
   deleteThumbnails,
   generateThumbnails,
 } from '../../../api/api-functions/images.ts';
@@ -19,6 +20,15 @@ const Settings: React.FC = () => {
     'folderPaths',
     [],
   );
+  const [autoFolderSetting, setAutoFolder] = useLocalStorage(
+    'auto-add-folder',
+    'false',
+  );
+  const [addedFolders, setAddedFolders] = useLocalStorage<string[]>(
+    'addedFolders',
+    [],
+  );
+  const [check, setCheck] = useState<boolean>(autoFolderSetting === 'true');
   const [errorDialogContent, setErrorDialogContent] = useState<{
     title: string;
     description: string;
@@ -29,10 +39,20 @@ const Settings: React.FC = () => {
       autoInvalidateTags: ['ai-tagging-images', 'ai'],
     });
 
+  const { mutate: deleteFolderAITagging } = usePictoMutation({
+    mutationFn: deleteFolder,
+    autoInvalidateTags: ['ai-tagging-images', 'ai'],
+  });
+
   const { mutate: deleteThumbnail, isPending: isDeletingThumbnails } =
     usePictoMutation({
       mutationFn: deleteThumbnails,
     });
+
+  useEffect(() => {
+    setCheck(autoFolderSetting === 'true');
+  }, [autoFolderSetting]);
+
   const handleFolderPathChange = async (newPaths: string[]) => {
     //Error if newPaths contains a path that is already in currentPaths
     const duplicatePaths = newPaths.filter((path) =>
@@ -66,7 +86,9 @@ const Settings: React.FC = () => {
     try {
       const updatedPaths = currentPaths.filter((path) => path !== pathToRemove);
       setCurrentPaths(updatedPaths);
+      setAddedFolders(addedFolders.filter((path) => path !== pathToRemove));
       deleteThumbnail(pathToRemove);
+      deleteFolderAITagging(pathToRemove);
       await deleteCache();
       console.log(`Removed folder path: ${pathToRemove}`);
     } catch (error) {
@@ -76,8 +98,8 @@ const Settings: React.FC = () => {
 
   if (isGeneratingThumbnails || isDeletingThumbnails || isLoading) {
     return (
-      <div>
-        <LoadingScreen />
+      <div className="flex h-full w-full items-center justify-center">
+        <LoadingScreen variant="fullscreen" />
       </div>
     );
   }
@@ -142,6 +164,28 @@ const Settings: React.FC = () => {
               Restart Server
             </Button>
           )}
+        </div>
+        <div>
+          <label className="inline-flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              value=""
+              className="peer sr-only"
+              checked={check}
+              onClick={() => {
+                setCheck(!check);
+                setAutoFolder(check ? 'false' : 'true');
+              }}
+            />
+            <span className="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">
+              Auto Sync Desktop Folders
+            </span>
+            <div className="rounded-full after:rounded-full peer relative h-6 w-11 bg-gray-200 after:absolute after:start-[2px] after:top-0.5 after:h-5 after:w-5 after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-4 peer-focus:ring-blue-300 dark:border-gray-600 dark:bg-gray-700 dark:peer-checked:bg-blue-600 dark:peer-focus:ring-blue-800 rtl:peer-checked:after:-translate-x-full"></div>
+          </label>
+          <p className="ml-3 mt-1 text-xs text-yellow-500">
+            WARNING: It may impact performance, restart for changes to take
+            effect.
+          </p>
         </div>
       </div>
       <ErrorDialog

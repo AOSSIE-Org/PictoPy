@@ -53,6 +53,8 @@ from app.schemas.images import (
 
 router = APIRouter()
 
+progress_status = {}
+
 
 async def run_get_classes(img_path, folder_id=None):
     loop = asyncio.get_event_loop()
@@ -164,8 +166,18 @@ async def add_multiple_images(payload: AddMultipleImagesRequest):
         )
 
 
-async def process_images(tasks):
-    await asyncio.gather(*tasks)
+async def process_images(tasks, folder_id):
+    total = len(tasks)
+    completed = 0
+    progress_status[folder_id] = {"total": total, "completed": 0, "status": "pending"}
+
+    for coro in asyncio.as_completed(tasks):
+        await coro
+        completed += 1
+        progress_status[folder_id]["completed"] = completed
+        await asyncio.sleep(0)
+
+    progress_status[folder_id]["status"] = "completed"
 
 
 @router.delete(
@@ -294,6 +306,7 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
         )
 
 
+
 @router.get(
     "/all-image-objects",
     response_model=GetAllImageObjectsResponse,
@@ -378,68 +391,91 @@ def get_class_ids(path: str = Query(...)):
 )
 async def add_folder(payload: AddFolderRequest):
     try:
-
         folder_path = payload.folder_path
-        if not os.path.isdir(folder_path):
 
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ErrorResponse(
-                    success=False,
-                    error="Invalid folder path",
-                    message="The provided path is not a valid directory",
-                ).model_dump(),
-            )
-        if (
-            not os.access(folder_path, os.R_OK)
-            or not os.access(folder_path, os.W_OK)
-            or not os.access(folder_path, os.X_OK)
-        ):
+        print("Folder Path = ",folder_path)
 
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=ErrorResponse(
-                    success=False,
-                    error="Permission denied",
-                    message="The app does not have read and write permissions for the specified folder",
-                ),
-            )
+        
+        for folder in folder_path:
+            if not os.path.isdir(folder_path):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ErrorResponse(
+                        success=False,
+                        error="Invalid folder path",
+                        message="The provided path is not a valid directory",
+                    ).model_dump(),
+                )
+            
+            if (
+                not os.access(folder_path, os.R_OK)
+                or not os.access(folder_path, os.W_OK)
+                or not os.access(folder_path, os.X_OK)
+            ):
 
-        folder_id = get_folder_id_from_path(folder_path)
-        if folder_id is None:
-            folder_id = insert_folder(folder_path)
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=ErrorResponse(
+                        success=False,
+                        error="Permission denied",
+                        message="The app does not have read and write permissions for the specified folder",
+                    ),
+                )
+            
+            
+            folder_id = get_folder_id_from_path(folder)
+            if folder_id is None:
+                folder_id = insert_folder(folder)
+            if folder_id is None:
+                print("Could not insert folder", folder_id)
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "status_code": 400,
+                        "content": {
+                            "success": False,
+                            "error": "Folder not inserted",
+                            "message": "Could not insert folder",
+                        },
+                    },
+                )
 
-        image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
-        tasks = []
+            image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
+            tasks = []
 
-        for root, _, files in os.walk(folder_path):
-            if "PictoPy.thumbnails" in root:
-                continue
-            for file in files:
-                file_path = os.path.join(root, file)
-                file_extension = os.path.splitext(file_path)[1].lower()
-                if file_extension in image_extensions:
-                    tasks.append(
-                        asyncio.create_task(
-                            run_get_classes(file_path, folder_id=folder_id)
+            for root, _, files in os.walk(folder):
+                if "PictoPy.thumbnails" in root:
+                    continue
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    file_extension = os.path.splitext(file_path)[1].lower()
+                    if file_extension in image_extensions:
+                        tasks.append(
+                            asyncio.create_task(
+                                run_get_classes(file_path, folder_id=folder_id)
+                            )
                         )
-                    )
 
-        if not tasks:
-            return AddFolderResponse(
-                data=0,
-                message="No valid images found in the specified folder",
-                success=True,
-            )
-
-        await asyncio.create_task(process_images(tasks))
-
+            if not tasks:
+                return AddFolderResponse(
+                    data=0,
+                    message="No valid images found in the specified folder",
+                    success=True,
+                )
+            
+            progress_status[folder_id] = {
+                "total": len(tasks),
+                "completed": 0,
+                "status": "pending",
+            }
+            asyncio.create_task(process_images(tasks, folder_id))
+        
         return AddFolderResponse(
             data=len(tasks),
             message=f"Processing {len(tasks)} images from the folder in the background",
             success=True,
         )
-
+       
     except Exception:
 
         raise HTTPException(
@@ -452,11 +488,137 @@ async def add_folder(payload: AddFolderRequest):
         )
 
 
-# generate 400px width or height thumbnails for all the images present the given folder using pillow library
-@router.post(
-    "/generate-thumbnails",
-    response_model=GenerateThumbnailsResponse,
-)
+# @router.post(
+#     "/add-folder",
+#     response_model=AddFolderResponse,
+#     responses={code: {"model": ErrorResponse} for code in [400, 401, 500]},
+# )
+# async def add_folder(payload: AddFolderRequest):
+#     try:
+
+#         folder_path = payload.folder_path
+#         if not os.path.isdir(folder_path):
+
+#             raise HTTPException(
+#                 status_code=status.HTTP_400_BAD_REQUEST,
+#                 detail=ErrorResponse(
+#                     success=False,
+#                     error="Invalid folder path",
+#                     message="The provided path is not a valid directory",
+#                 ).model_dump(),
+#             )
+#         if (
+#             not os.access(folder_path, os.R_OK)
+#             or not os.access(folder_path, os.W_OK)
+#             or not os.access(folder_path, os.X_OK)
+#         ):
+
+#             raise HTTPException(
+#                 status_code=status.HTTP_401_UNAUTHORIZED,
+#                 detail=ErrorResponse(
+#                     success=False,
+#                     error="Permission denied",
+#                     message="The app does not have read and write permissions for the specified folder",
+#                 ),
+#             )
+
+#         folder_id = get_folder_id_from_path(folder_path)
+#         if folder_id is None:
+#             folder_id = insert_folder(folder_path)
+
+#         image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
+#         tasks = []
+
+#         for root, _, files in os.walk(folder_path):
+#             if "PictoPy.thumbnails" in root:
+#                 continue
+#             for file in files:
+#                 file_path = os.path.join(root, file)
+#                 file_extension = os.path.splitext(file_path)[1].lower()
+#                 if file_extension in image_extensions:
+#                     tasks.append(
+#                         asyncio.create_task(
+#                             run_get_classes(file_path, folder_id=folder_id)
+#                         )
+#                     )
+
+#         if not tasks:
+#             return AddFolderResponse(
+#                 data=0,
+#                 message="No valid images found in the specified folder",
+#                 success=True,
+#             )
+
+#         await asyncio.create_task(process_images(tasks))
+
+#         return AddFolderResponse(
+#             data=len(tasks),
+#             message=f"Processing {len(tasks)} images from the folder in the background",
+#             success=True,
+#         )
+
+#     except Exception:
+
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=ErrorResponse(
+#                 success=False,
+#                 error="Internal server error",
+#                 message="Failed to add a folder",
+#             ).model_dump(),
+#         )
+
+
+@router.delete("/delete-folder")
+@exception_handler_wrapper
+def delete_folder_ai_tagging(payload: dict):
+    if "folder_path" not in payload:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status_code": 400,
+                "content": {
+                    "success": False,
+                    "error": "Missing 'folder_path' in payload",
+                    "message": "Folder path is required",
+                },
+            },
+        )
+
+    folder_path = payload["folder_path"]
+    if not os.path.isdir(folder_path):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status_code": 400,
+                "content": {
+                    "success": False,
+                    "error": "Invalid folder path",
+                    "message": "The provided path is not a valid directory",
+                },
+            },
+        )
+
+    image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".webp"}
+
+    for root, _, files in os.walk(folder_path):
+        for file in files:
+            if any(file.lower().endswith(ext) for ext in image_extensions):
+                delete_image_db(os.path.join(root, file))
+
+    delete_folder(folder_path)
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "data": "",
+            "message": "Folder deleted successfully",
+            "success": True,
+        },
+    )
+
+
+@router.post("/generate-thumbnails")
 @exception_handler_wrapper
 def generate_thumbnails(payload: GenerateThumbnailsRequest):
 
@@ -545,4 +707,23 @@ def delete_thumbnails(payload: DeleteThumbnailsRequest):
     return DeleteThumbnailsResponse(
         success=True,
         message="All PictoPy.thumbnails folders have been successfully deleted.",
+    )
+
+
+@router.get("/add-folder-progress")
+@exception_handler_wrapper
+def combined_progress():
+    total_tasks = 0
+    total_completed = 0
+    for status in progress_status.values():
+        total_tasks += status["total"]
+        total_completed += status["completed"]
+    progress = 100 if total_tasks == 0 else int((total_completed / total_tasks) * 100)
+    return JSONResponse(
+        status_code=200,
+        content={
+            "data": progress,
+            "message": progress_status,
+            "success": True,
+        },
     )

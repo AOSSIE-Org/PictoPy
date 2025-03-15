@@ -1,17 +1,17 @@
 use std::fs;
 use std::path::Path;
 
-use image::{DynamicImage, GenericImageView, ImageOutputFormat,RgbImage};
+use image::{DynamicImage, GenericImageView, ImageOutputFormat, RgbImage};
 use tauri::State;
 use tempfile::tempdir;
 use tokio;
 
 use PictoPy::services::{
     adjust_brightness_contrast, apply_sepia, check_secure_folder_status, create_secure_folder,
-    decrypt_data, derive_key, encrypt_data, generate_salt, get_folders_with_images, get_images_in_folder, get_random_memories,
-    get_secure_folder_path, hash_password, is_image_file, move_to_secure_folder,
-    remove_from_secure_folder, save_edited_image, share_file, unlock_secure_folder, CacheService,
-    FileService, SECURE_FOLDER_NAME,
+    decrypt_data, derive_key, encrypt_data, generate_salt, get_folders_with_images,
+    get_images_in_folder, get_random_memories, get_secure_folder_path, hash_password,
+    is_image_file, move_to_secure_folder, remove_from_secure_folder, save_edited_image, share_file,
+    unlock_secure_folder, CacheService, FileService, SECURE_FOLDER_NAME,
 };
 
 /// This unsafe helper is for testing only.
@@ -123,7 +123,7 @@ async fn test_save_edited_image() {
         0,
     )
     .await;
-    
+
     assert!(result.is_ok(), "save_edited_image should succeed");
 
     // Check if the edited file exists at the correct path

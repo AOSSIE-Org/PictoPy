@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import FilterControls from './FilterControls';
 import MediaGrid from '../Media/Mediagrid';
+import { LoadingScreen } from '@/components/ui/LoadingScreen/LoadingScreen';
 import MediaView from '../Media/MediaView';
 import PaginationControls from '../ui/PaginationControls';
 import { usePictoQuery } from '@/hooks/useQueryExtensio';
@@ -13,8 +14,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import ProgressiveFolderLoader from '../ui/ProgressiveLoader';
+
 import { UserSearch } from 'lucide-react';
 import ErrorPage from '@/components/ui/ErrorPage/ErrorPage';
+
 export default function AIGallery({
   title,
   type,
@@ -30,7 +34,7 @@ export default function AIGallery({
     queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
-
+  const [addedFolders, setAddedFolders] = useState<string[]>([]);
   let mediaItems = successData ?? [];
   const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -80,6 +84,14 @@ export default function AIGallery({
     setShowMediaViewer(false);
   }, []);
 
+  const handleFolderAdded = useCallback(async (newPaths: string[]) => {
+    setAddedFolders(newPaths);
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterTag, faceSearchResults]);
+
   if (error) {
     return (
       <ErrorPage
@@ -119,10 +131,15 @@ export default function AIGallery({
           <FilterControls
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
+            onFolderAdded={handleFolderAdded}
             isLoading={isGeneratingTags}
             isVisibleSelectedImage={isVisibleSelectedImage}
             setIsVisibleSelectedImage={setIsVisibleSelectedImage}
             setFaceSearchResults={setFaceSearchResults}
+          />
+          <ProgressiveFolderLoader
+            additionalFolders={addedFolders}
+            setAdditionalFolders={setAddedFolders}
           />
         </div>
 
@@ -177,19 +194,25 @@ export default function AIGallery({
           </>
         )}
 
-        {showMediaViewer && (
-          <MediaView
-            initialIndex={selectedMediaIndex}
-            onClose={closeMediaViewer}
-            allMedia={filteredMediaItems.map((item: any) => ({
-              url: item.url,
-              path: item?.imagePath,
-              thumbnailUrl: item.thumbnailUrl,
-            }))}
-            currentPage={currentPage}
-            itemsPerPage={pageNo}
-            type={type}
+        {isGeneratingTags ? (
+          <LoadingScreen
+            isLoading={isGeneratingTags}
+            message="Generating tags..."
           />
+        ) : (
+          showMediaViewer && (
+            <MediaView
+              initialIndex={selectedMediaIndex}
+              onClose={closeMediaViewer}
+              allMedia={filteredMediaItems.map((item: any) => ({
+                url: item.url,
+                path: item?.imagePath,
+              }))}
+              currentPage={currentPage}
+              itemsPerPage={pageNo}
+              type={type}
+            />
+          )
         )}
       </div>
     </div>

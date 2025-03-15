@@ -19,7 +19,7 @@ class DeleteMultipleImagesRequest(BaseModel):
 
 
 class AddFolderRequest(BaseModel):
-    folder_path: str
+    folder_path: List[str]
 
 
 class GenerateThumbnailsRequest(BaseModel):

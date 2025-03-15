@@ -19,6 +19,11 @@ from app.routes.facetagging import router as tagging_router
 import multiprocessing
 from app.scheduler import start_scheduler
 from app.custom_logging import CustomizeLogger
+import os
+
+
+thumbnails_dir = os.path.join("images", "PictoPy.thumbnails")
+os.makedirs(thumbnails_dir, exist_ok=True)
 
 
 @asynccontextmanager
