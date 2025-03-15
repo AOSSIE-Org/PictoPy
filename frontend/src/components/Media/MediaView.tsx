@@ -22,8 +22,6 @@ import {
   Folder,
   ExternalLink,
   Sliders,
-  SunIcon,
-  ContrastIcon,
   Instagram,
 } from 'lucide-react';
 import { Crops } from '../ui/Icons/Icons';
@@ -721,7 +719,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                 className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
                 aria-label="Adjust"
               >
-                <Crops className="h-5 w-5" />
+                <Crops/>
               </button>
               {showAdjustMenu && (
                 <div className="absolute bottom-full right-5 mb-2 grid w-64 grid-cols-2 gap-2 rounded-md border-2 bg-white/10 p-4 backdrop-blur-md hover:border-white lg:grid-cols-1">
