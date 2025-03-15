@@ -18,6 +18,10 @@ export const delMultipleImages = async (
   paths: string[],
   isFromDevice: boolean,
 ) => {
+
+  console.log("Paths = ",paths);
+  console.log("Is From Device = ",isFromDevice);
+
   const response = await fetch(imagesEndpoints.deleteMultipleImages, {
     method: 'DELETE',
     headers: {
@@ -25,6 +29,8 @@ export const delMultipleImages = async (
     },
     body: JSON.stringify({ paths, isFromDevice }),
   });
+
+
 
   const data: APIResponse = await response.json();
   return data;
@@ -100,13 +106,12 @@ export const generateThumbnails = async (folderPath: string[]) => {
 };
 
 export const deleteThumbnails = async (folderPath: string) => {
-  const queryParams = new URLSearchParams({ folder_path: folderPath });
-  const response = await fetch(
-    `${imagesEndpoints.deleteThumbnails}?${queryParams}`,
-    {
-      method: 'DELETE',
-    },
-  );
+  const response = await fetch(imagesEndpoints.deleteThumbnails, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ folder_path: folderPath }), // Send as JSON body
+  });
+
   const data = await response.json();
   return data;
 };

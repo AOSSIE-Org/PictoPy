@@ -21,7 +21,6 @@ from app.scheduler import start_scheduler
 from app.custom_logging import CustomizeLogger
 
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_YOLO_mappings()

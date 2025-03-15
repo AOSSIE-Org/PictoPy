@@ -69,7 +69,7 @@ def test_create_new_album(mock_album_data):
     with patch("app.database.albums.create_album"):
         response = client.post("/albums/create-album", json=mock_album_data)
         assert response.status_code == 200
-        assert response.json()["success"] == True
+        assert response.json()["success"] is True
 
 
 def test_add_multiple_images_to_album(test_images):
@@ -77,12 +77,15 @@ def test_add_multiple_images_to_album(test_images):
         "album_name": "Test Album",
         "paths": [str(Path(test_images) / "000000000009.jpg")],
     }
-    with patch('app.database.albums.add_photo_to_album'):
-        insert_image_db(str(Path(test_images) / "000000000009.jpg") , [] , extract_metadata(str(Path(test_images) / "000000000009.jpg")))
-        response = client.request("POST" , "/albums/add-multiple-to-album", json=payload)
+    with patch("app.database.albums.add_photo_to_album"):
+        insert_image_db(
+            str(Path(test_images) / "000000000009.jpg"),
+            [],
+            extract_metadata(str(Path(test_images) / "000000000009.jpg")),
+        )
+        response = client.request("POST", "/albums/add-multiple-to-album", json=payload)
         assert response.status_code == 200
-        assert response.json()["success"] == True
-
+        assert response.json()["success"] is True
 
 
 def test_remove_image_from_album(test_images):
