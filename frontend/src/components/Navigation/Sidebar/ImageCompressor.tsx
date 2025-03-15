@@ -5,7 +5,17 @@ import { writeFile } from '@tauri-apps/plugin-fs';
 
 // Environment flag for testing
 // Options: null (auto-detect), false (force browser), true (force Tauri)
-const FORCE_MODE: boolean | null = false;
+const FORCE_MODE: boolean | null = true;
+
+// Flag to enable verbose debugging
+const DEBUG_MODE = true;
+
+// Function to log debugging information if in debug mode
+const debugLog = (...args: any[]) => {
+  if (DEBUG_MODE) {
+    console.log('[DEBUG]', ...args);
+  }
+};
 
 // Improved environment checker utility
 const isTauriApp = () => {
@@ -71,6 +81,39 @@ const ImageCompressor: React.FC = () => {
   const [isTauriEnvironment, setIsTauriEnvironment] = useState<boolean>(false);
   const [isDialogPluginAvailable, setIsDialogPluginAvailable] =
     useState<boolean>(false);
+
+  // Initialize Tauri plugins
+  useEffect(() => {
+    const initTauriPlugins = async () => {
+      try {
+        debugLog('Initializing Tauri plugins...');
+
+        // Try to access the save dialog function
+        if (typeof save === 'function') {
+          debugLog('Dialog plugin save function exists and is a function');
+
+          // Test if the function is actually callable (without executing it)
+          const saveKeys = Object.keys(save);
+          debugLog('Save function properties:', saveKeys);
+
+          setIsDialogPluginAvailable(true);
+          debugLog('Dialog plugin marked as available');
+        } else {
+          debugLog(
+            'Dialog plugin save function is not a function:',
+            typeof save,
+          );
+          setIsDialogPluginAvailable(false);
+        }
+      } catch (error) {
+        console.error('Error initializing Tauri plugins:', error);
+        setIsDialogPluginAvailable(false);
+      }
+    };
+
+    // Call the initialization function
+    initTauriPlugins();
+  }, []);
 
   // Check if we're running in a Tauri environment or a browser
   useEffect(() => {
@@ -287,123 +330,121 @@ const ImageCompressor: React.FC = () => {
    * @param image - The compressed image to download.
    */
   const handleDownload = async (image: CompressedImage) => {
-    console.log('Download initiated for image:', image.originalFile.name);
-    try {
-      // Set downloading state
-      setDownloadingImages((prev) => [...prev, image.id]);
-      console.log('Download state set, checking environment...');
+    if (!image || !image.compressedBlob) {
+      addNotification('error', 'No compressed image to download.');
+      return;
+    }
 
-      // Use Tauri dialog only if environment is Tauri AND dialog plugin is available
-      if (isTauriEnvironment && isDialogPluginAvailable) {
-        console.log('Using Tauri native dialog for download');
-        try {
-          // Show the save dialog to let the user choose where to save the file
-          const defaultPathValue = `compressed_${image.originalFile.name}`;
-          console.log(
-            'Calling Tauri save dialog with defaultPath:',
-            defaultPathValue,
-          );
+    const fileName = `compressed_${image.originalFile.name}`;
 
-          // Set a timeout to detect if the dialog is not showing
-          const dialogTimeout = setTimeout(() => {
-            console.warn(
-              'Dialog may not be showing - potential issue with Tauri dialog plugin',
-            );
-            // Show a notification to let the user know there's an issue
+    debugLog(`Starting download process for ${fileName}`);
+    debugLog(
+      `Environment: isTauriApp=${isTauriApp()}, isDialogPluginAvailable=${isDialogPluginAvailable}`,
+    );
+
+    // Attempt to use Tauri saveDialog if available
+    if (isTauriApp() && isDialogPluginAvailable) {
+      debugLog('Attempting to use Tauri save dialog');
+
+      let dialogTimeoutId: NodeJS.Timeout | null = null;
+      let dialogShown = false;
+
+      try {
+        // Set a longer timeout for the dialog to appear (10 seconds)
+        dialogTimeoutId = setTimeout(() => {
+          if (!dialogShown) {
+            debugLog('Dialog timeout reached (10 seconds)');
             addNotification(
               'error',
               'Having trouble showing the save dialog. Using browser download instead.',
             );
-            // Fall back to browser download
-            handleBrowserDownload(image);
-          }, 5000); // Give it 5 seconds to show the dialog
 
-          try {
-            // Try to show the save dialog
-            const filePath = await save({
-              defaultPath: defaultPathValue,
-              title: 'Save Compressed Image',
-              filters: [
-                {
-                  name: 'Images',
-                  extensions: ['jpg', 'jpeg', 'png'],
-                },
-              ],
-            });
-
-            // Dialog worked, clear the timeout
-            clearTimeout(dialogTimeout);
-
-            console.log(
-              'Save dialog result:',
-              filePath ? `Path selected: ${filePath}` : 'Dialog canceled',
-            );
-
-            // If user canceled the dialog
-            if (!filePath) {
-              console.log('User canceled the save dialog');
-              setDownloadingImages((prev) =>
-                prev.filter((id) => id !== image.id),
-              );
-              return;
-            }
-
-            // Convert the Blob to an ArrayBuffer
-            console.log('Converting blob to ArrayBuffer...');
-            const arrayBuffer = await image.compressedBlob.arrayBuffer();
-            // Convert ArrayBuffer to Uint8Array which Tauri's writeFile expects
-            const uint8Array = new Uint8Array(arrayBuffer);
-
-            // Write the file to the selected location
-            console.log('Writing file to:', filePath);
-            await writeFile(filePath, uint8Array);
-            console.log('File successfully written');
-
-            // Show a success notification
-            addNotification('success', 'Download Successful');
-          } catch (dialogError) {
-            // Clear the timeout if there's an error with the dialog
-            clearTimeout(dialogTimeout);
-            throw dialogError;
+            // Fallback to browser download
+            debugLog('Falling back to browser download');
+            const url = URL.createObjectURL(image.compressedBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
           }
-        } catch (tauriError) {
-          console.error('Tauri download error details:', tauriError);
-          console.warn(
-            'Tauri save dialog failed, falling back to browser download',
-          );
+        }, 10000); // 10 seconds timeout
 
-          // Check if it's a specific error that suggests plugin issues
-          const errorMessage = String(tauriError);
-          if (
-            errorMessage.includes('not a function') ||
-            errorMessage.includes('plugin') ||
-            errorMessage.includes('undefined')
-          ) {
-            console.error('Plugin initialization error detected');
-            addNotification(
-              'error',
-              'File dialog plugin error - using browser download instead',
-            );
-          }
+        debugLog('Save dialog properties:', {
+          saveType: typeof save,
+          saveIsFunction: typeof save === 'function',
+        });
 
-          // If Tauri APIs fail for some reason, fall back to browser download
-          handleBrowserDownload(image);
+        // Check if save is defined before attempting to use it
+        if (typeof save !== 'function') {
+          throw new Error('Tauri dialog save function is not available');
         }
-      } else {
-        console.log(
-          'Using browser download API (environment or plugin check failed)',
+
+        const savePath = await save({
+          defaultPath: fileName,
+          filters: [
+            {
+              name: 'Images',
+              extensions: ['jpg', 'jpeg', 'png'],
+            },
+          ],
+        });
+
+        // If we got here, the dialog was shown
+        dialogShown = true;
+        clearTimeout(dialogTimeoutId);
+
+        debugLog(`User selected save path: ${savePath}`);
+
+        if (savePath) {
+          const data = await image.compressedBlob.arrayBuffer();
+          await writeFile({
+            contents: Array.from(new Uint8Array(data)),
+            path: savePath,
+          });
+
+          addNotification('success', 'Image saved successfully!');
+          debugLog('Image saved successfully to', savePath);
+        } else {
+          debugLog('User cancelled the save dialog');
+        }
+      } catch (err) {
+        // Type cast the error to any or Error to handle it safely
+        const error = err as Error;
+        console.error('Tauri save error:', error);
+        debugLog('Error using Tauri save dialog:', error);
+
+        // Clear the timeout if there was an error
+        if (dialogTimeoutId) clearTimeout(dialogTimeoutId);
+
+        // Use browser download as fallback
+        addNotification(
+          'error',
+          `Error with native save: ${error.message}. Using browser download instead.`,
         );
-        // Browser environment - use browser's download API
-        handleBrowserDownload(image);
+        const url = URL.createObjectURL(image.compressedBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       }
-    } catch (error) {
-      console.error('Error saving file:', error);
-      // Show an error notification
-      addNotification('error', `Failed to save image: ${error}`);
-    } finally {
-      // Clear downloading state
-      console.log('Clearing download state');
-      setDownloadingImages((prev) => prev.filter((id) => id !== image.id));
+    } else {
+      // Use browser download API
+      debugLog('Using browser download API');
+      const url = URL.createObjectURL(image.compressedBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      debugLog('Browser download completed');
     }
   };
 
