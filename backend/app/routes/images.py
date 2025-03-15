@@ -154,8 +154,8 @@ async def add_multiple_images(payload: AddMultipleImagesRequest):
             success=True,
         )
 
-    except Exception:
-
+    except Exception as e:
+        print(e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
@@ -391,13 +391,11 @@ def get_class_ids(path: str = Query(...)):
 )
 async def add_folder(payload: AddFolderRequest):
     try:
-        folder_path = payload.folder_path
+        folder_paths = payload.folder_path
 
-        print("Folder Path = ",folder_path)
-
-        
-        for folder in folder_path:
-            if not os.path.isdir(folder_path):
+        for folder in folder_paths:
+            if not os.path.isdir(folder):
+                print("Not OS DIR")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ErrorResponse(
@@ -408,9 +406,9 @@ async def add_folder(payload: AddFolderRequest):
                 )
             
             if (
-                not os.access(folder_path, os.R_OK)
-                or not os.access(folder_path, os.W_OK)
-                or not os.access(folder_path, os.X_OK)
+                not os.access(folder, os.R_OK)
+                or not os.access(folder, os.W_OK)
+                or not os.access(folder, os.X_OK)
             ):
 
                 raise HTTPException(
@@ -476,7 +474,8 @@ async def add_folder(payload: AddFolderRequest):
             success=True,
         )
        
-    except Exception:
+    except Exception as e:
+        print(e)
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

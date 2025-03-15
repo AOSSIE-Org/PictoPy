@@ -19,9 +19,6 @@ export const delMultipleImages = async (
   isFromDevice: boolean,
 ) => {
 
-  console.log("Paths = ",paths);
-  console.log("Is From Device = ",isFromDevice);
-
   const response = await fetch(imagesEndpoints.deleteMultipleImages, {
     method: 'DELETE',
     headers: {
