@@ -5,10 +5,33 @@ import { writeFile } from '@tauri-apps/plugin-fs';
 
 // Improved environment checker utility
 const isTauriApp = () => {
+  // Method 1: Standard detection
   const isTauri =
     typeof window !== 'undefined' && window.__TAURI__ !== undefined;
-  console.log('Environment check - Tauri available:', isTauri);
-  return isTauri;
+
+  // Method 2: Check if running on localhost:1420 which is typically Tauri
+  const isTauriPort = window.location.port === '1420';
+
+  // Method 3: Check other Tauri indicators
+  const hasTauriGlobal =
+    typeof window !== 'undefined' &&
+    'Capacitor' in window === false &&
+    '__TAURI_IPC__' in window;
+
+  console.log('Environment check details:', {
+    standardDetection: isTauri,
+    portCheck: isTauriPort,
+    globalCheck: hasTauriGlobal,
+  });
+
+  // Use any method that works
+  const result = isTauri || isTauriPort || hasTauriGlobal;
+
+  // TESTING ONLY: Uncomment the next line to force Tauri mode for testing
+  // return true;
+
+  console.log('Final environment detection result:', result);
+  return result;
 };
 
 // Define the CompressedImage interface
@@ -50,8 +73,23 @@ const ImageCompressor: React.FC = () => {
 
       // Check for Tauri plugins availability
       if (isInTauri) {
-        console.log('Tauri import check - Dialog plugin:', typeof save);
-        console.log('Tauri import check - FS plugin:', typeof writeFile);
+        console.log(
+          'Tauri import check - Dialog plugin available:',
+          typeof save === 'function',
+        );
+        console.log(
+          'Tauri import check - FS plugin available:',
+          typeof writeFile === 'function',
+        );
+
+        if (typeof save !== 'function') {
+          console.error('Tauri dialog plugin not properly loaded!');
+        }
+
+        if (typeof writeFile !== 'function') {
+          console.error('Tauri fs plugin not properly loaded!');
+        }
+
         console.log(
           'Running in Tauri environment. Will use native file dialog.',
         );
@@ -239,55 +277,93 @@ const ImageCompressor: React.FC = () => {
         try {
           // Tauri desktop environment - use native save dialog
           // Show the save dialog to let the user choose where to save the file
-          const defaultPath = `compressed_${image.originalFile.name}`;
+          const defaultPathValue = `compressed_${image.originalFile.name}`;
           console.log(
             'Calling Tauri save dialog with defaultPath:',
-            defaultPath,
+            defaultPathValue,
           );
 
-          const filePath = await save({
-            defaultPath,
-            title: 'Save Compressed Image',
-            filters: [
-              {
-                name: 'Images',
-                extensions: ['jpg', 'jpeg', 'png'],
-              },
-            ],
-          });
-
-          console.log(
-            'Save dialog result:',
-            filePath ? `Path selected: ${filePath}` : 'Dialog canceled',
-          );
-
-          // If user canceled the dialog
-          if (!filePath) {
-            console.log('User canceled the save dialog');
-            setDownloadingImages((prev) =>
-              prev.filter((id) => id !== image.id),
+          // Set a timeout to detect if the dialog is not showing
+          const dialogTimeout = setTimeout(() => {
+            console.warn(
+              'Dialog may not be showing - potential issue with Tauri dialog plugin',
             );
-            return;
+            // Show an notification to let the user know there's an issue
+            addNotification(
+              'error',
+              'Having trouble showing the save dialog. Using browser download instead.',
+            );
+            // Fall back to browser download
+            handleBrowserDownload(image);
+          }, 3000); // Give it 3 seconds to show the dialog
+
+          try {
+            const filePath = await save({
+              defaultPath: defaultPathValue,
+              title: 'Save Compressed Image',
+              filters: [
+                {
+                  name: 'Images',
+                  extensions: ['jpg', 'jpeg', 'png'],
+                },
+              ],
+            });
+
+            // Dialog worked, clear the timeout
+            clearTimeout(dialogTimeout);
+
+            console.log(
+              'Save dialog result:',
+              filePath ? `Path selected: ${filePath}` : 'Dialog canceled',
+            );
+
+            // If user canceled the dialog
+            if (!filePath) {
+              console.log('User canceled the save dialog');
+              setDownloadingImages((prev) =>
+                prev.filter((id) => id !== image.id),
+              );
+              return;
+            }
+
+            // Convert the Blob to an ArrayBuffer
+            console.log('Converting blob to ArrayBuffer...');
+            const arrayBuffer = await image.compressedBlob.arrayBuffer();
+            // Convert ArrayBuffer to Uint8Array which Tauri's writeFile expects
+            const uint8Array = new Uint8Array(arrayBuffer);
+
+            // Write the file to the selected location
+            console.log('Writing file to:', filePath);
+            await writeFile(filePath, uint8Array);
+            console.log('File successfully written');
+
+            // Show a success notification
+            addNotification('success', 'Download Successful');
+          } catch (dialogError) {
+            // Clear the timeout if there's an error with the dialog
+            clearTimeout(dialogTimeout);
+            throw dialogError;
           }
-
-          // Convert the Blob to an ArrayBuffer
-          console.log('Converting blob to ArrayBuffer...');
-          const arrayBuffer = await image.compressedBlob.arrayBuffer();
-          // Convert ArrayBuffer to Uint8Array which Tauri's writeFile expects
-          const uint8Array = new Uint8Array(arrayBuffer);
-
-          // Write the file to the selected location
-          console.log('Writing file to:', filePath);
-          await writeFile(filePath, uint8Array);
-          console.log('File successfully written');
-
-          // Show a success notification
-          addNotification('success', 'Download Successful');
         } catch (tauriError) {
           console.error('Tauri download error details:', tauriError);
           console.warn(
             'Tauri save dialog failed, falling back to browser download',
           );
+
+          // Check if it's a specific error that suggests plugin issues
+          const errorMessage = String(tauriError);
+          if (
+            errorMessage.includes('not a function') ||
+            errorMessage.includes('plugin') ||
+            errorMessage.includes('undefined')
+          ) {
+            console.error('Plugin initialization error detected');
+            addNotification(
+              'error',
+              'File dialog plugin error - using browser download instead',
+            );
+          }
+
           // If Tauri APIs fail for some reason, fall back to browser download
           handleBrowserDownload(image);
         }
