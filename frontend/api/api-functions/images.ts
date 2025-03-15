@@ -18,7 +18,6 @@ export const delMultipleImages = async (
   paths: string[],
   isFromDevice: boolean,
 ) => {
-
   const response = await fetch(imagesEndpoints.deleteMultipleImages, {
     method: 'DELETE',
     headers: {
@@ -26,8 +25,6 @@ export const delMultipleImages = async (
     },
     body: JSON.stringify({ paths, isFromDevice }),
   });
-
-
 
   const data: APIResponse = await response.json();
   return data;
