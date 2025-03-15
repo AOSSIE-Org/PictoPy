@@ -1,5 +1,12 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Upload, Download, Trash2, RefreshCw } from 'lucide-react';
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeFile } from '@tauri-apps/plugin-fs';
+
+// Improved environment checker utility
+const isTauriApp = () => {
+  return window.__TAURI__ !== undefined;
+};
 
 // Define the CompressedImage interface
 interface CompressedImage {
@@ -11,14 +18,48 @@ interface CompressedImage {
   previewUrl: string;
 }
 
+// Define the notification interface
+interface Notification {
+  type: 'success' | 'error';
+  message: string;
+  id: string;
+}
+
 const ImageCompressor: React.FC = () => {
   const [compressedImages, setCompressedImages] = useState<CompressedImage[]>(
     [],
   );
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
+  const [downloadingImages, setDownloadingImages] = useState<string[]>([]);
   const [compressionLevel, setCompressionLevel] = useState<number>(0.7);
   const [maxWidth, setMaxWidth] = useState<number>(1920);
   const [maxHeight, setMaxHeight] = useState<number>(1080);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isTauriEnvironment, setIsTauriEnvironment] = useState<boolean>(false);
+
+  // Check if we're running in a Tauri environment or a browser
+  useEffect(() => {
+    setIsTauriEnvironment(isTauriApp());
+
+    if (!isTauriApp()) {
+      console.log(
+        'Running in browser environment. Using browser download API as fallback.',
+      );
+    } else {
+      console.log('Running in Tauri environment. Using native file dialog.');
+    }
+  }, []);
+
+  // Function to add a notification
+  const addNotification = (type: 'success' | 'error', message: string) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setNotifications((prev) => [...prev, { type, message, id }]);
+
+    // Auto-remove notification after 5 seconds
+    setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    }, 5000);
+  };
 
   /**
    * Compresses an image file.
@@ -122,18 +163,113 @@ const ImageCompressor: React.FC = () => {
   };
 
   /**
+   * Handles downloading in browser environment using the browser's download API.
+   * @param image - The compressed image to download.
+   */
+  const handleBrowserDownload = (image: CompressedImage) => {
+    try {
+      // Check if the browser supports the download attribute
+      const isDownloadSupported = 'download' in document.createElement('a');
+
+      if (!isDownloadSupported) {
+        throw new Error('Your browser does not support the download feature');
+      }
+
+      // Create a download link
+      const url = URL.createObjectURL(image.compressedBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `compressed_${image.originalFile.name}`;
+
+      // Append to the document and trigger click
+      document.body.appendChild(a);
+      a.click();
+
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+
+      // Show a success notification
+      addNotification('success', 'Download Successful');
+    } catch (error) {
+      console.error('Error downloading file in browser:', error);
+      // Show an error notification with more specific message
+      let errorMessage = 'Failed to download image';
+
+      if (error instanceof Error) {
+        errorMessage = `${errorMessage}: ${error.message}`;
+      }
+
+      addNotification('error', errorMessage);
+    }
+  };
+
+  /**
    * Handles downloading a compressed image.
    * @param image - The compressed image to download.
    */
-  const handleDownload = (image: CompressedImage) => {
-    const url = URL.createObjectURL(image.compressedBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `compressed_${image.originalFile.name}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const handleDownload = async (image: CompressedImage) => {
+    try {
+      // Set downloading state
+      setDownloadingImages((prev) => [...prev, image.id]);
+
+      // Choose download method based on environment
+      if (isTauriEnvironment) {
+        try {
+          // Tauri desktop environment - use native save dialog
+          // Show the save dialog to let the user choose where to save the file
+          const defaultPath = `compressed_${image.originalFile.name}`;
+          const filePath = await save({
+            defaultPath,
+            title: 'Save Compressed Image',
+            filters: [
+              {
+                name: 'Images',
+                extensions: ['jpg', 'jpeg', 'png'],
+              },
+            ],
+          });
+
+          // If user canceled the dialog
+          if (!filePath) {
+            setDownloadingImages((prev) =>
+              prev.filter((id) => id !== image.id),
+            );
+            return;
+          }
+
+          // Convert the Blob to an ArrayBuffer
+          const arrayBuffer = await image.compressedBlob.arrayBuffer();
+          // Convert ArrayBuffer to Uint8Array which Tauri's writeFile expects
+          const uint8Array = new Uint8Array(arrayBuffer);
+
+          // Write the file to the selected location
+          await writeFile(filePath, uint8Array);
+
+          // Show a success notification
+          addNotification('success', 'Download Successful');
+        } catch (tauriError) {
+          console.error(
+            'Tauri save dialog failed, falling back to browser download:',
+            tauriError,
+          );
+          // If Tauri APIs fail for some reason, fall back to browser download
+          handleBrowserDownload(image);
+        }
+      } else {
+        // Browser environment - use browser's download API
+        handleBrowserDownload(image);
+      }
+    } catch (error) {
+      console.error('Error saving file:', error);
+      // Show an error notification
+      addNotification('error', `Failed to save image: ${error}`);
+    } finally {
+      // Clear downloading state
+      setDownloadingImages((prev) => prev.filter((id) => id !== image.id));
+    }
   };
 
   /**
@@ -163,7 +299,33 @@ const ImageCompressor: React.FC = () => {
   };
 
   return (
-    <div className="rounded-xl bg-white/80 p-6 shadow-lg backdrop-blur-sm dark:bg-gray-800/80">
+    <div className="rounded-xl relative bg-white/80 p-6 shadow-lg backdrop-blur-sm dark:bg-gray-800/80">
+      {/* Notifications */}
+      <div className="absolute bottom-4 right-4 z-50 w-72 space-y-2">
+        {notifications.map((notification) => (
+          <div
+            key={notification.id}
+            className={`translate-y-0 transform rounded-lg p-3 text-white opacity-100 shadow-md transition-all duration-300 ${
+              notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">{notification.message}</p>
+              <button
+                onClick={() =>
+                  setNotifications((prev) =>
+                    prev.filter((n) => n.id !== notification.id),
+                  )
+                }
+                className="ml-2 text-white/70 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <h3 className="mb-6 bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-xl font-bold text-transparent">
         Image Compressor
       </h3>
@@ -279,10 +441,19 @@ const ImageCompressor: React.FC = () => {
                 {/* Download Button */}
                 <button
                   onClick={() => handleDownload(image)}
-                  className="rounded-full bg-blue-50 p-2 text-blue-500 transition-all duration-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/30"
-                  title="Download compressed image"
+                  disabled={downloadingImages.includes(image.id)}
+                  className={`rounded-full p-2 transition-all duration-300 ${
+                    downloadingImages.includes(image.id)
+                      ? 'cursor-not-allowed bg-blue-100 text-blue-400 dark:bg-blue-900/50 dark:text-blue-300'
+                      : 'bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/30'
+                  }`}
+                  title="Save compressed image"
                 >
-                  <Download size={18} />
+                  {downloadingImages.includes(image.id) ? (
+                    <div className="h-4.5 w-4.5 rounded-full animate-spin border-2 border-blue-500 border-t-transparent" />
+                  ) : (
+                    <Download size={18} />
+                  )}
                 </button>
 
                 {/* Recompress Button */}
