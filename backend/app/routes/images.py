@@ -37,7 +37,6 @@ from app.schemas.images import (
     DeleteMultipleImagesResponse,
     GetAllImageObjectsResponse,
     ErrorResponse,
-    ClassIDsResponse,
     ImagesResponse,
     AddFolderRequest,
     AddFolderResponse,
