@@ -3,55 +3,13 @@ import { Upload, Download, Trash2, RefreshCw } from 'lucide-react';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
 
-// Environment flag for testing
-// Options: null (auto-detect), false (force browser), true (force Tauri)
-const FORCE_MODE: boolean | null = true;
-
-// Flag to enable verbose debugging
+// Constants
+const FORCE_MODE: boolean | null = null;
 const DEBUG_MODE = true;
+const debugLog = (...args: any[]) =>
+  DEBUG_MODE && console.log('[DEBUG]', ...args);
 
-// Function to log debugging information if in debug mode
-const debugLog = (...args: any[]) => {
-  if (DEBUG_MODE) {
-    console.log('[DEBUG]', ...args);
-  }
-};
-
-// Improved environment checker utility
-const isTauriApp = () => {
-  // If force mode is set (not null), use that value
-  if (FORCE_MODE !== null) {
-    console.log(`Forcing ${FORCE_MODE ? 'Tauri' : 'browser'} mode`);
-    return FORCE_MODE;
-  }
-
-  // Method 1: Standard detection
-  const isTauri =
-    typeof window !== 'undefined' && window.__TAURI__ !== undefined;
-
-  // Method 2: Check if running on localhost:1420 which is typically Tauri
-  const isTauriPort = window.location.port === '1420';
-
-  // Method 3: Check other Tauri indicators
-  const hasTauriGlobal =
-    typeof window !== 'undefined' &&
-    'Capacitor' in window === false &&
-    ('__TAURI_IPC__' in window || '__TAURI__' in window);
-
-  console.log('Environment check details:', {
-    standardDetection: isTauri,
-    portCheck: isTauriPort,
-    globalCheck: hasTauriGlobal,
-  });
-
-  // Use any method that works
-  const result = isTauri || isTauriPort || hasTauriGlobal;
-
-  console.log('Final environment detection result:', result);
-  return result;
-};
-
-// Define the CompressedImage interface
+// Interfaces
 interface CompressedImage {
   id: string;
   originalFile: File;
@@ -61,650 +19,445 @@ interface CompressedImage {
   previewUrl: string;
 }
 
-// Define the notification interface
 interface Notification {
   type: 'success' | 'error';
   message: string;
   id: string;
 }
 
+// Custom Hooks
+const useTauriCheck = () => {
+  const [isTauri, setIsTauri] = useState(false);
+  const [dialogAvailable, setDialogAvailable] = useState(false);
+
+  useEffect(() => {
+    const checkTauri = () => {
+      const isTauriEnv =
+        FORCE_MODE ??
+        (typeof window !== 'undefined' &&
+          ((window as any).__TAURI__ !== undefined ||
+            window.location.port === '1420'));
+      setIsTauri(!!isTauriEnv);
+      setDialogAvailable(isTauriEnv && typeof save === 'function');
+    };
+
+    checkTauri();
+  }, []);
+
+  return { isTauri, dialogAvailable };
+};
+
+const useNotifications = () => {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  const addNotification = (type: 'success' | 'error', message: string) => {
+    const id = Math.random().toString(36).slice(2, 9);
+    setNotifications((prev) => [...prev, { type, message, id }]);
+    setTimeout(
+      () => setNotifications((prev) => prev.filter((n) => n.id !== id)),
+      5000,
+    );
+  };
+
+  return { notifications, addNotification, setNotifications };
+};
+
+// Components
+const SliderInput: React.FC<{
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+}> = ({ label, value, min, max, step, onChange }) => (
+  <div className="rounded-lg bg-white/50 p-4 shadow-sm dark:bg-gray-700/50">
+    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+      {label}: <span className="font-semibold text-blue-600">{value}</span>
+    </label>
+    <input
+      type="range"
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+      min={min}
+      max={max}
+      step={step}
+      className="h-2 w-full cursor-pointer rounded-lg bg-gray-200 accent-blue-500 dark:bg-gray-600"
+    />
+  </div>
+);
+
 const ImageCompressor: React.FC = () => {
+  const { isTauri, dialogAvailable } = useTauriCheck();
+  const { notifications, addNotification, setNotifications } =
+    useNotifications();
   const [compressedImages, setCompressedImages] = useState<CompressedImage[]>(
     [],
   );
-  const [isCompressing, setIsCompressing] = useState<boolean>(false);
-  const [downloadingImages, setDownloadingImages] = useState<string[]>([]);
-  const [compressionLevel, setCompressionLevel] = useState<number>(0.7);
-  const [maxWidth, setMaxWidth] = useState<number>(1920);
-  const [maxHeight, setMaxHeight] = useState<number>(1080);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isTauriEnvironment, setIsTauriEnvironment] = useState<boolean>(false);
-  const [isDialogPluginAvailable, setIsDialogPluginAvailable] =
-    useState<boolean>(false);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressionLevel, setCompressionLevel] = useState(0.7);
+  const [maxWidth, setMaxWidth] = useState(1920);
+  const [maxHeight, setMaxHeight] = useState(1080);
 
-  // Initialize Tauri plugins
-  useEffect(() => {
-    const initTauriPlugins = async () => {
-      try {
-        debugLog('Initializing Tauri plugins...');
-
-        // Try to access the save dialog function
-        if (typeof save === 'function') {
-          debugLog('Dialog plugin save function exists and is a function');
-
-          // Test if the function is actually callable (without executing it)
-          const saveKeys = Object.keys(save);
-          debugLog('Save function properties:', saveKeys);
-
-          setIsDialogPluginAvailable(true);
-          debugLog('Dialog plugin marked as available');
-        } else {
-          debugLog(
-            'Dialog plugin save function is not a function:',
-            typeof save,
-          );
-          setIsDialogPluginAvailable(false);
-        }
-      } catch (error) {
-        console.error('Error initializing Tauri plugins:', error);
-        setIsDialogPluginAvailable(false);
-      }
-    };
-
-    // Call the initialization function
-    initTauriPlugins();
-  }, []);
-
-  // Check if we're running in a Tauri environment or a browser
-  useEffect(() => {
-    try {
-      console.log('Running environment check...');
-      const isInTauri = isTauriApp();
-      console.log('Setting environment state to:', isInTauri);
-      setIsTauriEnvironment(isInTauri);
-
-      // Check for Tauri plugins availability
-      if (isInTauri) {
-        const isSaveAvailable = typeof save === 'function';
-        const isWriteFileAvailable = typeof writeFile === 'function';
-
-        console.log(
-          'Tauri import check - Dialog plugin available:',
-          isSaveAvailable,
-        );
-        console.log(
-          'Tauri import check - FS plugin available:',
-          isWriteFileAvailable,
-        );
-
-        setIsDialogPluginAvailable(isSaveAvailable);
-
-        if (!isSaveAvailable) {
-          console.error(
-            'Tauri dialog plugin not properly loaded! Will use browser fallback.',
-          );
-        }
-
-        if (!isWriteFileAvailable) {
-          console.error('Tauri fs plugin not properly loaded!');
-        }
-
-        if (isSaveAvailable && isWriteFileAvailable) {
-          console.log(
-            'Running in Tauri environment with all plugins available. Will use native file dialog.',
-          );
-        } else {
-          console.log(
-            'Running in Tauri environment but some plugins are missing. May use fallbacks.',
-          );
-        }
-      } else {
-        console.log(
-          'Running in browser environment. Will use browser download API as fallback.',
-        );
-      }
-    } catch (error) {
-      console.error('Error during environment detection:', error);
-      setIsTauriEnvironment(false);
-    }
-  }, []);
-
-  // Function to add a notification
-  const addNotification = (type: 'success' | 'error', message: string) => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setNotifications((prev) => [...prev, { type, message, id }]);
-
-    // Auto-remove notification after 5 seconds
-    setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-    }, 5000);
-  };
-
-  /**
-   * Compresses an image file.
-   * @param file - The image file to compress.
-   * @returns A promise that resolves to the compressed image object.
-   */
   const compressImage = useCallback(
     async (file: File): Promise<CompressedImage> => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
+      const readFile = () =>
+        new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = () => reject('File reading failed');
+          reader.readAsDataURL(file);
+        });
+
+      const createImage = (src: string) =>
+        new Promise<HTMLImageElement>((resolve, reject) => {
           const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-              reject('Failed to get canvas context');
-              return;
-            }
-
-            let width = img.width;
-            let height = img.height;
-
-            // Adjust dimensions to fit within maxWidth and maxHeight
-            if (width > maxWidth) {
-              height *= maxWidth / width;
-              width = maxWidth;
-            }
-            if (height > maxHeight) {
-              width *= maxHeight / height;
-              height = maxHeight;
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Convert canvas to Blob
-            canvas.toBlob(
-              (blob) => {
-                if (blob) {
-                  const compressedImage: CompressedImage = {
-                    id: Math.random().toString(36).substring(2, 9),
-                    originalFile: file,
-                    originalSize: file.size,
-                    compressedSize: blob.size,
-                    compressedBlob: blob,
-                    previewUrl: URL.createObjectURL(blob),
-                  };
-                  resolve(compressedImage);
-                } else {
-                  reject('Failed to compress image');
-                }
-              },
-              'image/jpeg',
-              compressionLevel,
-            );
-          };
+          img.onload = () => resolve(img);
           img.onerror = () => reject('Image load failed');
-          img.src = event.target?.result as string;
-        };
-        reader.onerror = () => reject('File reading failed');
-        reader.readAsDataURL(file);
-      });
+          img.src = src;
+        });
+
+      const src = await readFile();
+      const img = await createImage(src);
+
+      let w = img.width;
+      let h = img.height;
+
+      if (w > maxWidth) {
+        h = h * (maxWidth / w);
+        w = maxWidth;
+      }
+
+      if (h > maxHeight) {
+        w = w * (maxHeight / h);
+        h = maxHeight;
+      }
+
+      const width = w;
+      const height = h;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d')?.drawImage(img, 0, 0, width, height);
+
+      const blob = await new Promise<Blob>((resolve) =>
+        canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', compressionLevel),
+      );
+
+      return {
+        id: Math.random().toString(36).slice(2, 9),
+        originalFile: file,
+        originalSize: file.size,
+        compressedSize: blob.size,
+        compressedBlob: blob,
+        previewUrl: URL.createObjectURL(blob),
+      };
     },
     [compressionLevel, maxWidth, maxHeight],
   );
 
-  /**
-   * Handles file upload and compresses the selected images.
-   * @param event - The file input change event.
-   */
-  const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      setIsCompressing(true);
-      try {
-        const compressedFiles = await Promise.all(
-          Array.from(files).map((file) =>
-            compressImage(file).catch((err) => {
-              console.error('Compression failed:', err);
-              return null;
-            }),
-          ),
-        );
-        setCompressedImages((prev) => [
-          ...prev,
-          ...compressedFiles.filter(
-            (file): file is CompressedImage => file !== null,
-          ),
-        ]);
-      } catch (error) {
-        console.error('Error compressing images:', error);
-      } finally {
-        setIsCompressing(false);
-      }
-    }
-  };
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
 
-  /**
-   * Handles downloading in browser environment using the browser's download API.
-   * @param image - The compressed image to download.
-   */
-  const handleBrowserDownload = (image: CompressedImage) => {
-    try {
-      // Check if the browser supports the download attribute
-      const isDownloadSupported = 'download' in document.createElement('a');
-
-      if (!isDownloadSupported) {
-        throw new Error('Your browser does not support the download feature');
-      }
-
-      // Create a download link
-      const url = URL.createObjectURL(image.compressedBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `compressed_${image.originalFile.name}`;
-
-      // Append to the document and trigger click
-      document.body.appendChild(a);
-      a.click();
-
-      // Clean up
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
-
-      // Show a success notification
-      addNotification('success', 'Download Successful');
-    } catch (error) {
-      console.error('Error downloading file in browser:', error);
-      // Show an error notification with more specific message
-      let errorMessage = 'Failed to download image';
-
-      if (error instanceof Error) {
-        errorMessage = `${errorMessage}: ${error.message}`;
-      }
-
-      addNotification('error', errorMessage);
-    }
-  };
-
-  /**
-   * Handles downloading a compressed image.
-   * @param image - The compressed image to download.
-   */
-  const handleDownload = async (image: CompressedImage) => {
-    if (!image || !image.compressedBlob) {
-      addNotification('error', 'No compressed image to download.');
-      return;
-    }
-
-    const fileName = `compressed_${image.originalFile.name}`;
-
-    debugLog(`Starting download process for ${fileName}`);
-    debugLog(
-      `Environment: isTauriApp=${isTauriApp()}, isDialogPluginAvailable=${isDialogPluginAvailable}`,
-    );
-
-    // Attempt to use Tauri saveDialog if available
-    if (isTauriApp() && isDialogPluginAvailable) {
-      debugLog('Attempting to use Tauri save dialog');
-
-      let dialogTimeoutId: NodeJS.Timeout | null = null;
-      let dialogShown = false;
-
-      try {
-        // Set a longer timeout for the dialog to appear (10 seconds)
-        dialogTimeoutId = setTimeout(() => {
-          if (!dialogShown) {
-            debugLog('Dialog timeout reached (10 seconds)');
-            addNotification(
-              'error',
-              'Having trouble showing the save dialog. Using browser download instead.',
-            );
-
-            // Fallback to browser download
-            debugLog('Falling back to browser download');
-            const url = URL.createObjectURL(image.compressedBlob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-          }
-        }, 10000); // 10 seconds timeout
-
-        debugLog('Save dialog properties:', {
-          saveType: typeof save,
-          saveIsFunction: typeof save === 'function',
-        });
-
-        // Check if save is defined before attempting to use it
-        if (typeof save !== 'function') {
-          throw new Error('Tauri dialog save function is not available');
-        }
-
-        const savePath = await save({
-          defaultPath: fileName,
-          filters: [
-            {
-              name: 'Images',
-              extensions: ['jpg', 'jpeg', 'png'],
-            },
-          ],
-        });
-
-        // If we got here, the dialog was shown
-        dialogShown = true;
-        clearTimeout(dialogTimeoutId);
-
-        debugLog(`User selected save path: ${savePath}`);
-
-        if (savePath) {
-          const data = await image.compressedBlob.arrayBuffer();
-          await writeFile({
-            contents: Array.from(new Uint8Array(data)),
-            path: savePath,
-          });
-
-          addNotification('success', 'Image saved successfully!');
-          debugLog('Image saved successfully to', savePath);
-        } else {
-          debugLog('User cancelled the save dialog');
-        }
-      } catch (err) {
-        // Type cast the error to any or Error to handle it safely
-        const error = err as Error;
-        console.error('Tauri save error:', error);
-        debugLog('Error using Tauri save dialog:', error);
-
-        // Clear the timeout if there was an error
-        if (dialogTimeoutId) clearTimeout(dialogTimeoutId);
-
-        // Use browser download as fallback
-        addNotification(
-          'error',
-          `Error with native save: ${error.message}. Using browser download instead.`,
-        );
-        const url = URL.createObjectURL(image.compressedBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
-    } else {
-      // Use browser download API
-      debugLog('Using browser download API');
-      const url = URL.createObjectURL(image.compressedBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      debugLog('Browser download completed');
-    }
-  };
-
-  /**
-   * Handles removing a compressed image from the list.
-   * @param id - The ID of the compressed image to remove.
-   */
-  const handleRemove = (id: string) => {
-    setCompressedImages((prev) => prev.filter((img) => img.id !== id));
-  };
-
-  /**
-   * Handles recompressing an image.
-   * @param image - The compressed image to recompress.
-   */
-  const handleRecompress = async (image: CompressedImage) => {
     setIsCompressing(true);
     try {
-      const recompressedImage = await compressImage(image.originalFile);
-      setCompressedImages((prev) =>
-        prev.map((img) => (img.id === image.id ? recompressedImage : img)),
+      const results = await Promise.all(
+        Array.from(files).map((file) => compressImage(file).catch(() => null)),
       );
-    } catch (error) {
-      console.error('Error recompressing image:', error);
+      setCompressedImages((prev) => [
+        ...prev,
+        ...(results.filter(Boolean) as CompressedImage[]),
+      ]);
     } finally {
       setIsCompressing(false);
     }
   };
 
+  const handleDownload = async (image: CompressedImage) => {
+    debugLog('Starting download for image:', image.originalFile.name);
+
+    const downloadBrowser = () => {
+      debugLog('Using browser download API');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(image.compressedBlob);
+      a.download = `compressed_${image.originalFile.name}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      addNotification('success', 'Download Successful');
+    };
+
+    try {
+      if (isTauri && dialogAvailable) {
+        debugLog('Using Tauri native save dialog');
+        const fileName = `compressed_${image.originalFile.name}`;
+
+        const path = await save({
+          defaultPath: fileName,
+          filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png'] }],
+        });
+
+        if (path) {
+          debugLog('User selected path:', path);
+          try {
+            const arrayBuffer = await image.compressedBlob.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
+
+            debugLog(`Writing file with size: ${uint8Array.length} bytes`);
+            await writeFile(path, uint8Array);
+
+            addNotification('success', 'Image saved successfully!');
+            debugLog('File written successfully to', path);
+          } catch (writeErr) {
+            const error = writeErr as Error;
+            console.error('Error writing file:', error);
+            debugLog('Write error details:', error.message);
+            debugLog('Falling back to browser download due to write error');
+
+            addNotification('error', `Error saving file: ${error.message}`);
+            downloadBrowser();
+          }
+        } else {
+          debugLog('User cancelled save dialog');
+        }
+      } else {
+        debugLog('Using browser download (Tauri unavailable)');
+        downloadBrowser();
+      }
+    } catch (err) {
+      const error = err as Error;
+      console.error('Error during download:', error);
+      debugLog('Falling back to browser download due to error:', error.message);
+
+      let errorMessage = error.message || 'Unknown error';
+      if (errorMessage === 'undefined' || errorMessage.includes('undefined')) {
+        errorMessage = 'Native dialog plugin not responding correctly';
+      }
+
+      addNotification('error', `Error: ${errorMessage}`);
+      downloadBrowser();
+    }
+  };
+
   return (
     <div className="rounded-xl relative bg-white/80 p-6 shadow-lg backdrop-blur-sm dark:bg-gray-800/80">
-      {/* Notifications */}
-      <div className="absolute bottom-4 right-4 z-50 w-72 space-y-2">
-        {notifications.map((notification) => (
-          <div
-            key={notification.id}
-            className={`translate-y-0 transform rounded-lg p-3 text-white opacity-100 shadow-md transition-all duration-300 ${
-              notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">{notification.message}</p>
-              <button
-                onClick={() =>
-                  setNotifications((prev) =>
-                    prev.filter((n) => n.id !== notification.id),
-                  )
-                }
-                className="ml-2 text-white/70 hover:text-white"
-              >
-                ×
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      <NotificationList
+        notifications={notifications}
+        setNotifications={setNotifications}
+      />
 
       <h3 className="mb-6 bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-xl font-bold text-transparent">
         Image Compressor
       </h3>
 
       <div className="mb-6 space-y-4">
-        {/* Compression Level Slider */}
-        <div className="rounded-lg bg-white/50 p-4 shadow-sm dark:bg-gray-700/50">
-          <label
-            htmlFor="compression-level"
-            className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-          >
-            Compression Level:{' '}
-            <span className="font-semibold text-blue-600">
-              {compressionLevel}
-            </span>
-          </label>
-          <input
-            type="range"
-            id="compression-level"
-            min="0.1"
-            max="1"
-            step="0.1"
-            value={compressionLevel}
-            onChange={(e) => setCompressionLevel(parseFloat(e.target.value))}
-            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-500 dark:bg-gray-600"
-          />
-        </div>
-
-        {/* Max Width Slider */}
-        <div className="rounded-lg bg-white/50 p-4 shadow-sm dark:bg-gray-700/50">
-          <label
-            htmlFor="max-width"
-            className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-          >
-            Max Width:{' '}
-            <span className="font-semibold text-blue-600">{maxWidth}px</span>
-          </label>
-          <input
-            type="range"
-            id="max-width"
-            min="100"
-            max="3840"
-            step="100"
-            value={maxWidth}
-            onChange={(e) => setMaxWidth(parseInt(e.target.value))}
-            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-500 dark:bg-gray-600"
-          />
-        </div>
-
-        {/* Max Height Slider */}
-        <div className="rounded-lg bg-white/50 p-4 shadow-sm dark:bg-gray-700/50">
-          <label
-            htmlFor="max-height"
-            className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-          >
-            Max Height:{' '}
-            <span className="font-semibold text-blue-600">{maxHeight}px</span>
-          </label>
-          <input
-            type="range"
-            id="max-height"
-            min="100"
-            max="2160"
-            step="100"
-            value={maxHeight}
-            onChange={(e) => setMaxHeight(parseInt(e.target.value))}
-            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-500 dark:bg-gray-600"
-          />
-        </div>
-      </div>
-
-      {/* File Upload Button */}
-      <div className="mb-6">
-        <label
-          htmlFor="file-upload"
-          className="inline-flex cursor-pointer items-center rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-3 text-white shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]"
-        >
-          <Upload className="mr-2" size={18} />
-          Upload Images
-        </label>
-        <input
-          id="file-upload"
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleFileUpload}
-          className="hidden"
+        <SliderInput
+          label="Compression Level"
+          value={compressionLevel}
+          min={0.1}
+          max={1}
+          step={0.1}
+          onChange={setCompressionLevel}
+        />
+        <SliderInput
+          label="Max Width"
+          value={maxWidth}
+          min={100}
+          max={3840}
+          step={100}
+          onChange={setMaxWidth}
+        />
+        <SliderInput
+          label="Max Height"
+          value={maxHeight}
+          min={100}
+          max={2160}
+          step={100}
+          onChange={setMaxHeight}
         />
       </div>
 
-      {/* Compressing Indicator */}
-      {isCompressing && (
-        <div className="mb-6 flex items-center justify-center rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
-          <div className="rounded-full mr-3 h-4 w-4 animate-spin border-2 border-blue-600 border-t-transparent"></div>
-          <p className="font-medium text-blue-600 dark:text-blue-400">
-            Compressing images...
-          </p>
-        </div>
-      )}
+      <FileUploadButton onChange={handleFileUpload} />
 
-      {/* Compressed Images List */}
+      {isCompressing && <CompressingIndicator />}
+
       <ul className="space-y-6">
         {compressedImages.map((image) => (
-          <li
+          <CompressedImageItem
             key={image.id}
-            className="rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 p-5 shadow-md transition-all duration-300 hover:shadow-lg dark:from-gray-800/70 dark:to-gray-900/70"
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <span className="mr-2 flex-grow truncate text-sm font-medium">
-                {image.originalFile.name}
-              </span>
-              <div className="flex space-x-3">
-                {/* Download Button */}
-                <button
-                  onClick={() => handleDownload(image)}
-                  disabled={downloadingImages.includes(image.id)}
-                  className={`rounded-full p-2 transition-all duration-300 ${
-                    downloadingImages.includes(image.id)
-                      ? 'cursor-not-allowed bg-blue-100 text-blue-400 dark:bg-blue-900/50 dark:text-blue-300'
-                      : 'bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/30'
-                  }`}
-                  title="Save compressed image"
-                >
-                  {downloadingImages.includes(image.id) ? (
-                    <div className="h-4.5 w-4.5 rounded-full animate-spin border-2 border-blue-500 border-t-transparent" />
-                  ) : (
-                    <Download size={18} />
-                  )}
-                </button>
-
-                {/* Recompress Button */}
-                <button
-                  onClick={() => handleRecompress(image)}
-                  className="rounded-full bg-green-50 p-2 text-green-500 transition-all duration-300 hover:bg-green-100 hover:text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/30"
-                  title="Recompress image"
-                >
-                  <RefreshCw size={18} />
-                </button>
-
-                {/* Remove Button */}
-                <button
-                  onClick={() => handleRemove(image.id)}
-                  className="rounded-full bg-red-50 p-2 text-red-500 transition-all duration-300 hover:bg-red-100 hover:text-red-700 dark:bg-red-900/20 dark:hover:bg-red-900/30"
-                  title="Remove image"
-                >
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Image Preview and Details */}
-            <div className="flex items-center space-x-6">
-              <div className="h-24 w-24 overflow-hidden rounded-lg border border-gray-200 shadow-md transition-transform duration-300 hover:scale-105 dark:border-gray-700">
-                <img
-                  src={image.previewUrl}
-                  alt="Preview"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <div className="flex-1 rounded-lg bg-white/50 p-3 shadow-sm dark:bg-gray-800/50">
-                <div className="grid grid-cols-2 gap-2">
-                  <p className="text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Original:
-                    </span>
-                    <span className="ml-2 font-medium">
-                      {(image.originalSize / 1024).toFixed(2)} KB
-                    </span>
-                  </p>
-                  <p className="text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Compressed:
-                    </span>
-                    <span className="ml-2 font-medium">
-                      {(image.compressedSize / 1024).toFixed(2)} KB
-                    </span>
-                  </p>
-                </div>
-                <div className="mt-1 rounded-md bg-green-50 p-2 dark:bg-green-900/20">
-                  <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                    Saved{' '}
-                    {(
-                      (image.originalSize - image.compressedSize) /
-                      1024
-                    ).toFixed(2)}{' '}
-                    KB
-                    <span className="rounded-full ml-1 inline-block bg-green-100 px-2 py-0.5 text-xs text-green-800 dark:bg-green-800/40 dark:text-green-300">
-                      {(
-                        ((image.originalSize - image.compressedSize) /
-                          image.originalSize) *
-                        100
-                      ).toFixed(1)}
-                      %
-                    </span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </li>
+            image={image}
+            onDownload={() => handleDownload(image)}
+            onRemove={() =>
+              setCompressedImages((prev) =>
+                prev.filter((i) => i.id !== image.id),
+              )
+            }
+            onRecompress={async () => {
+              setIsCompressing(true);
+              try {
+                const newImage = await compressImage(image.originalFile);
+                setCompressedImages((prev) =>
+                  prev.map((i) => (i.id === image.id ? newImage : i)),
+                );
+              } finally {
+                setIsCompressing(false);
+              }
+            }}
+          />
         ))}
       </ul>
     </div>
   );
 };
+
+// Helper Components
+const NotificationList: React.FC<{
+  notifications: Notification[];
+  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
+}> = ({ notifications, setNotifications }) => (
+  <div className="absolute bottom-4 right-4 z-50 w-72 space-y-2">
+    {notifications.map((n) => (
+      <div
+        key={n.id}
+        className={`translate-y-0 transform rounded-lg p-3 text-white opacity-100 shadow-md transition-all duration-300 ${n.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}
+      >
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium">{n.message}</p>
+          <button
+            onClick={() =>
+              setNotifications((prev) => prev.filter((not) => not.id !== n.id))
+            }
+            className="ml-2 text-white/70 hover:text-white"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const FileUploadButton: React.FC<{
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}> = ({ onChange }) => (
+  <div className="mb-6">
+    <label className="inline-flex cursor-pointer items-center rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-3 text-white shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]">
+      <Upload className="mr-2" size={18} />
+      Upload Images
+      <input
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={onChange}
+        className="hidden"
+      />
+    </label>
+  </div>
+);
+
+const CompressingIndicator: React.FC = () => (
+  <div className="mb-6 flex items-center justify-center rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+    <div className="rounded-full mr-3 h-4 w-4 animate-spin border-2 border-blue-600 border-t-transparent" />
+    <p className="font-medium text-blue-600 dark:text-blue-400">
+      Compressing images...
+    </p>
+  </div>
+);
+
+const CompressedImageItem: React.FC<{
+  image: CompressedImage;
+  onDownload: () => void;
+  onRemove: () => void;
+  onRecompress: () => void;
+}> = ({ image, onDownload, onRemove, onRecompress }) => (
+  <li className="rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 p-5 shadow-md transition-all duration-300 hover:shadow-lg dark:from-gray-800/70 dark:to-gray-900/70">
+    <div className="mb-3 flex items-center justify-between">
+      <span className="mr-2 flex-grow truncate text-sm font-medium">
+        {image.originalFile.name}
+      </span>
+      <div className="flex space-x-3">
+        <ActionButton
+          onClick={onDownload}
+          icon={<Download size={18} />}
+          color="blue"
+        />
+        <ActionButton
+          onClick={onRecompress}
+          icon={<RefreshCw size={18} />}
+          color="green"
+        />
+        <ActionButton
+          onClick={onRemove}
+          icon={<Trash2 size={18} />}
+          color="red"
+        />
+      </div>
+    </div>
+    <div className="flex items-center space-x-6">
+      <img
+        src={image.previewUrl}
+        alt="Preview"
+        className="h-24 w-24 rounded-lg border border-gray-200 object-cover shadow-md dark:border-gray-700"
+      />
+      <ImageStats image={image} />
+    </div>
+  </li>
+);
+
+const ActionButton: React.FC<{
+  onClick: () => void;
+  icon: React.ReactNode;
+  color: string;
+}> = ({ onClick, icon, color }) => (
+  <button
+    onClick={onClick}
+    className={`rounded-full p-2 transition-all duration-300 bg-${color}-50 text-${color}-500 hover:bg-${color}-100 hover:text-${color}-700 dark:bg-${color}-900/20 dark:hover:bg-${color}-900/30`}
+  >
+    {icon}
+  </button>
+);
+
+const ImageStats: React.FC<{ image: CompressedImage }> = ({ image }) => {
+  const savedKB = ((image.originalSize - image.compressedSize) / 1024).toFixed(
+    2,
+  );
+  const savedPercent = (
+    ((image.originalSize - image.compressedSize) / image.originalSize) *
+    100
+  ).toFixed(1);
+
+  return (
+    <div className="flex-1 rounded-lg bg-white/50 p-3 shadow-sm dark:bg-gray-800/50">
+      <div className="grid grid-cols-2 gap-2">
+        <Stat
+          label="Original"
+          value={`${(image.originalSize / 1024).toFixed(2)} KB`}
+        />
+        <Stat
+          label="Compressed"
+          value={`${(image.compressedSize / 1024).toFixed(2)} KB`}
+        />
+      </div>
+      <div className="mt-1 rounded-md bg-green-50 p-2 dark:bg-green-900/20">
+        <p className="text-sm font-medium text-green-600 dark:text-green-400">
+          Saved {savedKB} KB{' '}
+          <span className="rounded-full ml-1 inline-block bg-green-100 px-2 py-0.5 text-xs text-green-800 dark:bg-green-800/40 dark:text-green-300">
+            {savedPercent}%
+          </span>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+const Stat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <p className="text-sm">
+    <span className="text-gray-500 dark:text-gray-400">{label}:</span>
+    <span className="ml-2 font-medium">{value}</span>
+  </p>
+);
 
 export default ImageCompressor;
