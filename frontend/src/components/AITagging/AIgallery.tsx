@@ -4,11 +4,8 @@ import MediaGrid from '../Media/Mediagrid';
 import { LoadingScreen } from '@/components/ui/LoadingScreen/LoadingScreen';
 import MediaView from '../Media/MediaView';
 import PaginationControls from '../ui/PaginationControls';
-import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtensio';
-import {
-  getAllImageObjects,
-  generateThumbnails,
-} from '../../../api/api-functions/images';
+import { usePictoQuery } from '@/hooks/useQueryExtensio';
+import { getAllImageObjects } from '../../../api/api-functions/images';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,16 +14,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import ProgressiveFolderLoader from '../ui/ProgressiveLoader';
+
 import { UserSearch } from 'lucide-react';
 import ErrorPage from '@/components/ui/ErrorPage/ErrorPage';
+
 export default function AIGallery({
   title,
   type,
-  folderPath,
 }: {
   title: string;
   type: 'image' | 'video';
-  folderPath: string;
 }) {
   const {
     successData,
@@ -36,11 +34,7 @@ export default function AIGallery({
     queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
-  const { mutate: generateThumbnailAPI, isPending: isGeneratingThumbnails } =
-    usePictoMutation({
-      mutationFn: generateThumbnails,
-      autoInvalidateTags: ['ai-tagging-images', 'ai'],
-    });
+  const [addedFolders, setAddedFolders] = useState<string[]>([]);
   let mediaItems = successData ?? [];
   const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -90,13 +84,9 @@ export default function AIGallery({
     setShowMediaViewer(false);
   }, []);
 
-  const handleFolderAdded = useCallback(async () => {
-    generateThumbnailAPI([folderPath]);
+  const handleFolderAdded = useCallback(async (newPaths: string[]) => {
+    setAddedFolders(newPaths);
   }, []);
-
-  useEffect(() => {
-    generateThumbnailAPI([folderPath]);
-  }, [folderPath]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -110,14 +100,6 @@ export default function AIGallery({
         details="An unexpected error occurred while loading media items. This may be due to a server issue or database failure. Please try again later."
         onRetry={() => window.location.reload()}
       />
-    );
-  }
-
-  if (isGeneratingThumbnails || isGeneratingTags) {
-    return (
-      <div>
-        <LoadingScreen />
-      </div>
     );
   }
 
@@ -154,6 +136,10 @@ export default function AIGallery({
             isVisibleSelectedImage={isVisibleSelectedImage}
             setIsVisibleSelectedImage={setIsVisibleSelectedImage}
             setFaceSearchResults={setFaceSearchResults}
+          />
+          <ProgressiveFolderLoader
+            additionalFolders={addedFolders}
+            setAdditionalFolders={setAddedFolders}
           />
         </div>
 
@@ -208,18 +194,25 @@ export default function AIGallery({
           </>
         )}
 
-        {showMediaViewer && (
-          <MediaView
-            initialIndex={selectedMediaIndex}
-            onClose={closeMediaViewer}
-            allMedia={filteredMediaItems.map((item: any) => ({
-              url: item.url,
-              path: item?.imagePath,
-            }))}
-            currentPage={currentPage}
-            itemsPerPage={pageNo}
-            type={type}
+        {isGeneratingTags ? (
+          <LoadingScreen
+            isLoading={isGeneratingTags}
+            message="Generating tags..."
           />
+        ) : (
+          showMediaViewer && (
+            <MediaView
+              initialIndex={selectedMediaIndex}
+              onClose={closeMediaViewer}
+              allMedia={filteredMediaItems.map((item: any) => ({
+                url: item.url,
+                path: item?.imagePath,
+              }))}
+              currentPage={currentPage}
+              itemsPerPage={pageNo}
+              type={type}
+            />
+          )
         )}
       </div>
     </div>

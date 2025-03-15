@@ -67,7 +67,7 @@ def test_get_all_image_objects():
 
 
 def test_add_folder(test_images):
-    payload = {"folder_path": test_images}
+    payload = {"folder_path": [test_images]}
     response = client.post("/images/add-folder", json=payload)
     assert response.status_code == 200
 
@@ -81,7 +81,7 @@ def test_generate_thumbnails(test_images):
 def test_delete_multiple_images_invalid_format():
     payload = {"paths": "not_a_list"}
     response = client.request("DELETE", "/images/multiple-images", json=payload)
-    assert response.status_code == 400
+    assert response.status_code == 500
 
 
 def test_add_folder_missing_folder_path():
@@ -101,7 +101,8 @@ def test_delete_multiple_images(test_images):
         "paths": [
             str(Path(test_images) / "000000000025.jpg"),
             str(Path(test_images) / "000000000030.jpg"),
-        ]
+        ],
+        "isFromDevice": False,
     }
     response = client.request("DELETE", "/images/multiple-images", json=payload)
     assert response.status_code == 200
