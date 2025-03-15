@@ -76,6 +76,7 @@ async def process_images(tasks, folder_id):
         await coro
         completed += 1
         progress_status[folder_id]["completed"] = completed
+        await asyncio.sleep(0)
 
     progress_status[folder_id]["status"] = "completed"
 
