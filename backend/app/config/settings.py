@@ -5,7 +5,5 @@ DEFAULT_FACENET_MODEL = "app/models/facenet.onnx"
 
 TEST_INPUT_PATH = "tests/inputs"
 TEST_OUTPUT_PATH = "tests/outputs"
-
 DATABASE_PATH = "app/database/PictoPy.db"
-
-IMAGES_PATH = "./images"
+THUMBNAIL_IMAGES_PATH = "./images"

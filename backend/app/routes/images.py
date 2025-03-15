@@ -1,15 +1,19 @@
 import os
-import shutil
 import asyncio
 from fastapi import APIRouter, Query, HTTPException, status
 from PIL import Image
+import shutil
 
 from app.config.settings import IMAGES_PATH
 
 from app.facenet.facenet import detect_faces
 from app.utils.classification import get_classes
 from app.utils.wrappers import exception_handler_wrapper
-from app.utils.generateThumbnails import generate_thumbnails_for_folders
+from app.utils.generateThumbnails import (
+    generate_thumbnails_for_folders,
+    generate_thumbnails_for_existing_folders,
+)
+from app.config.settings import THUMBNAIL_IMAGES_PATH
 from app.database.images import (
     get_all_image_ids_from_db,
     get_path_from_id,
@@ -17,11 +21,14 @@ from app.database.images import (
     delete_image_db,
     get_objects_db,
     get_all_image_paths,
+    get_all_images_from_folder_id,
 )
 from app.utils.metadata import extract_metadata
 from app.database.folders import (
     insert_folder,
     get_all_folders,
+    get_folder_id_from_path,
+    delete_folder,
 )
 
 from app.schemas.images import (
@@ -34,7 +41,8 @@ from app.schemas.images import (
     FailedPathResponse,ClassIDsResponse,
     GetImagesResponse,AddMultipleImagesRequest,
     DeleteThumbnailsRequest,DeleteThumbnailsResponse,
-    FailedDeletionThumbnailResponse,AddMultipleImagesResponse
+    FailedDeletionThumbnailResponse,AddMultipleImagesResponse,
+    GetThumbnailPathResponse
 )
 
 router = APIRouter()
@@ -203,6 +211,7 @@ def delete_image(payload: DeleteImageRequest):
         )
 
 
+
 @router.delete(
     "/multiple-images",
     response_model=DeleteMultipleImagesResponse,
@@ -212,7 +221,10 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
 
     try:
         paths = payload.paths
+        is_from_device = payload.is_from_device
         deleted_paths = []
+        folder_paths = set()
+
         for path in paths:
             if not os.path.isfile(path):
 
@@ -228,13 +240,20 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
     
             path = os.path.normpath(path)
             folder_path, filename = os.path.split(path)
-            thumbnail_folder = os.path.join(folder_path, "PictoPy.thumbnails")
+            folder_paths.add(folder_path)
+
+            thumbnail_folder = os.path.abspath(
+                os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails")
+            )
             thumb_nail_image_path = os.path.join(thumbnail_folder, filename)
+
+            print("File = ", filename)
 
             # Check and remove the original file
             if os.path.exists(path):
                 try:
-                    os.remove(path)
+                    if is_from_device:
+                        os.remove(path)
                 except PermissionError:
                     print(f"Permission denied for file '{path}'.")
                 except Exception as e:
@@ -246,6 +265,7 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
             if os.path.exists(thumb_nail_image_path):
                 try:
                     os.remove(thumb_nail_image_path)
+                    print("Successfully removed!")
                 except PermissionError:
                     print(f"Permission denied for file '{thumb_nail_image_path}'.")
                 except Exception as e:
@@ -256,6 +276,17 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
             delete_image_db(path)
             deleted_paths.append(path)
         
+       
+        # Delete those folders , no image left
+        for folder_path in folder_paths:
+            try:
+                folder_id = get_folder_id_from_path(folder_path)
+                images = get_all_images_from_folder_id(folder_id)
+                if not len(images):
+                    delete_folder(folder_path)
+            except Exception:
+                print("Folder deletion Unsuccessful")
+
         return DeleteMultipleImagesResponse(
             data=deleted_paths,
             message="Images deleted successfully",
@@ -282,8 +313,7 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
 )
 def get_all_image_objects():
     try:
-        folder_paths = get_all_folders()
-        generate_thumbnails_for_folders(folder_paths)
+        generate_thumbnails_for_existing_folders()
         image_ids = get_all_image_ids_from_db()
         data = {}
         for image_id in image_ids:
@@ -292,11 +322,14 @@ def get_all_image_objects():
             data[image_path] = classes if classes else "None"
             print(image_path)
         
+        thubnail_image_path = os.path.abspath(
+            os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails")
+        )
+
         return GetAllImageObjectsResponse(
-            data={"images": data},
+            data={"images": data,"image_path": thubnail_image_path},
             message="Successfully retrieved all image objects",
             success=True
-
         )
 
     except Exception as e:
@@ -356,7 +389,7 @@ def get_class_ids(path: str = Query(...)):
 @router.post(
     "/add-folder",
     response_model=AddFolderResponse,
-    responses={ code : { "model" : ErrorResponse } for code in [ 400,500 ] }
+    responses={ code : { "model" : ErrorResponse } for code in [ 400,401,500 ] }
 )
 async def add_folder(payload: AddFolderRequest):
     try:
@@ -377,30 +410,20 @@ async def add_folder(payload: AddFolderRequest):
             or not os.access(folder_path, os.W_OK)
             or not os.access(folder_path, os.X_OK)
         ):
-            return JSONResponse(
-                status_code=403,
-                content={
-                    "status_code": 403,
-                    "content": {
-                        "success": False,
-                        "error": "Permission denied",
-                        "message": "The app does not have read and write permissions for the specified folder",
-                    },
-                },
+            
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Permission denied",
+                    message="The app does not have read and write permissions for the specified folder"
+                )
             )
-        folder_id = insert_folder(folder_path)
+
+
+        folder_id = get_folder_id_from_path(folder_path)
         if folder_id is None:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Folder not inserted",
-                        "message": "Could not insert folder",
-                    },
-                },
-            )
+            folder_id = insert_folder(folder_path)
 
         image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
         tasks = []
@@ -455,57 +478,12 @@ async def add_folder(payload: AddFolderRequest):
 def generate_thumbnails(payload: GenerateThumbnailsRequest):
     
     folder_paths = payload.folder_paths
-    image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"]
-    failed_paths = []
-
-    for folder_path in folder_paths:
-        if not os.path.isdir(folder_path):
-            failed_paths.append(
-                FailedPathResponse(
-                    folder_path=folder_path,
-                    error="Invalid folder path",
-                    message="The provided path is not a valid directory"
-                )
-            )
-            continue
-
-        for root, _, files in os.walk(folder_path):
-            # Do not generate thumbnails for the "PictoPy.thumbnails" folder
-            if "PictoPy.thumbnails" in root:
-                continue
-
-            # Create the "PictoPy.thumbnails" folder in the current directory (`root`)
-            thumbnail_folder = os.path.join(root, "PictoPy.thumbnails")
-            os.makedirs(thumbnail_folder, exist_ok=True)
-
-            for file in files:
-                file_path = os.path.join(root, file)
-                file_extension = os.path.splitext(file_path)[1].lower()
-                if file_extension in image_extensions:
-                    try:
-                        # Create a unique thumbnail name based on the file name
-                        thumbnail_name = file
-                        thumbnail_path = os.path.join(thumbnail_folder, thumbnail_name)
-
-                        # Skip if the thumbnail already exists
-                        if os.path.exists(thumbnail_path):
-                            continue
-
-                        # Generate the thumbnail
-                        img = Image.open(file_path)
-                        img.thumbnail((400, 400))
-                        img.save(thumbnail_path)
-                    except Exception as e:
-                        failed_paths.append(
-                            FailedPathResponse(
-                                folder_path=folder_path,
-                                file=file_path,
-                                error="Thumbnail generation error",
-                                message=f"Error processing file {file}: {str(e)}"
-                            )
-                        )
-
+    failed_paths = generate_thumbnails_for_folders(folder_paths)  
+    thumbnail_image_path = os.path.abspath(
+        os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails")
+    )
     if failed_paths:
+        
         return GenerateThumbnailsResponse(
             success=False,
             message="Some folders or files could not be processed",
@@ -516,7 +494,25 @@ def generate_thumbnails(payload: GenerateThumbnailsRequest):
        success=True,
        message="Thumbnails generated successfully for all valid folders"
     )
+        
 
+
+@router.get(
+    "/get-thumbnail-path",
+    response_model=GenerateThumbnailsResponse
+)
+@exception_handler_wrapper
+def get_thumbnail_path():
+    print("GET request Received!")
+    thumbnail_path = os.path.abspath(
+        os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails")
+    )
+    print("Thumbnail Path = ", thumbnail_path)
+    return GetThumbnailPathResponse(
+        success=True,
+        thumbnailPath=thumbnail_path
+    )
+    
 
 # Delete all the thumbnails present in the given folder
 @router.delete(
@@ -546,22 +542,15 @@ def delete_thumbnails(payload: DeleteThumbnailsRequest):
     # List to store any errors encountered while deleting thumbnails
     failed_deletions = []
 
-    # Walk through the folder path and find all `PictoPy.thumbnails` folders
-    for root, dirs, _ in os.walk(folder_path):
-        for dir_name in dirs:
-            if dir_name == "PictoPy.thumbnails":
-                thumbnail_folder = os.path.join(root, dir_name)
-                try:
-                    # Delete the thumbnail folder
-                    shutil.rmtree(thumbnail_folder)
-                    print(f"Deleted: {thumbnail_folder}")
-                except Exception as e:
-                    failed_deletions.append(
-                        {
-                            "folder": thumbnail_folder,
-                            "error": str(e),
-                        }
-                    )
+    for file in os.listdir(folder_path):
+        try:
+            thumbnail_image_path = os.path.join(
+                THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails", file
+            )
+            if os.path.exists(thumbnail_image_path):
+                os.remove(thumbnail_image_path)
+        except Exception:
+            failed_deletions.append(thumbnail_image_path)
 
     if failed_deletions:
 

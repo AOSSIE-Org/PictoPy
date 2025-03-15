@@ -12,6 +12,7 @@ class DeleteImageRequest(BaseModel) :
 
 class DeleteMultipleImagesRequest(BaseModel) : 
     paths : List[str]
+    is_from_device : bool
 
 
 class AddFolderRequest(BaseModel) : 
@@ -100,3 +101,8 @@ class DeleteThumbnailsResponse(BaseModel):
     success: bool
     message: str
     failed_deletions: Optional[List[FailedDeletionThumbnailResponse]] = None
+
+
+class GetThumbnailPathResponse(BaseModel) : 
+    success: bool
+    thumbnailPath: str

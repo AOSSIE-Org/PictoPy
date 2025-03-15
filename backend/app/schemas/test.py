@@ -35,3 +35,7 @@ class ErrorResponse(BaseModel) :
     success: bool = False
     message: str
     error: str
+
+class TestImageResponse(BaseModel) : 
+    success: bool 
+    message: str

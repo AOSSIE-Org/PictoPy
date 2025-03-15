@@ -10,8 +10,12 @@ from app.schemas.test import (
     TestRouteRequest,TestRouteResponse,
     DetectionData,ErrorResponse,
     AddSingleImageRequest,AddSingleImageResponse,
-    GetImagesResponse
+    TestImageResponse,GetImagesResponse
 )
+from app.database.images import get_all_images_from_folder_id
+from app.database.folders import get_all_folder_ids
+import os
+import shutil
 
 
 router = APIRouter()
@@ -163,3 +167,31 @@ def add_single_image(payload: AddSingleImageRequest):
             ).model_dump()
         )
 
+@router.get(
+    "/test-image",
+    response_model=TestImageResponse,
+    responses={ code : { "model" : ErrorResponse } for code in [ 400 ] }
+)
+def test_images():
+    try : 
+        folder_ids = get_all_folder_ids()
+        for folder_id in folder_ids:
+            print("Current Folder ID = ", folder_id)
+            image_paths = get_all_images_from_folder_id(folder_id)
+            print("Image Paths = ", image_paths)
+
+        print("Folder IDS = ", folder_ids)
+        return TestImageResponse(
+            success=True,
+            message="Success"
+        )
+    
+    except Exception as e : 
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                message="Internal server error",
+                error=str(e)
+            ).model_dump()
+        )
