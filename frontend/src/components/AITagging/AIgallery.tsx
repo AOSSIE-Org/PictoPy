@@ -4,11 +4,8 @@ import MediaGrid from '../Media/Mediagrid';
 import { LoadingScreen } from '@/components/ui/LoadingScreen/LoadingScreen';
 import MediaView from '../Media/MediaView';
 import PaginationControls from '../ui/PaginationControls';
-import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtensio';
-import {
-  getAllImageObjects,
-  generateThumbnails,
-} from '../../../api/api-functions/images';
+import { usePictoQuery } from '@/hooks/useQueryExtensio';
+import { getAllImageObjects } from '../../../api/api-functions/images';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,10 +33,6 @@ export default function AIGallery({
   } = usePictoQuery({
     queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
-  });
-  const { mutate: generateThumbnailAPI } = usePictoMutation({
-    mutationFn: generateThumbnails,
-    autoInvalidateTags: ['ai-tagging-images', 'ai'],
   });
   const [addedFolders, setAddedFolders] = useState<string[]>([]);
   let mediaItems = successData ?? [];
@@ -92,7 +85,6 @@ export default function AIGallery({
   }, []);
 
   const handleFolderAdded = useCallback(async (newPaths: string[]) => {
-    generateThumbnailAPI([...newPaths]);
     setAddedFolders(newPaths);
   }, []);
 
