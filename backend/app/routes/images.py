@@ -1,6 +1,7 @@
 import os
 import asyncio
-from fastapi import APIRouter, Query, HTTPException, status
+from fastapi import APIRouter, Query, HTTPException
+from fastapi import status as fastapi_status
 from fastapi.responses import JSONResponse
 import shutil
 
@@ -88,7 +89,7 @@ def get_images():
     except Exception:
 
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
@@ -109,7 +110,7 @@ async def add_multiple_images(payload: AddMultipleImagesRequest):
         if not isinstance(image_paths, list):
 
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=fastapi_status.HTTP_400_BAD_REQUEST,
                 detail=ErrorResponse(
                     success=False,
                     error="Invalid 'paths' format",
@@ -121,7 +122,7 @@ async def add_multiple_images(payload: AddMultipleImagesRequest):
         for image_path in image_paths:
             if not os.path.isfile(image_path):
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=fastapi_status.HTTP_400_BAD_REQUEST,
                     detail=ErrorResponse(
                         success=False,
                         error="Invalid file path",
@@ -134,7 +135,7 @@ async def add_multiple_images(payload: AddMultipleImagesRequest):
             if file_extension not in image_extensions:
 
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=fastapi_status.HTTP_400_BAD_REQUEST,
                     detail=ErrorResponse(
                         success=False,
                         error="Invalid file type",
@@ -157,7 +158,7 @@ async def add_multiple_images(payload: AddMultipleImagesRequest):
     except Exception as e:
         print(e)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
@@ -193,7 +194,7 @@ def delete_image(payload: DeleteImageRequest):
 
         if not os.path.isfile(file_path):
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=fastapi_status.HTTP_404_NOT_FOUND,
                 detail=ErrorResponse(
                     success=False,
                     error="Image not found",
@@ -210,7 +211,7 @@ def delete_image(payload: DeleteImageRequest):
     except Exception as e:
 
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
                 success=False, error="Internal server error", message=str(e)
             ).model_dump(),
@@ -234,7 +235,7 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
             if not os.path.isfile(path):
 
                 raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
+                    status_code=fastapi_status.HTTP_404_NOT_FOUND,
                     detail=ErrorResponse(
                         success=False,
                         error="Image not found",
@@ -297,7 +298,7 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
     except Exception as e:
         print(e)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
@@ -335,7 +336,7 @@ def get_all_image_objects():
     except Exception:
 
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
@@ -354,7 +355,7 @@ def get_class_ids(path: str = Query(...)):
         if not path:
 
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=fastapi_status.HTTP_400_BAD_REQUEST,
                 detail=ErrorResponse(
                     success=False,
                     error="Missing 'path' parameter",
@@ -374,7 +375,7 @@ def get_class_ids(path: str = Query(...)):
     except Exception:
 
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
@@ -396,7 +397,7 @@ async def add_folder(payload: AddFolderRequest):
             if not os.path.isdir(folder):
                 print("Not OS DIR")
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=fastapi_status.HTTP_400_BAD_REQUEST,
                     detail=ErrorResponse(
                         success=False,
                         error="Invalid folder path",
@@ -411,7 +412,7 @@ async def add_folder(payload: AddFolderRequest):
             ):
 
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    status_code=fastapi_status.HTTP_401_UNAUTHORIZED,
                     detail=ErrorResponse(
                         success=False,
                         error="Permission denied",
@@ -476,94 +477,13 @@ async def add_folder(payload: AddFolderRequest):
         print(e)
 
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
                 message="Failed to add a folder",
             ).model_dump(),
         )
-
-
-# @router.post(
-#     "/add-folder",
-#     response_model=AddFolderResponse,
-#     responses={code: {"model": ErrorResponse} for code in [400, 401, 500]},
-# )
-# async def add_folder(payload: AddFolderRequest):
-#     try:
-
-#         folder_path = payload.folder_path
-#         if not os.path.isdir(folder_path):
-
-#             raise HTTPException(
-#                 status_code=status.HTTP_400_BAD_REQUEST,
-#                 detail=ErrorResponse(
-#                     success=False,
-#                     error="Invalid folder path",
-#                     message="The provided path is not a valid directory",
-#                 ).model_dump(),
-#             )
-#         if (
-#             not os.access(folder_path, os.R_OK)
-#             or not os.access(folder_path, os.W_OK)
-#             or not os.access(folder_path, os.X_OK)
-#         ):
-
-#             raise HTTPException(
-#                 status_code=status.HTTP_401_UNAUTHORIZED,
-#                 detail=ErrorResponse(
-#                     success=False,
-#                     error="Permission denied",
-#                     message="The app does not have read and write permissions for the specified folder",
-#                 ),
-#             )
-
-#         folder_id = get_folder_id_from_path(folder_path)
-#         if folder_id is None:
-#             folder_id = insert_folder(folder_path)
-
-#         image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
-#         tasks = []
-
-#         for root, _, files in os.walk(folder_path):
-#             if "PictoPy.thumbnails" in root:
-#                 continue
-#             for file in files:
-#                 file_path = os.path.join(root, file)
-#                 file_extension = os.path.splitext(file_path)[1].lower()
-#                 if file_extension in image_extensions:
-#                     tasks.append(
-#                         asyncio.create_task(
-#                             run_get_classes(file_path, folder_id=folder_id)
-#                         )
-#                     )
-
-#         if not tasks:
-#             return AddFolderResponse(
-#                 data=0,
-#                 message="No valid images found in the specified folder",
-#                 success=True,
-#             )
-
-#         await asyncio.create_task(process_images(tasks))
-
-#         return AddFolderResponse(
-#             data=len(tasks),
-#             message=f"Processing {len(tasks)} images from the folder in the background",
-#             success=True,
-#         )
-
-#     except Exception:
-
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=ErrorResponse(
-#                 success=False,
-#                 error="Internal server error",
-#                 message="Failed to add a folder",
-#             ).model_dump(),
-#         )
 
 
 @router.delete("/delete-folder")
@@ -668,7 +588,7 @@ def delete_thumbnails(payload: DeleteThumbnailsRequest):
     if not os.path.isdir(folder_path):
 
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=fastapi_status.HTTP_400_BAD_REQUEST,
             detail=ErrorResponse(
                 success=False,
                 error="Invalid folder path",
@@ -692,7 +612,7 @@ def delete_thumbnails(payload: DeleteThumbnailsRequest):
     if failed_deletions:
 
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=FailedDeletionThumbnailResponse(
                 success=False,
                 message="See the `failed_deletions` field for details.",
