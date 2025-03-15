@@ -34,10 +34,9 @@ def insert_folder(folder_path):
     existing_folder = cursor.fetchone()
 
     if existing_folder:
+        result = existing_folder[0]
         conn.close()
-        raise FileExistsError(
-            f"Error: Folder '{folder_path}' already exists in the database."
-        )
+        return result
 
     # Time is in Unix format
     last_modified_time = int(os.path.getmtime(abs_folder_path))
@@ -88,6 +87,14 @@ def get_all_folders():
     with sqlite3.connect(DATABASE_PATH) as conn:
         rows = conn.execute("SELECT folder_path FROM folders").fetchall()
         return [row[0] for row in rows] if rows else []
+
+
+def get_all_folder_ids():
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT folder_id from folders")
+    rows = cursor.fetchall()
+    return [row[0] for row in rows] if rows else []
 
 
 def delete_folder(folder_path):

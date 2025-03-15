@@ -403,52 +403,52 @@ const MediaView: React.FC<MediaViewProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/90">
-      <div className="absolute right-4 top-4 z-50 flex items-center gap-2">
+    <div className="to-black/98 fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-black/95 backdrop-blur-lg">
+      <div className="absolute right-4 top-4 z-50 flex items-center gap-3">
         <button
           onClick={toggleInfo}
-          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
           aria-label="Show Info"
         >
-          <Info className="h-6 w-6" />
+          <Info className="h-5 w-5" />
         </button>
         <button
           onClick={handleSetWallpaper}
-          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
           aria-label="Set as Wallpaper"
         >
-          <ImageIcon className="h-6 w-6" />
+          <ImageIcon className="h-5 w-5" />
         </button>
         <button
           onClick={handleOpenFolder}
-          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
           aria-label="Open Folder"
         >
-          <Folder className="h-6 w-6" />
+          <Folder className="h-5 w-5" />
         </button>
         <button
           onClick={handleOpenWith}
-          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
           aria-label="Open With"
         >
-          <ExternalLink className="h-6 w-6" />
+          <ExternalLink className="h-5 w-5" />
         </button>
         {!isSecureFolder && (
           <button
             onClick={handleShare}
-            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
             aria-label="Share"
           >
-            <Share2 className="h-6 w-6" />
+            <Share2 className="h-5 w-5" />
           </button>
         )}
         {!isSecureFolder && (
           <button
             onClick={toggleFavorite}
-            className={`rounded-full p-2 text-white transition-colors duration-300 ${
+            className={`rounded-full p-2.5 text-white transition-all duration-300 ${
               isFavorite(allMedia[globalIndex].path || '')
-                ? 'bg-red-500 hover:bg-red-600'
-                : 'bg-white/20 hover:bg-white/40'
+                ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
+                : 'bg-white/10 hover:bg-white/20 hover:text-white hover:shadow-lg'
             }`}
             aria-label={
               isFavorite(allMedia[globalIndex].path || '')
@@ -457,7 +457,7 @@ const MediaView: React.FC<MediaViewProps> = ({
             }
           >
             <Heart
-              className={`h-6 w-6 ${isFavorite(allMedia[globalIndex].path || '') ? 'fill-current' : ''}`}
+              className={`h-5 w-5 ${isFavorite(allMedia[globalIndex].path || '') ? 'fill-current' : ''}`}
             />
           </button>
         )}
@@ -467,40 +467,42 @@ const MediaView: React.FC<MediaViewProps> = ({
             className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
             aria-label="Edit"
           >
-            <Edit className="h-6 w-6" />
+            <Edit className="h-5 w-5" />
           </button>
         )}
         {!isSecureFolder && (
           <button
             onClick={handleMoveToSecureFolder}
-            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
             aria-label="Move to Secure Folder"
           >
-            <Lock className="h-6 w-6" />
+            <Lock className="h-5 w-5" />
           </button>
         )}
 
         {type === 'image' && (
           <button
             onClick={toggleSlideshow}
-            className="rounded-full flex items-center gap-2 bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
+            className="rounded-full flex items-center gap-2 bg-indigo-500/70 px-4 py-2 text-white transition-all duration-200 hover:bg-indigo-600/80 hover:shadow-lg"
             aria-label="Toggle Slideshow"
           >
             {isSlideshowActive ? (
-              <Pause className="h-5 w-5" />
+              <Pause className="h-4 w-4" />
             ) : (
-              <Play className="h-5 w-5" />
+              <Play className="h-4 w-4" />
             )}
-            {isSlideshowActive ? 'Pause' : 'Slideshow'}
+            <span className="text-sm font-medium">
+              {isSlideshowActive ? 'Pause' : 'Slideshow'}
+            </span>
           </button>
         )}
 
         <button
           onClick={onClose}
-          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          className="rounded-full ml-2 bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
           aria-label="Close"
         >
-          <X className="h-6 w-6" />
+          <X className="h-5 w-5" />
         </button>
       </div>
 
@@ -513,7 +515,6 @@ const MediaView: React.FC<MediaViewProps> = ({
         {type === 'image' ? (
           <div
             id="zoomable-image"
-            //Close when clicked outside the image:
             onClick={(e) => {
               if (e.target === e.currentTarget) {
                 onClose();
@@ -649,54 +650,58 @@ const MediaView: React.FC<MediaViewProps> = ({
           </>
         )}
       </div>
+
       {type === 'image' ? (
-        <div className="absolute bottom-32 right-4 flex cursor-pointer gap-2">
-          <button
-            onClick={handleZoomOut}
-            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-            aria-label="Zoom Out"
-          >
-            <ZoomOut className="h-5 w-5" />
-          </button>
-          <button
-            onClick={resetZoom}
-            className="rounded-md bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
-          >
-            Reset
-          </button>
-          <button
-            onClick={handleZoomIn}
-            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-            aria-label="Zoom In"
-          >
-            <ZoomIn className="h-5 w-5" />
-          </button>
-          <button
-            onClick={handleRotate}
-            className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-            aria-label="Rotate"
-          >
-            <RotateCw className="h-5 w-5" />
-          </button>
+        <div className="rounded-xl absolute bottom-32 right-4 flex flex-col gap-4 bg-black/30 p-3 backdrop-blur-md">
+          <div className="flex gap-2">
+            <button
+              onClick={handleZoomOut}
+              className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
+              aria-label="Zoom Out"
+            >
+              <ZoomOut className="h-5 w-5" />
+            </button>
+            <button
+              onClick={resetZoom}
+              className="rounded-md bg-white/10 px-3 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
+            >
+              Reset
+            </button>
+            <button
+              onClick={handleZoomIn}
+              className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
+              aria-label="Zoom In"
+            >
+              <ZoomIn className="h-5 w-5" />
+            </button>
+            <button
+              onClick={handleRotate}
+              className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
+              aria-label="Rotate"
+            >
+              <RotateCw className="h-5 w-5" />
+            </button>
+          </div>
           {isEditing && (
             <>
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={handleEditComplete}
-                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                className="rounded-md bg-emerald-500/70 p-2 text-white transition-all duration-200 hover:bg-emerald-600 hover:shadow-md"
                 aria-label="Confirm Edit"
               >
                 <Check className="h-5 w-5" />
               </button>
               <button
                 onClick={resetEditing}
-                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                className="rounded-md bg-rose-500/70 p-2 text-white transition-all duration-200 hover:bg-rose-600 hover:shadow-md"
                 aria-label="Cancel Edit"
               >
                 <X className="h-5 w-5" />
               </button>
               <select
                 onChange={(e) => setFilter(e.target.value)}
-                className="rounded-md bg-white/20 px-2 py-2 text-white"
+                className="rounded-md bg-white/10 px-2 py-2 text-sm text-white transition-all duration-200 hover:bg-white/20"
               >
                 <option value="">No Filter</option>
                 <option value="grayscale(100%)">Grayscale</option>
@@ -706,7 +711,7 @@ const MediaView: React.FC<MediaViewProps> = ({
               </select>
               <button
                 onClick={toggleAdjustMenu}
-                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
                 aria-label="Adjust"
               >
                 <Sliders className="h-5 w-5" />
@@ -827,7 +832,6 @@ const MediaView: React.FC<MediaViewProps> = ({
                 </div>
               )}
               {onaspect && (
-                <>
                   <div className="absolute bottom-full mb-2 w-32 rounded-md bg-white/20 backdrop-blur-md sm:right-1">
                     <div className="mb-1 mt-1 flex flex-col justify-center gap-1">
                       <div
@@ -862,30 +866,40 @@ const MediaView: React.FC<MediaViewProps> = ({
                       </div>
                     </div>
                   </div>
-                </>
               )}
+              </div>
             </>
           )}
         </div>
       ) : null}
 
-      {/* Thumbnails */}
-      {type === 'image' ? (
-        <div>
-          <div className="absolute bottom-0 flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-2 opacity-0 transition-opacity duration-300 hover:opacity-100">
+      {/* Adjust menu popup with improved styling */}
+      {showAdjustMenu && (
+          <button
+          onClick={toggleAdjustMenu}
+          className="mt-2 w-full rounded-md bg-white/20 py-1.5 text-xs font-medium text-white transition-all hover:bg-white/30"
+        >
+          Close
+        </button>
+      )}
+
+      {/* Thumbnails with improved styling */}
+      {type === 'image' && (
+        <div className="absolute bottom-0 w-full">
+          <div className="flex w-full items-center justify-center gap-2 overflow-x-auto bg-black/50 px-4 py-3 opacity-0 transition-all duration-300 hover:opacity-100">
             {allMedia.map((media, index) => (
               <div
                 key={index}
                 onClick={() => handleThumbnailClick(index)}
-                className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
+                className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg ${
                   index === globalIndex
-                    ? 'border-blue-500 shadow-lg'
-                    : 'border-transparent'
-                } cursor-pointer transition-transform hover:scale-105`}
+                    ? 'ring-2 ring-blue-500 ring-offset-1 ring-offset-black'
+                    : 'opacity-70 hover:opacity-100'
+                } cursor-pointer transition-all duration-200 hover:scale-105`}
               >
                 {isFavorite(media.path || '') && (
-                  <div className="absolute right-1 top-1 z-10">
-                    <Heart className="h-4 w-4 fill-current text-red-500" />
+                  <div className="rounded-full absolute right-1 top-1 z-10 bg-black/30 p-0.5">
+                    <Heart className="h-3 w-3 fill-current text-rose-500" />
                   </div>
                 )}
                 {type === 'image' ? (
@@ -899,22 +913,41 @@ const MediaView: React.FC<MediaViewProps> = ({
             ))}
           </div>
         </div>
-      ) : null}
+      )}
 
+      {/* Improved notification */}
       {notification && (
         <div
-          className={`fixed left-1/2 top-4 -translate-x-1/2 transform rounded-md p-4 ${
-            notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-          } z-50 text-lg font-bold text-white shadow-lg`}
+          className={`rounded-full fixed left-1/2 top-4 -translate-x-1/2 transform ${
+            notification.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'
+          } px-6 py-2 text-sm font-medium text-white shadow-lg transition-all duration-300 animate-in fade-in`}
         >
           {notification.message}
         </div>
       )}
-
+      {/* Improved info panel */}
       {showInfo && (
-        <div className="absolute left-4 top-4 z-50 rounded-lg bg-white/20 p-4 backdrop-blur-md">
-          <h3 className="mb-2 text-lg font-bold text-white">Image Info</h3>
-          <p className="text-white">Path: {allMedia[globalIndex].path}</p>
+        <div className="rounded-xl absolute left-4 top-4 z-50 max-w-md bg-black/50 p-4 backdrop-blur-lg transition-all duration-300 animate-in slide-in-from-left">
+          <h3 className="mb-3 text-lg font-medium text-white">
+            File Information
+          </h3>
+          <div className="space-y-1.5 text-sm text-white/80">
+            <p className="truncate">
+              <span className="text-white/60">Path:</span>{' '}
+              {allMedia[globalIndex].path}
+            </p>
+            <p>
+              <span className="text-white/60">Type:</span> {type}
+            </p>
+            <p>
+              <span className="text-white/60">Secure:</span>{' '}
+              {isSecureFolder ? 'Yes' : 'No'}
+            </p>
+            <p>
+              <span className="text-white/60">Index:</span> {globalIndex + 1} of{' '}
+              {allMedia.length}
+            </p>
+          </div>
         </div>
       )}
     </div>
