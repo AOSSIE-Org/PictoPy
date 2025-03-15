@@ -11,7 +11,7 @@ export function FileIcon(props: any) {
     </svg>
   );
 }
-export function Crops(props: any) {
+export function Crops() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
