@@ -1,3 +1,5 @@
+'use client';
+
 import type { MediaViewProps } from '@/types/Media';
 import type React from 'react';
 import { useEffect, useState, useCallback } from 'react';
@@ -8,8 +10,6 @@ import {
   Share2,
   Check,
   X,
-  SunMoon,
-  Contrast,
   ZoomIn,
   ZoomOut,
   RotateCw,
@@ -17,13 +17,23 @@ import {
   Play,
   Pause,
   Lock,
+  Info,
+  ImageIcon,
+  Folder,
+  ExternalLink,
+  Sliders,
+  SunIcon,
+  ContrastIcon,
+  Instagram,
 } from 'lucide-react';
+import { Crops } from '../ui/Icons/Icons';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { invoke } from '@tauri-apps/api/core';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { useNavigate } from 'react-router-dom';
 import NetflixStylePlayer from '../VideoPlayer/NetflixStylePlayer';
+import { save } from '@tauri-apps/plugin-dialog';
 
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
@@ -45,9 +55,17 @@ const MediaView: React.FC<MediaViewProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<Crop>();
+  const [aspect, setaspect] = useState<number | undefined>(undefined);
+  const [onaspect, setonaspect] = useState(false);
   const [filter, setFilter] = useState('');
-  const [brightness, setBrightness] = useState(100);
-  const [contrast, setContrast] = useState(100);
+  const [brightness, setBrightness] = useState(0);
+  const [contrast, setContrast] = useState(0);
+  const [vibrance, setVibrance] = useState(0);
+  const [exposure, setExposure] = useState(0);
+  const [temperature, setTemperature] = useState(0);
+  const [sharpness, setSharpness] = useState(0);
+  const [vignette, setVignette] = useState(0);
+  const [highlights, setHighlights] = useState(0);
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'error';
@@ -58,6 +76,8 @@ const MediaView: React.FC<MediaViewProps> = ({
     const saved = localStorage.getItem('pictopy-favorites');
     return saved ? JSON.parse(saved) : [];
   });
+  const [showInfo, setShowInfo] = useState(false);
+  const [showAdjustMenu, setShowAdjustMenu] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -77,7 +97,7 @@ const MediaView: React.FC<MediaViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [globalIndex, onClose, favorites]);
+  }, [onClose]);
 
   useEffect(() => {
     let slideshowInterval: NodeJS.Timeout | null = null;
@@ -148,17 +168,26 @@ const MediaView: React.FC<MediaViewProps> = ({
     setCrop(undefined);
     setCompletedCrop(undefined);
     setFilter('');
-    setBrightness(100);
-    setContrast(100);
+    setBrightness(0);
+    setContrast(0);
+    setVibrance(0);
+    setExposure(0);
+    setTemperature(0);
+    setSharpness(0);
+    setVignette(0);
+    setHighlights(0);
     setPosition({ x: 0, y: 0 });
     setScale(1);
   };
 
-  const showNotification = (message: string, type: 'success' | 'error') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 5000);
-    console.log(`Notification: ${type} - ${message}`);
-  };
+  const showNotification = useCallback(
+    (message: string, type: 'success' | 'error') => {
+      setNotification({ message, type });
+      setTimeout(() => setNotification(null), 5000);
+      console.log(`Notification: ${type} - ${message}`);
+    },
+    [],
+  );
 
   const handleShare = async () => {
     try {
@@ -213,9 +242,6 @@ const MediaView: React.FC<MediaViewProps> = ({
         ctx.drawImage(img, 0, 0);
       }
 
-      ctx.filter = `${filter} brightness(${brightness}%) contrast(${contrast}%)`;
-      ctx.drawImage(canvas, 0, 0);
-
       console.log('Canvas prepared, attempting to create blob');
 
       const editedBlob = await new Promise<Blob | null>((resolve) => {
@@ -244,13 +270,28 @@ const MediaView: React.FC<MediaViewProps> = ({
           password: prompt('Enter your secure folder password:'),
         });
       } else {
-        console.log('Invoking save_edited_image');
+        const selectedPath = await save({
+          defaultPath: `${allMedia[globalIndex].path?.replace(/\.\w+$/, '_edited.png')}`,
+          filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg'] }],
+        });
+
+        if (!selectedPath) {
+          console.log('User cancelled save dialog');
+          return;
+        }
+
         await invoke('save_edited_image', {
           imageData: Array.from(uint8Array),
-          originalPath: allMedia[globalIndex].path,
+          savePath: selectedPath,
           filter,
           brightness,
           contrast,
+          vibrance,
+          exposure,
+          temperature,
+          sharpness,
+          vignette,
+          highlights,
         });
       }
 
@@ -269,10 +310,16 @@ const MediaView: React.FC<MediaViewProps> = ({
     filter,
     brightness,
     contrast,
+    vibrance,
+    exposure,
+    temperature,
+    sharpness,
+    vignette,
+    highlights,
     allMedia,
     globalIndex,
-    showNotification,
     isSecureFolder,
+    showNotification,
   ]);
 
   const handleThumbnailClick = (index: number) => {
@@ -322,9 +369,70 @@ const MediaView: React.FC<MediaViewProps> = ({
     }
   };
 
+  const handleSetWallpaper = async () => {
+    try {
+      await invoke('set_wallpaper', { path: allMedia[globalIndex].path });
+      showNotification('Wallpaper set successfully', 'success');
+    } catch (err: any) {
+      showNotification(`Failed to set wallpaper: ${err}`, 'error');
+    }
+  };
+
+  const handleOpenFolder = async () => {
+    try {
+      await invoke('open_folder', { path: allMedia[globalIndex].path });
+    } catch (err: any) {
+      showNotification(`Failed to open folder: ${err}`, 'error');
+    }
+  };
+
+  const handleOpenWith = async () => {
+    try {
+      await invoke('open_with', { path: allMedia[globalIndex].path });
+    } catch (err: any) {
+      showNotification(`Failed to open file: ${err}`, 'error');
+    }
+  };
+
+  const toggleInfo = () => {
+    setShowInfo((prev) => !prev);
+  };
+
+  const toggleAdjustMenu = () => {
+    setShowAdjustMenu((prev) => !prev);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black">
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/90">
       <div className="absolute right-4 top-4 z-50 flex items-center gap-2">
+        <button
+          onClick={toggleInfo}
+          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          aria-label="Show Info"
+        >
+          <Info className="h-6 w-6" />
+        </button>
+        <button
+          onClick={handleSetWallpaper}
+          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          aria-label="Set as Wallpaper"
+        >
+          <ImageIcon className="h-6 w-6" />
+        </button>
+        <button
+          onClick={handleOpenFolder}
+          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          aria-label="Open Folder"
+        >
+          <Folder className="h-6 w-6" />
+        </button>
+        <button
+          onClick={handleOpenWith}
+          className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+          aria-label="Open With"
+        >
+          <ExternalLink className="h-6 w-6" />
+        </button>
         {!isSecureFolder && (
           <button
             onClick={handleShare}
@@ -332,24 +440,6 @@ const MediaView: React.FC<MediaViewProps> = ({
             aria-label="Share"
           >
             <Share2 className="h-6 w-6" />
-          </button>
-        )}
-        {!isSecureFolder && (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-            aria-label="Edit"
-          >
-            <Edit className="h-6 w-6" />
-          </button>
-        )}
-        {!isSecureFolder && (
-          <button
-            onClick={handleMoveToSecureFolder}
-            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
-            aria-label="Move to Secure Folder"
-          >
-            <Lock className="h-6 w-6" />
           </button>
         )}
         {!isSecureFolder && (
@@ -371,17 +461,26 @@ const MediaView: React.FC<MediaViewProps> = ({
             />
           </button>
         )}
-        {type === 'image' ? (
+        {type === 'image' && !isSecureFolder && (
           <button
-            onClick={() => setIsEditing(true)}
+            onClick={() => setIsEditing(!isEditing)}
             className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
             aria-label="Edit"
           >
             <Edit className="h-6 w-6" />
           </button>
-        ) : null}
+        )}
+        {!isSecureFolder && (
+          <button
+            onClick={handleMoveToSecureFolder}
+            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+            aria-label="Move to Secure Folder"
+          >
+            <Lock className="h-6 w-6" />
+          </button>
+        )}
 
-        {type === 'image' ? (
+        {type === 'image' && (
           <button
             onClick={toggleSlideshow}
             className="rounded-full flex items-center gap-2 bg-white/20 px-4 py-2 text-white transition-colors duration-200 hover:bg-white/40"
@@ -394,7 +493,7 @@ const MediaView: React.FC<MediaViewProps> = ({
             )}
             {isSlideshowActive ? 'Pause' : 'Slideshow'}
           </button>
-        ) : null}
+        )}
 
         <button
           onClick={onClose}
@@ -427,26 +526,95 @@ const MediaView: React.FC<MediaViewProps> = ({
             className="relative flex h-full w-full items-center justify-center overflow-hidden"
           >
             {isEditing ? (
-              <ReactCrop
-                crop={crop}
-                onChange={(c) => setCrop(c)}
-                onComplete={(c) => setCompletedCrop(c)}
-              >
-                <img
-                  id="source-image"
-                  src={allMedia[globalIndex].url || '/placeholder.svg'}
-                  alt={`image-${globalIndex}`}
-                  style={{
-                    filter: `${filter} brightness(${brightness}%) contrast(${contrast}%)`,
-                  }}
-                />
-              </ReactCrop>
+              <div className="relative inline-block">
+                <ReactCrop
+                  crop={crop}
+                  onChange={(c) => setCrop(c)}
+                  aspect={aspect}
+                  onComplete={(c) => setCompletedCrop(c)}
+                >
+                  <TemperatureFilter temperature={temperature} />
+                  <img
+                    id="source-image"
+                    src={
+                      allMedia[globalIndex].url ||
+                      allMedia[globalIndex].url ||
+                      '/placeholder.svg'
+                    }
+                    alt={`image-${globalIndex}`}
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      img.onerror = null;
+                      img.src =
+                        allMedia[globalIndex].thumbnailUrl ||
+                        allMedia[globalIndex].url ||
+                        '/PictoPy_Logo.png'; // Ensure a valid fallback
+                    }}
+                    style={{
+                      filter: `
+                      brightness(${100 + exposure + highlights / 2}%) 
+                      contrast(${100 + contrast}%) 
+                      saturate(${1 + vibrance / 100}) 
+                      hue-rotate(${temperature > 0 ? temperature * 0.25 : temperature * 0.8}deg) 
+                      sepia(${Math.abs(temperature) / 200}) 
+                      saturate(${temperature > 0 ? 1.2 : 1.0}) 
+                      brightness(${temperature > 0 ? 1.05 : 1.0}) 
+                      ${sharpness > 0 ? `url(#sharpness)` : ''} 
+                      ${filter} 
+                      `.trim(),
+                      display: 'block',
+                      width: '100%',
+                    }}
+                  />
+                  <svg width="0" height="0">
+                    <filter id="sharpness">
+                      <feConvolveMatrix
+                        order="3"
+                        kernelMatrix="0 -1 0 -1 5 -1 0 -1 0"
+                      />
+                    </filter>
+                  </svg>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      background: `radial-gradient(circle, rgba(0,0,0,0) 50%, rgba(0,0,0,${vignette / 100}))`,
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      background: `radial-gradient(circle, rgba(255, 255, 255, ${Math.min(highlights / 1000, 0.8)}) 30%, rgba(255, 255, 255, 0) 80%)`,
+                      pointerEvents: 'none',
+                    }}
+                  />
+                </ReactCrop>
+              </div>
             ) : (
               <img
-                src={allMedia[globalIndex].url || '/placeholder.svg'}
+                src={
+                  allMedia[globalIndex].url ||
+                  allMedia[globalIndex].thumbnailUrl
+                }
                 alt={`image-${globalIndex}`}
                 draggable={false}
                 className="h-full w-full select-none object-contain"
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  img.onerror = null;
+                  img.src =
+                    allMedia[globalIndex].thumbnailUrl ||
+                    allMedia[globalIndex].url ||
+                    '/PictoPy_Logo.png'; // Ensure a valid fallback
+                }}
                 style={{
                   transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
                   transition: isDragging
@@ -464,22 +632,25 @@ const MediaView: React.FC<MediaViewProps> = ({
             title=""
           />
         )}
-
-        <button
-          onClick={handlePrevItem}
-          className="rounded-full absolute left-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </button>
-        <button
-          onClick={handleNextItem}
-          className="rounded-full absolute right-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
-        >
-          <ChevronRight className="h-6 w-6" />
-        </button>
+        {!isEditing && (
+          <>
+            <button
+              onClick={handlePrevItem}
+              className="rounded-full absolute left-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+            <button
+              onClick={handleNextItem}
+              className="rounded-full absolute right-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
+          </>
+        )}
       </div>
       {type === 'image' ? (
-        <div className="absolute bottom-20 right-4 flex gap-2">
+        <div className="absolute bottom-32 right-4 flex cursor-pointer gap-2">
           <button
             onClick={handleZoomOut}
             className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
@@ -531,29 +702,168 @@ const MediaView: React.FC<MediaViewProps> = ({
                 <option value="grayscale(100%)">Grayscale</option>
                 <option value="sepia(100%)">Sepia</option>
                 <option value="invert(100%)">Invert</option>
+                <option value="saturate(200%)">Saturate</option>
               </select>
-              <div className="flex items-center gap-2">
-                <SunMoon className="h-5 w-5 text-white" />
-                <input
-                  type="range"
-                  min="0"
-                  max="200"
-                  value={brightness}
-                  onChange={(e) => setBrightness(Number(e.target.value))}
-                  className="w-24"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Contrast className="h-5 w-5 text-white" />
-                <input
-                  type="range"
-                  min="0"
-                  max="200"
-                  value={contrast}
-                  onChange={(e) => setContrast(Number(e.target.value))}
-                  className="w-24"
-                />
-              </div>
+              <button
+                onClick={toggleAdjustMenu}
+                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                aria-label="Adjust"
+              >
+                <Sliders className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setonaspect(!onaspect)}
+                className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                aria-label="Adjust"
+              >
+                <Crops className="h-5 w-5" />
+              </button>
+              {showAdjustMenu && (
+                <div className="absolute bottom-full right-5 mb-2 grid w-64 grid-cols-2 gap-2 rounded-md border-2 bg-white/10 p-4 backdrop-blur-md hover:border-white lg:grid-cols-1">
+                  <div className="mb-1">
+                    <label className="block text-sm font-medium text-white">
+                      Brightness
+                    </label>
+                    <input
+                      type="range"
+                      min="-100"
+                      max="100"
+                      value={brightness}
+                      onChange={(e) => setBrightness(Number(e.target.value))}
+                      className="h-1 w-full cursor-pointer accent-blue-500"
+                    />
+                  </div>
+                  <div className="mb-1">
+                    <label className="block text-sm font-medium text-white">
+                      Contrast
+                    </label>
+                    <input
+                      type="range"
+                      min="-100"
+                      max="100"
+                      value={contrast}
+                      onChange={(e) => setContrast(Number(e.target.value))}
+                      className="h-1 w-full cursor-pointer accent-blue-500"
+                    />
+                  </div>
+                  <div className="mb-1">
+                    <label className="block text-sm font-medium text-white">
+                      Vibrance
+                    </label>
+                    <input
+                      type="range"
+                      min="-100"
+                      max="100"
+                      value={vibrance}
+                      onChange={(e) => setVibrance(Number(e.target.value))}
+                      className="h-1 w-full cursor-pointer accent-blue-500"
+                    />
+                  </div>
+                  <div className="mb-1">
+                    <label className="block text-sm font-medium text-white">
+                      Exposure
+                    </label>
+                    <input
+                      type="range"
+                      min="-100"
+                      max="100"
+                      value={exposure}
+                      onChange={(e) => setExposure(Number(e.target.value))}
+                      className="h-1 w-full cursor-pointer accent-blue-500"
+                    />
+                  </div>
+                  <div className="mb-1">
+                    <label className="block text-sm font-medium text-white">
+                      Temperature
+                    </label>
+                    <input
+                      type="range"
+                      min="-100"
+                      max="100"
+                      value={temperature}
+                      onChange={(e) => setTemperature(Number(e.target.value))}
+                      className="h-1 w-full cursor-pointer accent-blue-500"
+                    />
+                  </div>
+                  <div className="mb-1">
+                    <label className="block text-sm font-medium text-white">
+                      Sharpness
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={sharpness}
+                      onChange={(e) => setSharpness(Number(e.target.value))}
+                      className="h-1 w-full cursor-pointer accent-blue-500"
+                    />
+                  </div>
+                  <div className="mb-1">
+                    <label className="block text-sm font-medium text-white">
+                      Vignette
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={vignette}
+                      onChange={(e) => setVignette(Number(e.target.value))}
+                      className="h-1 w-full cursor-pointer accent-blue-500"
+                    />
+                  </div>
+                  <div className="mb-1">
+                    <label className="block text-sm font-medium text-white">
+                      Highlights
+                    </label>
+                    <input
+                      type="range"
+                      min="-100"
+                      max="100"
+                      value={highlights}
+                      onChange={(e) => setHighlights(Number(e.target.value))}
+                      className="h-1 w-full cursor-pointer accent-blue-500"
+                    />
+                  </div>
+                </div>
+              )}
+              {onaspect && (
+                <>
+                  <div className="absolute bottom-full mb-2 w-32 rounded-md bg-white/20 backdrop-blur-md sm:right-1">
+                    <div className="mb-1 mt-1 flex flex-col justify-center gap-1">
+                      <div
+                        className="w-full p-2 text-center hover:bg-slate-400"
+                        onClick={() => setaspect(16 / 9)}
+                      >
+                        16/9
+                      </div>
+                      <div
+                        className="w-full p-2 text-center hover:bg-slate-400"
+                        onClick={() => setaspect(3 / 4)}
+                      >
+                        3/4
+                      </div>
+                      <div
+                        className="w-full p-2 text-center hover:bg-slate-400"
+                        onClick={() => setaspect(1 / 1)}
+                      >
+                        1:1
+                      </div>
+                      <div
+                        className="flex w-full justify-center p-2 text-center hover:bg-slate-400"
+                        onClick={() => setaspect(9 / 16)}
+                      >
+                        <Instagram></Instagram>
+                      </div>
+                      <div
+                        className="flex w-full justify-center p-2 text-center hover:bg-slate-400"
+                        onClick={() => setaspect(undefined)}
+                      >
+                        <X></X>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
@@ -600,8 +910,42 @@ const MediaView: React.FC<MediaViewProps> = ({
           {notification.message}
         </div>
       )}
+
+      {showInfo && (
+        <div className="absolute left-4 top-4 z-50 rounded-lg bg-white/20 p-4 backdrop-blur-md">
+          <h3 className="mb-2 text-lg font-bold text-white">Image Info</h3>
+          <p className="text-white">Path: {allMedia[globalIndex].path}</p>
+        </div>
+      )}
     </div>
   );
 };
 
 export default MediaView;
+
+const TemperatureFilter = ({
+  temperature,
+  intensity = 1.5,
+}: {
+  temperature: number;
+  intensity?: number;
+}) => {
+  // Amplify the temperature value
+  const factor = (temperature * intensity) / 100;
+  // Calculate red and blue multipliers.
+  // For positive temperature, red increases and blue decreases.
+  // For negative temperature, red decreases and blue increases.
+  const rMult = (1 + factor).toFixed(2);
+  const bMult = (1 - factor).toFixed(2);
+
+  return (
+    <svg width="0" height="0" style={{ position: 'absolute' }}>
+      <filter id="temp">
+        <feColorMatrix
+          type="matrix"
+          values={`${rMult} 0 0 0 0  0 1 0 0 0  0 0 ${bMult} 0 0  0 0 0 1 0`}
+        />
+      </filter>
+    </svg>
+  );
+};

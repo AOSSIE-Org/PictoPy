@@ -1,27 +1,18 @@
 # PowerShell script to set up Tauri development environment on Windows
-
 # Function to check if a command exists
 function Test-Command($command) {
     $oldPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Stop'
-
-    try {
-        Get-Command -Name $command -ErrorAction Stop | Out-Null
-        return $true
-    } catch {
-        return $false
-    } finally {
-        $ErrorActionPreference = $oldPreference
-    }
+    $ErrorActionPreference = 'stop'
+    try { if (Get-Command $command) { return $true } }
+    catch { return $false }
+    finally { $ErrorActionPreference = $oldPreference }
 }
-
 # Function to install Chocolatey
 function Install-Chocolatey {
     Set-ExecutionPolicy Bypass -Scope Process -Force
     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
     Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 }
-
 # Check and install Chocolatey
 if (-not (Test-Command choco)) {
     Write-Host "Chocolatey is not installed. Installing..." -ForegroundColor Yellow

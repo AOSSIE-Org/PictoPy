@@ -97,7 +97,6 @@ Handles file system operations and provides a secure bridge between the frontend
    ```
 
    On Windows:
-
    ```
    ./setup_win.ps1
    ```
