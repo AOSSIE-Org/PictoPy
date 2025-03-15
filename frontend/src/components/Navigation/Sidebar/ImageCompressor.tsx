@@ -5,7 +5,10 @@ import { writeFile } from '@tauri-apps/plugin-fs';
 
 // Improved environment checker utility
 const isTauriApp = () => {
-  return window.__TAURI__ !== undefined;
+  const isTauri =
+    typeof window !== 'undefined' && window.__TAURI__ !== undefined;
+  console.log('Environment check - Tauri available:', isTauri);
+  return isTauri;
 };
 
 // Define the CompressedImage interface
@@ -39,14 +42,27 @@ const ImageCompressor: React.FC = () => {
 
   // Check if we're running in a Tauri environment or a browser
   useEffect(() => {
-    setIsTauriEnvironment(isTauriApp());
+    try {
+      console.log('Running environment check...');
+      const isInTauri = isTauriApp();
+      console.log('Setting environment state to:', isInTauri);
+      setIsTauriEnvironment(isInTauri);
 
-    if (!isTauriApp()) {
-      console.log(
-        'Running in browser environment. Using browser download API as fallback.',
-      );
-    } else {
-      console.log('Running in Tauri environment. Using native file dialog.');
+      // Check for Tauri plugins availability
+      if (isInTauri) {
+        console.log('Tauri import check - Dialog plugin:', typeof save);
+        console.log('Tauri import check - FS plugin:', typeof writeFile);
+        console.log(
+          'Running in Tauri environment. Will use native file dialog.',
+        );
+      } else {
+        console.log(
+          'Running in browser environment. Will use browser download API as fallback.',
+        );
+      }
+    } catch (error) {
+      console.error('Error during environment detection:', error);
+      setIsTauriEnvironment(false);
     }
   }, []);
 
@@ -211,16 +227,24 @@ const ImageCompressor: React.FC = () => {
    * @param image - The compressed image to download.
    */
   const handleDownload = async (image: CompressedImage) => {
+    console.log('Download initiated for image:', image.originalFile.name);
     try {
       // Set downloading state
       setDownloadingImages((prev) => [...prev, image.id]);
+      console.log('Download state set, checking environment...');
 
       // Choose download method based on environment
       if (isTauriEnvironment) {
+        console.log('Using Tauri native dialog for download');
         try {
           // Tauri desktop environment - use native save dialog
           // Show the save dialog to let the user choose where to save the file
           const defaultPath = `compressed_${image.originalFile.name}`;
+          console.log(
+            'Calling Tauri save dialog with defaultPath:',
+            defaultPath,
+          );
+
           const filePath = await save({
             defaultPath,
             title: 'Save Compressed Image',
@@ -232,8 +256,14 @@ const ImageCompressor: React.FC = () => {
             ],
           });
 
+          console.log(
+            'Save dialog result:',
+            filePath ? `Path selected: ${filePath}` : 'Dialog canceled',
+          );
+
           // If user canceled the dialog
           if (!filePath) {
+            console.log('User canceled the save dialog');
             setDownloadingImages((prev) =>
               prev.filter((id) => id !== image.id),
             );
@@ -241,24 +271,28 @@ const ImageCompressor: React.FC = () => {
           }
 
           // Convert the Blob to an ArrayBuffer
+          console.log('Converting blob to ArrayBuffer...');
           const arrayBuffer = await image.compressedBlob.arrayBuffer();
           // Convert ArrayBuffer to Uint8Array which Tauri's writeFile expects
           const uint8Array = new Uint8Array(arrayBuffer);
 
           // Write the file to the selected location
+          console.log('Writing file to:', filePath);
           await writeFile(filePath, uint8Array);
+          console.log('File successfully written');
 
           // Show a success notification
           addNotification('success', 'Download Successful');
         } catch (tauriError) {
-          console.error(
-            'Tauri save dialog failed, falling back to browser download:',
-            tauriError,
+          console.error('Tauri download error details:', tauriError);
+          console.warn(
+            'Tauri save dialog failed, falling back to browser download',
           );
           // If Tauri APIs fail for some reason, fall back to browser download
           handleBrowserDownload(image);
         }
       } else {
+        console.log('Using browser download API');
         // Browser environment - use browser's download API
         handleBrowserDownload(image);
       }
@@ -268,6 +302,7 @@ const ImageCompressor: React.FC = () => {
       addNotification('error', `Failed to save image: ${error}`);
     } finally {
       // Clear downloading state
+      console.log('Clearing download state');
       setDownloadingImages((prev) => prev.filter((id) => id !== image.id));
     }
   };
