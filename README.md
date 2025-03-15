@@ -140,7 +140,7 @@ npm run tauri build
 
 ### Python Backend Setup
 
-**Note:** For backend setup makes sure that you have Python version 3.12 or lower. Additionally, for Windows, make sure that you are using powershell for the setup, not command prompt.
+**Note:** For backend setup make sure that you have Python version 3.12 or lower. Additionally, for Windows, make sure that you are using powershell for the setup, not command prompt.
 
 #### Installation Steps
 
