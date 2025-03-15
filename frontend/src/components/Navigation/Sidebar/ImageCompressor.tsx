@@ -3,8 +3,18 @@ import { Upload, Download, Trash2, RefreshCw } from 'lucide-react';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
 
+// Environment flag for testing
+// Options: null (auto-detect), false (force browser), true (force Tauri)
+const FORCE_MODE: boolean | null = false;
+
 // Improved environment checker utility
 const isTauriApp = () => {
+  // If force mode is set (not null), use that value
+  if (FORCE_MODE !== null) {
+    console.log(`Forcing ${FORCE_MODE ? 'Tauri' : 'browser'} mode`);
+    return FORCE_MODE;
+  }
+
   // Method 1: Standard detection
   const isTauri =
     typeof window !== 'undefined' && window.__TAURI__ !== undefined;
@@ -16,7 +26,7 @@ const isTauriApp = () => {
   const hasTauriGlobal =
     typeof window !== 'undefined' &&
     'Capacitor' in window === false &&
-    '__TAURI_IPC__' in window;
+    ('__TAURI_IPC__' in window || '__TAURI__' in window);
 
   console.log('Environment check details:', {
     standardDetection: isTauri,
@@ -26,9 +36,6 @@ const isTauriApp = () => {
 
   // Use any method that works
   const result = isTauri || isTauriPort || hasTauriGlobal;
-
-  // TESTING ONLY: Uncomment the next line to force Tauri mode for testing
-  // return true;
 
   console.log('Final environment detection result:', result);
   return result;
@@ -62,6 +69,8 @@ const ImageCompressor: React.FC = () => {
   const [maxHeight, setMaxHeight] = useState<number>(1080);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isTauriEnvironment, setIsTauriEnvironment] = useState<boolean>(false);
+  const [isDialogPluginAvailable, setIsDialogPluginAvailable] =
+    useState<boolean>(false);
 
   // Check if we're running in a Tauri environment or a browser
   useEffect(() => {
@@ -73,26 +82,39 @@ const ImageCompressor: React.FC = () => {
 
       // Check for Tauri plugins availability
       if (isInTauri) {
+        const isSaveAvailable = typeof save === 'function';
+        const isWriteFileAvailable = typeof writeFile === 'function';
+
         console.log(
           'Tauri import check - Dialog plugin available:',
-          typeof save === 'function',
+          isSaveAvailable,
         );
         console.log(
           'Tauri import check - FS plugin available:',
-          typeof writeFile === 'function',
+          isWriteFileAvailable,
         );
 
-        if (typeof save !== 'function') {
-          console.error('Tauri dialog plugin not properly loaded!');
+        setIsDialogPluginAvailable(isSaveAvailable);
+
+        if (!isSaveAvailable) {
+          console.error(
+            'Tauri dialog plugin not properly loaded! Will use browser fallback.',
+          );
         }
 
-        if (typeof writeFile !== 'function') {
+        if (!isWriteFileAvailable) {
           console.error('Tauri fs plugin not properly loaded!');
         }
 
-        console.log(
-          'Running in Tauri environment. Will use native file dialog.',
-        );
+        if (isSaveAvailable && isWriteFileAvailable) {
+          console.log(
+            'Running in Tauri environment with all plugins available. Will use native file dialog.',
+          );
+        } else {
+          console.log(
+            'Running in Tauri environment but some plugins are missing. May use fallbacks.',
+          );
+        }
       } else {
         console.log(
           'Running in browser environment. Will use browser download API as fallback.',
@@ -271,11 +293,10 @@ const ImageCompressor: React.FC = () => {
       setDownloadingImages((prev) => [...prev, image.id]);
       console.log('Download state set, checking environment...');
 
-      // Choose download method based on environment
-      if (isTauriEnvironment) {
+      // Use Tauri dialog only if environment is Tauri AND dialog plugin is available
+      if (isTauriEnvironment && isDialogPluginAvailable) {
         console.log('Using Tauri native dialog for download');
         try {
-          // Tauri desktop environment - use native save dialog
           // Show the save dialog to let the user choose where to save the file
           const defaultPathValue = `compressed_${image.originalFile.name}`;
           console.log(
@@ -288,16 +309,17 @@ const ImageCompressor: React.FC = () => {
             console.warn(
               'Dialog may not be showing - potential issue with Tauri dialog plugin',
             );
-            // Show an notification to let the user know there's an issue
+            // Show a notification to let the user know there's an issue
             addNotification(
               'error',
               'Having trouble showing the save dialog. Using browser download instead.',
             );
             // Fall back to browser download
             handleBrowserDownload(image);
-          }, 3000); // Give it 3 seconds to show the dialog
+          }, 5000); // Give it 5 seconds to show the dialog
 
           try {
+            // Try to show the save dialog
             const filePath = await save({
               defaultPath: defaultPathValue,
               title: 'Save Compressed Image',
@@ -368,7 +390,9 @@ const ImageCompressor: React.FC = () => {
           handleBrowserDownload(image);
         }
       } else {
-        console.log('Using browser download API');
+        console.log(
+          'Using browser download API (environment or plugin check failed)',
+        );
         // Browser environment - use browser's download API
         handleBrowserDownload(image);
       }
