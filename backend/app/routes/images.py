@@ -306,7 +306,6 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
         )
 
 
-
 @router.get(
     "/all-image-objects",
     response_model=GetAllImageObjectsResponse,
@@ -404,7 +403,7 @@ async def add_folder(payload: AddFolderRequest):
                         message="The provided path is not a valid directory",
                     ).model_dump(),
                 )
-            
+
             if (
                 not os.access(folder, os.R_OK)
                 or not os.access(folder, os.W_OK)
@@ -419,8 +418,7 @@ async def add_folder(payload: AddFolderRequest):
                         message="The app does not have read and write permissions for the specified folder",
                     ),
                 )
-            
-            
+
             folder_id = get_folder_id_from_path(folder)
             if folder_id is None:
                 folder_id = insert_folder(folder)
@@ -460,20 +458,20 @@ async def add_folder(payload: AddFolderRequest):
                     message="No valid images found in the specified folder",
                     success=True,
                 )
-            
+
             progress_status[folder_id] = {
                 "total": len(tasks),
                 "completed": 0,
                 "status": "pending",
             }
             asyncio.create_task(process_images(tasks, folder_id))
-        
+
         return AddFolderResponse(
             data=len(tasks),
             message=f"Processing {len(tasks)} images from the folder in the background",
             success=True,
         )
-       
+
     except Exception as e:
         print(e)
 
