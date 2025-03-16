@@ -33,9 +33,10 @@ const AlbumsView: React.FC = () => {
     description: string;
   } | null>(null);
 
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
+  if (isLoading)
+    <div className="flex h-full w-full items-center justify-center">
+      <LoadingScreen message="Loading Albums..." />
+    </div>;
   const showErrorDialog = (title: string, err: unknown) => {
     setErrorDialogContent({
       title,

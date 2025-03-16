@@ -32,4 +32,3 @@ services:
 volumes:
   frontend-data:
   images-data:
-

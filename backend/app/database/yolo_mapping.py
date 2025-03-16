@@ -1,5 +1,5 @@
 import sqlite3
-from app.config.settings import MAPPINGS_DATABASE_PATH
+from app.config.settings import DATABASE_PATH
 from app.yolov8.utils import class_names
 
 
@@ -8,7 +8,7 @@ def create_YOLO_mappings():
     import os
 
     print(os.getcwd())
-    conn = sqlite3.connect(MAPPINGS_DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     cursor.execute(

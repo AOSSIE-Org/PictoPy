@@ -6,10 +6,5 @@ DEFAULT_FACENET_MODEL = "app/models/facenet.onnx"
 TEST_INPUT_PATH = "tests/inputs"
 TEST_OUTPUT_PATH = "tests/outputs"
 
-IMAGES_PATH = "./images"
-
-IMAGES_DATABASE_PATH = "app/database/images.db"
-ALBUM_DATABASE_PATH = "app/database/albums.db"
-MAPPINGS_DATABASE_PATH = "app/database/yolo_mapping.db"
-FACES_DATABASE_PATH = "app/database/faces.db"
-CLUSTERS_DATABASE_PATH = "app/database/clusters.db"
+DATABASE_PATH = "app/database/PictoPy.db"
+THUMBNAIL_IMAGES_PATH = "./images"

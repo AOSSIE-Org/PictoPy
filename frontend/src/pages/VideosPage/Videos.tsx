@@ -7,9 +7,10 @@ const Videos: React.FC = () => {
   const [currentPaths] = useLocalStorage<string[]>('folderPaths', []);
   const { videos, loading } = useVideos(currentPaths);
 
-  if (loading) {
-    return <LoadingScreen />;
-  }
+  if (loading)
+    <div className="flex h-full w-full items-center justify-center">
+      <LoadingScreen />
+    </div>;
 
   return (
     <>
