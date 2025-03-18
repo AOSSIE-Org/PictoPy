@@ -34,4 +34,10 @@ body:
           required: false
         - label: "Have you made sure code formatting is correct?"
           required: true
+        - label: "Do Your changes passes all tests?"
+          required: false
+
+
+
+        
         
