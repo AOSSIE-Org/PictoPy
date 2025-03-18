@@ -34,3 +34,6 @@ body:
           required: false
         - label: "Have you made sure code formatting is correct?"
           required: true
+        - label: "Does it contain any style related issues?"
+          required: false
+          
