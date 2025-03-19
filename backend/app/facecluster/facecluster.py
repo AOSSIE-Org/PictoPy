@@ -118,7 +118,7 @@ class FaceCluster:
         metric: str = "cosine",
         db_path: Union[str, Path] = CLUSTERS_DATABASE_PATH,
         batch_size: int = 100,
-        batch_threshold: int = 20
+        batch_threshold: int = 20,
     ) -> None:
         """
         Initialize the face cluster manager.
@@ -138,7 +138,7 @@ class FaceCluster:
         self.batch_threshold = batch_threshold
         self.pending_embeddings: List[NDArray] = []
         self.pending_image_ids: List[str] = []
-        
+
         logger.debug(f"Initializing DBSCAN with eps={eps}")
         self.dbscan = DBSCAN(
             eps=eps,
@@ -229,16 +229,16 @@ class FaceCluster:
     def add_face(self, embedding: NDArray, image_path: str) -> Dict[int, List[str]]:
         """
         Add a new face embedding to the clusters with batching support.
-        
+
         Args:
             embedding: Face embedding vector
             image_path: Path to the image
-            
+
         Returns:
             Updated clustering results
         """
         image_id = get_id_from_path(image_path)
-        
+
         # Add to pending batch
         self.pending_embeddings.append(embedding)
         self.pending_image_ids.append(image_id)
@@ -246,7 +246,7 @@ class FaceCluster:
         # Process batch if threshold reached
         if len(self.pending_embeddings) >= self.batch_threshold:
             return self._process_batch()
-            
+
         # Otherwise return current clusters without updating
         return self.get_clusters()
 
@@ -262,27 +262,30 @@ class FaceCluster:
         else:
             # Vectorized distance calculation for all pending embeddings
             distances = cosine_distances(
-                np.array(self.pending_embeddings),
-                self.embeddings
+                np.array(self.pending_embeddings), self.embeddings
             )
-            
+
             new_labels = []
             for dist_row in distances:
                 nearest_neighbor = np.argmin(dist_row)
                 if dist_row[nearest_neighbor] <= self.eps:
                     new_labels.append(self.labels[nearest_neighbor])
                 else:
-                    new_labels.append(max(self.labels) + 1 if len(self.labels) > 0 else 0)
-            
+                    new_labels.append(
+                        max(self.labels) + 1 if len(self.labels) > 0 else 0
+                    )
+
             # Update state
-            self.embeddings = np.vstack([self.embeddings, np.array(self.pending_embeddings)])
+            self.embeddings = np.vstack(
+                [self.embeddings, np.array(self.pending_embeddings)]
+            )
             self.image_ids.extend(self.pending_image_ids)
             self.labels = np.append(self.labels, new_labels)
 
         # Clear pending
         self.pending_embeddings = []
         self.pending_image_ids = []
-        
+
         self._clear_caches()
         self.save_to_db()
         return self.get_clusters()
@@ -367,7 +370,9 @@ class FaceCluster:
             )
 
     @classmethod
-    def load_from_db(cls, db_path: Union[str, Path] = CLUSTERS_DATABASE_PATH) -> "FaceCluster":
+    def load_from_db(
+        cls, db_path: Union[str, Path] = CLUSTERS_DATABASE_PATH
+    ) -> "FaceCluster":
         """
         Load clustering state from database.
 

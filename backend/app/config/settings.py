@@ -17,8 +17,14 @@ MAPPINGS_DATABASE_PATH = DATA_DIR / "mappings.db"
 CLUSTERS_DATABASE_PATH = DATA_DIR / "clusters.db"
 
 # Create data directory if it doesn't exist
-for db_path in [DATABASE_PATH, FACES_DATABASE_PATH, IMAGES_DATABASE_PATH, 
-                ALBUM_DATABASE_PATH, MAPPINGS_DATABASE_PATH, CLUSTERS_DATABASE_PATH]:
+for db_path in [
+    DATABASE_PATH,
+    FACES_DATABASE_PATH,
+    IMAGES_DATABASE_PATH,
+    ALBUM_DATABASE_PATH,
+    MAPPINGS_DATABASE_PATH,
+    CLUSTERS_DATABASE_PATH,
+]:
     os.makedirs(db_path.parent, exist_ok=True)
 
 # Model paths
@@ -37,5 +43,3 @@ THUMBNAIL_IMAGES_PATH = "./images"
 # Ensure images directory exists
 os.makedirs(IMAGES_PATH, exist_ok=True)
 os.makedirs(THUMBNAIL_IMAGES_PATH, exist_ok=True)
-
-

@@ -92,7 +92,9 @@ def remove_thumbnail(image_path: str) -> None:
     """Remove thumbnail for a given image if it exists"""
     try:
         image_name = os.path.basename(image_path)
-        thumbnail_path = os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails", image_name)
+        thumbnail_path = os.path.join(
+            THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails", image_name
+        )
         if os.path.exists(thumbnail_path):
             os.remove(thumbnail_path)
     except Exception:

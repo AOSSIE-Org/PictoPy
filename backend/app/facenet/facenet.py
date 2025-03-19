@@ -57,15 +57,16 @@ def extract_face_embeddings(img_path):
 
     return embeddings
 
+
 def detect_faces(img_path: str, progress_tracker: Optional[ProgressTracker] = None):
     """Modified to support progress tracking"""
     yolov8_detector = YOLOv8(
         DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.2, iou_thres=0.3
     )
-    
+
     if progress_tracker:
         progress_tracker.update(status="Loading image")
-    
+
     img = cv2.imread(img_path)
     if img is None:
         print(f"Failed to load image: {img_path}")
@@ -73,7 +74,7 @@ def detect_faces(img_path: str, progress_tracker: Optional[ProgressTracker] = No
 
     if progress_tracker:
         progress_tracker.update(status="Detecting faces")
-    
+
     boxes, scores, class_ids = yolov8_detector(img)
 
     processed_faces, embeddings = [], []
@@ -81,7 +82,7 @@ def detect_faces(img_path: str, progress_tracker: Optional[ProgressTracker] = No
         if score > 0.5:
             if progress_tracker:
                 progress_tracker.update(status="Processing face")
-            
+
             x1, y1, x2, y2 = map(int, box)
             face_img = img[y1:y2, x1:x2]
             padding = 20
@@ -98,7 +99,7 @@ def detect_faces(img_path: str, progress_tracker: Optional[ProgressTracker] = No
     if embeddings:
         if progress_tracker:
             progress_tracker.update(status="Saving embeddings")
-            
+
         insert_face_embeddings(img_path, embeddings)
         clusters = get_face_cluster()
         for embedding in embeddings:

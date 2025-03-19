@@ -148,10 +148,7 @@ def delete_multiple_images(payload: dict):
         return JSONResponse(
             status_code=200,
             content={
-                "data": {
-                    "deleted_paths": deleted_paths,
-                    "failed_paths": failed_paths
-                },
+                "data": {"deleted_paths": deleted_paths, "failed_paths": failed_paths},
                 "message": "Images processed successfully",
                 "success": True,
             },
