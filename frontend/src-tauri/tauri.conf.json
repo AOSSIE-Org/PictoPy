@@ -29,8 +29,17 @@
   "identifier": "com.yourcompany.pictopy",
   "plugins": {
     "fs": {
+
+      "scope": ["**"]
+    },
+    "shell": {
+      "open": true
+    },
+    "dialog": null
+
       "requireLiteralLeadingDot": true
     }
+
   },
   "app": {
     "windows": [
@@ -40,15 +49,17 @@
         "height": 600,
         "resizable": true,
         "fullscreen": false,
-        "maximized": false
+        "decorations": true,
+        "label": "main"
       }
     ],
     "security": {
+      "csp": null,
+      "capabilities": ["main-capability"],
       "assetProtocol": {
-        "scope": ["**"],
-        "enable": true
-      },
-      "csp": null
+        "enable": true,
+        "scope": ["**"]
+      }
     }
   }
 }
