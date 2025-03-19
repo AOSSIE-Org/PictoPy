@@ -150,11 +150,11 @@ const Sidebar: React.FC = () => {
       {/* Sidebar */}
       <div className="h-fit p-4">
         <nav
-          className="sidebar rounded-3xl relative z-10 flex h-[calc(100vh-2rem)] flex-col justify-between overflow-hidden border-r backdrop-blur-sm transition-all duration-300 ease-in-out"
+          className="sidebar rounded-3xl relative z-10 flex h-[calc(100vh-2rem)] flex-col justify-between overflow-hidden border backdrop-blur-sm transition-all duration-300 ease-in-out"
           style={sidebarStyle}
           aria-label="Main Navigation"
         >
-          <div className="scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent mt-4 flex flex-col items-center overflow-y-auto">
+          <div className="scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent mt-4 flex flex-col items-center ">
             {/* Avatar Section */}
             <div className="group relative mb-6 flex w-full justify-center px-4">
               <div
@@ -273,7 +273,7 @@ const Sidebar: React.FC = () => {
           <div className="mt-auto flex items-center justify-center p-3">
             <button
               onClick={() => setShowCustomize(true)}
-              className="rounded-full bg-[var(--bg-hover)] p-3 shadow-md transition-all duration-300 hover:bg-[var(--bg-active)] hover:shadow-lg focus:outline-none"
+              className="rounded-full bg-[var(--bg-hover)] p-3 shadow-md transition-all duration-300 hover:bg-[var(--bg-active)] hover:shadow-lg bg-blue-500 focus:outline-none"
               aria-label="Customize sidebar"
               onKeyDown={handleKeyDown}
             >
