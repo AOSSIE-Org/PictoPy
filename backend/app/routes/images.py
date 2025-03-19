@@ -90,73 +90,69 @@ def delete_multiple_images(payload: dict):
             return JSONResponse(
                 status_code=400,
                 content={
-                    "status_code": 400,
-                    "content": {
-                        "success": False,
-                        "error": "Invalid 'paths' format",
-                        "message": "'paths' should be a list",
-                    },
+                    "success": False,
+                    "error": "Invalid 'paths' format",
+                    "message": "'paths' should be a list",
                 },
             )
 
         deleted_paths = []
         folder_paths = set()
+        failed_paths = []
 
         for path in paths:
+            try:
+                path = os.path.normpath(path)
+                folder_path, filename = os.path.split(path)
+                folder_paths.add(folder_path)
 
-            path = os.path.normpath(path)
-            folder_path, filename = os.path.split(path)
-            folder_paths.add(folder_path)
+                thumbnail_folder = os.path.abspath(
+                    os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails")
+                )
+                thumb_nail_image_path = os.path.join(thumbnail_folder, filename)
 
-            thumbnail_folder = os.path.abspath(
-                os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails")
-            )
-            thumb_nail_image_path = os.path.join(thumbnail_folder, filename)
+                # Check and remove the original file if it exists and we have permission
+                if os.path.exists(path):
+                    try:
+                        if is_from_device:
+                            os.remove(path)
+                    except (PermissionError, OSError) as e:
+                        print(f"Error removing file '{path}': {e}")
+                        failed_paths.append({"path": path, "error": str(e)})
 
-            print("File = ", filename)
-
-            # Check and remove the original file
-            if os.path.exists(path):
+                # Try to remove thumbnail if it exists, but don't fail if we can't
                 try:
-                    if is_from_device:
-                        os.remove(path)
-                except PermissionError:
-                    print(f"Permission denied for file '{path}'.")
-                except Exception as e:
-                    print(f"An error occurred: {e}")
-            else:
-                print(f"File '{path}' does not exist.")
+                    if os.path.exists(thumb_nail_image_path):
+                        os.remove(thumb_nail_image_path)
+                except (PermissionError, OSError) as e:
+                    print(f"Error removing thumbnail '{thumb_nail_image_path}': {e}")
 
-            # Check and remove the thumbnail file
-            if os.path.exists(thumb_nail_image_path):
-                try:
-                    os.remove(thumb_nail_image_path)
-                    print("Successfully removed!")
-                except PermissionError:
-                    print(f"Permission denied for file '{thumb_nail_image_path}'.")
-                except Exception as e:
-                    print(f"An error occurred: {e}")
-            else:
-                print(f"File '{thumb_nail_image_path}' does not exist.")
-
-            delete_image_db(path)
-            deleted_paths.append(path)
+                # Remove from database regardless of file existence
+                delete_image_db(path)
+                deleted_paths.append(path)
+            except Exception as e:
+                print(f"Error processing path '{path}': {e}")
+                failed_paths.append({"path": path, "error": str(e)})
 
         # Delete those folders , no image left
         for folder_path in folder_paths:
             try:
                 folder_id = get_folder_id_from_path(folder_path)
-                images = get_all_images_from_folder_id(folder_id)
-                if not len(images):
-                    delete_folder(folder_path)
-            except Exception:
-                print("Folder deletion Unsuccessful")
+                if folder_id is not None:  # Only try to delete if folder exists in DB
+                    images = get_all_images_from_folder_id(folder_id)
+                    if not len(images):
+                        delete_folder(folder_path)
+            except Exception as e:
+                print(f"Folder deletion unsuccessful for '{folder_path}': {e}")
 
         return JSONResponse(
             status_code=200,
             content={
-                "data": "Images",
-                "message": "Images deleted successfully",
+                "data": {
+                    "deleted_paths": deleted_paths,
+                    "failed_paths": failed_paths
+                },
+                "message": "Images processed successfully",
                 "success": True,
             },
         )
@@ -165,12 +161,9 @@ def delete_multiple_images(payload: dict):
         return JSONResponse(
             status_code=500,
             content={
-                "status_code": 500,
-                "content": {
-                    "success": False,
-                    "error": "Internal server error",
-                    "message": str(e),
-                },
+                "success": False,
+                "error": "Internal server error",
+                "message": str(e),
             },
         )
 

@@ -22,12 +22,20 @@ for db_path in [DATABASE_PATH, FACES_DATABASE_PATH, IMAGES_DATABASE_PATH,
     os.makedirs(db_path.parent, exist_ok=True)
 
 # Model paths
-DEFAULT_FACE_DETECTION_MODEL = BASE_DIR / "app" / "models" / "face_detection.onnx"
-DEFAULT_FACENET_MODEL = BASE_DIR / "app" / "models" / "facenet.onnx"
-DEFAULT_OBJ_DETECTION_MODEL = BASE_DIR / "app" / "models" / "yolov8n.onnx"
+DEFAULT_FACE_DETECTION_MODEL = "app/models/yolov8n-face.onnx"
+DEFAULT_FACENET_MODEL = "app/models/facenet.onnx"
+DEFAULT_OBJ_DETECTION_MODEL = "app/models/yolov8n.onnx"
 
-# Images path
+# Test paths
+TEST_INPUT_PATH = "tests/inputs"
+TEST_OUTPUT_PATH = "tests/outputs"
+
+# Images and thumbnails paths
 IMAGES_PATH = DATA_DIR / "images"
+THUMBNAIL_IMAGES_PATH = "./images"
+
+# Ensure images directory exists
 os.makedirs(IMAGES_PATH, exist_ok=True)
+os.makedirs(THUMBNAIL_IMAGES_PATH, exist_ok=True)
 
 
