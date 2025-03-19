@@ -29,12 +29,17 @@
   "identifier": "com.yourcompany.pictopy",
   "plugins": {
     "fs": {
+
       "scope": ["**"]
     },
     "shell": {
       "open": true
     },
     "dialog": null
+
+      "requireLiteralLeadingDot": true
+    }
+
   },
   "app": {
     "windows": [

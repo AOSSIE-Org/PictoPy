@@ -134,3 +134,6 @@ dmypy.json
 cython_debug/
 
 images/
+
+dist/
+tests/inputs/PictoPy.thumbnails/

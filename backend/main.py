@@ -10,21 +10,29 @@ from app.database.faces import cleanup_face_embeddings, create_faces_table
 from app.database.images import create_image_id_mapping_table, create_images_table
 from app.database.albums import create_albums_table
 from app.database.yolo_mapping import create_YOLO_mappings
+from app.database.folders import create_folders_table
 from app.facecluster.init_face_cluster import get_face_cluster, init_face_cluster
 from app.routes.test import router as test_router
 from app.routes.images import router as images_router
 from app.routes.albums import router as albums_router
 from app.routes.facetagging import router as tagging_router
 import multiprocessing
+from app.scheduler import start_scheduler
 from app.custom_logging import CustomizeLogger
+import os
+
+
+thumbnails_dir = os.path.join("images", "PictoPy.thumbnails")
+os.makedirs(thumbnails_dir, exist_ok=True)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_YOLO_mappings()
     create_faces_table()
-    create_image_id_mapping_table()
+    create_folders_table()
     create_images_table()
+    create_image_id_mapping_table()
     create_albums_table()
     cleanup_face_embeddings()
     init_face_cluster()
@@ -35,6 +43,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+start_scheduler()
 
 
 # Add CORS middleware

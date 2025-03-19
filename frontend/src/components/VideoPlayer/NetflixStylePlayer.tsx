@@ -20,14 +20,12 @@ interface NetflixStylePlayerProps {
 
 export default function NetflixStylePlayer({
   videoSrc,
-  title,
-  description,
 }: NetflixStylePlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
-  const [showControls, setShowControls] = useState(false); // Initially hidden
+  const [showControls, setShowControls] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -37,7 +35,7 @@ export default function NetflixStylePlayer({
     const showControlsTemporarily = () => {
       setShowControls(true);
       clearTimeout(timeout);
-      timeout = setTimeout(() => setShowControls(false), 3000); // Hide after 3 seconds
+      timeout = setTimeout(() => setShowControls(false), 3000);
     };
 
     const container = containerRef.current;
@@ -55,22 +53,29 @@ export default function NetflixStylePlayer({
     };
   }, []);
 
+  const formatTime = (timeInSeconds: number) => {
+    const hours = Math.floor(timeInSeconds / 3600);
+    const minutes = Math.floor((timeInSeconds % 3600) / 60);
+    const seconds = Math.floor(timeInSeconds % 60);
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
   const togglePlay = () => {
     if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
+      isPlaying ? videoRef.current.pause() : videoRef.current.play();
       setIsPlaying(!isPlaying);
     }
   };
 
   const handleProgress = () => {
     if (videoRef.current) {
-      const progress =
-        (videoRef.current.currentTime / videoRef.current.duration) * 100;
-      setProgress(progress);
+      setProgress(
+        (videoRef.current.currentTime / videoRef.current.duration) * 100,
+      );
     }
   };
 
@@ -87,11 +92,10 @@ export default function NetflixStylePlayer({
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
       containerRef.current?.requestFullscreen();
-      setIsFullscreen(true);
     } else {
       document.exitFullscreen();
-      setIsFullscreen(false);
     }
+    setIsFullscreen(!isFullscreen);
   };
 
   const skipTime = (seconds: number) => {
@@ -111,161 +115,78 @@ export default function NetflixStylePlayer({
 
   const toggleMute = () => {
     if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-      if (isMuted) {
-        videoRef.current.volume = volume;
-      } else {
-        setVolume(videoRef.current.volume);
-        videoRef.current.volume = 0;
-      }
-    }
-  };
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, []);
-
-  const handleVideoClick = (e: React.MouseEvent) => {
-    // Prevent video click from interfering with button click
-    e.stopPropagation();
-    togglePlay();
-  };
-
-  const handleContainerClick = (e: React.MouseEvent) => {
-    // Get container dimensions
-    const container = containerRef.current;
-    if (!container) return;
-
-    const { left, right, top, bottom, width, height } =
-      container.getBoundingClientRect();
-
-    // Define the clickable middle area (e.g., 40% of the width in the middle of the screen)
-    const middleAreaWidth = width * 0.4;
-    const middleAreaHeight = height * 0.4;
-    const centerX = (left + right) / 2;
-    const centerY = (top + bottom) / 2;
-
-    const clickX = e.clientX;
-    const clickY = e.clientY;
-
-    // Check if click is within the middle area
-    const withinX =
-      clickX >= centerX - middleAreaWidth / 2 &&
-      clickX <= centerX + middleAreaWidth / 2;
-    const withinY =
-      clickY >= centerY - middleAreaHeight / 2 &&
-      clickY <= centerY + middleAreaHeight / 2;
-
-    if (withinX && withinY) {
-      togglePlay();
-      setShowControls(true); // Show controls when clicked
+      const newMuteState = !isMuted;
+      videoRef.current.muted = newMuteState;
+      setIsMuted(newMuteState);
     }
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="relative z-10 aspect-video w-full bg-black"
-      onClick={handleContainerClick}
-    >
-      <video
-        ref={videoRef}
-        src={videoSrc}
-        className="h-full w-full"
-        onTimeUpdate={handleProgress}
-        onClick={handleVideoClick} // Updated to handle video click separately
-      />
-
-      {/* Center Play/Pause Button */}
-      {/* Center Play/Pause Button */}
+    <div ref={containerRef} className="relative aspect-video w-full bg-black">
+      {/* Clickable play/pause area above progress bar */}
       <div
-        className={`absolute inset-0 flex items-center justify-center ${!isPlaying ? 'opacity-100' : 'opacity-0'}`}
+        className="absolute inset-0 flex items-center justify-center"
+        onClick={togglePlay}
       >
-        <button
-          onClick={togglePlay}
-          className="rounded-full p-4 text-white transition-colors focus:outline-none"
-          aria-label={isPlaying ? 'Pause' : 'Play'}
-        >
-          {isPlaying ? <Pause size={40} /> : <Play size={40} />}
-        </button>
+        <video
+          ref={videoRef}
+          src={videoSrc}
+          className="h-full w-full"
+          onTimeUpdate={handleProgress}
+          preload="auto"
+        />
       </div>
 
-      {/* Overlay */}
+      {/* Progress Bar */}
       <div
-        className={`absolute inset-0 bg-gradient-to-t from-black/70 to-transparent transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute bottom-16 left-0 right-0 px-4 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}
       >
-        <div className="absolute bottom-16 left-8 text-white">
-          <h2 className="mb-2 text-4xl font-bold">{title}</h2>
-          <p className="text-lg">{description}</p>
+        <div
+          className="h-1 w-full cursor-pointer bg-gray-600"
+          onClick={handleProgressBarClick}
+        >
+          <div
+            className="h-full bg-red-600"
+            style={{ width: `${progress}%` }}
+          />
         </div>
       </div>
 
       {/* Controls */}
       <div
-        className={`absolute bottom-0 left-0 right-0 p-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute bottom-4 left-0 right-0 flex items-center justify-between px-4 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}
       >
         <div className="flex items-center space-x-4">
-          <button
-            onClick={() => skipTime(-10)}
-            className="rounded-full bg-white/30 p-2 text-white transition-colors hover:bg-white/50 focus:outline-none"
-            aria-label="Skip back 10 seconds"
-          >
+          <button onClick={() => skipTime(-10)} className="p-2 text-white">
             <Rewind size={24} />
           </button>
-          <button
-            onClick={togglePlay}
-            className="rounded-full bg-white/30 p-2 text-white transition-colors hover:bg-white/50 focus:outline-none"
-            aria-label={isPlaying ? 'Pause' : 'Play'}
-          >
+          <button onClick={togglePlay} className="p-2 text-white">
             {isPlaying ? <Pause size={24} /> : <Play size={24} />}
           </button>
-          <button
-            onClick={() => skipTime(10)}
-            className="rounded-full bg-white/30 p-2 text-white transition-colors hover:bg-white/50 focus:outline-none"
-            aria-label="Skip forward 10 seconds"
-          >
+          <button onClick={() => skipTime(10)} className="p-2 text-white">
             <FastForward size={24} />
           </button>
-          <div className="flex-grow">
-            <div
-              className="rounded-full h-1 cursor-pointer overflow-hidden bg-gray-600"
-              onClick={handleProgressBarClick}
-            >
-              <div
-                className="h-full bg-red-600"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+          <div className="text-white">
+            {formatTime(videoRef.current?.currentTime ?? 0) +
+              ' / ' +
+              formatTime(videoRef.current?.duration ?? 0)}
           </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={toggleMute}
-              className="text-white focus:outline-none"
-              aria-label={isMuted ? 'Unmute' : 'Mute'}
-            >
-              {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
-            </button>
-            <Slider
-              min={0}
-              max={1}
-              step={0.01}
-              value={[isMuted ? 0 : volume]}
-              onValueChange={handleVolumeChange}
-              className="w-24"
-            />
-          </div>
-          <button
-            onClick={toggleFullScreen}
-            className="text-white focus:outline-none"
-            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-          >
+        </div>
+
+        {/* Volume and Fullscreen */}
+        <div className="flex items-center space-x-4">
+          <button onClick={toggleMute} className="text-white">
+            {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+          </button>
+          <Slider
+            min={0}
+            max={1}
+            step={0.01}
+            value={[isMuted ? 0 : volume]}
+            onValueChange={handleVolumeChange}
+            className="w-24"
+          />
+          <button onClick={toggleFullScreen} className="text-white">
             {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
           </button>
         </div>
