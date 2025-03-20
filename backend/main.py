@@ -19,6 +19,7 @@ from app.routes.facetagging import router as tagging_router
 import multiprocessing
 from app.scheduler import start_scheduler
 from app.custom_logging import CustomizeLogger
+from app.database.connection_pool import initialize_pool, close_pool
 import os
 
 
@@ -28,6 +29,9 @@ os.makedirs(thumbnails_dir, exist_ok=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize database connection pool
+    initialize_pool()
+    
     create_YOLO_mappings()
     create_faces_table()
     create_folders_table()
@@ -40,6 +44,9 @@ async def lifespan(app: FastAPI):
     face_cluster = get_face_cluster()
     if face_cluster:
         face_cluster.save_to_db()
+    
+    # Close database connection pool
+    close_pool()
 
 
 app = FastAPI(lifespan=lifespan)
