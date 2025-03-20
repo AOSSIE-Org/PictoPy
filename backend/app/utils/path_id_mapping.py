@@ -3,7 +3,7 @@ import os
 from app.config.settings import DATABASE_PATH
 
 
-def get_path_from_id(image_id):
+def get_path_from_id(image_id) -> str | None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT path FROM image_id_mapping WHERE id = ?", (image_id,))
@@ -12,7 +12,7 @@ def get_path_from_id(image_id):
     return result[0] if result else None
 
 
-def get_id_from_path(path):
+def get_id_from_path(path) -> str | None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_path = os.path.abspath(path)

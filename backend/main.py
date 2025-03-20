@@ -19,6 +19,7 @@ from app.routes.facetagging import router as tagging_router
 import multiprocessing
 from app.scheduler import start_scheduler
 from app.custom_logging import CustomizeLogger
+from pathlib import Path
 import os
 
 
@@ -71,7 +72,7 @@ app.include_router(tagging_router, prefix="/tag", tags=["Tagging"])
 # Runs when we use this command: python3 main.py (As in production)
 if __name__ == "__main__":
     multiprocessing.freeze_support()  # Required for Windows.
-    app.logger = CustomizeLogger.make_logger("app/logging_config.json")
+    app.state.logger = CustomizeLogger.make_logger(Path("app/logging_config.json"))
     config = Config(app=app, host="0.0.0.0", port=8000, log_config=None)
     server = Server(config)
     server.run()

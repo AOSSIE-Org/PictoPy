@@ -1,12 +1,12 @@
 from contextlib import contextmanager
 import logging
-import onnxruntime
+import onnxruntime  # type: ignore
 
 logger = logging.getLogger(__name__)
 
 
 @contextmanager
-def onnx_session(model_path: str):
+def onnx_session(model_path: str) -> onnxruntime.InferenceSession:
     """
     Context manager for ONNX runtime sessions to ensure proper resource management.
 

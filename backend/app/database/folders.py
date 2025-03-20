@@ -3,7 +3,7 @@ import os
 from app.config.settings import DATABASE_PATH
 
 
-def create_folders_table():
+def create_folders_table() -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute(
@@ -19,7 +19,7 @@ def create_folders_table():
     conn.close()
 
 
-def insert_folder(folder_path):
+def insert_folder(folder_path) -> str | None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -58,7 +58,7 @@ def insert_folder(folder_path):
     return result[0] if result else None
 
 
-def get_folder_id_from_path(folder_path):
+def get_folder_id_from_path(folder_path) -> str | None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_folder_path = os.path.abspath(folder_path)
@@ -83,13 +83,13 @@ def get_folder_path_from_id(folder_id):
     return result[0] if result else None
 
 
-def get_all_folders():
+def get_all_folders() -> list[str]:
     with sqlite3.connect(DATABASE_PATH) as conn:
         rows = conn.execute("SELECT folder_path FROM folders").fetchall()
         return [row[0] for row in rows] if rows else []
 
 
-def get_all_folder_ids():
+def get_all_folder_ids() -> list[str]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT folder_id from folders")
@@ -97,7 +97,7 @@ def get_all_folder_ids():
     return [row[0] for row in rows] if rows else []
 
 
-def delete_folder(folder_path):
+def delete_folder(folder_path) -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_folder_path = os.path.abspath(folder_path)

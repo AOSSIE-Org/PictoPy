@@ -1,5 +1,5 @@
-from transformers import AutoModelForTokenClassification
-import torch
+from transformers import AutoModelForTokenClassification  # type: ignore
+import torch  # type: ignore
 
 # Pre-trained model name
 model_name = "dslim/bert-base-NER"

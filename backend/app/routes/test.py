@@ -4,7 +4,7 @@ from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 
 from app.config.settings import DEFAULT_FACE_DETECTION_MODEL
-from app.yolov8 import YOLOv8
+import app.yolov8.YOLOv8 as YOLOv8
 from app.yolov8.utils import class_names
 from app.utils.classification import get_classes
 from app.routes.images import get_all_image_paths
