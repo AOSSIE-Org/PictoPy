@@ -189,7 +189,6 @@ async def process_images(tasks, folder_id):
 def delete_image(payload: DeleteImageRequest):
     try:
         paths = payload["paths"]
-        is_from_device = payload["isFromDevice"]
         if not isinstance(paths, list):
             return JSONResponse(
                 status_code=400,
@@ -224,7 +223,7 @@ def delete_image(payload: DeleteImageRequest):
 def delete_multiple_images(payload: DeleteMultipleImagesRequest):
     try:
         paths = payload.paths
-        is_from_device = payload.isFromDevice
+        _is_from_device = payload.isFromDevice  # Prefix with underscore
         deleted_paths = []
         folder_paths = set()
         failed_paths = []
@@ -233,10 +232,7 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
             try:
                 if not os.path.isfile(path):
                     print(f"File not found: {path}")
-                    failed_paths.append({
-                        "path": path,
-                        "error": "File not found"
-                    })
+                    failed_paths.append({"path": path, "error": "File not found"})
                     continue
 
                 path = os.path.normpath(path)
@@ -251,7 +247,7 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
                 # Check and remove the original file if it exists and we have permission
                 if os.path.exists(path):
                     try:
-                        if is_from_device:
+                        if _is_from_device:
                             os.remove(path)
                     except (PermissionError, OSError) as e:
                         print(f"Error removing file '{path}': {e}")
@@ -283,12 +279,9 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
                 print(f"Folder deletion unsuccessful for '{folder_path}': {e}")
 
         return DeleteMultipleImagesResponse(
-            data={
-                "deleted_paths": deleted_paths,
-                "failed_paths": failed_paths
-            },
+            data={"deleted_paths": deleted_paths, "failed_paths": failed_paths},
             message="Images processed successfully",
-            success=True
+            success=True,
         )
 
     except Exception as e:
@@ -362,9 +355,11 @@ def get_class_ids(path: str = Query(...)):
         class_ids = get_objects_db(path)
         return ClassIDsResponse(
             success=True,
-            message="Successfully retrieved class IDs"
-            if class_ids
-            else "No class IDs found for the image",
+            message=(
+                "Successfully retrieved class IDs"
+                if class_ids
+                else "No class IDs found for the image"
+            ),
             data=class_ids if class_ids else "None",
         )
 
