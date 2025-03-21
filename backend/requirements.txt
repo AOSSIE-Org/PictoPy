@@ -36,6 +36,7 @@ pillow==10.3.0
 priority==2.0.0
 protobuf==5.26.1
 pydantic==2.7.1
+pydantic-settings==2.2.1
 pydantic_core==2.18.2
 Pygments==2.18.0
 python-dotenv==1.0.1

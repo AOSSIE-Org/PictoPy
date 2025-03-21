@@ -12,13 +12,11 @@ class YOLOv8:
         self.conf_threshold = conf_thres
         self.iou_threshold = iou_thres
 
-        # Initialize model info
+    def __call__(self, image):
         with onnx_session(self.model_path) as session:
             self.get_input_details(session)
             self.get_output_details(session)
-
-    def __call__(self, image):
-        return self.detect_objects(image)
+            return self.detect_objects(image)
 
     @log_memory_usage
     def detect_objects(self, image):
