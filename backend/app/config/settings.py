@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any
 from pathlib import Path
 import os
 
+
 class LogConfig(BaseSettings):
     """Logging configuration"""
     path: str = "logs/app.log"
@@ -31,4 +32,11 @@ class Settings(BaseSettings):
     thumbnail_path: str = THUMBNAIL_IMAGES_PATH
 
 settings = Settings()
+
+
+TEST_INPUT_PATH = "tests/inputs"
+TEST_OUTPUT_PATH = "tests/outputs"
+DATABASE_PATH = "app/database/PictoPy.db"
+THUMBNAIL_IMAGES_PATH = "./images"
+IMAGES_PATH = "./images"
 
