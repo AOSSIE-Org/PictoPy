@@ -35,11 +35,6 @@ DEFAULT_OBJ_DETECTION_MODEL = "app/models/yolov8n.onnx"
 # Test paths
 TEST_INPUT_PATH = "tests/inputs"
 TEST_OUTPUT_PATH = "tests/outputs"
-
-# Images and thumbnails paths
-IMAGES_PATH = DATA_DIR / "images"
+DATABASE_PATH = "app/database/PictoPy.db"
 THUMBNAIL_IMAGES_PATH = "./images"
-
-# Ensure images directory exists
-os.makedirs(IMAGES_PATH, exist_ok=True)
-os.makedirs(THUMBNAIL_IMAGES_PATH, exist_ok=True)
+IMAGES_PATH = "./images"

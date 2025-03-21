@@ -22,9 +22,9 @@ import {
   Folder,
   ExternalLink,
   Sliders,
-  SunIcon,
-  ContrastIcon,
+  Instagram,
 } from 'lucide-react';
+import { Crops } from '../ui/Icons/Icons';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { invoke } from '@tauri-apps/api/core';
@@ -53,6 +53,8 @@ const MediaView: React.FC<MediaViewProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<Crop>();
+  const [aspect, setaspect] = useState<number | undefined>(undefined);
+  const [onaspect, setonaspect] = useState(false);
   const [filter, setFilter] = useState('');
   const [brightness, setBrightness] = useState(0);
   const [contrast, setContrast] = useState(0);
@@ -459,8 +461,8 @@ const MediaView: React.FC<MediaViewProps> = ({
         )}
         {type === 'image' && !isSecureFolder && (
           <button
-            onClick={() => setIsEditing(true)}
-            className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
+            onClick={() => setIsEditing(!isEditing)}
+            className="rounded-full bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
             aria-label="Edit"
           >
             <Edit className="h-5 w-5" />
@@ -527,6 +529,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                 <ReactCrop
                   crop={crop}
                   onChange={(c) => setCrop(c)}
+                  aspect={aspect}
                   onComplete={(c) => setCompletedCrop(c)}
                 >
                   <TemperatureFilter temperature={temperature} />
@@ -628,19 +631,22 @@ const MediaView: React.FC<MediaViewProps> = ({
             title=""
           />
         )}
-
-        <button
-          onClick={handlePrevItem}
-          className="rounded-full absolute left-4 top-1/2 z-50 flex -translate-y-1/2 transform items-center bg-black/30 p-3 text-white backdrop-blur-md transition-all duration-200 hover:bg-black/50 hover:shadow-lg"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </button>
-        <button
-          onClick={handleNextItem}
-          className="rounded-full absolute right-4 top-1/2 z-50 flex -translate-y-1/2 transform items-center bg-black/30 p-3 text-white backdrop-blur-md transition-all duration-200 hover:bg-black/50 hover:shadow-lg"
-        >
-          <ChevronRight className="h-6 w-6" />
-        </button>
+        {!isEditing && (
+          <>
+            <button
+              onClick={handlePrevItem}
+              className="rounded-full absolute left-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+            <button
+              onClick={handleNextItem}
+              className="rounded-full absolute right-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
+          </>
+        )}
       </div>
 
       {type === 'image' ? (
@@ -674,199 +680,205 @@ const MediaView: React.FC<MediaViewProps> = ({
               <RotateCw className="h-5 w-5" />
             </button>
           </div>
-
           {isEditing && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={handleEditComplete}
-                className="rounded-md bg-emerald-500/70 p-2 text-white transition-all duration-200 hover:bg-emerald-600 hover:shadow-md"
-                aria-label="Confirm Edit"
-              >
-                <Check className="h-5 w-5" />
-              </button>
-              <button
-                onClick={resetEditing}
-                className="rounded-md bg-rose-500/70 p-2 text-white transition-all duration-200 hover:bg-rose-600 hover:shadow-md"
-                aria-label="Cancel Edit"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              <select
-                onChange={(e) => setFilter(e.target.value)}
-                className="rounded-md bg-white/10 px-2 py-2 text-sm text-white transition-all duration-200 hover:bg-white/20"
-              >
-                <option value="">No Filter</option>
-                <option value="grayscale(100%)">Grayscale</option>
-                <option value="sepia(100%)">Sepia</option>
-                <option value="invert(100%)">Invert</option>
-                <option value="saturate(200%)">Saturate</option>
-              </select>
-              <button
-                onClick={toggleAdjustMenu}
-                className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
-                aria-label="Adjust"
-              >
-                <Sliders className="h-5 w-5" />
-              </button>
-
-              {/* Quick adjustment controls */}
-              <div className="mt-2 flex w-full items-center gap-2">
-                <SunIcon className="h-4 w-4 text-white/80" />
-                <input
-                  type="range"
-                  min="0"
-                  max="200"
-                  value={brightness}
-                  onChange={(e) => setBrightness(Number(e.target.value))}
-                  className="h-2 w-24 appearance-none rounded-lg bg-white/20"
-                />
+            <>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleEditComplete}
+                  className="rounded-md bg-emerald-500/70 p-2 text-white transition-all duration-200 hover:bg-emerald-600 hover:shadow-md"
+                  aria-label="Confirm Edit"
+                >
+                  <Check className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={resetEditing}
+                  className="rounded-md bg-rose-500/70 p-2 text-white transition-all duration-200 hover:bg-rose-600 hover:shadow-md"
+                  aria-label="Cancel Edit"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <select
+                  onChange={(e) => setFilter(e.target.value)}
+                  className="rounded-md bg-white/10 px-2 py-2 text-sm text-white transition-all duration-200 hover:bg-white/20"
+                >
+                  <option value="">No Filter</option>
+                  <option value="grayscale(100%)">Grayscale</option>
+                  <option value="sepia(100%)">Sepia</option>
+                  <option value="invert(100%)">Invert</option>
+                  <option value="saturate(200%)">Saturate</option>
+                </select>
+                <button
+                  onClick={toggleAdjustMenu}
+                  className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
+                  aria-label="Adjust"
+                >
+                  <Sliders className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setonaspect(!onaspect)}
+                  className="rounded-md bg-white/20 p-2 text-white transition-colors duration-200 hover:bg-white/40"
+                  aria-label="Adjust"
+                >
+                  <Crops />
+                </button>
+                {showAdjustMenu && (
+                  <div className="absolute bottom-full right-5 mb-2 grid w-64 grid-cols-2 gap-2 rounded-md border-2 bg-white/10 p-4 backdrop-blur-md hover:border-white lg:grid-cols-1">
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Brightness
+                      </label>
+                      <input
+                        type="range"
+                        min="-100"
+                        max="100"
+                        value={brightness}
+                        onChange={(e) => setBrightness(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Contrast
+                      </label>
+                      <input
+                        type="range"
+                        min="-100"
+                        max="100"
+                        value={contrast}
+                        onChange={(e) => setContrast(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Vibrance
+                      </label>
+                      <input
+                        type="range"
+                        min="-100"
+                        max="100"
+                        value={vibrance}
+                        onChange={(e) => setVibrance(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Exposure
+                      </label>
+                      <input
+                        type="range"
+                        min="-100"
+                        max="100"
+                        value={exposure}
+                        onChange={(e) => setExposure(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Temperature
+                      </label>
+                      <input
+                        type="range"
+                        min="-100"
+                        max="100"
+                        value={temperature}
+                        onChange={(e) => setTemperature(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Sharpness
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={sharpness}
+                        onChange={(e) => setSharpness(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Vignette
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={vignette}
+                        onChange={(e) => setVignette(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <label className="block text-sm font-medium text-white">
+                        Highlights
+                      </label>
+                      <input
+                        type="range"
+                        min="-100"
+                        max="100"
+                        value={highlights}
+                        onChange={(e) => setHighlights(Number(e.target.value))}
+                        className="h-1 w-full cursor-pointer accent-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
+                {onaspect && (
+                  <div className="absolute bottom-full mb-2 w-32 rounded-md bg-white/20 backdrop-blur-md sm:right-1">
+                    <div className="mb-1 mt-1 flex flex-col justify-center gap-1">
+                      <div
+                        className="w-full p-2 text-center hover:bg-slate-400"
+                        onClick={() => setaspect(16 / 9)}
+                      >
+                        16/9
+                      </div>
+                      <div
+                        className="w-full p-2 text-center hover:bg-slate-400"
+                        onClick={() => setaspect(3 / 4)}
+                      >
+                        3/4
+                      </div>
+                      <div
+                        className="w-full p-2 text-center hover:bg-slate-400"
+                        onClick={() => setaspect(1 / 1)}
+                      >
+                        1:1
+                      </div>
+                      <div
+                        className="flex w-full justify-center p-2 text-center hover:bg-slate-400"
+                        onClick={() => setaspect(9 / 16)}
+                      >
+                        <Instagram></Instagram>
+                      </div>
+                      <div
+                        className="flex w-full justify-center p-2 text-center hover:bg-slate-400"
+                        onClick={() => setaspect(undefined)}
+                      >
+                        <X></X>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex w-full items-center gap-2">
-                <ContrastIcon className="h-4 w-4 text-white/80" />
-                <input
-                  type="range"
-                  min="0"
-                  max="200"
-                  value={contrast}
-                  onChange={(e) => setContrast(Number(e.target.value))}
-                  className="h-2 w-24 appearance-none rounded-lg bg-white/20"
-                />
-              </div>
-            </div>
+            </>
           )}
         </div>
       ) : null}
 
       {/* Adjust menu popup with improved styling */}
       {showAdjustMenu && (
-        <div className="rounded-xl absolute bottom-32 right-24 w-72 bg-black/50 p-5 shadow-xl backdrop-blur-lg">
-          <h4 className="mb-4 text-center text-sm font-medium text-white/90">
-            Image Adjustments
-          </h4>
-          <div className="mb-3">
-            <label className="mb-1 block text-xs font-medium text-white/80">
-              Brightness
-            </label>
-            <input
-              type="range"
-              min="-100"
-              max="100"
-              value={brightness}
-              onChange={(e) => setBrightness(Number(e.target.value))}
-              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
-            />
-            <div className="mt-1 flex justify-between text-xs text-white/60">
-              <span>-100</span>
-              <span>0</span>
-              <span>+100</span>
-            </div>
-          </div>
-
-          <div className="mb-3">
-            <label className="mb-1 block text-xs font-medium text-white/80">
-              Contrast
-            </label>
-            <input
-              type="range"
-              min="-100"
-              max="100"
-              value={contrast}
-              onChange={(e) => setContrast(Number(e.target.value))}
-              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
-            />
-          </div>
-
-          <div className="mb-3">
-            <label className="mb-1 block text-xs font-medium text-white/80">
-              Vibrance
-            </label>
-            <input
-              type="range"
-              min="-100"
-              max="100"
-              value={vibrance}
-              onChange={(e) => setVibrance(Number(e.target.value))}
-              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
-            />
-          </div>
-
-          <div className="mb-3">
-            <label className="mb-1 block text-xs font-medium text-white/80">
-              Exposure
-            </label>
-            <input
-              type="range"
-              min="-100"
-              max="100"
-              value={exposure}
-              onChange={(e) => setExposure(Number(e.target.value))}
-              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
-            />
-          </div>
-
-          <div className="mb-3">
-            <label className="mb-1 block text-xs font-medium text-white/80">
-              Temperature
-            </label>
-            <input
-              type="range"
-              min="-100"
-              max="100"
-              value={temperature}
-              onChange={(e) => setTemperature(Number(e.target.value))}
-              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
-            />
-          </div>
-
-          <div className="mb-3">
-            <label className="mb-1 block text-xs font-medium text-white/80">
-              Sharpness
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={sharpness}
-              onChange={(e) => setSharpness(Number(e.target.value))}
-              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
-            />
-          </div>
-
-          <div className="mb-3">
-            <label className="mb-1 block text-xs font-medium text-white/80">
-              Vignette
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={vignette}
-              onChange={(e) => setVignette(Number(e.target.value))}
-              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
-            />
-          </div>
-
-          <div className="mb-3">
-            <label className="mb-1 block text-xs font-medium text-white/80">
-              Highlights
-            </label>
-            <input
-              type="range"
-              min="-100"
-              max="100"
-              value={highlights}
-              onChange={(e) => setHighlights(Number(e.target.value))}
-              className="rounded-full h-1.5 w-full appearance-none bg-white/30"
-            />
-          </div>
-
-          <button
-            onClick={toggleAdjustMenu}
-            className="mt-2 w-full rounded-md bg-white/20 py-1.5 text-xs font-medium text-white transition-all hover:bg-white/30"
-          >
-            Close
-          </button>
-        </div>
+        <button
+          onClick={toggleAdjustMenu}
+          className="mt-2 w-full rounded-md bg-white/20 py-1.5 text-xs font-medium text-white transition-all hover:bg-white/30"
+        >
+          Close
+        </button>
       )}
 
       {/* Thumbnails with improved styling */}
@@ -911,7 +923,6 @@ const MediaView: React.FC<MediaViewProps> = ({
           {notification.message}
         </div>
       )}
-
       {/* Improved info panel */}
       {showInfo && (
         <div className="rounded-xl absolute left-4 top-4 z-50 max-w-md bg-black/50 p-4 backdrop-blur-lg transition-all duration-300 animate-in slide-in-from-left">
