@@ -16,7 +16,7 @@ from app.database.folders import delete_folder
 async def process_images(tasks, folder_id=None):
     """
     Process a list of image processing tasks.
-    
+
     Args:
         tasks: List of asyncio tasks for processing images
         folder_id: Optional folder ID if images belong to a specific folder

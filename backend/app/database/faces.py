@@ -225,15 +225,16 @@ def delete_face_embeddings(image_path: Union[str, Path]) -> None:
         try:
             # Delete all embeddings for this image
             cursor = conn.execute(
-                "DELETE FROM face_embeddings WHERE image_path = ?",
-                (image_path_str,)
+                "DELETE FROM face_embeddings WHERE image_path = ?", (image_path_str,)
             )
             deleted_count = cursor.rowcount
             conn.commit()
 
             if deleted_count > 0:
-                logger.info(f"Deleted {deleted_count} face embeddings for image: {image_path_str}")
-            
+                logger.info(
+                    f"Deleted {deleted_count} face embeddings for image: {image_path_str}"
+                )
+
         except sqlite3.Error as e:
             logger.error(f"Database error while deleting face embeddings: {str(e)}")
             raise

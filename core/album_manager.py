@@ -1,34 +1,25 @@
-# ...existing code...
-from utils.cache import cached, invalidate_cache
+class AlbumManager:
+    def get_albums(self):
+        albums = []  # Define the variable
+        # Your implementation
+        return albums
 
-# Cache albums for 1 hour (3600 seconds)
-@cached(key_prefix="albums", ttl=3600)
-def get_all_albums():
-    # ...existing code...
-    return albums
+    def get_album(self, album_id):
+        album = None  # Define the variable
+        # Your implementation
+        return album
 
-@cached(key_prefix="album", ttl=3600)
-def get_album(album_id):
-    # ...existing code...
-    return album
+    def create_album(self, name):
+        result = None  # Define the variable
+        # Your implementation
+        return result
 
-def add_album(album_data):
-    # ...existing code...
-    # Invalidate albums cache after adding a new album
-    invalidate_cache("albums:get_all_albums")
-    return result
+    def update_album(self, album_id, name):
+        result = None  # Define the variable
+        # Your implementation
+        return result
 
-def update_album(album_id, album_data):
-    # ...existing code...
-    # Invalidate specific album cache and albums list
-    invalidate_cache(f"album:get_album:{album_id}")
-    invalidate_cache("albums:get_all_albums")
-    return result
-
-def delete_album(album_id):
-    # ...existing code...
-    # Invalidate caches after deletion
-    invalidate_cache(f"album:get_album:{album_id}")
-    invalidate_cache("albums:get_all_albums")
-    return result
-# ...existing code...
+    def delete_album(self, album_id):
+        result = None  # Define the variable
+        # Your implementation
+        return result
