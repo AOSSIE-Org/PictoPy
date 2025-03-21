@@ -1,5 +1,6 @@
 import os
 import asyncio
+import uuid
 from fastapi import APIRouter, Query, HTTPException
 from fastapi import status as fastapi_status
 from fastapi.responses import JSONResponse
@@ -101,14 +102,13 @@ def get_images():
 @router.post(
     "/images",
     response_model=AddMultipleImagesResponse,
+    status_code=fastapi_status.HTTP_202_ACCEPTED,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
 async def add_multiple_images(payload: AddMultipleImagesRequest):
     try:
-
         image_paths = payload.paths
         if not isinstance(image_paths, list):
-
             raise HTTPException(
                 status_code=fastapi_status.HTTP_400_BAD_REQUEST,
                 detail=ErrorResponse(
@@ -133,7 +133,6 @@ async def add_multiple_images(payload: AddMultipleImagesRequest):
             image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
             file_extension = os.path.splitext(image_path)[1].lower()
             if file_extension not in image_extensions:
-
                 raise HTTPException(
                     status_code=fastapi_status.HTTP_400_BAD_REQUEST,
                     detail=ErrorResponse(
@@ -147,7 +146,9 @@ async def add_multiple_images(payload: AddMultipleImagesRequest):
             shutil.copy(image_path, destination_path)
             tasks.append(asyncio.create_task(run_get_classes(destination_path)))
 
-        asyncio.create_task(process_images(tasks))
+        # Generate a unique ID for this batch of images
+        batch_id = str(uuid.uuid4())
+        asyncio.create_task(process_images(tasks, folder_id=batch_id))
 
         return AddMultipleImagesResponse(
             data=len(tasks),

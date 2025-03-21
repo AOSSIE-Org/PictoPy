@@ -61,8 +61,7 @@ def test_get_images(test_images):
     assert response.status_code == 200
 
 
-@pytest.mark.asyncio
-async def test_add_multiple_images(test_images):
+def test_add_multiple_images(test_images):
     payload = {
         "paths": [
             str(Path(test_images) / "000000000009.jpg"),
@@ -136,6 +135,7 @@ def test_delete_multiple_images(test_images):
     assert response.status_code == 200
     response_data = response.json()
     assert response_data["success"] is True
+    assert isinstance(response_data["data"], dict)
     assert "deleted_paths" in response_data["data"]
     assert "failed_paths" in response_data["data"]
 

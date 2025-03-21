@@ -209,3 +209,31 @@ def get_database_stats() -> dict:
             "total_images": total_images,
             "database_size_bytes": Path(FACES_DATABASE_PATH).stat().st_size,
         }
+
+
+def delete_face_embeddings(image_path: Union[str, Path]) -> None:
+    """
+    Delete all face embeddings associated with an image from the database.
+
+    Args:
+        image_path: Path to the image file (can be string or Path object)
+    """
+    # Convert path to string if it's a Path object
+    image_path_str = str(image_path)
+
+    with get_db_connection() as conn:
+        try:
+            # Delete all embeddings for this image
+            cursor = conn.execute(
+                "DELETE FROM face_embeddings WHERE image_path = ?",
+                (image_path_str,)
+            )
+            deleted_count = cursor.rowcount
+            conn.commit()
+
+            if deleted_count > 0:
+                logger.info(f"Deleted {deleted_count} face embeddings for image: {image_path_str}")
+            
+        except sqlite3.Error as e:
+            logger.error(f"Database error while deleting face embeddings: {str(e)}")
+            raise
