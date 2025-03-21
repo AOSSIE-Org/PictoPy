@@ -106,7 +106,6 @@ npm run setup
    ```
 
    On Windows:
-
    ```
    ./setup_win.ps1
    ```
