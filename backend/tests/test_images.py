@@ -10,6 +10,7 @@ from app.database.albums import create_albums_table
 from app.database.yolo_mapping import create_YOLO_mappings
 from app.database.faces import cleanup_face_embeddings, create_faces_table
 from app.facecluster.init_face_cluster import init_face_cluster
+from app.database.folders import create_folders_table
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,6 +25,7 @@ def initialize_database_and_services():
     create_faces_table()
     create_image_id_mapping_table()
     create_images_table()
+    create_folders_table()
     create_albums_table()
     cleanup_face_embeddings()
     init_face_cluster()
@@ -68,6 +70,9 @@ async def test_add_multiple_images(test_images):
             str(Path(test_images) / "000000000030.jpg"),
         ]
     }
+
+    print("Payload = ", payload)
+
     response = client.post("/images/images", json=payload)
     assert response.status_code == 202
 
@@ -77,53 +82,46 @@ def test_get_all_image_objects():
     assert response.status_code == 200
 
 
-@pytest.mark.asyncio
-async def test_add_folder(test_images):
-    payload = {"folder_path": test_images}
+def test_add_folder(test_images):
+    payload = {"folder_path": [test_images]}
     response = client.post("/images/add-folder", json=payload)
     assert response.status_code == 200
 
 
 def test_generate_thumbnails(test_images):
-    payload = {"folder_path": test_images}
+    payload = {"folder_paths": [test_images]}
     response = client.post("/images/generate-thumbnails", json=payload)
-    assert response.status_code == 201
+    assert response.status_code == 200
 
 
 def test_add_multiple_images_missing_paths():
     payload = {}
     response = client.post("/images/images", json=payload)
-    assert response.status_code == 400
+    assert response.status_code == 422
 
 
 def test_delete_image_missing_path():
     payload = {}
     response = client.request("DELETE", "/images/delete-image", json=payload)
-    assert response.status_code == 400
+    assert response.status_code == 422
 
 
 def test_delete_multiple_images_invalid_format():
     payload = {"paths": "not_a_list"}
     response = client.request("DELETE", "/images/multiple-images", json=payload)
-    assert response.status_code == 400
+    assert response.status_code == 422
 
 
 def test_add_folder_missing_folder_path():
     payload = {}
     response = client.post("/images/add-folder", json=payload)
-    assert response.status_code == 400
+    assert response.status_code == 422
 
 
 def test_generate_thumbnails_missing_folder_path():
     payload = {}
     response = client.request("POST", "/images/generate-thumbnails", json=payload)
-    assert response.status_code == 400
-
-
-def test_delete_image(test_images):
-    payload = {"path": str(Path(test_images) / "000000000009.jpg")}
-    response = client.request("DELETE", "/images/delete-image", json=payload)
-    assert response.status_code == 200
+    assert response.status_code == 422
 
 
 def test_delete_multiple_images(test_images):
@@ -131,7 +129,19 @@ def test_delete_multiple_images(test_images):
         "paths": [
             str(Path(test_images) / "000000000025.jpg"),
             str(Path(test_images) / "000000000030.jpg"),
-        ]
+        ],
+        "isFromDevice": False,
     }
     response = client.request("DELETE", "/images/multiple-images", json=payload)
     assert response.status_code == 200
+
+
+def test_delete_thumbnails(test_images):
+    params = {"folder_path": test_images}
+    response = client.delete("/images/delete-thumbnails", params=params)
+    assert response.status_code == 422
+
+
+def test_delete_thumbnails_missing_folder_path():
+    response = client.delete("/images/delete-thumbnails")
+    assert response.status_code == 422

@@ -6,22 +6,12 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-
 import { Button } from '../ui/button';
 import { MediaItem } from '@/types/Media';
 import AITaggingFolderPicker from '../FolderPicker/AITaggingFolderPicker';
-import LoadingScreen from '../ui/LoadingScreen/LoadingScreen';
 import DeleteSelectedImagePage from '../FolderPicker/DeleteSelectedImagePage';
 import ErrorDialog from '../Album/Error';
-import {
-  Trash2,
-  Filter,
-  UserSearch,
-  Upload,
-  Camera
-} from 'lucide-react';
-import { queryClient, usePictoMutation } from '@/hooks/useQueryExtensio';
-import { addFolder } from '../../../api/api-functions/images';
+import { Trash2, Filter, UserSearch, Upload, Camera } from 'lucide-react';
 import { searchByFace } from '../../../api/api-functions/faceTagging';
 import {
   Dialog,
@@ -31,11 +21,12 @@ import {
   DialogTrigger,
 } from '../ui/dialog';
 import WebcamCapture from './WebcamCapture';
+import { LoadingScreen } from '../LoadingScreen/LoadingScreen';
 
 interface FilterControlsProps {
   setFilterTag: (tag: string[]) => void;
   mediaItems: MediaItem[];
-  onFolderAdded: () => Promise<void>;
+  onFolderAdded: (newPaths: string[]) => Promise<void>;
   isLoading: boolean;
   isVisibleSelectedImage: boolean;
   setIsVisibleSelectedImage: (value: boolean) => void;
@@ -46,23 +37,10 @@ export default function FilterControls({
   setFilterTag,
   mediaItems,
   onFolderAdded,
-  isLoading,
   isVisibleSelectedImage,
   setIsVisibleSelectedImage,
   setFaceSearchResults,
 }: FilterControlsProps) {
-  const {
-    mutate: addFolderAPI,
-    isPending: isAddingFolder,
-    errorMessage,
-  } = usePictoMutation({
-    mutationFn: addFolder,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-images'] });
-    },
-    autoInvalidateTags: ['ai-tagging-images', 'ai'],
-  });
-
   const uniqueTags = React.useMemo(() => {
     const allTags = mediaItems.flatMap((item) => item.tags);
     return Array.from(new Set(allTags))
@@ -114,10 +92,10 @@ export default function FilterControls({
     event.preventDefault();
     setIsDropdownOpen((prevState) => !prevState); // Toggle dropdown visibility
   };
-  const handleFolderPick = async (path: string) => {
+  const handleFolderPick = async (paths: string[]) => {
+    //set addiitional paths here
     try {
-      addFolderAPI(path);
-      await onFolderAdded();
+      await onFolderAdded(paths);
     } catch (error) {
       console.error('Error adding folder:', error);
     }
@@ -136,7 +114,9 @@ export default function FilterControls({
     });
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -147,18 +127,20 @@ export default function FilterControls({
       const result = await searchByFace(file);
 
       if (result.success && result.data) {
-        const matchedPaths = result.data.matches.map((match: any) => match.path);
+        const matchedPaths = result.data.matches.map(
+          (match: any) => match.path,
+        );
         setFaceSearchResults(matchedPaths);
         setIsFaceDialogOpen(false);
       } else {
-        setSearchError(result.message || "Failed to search by face");
+        setSearchError(result.message || 'Failed to search by face');
       }
     } catch (error: any) {
-      console.error("Error in face search:", error);
+      console.error('Error in face search:', error);
       if (error.message?.includes('400')) {
-        setSearchError("No person detected in the image");
+        setSearchError('No person detected in the image');
       } else {
-        setSearchError(error.message || "An unknown error occurred");
+        setSearchError(error.message || 'An unknown error occurred');
       }
     } finally {
       setIsSearching(false);
@@ -176,7 +158,10 @@ export default function FilterControls({
     }
   };
 
-  const handleCameraCapture = (matchedPaths: string[], errorMessage?: string) => {
+  const handleCameraCapture = (
+    matchedPaths: string[],
+    errorMessage?: string,
+  ) => {
     if (errorMessage) {
       setIsSearching(false);
       setSearchError(errorMessage);
@@ -203,10 +188,6 @@ export default function FilterControls({
 
   return (
     <>
-      {(isLoading || isAddingFolder) && <LoadingScreen />}
-      {errorMessage && errorMessage !== 'Something went wrong' && (
-        <div className="text-red-500">Error: {errorMessage}</div>
-      )}
       <div className="flex items-center gap-4 overflow-auto">
         <AITaggingFolderPicker setFolderPath={handleFolderPick} />
 

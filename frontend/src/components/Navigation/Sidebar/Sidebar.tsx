@@ -33,9 +33,10 @@ type CustomCSSProperties = React.CSSProperties & {
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
-  const [ ] = useState<boolean>(false);
+  // const [] = useState<boolean>(false);
   const [showCustomize, setShowCustomize] = useState<boolean>(false);
-  const [showImageCompressor, setShowImageCompressor] = useState<boolean>(false);
+  const [showImageCompressor, setShowImageCompressor] =
+    useState<boolean>(false);
   const [styles, setStyles] = useState<CustomStyles>(defaultStyles);
   const [avatar, setAvatar] = useState<string | null>(null);
   const [isAvatarLoading, setIsAvatarLoading] = useState<boolean>(false);
@@ -108,10 +109,13 @@ const Sidebar: React.FC = () => {
     backgroundSize: 'cover',
     fontFamily: styles.fontFamily,
     fontSize: `${styles.fontSize}px`,
-    
+    boxShadow:
+      '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
     '--bg-active': styles.activeBackgroundColor,
     '--text-active': styles.activeTextColor,
     '--bg-hover': styles.hoverBackgroundColor,
+    width: '100%', // Ensure full width within container
+    height: '100%', // Ensure full height
   };
 
   // Define the navigation items
@@ -144,19 +148,18 @@ const Sidebar: React.FC = () => {
       )}
 
       {/* Sidebar */}
-      <div className="p-4">
+      <div className="h-fit p-4">
         <nav
-          className="sidebar relative z-10 flex h-[calc(90vh-2rem)] flex-col justify-between rounded-3xl border-r transition-all duration-300 ease-in-out"
+          className="sidebar rounded-3xl relative z-10 flex h-[calc(100vh-2rem)] flex-col justify-between overflow-hidden border-r backdrop-blur-sm transition-all duration-300 ease-in-out"
           style={sidebarStyle}
-          
           aria-label="Main Navigation"
         >
-          <div className="mt-2 flex flex-col items-center">
+          <div className="scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent mt-4 flex flex-col items-center overflow-y-auto">
             {/* Avatar Section */}
-            <div className="relative group mb-6">
+            <div className="group relative mb-6 flex w-full justify-center px-4">
               <div
                 className={`avatar-container relative cursor-pointer transition-all duration-300 ${
-                  isAvatarLoading ? 'opacity-50 pointer-events-none' : ''
+                  isAvatarLoading ? 'pointer-events-none opacity-50' : ''
                 }`}
                 onClick={() => document.getElementById('avatarUpload')?.click()}
                 onKeyDown={handleKeyDown}
@@ -164,39 +167,41 @@ const Sidebar: React.FC = () => {
                 role="button"
                 aria-label="Change profile picture"
               >
-                <div className="relative h-24 w-24 rounded-full border-4 border-white/20 hover:border-primary transition-colors duration-300 shadow-lg overflow-hidden">
+                <div className="rounded-full relative h-20 w-20 overflow-hidden border-4 border-white/30 shadow-xl transition-all duration-300 hover:border-primary hover:shadow-2xl sm:h-24 sm:w-24">
                   {croppedAvatar ? (
                     <img
                       src={croppedAvatar || '/placeholder.svg'}
                       alt="User Avatar"
-                      className="h-full w-full object-cover transform group-hover:scale-105 transition-transform duration-300"
+                      className="h-full w-full transform object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                   ) : avatar ? (
                     <img
                       src={avatar || '/placeholder.svg'}
                       alt="User Avatar"
-                      className="h-full w-full object-cover transform group-hover:scale-105 transition-transform duration-300"
+                      className="h-full w-full transform object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                   ) : (
-                    <div className="h-full w-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center">
-                      <User className="h-12 w-12 text-white/80" />
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900">
+                      <User className="h-10 w-10 text-white/90 sm:h-12 sm:w-12" />
                     </div>
                   )}
 
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <span className="text-white text-sm font-medium text-center">Change Photo</span>
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                    <span className="text-center text-xs font-medium text-white drop-shadow-md sm:text-sm">
+                      Change Photo
+                    </span>
                   </div>
                 </div>
 
                 {isAvatarLoading && (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                    <div className="rounded-full h-8 w-8 animate-spin border-b-2 border-white"></div>
                   </div>
                 )}
               </div>
 
               {avatarError && (
-                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-4 bg-red-100 text-red-700 px-3 py-1 rounded-lg text-sm w-max max-w-[200px] text-center">
+                <div className="absolute bottom-0 left-1/2 w-max max-w-[200px] -translate-x-1/2 translate-y-4 transform rounded-lg bg-red-100 px-3 py-1 text-center text-sm text-red-700">
                   {avatarError}
                 </div>
               )}
@@ -212,77 +217,115 @@ const Sidebar: React.FC = () => {
             </div>
 
             {/* Navigation Items */}
-            {navItems.map(({ path, label, Icon }) => (
-              <Link
-                key={path}
-                to={path}
-                className={`group m-1 flex flex-col items-center gap-1 rounded-lg p-4 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
-                  isActive(path)
-                    ? 'bg-[var(--bg-active)] text-[var(--text-active)] shadow-md'
-                    : 'text-default hover:bg-[var(--bg-hover)]'
-                }`}
-                aria-current={isActive(path) ? 'page' : undefined}
+            <div className="w-full space-y-1 px-3">
+              {navItems.map(({ path, label, Icon }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  className={`rounded-xl group flex flex-col items-center gap-1 px-2 py-3 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
+                    isActive(path)
+                      ? 'bg-[var(--bg-active)] text-[var(--text-active)] shadow-lg'
+                      : 'text-default hover:bg-[var(--bg-hover)]'
+                  }`}
+                  aria-current={isActive(path) ? 'page' : undefined}
+                >
+                  <Icon
+                    style={{
+                      width: styles.iconSize,
+                      height: styles.iconSize,
+                      color: isActive(path)
+                        ? styles.activeTextColor
+                        : styles.iconColor,
+                    }}
+                    aria-hidden="true"
+                    className="transition-transform duration-300 group-hover:scale-110"
+                  />
+                  <span className="mt-1 whitespace-nowrap text-xs font-medium tracking-wide">
+                    {label}
+                  </span>
+                </Link>
+              ))}
+
+              {/* Image Compressor Button */}
+              <button
+                onClick={() => setShowImageCompressor(true)}
+                className="text-default rounded-xl group flex w-full flex-col items-center gap-1 px-2 py-3 transition-all duration-300 hover:scale-[1.02] hover:bg-[var(--bg-hover)] active:scale-[0.98]"
+                aria-label="Open Image Compressor"
+                onKeyDown={handleKeyDown}
               >
-                <Icon
+                <FileCompress
                   style={{
                     width: styles.iconSize,
                     height: styles.iconSize,
                     color: styles.iconColor,
                   }}
                   aria-hidden="true"
+                  className="transition-transform duration-300 group-hover:scale-110"
                 />
-                <span className="whitespace-nowrap font-medium">{label}</span>
-              </Link>
-            ))}
-
-            {/* Image Compressor Button */}
-            <button
-              onClick={() => setShowImageCompressor(true)}
-              className="group m-1 flex w-full flex-col items-center gap-1 rounded-lg p-4 text-default transition-all duration-300 hover:scale-[1.02] hover:bg-[var(--bg-hover)] active:scale-[0.98]"
-              aria-label="Open Image Compressor"
-              onKeyDown={handleKeyDown}
-            >
-              <FileCompress
-                style={{
-                  width: styles.iconSize,
-                  height: styles.iconSize,
-                  color: styles.iconColor,
-                }}
-                aria-hidden="true"
-              />
-              <span className="font-medium">Compressor</span>
-            </button>
+                <span className="mt-1 text-xs font-medium tracking-wide">
+                  Compressor
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Customize Button */}
-          <div className="flex items-center justify-center p-4">
+          <div className="mt-auto flex items-center justify-center p-3">
             <button
               onClick={() => setShowCustomize(true)}
-              className="bg-[var(--bg-hover)] hover:bg-[var(--bg-active)] rounded-lg p-2 transition-all duration-300 focus:outline-none"
+              className="rounded-full bg-[var(--bg-hover)] p-3 shadow-md transition-all duration-300 hover:bg-[var(--bg-active)] hover:shadow-lg focus:outline-none"
               aria-label="Customize sidebar"
               onKeyDown={handleKeyDown}
             >
-              <Palette size={20} />
+              <Palette size={20} className="text-[var(--text-active)]" />
             </button>
           </div>
         </nav>
       </div>
 
       {/* Customization Popup */}
+
       {showCustomize && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 dark:bg-gray-800">
-            <CustomizationPopup styles={styles} setStyles={setStyles} onClose={() => setShowCustomize(false)} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm transition-opacity duration-300">
+          <div className="rounded-2xl m-4 max-h-[90vh] w-full max-w-md overflow-y-auto bg-white/90 p-4 shadow-2xl dark:bg-gray-800/90">
+            <CustomizationPopup
+              styles={styles}
+              setStyles={setStyles}
+              onClose={() => setShowCustomize(false)}
+            />
           </div>
         </div>
       )}
 
       {/* Image Compressor Popup */}
+
       {showImageCompressor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity duration-300">
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 dark:bg-gray-800">
-            <div className="mb-4">
-              <h2 className="text-xl font-bold">Image Compressor</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm transition-opacity duration-300">
+          <div className="rounded-2xl m-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-white/90 p-6 shadow-2xl dark:bg-gray-800/90">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-xl font-bold text-transparent sm:text-2xl">
+                Image Compressor
+              </h2>
+              <button
+                onClick={() => setShowImageCompressor(false)}
+                className="rounded-full p-2 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
+                aria-label="Close image compressor"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
             </div>
             <ImageCompressor />
           </div>
@@ -291,12 +334,17 @@ const Sidebar: React.FC = () => {
 
       {/* Avatar Cropper Popup */}
       {showAvatarCropper && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity duration-300">
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 dark:bg-gray-800">
-            <div className="mb-4">
-              <h2 className="text-xl font-bold">Crop Avatar</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm transition-opacity duration-300">
+          <div className="rounded-2xl m-4 max-h-[90vh] w-full max-w-lg overflow-y-auto bg-white/90 p-6 shadow-2xl dark:bg-gray-800/90">
+            <div className="mb-6">
+              <h2 className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-xl font-bold text-transparent sm:text-2xl">
+                Crop Avatar
+              </h2>
             </div>
-            <AvatarCropper image={avatar as string} onCropComplete={handleCropComplete} />
+            <AvatarCropper
+              image={avatar as string}
+              onCropComplete={handleCropComplete}
+            />
           </div>
         </div>
       )}
