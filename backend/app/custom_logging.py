@@ -7,6 +7,9 @@ import sys
 from pathlib import Path
 from loguru import logger
 import json
+from typing import Dict, Any, Optional, Union
+
+from app.config.settings import settings, LogConfig
 
 
 class InterceptHandler(logging.Handler):
@@ -36,23 +39,28 @@ class InterceptHandler(logging.Handler):
 
 class CustomizeLogger:
     @classmethod
-    def make_logger(cls, config_path: Path):
-        print("hello logger")
-        config = cls.load_logging_config(config_path)
-        logging_config = config.get("logger")
+    def make_logger(cls, config_path: Optional[Path] = None):
+        # Support both new settings-based config and legacy file-based config
+        if config_path:
+            # Legacy path - load from JSON file
+            config = cls.load_logging_config(config_path)
+            logging_config = config.get("logger")
+        else:
+            # New path - use Pydantic settings
+            logging_config = settings.logger
 
         logger = cls.customize_logging(
-            logging_config.get("path"),
-            level=logging_config.get("level"),
-            retention=logging_config.get("retention"),
-            rotation=logging_config.get("rotation"),
-            format=logging_config.get("format"),
+            logging_config.path if isinstance(logging_config, LogConfig) else logging_config.get("path"),
+            level=logging_config.level if isinstance(logging_config, LogConfig) else logging_config.get("level"),
+            retention=logging_config.retention if isinstance(logging_config, LogConfig) else logging_config.get("retention"),
+            rotation=logging_config.rotation if isinstance(logging_config, LogConfig) else logging_config.get("rotation"),
+            format=logging_config.format if isinstance(logging_config, LogConfig) else logging_config.get("format"),
         )
         return logger
 
     @classmethod
     def customize_logging(
-        cls, filepath: Path, level: str, rotation: str, retention: str, format: str
+        cls, filepath: Union[Path, str], level: str, rotation: str, retention: str, format: str
     ):
         logger.remove()
         logger.add(
