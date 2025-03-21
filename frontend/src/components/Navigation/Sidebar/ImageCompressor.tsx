@@ -1,5 +1,17 @@
 import React, { useState, useCallback } from 'react';
-import { Upload, Download, Trash2, RefreshCw } from 'lucide-react';
+import {
+  Upload,
+  Download,
+  Trash2,
+  RefreshCw,
+  Download as DownloadIcon,
+} from 'lucide-react';
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeFile } from '@tauri-apps/plugin-fs';
+import JSZip from 'jszip';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useTauriCheck } from '@/hooks/useTauriCheck';
+import NotificationPortal from '@/components/ui/NotificationPortal';
 
 // Define the CompressedImage interface
 interface CompressedImage {
@@ -12,6 +24,9 @@ interface CompressedImage {
 }
 
 const ImageCompressor: React.FC = () => {
+  const { isTauri, dialogAvailable } = useTauriCheck();
+  const { notifications, addNotification, removeNotification } =
+    useNotifications();
   const [compressedImages, setCompressedImages] = useState<CompressedImage[]>(
     [],
   );
@@ -162,6 +177,56 @@ const ImageCompressor: React.FC = () => {
     }
   };
 
+  /**
+   * Handles downloading all compressed images as a zip file.
+   */
+  const handleDownloadAll = async () => {
+    if (compressedImages.length === 0) return;
+
+    try {
+      const zip = new JSZip();
+
+      // Add each compressed image to the zip
+      for (const image of compressedImages) {
+        const arrayBuffer = await image.compressedBlob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        zip.file(`compressed_${image.originalFile.name}`, uint8Array);
+      }
+
+      // Generate zip file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipArrayBuffer = await zipBlob.arrayBuffer();
+      const zipUint8Array = new Uint8Array(zipArrayBuffer);
+
+      if (isTauri && dialogAvailable) {
+        // Use native save dialog
+        const path = await save({
+          defaultPath: 'compressed_images.zip',
+          filters: [{ name: 'ZIP Archive', extensions: ['zip'] }],
+        });
+
+        if (path) {
+          await writeFile(path, zipUint8Array);
+          addNotification('success', 'All images downloaded successfully!');
+        }
+      } else {
+        // Fallback to browser download
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'compressed_images.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        addNotification('success', 'All images downloaded successfully!');
+      }
+    } catch (error) {
+      console.error('Error downloading all images:', error);
+      addNotification('error', 'Failed to download all images');
+    }
+  };
+
   return (
     <div className="rounded-xl bg-white/80 p-6 shadow-lg backdrop-blur-sm dark:bg-gray-800/80">
       <h3 className="mb-6 bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-xl font-bold text-transparent">
@@ -235,8 +300,8 @@ const ImageCompressor: React.FC = () => {
         </div>
       </div>
 
-      {/* File Upload Button */}
-      <div className="mb-6">
+      {/* File Upload and Download All Buttons */}
+      <div className="mb-6 flex items-center justify-between">
         <label
           htmlFor="file-upload"
           className="inline-flex cursor-pointer items-center rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-3 text-white shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]"
@@ -252,6 +317,16 @@ const ImageCompressor: React.FC = () => {
           onChange={handleFileUpload}
           className="hidden"
         />
+
+        {compressedImages.length > 0 && (
+          <button
+            onClick={handleDownloadAll}
+            className="inline-flex items-center rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-3 text-white shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]"
+          >
+            <DownloadIcon className="mr-2" size={18} />
+            Download All
+          </button>
+        )}
       </div>
 
       {/* Compressing Indicator */}
@@ -356,6 +431,12 @@ const ImageCompressor: React.FC = () => {
           </li>
         ))}
       </ul>
+
+      {/* Notifications */}
+      <NotificationPortal
+        notifications={notifications}
+        onClose={removeNotification}
+      />
     </div>
   );
 };

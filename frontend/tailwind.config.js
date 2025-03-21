@@ -95,12 +95,17 @@ module.exports = {
             boxShadow: '0 6px 10px rgba(255, 255, 255, 0.15)',
           },
         },
+        'slide-in': {
+          '0%': { transform: 'translateX(100%)', opacity: 0 },
+          '100%': { transform: 'translateX(0)', opacity: 1 },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'button-hover': 'button-hover 0.3s ease-in-out',
         'button-hover-dark': 'button-hover-dark 0.3s ease-in-out',
+        'slide-in': 'slide-in 0.3s ease-out',
       },
     },
     borderRadius: {
