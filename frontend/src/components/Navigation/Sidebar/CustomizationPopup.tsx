@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Palette, Layout, Type, Image } from 'lucide-react';
-import { CustomStyles, presetThemes } from './styles';
+import { CustomStyles, presetThemes, defaultStyles } from './styles';
 
 // Define the props interface for the CustomizationPopup component
 interface CustomizationPopupProps {
@@ -17,6 +17,18 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('presets');
+
+  const saveTheme = () => {
+    localStorage.setItem('savedStyles', JSON.stringify(styles));
+    alert('Theme saved successfully!');
+  };
+
+  // Function to reset styles to default
+  const resetTheme = () => {
+    setStyles(defaultStyles);
+    localStorage.removeItem('savedStyles');
+    alert('Theme reset to default!');
+  };
 
   /**
    * Updates a specific style property in the `styles` state.
@@ -391,6 +403,21 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
 
         <div className="scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 max-h-[calc(85vh-120px)] overflow-y-auto p-6">
           {renderTabContent()}
+        </div>
+        <div className="flex justify-between p-8">
+          <button
+            onClick={saveTheme}
+            className="animation duration-400 rounded-[6px] bg-white p-3 text-black hover:cursor-pointer hover:bg-gray-200"
+          >
+            Save theme
+          </button>
+
+          <button
+            onClick={resetTheme}
+            className="animation duration-400 rounded-[6px] bg-white p-3 text-black hover:cursor-pointer hover:bg-gray-200"
+          >
+            Reset theme
+          </button>
         </div>
       </div>
     </div>
