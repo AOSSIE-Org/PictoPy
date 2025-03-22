@@ -6,7 +6,7 @@ from app.utils.classification import get_classes
 from app.facenet.preprocess import normalize_embedding, preprocess_image
 from app.yolov8.YOLOv8 import YOLOv8
 from app.database.faces import insert_face_embeddings
-from typing import Optional
+from typing import Optional, List
 from app.utils.progress import ProgressTracker
 
 providers = (
@@ -110,3 +110,50 @@ def detect_faces(img_path: str, progress_tracker: Optional[ProgressTracker] = No
         "processed_faces": processed_faces,
         "num_faces": len(embeddings),
     }
+
+
+def detect_faces_batch(image_paths: List[str]) -> None:
+    """
+    Detect faces in multiple images and add them to clusters efficiently.
+    
+    Args:
+        image_paths: List of paths to images
+    """
+    face_cluster = get_face_cluster()
+    all_embeddings = []
+    valid_paths = []
+    
+    for img_path in image_paths:
+        try:
+            # Load and preprocess image
+            img = cv2.imread(str(img_path))
+            if img is None:
+                continue
+                
+            # Detect faces
+            yolo = YOLOv8(DEFAULT_FACE_DETECTION_MODEL, providers=providers)
+            boxes = yolo.detect_faces(img)
+            
+            if not boxes:
+                continue
+                
+            # Process each face
+            embeddings = []
+            for box in boxes:
+                face_img = preprocess_image(img, box)
+                embedding = generate_embedding(face_img)
+                if embedding is not None:
+                    embeddings.append(normalize_embedding(embedding))
+            
+            if embeddings:
+                all_embeddings.extend(embeddings)
+                valid_paths.extend([img_path] * len(embeddings))
+                
+                # Store in database
+                insert_face_embeddings(img_path, embeddings)
+        except Exception as e:
+            print(f"Error processing {img_path}: {e}")
+    
+    # Add to face clusters if we have embeddings
+    if all_embeddings:
+        face_cluster.add_faces_batch(all_embeddings, valid_paths)

@@ -34,6 +34,38 @@ async def run_get_classes(img_path, folder_id=None):
             detect_faces(img_path)
 
 
+async def process_folder_images(folder_path, folder_id=None):
+    """
+    Process all images in a folder with optimized batch processing.
+    
+    Args:
+        folder_path: Path to the folder
+        folder_id: Optional folder ID
+    """
+    image_paths = []
+    face_image_paths = []
+    
+    # First pass - process all images and identify potential face images
+    for img_path in get_all_image_paths(folder_path):
+        image_paths.append(img_path)
+        
+        # Run classification
+        result = await asyncio.get_event_loop().run_in_executor(None, get_classes, img_path)
+        insert_image_db(img_path, result, extract_metadata(img_path), folder_id)
+        
+        # Check if image might contain faces
+        if result:
+            classes = result.split(",")
+            if "0" in classes and classes.count("0") < 8:
+                face_image_paths.append(img_path)
+    
+    # Second pass - batch process face detection
+    if face_image_paths:
+        await asyncio.get_event_loop().run_in_executor(
+            None, detect_faces_batch, face_image_paths
+        )
+
+
 async def my_scheduled_task():
     try:
         print("Running scheduled task at:", time.strftime("%Y-%m-%d %H:%M:%S"))
