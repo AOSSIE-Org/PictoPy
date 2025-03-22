@@ -250,33 +250,35 @@ class FaceCluster:
         # Otherwise return current clusters without updating
         return self.get_clusters()
 
-    def add_faces_batch(self, embeddings: List[NDArray], image_paths: List[str]) -> Dict[int, List[str]]:
+    def add_faces_batch(
+        self, embeddings: List[NDArray], image_paths: List[str]
+    ) -> Dict[int, List[str]]:
         """
         Add multiple face embeddings to the clusters efficiently.
-        
+
         Args:
             embeddings: List of face embedding vectors
             image_paths: List of paths to the images
-        
+
         Returns:
             Updated clustering results
         """
         if not embeddings or not image_paths:
             return self.get_clusters()
-        
+
         image_ids = [get_id_from_path(path) for path in image_paths]
-        
+
         # Add to pending batch
         self.pending_embeddings.extend(embeddings)
         self.pending_image_ids.extend(image_ids)
-        
+
         # Process all pending faces
         return self._process_batch()
 
     def _process_batch(self) -> Dict[int, List[str]]:
         """
         Process pending face embeddings in an optimized way.
-        
+
         Returns:
             Updated clustering results
         """

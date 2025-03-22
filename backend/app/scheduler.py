@@ -7,7 +7,7 @@ from app.utils.classification import get_classes
 from app.routes.images import get_all_image_paths, delete_image_db
 from app.database.folders import get_all_folders, get_folder_id_from_path
 from app.config.settings import THUMBNAIL_IMAGES_PATH
-from app.facenet.facenet import detect_faces
+from app.facenet.facenet import detect_faces, detect_faces_batch
 from app.database.images import insert_image_db
 from app.utils.metadata import extract_metadata
 from app.database.folders import delete_folder
@@ -37,28 +37,30 @@ async def run_get_classes(img_path, folder_id=None):
 async def process_folder_images(folder_path, folder_id=None):
     """
     Process all images in a folder with optimized batch processing.
-    
+
     Args:
         folder_path: Path to the folder
         folder_id: Optional folder ID
     """
     image_paths = []
     face_image_paths = []
-    
+
     # First pass - process all images and identify potential face images
     for img_path in get_all_image_paths(folder_path):
         image_paths.append(img_path)
-        
+
         # Run classification
-        result = await asyncio.get_event_loop().run_in_executor(None, get_classes, img_path)
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, get_classes, img_path
+        )
         insert_image_db(img_path, result, extract_metadata(img_path), folder_id)
-        
+
         # Check if image might contain faces
         if result:
             classes = result.split(",")
             if "0" in classes and classes.count("0") < 8:
                 face_image_paths.append(img_path)
-    
+
     # Second pass - batch process face detection
     if face_image_paths:
         await asyncio.get_event_loop().run_in_executor(
