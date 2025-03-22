@@ -3,15 +3,14 @@ import numpy as np
 import logging
 import os
 import sys
-# Remove the Path import since it's unused
 
-# First add the project root to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the project root to the Python path before any imports
 
-# Then import the project modules
+# Now import the modules
 from app.facecluster.facecluster import FaceCluster
 from app.database.faces import cleanup_face_embeddings, create_faces_table
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Set up logging
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -103,4 +102,3 @@ def test_incremental_clustering_performance():
 
 if __name__ == "__main__":
     test_incremental_clustering_performance()
-
