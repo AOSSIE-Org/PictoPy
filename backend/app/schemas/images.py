@@ -63,9 +63,9 @@ class DeleteImageResponse(BaseModel):
 
 
 class DeleteMultipleImagesResponse(BaseModel):
-    data: List[str]
-    message: str
     success: bool
+    message: str
+    data: dict[str, list[str]] = {"deleted_paths": [], "failed_paths": []}
 
 
 class GetAllImageObjectsResponse(BaseModel):

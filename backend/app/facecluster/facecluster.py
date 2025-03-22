@@ -14,7 +14,7 @@ import time
 from functools import wraps
 from numpy.typing import NDArray
 
-from app.config.settings import DATABASE_PATH
+from app.config.settings import CLUSTERS_DATABASE_PATH
 from app.utils.path_id_mapping import get_id_from_path
 from app.database.faces import get_all_face_embeddings
 
@@ -116,7 +116,9 @@ class FaceCluster:
         eps: float = 0.3,
         min_samples: int = 2,
         metric: str = "cosine",
-        db_path: Union[str, Path] = DATABASE_PATH,
+        db_path: Union[str, Path] = CLUSTERS_DATABASE_PATH,
+        batch_size: int = 100,
+        batch_threshold: int = 20,
     ) -> None:
         """
         Initialize the face cluster manager.
@@ -126,10 +128,17 @@ class FaceCluster:
             min_samples: DBSCAN minimum samples parameter
             metric: Distance metric for clustering
             db_path: Path to the database
+            batch_size: Size of batches for processing
+            batch_threshold: Number of faces to accumulate before processing
         """
         self.eps = eps
         self.min_samples = min_samples
         self.metric = metric
+        self.batch_size = batch_size
+        self.batch_threshold = batch_threshold
+        self.pending_embeddings: List[NDArray] = []
+        self.pending_image_ids: List[str] = []
+
         logger.debug(f"Initializing DBSCAN with eps={eps}")
         self.dbscan = DBSCAN(
             eps=eps,
@@ -219,7 +228,7 @@ class FaceCluster:
 
     def add_face(self, embedding: NDArray, image_path: str) -> Dict[int, List[str]]:
         """
-        Add a new face embedding to the clusters.
+        Add a new face embedding to the clusters with batching support.
 
         Args:
             embedding: Face embedding vector
@@ -230,29 +239,91 @@ class FaceCluster:
         """
         image_id = get_id_from_path(image_path)
 
-        if len(self.embeddings) == 0:
-            self.embeddings = np.array([embedding])
-            self.image_ids = [image_id]
-            self.labels = np.array([-1])
-        else:
-            # Vectorized distance calculation
-            distances = cosine_distances(embedding.reshape(1, -1), self.embeddings)[0]
-            nearest_neighbor = np.argmin(distances)
+        # Add to pending batch
+        self.pending_embeddings.append(embedding)
+        self.pending_image_ids.append(image_id)
 
-            # Determine cluster assignment
-            if distances[nearest_neighbor] <= self.eps:
-                new_label = self.labels[nearest_neighbor]
-            else:
-                new_label = max(self.labels) + 1 if len(self.labels) > 0 else 0
+        # Process batch if threshold reached
+        if len(self.pending_embeddings) >= self.batch_threshold:
+            return self._process_batch()
+
+        # Otherwise return current clusters without updating
+        return self.get_clusters()
+
+    def add_faces_batch(
+        self, embeddings: List[NDArray], image_paths: List[str]
+    ) -> Dict[int, List[str]]:
+        """
+        Add multiple face embeddings to the clusters efficiently.
+
+        Args:
+            embeddings: List of face embedding vectors
+            image_paths: List of paths to the images
+
+        Returns:
+            Updated clustering results
+        """
+        if not embeddings or not image_paths:
+            return self.get_clusters()
+
+        image_ids = [get_id_from_path(path) for path in image_paths]
+
+        # Add to pending batch
+        self.pending_embeddings.extend(embeddings)
+        self.pending_image_ids.extend(image_ids)
+
+        # Process all pending faces
+        return self._process_batch()
+
+    def _process_batch(self) -> Dict[int, List[str]]:
+        """
+        Process pending face embeddings in an optimized way.
+
+        Returns:
+            Updated clustering results
+        """
+        if not self.pending_embeddings:
+            return self.get_clusters()
+
+        # First-time processing
+        if len(self.embeddings) == 0:
+            self.embeddings = np.array(self.pending_embeddings)
+            self.image_ids = self.pending_image_ids
+            self.labels = np.array([-1] * len(self.pending_embeddings))
+        else:
+            # Vectorized distance calculation for all pending embeddings
+            distances = cosine_distances(
+                np.array(self.pending_embeddings), self.embeddings
+            )
+
+            new_labels = []
+            for dist_row in distances:
+                nearest_neighbor = np.argmin(dist_row)
+                if dist_row[nearest_neighbor] <= self.eps:
+                    new_labels.append(self.labels[nearest_neighbor])
+                else:
+                    new_labels.append(
+                        max(self.labels) + 1 if len(self.labels) > 0 else 0
+                    )
 
             # Update state
-            self.embeddings = np.vstack([self.embeddings, embedding])
-            self.image_ids.append(image_id)
-            self.labels = np.append(self.labels, new_label)
+            self.embeddings = np.vstack(
+                [self.embeddings, np.array(self.pending_embeddings)]
+            )
+            self.image_ids.extend(self.pending_image_ids)
+            self.labels = np.append(self.labels, new_labels)
+
+        # Clear pending
+        self.pending_embeddings = []
+        self.pending_image_ids = []
 
         self._clear_caches()
         self.save_to_db()
         return self.get_clusters()
+
+    def force_process_pending(self) -> Dict[int, List[str]]:
+        """Force process any pending faces"""
+        return self._process_batch()
 
     @TTLCache(maxsize=128, ttl=3600)
     def get_related_images(self, image_id: str) -> List[str]:
@@ -330,7 +401,9 @@ class FaceCluster:
             )
 
     @classmethod
-    def load_from_db(cls, db_path: Union[str, Path] = DATABASE_PATH) -> "FaceCluster":
+    def load_from_db(
+        cls, db_path: Union[str, Path] = CLUSTERS_DATABASE_PATH
+    ) -> "FaceCluster":
         """
         Load clustering state from database.
 

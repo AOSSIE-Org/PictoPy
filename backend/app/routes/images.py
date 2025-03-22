@@ -1,5 +1,6 @@
 import os
 import asyncio
+import uuid
 from fastapi import APIRouter, Query, HTTPException
 from fastapi import status as fastapi_status
 from fastapi.responses import JSONResponse
@@ -101,14 +102,13 @@ def get_images():
 @router.post(
     "/images",
     response_model=AddMultipleImagesResponse,
+    status_code=fastapi_status.HTTP_202_ACCEPTED,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
 async def add_multiple_images(payload: AddMultipleImagesRequest):
     try:
-
         image_paths = payload.paths
         if not isinstance(image_paths, list):
-
             raise HTTPException(
                 status_code=fastapi_status.HTTP_400_BAD_REQUEST,
                 detail=ErrorResponse(
@@ -133,7 +133,6 @@ async def add_multiple_images(payload: AddMultipleImagesRequest):
             image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
             file_extension = os.path.splitext(image_path)[1].lower()
             if file_extension not in image_extensions:
-
                 raise HTTPException(
                     status_code=fastapi_status.HTTP_400_BAD_REQUEST,
                     detail=ErrorResponse(
@@ -147,7 +146,9 @@ async def add_multiple_images(payload: AddMultipleImagesRequest):
             shutil.copy(image_path, destination_path)
             tasks.append(asyncio.create_task(run_get_classes(destination_path)))
 
-        asyncio.create_task(process_images(tasks))
+        # Generate a unique ID for this batch of images
+        batch_id = str(uuid.uuid4())
+        asyncio.create_task(process_images(tasks, folder_id=batch_id))
 
         return AddMultipleImagesResponse(
             data=len(tasks),
@@ -188,24 +189,21 @@ async def process_images(tasks, folder_id):
 )
 def delete_image(payload: DeleteImageRequest):
     try:
-
-        filename = payload.path
-        file_path = os.path.join(IMAGES_PATH, filename)
-
-        if not os.path.isfile(file_path):
-            raise HTTPException(
-                status_code=fastapi_status.HTTP_404_NOT_FOUND,
-                detail=ErrorResponse(
-                    success=False,
-                    error="Image not found",
-                    message="Image file not found",
-                ).model_dump(),
+        paths = payload["paths"]
+        if not isinstance(paths, list):
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "error": "Invalid 'paths' format",
+                    "message": "'paths' should be a list",
+                },
             )
 
-        os.remove(file_path)
-        delete_image_db(file_path)
+        os.remove(paths[0])
+        delete_image_db(paths[0])
         return DeleteImageResponse(
-            data=file_path, message="Image deleted successfully", success=True
+            data=paths[0], message="Image deleted successfully", success=True
         )
 
     except Exception as e:
@@ -224,75 +222,67 @@ def delete_image(payload: DeleteImageRequest):
     responses={code: {"model": ErrorResponse} for code in [404, 500]},
 )
 def delete_multiple_images(payload: DeleteMultipleImagesRequest):
-
     try:
         paths = payload.paths
-        is_from_device = payload.isFromDevice
+        _is_from_device = payload.isFromDevice  # Prefix with underscore
         deleted_paths = []
         folder_paths = set()
+        failed_paths = []
 
         for path in paths:
-            if not os.path.isfile(path):
+            try:
+                if not os.path.isfile(path):
+                    print(f"File not found: {path}")
+                    failed_paths.append({"path": path, "error": "File not found"})
+                    continue
 
-                raise HTTPException(
-                    status_code=fastapi_status.HTTP_404_NOT_FOUND,
-                    detail=ErrorResponse(
-                        success=False,
-                        error="Image not found",
-                        message=f"Image file not found : {path}",
-                    ).model_dump(),
+                path = os.path.normpath(path)
+                folder_path, filename = os.path.split(path)
+                folder_paths.add(folder_path)
+
+                thumbnail_folder = os.path.abspath(
+                    os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails")
                 )
+                thumb_nail_image_path = os.path.join(thumbnail_folder, filename)
 
-            path = os.path.normpath(path)
-            folder_path, filename = os.path.split(path)
-            folder_paths.add(folder_path)
+                # Check and remove the original file if it exists and we have permission
+                if os.path.exists(path):
+                    try:
+                        if _is_from_device:
+                            os.remove(path)
+                    except (PermissionError, OSError) as e:
+                        print(f"Error removing file '{path}': {e}")
+                        failed_paths.append({"path": path, "error": str(e)})
 
-            thumbnail_folder = os.path.abspath(
-                os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails")
-            )
-            thumb_nail_image_path = os.path.join(thumbnail_folder, filename)
-
-            print("File = ", filename)
-
-            # Check and remove the original file
-            if os.path.exists(path):
+                # Try to remove thumbnail if it exists, but don't fail if we can't
                 try:
-                    if is_from_device:
-                        os.remove(path)
-                except PermissionError:
-                    print(f"Permission denied for file '{path}'.")
-                except Exception as e:
-                    print(f"An error occurred: {e}")
-            else:
-                print(f"File '{path}' does not exist.")
+                    if os.path.exists(thumb_nail_image_path):
+                        os.remove(thumb_nail_image_path)
+                except (PermissionError, OSError) as e:
+                    print(f"Error removing thumbnail '{thumb_nail_image_path}': {e}")
 
-            # Check and remove the thumbnail file
-            if os.path.exists(thumb_nail_image_path):
-                try:
-                    os.remove(thumb_nail_image_path)
-                    print("Successfully removed!")
-                except PermissionError:
-                    print(f"Permission denied for file '{thumb_nail_image_path}'.")
-                except Exception as e:
-                    print(f"An error occurred: {e}")
-            else:
-                print(f"File '{thumb_nail_image_path}' does not exist.")
-
-            delete_image_db(path)
-            deleted_paths.append(path)
+                # Remove from database regardless of file existence
+                delete_image_db(path)
+                deleted_paths.append(path)
+            except Exception as e:
+                print(f"Error processing path '{path}': {e}")
+                failed_paths.append({"path": path, "error": str(e)})
 
         # Delete those folders , no image left
         for folder_path in folder_paths:
             try:
                 folder_id = get_folder_id_from_path(folder_path)
-                images = get_all_images_from_folder_id(folder_id)
-                if not len(images):
-                    delete_folder(folder_path)
-            except Exception:
-                print("Folder deletion Unsuccessful")
+                if folder_id is not None:  # Only try to delete if folder exists in DB
+                    images = get_all_images_from_folder_id(folder_id)
+                    if not len(images):
+                        delete_folder(folder_path)
+            except Exception as e:
+                print(f"Folder deletion unsuccessful for '{folder_path}': {e}")
 
         return DeleteMultipleImagesResponse(
-            data=deleted_paths, message="Images deleted successfully", success=True
+            data={"deleted_paths": deleted_paths, "failed_paths": failed_paths},
+            message="Images processed successfully",
+            success=True,
         )
 
     except Exception as e:
@@ -366,9 +356,11 @@ def get_class_ids(path: str = Query(...)):
         class_ids = get_objects_db(path)
         return ClassIDsResponse(
             success=True,
-            message="Successfully retrieved class IDs"
-            if class_ids
-            else "No class IDs found for the image",
+            message=(
+                "Successfully retrieved class IDs"
+                if class_ids
+                else "No class IDs found for the image"
+            ),
             data=class_ids if class_ids else "None",
         )
 

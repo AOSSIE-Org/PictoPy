@@ -6,6 +6,8 @@ from app.utils.classification import get_classes
 from app.facenet.preprocess import normalize_embedding, preprocess_image
 from app.yolov8.YOLOv8 import YOLOv8
 from app.database.faces import insert_face_embeddings
+from typing import Optional, List
+from app.utils.progress import ProgressTracker
 
 providers = (
     ["CUDAExecutionProvider", "CPUExecutionProvider"]
@@ -56,20 +58,31 @@ def extract_face_embeddings(img_path):
     return embeddings
 
 
-def detect_faces(img_path):
+def detect_faces(img_path: str, progress_tracker: Optional[ProgressTracker] = None):
+    """Modified to support progress tracking"""
     yolov8_detector = YOLOv8(
-        DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.35, iou_thres=0.45
+        DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.2, iou_thres=0.3
     )
+
+    if progress_tracker:
+        progress_tracker.update(status="Loading image")
+
     img = cv2.imread(img_path)
     if img is None:
         print(f"Failed to load image: {img_path}")
         return None
 
+    if progress_tracker:
+        progress_tracker.update(status="Detecting faces")
+
     boxes, scores, class_ids = yolov8_detector(img)
 
     processed_faces, embeddings = [], []
     for box, score in zip(boxes, scores):
-        if score > 0.3:
+        if score > 0.5:
+            if progress_tracker:
+                progress_tracker.update(status="Processing face")
+
             x1, y1, x2, y2 = map(int, box)
             face_img = img[y1:y2, x1:x2]
             padding = 20
@@ -84,6 +97,9 @@ def detect_faces(img_path):
             embeddings.append(embedding)
 
     if embeddings:
+        if progress_tracker:
+            progress_tracker.update(status="Saving embeddings")
+
         insert_face_embeddings(img_path, embeddings)
         clusters = get_face_cluster()
         for embedding in embeddings:
@@ -94,3 +110,50 @@ def detect_faces(img_path):
         "processed_faces": processed_faces,
         "num_faces": len(embeddings),
     }
+
+
+def detect_faces_batch(image_paths: List[str]) -> None:
+    """
+    Detect faces in multiple images and add them to clusters efficiently.
+
+    Args:
+        image_paths: List of paths to images
+    """
+    face_cluster = get_face_cluster()
+    all_embeddings = []
+    valid_paths = []
+
+    for img_path in image_paths:
+        try:
+            # Load and preprocess image
+            img = cv2.imread(str(img_path))
+            if img is None:
+                continue
+
+            # Detect faces
+            yolo = YOLOv8(DEFAULT_FACE_DETECTION_MODEL, providers=providers)
+            boxes = yolo.detect_faces(img)
+
+            if not boxes:
+                continue
+
+            # Process each face
+            embeddings = []
+            for box in boxes:
+                face_img = preprocess_image(img, box)
+                embedding = get_face_embedding(face_img)
+                if embedding is not None:
+                    embeddings.append(normalize_embedding(embedding))
+
+            if embeddings:
+                all_embeddings.extend(embeddings)
+                valid_paths.extend([img_path] * len(embeddings))
+
+                # Store in database
+                insert_face_embeddings(img_path, embeddings)
+        except Exception as e:
+            print(f"Error processing {img_path}: {e}")
+
+    # Add to face clusters if we have embeddings
+    if all_embeddings:
+        face_cluster.add_faces_batch(all_embeddings, valid_paths)
