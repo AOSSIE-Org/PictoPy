@@ -111,95 +111,85 @@ impl BrightnessContrastLUT {
     }
 }
 
-/// Generates a cache key for the given image and adjustment parameters
-///
-/// Uses a combination of image dimensions, pixel sampling, and parameters
-/// to create a unique identifier for caching purposes.
-#[allow(dead_code)]
-fn generate_cache_key(img: &DynamicImage, brightness: i32, contrast: i32) -> String {
-    let dimensions = img.dimensions();
+/// Standardized cache key generation for all image operations
+pub fn generate_cache_key(img: &DynamicImage, operation: &str, params: &[i32]) -> String {
+    // Use the improved cache key generation from ImageCache
+    IMAGE_CACHE.generate_cache_key(img, operation, params)
+}
 
-    // Using a more robust hashing approach
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    use std::hash::{Hash, Hasher};
+/// Creates a lookup table for brightness and contrast adjustments
+fn create_brightness_contrast_lut(brightness: i32, contrast: i32) -> [u8; 256] {
+    let brightness_factor = brightness as f32 / 100.0;
+    let contrast_factor = (259.0 * (contrast as f32 + 255.0)) / (255.0 * (259.0 - contrast as f32));
 
-    // Hash the image dimensions
-    dimensions.0.hash(&mut hasher);
-    dimensions.1.hash(&mut hasher);
-
-    // Hash a sample of pixels for faster processing
-    // Take 100 evenly distributed pixels or fewer if the image is smaller
-    let pixel_count = img.width() * img.height();
-    let sample_size = std::cmp::min(100, pixel_count);
-
-    if sample_size > 0 {
-        let step = pixel_count / sample_size;
-        for i in (0..pixel_count).step_by(step as usize) {
-            let x = i % img.width();
-            let y = i / img.width();
-            let pixel = img.get_pixel(x, y);
-            pixel[0].hash(&mut hasher);
-            pixel[1].hash(&mut hasher);
-            pixel[2].hash(&mut hasher);
-        }
+    let mut lut = [0u8; 256];
+    for i in 0..256 {
+        let mut value = i as f32;
+        // Apply brightness
+        value += 255.0 * brightness_factor;
+        // Apply contrast
+        value = (contrast_factor * (value - 128.0)) + 128.0;
+        // Clamp to valid range
+        lut[i] = value.max(0.0).min(255.0) as u8;
     }
 
-    // Hash the adjustment parameters
-    brightness.hash(&mut hasher);
-    contrast.hash(&mut hasher);
-
-    format!(
-        "bc_{}_{}_{}x{}_{}",
-        brightness,
-        contrast,
-        dimensions.0,
-        dimensions.1,
-        hasher.finish()
-    )
+    lut
 }
 
 /// Adjusts brightness and contrast of an image with optimized performance
-///
-/// Uses:
-/// - Caching to avoid redundant processing
-/// - LUT for fast pixel transformations
-/// - Parallel processing with Rayon
-///
-/// # Arguments
-/// * `img` - Source image
-/// * `brightness` - Brightness adjustment (-100 to 100)
-/// * `contrast` - Contrast adjustment (-100 to 100)
-///
-/// # Returns
-/// * Processed image
 pub fn adjust_brightness_contrast(
     img: &DynamicImage,
     brightness: i32,
     contrast: i32,
 ) -> DynamicImage {
-    let mut adjusted = img.to_rgb8();
-    let brightness_factor = brightness as f32 / 100.0;
-    let contrast_factor = (259.0 * (contrast as f32 + 255.0)) / (255.0 * (259.0 - contrast as f32));
+    let start_time = Instant::now();
+    PROCESSING_COUNT.fetch_add(1, Ordering::SeqCst);
 
-    for pixel in adjusted.pixels_mut() {
-        for c in 0..3 {
-            // Apply brightness
-            let mut value = pixel[c] as f32 / 255.0;
-            if brightness_factor > 0.0 {
-                // Removed unnecessary parentheses
-                value = value * (1.0 - brightness_factor) + brightness_factor;
-            } else {
-                value *= 1.0 + brightness_factor;
-            }
+    // Generate cache key
+    let cache_key = generate_cache_key(img, "brightness_contrast", &[brightness, contrast]);
 
-            // Apply contrast
-            value = (contrast_factor * (value - 0.5) + 0.5).max(0.0).min(1.0);
-
-            pixel[c] = (value * 255.0) as u8;
-        }
+    // Check cache first
+    if let Some(cached_img) = IMAGE_CACHE.get(&cache_key) {
+        let elapsed = start_time.elapsed();
+        TOTAL_PROCESSING_TIME.fetch_add(elapsed.as_millis() as usize, Ordering::SeqCst);
+        IMAGE_CACHE.log_operation("brightness_contrast", elapsed, true);
+        return cached_img;
     }
 
-    DynamicImage::ImageRgb8(adjusted)
+    // Pre-compute LUT for faster processing
+    let lut = create_brightness_contrast_lut(brightness, contrast);
+
+    let rgb_img = img.to_rgb8();
+    let (width, height) = img.dimensions();
+    let mut output = RgbImage::new(width, height);
+
+    // Process image in parallel chunks
+    output
+        .par_chunks_mut(3 * width as usize)
+        .enumerate()
+        .for_each(|(y, row)| {
+            for x in 0..width {
+                let pixel = rgb_img.get_pixel(x, y as u32);
+                let idx = (x as usize) * 3;
+
+                // Apply LUT transformation
+                row[idx] = lut[pixel[0] as usize];
+                row[idx + 1] = lut[pixel[1] as usize];
+                row[idx + 2] = lut[pixel[2] as usize];
+            }
+        });
+
+    let result = DynamicImage::ImageRgb8(output);
+
+    // Cache the result
+    let _ = IMAGE_CACHE.put(cache_key, result.clone());
+
+    // Update processing time
+    let elapsed = start_time.elapsed();
+    TOTAL_PROCESSING_TIME.fetch_add(elapsed.as_millis() as usize, Ordering::SeqCst);
+    IMAGE_CACHE.log_operation("brightness_contrast", elapsed, false);
+
+    result
 }
 
 /// Applies a vibrance adjustment to an image
@@ -210,7 +200,7 @@ pub fn adjust_vibrance(img: &DynamicImage, vibrance: i32) -> DynamicImage {
     PROCESSING_COUNT.fetch_add(1, Ordering::SeqCst);
 
     // Generate cache key
-    let cache_key = format!("vibrance_{}_{}x{}", vibrance, img.width(), img.height());
+    let cache_key = generate_cache_key(img, "vibrance", &[vibrance]);
 
     // Check cache first
     if let Some(cached_img) = IMAGE_CACHE.get(&cache_key) {
@@ -271,7 +261,7 @@ pub fn adjust_exposure(img: &DynamicImage, exposure: i32) -> DynamicImage {
     PROCESSING_COUNT.fetch_add(1, Ordering::SeqCst);
 
     // Generate cache key
-    let cache_key = generate_cache_key(img, exposure, 0);
+    let cache_key = generate_cache_key(img, "exposure", &[exposure]);
 
     // Check cache first
     if let Some(cached_img) = IMAGE_CACHE.get(&cache_key) {
@@ -332,14 +322,14 @@ pub fn adjust_temperature(img: &DynamicImage, temperature: i32) -> DynamicImage 
     PROCESSING_COUNT.fetch_add(1, Ordering::SeqCst);
 
     // Generate cache key
-    let cache_key = format!("temp_{}_{}x{}", temperature, img.width(), img.height());
+    let cache_key = generate_cache_key(img, "temperature", &[temperature]);
 
     // Check cache first
     if let Some(cached_img) = IMAGE_CACHE.get(&cache_key) {
         let elapsed = start_time.elapsed();
         TOTAL_PROCESSING_TIME.fetch_add(elapsed.as_millis() as usize, Ordering::SeqCst);
         IMAGE_CACHE.log_performance("cache_hit", elapsed);
-        return DynamicImage::ImageRgb8(cached_img.to_rgb8());
+        return cached_img;
     }
 
     // Get image dimensions and create output buffer
@@ -388,14 +378,14 @@ pub fn apply_sharpening(img: &DynamicImage, amount: i32) -> DynamicImage {
     PROCESSING_COUNT.fetch_add(1, Ordering::SeqCst);
 
     // Generate cache key
-    let cache_key = format!("sharp_{}_{}x{}", amount, img.width(), img.height());
+    let cache_key = generate_cache_key(img, "sharpening", &[amount]);
 
     // Check cache first
     if let Some(cached_img) = IMAGE_CACHE.get(&cache_key) {
         let elapsed = start_time.elapsed();
         TOTAL_PROCESSING_TIME.fetch_add(elapsed.as_millis() as usize, Ordering::SeqCst);
         IMAGE_CACHE.log_performance("cache_hit", elapsed);
-        return DynamicImage::ImageRgb8(cached_img.to_rgb8());
+        return cached_img;
     }
 
     // Convert amount to a factor (0.0 to 2.0)

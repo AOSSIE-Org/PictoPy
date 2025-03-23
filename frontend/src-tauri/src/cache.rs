@@ -1,7 +1,10 @@
 use image::{DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::cmp::min;
+use std::collections::hash_map::DefaultHasher;
+use std::collections::{HashMap, VecDeque};
+use std::hash::{Hash, Hasher};
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
@@ -15,6 +18,7 @@ lazy_static! {
     pub static ref CACHE_PRELOADS: AtomicUsize = AtomicUsize::new(0);
     pub static ref TOTAL_PROCESSING_TIME: AtomicUsize = AtomicUsize::new(0);
     pub static ref PROCESSING_COUNT: AtomicUsize = AtomicUsize::new(0);
+    pub static ref CACHE_EVICTIONS: AtomicUsize = AtomicUsize::new(0);
 }
 #[allow(dead_code)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -83,9 +87,11 @@ struct CacheEntry {
 
 pub struct ImageCache {
     entries: Mutex<HashMap<String, CacheEntry>>,
+    lru_queue: Mutex<VecDeque<String>>,
     stats: Mutex<CacheStats>,
     config: Mutex<CacheConfig>,
     performance_log: Mutex<Vec<(String, Duration)>>,
+    memory_usage: AtomicUsize,
 }
 
 impl Default for ImageCache {
@@ -114,9 +120,11 @@ impl ImageCache {
 
         Self {
             entries: Mutex::new(HashMap::new()),
+            lru_queue: Mutex::new(VecDeque::new()),
             stats: Mutex::new(stats),
             config: Mutex::new(config),
             performance_log: Mutex::new(Vec::new()),
+            memory_usage: AtomicUsize::new(0),
         }
     }
 
@@ -230,52 +238,78 @@ impl ImageCache {
 
     pub fn get(&self, key: &str) -> Option<DynamicImage> {
         let mut entries = self.entries.lock().unwrap();
+        let mut lru = self.lru_queue.lock().unwrap();
 
         if let Some(entry) = entries.get_mut(key) {
-            // Check if entry has expired
+            // Check expiration
             if let Some(expires_at) = entry.expires_at {
                 if Instant::now() > expires_at {
                     entries.remove(key);
-                    CACHE_MISSES.fetch_add(1, Ordering::SeqCst);
-
-                    // Update stats
-                    let mut stats = self.stats.lock().unwrap();
-                    stats.misses += 1;
-                    stats.current_items = entries.len();
-
+                    CACHE_EVICTIONS.fetch_add(1, Ordering::SeqCst);
                     return None;
                 }
             }
 
-            // Update last accessed time
+            // Update access time and LRU
             entry.last_accessed = Instant::now();
-
-            CACHE_HITS.fetch_add(1, Ordering::SeqCst);
+            if let Some(pos) = lru.iter().position(|k| k == key) {
+                lru.remove(pos);
+            }
+            lru.push_back(key.to_string());
 
             // Update stats
+            CACHE_HITS.fetch_add(1, Ordering::SeqCst);
             let mut stats = self.stats.lock().unwrap();
             stats.hits += 1;
+            stats.cache_hit_ratio = stats.hits as f64 / (stats.hits + stats.misses) as f64;
 
-            // Calculate hit ratio
-            let total = stats.hits + stats.misses;
-            if total > 0 {
-                stats.cache_hit_ratio = stats.hits as f64 / total as f64;
-            }
-
-            return Some(entry.image.clone());
+            Some(entry.image.clone())
+        } else {
+            CACHE_MISSES.fetch_add(1, Ordering::SeqCst);
+            let mut stats = self.stats.lock().unwrap();
+            stats.misses += 1;
+            stats.cache_hit_ratio = stats.hits as f64 / (stats.hits + stats.misses) as f64;
+            None
         }
-
-        CACHE_MISSES.fetch_add(1, Ordering::SeqCst);
-
-        // Update stats
-        let mut stats = self.stats.lock().unwrap();
-        stats.misses += 1;
-
-        None
     }
 
     pub fn put(&self, key: String, image: DynamicImage) -> Result<(), String> {
-        self.put_with_ttl(key, image, None)
+        let size_bytes = self.estimate_image_size(&image);
+        let config = self.config.lock().unwrap();
+
+        // Check size limits
+        while (self.memory_usage.load(Ordering::SeqCst) + size_bytes) > config.max_memory_bytes {
+            self.evict_oldest_entry()?;
+        }
+
+        let mut entries = self.entries.lock().unwrap();
+        let mut lru = self.lru_queue.lock().unwrap();
+
+        // Create entry
+        let entry = CacheEntry {
+            key: key.clone(),
+            image,
+            size_bytes,
+            last_accessed: Instant::now(),
+            created_at: Instant::now(),
+            expires_at: Some(Instant::now() + Duration::from_secs(config.default_ttl_seconds)),
+        };
+
+        // Update memory tracking
+        self.memory_usage.fetch_add(size_bytes, Ordering::SeqCst);
+
+        // Update stats
+        let mut stats = self.stats.lock().unwrap();
+        stats.current_items = entries.len() + 1;
+        stats.memory_used_bytes = self.memory_usage.load(Ordering::SeqCst);
+        stats.memory_utilization_percent =
+            (stats.memory_used_bytes as f64 / config.max_memory_bytes as f64) * 100.0;
+
+        // Update LRU and insert entry
+        lru.push_back(key.clone());
+        entries.insert(key, entry);
+
+        Ok(())
     }
 
     pub fn put_with_ttl(
@@ -331,11 +365,98 @@ impl ImageCache {
         Ok(())
     }
 
+    pub fn generate_cache_key(
+        &self,
+        img: &DynamicImage,
+        operation: &str,
+        params: &[i32],
+    ) -> String {
+        let mut hasher = DefaultHasher::new();
+        let (width, height) = img.dimensions();
+
+        // Hash dimensions and first few pixels for uniqueness
+        (width, height).hash(&mut hasher);
+        for y in 0..min(height, 10) {
+            for x in 0..min(width, 10) {
+                img.get_pixel(x, y).hash(&mut hasher);
+            }
+        }
+
+        // Hash operation and parameters
+        operation.hash(&mut hasher);
+        params.hash(&mut hasher);
+
+        format!("{}_{:x}", operation, hasher.finish())
+    }
+
     fn estimate_image_size(&self, image: &DynamicImage) -> usize {
-        // Estimate memory usage based on dimensions and color type
         let (width, height) = image.dimensions();
-        let bytes_per_pixel = 4; // Assuming RGBA8
-        (width as usize) * (height as usize) * bytes_per_pixel
+        let bytes_per_pixel = match image {
+            DynamicImage::ImageRgb8(_) => 3,
+            DynamicImage::ImageRgba8(_) => 4,
+            _ => 4, // Default to largest size
+        };
+        width as usize * height as usize * bytes_per_pixel + std::mem::size_of::<CacheEntry>()
+    }
+
+    fn update_memory_stats(&self) {
+        let mut stats = self.stats.lock().unwrap();
+        let config = self.config.lock().unwrap();
+        stats.memory_used_bytes = self.memory_usage.load(Ordering::SeqCst);
+        stats.memory_utilization_percent =
+            (stats.memory_used_bytes as f64 / config.max_memory_bytes as f64) * 100.0;
+    }
+
+    pub fn invalidate_stale_entries(&self) -> usize {
+        let now = Instant::now();
+        let mut entries = self.entries.lock().unwrap();
+        let mut lru = self.lru_queue.lock().unwrap();
+        let initial_count = entries.len();
+
+        // Create a list of keys to remove
+        let stale_keys: Vec<String> = entries
+            .iter()
+            .filter_map(|(key, entry)| {
+                if let Some(expires_at) = entry.expires_at {
+                    if now > expires_at {
+                        Some(key.clone())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // Remove stale entries
+        for key in &stale_keys {
+            if let Some(entry) = entries.remove(key) {
+                self.memory_usage
+                    .fetch_sub(entry.size_bytes, Ordering::SeqCst);
+            }
+
+            // Also remove from LRU queue
+            if let Some(pos) = lru.iter().position(|k| k == key) {
+                lru.remove(pos);
+            }
+        }
+
+        // Update stats
+        let removed_count = initial_count - entries.len();
+        CACHE_INVALIDATIONS.fetch_add(removed_count, Ordering::SeqCst);
+
+        self.update_memory_stats();
+
+        removed_count
+    }
+
+    pub fn log_operation(&self, operation: &str, duration: Duration, cache_hit: bool) {
+        let mut log = self.performance_log.lock().unwrap();
+        log.push((
+            format!("{}_{}", operation, if cache_hit { "hit" } else { "miss" }),
+            duration,
+        ));
     }
 
     pub fn preload_common_operations(&self, img: &DynamicImage) -> Result<usize, String> {
@@ -517,6 +638,54 @@ impl ImageCache {
         }
 
         Ok(())
+    }
+
+    fn evict_entries(&self, needed_bytes: usize) -> Result<(), String> {
+        let mut entries = self.entries.lock().unwrap();
+        let mut lru = self.lru_queue.lock().unwrap();
+        let mut evicted = 0;
+        let mut freed_bytes = 0;
+
+        // Evict until we have enough space
+        while freed_bytes < needed_bytes && !lru.is_empty() {
+            if let Some(key) = lru.pop_front() {
+                if let Some(entry) = entries.remove(&key) {
+                    freed_bytes += entry.size_bytes;
+                    evicted += 1;
+                }
+            }
+        }
+
+        // Update stats
+        self.memory_usage.fetch_sub(freed_bytes, Ordering::SeqCst);
+        CACHE_EVICTIONS.fetch_add(evicted, Ordering::SeqCst);
+
+        Ok(())
+    }
+
+    fn evict_oldest_entry(&self) -> Result<(), String> {
+        let mut entries = self.entries.lock().unwrap();
+        let mut lru = self.lru_queue.lock().unwrap();
+
+        if let Some(key) = lru.pop_front() {
+            if let Some(entry) = entries.remove(&key) {
+                self.memory_usage
+                    .fetch_sub(entry.size_bytes, Ordering::SeqCst);
+                CACHE_EVICTIONS.fetch_add(1, Ordering::SeqCst);
+
+                let mut stats = self.stats.lock().unwrap();
+                stats.evictions += 1;
+                stats.current_items = entries.len();
+                stats.memory_used_bytes = self.memory_usage.load(Ordering::SeqCst);
+                return Ok(());
+            }
+        }
+
+        Err("No entries to evict".to_string())
+    }
+
+    pub fn get_memory_usage(&self) -> usize {
+        self.memory_usage.load(Ordering::SeqCst)
     }
 }
 
