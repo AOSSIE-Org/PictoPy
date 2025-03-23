@@ -5,8 +5,11 @@ mod models;
 mod repositories;
 mod services;
 mod utils;
+mod cache;
+mod image_processing;
 
 use crate::services::{CacheService, FileService};
+use crate::image_processing::adjust_brightness_contrast;
 use std::env;
 use tauri::path::BaseDirectory;
 use tauri::Manager;
@@ -47,6 +50,26 @@ fn main() {
             services::open_folder,
             services::open_with,
             services::set_wallpaper,
+            services::get_cache_stats,
+            services::reset_cache_stats,
+            services::clear_image_cache,
+            services::prune_image_cache_by_age,
+            services::configure_image_cache,
+            services::get_image_cache_config,
+            services::invalidate_cache_entry,
+            services::invalidate_cache_by_prefix,
+            services::put_image_with_ttl,
+            services::invalidate_cache_by_pattern,
+            services::preload_common_operations,
+            services::get_cache_entries_by_prefix,
+            services::get_detailed_cache_stats,
+            services::export_cache_stats,
+            services::get_cache_performance_log,
+            services::analyze_cache_usage,
+            services::optimize_cache_config,
+            services::get_image_processing_documentation,
+            services::sync_with_python_cache,
+            services::preload_with_python,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

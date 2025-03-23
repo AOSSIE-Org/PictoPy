@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
+use std::time::{SystemTime, Duration};
 use tauri::State;
 mod cache_service;
 mod file_service;
@@ -22,6 +22,8 @@ use std::num::NonZeroU32;
 use std::process::Command;
 use tauri::path::BaseDirectory;
 use tauri::Manager;
+use crate::cache::{IMAGE_CACHE, CacheStats};
+use crate::image_processing::adjust_brightness_contrast;
 
 pub const SECURE_FOLDER_NAME: &str = "secure_folder";
 const SALT_LENGTH: usize = 16;
@@ -267,21 +269,33 @@ pub async fn save_edited_image(
         _ => {}
     }
 
-    // Convert the selected save path to PathBuf
-    let save_path = PathBuf::from(save_path);
-    // Apply adjustments
-    img = adjust_brightness_contrast(&img, brightness, contrast);
-
-    // Save the edited image to the selected path
-    img = apply_vibrance(&img, vibrance);
-    img = apply_exposure(&img, exposure);
-    img = apply_temperature(&img, temperature);
-    img = apply_sharpness(&img, sharpness);
-    img = apply_vignette(&img, vignette);
-    img = apply_highlights(&img, highlights);
-
+    // Apply adjustments using our optimized functions
+    if brightness != 0 || contrast != 0 {
+        img = adjust_brightness_contrast(&img, brightness, contrast);
+    }
+    
+    if vibrance != 0 {
+        img = adjust_vibrance(&img, vibrance);
+    }
+    
+    if exposure != 0 {
+        img = adjust_exposure(&img, exposure);
+    }
+    
+    if temperature != 0 {
+        img = adjust_temperature(&img, temperature);
+    }
+    
+    if sharpness != 0 {
+        img = apply_sharpening(&img, sharpness);
+    }
+    
+    // Save the image
     img.save(&save_path).map_err(|e| e.to_string())?;
-
+    
+    // Sync with Python cache
+    sync_with_python_cache(&save_path)?;
+    
     Ok(())
 }
 
@@ -315,25 +329,6 @@ pub fn apply_saturation(img: &DynamicImage, factor: f32) -> DynamicImage {
         }
     }
     DynamicImage::ImageRgb8(saturated)
-}
-
-pub fn adjust_brightness_contrast(
-    img: &DynamicImage,
-    brightness: i32,
-    contrast: i32,
-) -> DynamicImage {
-    let mut adjusted = img.to_rgb8();
-    for pixel in adjusted.pixels_mut() {
-        for c in 0..3 {
-            let mut color = pixel[c] as f32;
-            // Apply brightness
-            color += brightness as f32 * 2.55;
-            // Apply contrast
-            color = ((color - 128.0) * (contrast as f32 / 100.0 + 1.0)) + 128.0;
-            pixel[c] = color.max(0.0).min(255.0) as u8;
-        }
-    }
-    DynamicImage::ImageRgb8(adjusted)
 }
 
 pub fn apply_vibrance(img: &DynamicImage, vibrance: i32) -> DynamicImage {
@@ -960,10 +955,162 @@ pub async fn open_with(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn get_server_path(handle: tauri::AppHandle) -> Result<String, String> {
-    let resource_path = handle
-        .path()
-        .resolve("resources/server", BaseDirectory::Resource)
-        .map_err(|e| e.to_string())?;
-    Ok(resource_path.to_string_lossy().to_string())
+pub fn get_cache_stats() -> crate::cache::CacheStats {
+    IMAGE_CACHE.get_stats()
+}
+
+#[tauri::command]
+pub fn reset_cache_stats() -> bool {
+    IMAGE_CACHE.reset_stats();
+    true
+}
+
+#[tauri::command]
+pub fn clear_image_cache() -> usize {
+    IMAGE_CACHE.clear()
+}
+
+#[tauri::command]
+pub fn prune_image_cache_by_age(hours: u64) -> usize {
+    let max_age = Duration::from_secs(hours * 3600);
+    IMAGE_CACHE.prune_by_age(max_age)
+}
+
+#[tauri::command]
+pub fn configure_image_cache(max_items: usize, max_memory_mb: usize, default_ttl_seconds: u64) -> bool {
+    let config = crate::cache::CacheConfig {
+        max_items,
+        max_memory_bytes: max_memory_mb * 1024 * 1024,
+        default_ttl_seconds,
+    };
+    
+    IMAGE_CACHE.configure(config);
+    true
+}
+
+#[tauri::command]
+pub fn get_image_cache_config() -> crate::cache::CacheConfig {
+    IMAGE_CACHE.get_config()
+}
+
+#[tauri::command]
+pub fn invalidate_cache_entry(key: &str) -> bool {
+    IMAGE_CACHE.invalidate(key)
+}
+
+#[tauri::command]
+pub fn invalidate_cache_by_prefix(prefix: &str) -> usize {
+    IMAGE_CACHE.invalidate_by_prefix(prefix)
+}
+
+#[tauri::command]
+pub fn put_image_with_ttl(key: String, image_data: Vec<u8>, ttl_seconds: u64) -> Result<(), String> {
+    let img = image::load_from_memory(&image_data).map_err(|e| e.to_string())?;
+    let ttl = Some(std::time::Duration::from_secs(ttl_seconds));
+    IMAGE_CACHE.put_with_ttl(key, img, ttl)
+}
+
+#[tauri::command]
+pub fn invalidate_cache_by_pattern(pattern: &str) -> Result<usize, String> {
+    IMAGE_CACHE.invalidate_by_pattern(pattern)
+}
+
+#[tauri::command]
+pub fn preload_common_operations(image_data: Vec<u8>) -> Result<usize, String> {
+    let img = image::load_from_memory(&image_data).map_err(|e| e.to_string())?;
+    IMAGE_CACHE.preload_common_operations(&img)
+}
+
+#[tauri::command]
+pub fn get_cache_entries_by_prefix(prefix: &str, limit: usize, offset: usize) -> Vec<(String, usize, u64)> {
+    IMAGE_CACHE.get_entries_by_prefix(prefix, limit, offset)
+        .into_iter()
+        .map(|(key, size, time)| (key, size, time.elapsed().as_secs()))
+        .collect()
+}
+
+// Add new Tauri commands for monitoring and statistics
+
+#[tauri::command]
+pub fn get_detailed_cache_stats() -> CacheStats {
+    IMAGE_CACHE.get_stats()
+}
+
+#[tauri::command]
+pub fn export_cache_stats() -> Result<String, String> {
+    IMAGE_CACHE.export_stats()
+}
+
+#[tauri::command]
+pub fn get_cache_performance_log() -> Vec<(String, u128)> {
+    IMAGE_CACHE.get_performance_log()
+}
+
+#[tauri::command]
+pub fn analyze_cache_usage() -> HashMap<String, usize> {
+    IMAGE_CACHE.analyze_cache_usage()
+}
+
+#[tauri::command]
+pub fn optimize_cache_config() -> crate::cache::CacheConfig {
+    // Analyze current usage and suggest optimal configuration
+    let stats = IMAGE_CACHE.get_stats();
+    let current_config = IMAGE_CACHE.get_config();
+    
+    // Simple heuristic: if hit ratio is low, increase cache size
+    // if memory utilization is low, decrease max memory
+    let mut optimal_config = current_config.clone();
+    
+    if stats.cache_hit_ratio < 0.7 && stats.memory_utilization_percent > 90.0 {
+        // Hit ratio is low and memory is nearly full - increase cache size
+        optimal_config.max_memory_bytes = (current_config.max_memory_bytes as f64 * 1.5) as usize;
+        optimal_config.max_items = (current_config.max_items as f64 * 1.5) as usize;
+    } else if stats.cache_hit_ratio > 0.9 && stats.memory_utilization_percent < 50.0 {
+        // High hit ratio with low memory utilization - decrease cache size
+        optimal_config.max_memory_bytes = (current_config.max_memory_bytes as f64 * 0.8) as usize;
+    }
+    
+    // Ensure reasonable limits
+    optimal_config.max_memory_bytes = optimal_config.max_memory_bytes.max(10 * 1024 * 1024); // Min 10MB
+    optimal_config.max_items = optimal_config.max_items.max(100); // Min 100 items
+    
+    optimal_config
+}
+
+// Add documentation for the image processing system
+#[tauri::command]
+pub fn get_image_processing_documentation() -> HashMap<String, String> {
+    let mut docs = HashMap::new();
+    
+    docs.insert("overview".to_string(), 
+        "The image processing system uses a multi-layered approach with LUT-based transformations, \
+        parallel processing with Rayon, and an intelligent caching system to optimize performance.".to_string());
+    
+    docs.insert("cache_usage".to_string(),
+        "The cache system stores processed images to avoid redundant calculations. \
+        It uses LRU eviction policy, size limits, and time-based expiration.".to_string());
+    
+    docs.insert("performance_tips".to_string(),
+        "For best performance: 1) Use the same image dimensions when possible, \
+        2) Preload common operations for frequently used images, \
+        3) Configure cache size based on available memory.".to_string());
+    
+    docs.insert("commands".to_string(),
+        "Available commands: configure_image_cache, get_image_cache_config, \
+        clear_image_cache, prune_image_cache_by_age, invalidate_cache_entry, \
+        invalidate_cache_by_pattern, get_cache_stats, reset_cache_stats, \
+        get_detailed_cache_stats, export_cache_stats, analyze_cache_usage, \
+        optimize_cache_config.".to_string());
+    
+    docs
+}
+
+#[tauri::command]
+pub fn sync_with_python_cache(image_path: &str) -> Result<(), String> {
+    IMAGE_CACHE.sync_with_python_cache(image_path)
+}
+
+#[tauri::command]
+pub fn preload_with_python(image_path: &str) -> Result<(), String> {
+    IMAGE_CACHE.preload_with_python(image_path)
 }
