@@ -253,10 +253,9 @@ pub async fn save_edited_image(
     exposure: i32,
     temperature: i32,
     sharpness: i32,
-    vignette: i32,
-    highlights: i32,
+    _vignette: i32,
+    _highlights: i32,
 ) -> Result<(), String> {
-    
     let mut img = image::load_from_memory(&image_data).map_err(|e| e.to_string())?;
 
     // Apply filter

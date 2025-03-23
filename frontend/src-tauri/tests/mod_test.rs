@@ -6,7 +6,7 @@ use tauri::State;
 use tempfile::tempdir;
 use tokio;
 
-use PictoPy::services::{
+use picto_py::services::{
     adjust_brightness_contrast, apply_sepia, check_secure_folder_status, create_secure_folder,
     decrypt_data, derive_key, encrypt_data, generate_salt, get_folders_with_images,
     get_images_in_folder, get_random_memories, get_secure_folder_path, hash_password,
@@ -172,7 +172,7 @@ fn test_encrypt_decrypt_data() {
 #[test]
 fn test_derive_key() {
     let salt = generate_salt();
-    let key = derive_key("password", &salt);
+    let _key = derive_key("password", &salt);
     // We cannot access the inner key bytes, so we simply assume key derivation succeeded.
     assert!(true, "Key derived successfully");
 }

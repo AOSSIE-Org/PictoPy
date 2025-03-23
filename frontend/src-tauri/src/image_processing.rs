@@ -424,4 +424,3 @@ pub fn apply_sharpening(img: &DynamicImage, amount: i32) -> DynamicImage {
 
     result
 }
-

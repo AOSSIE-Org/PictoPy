@@ -16,7 +16,7 @@ lazy_static! {
     pub static ref TOTAL_PROCESSING_TIME: AtomicUsize = AtomicUsize::new(0);
     pub static ref PROCESSING_COUNT: AtomicUsize = AtomicUsize::new(0);
 }
-
+#[allow(dead_code)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CacheConfig {
     pub max_items: usize,
