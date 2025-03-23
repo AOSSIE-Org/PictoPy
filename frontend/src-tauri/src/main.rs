@@ -70,6 +70,9 @@ fn main() {
             services::get_image_processing_documentation,
             services::sync_with_python_cache,
             services::preload_with_python,
+            services::get_cache_visualization_data,
+            services::configure_cache_time_series,
+            services::run_diagnostics,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

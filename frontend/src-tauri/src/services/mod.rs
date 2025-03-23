@@ -1114,3 +1114,56 @@ pub fn sync_with_python_cache(image_path: &str) -> Result<(), String> {
 pub fn preload_with_python(image_path: &str) -> Result<(), String> {
     IMAGE_CACHE.preload_with_python(image_path)
 }
+
+#[tauri::command]
+pub fn run_diagnostics() -> HashMap<String, String> {
+    let mut results = HashMap::new();
+    
+    // Test SIMD capabilities
+    #[cfg(target_arch = "x86_64")]
+    {
+        results.insert("cpu_architecture".to_string(), "x86_64".to_string());
+        results.insert("avx2_support".to_string(), is_x86_feature_detected!("avx2").to_string());
+    }
+    
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        results.insert("cpu_architecture".to_string(), "non-x86_64".to_string());
+        results.insert("avx2_support".to_string(), "false".to_string());
+    }
+    
+    // Test image processing performance
+    let width = 500;
+    let height = 500;
+    let mut img = RgbImage::new(width, height);
+    
+    // Fill with a gradient
+    for y in 0..height {
+        for x in 0..width {
+            let pixel = image::Rgb([x as u8 % 255, y as u8 % 255, 128]);
+            img.put_pixel(x, y, pixel);
+        }
+    }
+    
+    let dynamic_img = DynamicImage::ImageRgb8(img);
+    
+    // Measure performance
+    let start = Instant::now();
+    let _ = crate::image_processing::adjust_brightness_contrast(&dynamic_img, 10, 20);
+    let duration = start.elapsed();
+    
+    results.insert("processing_time_ms".to_string(), duration.as_millis().to_string());
+    
+    // Test TimeSeriesData
+    let ts = TimeSeriesData::new();
+    let viz_data = ts.get_visualization_data();
+    
+    results.insert("time_series_points".to_string(), viz_data.labels.len().to_string());
+    
+    // Test cache configuration
+    let cache_config = IMAGE_CACHE.get_config();
+    results.insert("cache_max_items".to_string(), cache_config.max_items.to_string());
+    results.insert("cache_max_memory_mb".to_string(), (cache_config.max_memory_bytes / (1024 * 1024)).to_string());
+    
+    results
+}
