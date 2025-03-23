@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, Duration};
+use std::time::{Duration, Instant, SystemTime};
 use tauri::State;
 mod cache_service;
 mod file_service;
@@ -9,7 +9,7 @@ use chrono::{DateTime, Datelike, Utc};
 use data_encoding::BASE64;
 use directories::ProjectDirs;
 pub use file_service::FileService;
-use image::{DynamicImage, Rgba, RgbaImage};
+use image::{DynamicImage, RgbImage, Rgba, RgbaImage};
 use rand::seq::SliceRandom;
 use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
 use ring::digest;
@@ -20,10 +20,14 @@ use std::collections::HashSet;
 use std::fs;
 use std::num::NonZeroU32;
 use std::process::Command;
-use tauri::path::BaseDirectory;
-use tauri::Manager;
-use crate::cache::{IMAGE_CACHE, CacheStats};
-use crate::image_processing::adjust_brightness_contrast;
+// Removed unused imports
+// use tauri::path::BaseDirectory;
+// use tauri::Manager;
+use crate::cache::{CacheStats, IMAGE_CACHE};
+use crate::image_processing::{
+    adjust_brightness_contrast, adjust_exposure, adjust_temperature, adjust_vibrance,
+    apply_sharpening,
+};
 
 pub const SECURE_FOLDER_NAME: &str = "secure_folder";
 const SALT_LENGTH: usize = 16;
@@ -273,29 +277,29 @@ pub async fn save_edited_image(
     if brightness != 0 || contrast != 0 {
         img = adjust_brightness_contrast(&img, brightness, contrast);
     }
-    
+
     if vibrance != 0 {
-        img = adjust_vibrance(&img, vibrance);
+        img = apply_vibrance(&img, vibrance);
     }
-    
+
     if exposure != 0 {
-        img = adjust_exposure(&img, exposure);
+        img = apply_exposure(&img, exposure);
     }
-    
+
     if temperature != 0 {
-        img = adjust_temperature(&img, temperature);
+        img = apply_temperature(&img, temperature);
     }
-    
+
     if sharpness != 0 {
-        img = apply_sharpening(&img, sharpness);
+        img = apply_sharpness(&img, sharpness);
     }
-    
+
     // Save the image
     img.save(&save_path).map_err(|e| e.to_string())?;
-    
+
     // Sync with Python cache
     sync_with_python_cache(&save_path)?;
-    
+
     Ok(())
 }
 
@@ -955,7 +959,7 @@ pub async fn open_with(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn get_cache_stats() -> crate::cache::CacheStats {
+pub fn get_cache_stats() -> CacheStats {
     IMAGE_CACHE.get_stats()
 }
 
@@ -977,13 +981,17 @@ pub fn prune_image_cache_by_age(hours: u64) -> usize {
 }
 
 #[tauri::command]
-pub fn configure_image_cache(max_items: usize, max_memory_mb: usize, default_ttl_seconds: u64) -> bool {
+pub fn configure_image_cache(
+    max_items: usize,
+    max_memory_mb: usize,
+    default_ttl_seconds: u64,
+) -> bool {
     let config = crate::cache::CacheConfig {
         max_items,
         max_memory_bytes: max_memory_mb * 1024 * 1024,
         default_ttl_seconds,
     };
-    
+
     IMAGE_CACHE.configure(config);
     true
 }
@@ -1004,7 +1012,11 @@ pub fn invalidate_cache_by_prefix(prefix: &str) -> usize {
 }
 
 #[tauri::command]
-pub fn put_image_with_ttl(key: String, image_data: Vec<u8>, ttl_seconds: u64) -> Result<(), String> {
+pub fn put_image_with_ttl(
+    key: String,
+    image_data: Vec<u8>,
+    ttl_seconds: u64,
+) -> Result<(), String> {
     let img = image::load_from_memory(&image_data).map_err(|e| e.to_string())?;
     let ttl = Some(std::time::Duration::from_secs(ttl_seconds));
     IMAGE_CACHE.put_with_ttl(key, img, ttl)
@@ -1022,8 +1034,13 @@ pub fn preload_common_operations(image_data: Vec<u8>) -> Result<usize, String> {
 }
 
 #[tauri::command]
-pub fn get_cache_entries_by_prefix(prefix: &str, limit: usize, offset: usize) -> Vec<(String, usize, u64)> {
-    IMAGE_CACHE.get_entries_by_prefix(prefix, limit, offset)
+pub fn get_cache_entries_by_prefix(
+    prefix: &str,
+    limit: usize,
+    offset: usize,
+) -> Vec<(String, usize, u64)> {
+    IMAGE_CACHE
+        .get_entries_by_prefix(prefix, limit, offset)
         .into_iter()
         .map(|(key, size, time)| (key, size, time.elapsed().as_secs()))
         .collect()
@@ -1056,11 +1073,11 @@ pub fn optimize_cache_config() -> crate::cache::CacheConfig {
     // Analyze current usage and suggest optimal configuration
     let stats = IMAGE_CACHE.get_stats();
     let current_config = IMAGE_CACHE.get_config();
-    
+
     // Simple heuristic: if hit ratio is low, increase cache size
     // if memory utilization is low, decrease max memory
     let mut optimal_config = current_config.clone();
-    
+
     if stats.cache_hit_ratio < 0.7 && stats.memory_utilization_percent > 90.0 {
         // Hit ratio is low and memory is nearly full - increase cache size
         optimal_config.max_memory_bytes = (current_config.max_memory_bytes as f64 * 1.5) as usize;
@@ -1069,11 +1086,11 @@ pub fn optimize_cache_config() -> crate::cache::CacheConfig {
         // High hit ratio with low memory utilization - decrease cache size
         optimal_config.max_memory_bytes = (current_config.max_memory_bytes as f64 * 0.8) as usize;
     }
-    
+
     // Ensure reasonable limits
     optimal_config.max_memory_bytes = optimal_config.max_memory_bytes.max(10 * 1024 * 1024); // Min 10MB
     optimal_config.max_items = optimal_config.max_items.max(100); // Min 100 items
-    
+
     optimal_config
 }
 
@@ -1081,27 +1098,36 @@ pub fn optimize_cache_config() -> crate::cache::CacheConfig {
 #[tauri::command]
 pub fn get_image_processing_documentation() -> HashMap<String, String> {
     let mut docs = HashMap::new();
-    
+
     docs.insert("overview".to_string(), 
         "The image processing system uses a multi-layered approach with LUT-based transformations, \
         parallel processing with Rayon, and an intelligent caching system to optimize performance.".to_string());
-    
-    docs.insert("cache_usage".to_string(),
+
+    docs.insert(
+        "cache_usage".to_string(),
         "The cache system stores processed images to avoid redundant calculations. \
-        It uses LRU eviction policy, size limits, and time-based expiration.".to_string());
-    
-    docs.insert("performance_tips".to_string(),
+        It uses LRU eviction policy, size limits, and time-based expiration."
+            .to_string(),
+    );
+
+    docs.insert(
+        "performance_tips".to_string(),
         "For best performance: 1) Use the same image dimensions when possible, \
         2) Preload common operations for frequently used images, \
-        3) Configure cache size based on available memory.".to_string());
-    
-    docs.insert("commands".to_string(),
+        3) Configure cache size based on available memory."
+            .to_string(),
+    );
+
+    docs.insert(
+        "commands".to_string(),
         "Available commands: configure_image_cache, get_image_cache_config, \
         clear_image_cache, prune_image_cache_by_age, invalidate_cache_entry, \
         invalidate_cache_by_pattern, get_cache_stats, reset_cache_stats, \
         get_detailed_cache_stats, export_cache_stats, analyze_cache_usage, \
-        optimize_cache_config.".to_string());
-    
+        optimize_cache_config."
+            .to_string(),
+    );
+
     docs
 }
 
@@ -1118,25 +1144,28 @@ pub fn preload_with_python(image_path: &str) -> Result<(), String> {
 #[tauri::command]
 pub fn run_diagnostics() -> HashMap<String, String> {
     let mut results = HashMap::new();
-    
+
     // Test SIMD capabilities
     #[cfg(target_arch = "x86_64")]
     {
         results.insert("cpu_architecture".to_string(), "x86_64".to_string());
-        results.insert("avx2_support".to_string(), is_x86_feature_detected!("avx2").to_string());
+        results.insert(
+            "avx2_support".to_string(),
+            is_x86_feature_detected!("avx2").to_string(),
+        );
     }
-    
+
     #[cfg(not(target_arch = "x86_64"))]
     {
         results.insert("cpu_architecture".to_string(), "non-x86_64".to_string());
         results.insert("avx2_support".to_string(), "false".to_string());
     }
-    
+
     // Test image processing performance
     let width = 500;
     let height = 500;
     let mut img = RgbImage::new(width, height);
-    
+
     // Fill with a gradient
     for y in 0..height {
         for x in 0..width {
@@ -1144,26 +1173,38 @@ pub fn run_diagnostics() -> HashMap<String, String> {
             img.put_pixel(x, y, pixel);
         }
     }
-    
+
     let dynamic_img = DynamicImage::ImageRgb8(img);
-    
+
     // Measure performance
     let start = Instant::now();
     let _ = crate::image_processing::adjust_brightness_contrast(&dynamic_img, 10, 20);
     let duration = start.elapsed();
-    
-    results.insert("processing_time_ms".to_string(), duration.as_millis().to_string());
-    
+
+    results.insert(
+        "processing_time_ms".to_string(),
+        duration.as_millis().to_string(),
+    );
+
     // Test TimeSeriesData
-    let ts = TimeSeriesData::new();
+    let ts = crate::cache::TimeSeriesData::new();
     let viz_data = ts.get_visualization_data();
-    
-    results.insert("time_series_points".to_string(), viz_data.labels.len().to_string());
-    
+
+    results.insert(
+        "time_series_points".to_string(),
+        viz_data.labels.len().to_string(),
+    );
+
     // Test cache configuration
     let cache_config = IMAGE_CACHE.get_config();
-    results.insert("cache_max_items".to_string(), cache_config.max_items.to_string());
-    results.insert("cache_max_memory_mb".to_string(), (cache_config.max_memory_bytes / (1024 * 1024)).to_string());
-    
+    results.insert(
+        "cache_max_items".to_string(),
+        cache_config.max_items.to_string(),
+    );
+    results.insert(
+        "cache_max_memory_mb".to_string(),
+        (cache_config.max_memory_bytes / (1024 * 1024)).to_string(),
+    );
+
     results
 }
