@@ -71,6 +71,7 @@ pub struct VisualizationData {
     pub values: Vec<f64>,
 }
 
+#[allow(dead_code)]
 struct CacheEntry {
     key: String,
     image: DynamicImage,

@@ -421,6 +421,7 @@ pub fn apply_sharpness(img: &DynamicImage, sharpness: i32) -> DynamicImage {
     DynamicImage::ImageRgba8(sharpened)
 }
 
+#[allow(dead_code)]
 pub fn apply_vignette(img: &DynamicImage, vignette: i32) -> DynamicImage {
     let mut vignetted = img.to_rgba8();
     let (width, height) = vignetted.dimensions();
@@ -441,6 +442,7 @@ pub fn apply_vignette(img: &DynamicImage, vignette: i32) -> DynamicImage {
     DynamicImage::ImageRgba8(vignetted)
 }
 
+#[allow(dead_code)]
 pub fn apply_highlights(img: &DynamicImage, highlights: i32) -> DynamicImage {
     let mut highlighted = img.to_rgb8();
     let factor = highlights as f32 / 100.0;
