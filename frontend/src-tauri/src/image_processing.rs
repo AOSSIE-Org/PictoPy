@@ -1,5 +1,5 @@
 use crate::cache::{ImageCache, PROCESSING_COUNT, TOTAL_PROCESSING_TIME};
-use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb, RgbImage};
+use image::{DynamicImage, GenericImageView, RgbImage};
 use lazy_static::lazy_static;
 use rayon::prelude::*;
 use std::collections::hash_map::DefaultHasher;
@@ -175,7 +175,8 @@ pub fn adjust_brightness_contrast(
         for c in 0..3 {
             // Apply brightness
             let mut value = pixel[c] as f32 / 255.0;
-            if (brightness_factor > 0.0) {
+            if brightness_factor > 0.0 {
+                // Removed unnecessary parentheses
                 value = value * (1.0 - brightness_factor) + brightness_factor;
             } else {
                 value = value * (1.0 + brightness_factor);

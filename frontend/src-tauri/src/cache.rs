@@ -438,8 +438,71 @@ impl ImageCache {
     }
 
     pub fn preload_with_python(&self, image_path: &str) -> Result<(), String> {
-        // Basic implementation to fix the missing method error
-        // You can expand this later with actual Python integration
+        // Sanitize the input path
+        let sanitized_path = image_path.replace('\'', "\\\'").replace('\"', "\\\"");
+
+        // Prepare Python script with proper JSON handling
+        let python_script = r#"
+    import json
+    import cache
+    import sys
+    
+    try:
+        result = cache.preload_image('{}')
+        json.dump(result, sys.stdout)
+    except Exception as e:
+        json.dump({{"error": str(e)}}, sys.stderr)
+        sys.exit(1)
+    "#;
+
+        // Choose Python executable based on platform
+        #[cfg(windows)]
+        let python_cmd = "python";
+        #[cfg(not(windows))]
+        let python_cmd = "python3";
+
+        // Execute Python script with timeout
+        let output = Command::new(python_cmd)
+            .args(&["-c", &python_script.replace("{}", &sanitized_path)])
+            .env("PYTHONPATH", "./python") // Add Python module path
+            .current_dir(std::env::current_dir().map_err(|e| e.to_string())?)
+            .output()
+            .map_err(|e| format!("Failed to execute Python: {}", e))?;
+
+        if !output.status.success() {
+            let error_msg = String::from_utf8_lossy(&output.stderr);
+            // Try to parse error JSON
+            if let Ok(error) = serde_json::from_str::<serde_json::Value>(&error_msg) {
+                if let Some(err_msg) = error.get("error").and_then(|e| e.as_str()) {
+                    return Err(format!("Python error: {}", err_msg));
+                }
+            }
+            return Err(format!("Python execution failed: {}", error_msg));
+        }
+
+        // Parse the output and update the cache
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let preloaded_data: Vec<(String, Vec<u8>)> = serde_json::from_str(&stdout)
+            .map_err(|e| format!("Failed to parse Python output: {}", e))?;
+
+        // Update cache stats
+        let preload_count = preloaded_data.len();
+        CACHE_PRELOADS.fetch_add(preload_count, Ordering::SeqCst);
+
+        // Process preloaded images
+        for (key, image_data) in preloaded_data {
+            match image::load_from_memory(&image_data) {
+                Ok(image) => {
+                    if let Err(e) = self.put(key.clone(), image) {
+                        eprintln!("Failed to cache image {}: {}", key, e);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Failed to load image {}: {}", key, e);
+                }
+            }
+        }
+
         Ok(())
     }
 }
@@ -448,4 +511,3 @@ impl ImageCache {
 lazy_static! {
     pub static ref IMAGE_CACHE: ImageCache = ImageCache::new();
 }
-
