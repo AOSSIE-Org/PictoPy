@@ -24,10 +24,7 @@ use std::process::Command;
 // use tauri::path::BaseDirectory;
 // use tauri::Manager;
 use crate::cache::{CacheStats, IMAGE_CACHE};
-use crate::image_processing::{
-    adjust_brightness_contrast, adjust_exposure, adjust_temperature, adjust_vibrance,
-    apply_sharpening,
-};
+use crate::image_processing::adjust_brightness_contrast;
 
 pub const SECURE_FOLDER_NAME: &str = "secure_folder";
 const SALT_LENGTH: usize = 16;
@@ -91,9 +88,9 @@ pub fn get_all_images_with_cache(
                 let year = datetime.year() as u32;
                 let month = datetime.month();
                 map.entry(year)
-                    .or_insert_with(HashMap::new)
+                    .or_default()
                     .entry(month)
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(path.to_str().unwrap_or_default().to_string());
             }
         }
@@ -116,9 +113,9 @@ pub fn get_all_images_with_cache(
                     let year = datetime.year() as u32;
                     let month = datetime.month();
                     map.entry(year)
-                        .or_insert_with(HashMap::new)
+                        .or_default()
                         .entry(month)
-                        .or_insert_with(Vec::new)
+                        .or_default()
                         .push(path.to_str().unwrap_or_default().to_string());
 
                     all_image_paths.push(path); // Collect all paths for caching
@@ -162,9 +159,9 @@ pub fn get_all_videos_with_cache(
                         let year = datetime.year() as u32;
                         let month = datetime.month();
                         map.entry(year)
-                            .or_insert_with(HashMap::new)
+                            .or_default()
                             .entry(month)
-                            .or_insert_with(Vec::new)
+                            .or_default()
                             .push(path.to_str().unwrap_or_default().to_string());
                     }
                 }
@@ -181,9 +178,9 @@ pub fn get_all_videos_with_cache(
                             let year = datetime.year() as u32;
                             let month = datetime.month();
                             map.entry(year)
-                                .or_insert_with(HashMap::new)
+                                .or_default()
                                 .entry(month)
-                                .or_insert_with(Vec::new)
+                                .or_default()
                                 .push(path.to_str().unwrap_or_default().to_string());
                         }
                     }
@@ -195,7 +192,7 @@ pub fn get_all_videos_with_cache(
                 .values()
                 .flat_map(|year_map| year_map.values())
                 .flatten()
-                .map(|s| PathBuf::from(s))
+                .map(PathBuf::from)
                 .collect();
             if let Err(e) = cache_state.cache_videos(&flattened) {
                 eprintln!("Failed to cache videos: {}", e);
@@ -259,7 +256,7 @@ pub async fn save_edited_image(
     vignette: i32,
     highlights: i32,
 ) -> Result<(), String> {
-    use std::path::PathBuf;
+    
     let mut img = image::load_from_memory(&image_data).map_err(|e| e.to_string())?;
 
     // Apply filter
@@ -601,7 +598,7 @@ pub async fn get_secure_media(password: String) -> Result<Vec<SecureMedia>, Stri
 
             secure_media.push(SecureMedia {
                 id: path.file_name().unwrap().to_string_lossy().to_string(),
-                url: format!("file://{}", temp_file.to_string_lossy().to_string()),
+                url: format!("file://{}", temp_file.to_string_lossy()),
                 path: path.to_string_lossy().to_string(),
             });
         }
@@ -934,7 +931,7 @@ pub async fn open_with(path: String) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         Command::new("rundll32.exe")
-            .args(&["shell32.dll,OpenAs_RunDLL", &path])
+            .args(["shell32.dll,OpenAs_RunDLL", &path])
             .spawn()
             .map_err(|e| e.to_string())?;
     }

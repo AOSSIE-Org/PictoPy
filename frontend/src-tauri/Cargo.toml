@@ -1,5 +1,5 @@
 [package]
-name = "PictoPy"
+name = "picto_py"  # Changed from PictoPy to follow snake_case convention
 version = "0.0.0"
 description = "A Tauri App"
 authors = ["you"]

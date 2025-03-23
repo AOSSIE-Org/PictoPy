@@ -7,6 +7,12 @@ const VIDEOS_CACHE_FILE_PATH: &str = "videos_cache.txt";
 
 pub struct CacheService;
 
+impl Default for CacheService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CacheService {
     pub fn new() -> Self {
         CacheService

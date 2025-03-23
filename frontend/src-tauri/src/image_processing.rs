@@ -2,10 +2,7 @@ use crate::cache::{ImageCache, PROCESSING_COUNT, TOTAL_PROCESSING_TIME};
 use image::{DynamicImage, GenericImageView, RgbImage};
 use lazy_static::lazy_static;
 use rayon::prelude::*;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::time::Instant;
 
 lazy_static! {
@@ -106,6 +103,7 @@ impl BrightnessContrastLUT {
 ///
 /// Uses a combination of image dimensions, pixel sampling, and parameters
 /// to create a unique identifier for caching purposes.
+#[allow(dead_code)]
 fn generate_cache_key(img: &DynamicImage, brightness: i32, contrast: i32) -> String {
     let dimensions = img.dimensions();
 
@@ -179,7 +177,7 @@ pub fn adjust_brightness_contrast(
                 // Removed unnecessary parentheses
                 value = value * (1.0 - brightness_factor) + brightness_factor;
             } else {
-                value = value * (1.0 + brightness_factor);
+                value *= 1.0 + brightness_factor;
             }
 
             // Apply contrast
@@ -426,3 +424,4 @@ pub fn apply_sharpening(img: &DynamicImage, amount: i32) -> DynamicImage {
 
     result
 }
+

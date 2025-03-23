@@ -1,10 +1,10 @@
 use image::{DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 // Atomic counters for cache statistics
@@ -38,6 +38,12 @@ pub struct CacheStats {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TimeSeriesData {
     pub data_points: Vec<(String, f64)>,
+}
+
+impl Default for TimeSeriesData {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TimeSeriesData {
@@ -79,6 +85,12 @@ pub struct ImageCache {
     stats: Mutex<CacheStats>,
     config: Mutex<CacheConfig>,
     performance_log: Mutex<Vec<(String, Duration)>>,
+}
+
+impl Default for ImageCache {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ImageCache {
@@ -415,7 +427,7 @@ impl ImageCache {
         #[cfg(target_os = "windows")]
         {
             Command::new("python")
-                .args(&[
+                .args([
                     "-c",
                     &format!("import cache; cache.sync_with_rust('{}')", image_path),
                 ])
@@ -463,7 +475,7 @@ impl ImageCache {
 
         // Execute Python script with timeout
         let output = Command::new(python_cmd)
-            .args(&["-c", &python_script.replace("{}", &sanitized_path)])
+            .args(["-c", &python_script.replace("{}", &sanitized_path)])
             .env("PYTHONPATH", "./python") // Add Python module path
             .current_dir(std::env::current_dir().map_err(|e| e.to_string())?)
             .output()
