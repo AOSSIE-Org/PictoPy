@@ -1,7 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod benchmark;
+
 mod cache;
 mod image_processing;
 mod models;
@@ -67,7 +67,6 @@ pub fn run() {
             sync_with_python_cache,
             preload_with_python,
             run_diagnostics,
-            benchmark::run_benchmark,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

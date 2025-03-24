@@ -1,4 +1,3 @@
-pub mod benchmark;
 pub mod cache;
 pub mod image_processing;
 pub mod models;
