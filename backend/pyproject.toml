@@ -9,3 +9,4 @@ warn_return_any = true
 warn_unreachable = true
 ignore_missing_imports = true
 explicit_package_bases = true
+exclude = "^(tests)/"
