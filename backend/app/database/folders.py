@@ -1,9 +1,17 @@
 import sqlite3
 import os
+from typing import Optional
 from app.config.settings import DATABASE_PATH
 
 
 def create_folders_table() -> None:
+    """
+    Create folders table if it does not exists
+
+    Returns:
+        None: Creates table and returns nothing.
+    """
+
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute(
@@ -19,7 +27,17 @@ def create_folders_table() -> None:
     conn.close()
 
 
-def insert_folder(folder_path) -> str | None:
+def insert_folder(folder_path: str) -> str | None:
+    """
+    Inserts a folder path into the 'folders' table if it does not already exist.
+
+    Args:
+        folder_path (str): The absolute or relative path to the folder to be inserted.
+
+    Returns:
+        str | None: The folder ID if the folder exists or is successfully inserted,
+        otherwise None if the insertion fails or no folder is found.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -36,7 +54,7 @@ def insert_folder(folder_path) -> str | None:
     if existing_folder:
         result = existing_folder[0]
         conn.close()
-        return result
+        return str(result)
 
     # Time is in Unix format
     last_modified_time = int(os.path.getmtime(abs_folder_path))
@@ -58,7 +76,16 @@ def insert_folder(folder_path) -> str | None:
     return result[0] if result else None
 
 
-def get_folder_id_from_path(folder_path) -> str | None:
+def get_folder_id_from_path(folder_path: str) -> Optional[str]:
+    """
+    Retrieves the folder ID from the database for the given folder path.
+
+    Args:
+        folder_path (str): The absolute or relative folder path to query.
+
+    Returns:
+        Optional[str]: The folder ID if found, otherwise None.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_folder_path = os.path.abspath(folder_path)
@@ -71,7 +98,17 @@ def get_folder_id_from_path(folder_path) -> str | None:
     return result[0] if result else None
 
 
-def get_folder_path_from_id(folder_id):
+def get_folder_path_from_id(folder_id: str) -> Optional[str]:
+    """
+    Retrieves the folder path from the database for the given folder id.
+
+    Args:
+        folder_id (str): The folder id for query.
+
+    Returns:
+        Optional[str]: The folder path if found, otherwise None.
+    """
+
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute(
@@ -84,12 +121,24 @@ def get_folder_path_from_id(folder_id):
 
 
 def get_all_folders() -> list[str]:
+    """
+    Retrieves the all the folder paths from the database
+
+    Returns:
+        list[str]: list of all folder paths or an empty list if no folders.
+    """
     with sqlite3.connect(DATABASE_PATH) as conn:
         rows = conn.execute("SELECT folder_path FROM folders").fetchall()
         return [row[0] for row in rows] if rows else []
 
 
 def get_all_folder_ids() -> list[str]:
+    """
+    Retrieves all the folder IDs from the database
+
+    Returns:
+        list[str]: list of all folder ids or an empty list if no folders.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT folder_id from folders")
@@ -97,7 +146,16 @@ def get_all_folder_ids() -> list[str]:
     return [row[0] for row in rows] if rows else []
 
 
-def delete_folder(folder_path) -> None:
+def delete_folder(folder_path: str) -> None:
+    """ "
+    Deletes a folder from the database
+
+    Args:
+        folder_path (str): The absolute or relative path to the folder to be deleted.
+
+    Returns:
+        None: Deletes the folder from the database and returns nothing.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_folder_path = os.path.abspath(folder_path)
