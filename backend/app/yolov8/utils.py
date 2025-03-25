@@ -1,7 +1,8 @@
 import numpy as np
 import cv2
+from typing import List, Tuple
 
-class_names = [
+class_names: List[str] = [
     "person",
     "bicycle",
     "car",
@@ -84,73 +85,63 @@ class_names = [
     "toothbrush",
 ]
 
-# Create a list of colors for each class where each color is a tuple of 3 integer values
 rng = np.random.default_rng(3)
-colors = rng.uniform(0, 255, size=(len(class_names), 3))
+colors: np.ndarray = rng.uniform(0, 255, size=(len(class_names), 3))
 
 
-def nms(boxes, scores, iou_threshold):
-    # Sort by score
-    sorted_indices = np.argsort(scores)[::-1]
+def nms(boxes: np.ndarray, scores: np.ndarray, iou_threshold: float) -> List[int]:
+    sorted_indices: np.ndarray = np.argsort(scores)[::-1]
 
-    keep_boxes = []
+    keep_boxes: List[int] = []
     while sorted_indices.size > 0:
-        # Pick the last box
-        box_id = sorted_indices[0]
+        box_id: int = sorted_indices[0]
         keep_boxes.append(box_id)
 
-        # Compute IoU of the picked box with the rest
-        ious = compute_iou(boxes[box_id, :], boxes[sorted_indices[1:], :])
+        ious: np.ndarray = compute_iou(boxes[box_id, :], boxes[sorted_indices[1:], :])
 
-        # Remove boxes with IoU over the threshold
-        keep_indices = np.where(ious < iou_threshold)[0]
-
-        # print(keep_indices.shape, sorted_indices.shape)
+        keep_indices: np.ndarray = np.where(ious < iou_threshold)[0]
         sorted_indices = sorted_indices[keep_indices + 1]
 
     return keep_boxes
 
 
-def multiclass_nms(boxes, scores, class_ids, iou_threshold):
+def multiclass_nms(
+    boxes: np.ndarray, scores: np.ndarray, class_ids: np.ndarray, iou_threshold: float
+) -> List[int]:
+    unique_class_ids: np.ndarray = np.unique(class_ids)
 
-    unique_class_ids = np.unique(class_ids)
-
-    keep_boxes = []
+    keep_boxes: List[int] = []
     for class_id in unique_class_ids:
-        class_indices = np.where(class_ids == class_id)[0]
-        class_boxes = boxes[class_indices, :]
-        class_scores = scores[class_indices]
+        class_indices: np.ndarray = np.where(class_ids == class_id)[0]
+        class_boxes: np.ndarray = boxes[class_indices, :]
+        class_scores: np.ndarray = scores[class_indices]
 
-        class_keep_boxes = nms(class_boxes, class_scores, iou_threshold)
+        class_keep_boxes: List[int] = nms(class_boxes, class_scores, iou_threshold)
         keep_boxes.extend(class_indices[class_keep_boxes])
 
     return keep_boxes
 
 
-def compute_iou(box, boxes):
-    # Compute xmin, ymin, xmax, ymax for both boxes
-    xmin = np.maximum(box[0], boxes[:, 0])
-    ymin = np.maximum(box[1], boxes[:, 1])
-    xmax = np.minimum(box[2], boxes[:, 2])
-    ymax = np.minimum(box[3], boxes[:, 3])
+def compute_iou(box: np.ndarray, boxes: np.ndarray) -> np.ndarray:
+    xmin: np.ndarray = np.maximum(box[0], boxes[:, 0])
+    ymin: np.ndarray = np.maximum(box[1], boxes[:, 1])
+    xmax: np.ndarray = np.minimum(box[2], boxes[:, 2])
+    ymax: np.ndarray = np.minimum(box[3], boxes[:, 3])
 
-    # Compute intersection area
-    intersection_area = np.maximum(0, xmax - xmin) * np.maximum(0, ymax - ymin)
+    intersection_area: np.ndarray = np.maximum(0, xmax - xmin) * np.maximum(
+        0, ymax - ymin
+    )
 
-    # Compute union area
-    box_area = (box[2] - box[0]) * (box[3] - box[1])
-    boxes_area = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
-    union_area = box_area + boxes_area - intersection_area
+    box_area: float = (box[2] - box[0]) * (box[3] - box[1])
+    boxes_area: np.ndarray = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+    union_area: np.ndarray = box_area + boxes_area - intersection_area
 
-    # Compute IoU
-    iou = intersection_area / union_area
-
+    iou: np.ndarray = intersection_area / union_area
     return iou
 
 
-def xywh2xyxy(x):
-    # Convert bounding box (x, y, w, h) to bounding box (x1, y1, x2, y2)
-    y = np.copy(x)
+def xywh2xyxy(x: np.ndarray) -> np.ndarray:
+    y: np.ndarray = np.copy(x)
     y[..., 0] = x[..., 0] - x[..., 2] / 2
     y[..., 1] = x[..., 1] - x[..., 3] / 2
     y[..., 2] = x[..., 0] + x[..., 2] / 2
@@ -159,27 +150,34 @@ def xywh2xyxy(x):
 
 
 def draw_detections(
-    image, boxes, scores, class_ids, mask_alpha=0.3, confidence_threshold=0.3
-):
-    det_img = image.copy()
+    image: np.ndarray,
+    boxes: np.ndarray,
+    scores: np.ndarray,
+    class_ids: np.ndarray,
+    mask_alpha: float = 0.3,
+    confidence_threshold: float = 0.3,
+) -> np.ndarray:
+    det_img: np.ndarray = image.copy()
 
     img_height, img_width = image.shape[:2]
-    font_size = min([img_height, img_width]) * 0.0006
-    text_thickness = int(min([img_height, img_width]) * 0.001)
+    font_size: float = min([img_height, img_width]) * 0.0006
+    text_thickness: int = int(min([img_height, img_width]) * 0.001)
 
     det_img = draw_masks(det_img, boxes, class_ids, mask_alpha)
 
-    # Draw bounding boxes and labels of detections
     for class_id, box, score in zip(class_ids, boxes, scores):
         if score < confidence_threshold or class_id >= len(class_names) - 1:
-            color = colors[-1]
-            label = "unknown"
+            color: np.ndarray = colors[-1]
+            label: str = "unknown"
         else:
             color = colors[class_id]
             label = class_names[class_id]
-        draw_box(det_img, box, color)
-        caption = f"{label} {int(score * 100)}%"
-        draw_text(det_img, caption, box, color, font_size, text_thickness)
+
+        draw_box(det_img, box, tuple(color.astype(int)))
+        caption: str = f"{label} {int(score * 100)}%"
+        draw_text(
+            det_img, caption, box, tuple(color.astype(int)), font_size, text_thickness
+        )
 
     return det_img
 
@@ -187,7 +185,7 @@ def draw_detections(
 def draw_box(
     image: np.ndarray,
     box: np.ndarray,
-    color: tuple[int, int, int] = (0, 0, 255),
+    color: Tuple[int, int, int] = (0, 0, 255),
     thickness: int = 2,
 ) -> np.ndarray:
     x1, y1, x2, y2 = box.astype(int)
@@ -198,11 +196,11 @@ def draw_text(
     image: np.ndarray,
     text: str,
     box: np.ndarray,
-    color: tuple[int, int, int] = (0, 0, 255),
+    color: Tuple[int, int, int] = (0, 0, 255),
     font_size: float = 0.001,
     text_thickness: int = 2,
 ) -> np.ndarray:
-    x1, y1, x2, y2 = box.astype(int)
+    x1, y1, _, _ = box.astype(int)
     (tw, th), _ = cv2.getTextSize(
         text=text,
         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
@@ -228,15 +226,11 @@ def draw_text(
 def draw_masks(
     image: np.ndarray, boxes: np.ndarray, classes: np.ndarray, mask_alpha: float = 0.3
 ) -> np.ndarray:
-    mask_img = image.copy()
+    mask_img: np.ndarray = image.copy()
 
-    # Draw bounding boxes and labels of detections
     for box, class_id in zip(boxes, classes):
-        color = colors[class_id]
-
+        color: np.ndarray = colors[class_id]
         x1, y1, x2, y2 = box.astype(int)
-
-        # Draw fill rectangle in mask image
         cv2.rectangle(mask_img, (x1, y1), (x2, y2), color, -1)
 
     return cv2.addWeighted(mask_img, mask_alpha, image, 1 - mask_alpha, 0)
