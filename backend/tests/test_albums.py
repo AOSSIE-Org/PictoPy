@@ -117,7 +117,7 @@ def test_view_album_photos():
 
 def test_update_album_description():
     payload = {"album_name": "Test Album", "description": "Updated description"}
-    with patch("app.database.albums.edit_album_description"):
+    with patch("app.routes.albums.edit_album_description"):
         response = client.put("/albums/edit-album-description", json=payload)
         assert response.status_code == 200
         assert response.json()["success"] is True
