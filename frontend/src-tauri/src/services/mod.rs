@@ -550,8 +550,10 @@ pub async fn remove_from_secure_folder(file_name: String, password: String) -> R
     // Write the decrypted content back to the original path
     fs::write(original_path, decrypted_content).map_err(|e| e.to_string())?;
 
-    // Remove the file from the secure folder and update metadata
-    fs::remove_file(&file_path).map_err(|e| e.to_string())?;
+    // Securely delete the file from the secure folder
+    secure_delete_file(&file_path)?;
+
+    // Update metadata
     let mut updated_metadata = metadata;
     updated_metadata.remove(&file_name);
     fs::write(
@@ -1081,5 +1083,6 @@ pub fn verify_password(password: &str, stored_hash: &str) -> Result<bool, String
         Err(_) => Ok(false), // Password doesn't match, but this is not an error condition
     }
 }
+
 
 
