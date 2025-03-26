@@ -11,7 +11,7 @@ use PictoPy::services::{
     decrypt_data, derive_key, encrypt_data, generate_salt, get_folders_with_images,
     get_images_in_folder, get_random_memories, get_secure_folder_path, hash_password,
     is_image_file, move_to_secure_folder, remove_from_secure_folder, save_edited_image, share_file,
-    unlock_secure_folder, validate_password, verify_password, CacheService, FileService, 
+    unlock_secure_folder, validate_password, verify_password, CacheService, FileService,
     SECURE_FOLDER_NAME,
 };
 
@@ -168,7 +168,7 @@ fn test_hash_password() {
 fn test_encrypt_decrypt_data() {
     let data = b"test data";
     let password = "secret";
-    
+
     // Encrypt the data
     let encrypted = match encrypt_data(data, password) {
         Ok(enc) => enc,
@@ -177,10 +177,10 @@ fn test_encrypt_decrypt_data() {
             panic!("Encryption failed: {}", e);
         }
     };
-    
+
     // Print debug info
     println!("Encrypted data length: {}", encrypted.len());
-    
+
     // Decrypt with the same password
     let decrypted = match decrypt_data(&encrypted, password) {
         Ok(dec) => dec,
@@ -189,7 +189,7 @@ fn test_encrypt_decrypt_data() {
             panic!("Decryption failed: {}", e);
         }
     };
-    
+
     // Verify the decrypted data matches the original
     assert_eq!(decrypted, data);
 }
@@ -288,7 +288,7 @@ async fn test_password_validation() {
     assert!(validate_password("short").is_err()); // Too short
     assert!(validate_password("nouppercase123").is_err()); // No uppercase
     assert!(validate_password("NONUMBERS").is_err()); // No numbers
-    
+
     // Test strong password
     assert!(validate_password("StrongPass123").is_ok());
 }
@@ -297,15 +297,15 @@ async fn test_password_validation() {
 async fn test_argon2id_password_hashing() {
     let password = "TestPassword123";
     let salt = generate_salt();
-    
+
     let hash_result = hash_password(password, &salt);
     assert!(hash_result.is_ok());
-    
+
     let hash = hash_result.unwrap();
     let verification = verify_password(password, &hash);
     assert!(verification.is_ok());
     assert!(verification.unwrap());
-    
+
     // Test wrong password
     let wrong_verification = verify_password("WrongPassword123", &hash);
     assert!(wrong_verification.is_ok());
@@ -316,17 +316,17 @@ async fn test_argon2id_password_hashing() {
 async fn test_encryption_decryption() {
     let data = b"This is a test message for encryption";
     let password = "SecurePassword123";
-    
+
     let encrypted = encrypt_data(data, password);
     assert!(encrypted.is_ok());
-    
+
     let encrypted_data = encrypted.unwrap();
     let decrypted = decrypt_data(&encrypted_data, password);
     assert!(decrypted.is_ok());
-    
+
     let decrypted_data = decrypted.unwrap();
     assert_eq!(decrypted_data, data);
-    
+
     // Test wrong password
     let wrong_decryption = decrypt_data(&encrypted_data, "WrongPassword123");
     assert!(wrong_decryption.is_err());
