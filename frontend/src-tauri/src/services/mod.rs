@@ -23,6 +23,8 @@ use std::fs;
 use std::process::Command;
 use tauri::path::BaseDirectory;
 use tauri::Manager;
+use std::io::{Seek, SeekFrom, Write};
+use std::fs::OpenOptions;
 
 pub const SECURE_FOLDER_NAME: &str = "secure_folder";
 const SALT_LENGTH: usize = 16;
@@ -1028,4 +1030,55 @@ pub fn validate_password(password: &str) -> Result<(), String> {
     
     Ok(())
 }
+
+// Function to securely delete a file
+pub fn secure_delete_file(path: &Path) -> Result<(), String> {
+    // Get file size
+    let metadata = fs::metadata(path).map_err(|e| format!("Failed to get file metadata: {}", e))?;
+    let file_size = metadata.len();
+    
+    // Open file for writing
+    let mut file = OpenOptions::new()
+        .write(true)
+        .open(path)
+        .map_err(|e| format!("Failed to open file for secure deletion: {}", e))?;
+    
+    // Patterns for overwriting
+    let patterns = [
+        vec![0x00; 4096],  // All zeros
+        vec![0xFF; 4096],  // All ones
+        vec![0x55; 4096],  // Alternating 01010101
+        vec![0xAA; 4096],  // Alternating 10101010
+        vec![0x92, 0x49, 0x24, 0x92],  // Random pattern
+    ];
+    
+    // Multiple overwrite passes
+    for pattern in patterns.iter() {
+        file.seek(SeekFrom::Start(0))
+            .map_err(|e| format!("Failed to seek to start of file: {}", e))?;
+        
+        let mut remaining = file_size;
+        while remaining > 0 {
+            let to_write = std::cmp::min(remaining, pattern.len() as u64);
+            let written = file.write(&pattern[0..to_write as usize])
+                .map_err(|e| format!("Failed to write to file: {}", e))?;
+            
+            remaining -= written as u64;
+            if written == 0 {
+                break;
+            }
+        }
+        
+        file.flush().map_err(|e| format!("Failed to flush file: {}", e))?;
+    }
+    
+    // Close and delete the file
+    drop(file);
+    fs::remove_file(path).map_err(|e| format!("Failed to remove file: {}", e))?;
+    
+    Ok(())
+}
+
+
+
 
