@@ -4,6 +4,10 @@ use std::time::SystemTime;
 use tauri::State;
 mod cache_service;
 mod file_service;
+use argon2::{
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2, Params,
+};
 pub use cache_service::CacheService;
 use chrono::{DateTime, Datelike, Utc};
 use data_encoding::BASE64;
@@ -12,9 +16,8 @@ pub use file_service::FileService;
 use image::{DynamicImage, Rgba, RgbaImage};
 use rand::seq::SliceRandom;
 use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
-use ring::digest;
-use ring::pbkdf2;
 use ring::rand::{SecureRandom, SystemRandom};
+use ring::pbkdf2;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
@@ -26,6 +29,11 @@ use tauri::Manager;
 pub const SECURE_FOLDER_NAME: &str = "secure_folder";
 const SALT_LENGTH: usize = 16;
 const NONCE_LENGTH: usize = 12;
+
+// Constants for Argon2id
+const ARGON2_MEMORY_COST: u32 = 65536; // 64MB
+const ARGON2_TIME_COST: u32 = 3; // Iterations
+const ARGON2_PARALLELISM: u32 = 4; // Parallelism factor
 
 #[derive(Serialize, Deserialize)]
 pub struct SecureMedia {
@@ -567,7 +575,7 @@ pub async fn create_secure_folder(password: String) -> Result<(), String> {
     let config_path = secure_folder.join("config.json");
     let config = serde_json::json!({
         "salt": BASE64.encode(&salt),
-        "hashed_password": BASE64.encode(&hashed_password),
+        "hashed_password": hashed_password?,
     });
     fs::write(config_path, serde_json::to_string(&config).unwrap()).map_err(|e| e.to_string())?;
 
@@ -613,16 +621,29 @@ pub async fn get_secure_media(password: String) -> Result<Vec<SecureMedia>, Stri
     Ok(secure_media)
 }
 
-pub fn hash_password(password: &str, salt: &[u8]) -> Vec<u8> {
-    let mut hash = [0u8; digest::SHA256_OUTPUT_LEN];
-    pbkdf2::derive(
-        pbkdf2::PBKDF2_HMAC_SHA256,
-        NonZeroU32::new(100_000).unwrap(),
-        salt,
-        password.as_bytes(),
-        &mut hash,
+pub fn hash_password(password: &str, salt: &[u8]) -> Result<String, String> {
+    // Create a proper SaltString from the raw salt bytes
+    let salt_string =
+        SaltString::encode_b64(salt).map_err(|e| format!("Failed to encode salt: {}", e))?;
+
+    let argon2 = Argon2::new(
+        argon2::Algorithm::Argon2id,
+        argon2::Version::V0x13,
+        Params::new(
+            ARGON2_MEMORY_COST,
+            ARGON2_TIME_COST,
+            ARGON2_PARALLELISM,
+            Some(32), // Output length
+        )
+        .map_err(|e| e.to_string())?,
     );
-    hash.to_vec()
+
+    let password_hash = argon2
+        .hash_password(password.as_bytes(), &salt_string)
+        .map_err(|e| e.to_string())?
+        .to_string();
+
+    Ok(password_hash)
 }
 
 pub fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, ring::error::Unspecified> {
@@ -708,21 +729,35 @@ pub async fn unlock_secure_folder(password: String) -> Result<bool, String> {
         )
         .map_err(|e| e.to_string())?;
 
-    let input_hash = hash_password(&password, &salt);
+    let _input_hash = hash_password(&password, &salt);
 
-    Ok(input_hash == stored_hash)
+    let stored_hash_str = String::from_utf8(stored_hash.clone())
+        .map_err(|e| format!("Invalid UTF-8 in stored hash: {}", e))?;
+
+    let parsed_hash = PasswordHash::new(&stored_hash_str)
+        .map_err(|e| format!("Invalid stored hash: {}", e))?;
+    let argon2 = Argon2::default();
+    Ok(argon2.verify_password(password.as_bytes(), &parsed_hash).is_ok())
 }
 
 pub fn derive_key(password: &str, salt: &[u8]) -> LessSafeKey {
-    let mut key_bytes = [0u8; 32];
-    pbkdf2::derive(
-        pbkdf2::PBKDF2_HMAC_SHA256,
-        NonZeroU32::new(100_000).unwrap(),
-        salt,
-        password.as_bytes(),
-        &mut key_bytes,
+    // Use Argon2id for key derivation
+    let argon2 = Argon2::new(
+        argon2::Algorithm::Argon2id,
+        argon2::Version::V0x13,
+        Params::new(
+            ARGON2_MEMORY_COST,
+            ARGON2_TIME_COST,
+            ARGON2_PARALLELISM,
+            Some(32), // Output length - 32 bytes for AES-256
+        )
+        .expect("Failed to create Argon2 params"),
     );
-
+    
+    let mut key_bytes = [0u8; 32];
+    argon2.hash_password_into(password.as_bytes(), salt, &mut key_bytes)
+        .expect("Failed to derive key");
+    
     let unbound_key = UnboundKey::new(&AES_256_GCM, &key_bytes).unwrap();
     LessSafeKey::new(unbound_key)
 }
@@ -967,3 +1002,8 @@ pub fn get_server_path(handle: tauri::AppHandle) -> Result<String, String> {
         .map_err(|e| e.to_string())?;
     Ok(resource_path.to_string_lossy().to_string())
 }
+
+
+
+
+

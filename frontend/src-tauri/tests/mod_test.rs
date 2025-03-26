@@ -156,8 +156,10 @@ fn test_get_secure_folder_path() {
 #[test]
 fn test_hash_password() {
     let salt = generate_salt();
-    let hash = hash_password("password", &salt);
-    assert_eq!(hash.len(), ring::digest::SHA256_OUTPUT_LEN);
+    let hash_result = hash_password("password", &salt);
+    assert!(hash_result.is_ok(), "Password hashing should succeed");
+    let hash = hash_result.unwrap();
+    assert!(!hash.is_empty(), "Hash should not be empty");
 }
 
 #[test]
