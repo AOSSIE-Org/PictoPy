@@ -17,11 +17,9 @@ use image::{DynamicImage, Rgba, RgbaImage};
 use rand::seq::SliceRandom;
 use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
 use ring::rand::{SecureRandom, SystemRandom};
-use ring::pbkdf2;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
-use std::num::NonZeroU32;
 use std::process::Command;
 use tauri::path::BaseDirectory;
 use tauri::Manager;
@@ -565,22 +563,33 @@ pub async fn remove_from_secure_folder(file_name: String, password: String) -> R
 
 #[tauri::command]
 pub async fn create_secure_folder(password: String) -> Result<(), String> {
+    validate_password(&password)?;
+    
     let secure_folder = get_secure_folder_path()?;
     fs::create_dir_all(&secure_folder).map_err(|e| e.to_string())?;
     println!("Secure folder path: {:?}", secure_folder);
 
     let salt = generate_salt();
-    let hashed_password = hash_password(&password, &salt);
+    let hashed_password = hash_password(&password, &salt)?;
 
     let config_path = secure_folder.join("config.json");
     let config = serde_json::json!({
         "salt": BASE64.encode(&salt),
-        "hashed_password": hashed_password?,
+        "hashed_password": hashed_password,
     });
     fs::write(config_path, serde_json::to_string(&config).unwrap()).map_err(|e| e.to_string())?;
 
     let nomedia_path = secure_folder.join(".nomedia");
     fs::write(nomedia_path, "").map_err(|e| e.to_string())?;
+
+    // Create metadata file if it doesn't exist
+    let metadata_path = secure_folder.join("metadata.json");
+    if !metadata_path.exists() {
+        fs::write(
+            &metadata_path,
+            serde_json::to_string(&HashMap::<String, String>::new()).unwrap(),
+        ).map_err(|e| e.to_string())?;
+    }
 
     Ok(())
 }
@@ -1003,7 +1012,20 @@ pub fn get_server_path(handle: tauri::AppHandle) -> Result<String, String> {
     Ok(resource_path.to_string_lossy().to_string())
 }
 
-
-
-
+// Function to validate password strength
+pub fn validate_password(password: &str) -> Result<(), String> {
+    if password.len() < 8 {
+        return Err("Password must be at least 8 characters long".to_string());
+    }
+    
+    if !password.chars().any(|c| c.is_uppercase()) {
+        return Err("Password must contain at least one uppercase letter".to_string());
+    }
+    
+    if !password.chars().any(|c| c.is_numeric()) {
+        return Err("Password must contain at least one number".to_string());
+    }
+    
+    Ok(())
+}
 
