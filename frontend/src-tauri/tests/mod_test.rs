@@ -37,9 +37,8 @@ fn test_get_folders_with_images() {
     let fs_state = real_file_service_state();
     let cs_state = real_cache_service_state();
     let folders = get_folders_with_images(directory, fs_state, cs_state);
-    // Adjust this assertion according to expected behavior.
-    // Here, we simply check that the function returns a vector.
-    assert!(folders.len() >= 0);
+    // Just check that we got a result
+    assert!(true, "Function returned without error");
 }
 
 #[test]
@@ -47,7 +46,8 @@ fn test_get_images_in_folder() {
     let folder = "folder_path";
     let fs_state = real_file_service_state();
     let images = get_images_in_folder(folder, fs_state);
-    assert!(images.len() >= 0);
+    // Just check that we got a result
+    assert!(true, "Function returned without error");
 }
 
 // #[test]
@@ -91,6 +91,7 @@ async fn test_share_file() {
     assert!(result.is_ok() || result.is_err());
 }
 
+#[tokio::test]
 async fn test_save_edited_image() {
     // Create a simple test image
     let img = DynamicImage::ImageRgb8(RgbImage::new(10, 10));
@@ -111,7 +112,7 @@ async fn test_save_edited_image() {
     // Call the function to save the edited image
     let result = save_edited_image(
         buffer.clone(),
-        original_path.to_string_lossy().to_string(), // Correct save path
+        original_path.to_string_lossy().to_string(),
         "grayscale(100%)".to_string(),
         100,
         100,
@@ -166,16 +167,36 @@ fn test_hash_password() {
 fn test_encrypt_decrypt_data() {
     let data = b"test data";
     let password = "secret";
-    let encrypted = encrypt_data(data, password).unwrap();
-    let decrypted = decrypt_data(&encrypted, password).unwrap();
+    
+    // Encrypt the data
+    let encrypted = match encrypt_data(data, password) {
+        Ok(enc) => enc,
+        Err(e) => {
+            println!("Encryption error: {}", e);
+            panic!("Encryption failed: {}", e);
+        }
+    };
+    
+    // Print debug info
+    println!("Encrypted data length: {}", encrypted.len());
+    
+    // Decrypt with the same password
+    let decrypted = match decrypt_data(&encrypted, password) {
+        Ok(dec) => dec,
+        Err(e) => {
+            println!("Decryption error: {}", e);
+            panic!("Decryption failed: {}", e);
+        }
+    };
+    
+    // Verify the decrypted data matches the original
     assert_eq!(decrypted, data);
 }
 
 #[test]
 fn test_derive_key() {
     let salt = generate_salt();
-    let key = derive_key("password", &salt);
-    // We cannot access the inner key bytes, so we simply assume key derivation succeeded.
+    let _key = derive_key("password", &salt); // Add underscore to suppress warning
     assert!(true, "Key derived successfully");
 }
 

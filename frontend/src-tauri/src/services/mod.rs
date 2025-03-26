@@ -657,9 +657,9 @@ pub fn hash_password(password: &str, salt: &[u8]) -> Result<String, String> {
     Ok(password_hash)
 }
 
-pub fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, ring::error::Unspecified> {
+pub fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, String> {
     let salt = generate_salt();
-    let key = derive_key(password, &salt);
+    let key = derive_key(password, &salt)?;
     let nonce = generate_nonce();
 
     let mut in_out = data.to_vec();
@@ -667,7 +667,7 @@ pub fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, ring::error:
         Nonce::assume_unique_for_key(nonce),
         Aad::empty(),
         &mut in_out,
-    )?;
+    ).map_err(|_| "Encryption failed".to_string())?;
 
     let mut result = Vec::new();
     result.extend_from_slice(&salt);
@@ -678,40 +678,36 @@ pub fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, ring::error:
     Ok(result)
 }
 
-pub fn decrypt_data(encrypted: &[u8], password: &str) -> Result<Vec<u8>, String> {
-    println!("Decrypting data...");
-
-    if encrypted.len() < SALT_LENGTH + NONCE_LENGTH + 16 {
-        return Err(format!(
-            "Encrypted data too short: {} bytes",
-            encrypted.len()
-        ));
+pub fn decrypt_data(encrypted_data: &[u8], password: &str) -> Result<Vec<u8>, String> {
+    if encrypted_data.len() < SALT_LENGTH + NONCE_LENGTH + AES_256_GCM.tag_len() {
+        return Err("Invalid encrypted data format".to_string());
     }
 
-    let salt = &encrypted[..SALT_LENGTH];
-    let nonce = &encrypted[SALT_LENGTH..SALT_LENGTH + NONCE_LENGTH];
-    let tag_len = 16;
-    let (ciphertext, tag) = encrypted[SALT_LENGTH + NONCE_LENGTH..]
-        .split_at(encrypted.len() - SALT_LENGTH - NONCE_LENGTH - tag_len);
+    let salt = &encrypted_data[0..SALT_LENGTH];
+    let nonce = &encrypted_data[SALT_LENGTH..SALT_LENGTH + NONCE_LENGTH];
+    let ciphertext_and_tag = &encrypted_data[SALT_LENGTH + NONCE_LENGTH..];
 
-    let key = derive_key(password, salt);
-    let nonce = match Nonce::try_assume_unique_for_key(nonce) {
-        Ok(n) => n,
-        Err(e) => return Err(format!("Nonce error: {:?}", e)),
-    };
+    let key = derive_key(password, salt)?;
 
-    let mut plaintext = ciphertext.to_vec();
-    plaintext.extend_from_slice(tag);
-
-    match key.open_in_place(nonce, Aad::empty(), &mut plaintext) {
-        Ok(decrypted) => {
-            println!(
-                "Decryption successful! Decrypted length: {}",
-                decrypted.len()
-            );
-            Ok(decrypted.to_vec())
-        }
-        Err(e) => Err(format!("Decryption error: {:?}", e)),
+    // The tag is at the end of the ciphertext
+    let tag_position = ciphertext_and_tag.len() - AES_256_GCM.tag_len();
+    
+    // Split the ciphertext and tag
+    let mut ciphertext = ciphertext_and_tag[..tag_position].to_vec();
+    let tag = &ciphertext_and_tag[tag_position..];
+    
+    // Combine ciphertext and tag for opening
+    let mut in_out = ciphertext.clone();
+    in_out.extend_from_slice(tag);
+    
+    // Open in place
+    match key.open_in_place(
+        Nonce::assume_unique_for_key(*arrayref::array_ref!(nonce, 0, NONCE_LENGTH)),
+        Aad::empty(),
+        &mut in_out
+    ) {
+        Ok(plaintext) => Ok(plaintext.to_vec()),
+        Err(_) => Err("Decryption failed. Incorrect password or corrupted data.".to_string())
     }
 }
 
@@ -751,8 +747,9 @@ pub async fn unlock_secure_folder(password: String) -> Result<bool, String> {
     Ok(argon2.verify_password(password.as_bytes(), &parsed_hash).is_ok())
 }
 
-pub fn derive_key(password: &str, salt: &[u8]) -> LessSafeKey {
-    // Use Argon2id for key derivation
+pub fn derive_key(password: &str, salt: &[u8]) -> Result<LessSafeKey, String> {
+    let mut key_bytes = [0u8; 32];
+    
     let argon2 = Argon2::new(
         argon2::Algorithm::Argon2id,
         argon2::Version::V0x13,
@@ -760,17 +757,19 @@ pub fn derive_key(password: &str, salt: &[u8]) -> LessSafeKey {
             ARGON2_MEMORY_COST,
             ARGON2_TIME_COST,
             ARGON2_PARALLELISM,
-            Some(32), // Output length - 32 bytes for AES-256
+            Some(32),
         )
-        .expect("Failed to create Argon2 params"),
+        .map_err(|e| e.to_string())?,
     );
     
-    let mut key_bytes = [0u8; 32];
-    argon2.hash_password_into(password.as_bytes(), salt, &mut key_bytes)
-        .expect("Failed to derive key");
+    argon2
+        .hash_password_into(password.as_bytes(), salt, &mut key_bytes)
+        .map_err(|e| format!("Key derivation failed: {}", e))?;
+
+    let unbound_key = UnboundKey::new(&AES_256_GCM, &key_bytes)
+        .map_err(|_| "Failed to create encryption key".to_string())?;
     
-    let unbound_key = UnboundKey::new(&AES_256_GCM, &key_bytes).unwrap();
-    LessSafeKey::new(unbound_key)
+    Ok(LessSafeKey::new(unbound_key))
 }
 
 #[tauri::command]
@@ -1078,6 +1077,11 @@ pub fn secure_delete_file(path: &Path) -> Result<(), String> {
     
     Ok(())
 }
+
+
+
+
+
 
 
 
