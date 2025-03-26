@@ -489,44 +489,50 @@ pub fn generate_salt() -> [u8; SALT_LENGTH] {
 
 #[tauri::command]
 pub async fn move_to_secure_folder(path: String, password: String) -> Result<(), String> {
+    // Validate password first
+    validate_password(&password)?;
+    
     let secure_folder = get_secure_folder_path()?;
+    
+    // Ensure secure folder exists
+    if !secure_folder.exists() {
+        return Err("Secure folder not set up. Please set up the secure folder first.".to_string());
+    }
+    
     let file_name = Path::new(&path).file_name().ok_or("Invalid file name")?;
     let dest_path = secure_folder.join(file_name);
 
-    let content = fs::read(&path).map_err(|e| e.to_string())?;
-    let ciphertext_length = content.len() + AES_256_GCM.tag_len();
-    let _expected_length = SALT_LENGTH + NONCE_LENGTH + ciphertext_length + 16;
-    let encrypted = encrypt_data(&content, &password).map_err(|e| e.to_string())?;
-    println!("Encrypted file size: {}", encrypted.len());
-    fs::write(&dest_path, encrypted).map_err(|e| e.to_string())?;
-    println!("Encrypted file saved to: {:?}", secure_folder);
-    fs::remove_file(&path).map_err(|e| e.to_string())?;
-
-    let thumbnails_folder = Path::new(&path)
-        .parent() // Get parent directory of the original file
-        .and_then(|parent| parent.join("PictoPy.thumbnails").canonicalize().ok()) // Navigate to PictoPy.thumbnails
-        .ok_or("Unable to locate thumbnails directory")?;
-    let thumbnail_path = thumbnails_folder.join(file_name);
-
-    if thumbnail_path.exists() {
-        fs::remove_file(&thumbnail_path).map_err(|e| e.to_string())?;
-        println!("Thumbnail deleted: {:?}", thumbnail_path);
-    } else {
-        println!("Thumbnail not found: {:?}", thumbnail_path);
-    }
-
-    // Store the original path
+    // Read the file content
+    let content = fs::read(&path).map_err(|e| format!("Failed to read file: {}", e))?;
+    
+    // Encrypt the content
+    let encrypted = encrypt_data(&content, &password)?;
+    
+    // Write the encrypted content
+    fs::write(&dest_path, &encrypted).map_err(|e| format!("Failed to write encrypted file: {}", e))?;
+    
+    // Update metadata
     let metadata_path = secure_folder.join("metadata.json");
     let mut metadata: HashMap<String, String> = if metadata_path.exists() {
         serde_json::from_str(&fs::read_to_string(&metadata_path).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?
+            .map_err(|e| format!("Failed to parse metadata: {}", e))?
     } else {
         HashMap::new()
     };
-    metadata.insert(file_name.to_string_lossy().to_string(), path);
-    fs::write(&metadata_path, serde_json::to_string(&metadata).unwrap())
-        .map_err(|e| e.to_string())?;
-
+    
+    metadata.insert(
+        file_name.to_string_lossy().to_string(),
+        path.clone(),
+    );
+    
+    fs::write(
+        &metadata_path,
+        serde_json::to_string(&metadata).unwrap(),
+    ).map_err(|e| format!("Failed to update metadata: {}", e))?;
+    
+    // Securely delete the original file
+    secure_delete_file(Path::new(&path))?;
+    
     Ok(())
 }
 
@@ -1083,6 +1089,7 @@ pub fn verify_password(password: &str, stored_hash: &str) -> Result<bool, String
         Err(_) => Ok(false), // Password doesn't match, but this is not an error condition
     }
 }
+
 
 
 
