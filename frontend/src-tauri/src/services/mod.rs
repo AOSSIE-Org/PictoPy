@@ -5,8 +5,8 @@ use tauri::State;
 mod cache_service;
 mod file_service;
 use argon2::{
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
-    Argon2, Params,
+    password_hash::{PasswordHasher, SaltString},
+    Argon2, Params, PasswordVerifier,
 };
 pub use cache_service::CacheService;
 use chrono::{DateTime, Datelike, Utc};
@@ -727,24 +727,14 @@ pub async fn unlock_secure_folder(password: String) -> Result<bool, String> {
     let salt = BASE64
         .decode(config["salt"].as_str().ok_or("Invalid salt")?.as_bytes())
         .map_err(|e| e.to_string())?;
-    let stored_hash = BASE64
-        .decode(
-            config["hashed_password"]
-                .as_str()
-                .ok_or("Invalid hash")?
-                .as_bytes(),
-        )
-        .map_err(|e| e.to_string())?;
+    
+    let stored_hash = config["hashed_password"]
+        .as_str()
+        .ok_or("Invalid hash")?
+        .to_string();
 
-    let _input_hash = hash_password(&password, &salt);
-
-    let stored_hash_str = String::from_utf8(stored_hash.clone())
-        .map_err(|e| format!("Invalid UTF-8 in stored hash: {}", e))?;
-
-    let parsed_hash = PasswordHash::new(&stored_hash_str)
-        .map_err(|e| format!("Invalid stored hash: {}", e))?;
-    let argon2 = Argon2::default();
-    Ok(argon2.verify_password(password.as_bytes(), &parsed_hash).is_ok())
+    // Use the new verification method
+    verify_password(&password, &stored_hash)
 }
 
 pub fn derive_key(password: &str, salt: &[u8]) -> Result<LessSafeKey, String> {
@@ -1078,11 +1068,18 @@ pub fn secure_delete_file(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
-
-
-
-
-
-
+pub fn verify_password(password: &str, stored_hash: &str) -> Result<bool, String> {
+    // Parse the stored hash
+    let parsed_hash = argon2::PasswordHash::new(stored_hash)
+        .map_err(|e| format!("Failed to parse hash: {}", e))?;
+    
+    // Verify the password against the parsed hash
+    let argon2 = Argon2::default();
+    
+    match argon2.verify_password(password.as_bytes(), &parsed_hash) {
+        Ok(_) => Ok(true),
+        Err(_) => Ok(false), // Password doesn't match, but this is not an error condition
+    }
+}
 
 
