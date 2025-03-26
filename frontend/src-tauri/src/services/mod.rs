@@ -732,7 +732,7 @@ pub async fn unlock_secure_folder(password: String) -> Result<bool, String> {
         serde_json::from_str(&fs::read_to_string(config_path).map_err(|e| e.to_string())?)
             .map_err(|e| e.to_string())?;
 
-    let salt = BASE64
+    let _salt = BASE64
         .decode(config["salt"].as_str().ok_or("Invalid salt")?.as_bytes())
         .map_err(|e| e.to_string())?;
     
@@ -1089,6 +1089,7 @@ pub fn verify_password(password: &str, stored_hash: &str) -> Result<bool, String
         Err(_) => Ok(false), // Password doesn't match, but this is not an error condition
     }
 }
+
 
 
 

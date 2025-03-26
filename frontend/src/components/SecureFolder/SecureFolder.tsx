@@ -41,17 +41,12 @@ const SecureFolder: React.FC = () => {
       return;
     }
 
-    if (password.length < 4) {
-      setError('Password must be at least 4 characters long');
-      return;
-    }
-
     try {
       await invoke('create_secure_folder', { password });
       setIsSetup(true);
       setError('');
     } catch (error) {
-      setError(`Failed to create secure folder: ${error}`);
+      setError(`${error}`);
     }
   };
 

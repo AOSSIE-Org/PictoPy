@@ -11,7 +11,8 @@ use PictoPy::services::{
     decrypt_data, derive_key, encrypt_data, generate_salt, get_folders_with_images,
     get_images_in_folder, get_random_memories, get_secure_folder_path, hash_password,
     is_image_file, move_to_secure_folder, remove_from_secure_folder, save_edited_image, share_file,
-    unlock_secure_folder, CacheService, FileService, SECURE_FOLDER_NAME,
+    unlock_secure_folder, validate_password, verify_password, CacheService, FileService, 
+    SECURE_FOLDER_NAME,
 };
 
 /// This unsafe helper is for testing only.
@@ -36,7 +37,7 @@ fn test_get_folders_with_images() {
     let directory = "test_dir";
     let fs_state = real_file_service_state();
     let cs_state = real_cache_service_state();
-    let folders = get_folders_with_images(directory, fs_state, cs_state);
+    let _folders = get_folders_with_images(directory, fs_state, cs_state);
     // Just check that we got a result
     assert!(true, "Function returned without error");
 }
@@ -45,7 +46,7 @@ fn test_get_folders_with_images() {
 fn test_get_images_in_folder() {
     let folder = "folder_path";
     let fs_state = real_file_service_state();
-    let images = get_images_in_folder(folder, fs_state);
+    let _images = get_images_in_folder(folder, fs_state);
     // Just check that we got a result
     assert!(true, "Function returned without error");
 }
@@ -279,4 +280,54 @@ fn test_get_random_memories() {
     let images = result.unwrap();
     // With one image available, expect exactly one image.
     assert_eq!(images.len(), 1);
+}
+
+#[tokio::test]
+async fn test_password_validation() {
+    // Test weak passwords
+    assert!(validate_password("short").is_err()); // Too short
+    assert!(validate_password("nouppercase123").is_err()); // No uppercase
+    assert!(validate_password("NONUMBERS").is_err()); // No numbers
+    
+    // Test strong password
+    assert!(validate_password("StrongPass123").is_ok());
+}
+
+#[tokio::test]
+async fn test_argon2id_password_hashing() {
+    let password = "TestPassword123";
+    let salt = generate_salt();
+    
+    let hash_result = hash_password(password, &salt);
+    assert!(hash_result.is_ok());
+    
+    let hash = hash_result.unwrap();
+    let verification = verify_password(password, &hash);
+    assert!(verification.is_ok());
+    assert!(verification.unwrap());
+    
+    // Test wrong password
+    let wrong_verification = verify_password("WrongPassword123", &hash);
+    assert!(wrong_verification.is_ok());
+    assert!(!wrong_verification.unwrap());
+}
+
+#[tokio::test]
+async fn test_encryption_decryption() {
+    let data = b"This is a test message for encryption";
+    let password = "SecurePassword123";
+    
+    let encrypted = encrypt_data(data, password);
+    assert!(encrypted.is_ok());
+    
+    let encrypted_data = encrypted.unwrap();
+    let decrypted = decrypt_data(&encrypted_data, password);
+    assert!(decrypted.is_ok());
+    
+    let decrypted_data = decrypted.unwrap();
+    assert_eq!(decrypted_data, data);
+    
+    // Test wrong password
+    let wrong_decryption = decrypt_data(&encrypted_data, "WrongPassword123");
+    assert!(wrong_decryption.is_err());
 }
