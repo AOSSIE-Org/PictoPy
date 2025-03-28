@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
   Home,
   Sparkles,
@@ -219,7 +219,7 @@ const Sidebar: React.FC = () => {
             {/* Navigation Items */}
             <div className="w-full space-y-1 px-3">
               {navItems.map(({ path, label, Icon }) => (
-                <Link
+                <NavLink
                   key={path}
                   to={path}
                   className={`rounded-xl group flex flex-col items-center gap-1 px-2 py-3 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
@@ -243,7 +243,7 @@ const Sidebar: React.FC = () => {
                   <span className="mt-1 whitespace-nowrap text-xs font-medium tracking-wide">
                     {label}
                   </span>
-                </Link>
+                </NavLink>
               ))}
 
               {/* Image Compressor Button */}

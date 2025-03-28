@@ -13,6 +13,8 @@ import AITagging from './pages/AITagging/AITaging';
 import Album from './pages/Album/Album';
 import SecureFolder from './pages/SecureFolderPage/SecureFolder';
 import Memories from './pages/Memories/Memories';
+// import { fetchImages } from './loader/fetchImage';
+import { fetchImagesForHome } from './loader/fetchImage';
 
 
 //Listen for window close event and stop server
@@ -43,7 +45,11 @@ const router = createBrowserRouter(
   createRoutesFromElements(
     <Route path='/' element={<Layout/>} >
         <Route path='' element={<InitialPage/>} />
-        <Route path='home' element={<Dashboard/>}  />
+        <Route 
+          path='home' 
+          element={<Dashboard/>} 
+          loader={fetchImagesForHome}  
+        />
         <Route path={ROUTES.LAYOUT.VIDEOS} element={<Videos />} />
         <Route path={ROUTES.LAYOUT.SETTINGS} element={<Settings />} />
         <Route path={ROUTES.LAYOUT.AI} element={<AITagging />} />

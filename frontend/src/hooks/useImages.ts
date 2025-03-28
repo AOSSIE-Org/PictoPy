@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { usePictoMutation } from '@/hooks/useQueryExtensio';
 import { generateThumbnails } from '../../api/api-functions/images';
 
-interface ImageData {
+export interface ImageData {
   original: string;
   url: string;
   thumbnailUrl: string;
@@ -15,7 +15,7 @@ interface ImageData {
   imagePath: string;
 }
 
-interface ResponseData {
+export interface ResponseData {
   [year: string]: {
     [month: string]: string[];
   };
@@ -28,9 +28,12 @@ export const extractThumbnailPath = (imagePath: string) => {
   return `${thumbnailPath}/${thumbnailImageName}`;
 };
 
+
+
 export const useImages = (folderPaths: string[]) => {
   const [images, setImages] = useState<ImageData[]>([]);
   const [loading, setLoading] = useState(true);
+ 
   const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation(
     {
       mutationFn: generateThumbnails,
