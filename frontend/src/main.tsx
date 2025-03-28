@@ -1,10 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
 import { isProd } from './utils/isProd';
 import { stopServer, startServer } from './utils/serverUtils';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { imagesEndpoints } from '../api/apiEndpoints';
+import { Layout } from './Layout';
+import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } from 'react-router-dom';
+import { InitialPage } from './pages/Setupscreen/Setup';
+import Dashboard from './pages/Dashboard/Dashboard';
+import Videos from './pages/VideosPage/Videos';
+import Settings from './pages/SettingsPage/Settings';
+import AITagging from './pages/AITagging/AITaging';
+import Album from './pages/Album/Album';
+import SecureFolder from './pages/SecureFolderPage/SecureFolder';
+import Memories from './pages/Memories/Memories';
+
 
 //Listen for window close event and stop server
 const onCloseListener = async () => {
@@ -13,50 +22,43 @@ const onCloseListener = async () => {
   });
 };
 
-const fetchFilePath = async () => {
-  try {
-    // Fetch file path from backend
-    const response = await fetch(imagesEndpoints.getThumbnailPath);
-    const data = await response.json();
-    if (localStorage.getItem('thumbnailPath')) {
-      localStorage.removeItem('thumbnailPath');
-    }
-    if (data.thumbnailPath) {
-      // Store in localStorage
-      console.log('Thumbnail Path = ', data.thumbnailPath);
-      localStorage.setItem('thumbnailPath', data.thumbnailPath);
-      return data.thumbnailPath;
-    }
-  } catch (error) {
-    console.error('Error fetching file path:', error);
-  }
-  return null;
+const ROUTES = {
+  INITIAL: '/',
+  LAYOUT: {
+    AI: 'ai-tagging',
+    HOME: 'home',
+    DASHBOARD: 'dashboard',
+    PHOTOS: 'photos',
+    VIDEOS: 'videos',
+    SETTINGS: 'settings',
+    ALBUM: 'albums',
+    SECURE_FOLDER: 'secure-folder',
+    MEMORIES: 'memories',
+  },
 };
 
-const Main = () => {
-  const [isReady, setIsReady] = useState(false);
 
-  useEffect(() => {
-    const init = async () => {
-      const storedPath = localStorage.getItem('thumbnailPath');
-      console.log('Thumbnail Path = ', storedPath);
-      if (!storedPath) {
-        await fetchFilePath();
-      }
-      setIsReady(true);
-    };
 
-    init();
-  }, []);
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route path='/' element={<Layout/>} >
+        <Route path='' element={<InitialPage/>} />
+        <Route path='home' element={<Dashboard/>}  />
+        <Route path={ROUTES.LAYOUT.VIDEOS} element={<Videos />} />
+        <Route path={ROUTES.LAYOUT.SETTINGS} element={<Settings />} />
+        <Route path={ROUTES.LAYOUT.AI} element={<AITagging />} />
+        <Route path={ROUTES.LAYOUT.ALBUM} element={<Album/>} />
+        <Route path={ROUTES.LAYOUT.SECURE_FOLDER} element={<SecureFolder />} />
+        <Route path={ROUTES.LAYOUT.MEMORIES} element={<Memories />} />
+    </Route>
+  )
+)
 
-  if (!isReady) return <p>Loading...</p>;
 
-  return <App />;
-};
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <Main />
+    <RouterProvider router={router} />   
   </React.StrictMode>,
 );
 
