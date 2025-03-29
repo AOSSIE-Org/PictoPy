@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from typing import List, Tuple
+from typing import List, Tuple, cast
 
 class_names: List[str] = [
     "person",
@@ -189,7 +189,7 @@ def draw_box(
     thickness: int = 2,
 ) -> np.ndarray:
     x1, y1, x2, y2 = box.astype(int)
-    return cv2.rectangle(image, (x1, y1), (x2, y2), color, thickness)
+    return cast(np.ndarray, cv2.rectangle(image, (x1, y1), (x2, y2), color, thickness))
 
 
 def draw_text(
@@ -211,15 +211,18 @@ def draw_text(
 
     cv2.rectangle(image, (x1, y1), (x1 + tw, y1 - th), color, -1)
 
-    return cv2.putText(
-        image,
-        text,
-        (x1, y1),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        font_size,
-        (255, 255, 255),
-        text_thickness,
-        cv2.LINE_AA,
+    return cast(
+        np.ndarray,
+        cv2.putText(
+            image,
+            text,
+            (x1, y1),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            font_size,
+            (255, 255, 255),
+            text_thickness,
+            cv2.LINE_AA,
+        ),
     )
 
 
@@ -233,4 +236,7 @@ def draw_masks(
         x1, y1, x2, y2 = box.astype(int)
         cv2.rectangle(mask_img, (x1, y1), (x2, y2), color.tolist(), -1)
 
-    return cv2.addWeighted(mask_img, mask_alpha, image, 1 - mask_alpha, 0)
+    return cast(
+        np.ndarray,
+        cv2.addWeighted(mask_img, mask_alpha, image, 1 - mask_alpha, 0),
+    )

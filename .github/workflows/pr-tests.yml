@@ -33,7 +33,7 @@ jobs:
           npm run format:check
           cd ..
           cd backend/
-          pre-commit run --config ../.pre-commit-config.yaml --all-files || exit 1
+          pre-commit run --config ./.pre-commit-config.yaml --all-files || exit 1
           cd ..
           cd frontend/src-tauri/
           cargo fmt -- --check

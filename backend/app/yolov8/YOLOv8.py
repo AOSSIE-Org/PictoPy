@@ -75,7 +75,7 @@ class YOLOv8:
         input_img = input_img.transpose(2, 0, 1)
         input_tensor = input_img[np.newaxis, :, :, :].astype(np.float32)
 
-        return input_tensor
+        return cast(np.ndarray, input_tensor)
 
     def process_output(
         self, output: List[np.ndarray]
