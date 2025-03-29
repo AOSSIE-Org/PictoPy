@@ -132,7 +132,7 @@ try {
 Write-Host "Setting up backend..." -ForegroundColor Yellow
 try {
     Set-Location .\backend\
-    
+    pip install ruff black pre-commit mypy
     # Create virtual environment
     python -m venv venv
     

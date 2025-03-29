@@ -256,7 +256,7 @@ cd frontend
 npm test
 ```
 
-#### Backend'
+#### Backend
 
 - FastAPI
   ```bash
@@ -268,6 +268,10 @@ npm test
   cd frontend/src-tauri/
   cargo test
   ```
+
+#### Note about pre commits
+
+Before committing changes make sure pre-commit ruff black and mypy are globally installed if virtual enviroment of python is not activated in the terminal from which you are comitting
 
 ## Additional Resources
 

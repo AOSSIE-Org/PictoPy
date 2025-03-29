@@ -99,6 +99,8 @@ pyenv global 3.12.0
 python_version=$(python --version)
 echo "Installed: $python_version"
 
+pip install ruff black pre-commit mypy
+
 
 # ---- Install Rust (if not already installed) ----
 if ! command -v rustc &> /dev/null; then

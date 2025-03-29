@@ -24,7 +24,7 @@ jobs:
           npm install
           cd ..
           cd backend
-          pip install pre-commit ruff black
+          pip install pre-commit ruff black mypy
           cd ..
       - name: Run Linters
         run: |
