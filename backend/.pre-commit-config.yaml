@@ -1,0 +1,22 @@
+repos:
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: "v0.0.241"
+    hooks:
+      - id: ruff
+        args: [--fix]
+
+  - repo: https://github.com/psf/black
+    rev: "22.3.0"
+    hooks:
+      - id: black
+        language_version: python3
+
+  - repo: local-mypy
+    hooks:
+      - id: mypy-backend
+        name: mypy backend
+        entry: bash -c 'cd backend && mypy --exclude "(^tests/|(^|/)test\.py$)" .'
+        language: system
+        types: [python]
+        files: ^backend/
+        pass_filenames: false

@@ -56,7 +56,10 @@ async def test_route(payload: TestRouteRequest) -> TestRouteResponse:
         return TestRouteResponse(
             success=True,
             message="Object detection completed successfully",
-            data=DetectionData(class_ids=class_ids, detected_classes=detected_classes),
+            data=DetectionData(
+                class_ids=[str(id) for id in class_ids],
+                detected_classes=detected_classes,
+            ),
         )
     except Exception as e:
         raise HTTPException(

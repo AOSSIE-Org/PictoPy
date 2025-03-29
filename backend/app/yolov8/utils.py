@@ -231,6 +231,6 @@ def draw_masks(
     for box, class_id in zip(boxes, classes):
         color: np.ndarray = colors[class_id]
         x1, y1, x2, y2 = box.astype(int)
-        cv2.rectangle(mask_img, (x1, y1), (x2, y2), color, -1)
+        cv2.rectangle(mask_img, (x1, y1), (x2, y2), color.tolist(), -1)
 
     return cv2.addWeighted(mask_img, mask_alpha, image, 1 - mask_alpha, 0)

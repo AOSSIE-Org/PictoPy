@@ -44,7 +44,7 @@ def extract_face_embeddings(img_path: str) -> list[np.ndarray] | str | None:
         print(f"No person detected in image: {img_path}")
         return "no_person"
 
-    boxes, scores, class_ids = yolov8_detector(img)
+    boxes, scores, detected_class_ids = yolov8_detector(img)
 
     embeddings = []
     for box, score in zip(boxes, scores):

@@ -1,13 +1,15 @@
 import psutil
 import logging
 from functools import wraps
-from typing import Callable
+from typing import TypeVar, Callable, Any, cast
 import time
 
 logger = logging.getLogger(__name__)
 
+F = TypeVar("F", bound=Callable[..., Any])
 
-def log_memory_usage(func: Callable) -> Callable:
+
+def log_memory_usage(func: F) -> F:
     """
     Decorator to log memory usage before and after function execution.
 
@@ -19,7 +21,7 @@ def log_memory_usage(func: Callable) -> Callable:
     """
 
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         process = psutil.Process()
 
         # Memory before execution
@@ -44,10 +46,10 @@ def log_memory_usage(func: Callable) -> Callable:
 
         return result
 
-    return wrapper
+    return cast(F, wrapper)
 
 
 def get_current_memory_usage() -> float:
     """Returns current memory usage in MB."""
     process = psutil.Process()
-    return process.memory_info().rss / 1024 / 1024
+    return float(process.memory_info().rss / 1024 / 1024)
