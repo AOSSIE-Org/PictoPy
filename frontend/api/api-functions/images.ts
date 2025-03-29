@@ -30,7 +30,7 @@ export const delMultipleImages = async (
   return data;
 };
 
-const parseAndSortImageData = (data: APIResponse['data']): Image[] => {
+export const parseAndSortImageData = (data: APIResponse['data']): Image[] => {
   const parsedImages: Image[] = Object.entries(data.images).map(
     ([src, tags]) => {
       const url = convertFileSrc(src);

@@ -16,6 +16,7 @@ import Memories from './pages/Memories/Memories';
 // import { fetchImages } from './loader/fetchImage';
 import { fetchImagesForHome } from './loader/fetchImages';
 import { fetchAlbums } from './loader/fetchAlbums';
+import { fetchAllImageObjects } from './loader/fetchAIImages';
 
 
 //Listen for window close event and stop server
@@ -56,6 +57,7 @@ const router = createBrowserRouter(
         <Route 
           path={ROUTES.LAYOUT.AI} 
           element={<AITagging />} 
+          loader={fetchAllImageObjects}
         />
         <Route 
           path={ROUTES.LAYOUT.ALBUM} 

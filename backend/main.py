@@ -5,6 +5,8 @@ This module contains the main FastAPI application.
 from uvicorn import Config, Server
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
 from contextlib import asynccontextmanager
 from app.database.faces import cleanup_face_embeddings, create_faces_table
 from app.database.images import create_image_id_mapping_table, create_images_table
@@ -60,6 +62,21 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"message": "PictoPy Server is up and running!"}
+
+@app.get("/loader/test")
+async def loader_test() : 
+    print("Yes Loader working .... !")
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status_code": 200,
+            "content": {
+                "success": True,
+                "folderPaths":["Path1","Path2","Path3"]
+            },
+        },
+    )
+
 
 
 app.include_router(test_router, prefix="/test", tags=["Test"])
