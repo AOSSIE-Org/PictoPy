@@ -14,7 +14,8 @@ import Album from './pages/Album/Album';
 import SecureFolder from './pages/SecureFolderPage/SecureFolder';
 import Memories from './pages/Memories/Memories';
 // import { fetchImages } from './loader/fetchImage';
-import { fetchImagesForHome } from './loader/fetchImage';
+import { fetchImagesForHome } from './loader/fetchImages';
+import { fetchAlbums } from './loader/fetchAlbums';
 
 
 //Listen for window close event and stop server
@@ -52,8 +53,15 @@ const router = createBrowserRouter(
         />
         <Route path={ROUTES.LAYOUT.VIDEOS} element={<Videos />} />
         <Route path={ROUTES.LAYOUT.SETTINGS} element={<Settings />} />
-        <Route path={ROUTES.LAYOUT.AI} element={<AITagging />} />
-        <Route path={ROUTES.LAYOUT.ALBUM} element={<Album/>} />
+        <Route 
+          path={ROUTES.LAYOUT.AI} 
+          element={<AITagging />} 
+        />
+        <Route 
+          path={ROUTES.LAYOUT.ALBUM} 
+          element={<Album/>} 
+          loader={fetchAlbums}
+        />
         <Route path={ROUTES.LAYOUT.SECURE_FOLDER} element={<SecureFolder />} />
         <Route path={ROUTES.LAYOUT.MEMORIES} element={<Memories />} />
     </Route>

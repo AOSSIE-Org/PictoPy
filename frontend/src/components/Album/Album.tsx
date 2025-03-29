@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import AlbumList from './AlbumList';
 import { Button } from '@/components/ui/button';
 import CreateAlbumForm from './AlbumForm';
@@ -13,12 +13,26 @@ import {
   deleteAlbums,
   fetchAllAlbums,
 } from '../../../api/api-functions/albums';
+import { useLoaderData } from 'react-router-dom';
+
 
 const AlbumsView: React.FC = () => {
-  const { successData: albums, isLoading } = usePictoQuery({
+
+
+  const initialAlbums:any = useLoaderData();
+  const [albums,setAlbums] = useState(initialAlbums);
+
+  const { successData:fetchedAlbums, isLoading } = usePictoQuery({
     queryFn: async () => await fetchAllAlbums(false),
     queryKey: ['all-albums'],
   });
+
+  useEffect(() => {
+    if (fetchedAlbums) {
+      console.log("Fetched Albums = ",albums);
+      setAlbums(fetchedAlbums);
+    }
+  }, [fetchedAlbums]);
 
   const { mutate: deleteAlbum } = usePictoMutation({
     mutationFn: deleteAlbums,
@@ -37,6 +51,7 @@ const AlbumsView: React.FC = () => {
     <div className="flex h-full w-full items-center justify-center">
       <LoadingScreen message="Loading Albums..." />
     </div>;
+
   const showErrorDialog = (title: string, err: unknown) => {
     setErrorDialogContent({
       title,
