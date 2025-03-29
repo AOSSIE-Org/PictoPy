@@ -2,6 +2,7 @@
 This module contains the main FastAPI application.
 """
 
+from typing import AsyncGenerator
 from uvicorn import Config, Server
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,7 +29,7 @@ os.makedirs(thumbnails_dir, exist_ok=True)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     create_YOLO_mappings()
     create_faces_table()
     create_folders_table()
@@ -59,7 +60,7 @@ app.add_middleware(
 
 
 @app.get("/")
-async def root():
+async def root() -> dict[str, str]:
     return {"message": "PictoPy Server is up and running!"}
 
 

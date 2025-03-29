@@ -27,7 +27,7 @@ def create_folders_table() -> None:
     conn.close()
 
 
-def insert_folder(folder_path: str) -> str | None:
+def insert_folder(folder_path: str) -> int | None:
     """
     Inserts a folder path into the 'folders' table if it does not already exist.
 
@@ -54,7 +54,7 @@ def insert_folder(folder_path: str) -> str | None:
     if existing_folder:
         result = existing_folder[0]
         conn.close()
-        return str(result)
+        return int(result)
 
     # Time is in Unix format
     last_modified_time = int(os.path.getmtime(abs_folder_path))
@@ -76,7 +76,7 @@ def insert_folder(folder_path: str) -> str | None:
     return result[0] if result else None
 
 
-def get_folder_id_from_path(folder_path: str) -> Optional[str]:
+def get_folder_id_from_path(folder_path: str) -> Optional[int]:
     """
     Retrieves the folder ID from the database for the given folder path.
 
@@ -132,7 +132,7 @@ def get_all_folders() -> list[str]:
         return [row[0] for row in rows] if rows else []
 
 
-def get_all_folder_ids() -> list[str]:
+def get_all_folder_ids() -> list[int]:
     """
     Retrieves all the folder IDs from the database
 

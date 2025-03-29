@@ -1,5 +1,6 @@
 import sqlite3
 import json
+from typing import List
 import bcrypt
 from app.config.settings import DATABASE_PATH
 from app.utils.wrappers import image_exists, album_exists
@@ -8,7 +9,7 @@ from app.utils.APIError import APIError
 from fastapi import status
 
 
-def create_albums_table():
+def create_albums_table() -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute(
@@ -27,7 +28,12 @@ def create_albums_table():
     conn.close()
 
 
-def create_album(album_name, description=None, is_hidden=False, password=None):
+def create_album(
+    album_name: str,
+    description: str | None = None,
+    is_hidden: bool = False,
+    password: str | None = None,
+) -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -55,7 +61,7 @@ def create_album(album_name, description=None, is_hidden=False, password=None):
     conn.close()
 
 
-def verify_album_access(album_name, password=None):
+def verify_album_access(album_name: str, password: str | None = None) -> bool:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -84,7 +90,7 @@ def verify_album_access(album_name, password=None):
 
 
 @album_exists
-def delete_album(album_name):
+def delete_album(album_name: str) -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM albums WHERE album_name = ?", (album_name,))
@@ -93,7 +99,7 @@ def delete_album(album_name):
 
 
 @album_exists
-def add_photo_to_album(album_name, image_path):
+def add_photo_to_album(album_name: str, image_path: str) -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -119,7 +125,9 @@ def add_photo_to_album(album_name, image_path):
 
 
 @album_exists
-def get_album_photos(album_name, password=None):
+def get_album_photos(
+    album_name: str, password: str | None = None
+) -> List[str | None] | None:
     verify_album_access(album_name, password)
 
     conn = sqlite3.connect(DATABASE_PATH)
@@ -137,7 +145,7 @@ def get_album_photos(album_name, password=None):
 
 @album_exists
 @image_exists
-def remove_photo_from_album(album_name, image_path):
+def remove_photo_from_album(album_name: str, image_path: str) -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -161,7 +169,7 @@ def remove_photo_from_album(album_name, image_path):
     conn.close()
 
 
-def get_all_albums(include_hidden=False):
+def get_all_albums(include_hidden: bool = False) -> list[dict]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -191,7 +199,7 @@ def get_all_albums(include_hidden=False):
 
 
 @album_exists
-def edit_album_description(album_name, new_description):
+def edit_album_description(album_name: str, new_description: str) -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -203,7 +211,7 @@ def edit_album_description(album_name, new_description):
     conn.close()
 
 
-def remove_image_from_all_albums(image_id):
+def remove_image_from_all_albums(image_id: str) -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Query, HTTPException
 from fastapi import status as fastapi_status
 from fastapi.responses import JSONResponse
 import shutil
+from typing import List, Dict, Set, Optional, Union
 
 from app.config.settings import IMAGES_PATH
 
@@ -54,10 +55,10 @@ from app.schemas.images import (
 
 router = APIRouter()
 
-progress_status = {}
+progress_status: Dict[int, Dict[str, Union[int, str]]] = {}
 
 
-async def run_get_classes(img_path, folder_id=None):
+async def run_get_classes(img_path: str, folder_id: Optional[int] = None) -> None:
     loop = asyncio.get_event_loop()
     result = await loop.run_in_executor(None, get_classes, img_path)
     insert_image_db(img_path, result, extract_metadata(img_path), folder_id)
@@ -72,7 +73,7 @@ async def run_get_classes(img_path, folder_id=None):
     response_model=GetImagesResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
-def get_images():
+def get_images() -> GetImagesResponse:
     try:
         image_files = get_all_image_paths()
 
@@ -103,7 +104,9 @@ def get_images():
     response_model=AddMultipleImagesResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
-async def add_multiple_images(payload: AddMultipleImagesRequest):
+async def add_multiple_images(
+    payload: AddMultipleImagesRequest,
+) -> AddMultipleImagesResponse:
     try:
 
         image_paths = payload.paths
@@ -118,7 +121,7 @@ async def add_multiple_images(payload: AddMultipleImagesRequest):
                 ).model_dump(),
             )
 
-        tasks = []
+        tasks: List[asyncio.Task] = []
         for image_path in image_paths:
             if not os.path.isfile(image_path):
                 raise HTTPException(
@@ -147,7 +150,7 @@ async def add_multiple_images(payload: AddMultipleImagesRequest):
             shutil.copy(image_path, destination_path)
             tasks.append(asyncio.create_task(run_get_classes(destination_path)))
 
-        asyncio.create_task(process_images(tasks))
+        asyncio.create_task(process_images(tasks, 0))
 
         return AddMultipleImagesResponse(
             data=len(tasks),
@@ -167,7 +170,7 @@ async def add_multiple_images(payload: AddMultipleImagesRequest):
         )
 
 
-async def process_images(tasks, folder_id):
+async def process_images(tasks: List[asyncio.Task], folder_id: int) -> None:
     total = len(tasks)
     completed = 0
     progress_status[folder_id] = {"total": total, "completed": 0, "status": "pending"}
@@ -186,7 +189,7 @@ async def process_images(tasks, folder_id):
     response_model=DeleteImageResponse,
     responses={code: {"model": ErrorResponse} for code in [404, 500]},
 )
-def delete_image(payload: DeleteImageRequest):
+def delete_image(payload: DeleteImageRequest) -> DeleteImageResponse:
     try:
 
         filename = payload.path
@@ -223,13 +226,15 @@ def delete_image(payload: DeleteImageRequest):
     response_model=DeleteMultipleImagesResponse,
     responses={code: {"model": ErrorResponse} for code in [404, 500]},
 )
-def delete_multiple_images(payload: DeleteMultipleImagesRequest):
+def delete_multiple_images(
+    payload: DeleteMultipleImagesRequest,
+) -> DeleteMultipleImagesResponse:
 
     try:
         paths = payload.paths
         is_from_device = payload.isFromDevice
-        deleted_paths = []
-        folder_paths = set()
+        deleted_paths: List[str] = []
+        folder_paths: Set[str] = set()
 
         for path in paths:
             if not os.path.isfile(path):
@@ -312,11 +317,11 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
     response_model=GetAllImageObjectsResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
-def get_all_image_objects():
+def get_all_image_objects() -> GetAllImageObjectsResponse:
     try:
         generate_thumbnails_for_existing_folders()
         image_ids = get_all_image_ids_from_db()
-        data = {}
+        data: Dict[str, str] = {}
         for image_id in image_ids:
             image_path = get_path_from_id(image_id)
             classes = get_objects_db(image_path)
@@ -350,7 +355,7 @@ def get_all_image_objects():
     response_model=ClassIDsResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
-def get_class_ids(path: str = Query(...)):
+def get_class_ids(path: str = Query(...)) -> ClassIDsResponse:
     try:
         if not path:
 
@@ -389,9 +394,12 @@ def get_class_ids(path: str = Query(...)):
     response_model=AddFolderResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 401, 500]},
 )
-async def add_folder(payload: AddFolderRequest):
+async def add_folder(
+    payload: AddFolderRequest,
+) -> Union[AddFolderResponse, JSONResponse]:
     try:
         folder_paths = payload.folder_path
+        tasks: List[asyncio.Task] = []
 
         for folder in folder_paths:
             if not os.path.isdir(folder):
@@ -438,7 +446,6 @@ async def add_folder(payload: AddFolderRequest):
                 )
 
             image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
-            tasks = []
 
             for root, _, files in os.walk(folder):
                 if "PictoPy.thumbnails" in root:
@@ -488,7 +495,7 @@ async def add_folder(payload: AddFolderRequest):
 
 @router.delete("/delete-folder")
 @exception_handler_wrapper
-def delete_folder_ai_tagging(payload: dict):
+def delete_folder_ai_tagging(payload: Dict[str, str]) -> JSONResponse:
     if "folder_path" not in payload:
         return JSONResponse(
             status_code=400,
@@ -537,7 +544,9 @@ def delete_folder_ai_tagging(payload: dict):
 
 @router.post("/generate-thumbnails")
 @exception_handler_wrapper
-def generate_thumbnails(payload: GenerateThumbnailsRequest):
+def generate_thumbnails(
+    payload: GenerateThumbnailsRequest,
+) -> GenerateThumbnailsResponse:
 
     folder_paths = payload.folder_paths
     failed_paths = generate_thumbnails_for_folders(folder_paths)
@@ -556,7 +565,7 @@ def generate_thumbnails(payload: GenerateThumbnailsRequest):
 
 @router.get("/get-thumbnail-path")
 @exception_handler_wrapper
-def get_thumbnail_path():
+def get_thumbnail_path() -> JSONResponse:
     print("GET request Received!")
     thumbnail_path = os.path.abspath(
         os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails")
@@ -581,7 +590,7 @@ def get_thumbnail_path():
     },
 )
 @exception_handler_wrapper
-def delete_thumbnails(payload: DeleteThumbnailsRequest):
+def delete_thumbnails(payload: DeleteThumbnailsRequest) -> DeleteThumbnailsResponse:
 
     folder_path = payload.folder_path
 
@@ -597,7 +606,7 @@ def delete_thumbnails(payload: DeleteThumbnailsRequest):
         )
 
     # List to store any errors encountered while deleting thumbnails
-    failed_deletions = []
+    failed_deletions: List[str] = []
 
     for file in os.listdir(folder_path):
         try:
@@ -629,12 +638,12 @@ def delete_thumbnails(payload: DeleteThumbnailsRequest):
 
 @router.get("/add-folder-progress")
 @exception_handler_wrapper
-def combined_progress():
+def combined_progress() -> JSONResponse:
     total_tasks = 0
     total_completed = 0
     for status in progress_status.values():
-        total_tasks += status["total"]
-        total_completed += status["completed"]
+        total_tasks += int(status["total"])
+        total_completed += int(status["completed"])
     progress = 100 if total_tasks == 0 else int((total_completed / total_tasks) * 100)
     return JSONResponse(
         status_code=200,
