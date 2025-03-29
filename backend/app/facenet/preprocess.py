@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 
-def preprocess_image(image):
+def preprocess_image(image) -> np.ndarray:
     image = cv2.resize(image, (160, 160))
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image = image.transpose((2, 0, 1))
@@ -12,7 +12,7 @@ def preprocess_image(image):
     return image
 
 
-def normalize_embedding(embedding):
+def normalize_embedding(embedding) -> np.ndarray:
     return embedding / np.linalg.norm(embedding)
 
 

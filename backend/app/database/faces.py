@@ -1,10 +1,11 @@
 import sqlite3
 import json
+from typing import Any
 import numpy as np
 from app.config.settings import DATABASE_PATH
 
 
-def create_faces_table():
+def create_faces_table() -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute(
@@ -21,7 +22,9 @@ def create_faces_table():
     conn.close()
 
 
-def insert_face_embeddings(image_path, embeddings):
+def insert_face_embeddings(
+    image_path: str, embeddings: list[np.ndarray[Any, Any]]
+) -> None:
     from app.database.images import get_id_from_path
 
     conn = sqlite3.connect(DATABASE_PATH)
@@ -46,7 +49,7 @@ def insert_face_embeddings(image_path, embeddings):
     conn.close()
 
 
-def get_face_embeddings(image_path):
+def get_face_embeddings(image_path: str) -> np.ndarray | None:
     from app.database.images import get_id_from_path
 
     conn = sqlite3.connect(DATABASE_PATH)
@@ -76,7 +79,7 @@ def get_face_embeddings(image_path):
         return None
 
 
-def get_all_face_embeddings():
+def get_all_face_embeddings() -> list[dict[str, Any]]:
     from app.database.images import get_path_from_id
 
     conn = sqlite3.connect(DATABASE_PATH)
@@ -99,7 +102,7 @@ def get_all_face_embeddings():
     return all_embeddings
 
 
-def delete_face_embeddings(image_id):
+def delete_face_embeddings(image_id: str) -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -109,7 +112,7 @@ def delete_face_embeddings(image_id):
     conn.close()
 
 
-def cleanup_face_embeddings():
+def cleanup_face_embeddings() -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 

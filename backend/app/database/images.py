@@ -9,7 +9,7 @@ from app.facecluster.init_face_cluster import get_face_cluster
 from app.database.albums import remove_image_from_all_albums
 
 
-def create_image_id_mapping_table():
+def create_image_id_mapping_table() -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute(
@@ -26,7 +26,7 @@ def create_image_id_mapping_table():
     conn.close()
 
 
-def create_images_table():
+def create_images_table() -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -47,7 +47,9 @@ def create_images_table():
     conn.close()
 
 
-def insert_image_db(path, class_ids, metadata, folder_id=None):
+def insert_image_db(
+    path: str, class_ids: str | None, metadata: dict, folder_id: str | None = None
+) -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_path = os.path.abspath(path)
@@ -73,7 +75,7 @@ def insert_image_db(path, class_ids, metadata, folder_id=None):
     conn.close()
 
 
-def delete_image_db(path):
+def delete_image_db(path: str) -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_path = os.path.abspath(path)
@@ -97,7 +99,7 @@ def delete_image_db(path):
     conn.close()
 
 
-def get_all_image_ids_from_db():
+def get_all_image_ids_from_db() -> list[int]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM image_id_mapping")
@@ -106,7 +108,7 @@ def get_all_image_ids_from_db():
     return ids
 
 
-def get_path_from_id(image_id):
+def get_path_from_id(image_id: int) -> str | None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT path FROM image_id_mapping WHERE id = ?", (image_id,))
@@ -115,7 +117,7 @@ def get_path_from_id(image_id):
     return result[0] if result else None
 
 
-def get_id_from_path(path):
+def get_id_from_path(path: str) -> int | None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_path = os.path.abspath(path)
@@ -125,9 +127,11 @@ def get_id_from_path(path):
     return result[0] if result else None
 
 
-def get_objects_db(path):
+def get_objects_db(path: str | None) -> list[str] | None:
     conn_images = sqlite3.connect(DATABASE_PATH)
     cursor_images = conn_images.cursor()
+    if path is None:
+        return None
     image_id = get_id_from_path(path)
 
     if image_id is None:
@@ -163,17 +167,17 @@ def get_objects_db(path):
     return class_names
 
 
-def is_image_in_database(path):
+def is_image_in_database(path: str) -> bool:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_path = os.path.abspath(path)
     cursor.execute("SELECT COUNT(*) FROM image_id_mapping WHERE path = ?", (abs_path,))
     count = cursor.fetchone()[0]
     conn.close()
-    return count > 0
+    return bool(count > 0)
 
 
-def get_all_image_paths():
+def get_all_image_paths() -> list[str]:
     with sqlite3.connect(DATABASE_PATH) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT path FROM image_id_mapping")
@@ -181,7 +185,7 @@ def get_all_image_paths():
         return paths if paths else []
 
 
-def get_all_images_from_folder_id(folder_id):
+def get_all_images_from_folder_id(folder_id: int | None) -> list[str]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute(

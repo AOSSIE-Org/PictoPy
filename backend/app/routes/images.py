@@ -37,6 +37,7 @@ from app.schemas.images import (
     DeleteImageResponse,
     DeleteMultipleImagesRequest,
     DeleteMultipleImagesResponse,
+    FailedPathResponse,
     GetAllImageObjectsResponse,
     ErrorResponse,
     ImagesResponse,
@@ -61,7 +62,7 @@ progress_status: Dict[int, Dict[str, Union[int, str]]] = {}
 async def run_get_classes(img_path: str, folder_id: Optional[int] = None) -> None:
     loop = asyncio.get_event_loop()
     result = await loop.run_in_executor(None, get_classes, img_path)
-    insert_image_db(img_path, result, extract_metadata(img_path), folder_id)
+    insert_image_db(img_path, result, extract_metadata(img_path), str(folder_id))
     if result:
         classes = result.split(",")
         if "0" in classes and classes.count("0") < 8:
@@ -321,9 +322,11 @@ def get_all_image_objects() -> GetAllImageObjectsResponse:
     try:
         generate_thumbnails_for_existing_folders()
         image_ids = get_all_image_ids_from_db()
-        data: Dict[str, str] = {}
+        data: Dict[str, str | list[str]] = {}
         for image_id in image_ids:
             image_path = get_path_from_id(image_id)
+            if not image_path:
+                continue
             classes = get_objects_db(image_path)
             data[image_path] = classes if classes else "None"
             print(image_path)
@@ -551,11 +554,11 @@ def generate_thumbnails(
     folder_paths = payload.folder_paths
     failed_paths = generate_thumbnails_for_folders(folder_paths)
     if failed_paths:
-
+        failed_paths_converted = [FailedPathResponse(**d) for d in failed_paths]
         return GenerateThumbnailsResponse(
             success=False,
             message="Some folders or files could not be processed",
-            failed_paths=failed_paths,
+            failed_paths=failed_paths_converted,
         )
 
     return GenerateThumbnailsResponse(

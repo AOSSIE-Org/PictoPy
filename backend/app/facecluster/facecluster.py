@@ -8,7 +8,19 @@ import json
 from collections import defaultdict
 from contextlib import contextmanager
 import logging
-from typing import Dict, List, Optional, Set, Union, Any, Callable, TypeVar, ParamSpec
+from typing import (
+    Dict,
+    List,
+    Optional,
+    Set,
+    Union,
+    Any,
+    Callable,
+    TypeVar,
+    ParamSpec,
+    cast,
+    Generator,
+)
 from pathlib import Path
 import time
 from functools import wraps
@@ -53,7 +65,7 @@ class TTLCache:
             if key in self.cache:
                 result, timestamp = self.cache[key]
                 if time.time() - timestamp <= self.ttl:
-                    return result
+                    return cast(R, result)
                 else:
                     del self.cache[key]
 
@@ -68,7 +80,7 @@ class TTLCache:
                 oldest_key = min(self.cache.keys(), key=lambda k: self.cache[k][1])
                 del self.cache[oldest_key]
 
-            return result
+            return cast(R, result)
 
         def clear_cache() -> None:
             """Clear the cache."""
@@ -79,7 +91,9 @@ class TTLCache:
 
 
 @contextmanager
-def database_connection(db_path: Union[str, Path]):
+def database_connection(
+    db_path: Union[str, Path]
+) -> Generator[sqlite3.Connection, None, None]:
     """
     Context manager for handling database connections.
 
@@ -197,7 +211,11 @@ class FaceCluster:
             self.labels = None
         else:
             self.embeddings = np.array(embeddings)
-            self.image_ids = [get_id_from_path(path) for path in image_paths]
+            self.image_ids = [
+                id
+                for id in [get_id_from_path(path) for path in image_paths]
+                if id is not None
+            ]
             self.labels = self.dbscan.fit_predict(self.embeddings)
 
         self._clear_caches()
@@ -232,7 +250,7 @@ class FaceCluster:
 
         if len(self.embeddings) == 0:
             self.embeddings = np.array([embedding])
-            self.image_ids = [image_id]
+            self.image_ids = [image_id if image_id is not None else ""]
             self.labels = np.array([-1])
         else:
             # Vectorized distance calculation
@@ -241,14 +259,24 @@ class FaceCluster:
 
             # Determine cluster assignment
             if distances[nearest_neighbor] <= self.eps:
-                new_label = self.labels[nearest_neighbor]
+                if self.labels is None:
+                    new_label = 0
+                else:
+                    new_label = self.labels[nearest_neighbor]
             else:
-                new_label = max(self.labels) + 1 if len(self.labels) > 0 else 0
+                if self.labels is None:
+                    new_label = 0
+                else:
+                    new_label = max(self.labels) + 1 if len(self.labels) > 0 else 0
 
             # Update state
             self.embeddings = np.vstack([self.embeddings, embedding])
-            self.image_ids.append(image_id)
-            self.labels = np.append(self.labels, new_label)
+            if image_id is not None:
+                self.image_ids.append(image_id)
+            if self.labels is None:
+                self.labels = np.array([new_label])
+            else:
+                self.labels = np.append(self.labels, new_label)
 
         self._clear_caches()
         self.save_to_db()
@@ -356,8 +384,14 @@ class FaceCluster:
                     # Load embeddings efficiently
                     embeddings = []
                     for emb in get_all_face_embeddings():
-                        if get_id_from_path(emb["image_path"]) in instance.image_ids:
-                            embeddings.extend(emb["embeddings"])
+                        # Fix: Ensure image_path is not None before using it
+                        if emb["image_path"] is not None:
+                            image_id = get_id_from_path(emb["image_path"])
+                            if image_id in instance.image_ids:
+                                # Fix: Ensure embeddings is not None before extending
+                                if emb["embeddings"] is not None:
+                                    embeddings.extend(emb["embeddings"])
+
                     instance.embeddings = np.array(embeddings)
 
         except sqlite3.OperationalError as e:

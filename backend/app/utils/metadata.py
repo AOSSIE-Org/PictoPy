@@ -5,7 +5,7 @@ from datetime import datetime
 from PIL.TiffImagePlugin import IFDRational
 
 
-def extract_metadata(image_path):
+def extract_metadata(image_path) -> dict:
     metadata = {}
 
     # Check if file exists

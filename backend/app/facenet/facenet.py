@@ -1,3 +1,5 @@
+from typing import Any
+import numpy as np
 from app.facecluster.init_face_cluster import get_face_cluster
 import cv2
 import onnxruntime
@@ -19,13 +21,13 @@ input_tensor_name = session.get_inputs()[0].name
 output_tensor_name = session.get_outputs()[0].name
 
 
-def get_face_embedding(image):
+def get_face_embedding(image: np.ndarray) -> np.ndarray:
     result = session.run([output_tensor_name], {input_tensor_name: image})[0]
     embedding = result[0]
     return normalize_embedding(embedding)
 
 
-def extract_face_embeddings(img_path):
+def extract_face_embeddings(img_path: str) -> list[np.ndarray] | str | None:
     # Return face embeddings from the image but do not add them to the db.
     yolov8_detector = YOLOv8(
         DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.2, iou_thres=0.3
@@ -33,7 +35,7 @@ def extract_face_embeddings(img_path):
 
     img = cv2.imread(img_path)
     if img is None:
-        print(f"Failed to load image: {img_path}")
+        print(f"Failed to load image: {img_path}")  # type: ignore[unreachable]
         return None
 
     # If "person" `class_id` is not found in the image, return early
@@ -56,13 +58,13 @@ def extract_face_embeddings(img_path):
     return embeddings
 
 
-def detect_faces(img_path):
+def detect_faces(img_path: str) -> dict[str, Any] | None:
     yolov8_detector = YOLOv8(
         DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.35, iou_thres=0.45
     )
     img = cv2.imread(img_path)
     if img is None:
-        print(f"Failed to load image: {img_path}")
+        print(f"Failed to load image: {img_path}")  # type: ignore[unreachable]
         return None
 
     boxes, scores, class_ids = yolov8_detector(img)

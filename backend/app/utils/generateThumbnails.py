@@ -5,7 +5,7 @@ from app.database.images import get_all_images_from_folder_id
 from app.config.settings import THUMBNAIL_IMAGES_PATH
 
 
-def generate_thumbnails_for_folders(folder_paths: list):
+def generate_thumbnails_for_folders(folder_paths: list) -> list[dict]:
     image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"]
     failed_paths = []
 
@@ -58,7 +58,7 @@ def generate_thumbnails_for_folders(folder_paths: list):
     return failed_paths
 
 
-def generate_thumbnails_for_existing_folders():
+def generate_thumbnails_for_existing_folders() -> list:
     try:
         folder_ids = get_all_folder_ids()
         thumbnail_folder = os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails")
