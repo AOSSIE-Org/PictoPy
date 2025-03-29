@@ -11,7 +11,7 @@ repos:
       - id: black
         language_version: python3
 
-  - repo: local-mypy
+  - repo: local
     hooks:
       - id: mypy-backend
         name: mypy backend
