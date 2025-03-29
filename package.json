@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "setup": "cd scripts && node setup.js",
     "linux-dev": "bash ./scripts/linux-dev.sh",
     "win-dev": "cd scripts && win-dev.bat",
     "prepare": "husky",
