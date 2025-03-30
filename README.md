@@ -56,7 +56,6 @@ Handles file system operations and provides a secure bridge between the frontend
 <br>
 <details>
 <summary> <h2 style="display: inline;">Setup</h2> </summary>
-<br>
 <details style ="margin-left:1rem"><summary><h3 style="display: inline;">Setup Using Script (Recommended Approach)</h3></summary>
 
 <div style="margin-left:2rem;">
@@ -144,9 +143,9 @@ Handles file system operations and provides a secure bridge between the frontend
 
 </div>
 </div>
-<br>
+
 </details>
-<br>
+
 <details style ="margin-left:1rem"><summary><h3 style="display: inline;">Setup Manually</h3></summary>
 
 <div style="margin-left:2rem;">
@@ -292,7 +291,7 @@ git remote add upstream https://github.com/AOSSIE-Org/PictoPy
 </div>
 </div>
 </details>
-<br>
+
 <details style ="margin-left:1rem">
 <summary> <h3 style="display: inline;">Docker Setup</h3> </summary>
 <div style="margin-left:1rem;">
@@ -309,7 +308,6 @@ git remote add upstream https://github.com/AOSSIE-Org/PictoPy
 </details>
 
 </details>
-<br>
 
 <details>
 <summary> <h2 style="display: inline;">Testing</h2> </summary>
@@ -331,16 +329,18 @@ npm test
   pytest
   ```
 - Tauri
+
   ```bash
   cd frontend/src-tauri/
   cargo test
   ```
+
   </div>
   </details>
-  <br>
+
   <details>
   <summary> <h2 style="display: inline;">Building for Production</h2> </summary>
-  <br>
+
   <div style="margin-left:2rem;">
   Create Signing Keys for tauri using the command:
 
