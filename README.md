@@ -55,7 +55,7 @@ Handles file system operations and provides a secure bridge between the frontend
 
 <br>
 <details>
-<summary> <h2 style="display: inline;">Setup</h2> </summary>
+<summary style="font-size:20px"> Setup </summary>
 <details style ="margin-left:1rem"><summary><h3 style="display: inline;">Setup Using Script (Recommended Approach)</h3></summary>
 
 <div style="margin-left:2rem;">
