@@ -21,12 +21,18 @@ export const router = createBrowserRouter(
     <Route path='' element={<InitialPage/>} />
     <Route path='/' element={<Layout/>} >
         <Route 
-          path='home' 
+          path={ROUTES.LAYOUT.HOME} 
           element={<Dashboard/>} 
           loader={fetchImagesForHome}  
         />
-        <Route path={ROUTES.LAYOUT.VIDEOS} element={<Videos />} />
-        <Route path={ROUTES.LAYOUT.SETTINGS} element={<Settings />} />
+        <Route 
+          path={ROUTES.LAYOUT.VIDEOS} 
+          element={<Videos />} 
+        />
+        <Route 
+          path={ROUTES.LAYOUT.SETTINGS} 
+          element={<Settings />} 
+        />
         <Route 
           path={ROUTES.LAYOUT.AI} 
           element={<AITagging />} 
@@ -37,8 +43,14 @@ export const router = createBrowserRouter(
           element={<Album/>} 
           loader={fetchAlbums}
         />
-        <Route path={ROUTES.LAYOUT.SECURE_FOLDER} element={<SecureFolder />} />
-        <Route path={ROUTES.LAYOUT.MEMORIES} element={<Memories />} />
+        <Route 
+          path={ROUTES.LAYOUT.SECURE_FOLDER} 
+          element={<SecureFolder />} 
+        />
+        <Route 
+          path={ROUTES.LAYOUT.MEMORIES} 
+          element={<Memories />} 
+        />
     </Route>
   </>
   )
