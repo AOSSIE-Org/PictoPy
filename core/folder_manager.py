@@ -7,10 +7,12 @@ def get_folder_structure(root_path=None):
     # ...existing code...
     return folder_structure
 
+
 @cached(key_prefix="folder_contents", ttl=300)
 def get_folder_contents(folder_path):
     # ...existing code...
     return contents
+
 
 def create_folder(parent_path, folder_name):
     # ...existing code...
@@ -18,6 +20,7 @@ def create_folder(parent_path, folder_name):
     invalidate_cache("folder_structure:get_folder_structure")
     invalidate_cache(f"folder_contents:get_folder_contents:{parent_path}")
     return result
+
 
 def rename_folder(folder_path, new_name):
     # ...existing code...
@@ -27,6 +30,7 @@ def rename_folder(folder_path, new_name):
     invalidate_cache(f"folder_contents:get_folder_contents:{parent_path}")
     return result
 
+
 def delete_folder(folder_path):
     # ...existing code...
     # Invalidate folder caches after deletion
@@ -34,4 +38,6 @@ def delete_folder(folder_path):
     parent_path = os.path.dirname(folder_path)
     invalidate_cache(f"folder_contents:get_folder_contents:{parent_path}")
     return result
+
+
 # ...existing code...

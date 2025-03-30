@@ -63,20 +63,17 @@ app.add_middleware(
 async def root():
     return {"message": "PictoPy Server is up and running!"}
 
+
 @app.get("/loader/test")
-async def loader_test() : 
+async def loader_test():
     print("Yes Loader working .... !")
     return JSONResponse(
         status_code=200,
         content={
             "status_code": 200,
-            "content": {
-                "success": True,
-                "folderPaths":["Path1","Path2","Path3"]
-            },
+            "content": {"success": True, "folderPaths": ["Path1", "Path2", "Path3"]},
         },
     )
-
 
 
 app.include_router(test_router, prefix="/test", tags=["Test"])

@@ -585,7 +585,7 @@ def delete_thumbnails(payload: DeleteThumbnailsRequest):
 
     folder_path = payload.folder_path
 
-    print("During deleting thumbnails = ",folder_path)
+    print("During deleting thumbnails = ", folder_path)
 
     if not os.path.isdir(folder_path):
 
