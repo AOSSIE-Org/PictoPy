@@ -16,10 +16,18 @@ import { fetchAllImageObjects } from '@/loader/fetchAIImages';
 import { fetchAlbums } from '@/loader/fetchAlbums';
 
 const pages = [
-  { path: ROUTES.LAYOUT.HOME, Component: Dashboard, loader: fetchImagesForHome },
+  {
+    path: ROUTES.LAYOUT.HOME,
+    Component: Dashboard,
+    loader: fetchImagesForHome,
+  },
   { path: ROUTES.LAYOUT.VIDEOS, Component: Videos },
   { path: ROUTES.LAYOUT.SETTINGS, Component: Settings },
-  { path: ROUTES.LAYOUT.AI, Component: AITagging, loader: fetchAllImageObjects },
+  {
+    path: ROUTES.LAYOUT.AI,
+    Component: AITagging,
+    loader: fetchAllImageObjects,
+  },
   { path: ROUTES.LAYOUT.ALBUM, Component: Album, loader: fetchAlbums },
   { path: ROUTES.LAYOUT.SECURE_FOLDER, Component: SecureFolder },
   { path: ROUTES.LAYOUT.MEMORIES, Component: Memories },
@@ -32,7 +40,8 @@ describe('Page rendering tests', () => {
       let router;
       let mockLoader;
 
-      if (loader || path === ROUTES.INITIAL) { // Add condition for InitialPage
+      if (loader || path === ROUTES.INITIAL) {
+        // Add condition for InitialPage
         if (loader) {
           // Mock the loader to return undefined
           mockLoader = jest.fn().mockResolvedValue(undefined);
@@ -50,11 +59,7 @@ describe('Page rendering tests', () => {
       render(
         <ThemeProvider>
           <QueryClientProviders>
-            {router ? (
-              <RouterProvider router={router} />
-            ) : (
-              <Component />
-            )}
+            {router ? <RouterProvider router={router} /> : <Component />}
           </QueryClientProviders>
         </ThemeProvider>,
       );

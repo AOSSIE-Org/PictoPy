@@ -38,7 +38,6 @@ export default function AIGallery({
 
   const imagesData = (useLoaderData() as any) || [];
 
-
   const [addedFolders, setAddedFolders] = useState<string[]>([]);
   // let mediaItems = successData ?? [];
   const [mediaItems, setMediaItems] = useState(imagesData ?? []);
