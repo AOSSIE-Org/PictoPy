@@ -1,6 +1,6 @@
-import { APIResponse } from "@/types/image";
-import { imagesEndpoints } from "../../api/apiEndpoints";
-import { parseAndSortImageData } from "../../api/api-functions/images";
+import { APIResponse } from '@/types/image';
+import { imagesEndpoints } from '../../api/apiEndpoints';
+import { parseAndSortImageData } from '../../api/api-functions/images';
 
 export const fetchAllImageObjects = async () => {
   const response = await fetch(imagesEndpoints.allImageObjects);

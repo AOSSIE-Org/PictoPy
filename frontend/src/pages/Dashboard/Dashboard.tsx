@@ -10,7 +10,8 @@ function Dashboard() {
   const [currentPaths] = useLocalStorage<string[]>('folderPaths', []);
   const fetchedImageData: any = useLoaderData();
   const [images, setImages] = useState(fetchedImageData ?? []);
-  const { images: createdImages, isCreating: loading } = useImages(currentPaths);
+  const { images: createdImages, isCreating: loading } =
+    useImages(currentPaths);
 
   useEffect(() => {
     if (images.length === 0 && loading) {
@@ -40,7 +41,9 @@ function Dashboard() {
     );
   }
 
-  return <MediaGallery mediaItems={images} title="Image Gallery" type="image" />;
+  return (
+    <MediaGallery mediaItems={images} title="Image Gallery" type="image" />
+  );
 }
 
 export default Dashboard;

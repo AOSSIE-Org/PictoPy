@@ -6,17 +6,15 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { router } from './routes/AppRoutes';
 import { RouterProvider } from 'react-router-dom';
 
-
 const onCloseListener = async () => {
   await getCurrentWindow().onCloseRequested(async () => {
     await stopServer();
   });
 };
 
-
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <RouterProvider router={router} />   
+    <RouterProvider router={router} />
   </React.StrictMode>,
 );
 

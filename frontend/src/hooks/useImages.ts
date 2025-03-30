@@ -28,12 +28,10 @@ export const extractThumbnailPath = (imagePath: string) => {
   return `${thumbnailPath}/${thumbnailImageName}`;
 };
 
-
-
 export const useImages = (folderPaths: string[]) => {
   const [images, setImages] = useState<ImageData[]>([]);
   const [loading, setLoading] = useState(true);
- 
+
   const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation(
     {
       mutationFn: generateThumbnails,

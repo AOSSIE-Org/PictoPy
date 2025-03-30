@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import AlbumList from './AlbumList';
 import { Button } from '@/components/ui/button';
 import CreateAlbumForm from './AlbumForm';
@@ -15,21 +15,18 @@ import {
 } from '../../../api/api-functions/albums';
 import { useLoaderData } from 'react-router-dom';
 
-
 const AlbumsView: React.FC = () => {
+  const initialAlbums: any = useLoaderData();
+  const [albums, setAlbums] = useState(initialAlbums);
 
-
-  const initialAlbums:any = useLoaderData();
-  const [albums,setAlbums] = useState(initialAlbums);
-
-  const { successData:fetchedAlbums, isLoading } = usePictoQuery({
+  const { successData: fetchedAlbums, isLoading } = usePictoQuery({
     queryFn: async () => await fetchAllAlbums(false),
     queryKey: ['all-albums'],
   });
 
   useEffect(() => {
     if (fetchedAlbums) {
-      console.log("Fetched Albums = ",albums);
+      console.log('Fetched Albums = ', albums);
       setAlbums(fetchedAlbums);
     }
   }, [fetchedAlbums]);

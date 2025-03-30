@@ -36,7 +36,7 @@ export default function AIGallery({
     queryKey: ['ai-tagging-images', 'ai'],
   });
 
-  const imagesData:any = useLoaderData();
+  const imagesData: any = useLoaderData();
 
   const [addedFolders, setAddedFolders] = useState<string[]>([]);
   // let mediaItems = successData ?? [];

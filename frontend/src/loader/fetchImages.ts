@@ -6,14 +6,14 @@ import {
 } from '@/hooks/useImages';
 
 export const fetchImagesForHome = async () => {
-    const folderPaths = window.localStorage.getItem('folderPaths');
-    if (!folderPaths || !folderPaths.length) return [];
-  
-    const parsedFolderPaths = JSON.parse(folderPaths);
+  const folderPaths = window.localStorage.getItem('folderPaths');
+  if (!folderPaths || !folderPaths.length) return [];
 
-    const response: ResponseData = await invoke('get_all_images_with_cache', {
-        directories: parsedFolderPaths,
-    });
+  const parsedFolderPaths = JSON.parse(folderPaths);
+
+  const response: ResponseData = await invoke('get_all_images_with_cache', {
+    directories: parsedFolderPaths,
+  });
 
   if (!response || typeof response !== 'object') {
     console.error('Invalid response format:', folderPaths, response);
@@ -66,4 +66,4 @@ export const fetchImagesForHome = async () => {
     }
   }
   return imageUrls;
-}
+};

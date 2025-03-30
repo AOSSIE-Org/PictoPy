@@ -38,7 +38,6 @@ const Settings: React.FC = () => {
       autoInvalidateTags: ['ai-tagging-images', 'ai'],
     });
 
-
   const { mutate: deleteThumbnail, isPending: isDeletingThumbnails } =
     usePictoMutation({
       mutationFn: deleteThumbnails,

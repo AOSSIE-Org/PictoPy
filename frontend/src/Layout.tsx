@@ -4,9 +4,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import QueryClientProviders from './Config/QueryClientProvider';
 import { Outlet } from 'react-router-dom';
 import LayoutApp from './layout/main';
-import "./App.css";
-
-
+import './App.css';
 
 const fetchFilePath = async () => {
   try {
@@ -48,13 +46,13 @@ export const Layout = () => {
 
   return (
     <>
-    <ThemeProvider>
-      <QueryClientProviders>
-        <LayoutApp>
-          <Outlet/>
-        </LayoutApp>
-      </QueryClientProviders>
-    </ThemeProvider>
+      <ThemeProvider>
+        <QueryClientProviders>
+          <LayoutApp>
+            <Outlet />
+          </LayoutApp>
+        </QueryClientProviders>
+      </ThemeProvider>
     </>
-  )
+  );
 };
