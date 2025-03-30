@@ -27,7 +27,6 @@ interface FilterControlsProps {
   setFilterTag: (tag: string[]) => void;
   mediaItems: MediaItem[];
   onFolderAdded: (newPaths: string[]) => Promise<void>;
-  isLoading: boolean;
   isVisibleSelectedImage: boolean;
   setIsVisibleSelectedImage: (value: boolean) => void;
   setFaceSearchResults: (paths: string[]) => void;

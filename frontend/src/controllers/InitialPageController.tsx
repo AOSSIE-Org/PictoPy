@@ -13,7 +13,7 @@ export const useInitialPageController = () => {
       const savedFolderPaths = await FolderService.getSavedFolderPaths();
       if (savedFolderPaths && savedFolderPaths.length > 0) {
         setFolderPaths(savedFolderPaths);
-        navigate('/settings');
+        navigate('/home');
       }
       setLoading(false);
     };
