@@ -8,7 +8,7 @@ import { useImages } from '@/hooks/useImages';
 
 function Dashboard() {
   const [currentPaths] = useLocalStorage<string[]>('folderPaths', []);
-  const fetchedImageData: any = useLoaderData();
+  const fetchedImageData = (useLoaderData() as any) || [];
   const [images, setImages] = useState(fetchedImageData ?? []);
   const { images: createdImages, isCreating: loading } =
     useImages(currentPaths);
