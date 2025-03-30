@@ -8,71 +8,63 @@ NC='\033[0m'
 
 echo -e "${YELLOW}Starting setup...${NC}"
 
-OS_TYPE=$(uname)
 
-if [ "$OS_TYPE" = "Linux" ]; then
-    if command -v apt-get &> /dev/null; then
-        echo -e "${YELLOW}Detected Linux with apt-get. Installing dependencies...${NC}"
-        apt-get update
+# Detect OS
+if [ -f "/etc/debian_version" ]; then
+    echo -e "\e[33mDetected Debian-based Linux. Installing dependencies...\e[0m"
+    sudo apt update
+    sudo apt install -y \
+        libwebkit2gtk-4.1-dev \
+        build-essential \
+        curl \
+        wget \
+        file \
+        libxdo-dev \
+        libssl-dev \
+        libayatana-appindicator3-dev \
+        librsvg2-dev
 
-        echo "deb http://archive.ubuntu.com/ubuntu jammy main universe multiverse" | tee /etc/apt/sources.list.d/ubuntu-jammy.list
-        echo "deb http://security.ubuntu.com/ubuntu jammy-security main universe multiverse" | tee -a /etc/apt/sources.list.d/ubuntu-jammy-security.list
+elif [[ "$(uname)" == "Darwin" ]]; then
+    echo -e "\e[33mDetected macOS. Installing dependencies using Homebrew...\e[0m"
 
-        apt-get install -y \
-            curl build-essential libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev git \
-            wget xz-utils libssl-dev libglib2.0-dev libgirepository1.0-dev pkg-config \
-            software-properties-common libjavascriptcoregtk-4.0-dev libjavascriptcoregtk-4.1-dev \
-            libsoup-3.0-dev libwebkit2gtk-4.1-dev librsvg2-dev file libglib2.0-dev libgl1-mesa-glx \
-        
-    else
-        echo -e "${RED}apt-get not found on Linux. Please install the following dependencies manually:${NC}"
-        echo -e "  curl, build-essential, libgtk-3-dev, libwebkit2gtk-4.0-dev, libappindicator3-dev,"
-        echo -e "  wget, xz-utils, libssl-dev, libglib2.0-dev, libgirepository1.0-dev, pkg-config,"
-        echo -e "  software-properties-common, libjavascriptcoregtk-4.0-dev, libjavascriptcoregtk-4.1-dev,"
-        echo -e "  libsoup-3.0-dev, libwebkit2gtk-4.1-dev, librsvg2-dev, file, libgl1-mesa-glx"
-        echo -e "${RED}Also please install Rust from https://rustup.rs${NC}"
-        exit 1
-    fi
-
-elif [ "$OS_TYPE" = "Darwin" ]; then
-    echo -e "${YELLOW}Detected macOS. Installing dependencies using Homebrew...${NC}"
     if ! command -v brew &> /dev/null; then
-        echo -e "${RED}Homebrew is not installed. Please install it from https://brew.sh${NC}"
+        echo -e "\e[31mHomebrew is not installed. Please install it from https://brew.sh\e[0m"
         exit 1
     fi
+
     brew update
     brew install \
-    curl \
-    git \
-    cmake \
-    pkg-config \
-    gtk+3 \
-    webkit2gtk \
-    libappindicator \
-    wget \
-    xz \
-    openssl@3 \
-    glib \
-    gobject-introspection \
-    gtk-mac-integration \
-    javascriptcoregtk \
-    webkit2gtk-4.1 \
-    libsoup \
-    librsvg \
-    gcc
+        curl \
+        git \
+        cmake \
+        pkg-config \
+        gtk+3 \
+        webkit2gtk \
+        libappindicator3 \
+        wget \
+        xz \
+        openssl@3 \
+        glib \
+        gobject-introspection \
+        gtk-mac-integration \
+        javascriptcoregtk \
+        webkit2gtk-4.1 \
+        libsoup \
+        librsvg \
+        gcc
 
+    # Install Rust
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
     source "$HOME/.cargo/env"
 
+    # Install Xcode Command Line Tools
     xcode-select --install
 
-    brew tap homebrew/cask
+    # Install XQuartz (for GUI applications)
     brew install --cask xquartz
 
-    brew install gtk+3 --with-jasper --with-quartz-relocation
-
 else
-    echo -e "${RED}Unsupported OS: $OS_TYPE. Please install system dependencies manually.${NC}"
+    echo -e "\e[31mUnsupported OS: $(uname). Please install system dependencies manually.\e[0m"
     exit 1
 fi
 
@@ -82,14 +74,19 @@ if ! command -v pyenv &> /dev/null; then
     curl https://pyenv.run | bash
     
     echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
-    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
-    echo 'eval "$(pyenv init --path)"' >> ~/.bashrc
-    echo 'eval "$(pyenv init -)"' >> ~/.bashrc
-    
-    export PYENV_ROOT="$HOME/.pyenv"
-    export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$(pyenv init --path)"
-    eval "$(pyenv init -)"
+    echo '[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+    echo 'eval "$(pyenv init - bash)"' >> ~/.bashrc
+
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.profile
+    echo '[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.profile
+    echo 'eval "$(pyenv init - bash)"' >> ~/.profile
+
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bash_profile
+    echo '[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bash_profile
+    echo 'eval "$(pyenv init - bash)"' >> ~/.bash_profile
+
+    source ~/.bash_profile
+
 fi
 
 echo "Installing Python 3.12..."
@@ -113,6 +110,8 @@ else
     rustup update
 fi
 
+. "$HOME/.cargo/env"  
+
 # ---- Install Node.js and npm (if not installed) ----
 if ! command -v node &> /dev/null; then
     echo -e "${RED}Node.js is not installed. Installing...${NC}"
@@ -127,13 +126,13 @@ else
     echo -e "${GREEN}npm version: $(npm --version)${NC}"
 fi
 
-$HOME/.cargo/env
+
 
 # ---- Set up the backend ----
 echo -e "${YELLOW}Setting up backend...${NC}"
-cd backend
-python -m venv venv
-source venv/bin/activate
+cd ../backend
+python -m venv .env
+source .env/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 deactivate
