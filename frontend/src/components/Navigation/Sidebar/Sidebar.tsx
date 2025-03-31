@@ -150,7 +150,7 @@ const Sidebar: React.FC = () => {
       {/* Sidebar */}
       <div className="h-fit p-4">
         <nav
-          className="sidebar rounded-3xl relative z-10 flex h-[calc(100vh-2rem)] flex-col justify-between overflow-hidden border-r backdrop-blur-sm transition-all duration-300 ease-in-out"
+          className="sidebar rounded-3xl relative z-10 flex h-[calc(100vh-2rem)] flex-col justify-between overflow-hidden border backdrop-blur-sm transition-all duration-300 ease-in-out"
           style={sidebarStyle}
           aria-label="Main Navigation"
         >
@@ -249,7 +249,7 @@ const Sidebar: React.FC = () => {
               {/* Image Compressor Button */}
               <button
                 onClick={() => setShowImageCompressor(true)}
-                className="text-default rounded-xl group flex w-full flex-col items-center gap-1 px-2 py-3 transition-all duration-300 hover:scale-[1.02] hover:bg-[var(--bg-hover)] active:scale-[0.98]"
+                className="text-default rounded-xl group flex w-full flex-col items-center gap-1 px-2 py-3 transition-all duration-300 hover:bg-[var(--bg-hover)] active:scale-[0.98]"
                 aria-label="Open Image Compressor"
                 onKeyDown={handleKeyDown}
               >
