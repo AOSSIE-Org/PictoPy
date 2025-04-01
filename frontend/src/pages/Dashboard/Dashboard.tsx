@@ -1,13 +1,24 @@
+import { useEffect, useState } from 'react';
 import MediaGallery from '@/components/Media/MediaGallery';
+import { useLocalStorage } from '@/hooks/LocalStorage';
+import { deleteCache } from '@/services/cacheService';
+import { useLoaderData } from 'react-router-dom';
 import LoadingScreen from '@/components/ui/LoadingScreen/LoadingScreen';
 import { useImages } from '@/hooks/useImages';
-import { useLocalStorage } from '@/hooks/LocalStorage';
-import { useEffect } from 'react';
-import { deleteCache } from '@/services/cacheService';
 
 function Dashboard() {
   const [currentPaths] = useLocalStorage<string[]>('folderPaths', []);
-  const { images, isCreating: loading } = useImages(currentPaths);
+  const fetchedImageData = (useLoaderData() as any) || [];
+  const [images, setImages] = useState(fetchedImageData ?? []);
+  const { images: createdImages, isCreating: loading } =
+    useImages(currentPaths);
+
+  useEffect(() => {
+    if (images.length === 0 && loading) {
+      setImages(createdImages);
+    }
+  }, [createdImages, loading, images]);
+
   useEffect(() => {
     const func = async () => {
       try {
@@ -21,14 +32,17 @@ function Dashboard() {
     };
     func();
   }, [currentPaths]);
-  if (loading)
-    <div className="flex h-full w-full items-center justify-center">
-      <LoadingScreen />;
-    </div>;
+
+  if (loading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <LoadingScreen />
+      </div>
+    );
+  }
+
   return (
-    <>
-      <MediaGallery mediaItems={images} title="Image Gallery" type="image" />
-    </>
+    <MediaGallery mediaItems={images} title="Image Gallery" type="image" />
   );
 }
 

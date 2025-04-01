@@ -18,6 +18,7 @@ import ProgressiveFolderLoader from '../ui/ProgressiveLoader';
 
 import { UserSearch } from 'lucide-react';
 import ErrorPage from '@/components/ui/ErrorPage/ErrorPage';
+import { useLoaderData } from 'react-router-dom';
 
 export default function AIGallery({
   title,
@@ -34,8 +35,12 @@ export default function AIGallery({
     queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
+
+  const imagesData = (useLoaderData() as any) || [];
+
   const [addedFolders, setAddedFolders] = useState<string[]>([]);
-  let mediaItems = successData ?? [];
+  // let mediaItems = successData ?? [];
+  const [mediaItems, setMediaItems] = useState(imagesData ?? []);
   const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
@@ -89,6 +94,12 @@ export default function AIGallery({
   }, []);
 
   useEffect(() => {
+    if (successData) {
+      setMediaItems(successData);
+    }
+  }, [successData]);
+
+  useEffect(() => {
     setCurrentPage(1);
   }, [filterTag, faceSearchResults]);
 
@@ -132,7 +143,6 @@ export default function AIGallery({
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
             onFolderAdded={handleFolderAdded}
-            isLoading={isGeneratingTags}
             isVisibleSelectedImage={isVisibleSelectedImage}
             setIsVisibleSelectedImage={setIsVisibleSelectedImage}
             setFaceSearchResults={setFaceSearchResults}

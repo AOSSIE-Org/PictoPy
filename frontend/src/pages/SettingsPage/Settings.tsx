@@ -10,7 +10,6 @@ import LoadingScreen from '@/components/ui/LoadingScreen/LoadingScreen';
 import ErrorDialog from '@/components/Album/Error';
 import { usePictoMutation } from '@/hooks/useQueryExtensio';
 import {
-  deleteFolder,
   deleteThumbnails,
   generateThumbnails,
 } from '../../../api/api-functions/images.ts';
@@ -38,11 +37,6 @@ const Settings: React.FC = () => {
       mutationFn: generateThumbnails,
       autoInvalidateTags: ['ai-tagging-images', 'ai'],
     });
-
-  const { mutate: deleteFolderAITagging } = usePictoMutation({
-    mutationFn: deleteFolder,
-    autoInvalidateTags: ['ai-tagging-images', 'ai'],
-  });
 
   const { mutate: deleteThumbnail, isPending: isDeletingThumbnails } =
     usePictoMutation({
@@ -88,7 +82,7 @@ const Settings: React.FC = () => {
       setCurrentPaths(updatedPaths);
       setAddedFolders(addedFolders.filter((path) => path !== pathToRemove));
       deleteThumbnail(pathToRemove);
-      deleteFolderAITagging(pathToRemove);
+      // deleteFolderAITagging(pathToRemove);
       await deleteCache();
       console.log(`Removed folder path: ${pathToRemove}`);
     } catch (error) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import {
   Home,
   Sparkles,
@@ -32,7 +32,6 @@ type CustomCSSProperties = React.CSSProperties & {
 };
 
 const Sidebar: React.FC = () => {
-  const location = useLocation();
   // const [] = useState<boolean>(false);
   const [showCustomize, setShowCustomize] = useState<boolean>(false);
   const [showImageCompressor, setShowImageCompressor] =
@@ -43,9 +42,6 @@ const Sidebar: React.FC = () => {
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [showAvatarCropper, setShowAvatarCropper] = useState<boolean>(false);
   const [croppedAvatar, setCroppedAvatar] = useState<string | null>(null);
-
-  // Check if the current path matches the given path
-  const isActive = (path: string): boolean => location.pathname === path;
 
   // Update the body background color when the UI background color changes
   useEffect(() => {
@@ -219,31 +215,36 @@ const Sidebar: React.FC = () => {
             {/* Navigation Items */}
             <div className="w-full space-y-1 px-3">
               {navItems.map(({ path, label, Icon }) => (
-                <Link
+                <NavLink
                   key={path}
                   to={path}
-                  className={`rounded-xl group flex flex-col items-center gap-1 px-2 py-3 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
-                    isActive(path)
-                      ? 'bg-[var(--bg-active)] text-[var(--text-active)] shadow-lg'
-                      : 'text-default hover:bg-[var(--bg-hover)]'
-                  }`}
-                  aria-current={isActive(path) ? 'page' : undefined}
+                  className={({ isActive }) =>
+                    `rounded-xl group flex flex-col items-center gap-1 px-2 py-3 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
+                      isActive
+                        ? 'bg-[var(--bg-active)] text-[var(--text-active)] shadow-lg'
+                        : 'text-default hover:bg-[var(--bg-hover)]'
+                    }`
+                  }
                 >
-                  <Icon
-                    style={{
-                      width: styles.iconSize,
-                      height: styles.iconSize,
-                      color: isActive(path)
-                        ? styles.activeTextColor
-                        : styles.iconColor,
-                    }}
-                    aria-hidden="true"
-                    className="transition-transform duration-300 group-hover:scale-110"
-                  />
-                  <span className="mt-1 whitespace-nowrap text-xs font-medium tracking-wide">
-                    {label}
-                  </span>
-                </Link>
+                  {({ isActive }) => (
+                    <>
+                      <Icon
+                        style={{
+                          width: styles.iconSize,
+                          height: styles.iconSize,
+                          color: isActive
+                            ? styles.activeTextColor
+                            : styles.iconColor,
+                        }}
+                        aria-hidden="true"
+                        className="transition-transform duration-300 group-hover:scale-110"
+                      />
+                      <span className="mt-1 whitespace-nowrap text-xs font-medium tracking-wide">
+                        {label}
+                      </span>
+                    </>
+                  )}
+                </NavLink>
               ))}
 
               {/* Image Compressor Button */}
