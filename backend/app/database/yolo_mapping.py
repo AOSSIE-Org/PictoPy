@@ -3,7 +3,7 @@ from app.config.settings import DATABASE_PATH
 from app.yolov8.utils import class_names
 
 
-def create_YOLO_mappings():
+def create_YOLO_mappings() -> None:
     # print current directory:
     import os
 

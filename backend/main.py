@@ -2,6 +2,7 @@
 This module contains the main FastAPI application.
 """
 
+from typing import AsyncGenerator
 from uvicorn import Config, Server
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +20,7 @@ from app.routes.facetagging import router as tagging_router
 import multiprocessing
 from app.scheduler import start_scheduler
 from app.custom_logging import CustomizeLogger
+from pathlib import Path
 import os
 
 
@@ -27,7 +29,7 @@ os.makedirs(thumbnails_dir, exist_ok=True)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     create_YOLO_mappings()
     create_faces_table()
     create_folders_table()
@@ -58,7 +60,7 @@ app.add_middleware(
 
 
 @app.get("/")
-async def root():
+async def root() -> dict[str, str]:
     return {"message": "PictoPy Server is up and running!"}
 
 
@@ -71,7 +73,7 @@ app.include_router(tagging_router, prefix="/tag", tags=["Tagging"])
 # Runs when we use this command: python3 main.py (As in production)
 if __name__ == "__main__":
     multiprocessing.freeze_support()  # Required for Windows.
-    app.logger = CustomizeLogger.make_logger("app/logging_config.json")
+    app.state.logger = CustomizeLogger.make_logger(Path("app/logging_config.json"))
     config = Config(app=app, host="0.0.0.0", port=8000, log_config=None)
     server = Server(config)
     server.run()

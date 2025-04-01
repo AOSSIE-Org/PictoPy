@@ -100,8 +100,10 @@ class GenerateThumbnailsResponse(BaseModel):
 
 
 class FailedDeletionThumbnailResponse(BaseModel):
-    folder: str
+    success: bool = False
     error: str
+    failed_deletions: List[str]
+    message: str
 
 
 class DeleteThumbnailsFailedResponse(BaseModel):

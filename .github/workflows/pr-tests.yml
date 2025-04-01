@@ -24,7 +24,7 @@ jobs:
           npm install
           cd ..
           cd backend
-          pip install pre-commit ruff black
+          pip install pre-commit ruff black mypy
           cd ..
       - name: Run Linters
         run: |
@@ -33,7 +33,7 @@ jobs:
           npm run format:check
           cd ..
           cd backend/
-          pre-commit run --config ../.pre-commit-config.yaml --all-files || exit 1
+          pre-commit run --config ./.pre-commit-config.yaml --all-files || exit 1
           cd ..
           cd frontend/src-tauri/
           cargo fmt -- --check

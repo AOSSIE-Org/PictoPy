@@ -41,7 +41,7 @@ def get_cached_data(key: str) -> Optional[Any]:
     return data
 
 
-def invalidate_cache(key: str = None) -> None:
+def invalidate_cache(key: Optional[str] = None) -> None:
     """
     Remove item(s) from cache.
 

@@ -115,6 +115,10 @@ TAURI_SIGNING_PRIVATE_KEY_PASSWORD=pass
 npm run tauri build
 ```
 
+#### Note about pre commits
+
+Before committing changes make sure pre-commit ruff black and mypy are globally installed if virtual enviroment of python is not activated in the terminal from which you are comitting
+
 ## Additional Resources
 
 - [Tauri Documentation](https://tauri.app/start/)

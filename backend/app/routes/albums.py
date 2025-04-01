@@ -33,10 +33,8 @@ router = APIRouter()
 
 @router.post("/create-album", response_model=AlbumCreateResponse)
 @exception_handler_wrapper
-def create_new_album(payload: AlbumCreate):
-    # Call the function to create an album
+def create_new_album(payload: AlbumCreate) -> AlbumCreateResponse:
     create_album(payload.name, payload.description, payload.is_hidden, payload.password)
-    # Success Response
     return AlbumCreateResponse(
         success=True,
         message=f"Album '{payload.name}' created successfully",
@@ -54,7 +52,7 @@ def create_new_album(payload: AlbumCreate):
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
 @exception_handler_wrapper
-def delete_existing_album(payload: AlbumDeleteRequest):
+def delete_existing_album(payload: AlbumDeleteRequest) -> AlbumDeleteResponse:
 
     album_name = payload.name
     try:
@@ -80,7 +78,9 @@ def delete_existing_album(payload: AlbumDeleteRequest):
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
 @exception_handler_wrapper
-def add_multiple_images_to_album(payload: AddMultipleImagesRequest):
+def add_multiple_images_to_album(
+    payload: AddMultipleImagesRequest,
+) -> AddMultipleImagesResponse:
 
     album_name = payload.album_name
     paths = payload.paths
@@ -112,7 +112,9 @@ def add_multiple_images_to_album(payload: AddMultipleImagesRequest):
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
 @exception_handler_wrapper
-def remove_image_from_album(payload: RemoveImagFromAlbumRequest):
+def remove_image_from_album(
+    payload: RemoveImagFromAlbumRequest,
+) -> RemoveImagFromAlbumResponse:
     album_name = payload.album_name
     path = payload.path
     try:
@@ -143,7 +145,7 @@ def remove_image_from_album(payload: RemoveImagFromAlbumRequest):
 def view_album_photos(
     album_name: str = Query(..., description="Name of the album to view"),
     password: str = Query(None, description="Password for hidden albums"),
-):
+) -> ViewAlbumResponse:
 
     photos = get_album_photos(album_name, password)
 
@@ -176,7 +178,9 @@ def view_album_photos(
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
 @exception_handler_wrapper
-def update_album_description(payload: UpdateAlbumDescriptionRequest):
+def update_album_description(
+    payload: UpdateAlbumDescriptionRequest,
+) -> UpdateAlbumDescriptionResponse:
 
     album_name = payload.album_name
     new_description = payload.description
@@ -204,7 +208,7 @@ def update_album_description(payload: UpdateAlbumDescriptionRequest):
     responses={code: {"model": ErrorResponse} for code in [404]},
 )
 @exception_handler_wrapper
-def get_albums():
+def get_albums() -> GetAlbumsResponse:
     try:
         albums = get_all_albums()
         return GetAlbumsResponse(
