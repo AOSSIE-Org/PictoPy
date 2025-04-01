@@ -1,0 +1,35 @@
+name: MacOS Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: macos-latest  # macOS runner provided by GitHub Actions
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20.x'
+
+      - name: Install dependencies
+        run: |
+          npm install
+
+      - name: Set SDKROOT and MACOSX_DEPLOYMENT_TARGET
+        run: |
+          export SDKROOT=$(xcrun --show-sdk-path)
+          export MACOSX_DEPLOYMENT_TARGET=10.13
+
+      - name: Build Tauri app
+        run: |
+          npm run tauri build
