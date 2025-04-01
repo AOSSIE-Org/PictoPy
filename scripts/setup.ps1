@@ -33,7 +33,7 @@ Write-Host "Installing Visual Studio Build Tools..." -ForegroundColor Yellow
 winget install Microsoft.VisualStudio.2022.BuildTools --force --override "--wait --passive --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows11SDK.22621"
 
 # ---- Check if Visual C++ Build Tools (cl.exe) are available ----
-$vsPath = "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Tools\MSVC"
+$vsPath = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC"
 if (Test-Path $vsPath) {
     $latestVersion = (Get-ChildItem $vsPath | Sort-Object Name -Descending | Select-Object -First 1).Name
     $clPath = Join-Path -Path $vsPath -ChildPath "$latestVersion\bin\Hostx64\x64\cl.exe"
@@ -115,7 +115,7 @@ if (-not (Test-Command cmake)) {
 # ---- Set up the frontend ----
 Write-Host "Setting up frontend..." -ForegroundColor Yellow
 try {
-    Set-Location .\frontend\
+    Set-Location ..\frontend\
     npm install
     
     Set-Location .\src-tauri\
@@ -134,10 +134,10 @@ try {
     Set-Location .\backend\
     pip install ruff black pre-commit mypy
     # Create virtual environment
-    python -m venv venv
+    python -m venv .env
     
     # Activate virtual environment and install dependencies
-    .\venv\Scripts\Activate.ps1
+    .\.env\Scripts\Activate.ps1
     python -m pip install --upgrade pip
     python -m pip install -r requirements.txt
     deactivate
