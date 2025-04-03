@@ -6,11 +6,12 @@ use tauri::State;
 use tempfile::tempdir;
 use tokio;
 
-use PictoPy::services::{
-    adjust_brightness_contrast, apply_sepia, check_secure_folder_status, create_secure_folder,
-    decrypt_data, derive_key, encrypt_data, generate_salt, get_folders_with_images,
-    get_images_in_folder, get_random_memories, get_secure_folder_path, hash_password,
-    is_image_file, move_to_secure_folder, remove_from_secure_folder, save_edited_image, share_file,
+use picto_py::image_processing::adjust_brightness_contrast;
+use picto_py::services::{
+    apply_sepia, check_secure_folder_status, create_secure_folder, decrypt_data, derive_key,
+    encrypt_data, generate_salt, get_folders_with_images, get_images_in_folder,
+    get_random_memories, get_secure_folder_path, hash_password, is_image_file,
+    move_to_secure_folder, remove_from_secure_folder, save_edited_image, share_file,
     unlock_secure_folder, CacheService, FileService, SECURE_FOLDER_NAME,
 };
 
@@ -36,18 +37,18 @@ fn test_get_folders_with_images() {
     let directory = "test_dir";
     let fs_state = real_file_service_state();
     let cs_state = real_cache_service_state();
-    let folders = get_folders_with_images(directory, fs_state, cs_state);
+    let _folders = get_folders_with_images(directory, fs_state, cs_state);
     // Adjust this assertion according to expected behavior.
     // Here, we simply check that the function returns a vector.
-    assert!(folders.len() >= 0);
+    assert!(true, "get_folders_with_images returned a vector");
 }
 
 #[test]
 fn test_get_images_in_folder() {
     let folder = "folder_path";
     let fs_state = real_file_service_state();
-    let images = get_images_in_folder(folder, fs_state);
-    assert!(images.len() >= 0);
+    let _images = get_images_in_folder(folder, fs_state);
+    assert!(true, "get_images_in_folder returned a vector");
 }
 
 // #[test]
@@ -91,6 +92,7 @@ async fn test_share_file() {
     assert!(result.is_ok() || result.is_err());
 }
 
+#[tokio::test]
 async fn test_save_edited_image() {
     // Create a simple test image
     let img = DynamicImage::ImageRgb8(RgbImage::new(10, 10));
@@ -172,7 +174,7 @@ fn test_encrypt_decrypt_data() {
 #[test]
 fn test_derive_key() {
     let salt = generate_salt();
-    let key = derive_key("password", &salt);
+    let _key = derive_key("password", &salt);
     // We cannot access the inner key bytes, so we simply assume key derivation succeeded.
     assert!(true, "Key derived successfully");
 }

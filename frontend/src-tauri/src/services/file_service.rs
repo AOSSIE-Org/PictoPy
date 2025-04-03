@@ -4,6 +4,12 @@ use std::path::PathBuf;
 
 pub struct FileService;
 
+impl Default for FileService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FileService {
     pub fn new() -> Self {
         FileService

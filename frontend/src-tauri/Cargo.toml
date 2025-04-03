@@ -1,5 +1,5 @@
 [package]
-name = "PictoPy"
+name = "picto_py"  # Changed from PictoPy to follow snake_case convention
 version = "0.0.0"
 description = "A Tauri App"
 authors = ["you"]
@@ -28,6 +28,9 @@ tempfile = "3"
 arrayref = "0.3.6"
 directories = "4.0"
 chrono = { version = "0.4.26", features = ["serde"] }
+lazy_static = "1.4.0"
+rayon = "1.7.0"
+regex = "1.8.1"
 
 base64 = "0.21.0"
 rand = "0.8.5"

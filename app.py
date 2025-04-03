@@ -1,6 +1,7 @@
 # ...existing code...
 from utils.cache import invalidate_cache
 
+
 # Add cache reset option when application starts
 def initialize_app():
     # ...existing code...
