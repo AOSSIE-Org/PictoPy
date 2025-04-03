@@ -34,10 +34,13 @@ type CustomCSSProperties = React.CSSProperties & {
 const Sidebar: React.FC = () => {
   const location = useLocation();
   // const [] = useState<boolean>(false);
+  const savedStyles = localStorage.getItem('savedStyles');
+  const parsedStyles = savedStyles ? JSON.parse(savedStyles) : defaultStyles;
+
   const [showCustomize, setShowCustomize] = useState<boolean>(false);
   const [showImageCompressor, setShowImageCompressor] =
     useState<boolean>(false);
-  const [styles, setStyles] = useState<CustomStyles>(defaultStyles);
+  const [styles, setStyles] = useState<CustomStyles>(parsedStyles);
   const [avatar, setAvatar] = useState<string | null>(null);
   const [isAvatarLoading, setIsAvatarLoading] = useState<boolean>(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
