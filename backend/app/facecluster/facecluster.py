@@ -5,10 +5,10 @@ from sklearn.cluster import DBSCAN
 from sklearn.metrics.pairwise import cosine_distances
 import sqlite3
 import json
-from collections import defaultdict
+from collections import defaultdict, deque
 from contextlib import contextmanager
 import logging
-from typing import Dict, List, Optional, Set, Union, Any, Callable, TypeVar, ParamSpec
+from typing import Dict, List, Optional, Set, Union, Any, Callable, TypeVar, ParamSpec, Deque
 from pathlib import Path
 import time
 from functools import wraps
@@ -116,7 +116,9 @@ class FaceCluster:
         eps: float = 0.3,
         min_samples: int = 2,
         metric: str = "cosine",
+
         db_path: Union[str, Path] = DATABASE_PATH,
+        batch_size: int = 50  # Parameter for batch proc
     ) -> None:
         """
         Initialize the face cluster manager.
@@ -126,6 +128,7 @@ class FaceCluster:
             min_samples: DBSCAN minimum samples parameter
             metric: Distance metric for clustering
             db_path: Path to the database
+            batch_size: Number of embeddings to process before full reclustering
         """
         self.eps = eps
         self.min_samples = min_samples
@@ -141,6 +144,11 @@ class FaceCluster:
         self.image_ids: List[str] = []
         self.labels: Optional[NDArray] = None
         self.db_path = Path(db_path)
+        
+        # Attributes for batch processing
+        self.batch_size = batch_size
+        self.pending_embeddings: Deque[tuple[NDArray, str]] = deque()
+        self.needs_reclustering = False
 
         # Initialize database
         self._init_database()
@@ -219,8 +227,8 @@ class FaceCluster:
 
     def add_face(self, embedding: NDArray, image_path: str) -> Dict[int, List[str]]:
         """
-        Add a new face embedding to the clusters.
-
+        Add a new face embedding to the pending queue.
+        
         Args:
             embedding: Face embedding vector
             image_path: Path to the image
@@ -229,16 +237,30 @@ class FaceCluster:
             Updated clustering results
         """
         image_id = get_id_from_path(image_path)
+        self.pending_embeddings.append((embedding, image_id))
+        
+        # If we've reached batch size, process the batch
+        if len(self.pending_embeddings) >= self.batch_size:
+            return self._process_batch()
+            
+        # If we have existing clusters, do quick assignment
+        if len(self.embeddings) > 0:
+            return self._quick_assign(embedding, image_id)
+            
+        return self.get_clusters()
 
+    def _quick_assign(self, embedding: NDArray, image_id: str) -> Dict[int, List[str]]:
+        """
+        Quickly assign a new face to existing clusters without full reclustering.
+        """
         if len(self.embeddings) == 0:
             self.embeddings = np.array([embedding])
             self.image_ids = [image_id]
             self.labels = np.array([-1])
         else:
-            # Vectorized distance calculation
             distances = cosine_distances(embedding.reshape(1, -1), self.embeddings)[0]
             nearest_neighbor = np.argmin(distances)
-
+            
             # Determine cluster assignment
             if distances[nearest_neighbor] <= self.eps:
                 new_label = self.labels[nearest_neighbor]
@@ -249,10 +271,46 @@ class FaceCluster:
             self.embeddings = np.vstack([self.embeddings, embedding])
             self.image_ids.append(image_id)
             self.labels = np.append(self.labels, new_label)
+            
+        self.needs_reclustering = True
+        return self.get_clusters()
 
+    def _process_batch(self) -> Dict[int, List[str]]:
+        """
+        Process all pending embeddings in the batch.
+        """
+        if not self.pending_embeddings:
+            return self.get_clusters()
+            
+        # Add all pending embeddings to main arrays
+        new_embeddings = []
+        new_image_ids = []
+        
+        while self.pending_embeddings:
+            embedding, image_id = self.pending_embeddings.popleft()
+            new_embeddings.append(embedding)
+            new_image_ids.append(image_id)
+            
+        if len(self.embeddings) == 0:
+            self.embeddings = np.array(new_embeddings)
+            self.image_ids = new_image_ids
+        else:
+            self.embeddings = np.vstack([self.embeddings, new_embeddings])
+            self.image_ids.extend(new_image_ids)
+            
+        # Perform full clustering
+        self.labels = self.dbscan.fit_predict(self.embeddings)
+        self.needs_reclustering = False
+        
         self._clear_caches()
         self.save_to_db()
         return self.get_clusters()
+
+    def force_recluster(self) -> Dict[int, List[str]]:
+        """
+        Force immediate processing of all pending embeddings and full reclustering.
+        """
+        return self._process_batch()
 
     @TTLCache(maxsize=128, ttl=3600)
     def get_related_images(self, image_id: str) -> List[str]:

@@ -22,10 +22,52 @@ use std::num::NonZeroU32;
 use std::process::Command;
 use tauri::path::BaseDirectory;
 use tauri::Manager;
+use rayon::prelude::*;
+use std::sync::Mutex;
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+use std::collections::hash_map::DefaultHasher;
+use lazy_static::lazy_static;
+use lru::LruCache;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::num::NonZeroUsize;
+
+// Constants for cache configuration
+const MAX_CACHE_SIZE: usize = 100;  // Maximum number of cached images
+const MAX_IMAGE_DIM: u32 = 4096;    // Maximum cached image dimension
+const MAX_CACHE_MEMORY: usize = 1024 * 1024 * 1024;  // 1GB max cache size
 
 pub const SECURE_FOLDER_NAME: &str = "secure_folder";
 const SALT_LENGTH: usize = 16;
 const NONCE_LENGTH: usize = 12;
+
+#[derive(Clone)]
+struct ImageAdjustment {
+    brightness: i32,
+    contrast: i32,
+}
+
+impl Hash for ImageAdjustment {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.brightness.hash(state);
+        self.contrast.hash(state);
+    }
+}
+
+lazy_static! {
+    static ref IMAGE_CACHE: Mutex<LruCache<u64, DynamicImage>> = Mutex::new(
+        LruCache::new(NonZeroUsize::new(MAX_CACHE_SIZE).unwrap())
+    );
+    static ref CURRENT_CACHE_MEMORY: AtomicUsize = AtomicUsize::new(0);
+    static ref CACHE_HITS: AtomicUsize = AtomicUsize::new(0);
+    static ref CACHE_MISSES: AtomicUsize = AtomicUsize::new(0);
+    static ref CACHE_EVICTIONS: AtomicUsize = AtomicUsize::new(0);
+    static ref TOTAL_PROCESSING_TIME: AtomicUsize = AtomicUsize::new(0);
+}
+
+fn calculate_image_memory_size(img: &DynamicImage) -> usize {
+    img.width() as usize * img.height() as usize * 4  // 4 bytes per pixel (RGBA)
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct SecureMedia {
@@ -967,3 +1009,76 @@ pub fn get_server_path(handle: tauri::AppHandle) -> Result<String, String> {
         .map_err(|e| e.to_string())?;
     Ok(resource_path.to_string_lossy().to_string())
 }
+
+#[tauri::command]
+pub fn clear_image_cache() {
+    let mut cache = IMAGE_CACHE.lock().unwrap();
+    cache.clear();
+    CURRENT_CACHE_MEMORY.store(0, Ordering::Relaxed);
+}
+
+#[tauri::command]
+pub fn get_cache_stats() -> Result<CacheStats, String> {
+    let cache = IMAGE_CACHE.lock().map_err(|e| {
+        error!("Failed to acquire cache lock for stats: {}", e);
+        format!("Cache lock error: {}", e)
+    })?;
+
+    let current_memory = CURRENT_CACHE_MEMORY.load(Ordering::Relaxed);
+    let hits = CACHE_HITS.load(Ordering::Relaxed);
+    let misses = CACHE_MISSES.load(Ordering::Relaxed);
+    let total_requests = hits + misses;
+    let hit_rate = if total_requests > 0 {
+        (hits as f64 / total_requests as f64) * 100.0
+    } else {
+        0.0
+    };
+
+    let stats = CacheStats {
+        current_memory_bytes: current_memory,
+        max_memory_bytes: MAX_CACHE_MEMORY,
+        current_items: cache.len(),
+        max_items: MAX_CACHE_SIZE,
+        cache_hits: hits,
+        cache_misses: misses,
+        cache_evictions: CACHE_EVICTIONS.load(Ordering::Relaxed),
+        hit_rate_percentage: hit_rate,
+        memory_usage_percentage: (current_memory as f64 / MAX_CACHE_MEMORY as f64) * 100.0,
+        average_processing_time_ms: if total_requests > 0 {
+            TOTAL_PROCESSING_TIME.load(Ordering::Relaxed) as f64 / total_requests as f64
+        } else {
+            0.0
+        },
+    };
+
+    debug!("Cache stats retrieved: {:?}", stats);
+    Ok(stats)
+}
+
+#[tauri::command]
+pub fn reset_cache_stats() -> Result<(), String> {
+    CACHE_HITS.store(0, Ordering::Relaxed);
+    CACHE_MISSES.store(0, Ordering::Relaxed);
+    CACHE_EVICTIONS.store(0, Ordering::Relaxed);
+    TOTAL_PROCESSING_TIME.store(0, Ordering::Relaxed);
+    
+    info!("Cache statistics reset");
+    Ok(())
+}
+
+#[derive(Serialize)]
+pub struct CacheStats {
+    current_memory_bytes: usize,
+    max_memory_bytes: usize,
+    current_items: usize,
+    max_items: usize,
+    cache_hits: usize,
+    cache_misses: usize,
+    cache_evictions: usize,
+    hit_rate_percentage: f64,
+    memory_usage_percentage: f64,
+    average_processing_time_ms: f64,
+}
+
+#[cfg(test)]
+mod tests;
