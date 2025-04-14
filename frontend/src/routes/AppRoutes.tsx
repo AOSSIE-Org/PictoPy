@@ -15,13 +15,11 @@ export const AppRoutes: React.FC = () => {
   return (
     <>
       <Routes>
-        <Route path={ROUTES.INITIAL} element={<InitialPage />} />
-      </Routes>
+      <Route path={ROUTES.INITIAL} element={<InitialPage />} />
       {isLayoutRoute && (
-        <Layout>
-          <LayoutRoutes />
-        </Layout>
+        <Route path="/*" element={<Layout><LayoutRoutes /></Layout>} />
       )}
+    </Routes>
     </>
   );
 };
