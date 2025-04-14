@@ -4,6 +4,10 @@ use std::time::SystemTime;
 use tauri::State;
 mod cache_service;
 mod file_service;
+use argon2::{
+    password_hash::{PasswordHasher, SaltString},
+    Argon2, Params, PasswordVerifier,
+};
 pub use cache_service::CacheService;
 use chrono::{DateTime, Datelike, Utc};
 use data_encoding::BASE64;
@@ -12,13 +16,12 @@ pub use file_service::FileService;
 use image::{DynamicImage, Rgba, RgbaImage};
 use rand::seq::SliceRandom;
 use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
-use ring::digest;
-use ring::pbkdf2;
 use ring::rand::{SecureRandom, SystemRandom};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
-use std::num::NonZeroU32;
+use std::fs::OpenOptions;
+use std::io::{Seek, SeekFrom, Write};
 use std::process::Command;
 use tauri::path::BaseDirectory;
 use tauri::Manager;
@@ -26,6 +29,11 @@ use tauri::Manager;
 pub const SECURE_FOLDER_NAME: &str = "secure_folder";
 const SALT_LENGTH: usize = 16;
 const NONCE_LENGTH: usize = 12;
+
+// Constants for Argon2id
+const ARGON2_MEMORY_COST: u32 = 65536; // 64MB
+const ARGON2_TIME_COST: u32 = 3; // Iterations
+const ARGON2_PARALLELISM: u32 = 4; // Parallelism factor
 
 #[derive(Serialize, Deserialize)]
 pub struct SecureMedia {
@@ -481,43 +489,45 @@ pub fn generate_salt() -> [u8; SALT_LENGTH] {
 
 #[tauri::command]
 pub async fn move_to_secure_folder(path: String, password: String) -> Result<(), String> {
+    // Validate password first
+    validate_password(&password)?;
+
     let secure_folder = get_secure_folder_path()?;
+
+    // Ensure secure folder exists
+    if !secure_folder.exists() {
+        return Err("Secure folder not set up. Please set up the secure folder first.".to_string());
+    }
+
     let file_name = Path::new(&path).file_name().ok_or("Invalid file name")?;
     let dest_path = secure_folder.join(file_name);
 
-    let content = fs::read(&path).map_err(|e| e.to_string())?;
-    let ciphertext_length = content.len() + AES_256_GCM.tag_len();
-    let _expected_length = SALT_LENGTH + NONCE_LENGTH + ciphertext_length + 16;
-    let encrypted = encrypt_data(&content, &password).map_err(|e| e.to_string())?;
-    println!("Encrypted file size: {}", encrypted.len());
-    fs::write(&dest_path, encrypted).map_err(|e| e.to_string())?;
-    println!("Encrypted file saved to: {:?}", secure_folder);
-    fs::remove_file(&path).map_err(|e| e.to_string())?;
+    // Read the file content
+    let content = fs::read(&path).map_err(|e| format!("Failed to read file: {}", e))?;
 
-    let thumbnails_folder = Path::new(&path)
-        .parent() // Get parent directory of the original file
-        .and_then(|parent| parent.join("PictoPy.thumbnails").canonicalize().ok()) // Navigate to PictoPy.thumbnails
-        .ok_or("Unable to locate thumbnails directory")?;
-    let thumbnail_path = thumbnails_folder.join(file_name);
+    // Encrypt the content
+    let encrypted = encrypt_data(&content, &password)?;
 
-    if thumbnail_path.exists() {
-        fs::remove_file(&thumbnail_path).map_err(|e| e.to_string())?;
-        println!("Thumbnail deleted: {:?}", thumbnail_path);
-    } else {
-        println!("Thumbnail not found: {:?}", thumbnail_path);
-    }
+    // Write the encrypted content
+    fs::write(&dest_path, &encrypted)
+        .map_err(|e| format!("Failed to write encrypted file: {}", e))?;
 
-    // Store the original path
+    // Update metadata
     let metadata_path = secure_folder.join("metadata.json");
     let mut metadata: HashMap<String, String> = if metadata_path.exists() {
         serde_json::from_str(&fs::read_to_string(&metadata_path).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?
+            .map_err(|e| format!("Failed to parse metadata: {}", e))?
     } else {
         HashMap::new()
     };
-    metadata.insert(file_name.to_string_lossy().to_string(), path);
+
+    metadata.insert(file_name.to_string_lossy().to_string(), path.clone());
+
     fs::write(&metadata_path, serde_json::to_string(&metadata).unwrap())
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Failed to update metadata: {}", e))?;
+
+    // Securely delete the original file
+    secure_delete_file(Path::new(&path))?;
 
     Ok(())
 }
@@ -542,8 +552,10 @@ pub async fn remove_from_secure_folder(file_name: String, password: String) -> R
     // Write the decrypted content back to the original path
     fs::write(original_path, decrypted_content).map_err(|e| e.to_string())?;
 
-    // Remove the file from the secure folder and update metadata
-    fs::remove_file(&file_path).map_err(|e| e.to_string())?;
+    // Securely delete the file from the secure folder
+    secure_delete_file(&file_path)?;
+
+    // Update metadata
     let mut updated_metadata = metadata;
     updated_metadata.remove(&file_name);
     fs::write(
@@ -557,22 +569,34 @@ pub async fn remove_from_secure_folder(file_name: String, password: String) -> R
 
 #[tauri::command]
 pub async fn create_secure_folder(password: String) -> Result<(), String> {
+    validate_password(&password)?;
+
     let secure_folder = get_secure_folder_path()?;
     fs::create_dir_all(&secure_folder).map_err(|e| e.to_string())?;
     println!("Secure folder path: {:?}", secure_folder);
 
     let salt = generate_salt();
-    let hashed_password = hash_password(&password, &salt);
+    let hashed_password = hash_password(&password, &salt)?;
 
     let config_path = secure_folder.join("config.json");
     let config = serde_json::json!({
         "salt": BASE64.encode(&salt),
-        "hashed_password": BASE64.encode(&hashed_password),
+        "hashed_password": hashed_password,
     });
     fs::write(config_path, serde_json::to_string(&config).unwrap()).map_err(|e| e.to_string())?;
 
     let nomedia_path = secure_folder.join(".nomedia");
     fs::write(nomedia_path, "").map_err(|e| e.to_string())?;
+
+    // Create metadata file if it doesn't exist
+    let metadata_path = secure_folder.join("metadata.json");
+    if !metadata_path.exists() {
+        fs::write(
+            &metadata_path,
+            serde_json::to_string(&HashMap::<String, String>::new()).unwrap(),
+        )
+        .map_err(|e| e.to_string())?;
+    }
 
     Ok(())
 }
@@ -613,29 +637,44 @@ pub async fn get_secure_media(password: String) -> Result<Vec<SecureMedia>, Stri
     Ok(secure_media)
 }
 
-pub fn hash_password(password: &str, salt: &[u8]) -> Vec<u8> {
-    let mut hash = [0u8; digest::SHA256_OUTPUT_LEN];
-    pbkdf2::derive(
-        pbkdf2::PBKDF2_HMAC_SHA256,
-        NonZeroU32::new(100_000).unwrap(),
-        salt,
-        password.as_bytes(),
-        &mut hash,
+pub fn hash_password(password: &str, salt: &[u8]) -> Result<String, String> {
+    // Create a proper SaltString from the raw salt bytes
+    let salt_string =
+        SaltString::encode_b64(salt).map_err(|e| format!("Failed to encode salt: {}", e))?;
+
+    let argon2 = Argon2::new(
+        argon2::Algorithm::Argon2id,
+        argon2::Version::V0x13,
+        Params::new(
+            ARGON2_MEMORY_COST,
+            ARGON2_TIME_COST,
+            ARGON2_PARALLELISM,
+            Some(32), // Output length
+        )
+        .map_err(|e| e.to_string())?,
     );
-    hash.to_vec()
+
+    let password_hash = argon2
+        .hash_password(password.as_bytes(), &salt_string)
+        .map_err(|e| e.to_string())?
+        .to_string();
+
+    Ok(password_hash)
 }
 
-pub fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, ring::error::Unspecified> {
+pub fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, String> {
     let salt = generate_salt();
-    let key = derive_key(password, &salt);
+    let key = derive_key(password, &salt)?;
     let nonce = generate_nonce();
 
     let mut in_out = data.to_vec();
-    let tag = key.seal_in_place_separate_tag(
-        Nonce::assume_unique_for_key(nonce),
-        Aad::empty(),
-        &mut in_out,
-    )?;
+    let tag = key
+        .seal_in_place_separate_tag(
+            Nonce::assume_unique_for_key(nonce),
+            Aad::empty(),
+            &mut in_out,
+        )
+        .map_err(|_| "Encryption failed".to_string())?;
 
     let mut result = Vec::new();
     result.extend_from_slice(&salt);
@@ -646,40 +685,36 @@ pub fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, ring::error:
     Ok(result)
 }
 
-pub fn decrypt_data(encrypted: &[u8], password: &str) -> Result<Vec<u8>, String> {
-    println!("Decrypting data...");
-
-    if encrypted.len() < SALT_LENGTH + NONCE_LENGTH + 16 {
-        return Err(format!(
-            "Encrypted data too short: {} bytes",
-            encrypted.len()
-        ));
+pub fn decrypt_data(encrypted_data: &[u8], password: &str) -> Result<Vec<u8>, String> {
+    if encrypted_data.len() < SALT_LENGTH + NONCE_LENGTH + AES_256_GCM.tag_len() {
+        return Err("Invalid encrypted data format".to_string());
     }
 
-    let salt = &encrypted[..SALT_LENGTH];
-    let nonce = &encrypted[SALT_LENGTH..SALT_LENGTH + NONCE_LENGTH];
-    let tag_len = 16;
-    let (ciphertext, tag) = encrypted[SALT_LENGTH + NONCE_LENGTH..]
-        .split_at(encrypted.len() - SALT_LENGTH - NONCE_LENGTH - tag_len);
+    let salt = &encrypted_data[0..SALT_LENGTH];
+    let nonce = &encrypted_data[SALT_LENGTH..SALT_LENGTH + NONCE_LENGTH];
+    let ciphertext_and_tag = &encrypted_data[SALT_LENGTH + NONCE_LENGTH..];
 
-    let key = derive_key(password, salt);
-    let nonce = match Nonce::try_assume_unique_for_key(nonce) {
-        Ok(n) => n,
-        Err(e) => return Err(format!("Nonce error: {:?}", e)),
-    };
+    let key = derive_key(password, salt)?;
 
-    let mut plaintext = ciphertext.to_vec();
-    plaintext.extend_from_slice(tag);
+    // The tag is at the end of the ciphertext
+    let tag_position = ciphertext_and_tag.len() - AES_256_GCM.tag_len();
 
-    match key.open_in_place(nonce, Aad::empty(), &mut plaintext) {
-        Ok(decrypted) => {
-            println!(
-                "Decryption successful! Decrypted length: {}",
-                decrypted.len()
-            );
-            Ok(decrypted.to_vec())
-        }
-        Err(e) => Err(format!("Decryption error: {:?}", e)),
+    // Split the ciphertext and tag
+    let mut ciphertext = ciphertext_and_tag[..tag_position].to_vec();
+    let tag = &ciphertext_and_tag[tag_position..];
+
+    // Combine ciphertext and tag for opening
+    let mut in_out = ciphertext.clone();
+    in_out.extend_from_slice(tag);
+
+    // Open in place
+    match key.open_in_place(
+        Nonce::assume_unique_for_key(*arrayref::array_ref!(nonce, 0, NONCE_LENGTH)),
+        Aad::empty(),
+        &mut in_out,
+    ) {
+        Ok(plaintext) => Ok(plaintext.to_vec()),
+        Err(_) => Err("Decryption failed. Incorrect password or corrupted data.".to_string()),
     }
 }
 
@@ -696,35 +731,42 @@ pub async fn unlock_secure_folder(password: String) -> Result<bool, String> {
         serde_json::from_str(&fs::read_to_string(config_path).map_err(|e| e.to_string())?)
             .map_err(|e| e.to_string())?;
 
-    let salt = BASE64
+    let _salt = BASE64
         .decode(config["salt"].as_str().ok_or("Invalid salt")?.as_bytes())
         .map_err(|e| e.to_string())?;
-    let stored_hash = BASE64
-        .decode(
-            config["hashed_password"]
-                .as_str()
-                .ok_or("Invalid hash")?
-                .as_bytes(),
-        )
-        .map_err(|e| e.to_string())?;
 
-    let input_hash = hash_password(&password, &salt);
+    let stored_hash = config["hashed_password"]
+        .as_str()
+        .ok_or("Invalid hash")?
+        .to_string();
 
-    Ok(input_hash == stored_hash)
+    // Use the new verification method
+    verify_password(&password, &stored_hash)
 }
 
-pub fn derive_key(password: &str, salt: &[u8]) -> LessSafeKey {
+pub fn derive_key(password: &str, salt: &[u8]) -> Result<LessSafeKey, String> {
     let mut key_bytes = [0u8; 32];
-    pbkdf2::derive(
-        pbkdf2::PBKDF2_HMAC_SHA256,
-        NonZeroU32::new(100_000).unwrap(),
-        salt,
-        password.as_bytes(),
-        &mut key_bytes,
+
+    let argon2 = Argon2::new(
+        argon2::Algorithm::Argon2id,
+        argon2::Version::V0x13,
+        Params::new(
+            ARGON2_MEMORY_COST,
+            ARGON2_TIME_COST,
+            ARGON2_PARALLELISM,
+            Some(32),
+        )
+        .map_err(|e| e.to_string())?,
     );
 
-    let unbound_key = UnboundKey::new(&AES_256_GCM, &key_bytes).unwrap();
-    LessSafeKey::new(unbound_key)
+    argon2
+        .hash_password_into(password.as_bytes(), salt, &mut key_bytes)
+        .map_err(|e| format!("Key derivation failed: {}", e))?;
+
+    let unbound_key = UnboundKey::new(&AES_256_GCM, &key_bytes)
+        .map_err(|_| "Failed to create encryption key".to_string())?;
+
+    Ok(LessSafeKey::new(unbound_key))
 }
 
 #[tauri::command]
@@ -966,4 +1008,85 @@ pub fn get_server_path(handle: tauri::AppHandle) -> Result<String, String> {
         .resolve("resources/server", BaseDirectory::Resource)
         .map_err(|e| e.to_string())?;
     Ok(resource_path.to_string_lossy().to_string())
+}
+
+// Function to validate password strength
+pub fn validate_password(password: &str) -> Result<(), String> {
+    if password.len() < 8 {
+        return Err("Password must be at least 8 characters long".to_string());
+    }
+
+    if !password.chars().any(|c| c.is_uppercase()) {
+        return Err("Password must contain at least one uppercase letter".to_string());
+    }
+
+    if !password.chars().any(|c| c.is_numeric()) {
+        return Err("Password must contain at least one number".to_string());
+    }
+
+    Ok(())
+}
+
+// Function to securely delete a file
+pub fn secure_delete_file(path: &Path) -> Result<(), String> {
+    // Get file size
+    let metadata = fs::metadata(path).map_err(|e| format!("Failed to get file metadata: {}", e))?;
+    let file_size = metadata.len();
+
+    // Open file for writing
+    let mut file = OpenOptions::new()
+        .write(true)
+        .open(path)
+        .map_err(|e| format!("Failed to open file for secure deletion: {}", e))?;
+
+    // Patterns for overwriting
+    let patterns = [
+        vec![0x00; 4096],             // All zeros
+        vec![0xFF; 4096],             // All ones
+        vec![0x55; 4096],             // Alternating 01010101
+        vec![0xAA; 4096],             // Alternating 10101010
+        vec![0x92, 0x49, 0x24, 0x92], // Random pattern
+    ];
+
+    // Multiple overwrite passes
+    for pattern in patterns.iter() {
+        file.seek(SeekFrom::Start(0))
+            .map_err(|e| format!("Failed to seek to start of file: {}", e))?;
+
+        let mut remaining = file_size;
+        while remaining > 0 {
+            let to_write = std::cmp::min(remaining, pattern.len() as u64);
+            let written = file
+                .write(&pattern[0..to_write as usize])
+                .map_err(|e| format!("Failed to write to file: {}", e))?;
+
+            remaining -= written as u64;
+            if written == 0 {
+                break;
+            }
+        }
+
+        file.flush()
+            .map_err(|e| format!("Failed to flush file: {}", e))?;
+    }
+
+    // Close and delete the file
+    drop(file);
+    fs::remove_file(path).map_err(|e| format!("Failed to remove file: {}", e))?;
+
+    Ok(())
+}
+
+pub fn verify_password(password: &str, stored_hash: &str) -> Result<bool, String> {
+    // Parse the stored hash
+    let parsed_hash = argon2::PasswordHash::new(stored_hash)
+        .map_err(|e| format!("Failed to parse hash: {}", e))?;
+
+    // Verify the password against the parsed hash
+    let argon2 = Argon2::default();
+
+    match argon2.verify_password(password.as_bytes(), &parsed_hash) {
+        Ok(_) => Ok(true),
+        Err(_) => Ok(false), // Password doesn't match, but this is not an error condition
+    }
 }

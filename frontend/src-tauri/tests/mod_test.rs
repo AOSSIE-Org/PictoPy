@@ -11,7 +11,8 @@ use PictoPy::services::{
     decrypt_data, derive_key, encrypt_data, generate_salt, get_folders_with_images,
     get_images_in_folder, get_random_memories, get_secure_folder_path, hash_password,
     is_image_file, move_to_secure_folder, remove_from_secure_folder, save_edited_image, share_file,
-    unlock_secure_folder, CacheService, FileService, SECURE_FOLDER_NAME,
+    unlock_secure_folder, validate_password, verify_password, CacheService, FileService,
+    SECURE_FOLDER_NAME,
 };
 
 /// This unsafe helper is for testing only.
@@ -36,18 +37,18 @@ fn test_get_folders_with_images() {
     let directory = "test_dir";
     let fs_state = real_file_service_state();
     let cs_state = real_cache_service_state();
-    let folders = get_folders_with_images(directory, fs_state, cs_state);
-    // Adjust this assertion according to expected behavior.
-    // Here, we simply check that the function returns a vector.
-    assert!(folders.len() >= 0);
+    let _folders = get_folders_with_images(directory, fs_state, cs_state);
+    // Just check that we got a result
+    assert!(true, "Function returned without error");
 }
 
 #[test]
 fn test_get_images_in_folder() {
     let folder = "folder_path";
     let fs_state = real_file_service_state();
-    let images = get_images_in_folder(folder, fs_state);
-    assert!(images.len() >= 0);
+    let _images = get_images_in_folder(folder, fs_state);
+    // Just check that we got a result
+    assert!(true, "Function returned without error");
 }
 
 // #[test]
@@ -91,6 +92,7 @@ async fn test_share_file() {
     assert!(result.is_ok() || result.is_err());
 }
 
+#[tokio::test]
 async fn test_save_edited_image() {
     // Create a simple test image
     let img = DynamicImage::ImageRgb8(RgbImage::new(10, 10));
@@ -111,7 +113,7 @@ async fn test_save_edited_image() {
     // Call the function to save the edited image
     let result = save_edited_image(
         buffer.clone(),
-        original_path.to_string_lossy().to_string(), // Correct save path
+        original_path.to_string_lossy().to_string(),
         "grayscale(100%)".to_string(),
         100,
         100,
@@ -156,24 +158,46 @@ fn test_get_secure_folder_path() {
 #[test]
 fn test_hash_password() {
     let salt = generate_salt();
-    let hash = hash_password("password", &salt);
-    assert_eq!(hash.len(), ring::digest::SHA256_OUTPUT_LEN);
+    let hash_result = hash_password("password", &salt);
+    assert!(hash_result.is_ok(), "Password hashing should succeed");
+    let hash = hash_result.unwrap();
+    assert!(!hash.is_empty(), "Hash should not be empty");
 }
 
 #[test]
 fn test_encrypt_decrypt_data() {
     let data = b"test data";
     let password = "secret";
-    let encrypted = encrypt_data(data, password).unwrap();
-    let decrypted = decrypt_data(&encrypted, password).unwrap();
+
+    // Encrypt the data
+    let encrypted = match encrypt_data(data, password) {
+        Ok(enc) => enc,
+        Err(e) => {
+            println!("Encryption error: {}", e);
+            panic!("Encryption failed: {}", e);
+        }
+    };
+
+    // Print debug info
+    println!("Encrypted data length: {}", encrypted.len());
+
+    // Decrypt with the same password
+    let decrypted = match decrypt_data(&encrypted, password) {
+        Ok(dec) => dec,
+        Err(e) => {
+            println!("Decryption error: {}", e);
+            panic!("Decryption failed: {}", e);
+        }
+    };
+
+    // Verify the decrypted data matches the original
     assert_eq!(decrypted, data);
 }
 
 #[test]
 fn test_derive_key() {
     let salt = generate_salt();
-    let key = derive_key("password", &salt);
-    // We cannot access the inner key bytes, so we simply assume key derivation succeeded.
+    let _key = derive_key("password", &salt); // Add underscore to suppress warning
     assert!(true, "Key derived successfully");
 }
 
@@ -256,4 +280,54 @@ fn test_get_random_memories() {
     let images = result.unwrap();
     // With one image available, expect exactly one image.
     assert_eq!(images.len(), 1);
+}
+
+#[tokio::test]
+async fn test_password_validation() {
+    // Test weak passwords
+    assert!(validate_password("short").is_err()); // Too short
+    assert!(validate_password("nouppercase123").is_err()); // No uppercase
+    assert!(validate_password("NONUMBERS").is_err()); // No numbers
+
+    // Test strong password
+    assert!(validate_password("StrongPass123").is_ok());
+}
+
+#[tokio::test]
+async fn test_argon2id_password_hashing() {
+    let password = "TestPassword123";
+    let salt = generate_salt();
+
+    let hash_result = hash_password(password, &salt);
+    assert!(hash_result.is_ok());
+
+    let hash = hash_result.unwrap();
+    let verification = verify_password(password, &hash);
+    assert!(verification.is_ok());
+    assert!(verification.unwrap());
+
+    // Test wrong password
+    let wrong_verification = verify_password("WrongPassword123", &hash);
+    assert!(wrong_verification.is_ok());
+    assert!(!wrong_verification.unwrap());
+}
+
+#[tokio::test]
+async fn test_encryption_decryption() {
+    let data = b"This is a test message for encryption";
+    let password = "SecurePassword123";
+
+    let encrypted = encrypt_data(data, password);
+    assert!(encrypted.is_ok());
+
+    let encrypted_data = encrypted.unwrap();
+    let decrypted = decrypt_data(&encrypted_data, password);
+    assert!(decrypted.is_ok());
+
+    let decrypted_data = decrypted.unwrap();
+    assert_eq!(decrypted_data, data);
+
+    // Test wrong password
+    let wrong_decryption = decrypt_data(&encrypted_data, "WrongPassword123");
+    assert!(wrong_decryption.is_err());
 }
