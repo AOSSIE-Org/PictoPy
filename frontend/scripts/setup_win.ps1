@@ -1,5 +1,4 @@
 # PowerShell script to set up Tauri development environment on Windows
-
 # Function to check if a command exists
 function Test-Command($command) {
     $oldPreference = $ErrorActionPreference
@@ -8,14 +7,12 @@ function Test-Command($command) {
     catch { return $false }
     finally { $ErrorActionPreference = $oldPreference }
 }
-
 # Function to install Chocolatey
 function Install-Chocolatey {
     Set-ExecutionPolicy Bypass -Scope Process -Force
     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
     Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 }
-
 # Check and install Chocolatey
 if (-not (Test-Command choco)) {
     Write-Host "Chocolatey is not installed. Installing..." -ForegroundColor Yellow
@@ -30,7 +27,7 @@ $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";"
 # Install Visual Studio Build Tools
 if (-not (Test-Path "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools")) {
     Write-Host "Installing Visual Studio Build Tools..." -ForegroundColor Yellow
-    choco install visualstudio2019buildtools -y --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+    winget install Microsoft.VisualStudio.2022.BuildTools --force --override "--wait --passive --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows11SDK.22621"
 } else {
     Write-Host "Visual Studio Build Tools are already installed." -ForegroundColor Green
 }

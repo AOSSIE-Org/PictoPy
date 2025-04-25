@@ -92,13 +92,16 @@ Replace `<HOST_IP>` with your actual IP address.
 ## Building the Tauri App
 
 ### Linux
+
 ```bash
    npm run tauri build
-   ```
+```
+
 ### Windows
+
 ```bash
    npm run tauri build -- --runner cargo-xwin --target x86_64-pc-windows-msvc
-   ```
+```
 
 ## Accessing the GUI App
 

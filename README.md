@@ -1,5 +1,7 @@
 # PictoPy
 
+### Discord Channel [Link](https://discord.com/channels/1022871757289422898/1311271974630330388)
+
 PictoPy is an advanced desktop gallery application that combines the power of Tauri, React, and Rust for the frontend with a Python backend for sophisticated image analysis and management.
 
 ## Architecture
@@ -55,60 +57,41 @@ Handles file system operations and provides a secure bridge between the frontend
 
 ## Setup
 
-### Frontend Setup
+1. Setup Using Script (Recommended Approach): [Guide](docs/Script_Setup_Guide.md)
+2. Setup Manually: [Guide](docs/Manual_Setup_Guide.md)
+3. Docker Setup:
 
-#### Prerequisites
+   - Docker Compose Setup: [Guide](./docs/docker-compose/redme.md)
+   - Setup using Dockerfile
 
-- Node.js (LTS version recommended)
-- npm (comes with Node.js)
-- Rust (latest stable version)
-- Tauri CLI
+     - For setting up the frontend, follow the instructions in the [Frontend Setup Guide](./docs/frontend/docker-setup.md).
+       </br>
+     - For setting up the backend, follow the instructions in the [Backend Setup Guide](./docs/backend/docker-setup.md).
 
-#### Installation
+## Testing
 
-1. Clone the repository to your local system:
-
-   ```bash
-   git clone git@github.com:AOSSIE-Org/PictoPy.git
-   ```
-
-   ```bash
-   cd PictoPy
-   ```
-
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-1. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-   ```bash
-    cd scripts
-   ```
-
-   On Debian/Ubuntu:
-
-   ```bash
-   ./setup_env.sh
-   ```
-
-   On Windows:
-
-   ```
-   ./setup_win.ps1
-   ```
-
-#### Running the Application
+### Frontend
 
 ```bash
-npm run tauri dev
+cd frontend
+npm test
 ```
 
-#### Building for Production
+### Backend
+
+- FastAPI
+  ```bash
+  cd backend
+  pytest
+  ```
+- Tauri
+
+  ```bash
+  cd frontend/src-tauri/
+  cargo test
+  ```
+
+## Building for Production
 
 Create Signing Keys for tauri using the command:
 
@@ -116,7 +99,7 @@ Create Signing Keys for tauri using the command:
 npm run tauri signer generate
 ```
 
-Set the public key in tauri.conf.json as pubkey and private key and password in Enviroment Variables as TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+Set the public key in tauri.conf.json as pubkey and private key and password in Environment Variables as TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 
 There is a preset pubkey in tauri.conf.json ; private key and password for it is:
 
@@ -132,138 +115,9 @@ TAURI_SIGNING_PRIVATE_KEY_PASSWORD=pass
 npm run tauri build
 ```
 
-### Python Backend Setup
-
-**Note:** For backend setup makes sure that you have Python version 3.12 or lower. Additionally, for Windows, make sure that you are using powershell for the setup, not command prompt.
-
-#### Installation Steps
-
-1.  **Navigate to the Backend Directory:** Open your terminal and use `cd` to change directories:
-
-    Bash
-
-    ```
-    cd backend
-
-    ```
-
-2.  **Set Up a Virtual Environment (Highly Recommended):** Virtual environments isolate project dependencies. Create one using:
-
-    Bash(Linux/MacOS)
-
-    ```
-    python3 -m venv .env
-
-    ```
-
-    Powershell(Windows)
-
-    ```
-    python -m venv .env
-
-    ```
-
-    Bash(Linux/MacOS)
-
-    ```
-    source .env/bin/activate
-
-    ```
-
-    Activate it for Windows:
-
-    Powershell(Windows)
-
-    ```
-    .env\Scripts\activate.ps1
-
-    ```
-
-    After activating, you should be able to see the virtual environment's name before the current path. Something like this:
-
-    ![alt text](docs/assets/screenshots/virtualEnv.png)
-
-3.  **Install Dependencies:** The `requirements.txt` file lists required packages. Install them using pip:
-
-    Bash
-
-    ```
-    pip install -r requirements.txt
-
-    ```
-
-4.  **Missing System Dependencies:** Some dependencies might need system-level libraries like `libGL.so.1` (often needed by OpenCV). Install the appropriate packages based on your distribution:
-
-    **Debian/Ubuntu:**
-
-    Bash
-
-    ```
-    sudo apt update
-    sudo apt install -y libglib2.0-dev libgl1-mesa-glx
-
-    ```
-
-    **Other Systems:** Consult your distribution's documentation for installation instructions.
-
-5.  **`gobject-2.0` Not Found Error:** Resolve this error by installing `libglib2.0-dev` (Debian/Ubuntu):
-
-    Bash
-
-    ```
-    sudo apt install -y libglib2.0-dev pkg-config
-
-    ```
-
-    For other systems, consult your distribution's documentation.
-
-6.  **Running the backend:**: To start the backend in development mode, run this command while being in the backend folder and the virtual environment activated:
-
-    Bash/Powershell
-
-    ```
-    fastapi dev
-    ```
-
-    The server will start on `http://localhost:8000` by default. In test mode, the server will automatically restart if any errors are detected or if source files are modified.
-
-    ![alt text](docs/assets/screenshots/serverRunning.png)
-
-### Docker Compose Setup
-
-- [Docker Compose](./docs/docker-compose/redme.md)
-
-### Setup using Dockerfile
-
-- For setting up the frontend, follow the instructions in the [Frontend Setup Guide](./docs/frontend/docker-setup.md).
-  </br>
-- For setting up the backend, follow the instructions in the [Backend Setup Guide](./docs/backend/docker-setup.md).
-
-### Testing
-
-#### Frontend
-
-```bash
-cd frontend
-npm test
-```
-
-#### Backend'
-
-- FastAPI
-  ```bash
-  cd backend
-  pytest
-  ```
-- Tauri
-  ```bash
-  cd frontend/src-tauri/
-  cargo test
-  ```
-
 ## Additional Resources
 
-- [Tauri Documentation](https://tauri.app/v1/guides/)
+- [Tauri Documentation](https://tauri.app/start/)
 - [React Documentation](https://reactjs.org/docs/getting-started.html)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 

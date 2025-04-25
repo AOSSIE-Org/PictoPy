@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  @apply bg-background !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
