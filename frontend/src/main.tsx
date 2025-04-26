@@ -6,7 +6,7 @@ import { stopServer, startServer } from './utils/serverUtils';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { imagesEndpoints } from '../api/apiEndpoints';
 
-//Listen for window close event and stop server
+//Listen for window close event and stop server.
 const onCloseListener = async () => {
   await getCurrentWindow().onCloseRequested(async () => {
     await stopServer();
