@@ -27,7 +27,7 @@ function Dashboard() {
     </div>;
   return (
     <>
-      <MediaGallery mediaItems={images} title="Image Gallery" type="image" />
+      <MediaGallery mediaItems={images} title="Image Galleryyy" type="image" />
     </>
   );
 }
