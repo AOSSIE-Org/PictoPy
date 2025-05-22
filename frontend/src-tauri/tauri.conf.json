@@ -28,10 +28,13 @@
     ],
     "resources": {
       "../../backend/dist/": "resources/server"
+    },
+    "macOS": {
+      "signingIdentity": "-"
     }
   },
   "productName": "PictoPy",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "identifier": "com.yourcompany.pictopy",
   "plugins": {
     "fs": {
