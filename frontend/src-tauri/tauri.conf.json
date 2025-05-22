@@ -10,7 +10,8 @@
     "targets": [
       "nsis",
       "deb",
-      "dmg"
+      "dmg",
+      "app"
     ],
     "createUpdaterArtifacts": true,
     "linux": {
