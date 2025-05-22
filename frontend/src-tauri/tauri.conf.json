@@ -34,7 +34,7 @@
     }
   },
   "productName": "PictoPy",
-  "version": "0.0.2",
+  "version": "0.0.1",
   "identifier": "com.yourcompany.pictopy",
   "plugins": {
     "fs": {
@@ -43,7 +43,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM5REMxNjMwRjgyRjM2OUIKUldTYk5pLzRNQmJjeWVWMTdLWkNxazNiQTY3YkNVKzZva1U3c2taM3lSOGZvTzJzdnJtNVRvakMK",
       "endpoints": [
-        "https://github.com/user/repo/releases/latest/download/latest.json"
+        "https://github.com/rahulharpal1603/PictoPy/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "basicUi"

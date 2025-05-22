@@ -138,9 +138,6 @@ jobs:
           - platform: "ubuntu-22.04"
             args: ""
             artifact: "PictoPy-Ubuntu"
-          - platform: "windows-latest"
-            args: ""
-            artifact: "PictoPy-Windows"
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
