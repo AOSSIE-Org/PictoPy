@@ -1,5 +1,7 @@
 # PictoPy
 
+### Discord Channel [Link](https://discord.com/channels/1022871757289422898/1311271974630330388)
+
 PictoPy is an advanced desktop gallery application that combines the power of Tauri, React, and Rust for the frontend with a Python backend for sophisticated image analysis and management.
 
 ## Architecture
@@ -55,56 +57,41 @@ Handles file system operations and provides a secure bridge between the frontend
 
 ## Setup
 
-### Frontend Setup
+1. Setup Using Script (Recommended Approach): [Guide](docs/Script_Setup_Guide.md)
+2. Setup Manually: [Guide](docs/Manual_Setup_Guide.md)
+3. Docker Setup:
 
-#### Prerequisites
+   - Docker Compose Setup: [Guide](./docs/docker-compose/redme.md)
+   - Setup using Dockerfile
 
-- Node.js (LTS version recommended)
-- npm (comes with Node.js)
-- Rust (latest stable version)
-- Tauri CLI
+     - For setting up the frontend, follow the instructions in the [Frontend Setup Guide](./docs/frontend/docker-setup.md).
+       </br>
+     - For setting up the backend, follow the instructions in the [Backend Setup Guide](./docs/backend/docker-setup.md).
 
-#### Installation
+## Testing
 
-
-1. Clone the repository to your local system:
-    ```bash
-    git clone git@github.com:AOSSIE-Org/PictoPy.git
-    ```
-    ```bash
-    cd PictoPy
-    ```
-
-
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-   ```bash
-    cd scripts
-   ```
-
-    On Debian/Ubuntu:
-    ```bash
-    ./setup_env.sh
-    ```
-    On Windows:
-    ```
-    ./setup_win.ps1
-    ```
-
-#### Running the Application
+### Frontend
 
 ```bash
-npm run tauri dev
+cd frontend
+npm test
 ```
 
-#### Building for Production
+### Backend
+
+- FastAPI
+  ```bash
+  cd backend
+  pytest
+  ```
+- Tauri
+
+  ```bash
+  cd frontend/src-tauri/
+  cargo test
+  ```
+
+## Building for Production
 
 Create Signing Keys for tauri using the command:
 
@@ -112,7 +99,7 @@ Create Signing Keys for tauri using the command:
 npm run tauri signer generate
 ```
 
-Set the public key in tauri.conf.json as pubkey and private key and password in Enviroment Variables as TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+Set the public key in tauri.conf.json as pubkey and private key and password in Environment Variables as TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 
 There is a preset pubkey in tauri.conf.json ; private key and password for it is:
 
@@ -128,164 +115,9 @@ TAURI_SIGNING_PRIVATE_KEY_PASSWORD=pass
 npm run tauri build
 ```
 
-### Python Backend Setup
-
-#### Installation Steps
-
-1.  **Navigate to the Backend Directory:** Open your terminal and use `cd` to change directories:
-
-    Bash
-
-    ```
-    cd backend
-
-    ```
-
-2.  **Set Up a Virtual Environment (Highly Recommended):** Virtual environments isolate project dependencies. Create one using:
-
-    Bash
-
-    ```
-    python -m venv venv  # Replace "venv" with your desired environment name
-
-    ```
-
-    Activate it for Linux/macOS:
-
-    Bash
-
-    ```
-    source venv/bin/activate
-
-    ```
-
-    Activate it for Windows:
-
-    Bash
-
-    ```
-    venv\Scripts\activate.bat
-
-    ```
-
-3.  **Install Dependencies:** The `requirements.txt` file lists required packages. Install them using pip:
-
-    Bash
-
-    ```
-    pip install -r requirements.txt
-
-    ```
-    Note: python 3.13 and above are not compatible with this project currently.
-
-4.  **Missing System Dependencies:** Some dependencies might need system-level libraries like `libGL.so.1` (often needed by OpenCV). Install the appropriate packages based on your distribution:
-
-    **Debian/Ubuntu:**
-
-    Bash
-
-    ```
-    sudo apt update
-    sudo apt install -y libglib2.0-dev libgl1-mesa-glx
-
-    ```
-
-    **Other Systems:** Consult your distribution's documentation for installation instructions.
-
-5.  **Permission Errors with `run.sh`:** If you encounter a "Permission denied" error when running `run.sh`, grant execute permissions:
-
-    Bash
-
-    ```
-    chmod +x ./run.sh
-
-    ```
-
-6.  **`gobject-2.0` Not Found Error:** Resolve this error by installing `libglib2.0-dev` (Debian/Ubuntu):
-
-    Bash
-
-    ```
-    sudo apt install -y libglib2.0-dev pkg-config
-
-    ```
-
-    For other systems, consult your distribution's documentation.
-
-**Running the Backend**
-
-Once installation and dependency resolution are complete, you can start the backend server:
-
-**UNIX-based Systems (Linux, macOS):**
-
-bash
-
-```
-./run.sh  # To run in production mode
-./run.sh --test  # To run in testing mode
-```
-
-**Windows:**
-
-Using PowerShell (Recommended):
-
-powershell
-
-```
-.\run-server.ps1  # To run in production mode
-.\run-server.ps1 --test  # To run in testing mode
-```
-
-Note: If you encounter a PowerShell execution policy error, run this command first:
-
-powershell
-
-```
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-Alternative using Batch (Legacy):
-bash
-
-```
-run.bat  # To run in production mode
-run.bat --test # To run in testing mode
-```
-
-The server will start on `http://localhost:8000` by default. In test mode, the server will automatically restart if any errors are detected or if source files are modified.
-
-You can control the number of workers by setting the `WORKERS` environment variable before running the script. If not set, it defaults to 1 worker.
-
-### Docker Compose Setup
-- [Docker Compose](./docs/docker-compose/redme.md)
-
-### Setup using Dockerfile
-
-- For setting up the frontend, follow the instructions in the [Frontend Setup Guide](./docs/frontend/docker-setup.md).
-  </br>
-- For setting up the backend, follow the instructions in the [Backend Setup Guide](./docs/backend/docker-setup.md).
-  
-### Testing
-#### Frontend
-```bash
-cd frontend
-npm test
-```
-#### Backend'
-- FastAPI
-    ```bash
-    cd backend
-    pytest
-    ```
-- Tauri
-    ```bash
-    cd frontend/src-tauri/
-    cargo test
-    ```
-
 ## Additional Resources
 
-- [Tauri Documentation](https://tauri.app/v1/guides/)
+- [Tauri Documentation](https://tauri.app/start/)
 - [React Documentation](https://reactjs.org/docs/getting-started.html)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 

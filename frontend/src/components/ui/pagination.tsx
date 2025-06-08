@@ -20,7 +20,7 @@ const PaginationContent = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ul
     ref={ref}
-    className={cn('flex flex-row items-center gap-1', className)}
+    className={cn('flex flex-row items-center gap-1 md:gap-2', className)}
     {...props}
   />
 ));
@@ -49,9 +49,10 @@ const PaginationLink = ({
     aria-current={isActive ? 'page' : undefined}
     className={cn(
       buttonVariants({
-        variant: isActive ? 'outline' : 'ghost',
+        variant: isActive ? 'default' : 'ghost',
         size,
       }),
+      isActive && 'pointer-events-none shadow-sm',
       className,
     )}
     {...props}
@@ -66,11 +67,11 @@ const PaginationPrevious = ({
   <PaginationLink
     aria-label="Go to previous page"
     size="default"
-    className={cn('gap-1 pl-2.5', className)}
+    className={cn('gap-1 pl-2.5 shadow-sm', className)}
     {...props}
   >
     <ChevronLeft className="h-4 w-4" />
-    <span className='cursor-pointer'>Previous</span>
+    <span className="hidden cursor-pointer sm:inline">Previous</span>
   </PaginationLink>
 );
 PaginationPrevious.displayName = 'PaginationPrevious';
@@ -82,10 +83,10 @@ const PaginationNext = ({
   <PaginationLink
     aria-label="Go to next page"
     size="default"
-    className={cn('gap-1 pr-2.5', className)}
+    className={cn('gap-1 pr-2.5 shadow-sm', className)}
     {...props}
   >
-    <span className='cursor-pointer'>Next</span>
+    <span className="hidden cursor-pointer sm:inline">Next</span>
     <ChevronRight className="h-4 w-4" />
   </PaginationLink>
 );
@@ -115,4 +116,3 @@ export {
   PaginationNext,
   PaginationPrevious,
 };
-

@@ -7,11 +7,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "nsis",
-      "deb",
-      "dmg"
-    ],
+    "targets": ["nsis", "deb", "dmg"],
     "linux": {
       "deb": {
         "postInstallScript": "./postinstall.sh"
@@ -33,7 +29,7 @@
   "identifier": "com.yourcompany.pictopy",
   "plugins": {
     "fs": {
-      "active": true
+      "requireLiteralLeadingDot": true
     }
   },
   "app": {
@@ -49,9 +45,7 @@
     ],
     "security": {
       "assetProtocol": {
-        "scope": [
-          "**"
-        ],
+        "scope": ["**"],
         "enable": true
       },
       "csp": null

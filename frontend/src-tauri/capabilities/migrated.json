@@ -2,27 +2,25 @@
   "identifier": "migrated",
   "description": "permissions that were migrated from v1",
   "local": true,
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "permissions": [
-    "path:default",
-    "event:default",
-    "window:default",
-    "app:default",
-    "resources:default",
-    "menu:default",
-    "tray:default",
+    "core:path:default",
+    "core:event:default",
+    "core:window:default",
+    "core:app:default",
+    "core:resources:default",
+    "core:menu:default",
+    "core:tray:default",
     "shell:allow-open",
-    "path:default",
-    "event:default",
-    "window:default",
-    "window:allow-destroy",
-    "app:default",
-    "resources:default",
-    "menu:default",
-    "tray:default",
-    "window:allow-set-title",
+    "core:path:default",
+    "core:event:default",
+    "core:window:default",
+    "core:window:allow-destroy",
+    "core:app:default",
+    "core:resources:default",
+    "core:menu:default",
+    "core:tray:default",
+    "core:window:allow-set-title",
     "dialog:allow-open",
     "fs:default",
     "fs:allow-app-write",
@@ -80,15 +78,11 @@
     "fs:write-files",
     {
       "identifier": "fs:scope",
-      "allow": [
-        "**"
-      ]
+      "allow": ["**"]
     },
     {
       "identifier": "fs:read-all",
-      "allow": [
-        "**"
-      ]
+      "allow": ["**"]
     },
     "shell:default",
     "dialog:default",
@@ -99,10 +93,7 @@
         {
           "name": "StartServerUnix",
           "cmd": "bash",
-          "args": [
-            "-c",
-            "./PictoPy_Server"
-          ],
+          "args": ["-c", "./PictoPy_Server"],
           "sidecar": false
         }
       ]
@@ -113,9 +104,7 @@
         {
           "name": "StartServerWindows",
           "cmd": "powershell",
-          "args": [
-            "./PictoPy_Server"
-          ],
+          "args": ["./PictoPy_Server"],
           "sidecar": false
         }
       ]
@@ -126,10 +115,7 @@
         {
           "name": "killProcessUnix",
           "cmd": "bash",
-          "args": [
-            "-c",
-            "pkill -f PictoPy_Server"
-          ],
+          "args": ["-c", "pkill -f PictoPy_Server"],
           "sidecar": false
         }
       ]
@@ -140,12 +126,14 @@
         {
           "name": "killProcessWindows",
           "cmd": "powershell",
-          "args": [
-            "taskkill /t /f /im PictoPy_Server.exe"
-          ],
+          "args": ["taskkill /t /f /im PictoPy_Server.exe"],
           "sidecar": false
         }
       ]
-    }
+    },
+    "shell:default",
+    "fs:default",
+    "dialog:default",
+    "store:default"
   ]
 }

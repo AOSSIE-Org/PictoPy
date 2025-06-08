@@ -33,9 +33,10 @@ const AlbumsView: React.FC = () => {
     description: string;
   } | null>(null);
 
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
+  if (isLoading)
+    <div className="flex h-full w-full items-center justify-center">
+      <LoadingScreen message="Loading Albums..." />
+    </div>;
   const showErrorDialog = (title: string, err: unknown) => {
     setErrorDialogContent({
       title,
@@ -60,11 +61,8 @@ const AlbumsView: React.FC = () => {
         <div className="text-center">No albums found.</div>
         <CreateAlbumForm
           isOpen={isCreateFormOpen}
-          onClose={() => setIsCreateFormOpen(false)}
-          onSuccess={() => {
-            setIsCreateFormOpen(false);
-          }}
-          onError={(err) => showErrorDialog('Error', err)}
+          closeForm={() => setIsCreateFormOpen(false)}
+          onError={(title, err) => showErrorDialog(title, err)}
         />
         <ErrorDialog
           content={errorDialogContent}
@@ -143,11 +141,8 @@ const AlbumsView: React.FC = () => {
 
       <CreateAlbumForm
         isOpen={isCreateFormOpen}
-        onClose={() => setIsCreateFormOpen(false)}
-        onSuccess={() => {
-          setIsCreateFormOpen(false);
-        }}
-        onError={(err) => showErrorDialog('Error', err)}
+        closeForm={() => setIsCreateFormOpen(false)}
+        onError={(title, err) => showErrorDialog(title, err)}
       />
 
       <EditAlbumDialog

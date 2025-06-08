@@ -4,11 +4,8 @@ import MediaGrid from '../Media/Mediagrid';
 import { LoadingScreen } from '@/components/ui/LoadingScreen/LoadingScreen';
 import MediaView from '../Media/MediaView';
 import PaginationControls from '../ui/PaginationControls';
-import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtensio';
-import {
-  getAllImageObjects,
-  generateThumbnails,
-} from '../../../api/api-functions/images';
+import { usePictoQuery } from '@/hooks/useQueryExtensio';
+import { getAllImageObjects } from '../../../api/api-functions/images';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,48 +14,56 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import ProgressiveFolderLoader from '../ui/ProgressiveLoader';
+
+import { UserSearch } from 'lucide-react';
+import ErrorPage from '@/components/ui/ErrorPage/ErrorPage';
 
 export default function AIGallery({
   title,
   type,
-  folderPath,
 }: {
   title: string;
   type: 'image' | 'video';
-  folderPath: string;
 }) {
   const {
-    successData: mediaItems = [],
-    isLoading: loading,
-    isError,
+    successData,
+    error,
+    isLoading: isGeneratingTags,
   } = usePictoQuery({
-    queryFn: getAllImageObjects,
+    queryFn: async () => await getAllImageObjects(),
     queryKey: ['ai-tagging-images', 'ai'],
   });
-  const { mutate: generateThumbnail, isPending: isCreating } = usePictoMutation(
-    {
-      mutationFn: generateThumbnails,
-      autoInvalidateTags: ['ai-tagging-images', 'ai'],
-    },
-  );
+  const [addedFolders, setAddedFolders] = useState<string[]>([]);
+  let mediaItems = successData ?? [];
   const [filterTag, setFilterTag] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showMediaViewer, setShowMediaViewer] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
   const [isVisibleSelectedImage, setIsVisibleSelectedImage] =
     useState<boolean>(true);
+  const [faceSearchResults, setFaceSearchResults] = useState<string[]>([]);
+
   const itemsPerRow: number = 3;
   const noOfPages: number[] = Array.from(
     { length: 41 },
     (_, index) => index + 10,
   );
+
   const filteredMediaItems = useMemo(() => {
+    let filtered = mediaItems;
+    if (faceSearchResults.length > 0) {
+      filtered = filtered.filter((item: any) =>
+        faceSearchResults.includes(item.imagePath),
+      );
+    }
+
     return filterTag.length > 0
-      ? mediaItems.filter((mediaItem: any) =>
+      ? filtered.filter((mediaItem: any) =>
           filterTag.some((tag) => mediaItem.tags.includes(tag)),
         )
-      : mediaItems;
-  }, [filterTag, mediaItems, loading]);
+      : filtered;
+  }, [filterTag, mediaItems, isGeneratingTags, faceSearchResults]);
 
   const [pageNo, setpageNo] = useState<number>(20);
 
@@ -79,20 +84,23 @@ export default function AIGallery({
     setShowMediaViewer(false);
   }, []);
 
-  const handleFolderAdded = useCallback(async () => {
-    await generateThumbnail(folderPath);
-  }, [folderPath, generateThumbnail]);
+  const handleFolderAdded = useCallback(async (newPaths: string[]) => {
+    setAddedFolders(newPaths);
+  }, []);
 
   useEffect(() => {
-    handleFolderAdded();
-  }, [folderPath, handleFolderAdded]);
+    setCurrentPage(1);
+  }, [filterTag, faceSearchResults]);
 
-  if (isCreating || loading) {
-    return <LoadingScreen />;
-  }
-
-  if (isError) {
-    return <div>Error loading media items.</div>;
+  if (error) {
+    return (
+      <ErrorPage
+        errorCode={500}
+        errorMessage="Error loading media items."
+        details="An unexpected error occurred while loading media items. This may be due to a server issue or database failure. Please try again later."
+        onRetry={() => window.location.reload()}
+      />
+    );
   }
 
   return (
@@ -100,15 +108,38 @@ export default function AIGallery({
       <div className="mx-auto px-2 pb-8 dark:bg-background dark:text-foreground">
         <div className="mb-2 flex items-center justify-between">
           {isVisibleSelectedImage && (
-            <h1 className="text-2xl font-bold">{title}</h1>
+            <div className="flex items-center">
+              <h1 className="text-2xl font-bold">{title}</h1>
+              {faceSearchResults.length > 0 && (
+                <div className="ml-4 flex items-center gap-2 rounded-lg bg-blue-100 px-3 py-1 dark:bg-blue-900/30">
+                  <UserSearch size={16} />
+                  <span className="text-sm">
+                    Face filter active ({faceSearchResults.length} matches)
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => setFaceSearchResults([])}
+                  >
+                    ×
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
           <FilterControls
             setFilterTag={setFilterTag}
             mediaItems={mediaItems}
             onFolderAdded={handleFolderAdded}
-            isLoading={loading}
+            isLoading={isGeneratingTags}
             isVisibleSelectedImage={isVisibleSelectedImage}
             setIsVisibleSelectedImage={setIsVisibleSelectedImage}
+            setFaceSearchResults={setFaceSearchResults}
+          />
+          <ProgressiveFolderLoader
+            additionalFolders={addedFolders}
+            setAdditionalFolders={setAddedFolders}
           />
         </div>
 
@@ -127,7 +158,6 @@ export default function AIGallery({
                 onPageChange={setCurrentPage}
               />
 
-              {/* Dropdown Menu - Right-Aligned */}
               <div className="absolute right-0 mt-5">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -136,7 +166,7 @@ export default function AIGallery({
                       className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
                     >
                       <p className="hidden lg:inline">
-                        Num of images per page: {pageNo}
+                        Num of images per page : {pageNo}
                       </p>
                     </Button>
                   </DropdownMenuTrigger>
@@ -164,18 +194,25 @@ export default function AIGallery({
           </>
         )}
 
-        {showMediaViewer && (
-          <MediaView
-            initialIndex={selectedMediaIndex}
-            onClose={closeMediaViewer}
-            allMedia={filteredMediaItems.map((item: any) => ({
-              url: item.url,
-              path: item?.imagePath,
-            }))}
-            currentPage={currentPage}
-            itemsPerPage={pageNo}
-            type={type}
+        {isGeneratingTags ? (
+          <LoadingScreen
+            isLoading={isGeneratingTags}
+            message="Generating tags..."
           />
+        ) : (
+          showMediaViewer && (
+            <MediaView
+              initialIndex={selectedMediaIndex}
+              onClose={closeMediaViewer}
+              allMedia={filteredMediaItems.map((item: any) => ({
+                url: item.url,
+                path: item?.imagePath,
+              }))}
+              currentPage={currentPage}
+              itemsPerPage={pageNo}
+              type={type}
+            />
+          )
         )}
       </div>
     </div>

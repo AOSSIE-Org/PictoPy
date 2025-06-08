@@ -56,19 +56,22 @@ export default function PaginationControls({
         {currentPage === 1 ? null : (
           <PaginationPrevious
             onClick={handlePrevious}
-            className="mr-2 border border-white"
+            className="mr-2 border border-white/20 transition-all duration-200 hover:scale-105 hover:border-white/50 hover:bg-white/10 active:scale-95"
           />
         )}
         {totalPages === 1 ? null : (
-          <PaginationContent>
+          <PaginationContent className="gap-1 md:gap-2">
             {getPageNumbers().map((page, index) =>
               page === '...' ? (
                 <PaginationItem key={index}>
-                  <PaginationLink className='cursor-pointer'>{page}</PaginationLink>
+                  <PaginationLink className="cursor-default hover:no-underline">
+                    {page}
+                  </PaginationLink>
                 </PaginationItem>
               ) : (
                 <PaginationItem key={index}>
-                  <PaginationLink className='cursor-pointer'
+                  <PaginationLink
+                    className="cursor-pointer transition-all duration-200 hover:scale-110 hover:bg-primary/90 active:scale-95"
                     isActive={page === currentPage}
                     onClick={() => onPageChange(Number(page))}
                   >
@@ -83,7 +86,7 @@ export default function PaginationControls({
         {currentPage === totalPages ? null : (
           <PaginationNext
             onClick={handleNext}
-            className="ml-2 border border-white"
+            className="ml-2 border border-white/20 transition-all duration-200 hover:scale-105 hover:border-white/50 hover:bg-white/10 active:scale-95"
           />
         )}
       </Pagination>

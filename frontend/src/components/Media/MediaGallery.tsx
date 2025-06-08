@@ -5,6 +5,9 @@ import SortingControls from './SortningControls';
 import PaginationControls from '../ui/PaginationControls';
 import { MediaGalleryProps } from '@/types/Media';
 import { sortMedia } from '@/utils/Media';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
+import { deleteCache } from '@/services/cacheService';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +15,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@radix-ui/react-dropdown-menu';
-import { Button } from '../ui/button';
 
 export default function MediaGallery({
   mediaItems,
@@ -56,54 +58,85 @@ export default function MediaGallery({
   const closeMediaViewer = useCallback(() => {
     setShowMediaViewer(false);
   }, []);
+
+  const handleRefreshClick = async () => {
+    try {
+      const result = await deleteCache();
+      if (result) {
+        console.log('Cache deleted');
+      }
+      window.location.reload();
+    } catch (error) {
+      console.error('Error deleting cache:', error);
+    }
+  };
+
   return (
-    <div className="w-full">
-      <div className="mx-auto px-2 pb-8 pt-1 dark:bg-background dark:text-foreground">
-        <div className="mb-2 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{title || currentYear}</h1>
-          <SortingControls
-            sortBy={sortBy}
-            setSortBy={handleSetSortBy}
-            mediaItems={mediaItems}
-          />
+    <div className="container mx-auto w-full max-w-7xl px-4">
+      <div className="mx-auto px-0 pb-12 pt-3 dark:bg-background dark:text-foreground md:px-2">
+        <div className="mb-6 flex flex-col gap-4 border-b pb-4 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-2xl font-bold text-transparent dark:from-gray-100 dark:to-gray-300 sm:text-3xl">
+            {title || currentYear}
+          </h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              onClick={() => handleRefreshClick()}
+              variant="outline"
+              className="border-gray-200/80 bg-white/90 shadow-sm transition-all duration-200 hover:bg-gray-50/90 hover:shadow-md dark:border-gray-800/80 dark:bg-gray-800/80 dark:text-gray-100 dark:hover:bg-gray-700/90 dark:hover:text-white"
+            >
+              <RefreshCw className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <span className="hidden text-sm md:inline">Refresh</span>
+            </Button>
+            <SortingControls
+              sortBy={sortBy}
+              setSortBy={handleSetSortBy}
+              mediaItems={mediaItems}
+            />
+          </div>
         </div>
+
         <MediaGrid
           mediaItems={currentItems}
           itemsPerRow={itemsPerRow}
           openMediaViewer={openMediaViewer}
           type={type}
         />
+
         {totalPages >= 1 && (
-          <div className='relative flex items-center justify-center gap-4'>
+          <div className="mt-8 flex flex-col items-center justify-between gap-4 sm:flex-row">
             <PaginationControls
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
             />
-            <div className="absolute right-0 mt-5">
+
+            <div className="mt-4 sm:mt-0">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
+                    className="border-gray-200/80 bg-white/90 shadow-sm transition-all duration-200 hover:bg-gray-50/90 hover:shadow-md dark:border-gray-800/80 dark:bg-gray-800/80 dark:text-gray-100 dark:hover:bg-gray-700/90 dark:hover:text-white"
                   >
-                    <p className="hidden lg:inline">
-                      Num of images per page : {pageNo}
-                    </p>
+                    <span className="max-w-[180px] truncate text-sm">
+                      {pageNo} images per page
+                    </span>
                   </Button>
                 </DropdownMenuTrigger>
+
                 <DropdownMenuContent
-                  className="max-h-[500px] w-[200px] overflow-y-auto"
+                  className="rounded-xl max-h-[500px] w-[200px] overflow-y-auto border border-gray-200/80 bg-white/95 shadow-lg backdrop-blur-sm dark:border-gray-800/80 dark:bg-gray-800/95"
                   align="end"
+                  sideOffset={5}
                 >
                   <DropdownMenuRadioGroup
-                    className="cursor-pointer overflow-auto bg-gray-950 p-4"
+                    className="p-1.5"
                     onValueChange={(value) => setpageNo(Number(value))}
                   >
                     {noOfPages.map((itemsPerPage) => (
                       <DropdownMenuRadioItem
                         key={itemsPerPage}
                         value={`${itemsPerPage}`}
+                        className="cursor-pointer rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors hover:bg-gray-100/80 dark:hover:bg-gray-700/80"
                       >
                         {itemsPerPage}
                       </DropdownMenuRadioItem>
@@ -114,12 +147,17 @@ export default function MediaGallery({
             </div>
           </div>
         )}
+
         {showMediaViewer && (
           <MediaView
             initialIndex={selectedMediaIndex}
             onClose={closeMediaViewer}
             allMedia={sortedMedia.map((item) => {
-              return { url: item.url, path: item?.imagePath };
+              return {
+                url: item.url,
+                path: item?.imagePath,
+                thumbnailUrl: item.thumbnailUrl,
+              };
             })}
             currentPage={currentPage}
             itemsPerPage={itemsPerPage}

@@ -80,9 +80,7 @@ const AlbumView: React.FC<AlbumViewProps> = ({
   const convertedImagePaths = albumData.photos.map((path) => {
     return {
       url: convertFileSrc(path),
-      thumbnailUrl: convertFileSrc(
-        extractThumbnailPath(albumData.folder_path, path),
-      ),
+      thumbnailUrl: convertFileSrc(extractThumbnailPath(path)),
     };
   });
 

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MediaView from '../Media/MediaView';
 import PaginationControls from '../ui/PaginationControls';
 import { convertFileSrc } from '@tauri-apps/api/core';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, X, Clock } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/LocalStorage';
 
 interface MemoryImage {
@@ -22,8 +22,7 @@ const Memories: React.FC = () => {
   const [storyIndex, setStoryIndex] = useState(0);
   const itemsPerPage = 12;
   const [currentPath] = useLocalStorage('folderPath', '');
-  // const [currentPaths] = useLocalStorage<string[]>('folderPaths', []); Temporarily commented out, will be uncommented after open PR related to multiple folder support is merged.
-  const currentPaths: string[] = []; // Temporarily added to avoid TypeScript error, will be removed after open PR related to multiple folder support is merged.
+  const [currentPaths] = useLocalStorage<string[]>('folderPaths', []);
   const storyDuration = 3000; // 3 seconds per story
 
   useEffect(() => {
@@ -104,26 +103,49 @@ const Memories: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-lg text-muted-foreground">
-            Loading your memories...
-          </p>
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-background to-background/80">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col items-center gap-6 text-center"
+        >
+          <div className="relative">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <div className="rounded-full absolute inset-0 h-12 w-12 border-2 border-primary/20"></div>
+          </div>
+          <div>
+            <p className="mb-1 text-xl font-semibold text-primary">
+              Loading your memories...
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Please wait while we find your special moments
+            </p>
+          </div>
+        </motion.div>
       </div>
     );
   }
 
   if (memories.length === 0) {
     return (
-      <div className="min-h-screen bg-background p-8">
-        <h1 className="mb-8 text-center text-4xl font-bold">Your Memories</h1>
-        <div className="flex items-center justify-center">
-          <p className="text-lg text-muted-foreground">
-            No memories found in the selected folder.
+      <div className="min-h-screen bg-gradient-to-b from-background to-background/80 p-8">
+        <h1 className="mb-8 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-center text-4xl font-bold text-transparent">
+          Your Memories
+        </h1>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center justify-center gap-6"
+        >
+          <div className="rounded-full bg-gray-100 p-8 dark:bg-gray-800">
+            <Clock className="h-16 w-16 text-gray-400" />
+          </div>
+          <p className="max-w-md text-center text-xl text-muted-foreground">
+            No memories found in the selected folder. Photos will appear here
+            once you've added some images.
           </p>
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -134,7 +156,7 @@ const Memories: React.FC = () => {
       <div className="fixed inset-0 bg-black">
         <button
           onClick={() => setShowStoryView(false)}
-          className="absolute right-4 top-4 z-50 text-white hover:text-gray-300"
+          className="rounded-full absolute right-4 top-4 z-50 bg-black/40 p-2 text-white transition-all duration-300 hover:bg-black/60"
         >
           <X className="h-6 w-6" />
         </button>
@@ -152,13 +174,18 @@ const Memories: React.FC = () => {
               alt={`Memory ${storyIndex + 1}`}
               className="h-full w-full object-contain"
             />
-            <div className="absolute left-0 top-0 h-1 w-full bg-gray-800">
+            <div className="absolute left-0 top-0 h-2 w-full bg-gray-800">
               <motion.div
                 initial={{ width: '0%' }}
                 animate={{ width: '100%' }}
                 transition={{ duration: storyDuration / 1000, ease: 'linear' }}
-                className="h-full bg-white"
+                className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
               />
+            </div>
+            <div className="absolute bottom-10 left-0 right-0 text-center">
+              <p className="rounded-full inline-block bg-black/60 px-4 py-2 text-sm text-white backdrop-blur-sm">
+                {getTimeAgo(currentMemory.created_at)}
+              </p>
             </div>
           </motion.div>
         </AnimatePresence>
@@ -167,8 +194,15 @@ const Memories: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <h1 className="mb-8 text-center text-4xl font-bold">Your Memories</h1>
+    <div className="min-h-screen bg-gradient-to-b from-background to-background/80 px-4 py-8 sm:px-8">
+      <motion.h1
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-10 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-center text-4xl font-bold text-transparent"
+      >
+        Your Memories
+      </motion.h1>
+
       <AnimatePresence mode="wait">
         <motion.div
           initial={{ opacity: 0 }}
@@ -182,19 +216,25 @@ const Memories: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="group relative cursor-pointer overflow-hidden rounded-lg bg-card shadow-lg"
+              className="rounded-xl group relative cursor-pointer overflow-hidden bg-card shadow-md transition-all duration-500 hover:shadow-xl hover:shadow-blue-900/5 dark:hover:shadow-blue-900/20"
               onClick={() => openMediaView(index)}
             >
               <div className="aspect-square overflow-hidden">
                 <img
                   src={convertFileSrc(memory.path)}
                   alt={`Memory ${index + 1}`}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                 />
               </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
               {/* Show time ago under each memory */}
-              <div className="rounded absolute bottom-2 left-2 bg-gray-800 bg-opacity-50 p-2 text-white">
-                {getTimeAgo(memory.created_at)}
+              <div className="absolute bottom-0 left-0 right-0 translate-y-full transform p-4 transition-transform duration-300 group-hover:translate-y-0">
+                <div className="flex items-center gap-2 rounded-lg bg-black/70 px-3 py-2 text-white backdrop-blur-sm">
+                  <Clock className="h-4 w-4" />
+                  <span className="text-sm font-medium">
+                    {getTimeAgo(memory.created_at)}
+                  </span>
+                </div>
               </div>
             </motion.div>
           ))}
@@ -202,11 +242,13 @@ const Memories: React.FC = () => {
       </AnimatePresence>
 
       {totalPages > 1 && (
-        <PaginationControls
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
+        <div className="mt-8">
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       )}
 
       {showMediaView && (

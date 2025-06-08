@@ -14,13 +14,16 @@ export const fetchAllImages = async () => {
   return data;
 };
 
-export const delMultipleImages = async (paths: string[]) => {
+export const delMultipleImages = async (
+  paths: string[],
+  isFromDevice: boolean,
+) => {
   const response = await fetch(imagesEndpoints.deleteMultipleImages, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ paths }),
+    body: JSON.stringify({ paths, isFromDevice }),
   });
 
   const data: APIResponse = await response.json();
@@ -31,9 +34,7 @@ const parseAndSortImageData = (data: APIResponse['data']): Image[] => {
   const parsedImages: Image[] = Object.entries(data.images).map(
     ([src, tags]) => {
       const url = convertFileSrc(src);
-      const thumbnailUrl = convertFileSrc(
-        extractThumbnailPath(data.folder_path, src),
-      );
+      const thumbnailUrl = convertFileSrc(extractThumbnailPath(src));
       return {
         imagePath: src,
         title: src.substring(src.lastIndexOf('\\') + 1),
@@ -60,7 +61,7 @@ export const getAllImageObjects = async () => {
   return newObj;
 };
 
-export const addFolder = async (folderPath: string) => {
+export const addFolder = async (folderPath: string[]) => {
   const response = await fetch(imagesEndpoints.addFolder, {
     method: 'POST',
     headers: {
@@ -86,14 +87,44 @@ export const addMultImages = async (paths: string[]) => {
   return data;
 };
 
-export const generateThumbnails = async (folderPath: string) => {
+export const generateThumbnails = async (folderPath: string[]) => {
   const response = await fetch(imagesEndpoints.generateThumbnails, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
+    body: JSON.stringify({ folder_paths: folderPath }),
+  });
+  const data = await response.json();
+  return data;
+};
+
+export const deleteThumbnails = async (folderPath: string) => {
+  const response = await fetch(imagesEndpoints.deleteThumbnails, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ folder_path: folderPath }), // Send as JSON body
+  });
+
+  const data = await response.json();
+  return data;
+};
+
+export const getProgress = async () => {
+  const response = await fetch(imagesEndpoints.progress);
+  const data = await response.json();
+  return data;
+};
+
+export const deleteFolder = async (folderPath: string) => {
+  const response = await fetch(imagesEndpoints.deleteFolder, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({ folder_path: folderPath }),
   });
+
   const data = await response.json();
   return data;
 };

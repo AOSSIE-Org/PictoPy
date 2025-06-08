@@ -1,9 +1,10 @@
 export const FolderService = {
-  getSavedFolderPath: async (): Promise<string | null> => {
-    return localStorage.getItem('folderPath');
+  getSavedFolderPaths: async (): Promise<string[] | null> => {
+    const paths = localStorage.getItem('folderPaths');
+    return paths ? JSON.parse(paths) : null;
   },
 
-  saveFolderPath: async (path: string): Promise<void> => {
-    localStorage.setItem('folderPath', path);
+  saveFolderPaths: async (paths: string[]): Promise<void> => {
+    localStorage.setItem('folderPaths', JSON.stringify(paths));
   },
 };

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { MoreVertical, Images } from 'lucide-react';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { AlbumCardProps } from '@/types/Album';
-
+import { extractThumbnailPath } from '@/hooks/useImages';
 const AlbumCard: React.FC<AlbumCardProps> = ({
   album,
   onClick,
@@ -19,13 +19,13 @@ const AlbumCard: React.FC<AlbumCardProps> = ({
     <div className="group relative h-64 overflow-hidden rounded-lg bg-slate-200 shadow-lg transition-transform duration-300 ease-in-out hover:-translate-y-2 hover:shadow-xl dark:bg-slate-800 dark:text-card-foreground">
       <div onClick={onClick} className="h-full cursor-pointer">
         {album.isHidden && (
-          <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded">
+          <div className="rounded absolute left-2 top-2 bg-red-600 px-2 py-1 text-xs text-white">
             Hidden
           </div>
         )}
         {album.imageCount ? (
           <img
-            src={convertFileSrc(album.coverImage)}
+            src={convertFileSrc(extractThumbnailPath(album.coverImage))}
             alt={`Cover for ${album.title}`}
             className="h-full w-full object-cover"
           />
