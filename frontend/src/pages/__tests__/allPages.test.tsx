@@ -5,11 +5,11 @@ import Dashboard from '../Dashboard/Dashboard';
 import Memories from '../Memories/Memories';
 import SecureFolder from '../SecureFolderPage/SecureFolder';
 import Settings from '../SettingsPage/Settings';
-import { InitialPage } from '../Setupscreen/Setup';
+import { InitialPage } from '../../components/Steps/FolderSetupStep';
 import Videos from '../VideosPage/Videos';
 import { ROUTES } from '@/constants/routes';
-import QueryClientProviders from '@/Config/QueryClientProvider';
-import { BrowserRouter } from 'react-router-dom';
+import QueryClientProviders from '@/config/QueryClientProvider';
+import { BrowserRouter } from 'react-router';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 
 const pages = [
