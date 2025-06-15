@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Camera } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import { BACKEND_URL } from '../../config/Backend';
+import { BACKEND_URL } from '@/config/Backend';
 
 interface WebcamCaptureProps {
   onCapture: (matchedPaths: string[], errorMessage?: string) => void;

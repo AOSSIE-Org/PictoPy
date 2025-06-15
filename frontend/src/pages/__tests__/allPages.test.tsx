@@ -5,7 +5,6 @@ import Dashboard from '../Dashboard/Dashboard';
 import Memories from '../Memories/Memories';
 import SecureFolder from '../SecureFolderPage/SecureFolder';
 import Settings from '../SettingsPage/Settings';
-import { InitialPage } from '../../components/Steps/FolderSetupStep';
 import Videos from '../VideosPage/Videos';
 import { ROUTES } from '@/constants/routes';
 import QueryClientProviders from '@/config/QueryClientProvider';
@@ -17,10 +16,9 @@ const pages = [
   { path: ROUTES.LAYOUT.VIDEOS, Component: Videos },
   { path: ROUTES.LAYOUT.SETTINGS, Component: Settings },
   { path: ROUTES.LAYOUT.AI, Component: AITagging },
-  { path: ROUTES.LAYOUT.ALBUM, Component: Album },
+  { path: ROUTES.LAYOUT.ALBUMS, Component: Album },
   { path: ROUTES.LAYOUT.SECURE_FOLDER, Component: SecureFolder },
   { path: ROUTES.LAYOUT.MEMORIES, Component: Memories },
-  { path: ROUTES.INITIAL, Component: InitialPage },
 ];
 
 describe('Page rendering tests', () => {
