@@ -73,9 +73,9 @@ export default function MediaGallery({
 
   return (
     <div className="container mx-auto w-full max-w-7xl px-4">
-      <div className="mx-auto px-0 pb-12 pt-3 dark:bg-background dark:text-foreground md:px-2">
-        <div className="mb-6 flex flex-col gap-4 border-b pb-4 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-2xl font-bold text-transparent dark:from-gray-100 dark:to-gray-300 sm:text-3xl">
+      <div className="dark:bg-background dark:text-foreground mx-auto px-0 pt-3 pb-12 md:px-2">
+        <div className="mb-6 flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
+          <h1 className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-2xl font-bold text-transparent sm:text-3xl dark:from-gray-100 dark:to-gray-300">
             {title || currentYear}
           </h1>
           <div className="flex flex-wrap items-center gap-3">
@@ -124,7 +124,7 @@ export default function MediaGallery({
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent
-                  className="rounded-xl max-h-[500px] w-[200px] overflow-y-auto border border-gray-200/80 bg-white/95 shadow-lg backdrop-blur-sm dark:border-gray-800/80 dark:bg-gray-800/95"
+                  className="max-h-[500px] w-[200px] overflow-y-auto rounded-xl border border-gray-200/80 bg-white/95 shadow-lg backdrop-blur-sm dark:border-gray-800/80 dark:bg-gray-800/95"
                   align="end"
                   sideOffset={5}
                 >

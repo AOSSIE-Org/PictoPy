@@ -103,7 +103,7 @@ const Memories: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-background to-background/80">
+      <div className="from-background to-background/80 flex min-h-screen items-center justify-center bg-gradient-to-b">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -111,14 +111,14 @@ const Memories: React.FC = () => {
           className="flex flex-col items-center gap-6 text-center"
         >
           <div className="relative">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <div className="rounded-full absolute inset-0 h-12 w-12 border-2 border-primary/20"></div>
+            <Loader2 className="text-primary h-12 w-12 animate-spin" />
+            <div className="border-primary/20 absolute inset-0 h-12 w-12 rounded-full border-2"></div>
           </div>
           <div>
-            <p className="mb-1 text-xl font-semibold text-primary">
+            <p className="text-primary mb-1 text-xl font-semibold">
               Loading your memories...
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Please wait while we find your special moments
             </p>
           </div>
@@ -129,7 +129,7 @@ const Memories: React.FC = () => {
 
   if (memories.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-background/80 p-8">
+      <div className="from-background to-background/80 min-h-screen bg-gradient-to-b p-8">
         <h1 className="mb-8 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-center text-4xl font-bold text-transparent">
           Your Memories
         </h1>
@@ -141,7 +141,7 @@ const Memories: React.FC = () => {
           <div className="rounded-full bg-gray-100 p-8 dark:bg-gray-800">
             <Clock className="h-16 w-16 text-gray-400" />
           </div>
-          <p className="max-w-md text-center text-xl text-muted-foreground">
+          <p className="text-muted-foreground max-w-md text-center text-xl">
             No memories found in the selected folder. Photos will appear here
             once you've added some images.
           </p>
@@ -156,7 +156,7 @@ const Memories: React.FC = () => {
       <div className="fixed inset-0 bg-black">
         <button
           onClick={() => setShowStoryView(false)}
-          className="rounded-full absolute right-4 top-4 z-50 bg-black/40 p-2 text-white transition-all duration-300 hover:bg-black/60"
+          className="absolute top-4 right-4 z-50 rounded-full bg-black/40 p-2 text-white transition-all duration-300 hover:bg-black/60"
         >
           <X className="h-6 w-6" />
         </button>
@@ -174,7 +174,7 @@ const Memories: React.FC = () => {
               alt={`Memory ${storyIndex + 1}`}
               className="h-full w-full object-contain"
             />
-            <div className="absolute left-0 top-0 h-2 w-full bg-gray-800">
+            <div className="absolute top-0 left-0 h-2 w-full bg-gray-800">
               <motion.div
                 initial={{ width: '0%' }}
                 animate={{ width: '100%' }}
@@ -182,8 +182,8 @@ const Memories: React.FC = () => {
                 className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
               />
             </div>
-            <div className="absolute bottom-10 left-0 right-0 text-center">
-              <p className="rounded-full inline-block bg-black/60 px-4 py-2 text-sm text-white backdrop-blur-sm">
+            <div className="absolute right-0 bottom-10 left-0 text-center">
+              <p className="inline-block rounded-full bg-black/60 px-4 py-2 text-sm text-white backdrop-blur-sm">
                 {getTimeAgo(currentMemory.created_at)}
               </p>
             </div>
@@ -194,7 +194,7 @@ const Memories: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-background/80 px-4 py-8 sm:px-8">
+    <div className="from-background to-background/80 min-h-screen bg-gradient-to-b px-4 py-8 sm:px-8">
       <motion.h1
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -216,7 +216,7 @@ const Memories: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="rounded-xl group relative cursor-pointer overflow-hidden bg-card shadow-md transition-all duration-500 hover:shadow-xl hover:shadow-blue-900/5 dark:hover:shadow-blue-900/20"
+              className="group bg-card relative cursor-pointer overflow-hidden rounded-xl shadow-md transition-all duration-500 hover:shadow-xl hover:shadow-blue-900/5 dark:hover:shadow-blue-900/20"
               onClick={() => openMediaView(index)}
             >
               <div className="aspect-square overflow-hidden">
@@ -228,7 +228,7 @@ const Memories: React.FC = () => {
               </div>
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
               {/* Show time ago under each memory */}
-              <div className="absolute bottom-0 left-0 right-0 translate-y-full transform p-4 transition-transform duration-300 group-hover:translate-y-0">
+              <div className="absolute right-0 bottom-0 left-0 translate-y-full transform p-4 transition-transform duration-300 group-hover:translate-y-0">
                 <div className="flex items-center gap-2 rounded-lg bg-black/70 px-3 py-2 text-white backdrop-blur-sm">
                   <Clock className="h-4 w-4" />
                   <span className="text-sm font-medium">

@@ -114,7 +114,7 @@ const Settings: React.FC = () => {
 
   return (
     <div className="mx-auto flex-1 px-4 pt-1">
-      <div className="bg-theme-light rounded-2xl space-y-6 border border-white/10 p-6 shadow backdrop-blur-md backdrop-saturate-150 dark:border-white/5 dark:bg-white/5">
+      <div className="bg-theme-light space-y-6 rounded-2xl border border-white/10 p-6 shadow backdrop-blur-md backdrop-saturate-150 dark:border-white/5 dark:bg-white/5">
         <div>
           <h2 className="text-theme-dark dark:text-theme-light mb-2 text-lg font-medium">
             Current Folder Paths
@@ -149,7 +149,7 @@ const Settings: React.FC = () => {
           <Button
             onClick={handleDeleteCache}
             variant="outline"
-            className="h-10 w-full border-gray-500 hover:bg-accent dark:hover:bg-white/10"
+            className="hover:bg-accent h-10 w-full border-gray-500 dark:hover:bg-white/10"
           >
             <FolderSync className="text-gray-5 mr-2 h-5 w-5 dark:text-gray-50" />
             Refresh Cache
@@ -158,7 +158,7 @@ const Settings: React.FC = () => {
             <Button
               onClick={() => restartServer(setIsLoading)}
               variant="outline"
-              className="h-10 w-full border-gray-500 hover:bg-accent dark:hover:bg-white/10"
+              className="hover:bg-accent h-10 w-full border-gray-500 dark:hover:bg-white/10"
             >
               <Server className="text-gray-5 mr-2 h-5 w-5 dark:text-gray-50" />
               Restart Server
@@ -180,9 +180,9 @@ const Settings: React.FC = () => {
             <span className="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">
               Auto Sync Desktop Folders
             </span>
-            <div className="rounded-full after:rounded-full peer relative h-6 w-11 bg-gray-200 after:absolute after:start-[2px] after:top-0.5 after:h-5 after:w-5 after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-4 peer-focus:ring-blue-300 dark:border-gray-600 dark:bg-gray-700 dark:peer-checked:bg-blue-600 dark:peer-focus:ring-blue-800 rtl:peer-checked:after:-translate-x-full"></div>
+            <div className="peer relative h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-600 peer-focus:ring-4 peer-focus:ring-blue-300 after:absolute after:start-[2px] after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white rtl:peer-checked:after:-translate-x-full dark:border-gray-600 dark:bg-gray-700 dark:peer-checked:bg-blue-600 dark:peer-focus:ring-blue-800"></div>
           </label>
-          <p className="ml-3 mt-1 text-xs text-yellow-500">
+          <p className="mt-1 ml-3 text-xs text-yellow-500">
             WARNING: It may impact performance, restart for changes to take
             effect.
           </p>

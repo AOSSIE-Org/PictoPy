@@ -8,7 +8,7 @@ export default function MediaGrid({
 }: MediaGridProps) {
   if (mediaItems.length === 0) {
     return (
-      <div className="rounded-2xl flex h-96 flex-col items-center justify-center space-y-4 bg-gradient-to-b from-gray-50/50 to-gray-100/50 shadow-inner dark:from-gray-900/30 dark:to-gray-800/30">
+      <div className="flex h-96 flex-col items-center justify-center space-y-4 rounded-2xl bg-gradient-to-b from-gray-50/50 to-gray-100/50 shadow-inner dark:from-gray-900/30 dark:to-gray-800/30">
         <div className="rounded-full bg-gray-100 p-6 dark:bg-gray-800/80">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -54,7 +54,7 @@ export default function MediaGrid({
           onClick={() => openMediaViewer(index)}
           className="group flex transform cursor-pointer flex-col gap-2 transition-all duration-300 hover:-translate-y-1"
         >
-          <div className="rounded-xl h-48 overflow-hidden shadow-sm transition-shadow duration-300 group-hover:shadow-xl dark:shadow-gray-900/10 dark:group-hover:shadow-gray-900/20 sm:h-56 md:h-52 lg:h-48 xl:h-44 2xl:h-56">
+          <div className="h-48 overflow-hidden rounded-xl shadow-sm transition-shadow duration-300 group-hover:shadow-xl sm:h-56 md:h-52 lg:h-48 xl:h-44 2xl:h-56 dark:shadow-gray-900/10 dark:group-hover:shadow-gray-900/20">
             <MediaCard item={item} type={type} />
           </div>
           <p className="truncate px-1 text-center text-sm font-medium text-gray-700 transition-colors group-hover:text-blue-600 dark:text-gray-300 dark:group-hover:text-blue-400">

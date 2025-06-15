@@ -110,7 +110,7 @@ const ProgressiveFolderLoader: React.FC<ProgressiveFolderLoaderProps> = ({
   const progressPercentage = typeof progress === 'number' ? progress : 0;
 
   return (
-    <div className="fixed left-0 right-0 top-0 z-[1000]">
+    <div className="fixed top-0 right-0 left-0 z-[1000]">
       <AnimatePresence>
         {/* Progress bar */}
         {!isComplete && progressPercentage < 100 && (
@@ -134,7 +134,7 @@ const ProgressiveFolderLoader: React.FC<ProgressiveFolderLoaderProps> = ({
         {/* Loading indicator */}
         {!isComplete && progressPercentage < 100 && (
           <motion.div
-            className="rounded-full fixed right-4 top-4 flex items-center gap-2 bg-white px-3 py-1.5 text-sm shadow-md dark:bg-gray-800"
+            className="fixed top-4 right-4 flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm shadow-md dark:bg-gray-800"
             initial={{ y: -50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -50, opacity: 0 }}
@@ -147,7 +147,7 @@ const ProgressiveFolderLoader: React.FC<ProgressiveFolderLoaderProps> = ({
         {/* Completion indicator */}
         {isComplete && !isProcessingRef.current && (
           <motion.div
-            className="rounded-full fixed right-4 top-4 flex items-center gap-2 bg-white px-3 py-1.5 text-sm shadow-md dark:bg-gray-800"
+            className="fixed top-4 right-4 flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm shadow-md dark:bg-gray-800"
             initial={{ y: -50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -50, opacity: 0 }}
@@ -159,7 +159,7 @@ const ProgressiveFolderLoader: React.FC<ProgressiveFolderLoaderProps> = ({
         {/* Error message */}
         {showError && errorMessage && (
           <motion.div
-            className="fixed left-1/2 top-4 flex max-w-md -translate-x-1/2 transform items-center gap-2 rounded-lg border-l-4 border-red-500 bg-white px-4 py-2 text-sm shadow-md dark:bg-gray-800"
+            className="fixed top-4 left-1/2 flex max-w-md -translate-x-1/2 transform items-center gap-2 rounded-lg border-l-4 border-red-500 bg-white px-4 py-2 text-sm shadow-md dark:bg-gray-800"
             initial={{ y: -50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -50, opacity: 0 }}

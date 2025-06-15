@@ -3,7 +3,6 @@ import asyncio
 from fastapi import APIRouter, Query, HTTPException
 from fastapi import status as fastapi_status
 from fastapi.responses import JSONResponse
-import shutil
 
 from app.config.settings import IMAGES_PATH
 
@@ -45,11 +44,9 @@ from app.schemas.images import (
     GenerateThumbnailsResponse,
     ClassIDsResponse,
     GetImagesResponse,
-    AddMultipleImagesRequest,
     DeleteThumbnailsRequest,
     DeleteThumbnailsResponse,
     FailedDeletionThumbnailResponse,
-    AddMultipleImagesResponse,
 )
 
 router = APIRouter()
@@ -79,7 +76,9 @@ def get_images():
         print("Image Files = ", image_files)
 
         return GetImagesResponse(
-            data=ImagesResponse(image_files=image_files, folder_path=os.path.abspath(IMAGES_PATH)),
+            data=ImagesResponse(
+                image_files=image_files, folder_path=os.path.abspath(IMAGES_PATH)
+            ),
             message="Successfully retrieved all images",
             success=True,
         )
@@ -131,12 +130,16 @@ def delete_image(payload: DeleteImageRequest):
 
         os.remove(file_path)
         delete_image_db(file_path)
-        return DeleteImageResponse(data=file_path, message="Image deleted successfully", success=True)
+        return DeleteImageResponse(
+            data=file_path, message="Image deleted successfully", success=True
+        )
 
     except Exception as e:
         raise HTTPException(
             status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(success=False, error="Internal server error", message=str(e)).model_dump(),
+            detail=ErrorResponse(
+                success=False, error="Internal server error", message=str(e)
+            ).model_dump(),
         )
 
 
@@ -167,7 +170,9 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
             folder_path, filename = os.path.split(path)
             folder_paths.add(folder_path)
 
-            thumbnail_folder = os.path.abspath(os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails"))
+            thumbnail_folder = os.path.abspath(
+                os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails")
+            )
             thumb_nail_image_path = os.path.join(thumbnail_folder, filename)
 
             print("File = ", filename)
@@ -209,7 +214,9 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
             except Exception:
                 print("Folder deletion Unsuccessful")
 
-        return DeleteMultipleImagesResponse(data=deleted_paths, message="Images deleted successfully", success=True)
+        return DeleteMultipleImagesResponse(
+            data=deleted_paths, message="Images deleted successfully", success=True
+        )
 
     except Exception as e:
         print(e)
@@ -239,7 +246,9 @@ def get_all_image_objects():
             data[image_path] = classes if classes else "None"
             print(image_path)
 
-        thubnail_image_path = os.path.abspath(os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails"))
+        thubnail_image_path = os.path.abspath(
+            os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails")
+        )
 
         return GetAllImageObjectsResponse(
             data={"images": data, "image_path": thubnail_image_path},
@@ -278,7 +287,9 @@ def get_class_ids(path: str = Query(...)):
         class_ids = get_objects_db(path)
         return ClassIDsResponse(
             success=True,
-            message="Successfully retrieved class IDs" if class_ids else "No class IDs found for the image",
+            message="Successfully retrieved class IDs"
+            if class_ids
+            else "No class IDs found for the image",
             data=class_ids if class_ids else "None",
         )
 
@@ -314,7 +325,11 @@ async def add_folder(payload: AddFolderRequest):
                     ).model_dump(),
                 )
 
-            if not os.access(folder, os.R_OK) or not os.access(folder, os.W_OK) or not os.access(folder, os.X_OK):
+            if (
+                not os.access(folder, os.R_OK)
+                or not os.access(folder, os.W_OK)
+                or not os.access(folder, os.X_OK)
+            ):
                 raise HTTPException(
                     status_code=fastapi_status.HTTP_401_UNAUTHORIZED,
                     detail=ErrorResponse(
@@ -351,7 +366,11 @@ async def add_folder(payload: AddFolderRequest):
                     file_path = os.path.join(root, file)
                     file_extension = os.path.splitext(file_path)[1].lower()
                     if file_extension in image_extensions:
-                        tasks.append(asyncio.create_task(run_get_classes(file_path, folder_id=folder_id)))
+                        tasks.append(
+                            asyncio.create_task(
+                                run_get_classes(file_path, folder_id=folder_id)
+                            )
+                        )
 
             if not tasks:
                 return AddFolderResponse(
@@ -447,14 +466,18 @@ def generate_thumbnails(payload: GenerateThumbnailsRequest):
             failed_paths=failed_paths,
         )
 
-    return GenerateThumbnailsResponse(success=True, message="Thumbnails generated successfully for all valid folders")
+    return GenerateThumbnailsResponse(
+        success=True, message="Thumbnails generated successfully for all valid folders"
+    )
 
 
 @router.get("/get-thumbnail-path")
 @exception_handler_wrapper
 def get_thumbnail_path():
     print("GET request Received!")
-    thumbnail_path = os.path.abspath(os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails"))
+    thumbnail_path = os.path.abspath(
+        os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails")
+    )
     print("Thumbnail Path = ", thumbnail_path)
     return JSONResponse(
         status_code=200,
@@ -493,7 +516,9 @@ def delete_thumbnails(payload: DeleteThumbnailsRequest):
 
     for file in os.listdir(folder_path):
         try:
-            thumbnail_image_path = os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails", file)
+            thumbnail_image_path = os.path.join(
+                THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails", file
+            )
             if os.path.exists(thumbnail_image_path):
                 os.remove(thumbnail_image_path)
         except Exception:

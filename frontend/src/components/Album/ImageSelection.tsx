@@ -97,7 +97,7 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
           return (
             <div key={index} className="relative">
               <div
-                className={`rounded-full absolute -right-2 -top-2 z-10 h-6 w-6 cursor-pointer border-2 border-white ${
+                className={`absolute -top-2 -right-2 z-10 h-6 w-6 cursor-pointer rounded-full border-2 border-white ${
                   selectedImages.includes(imagePath)
                     ? 'bg-blue-500'
                     : 'bg-gray-300'
@@ -109,7 +109,7 @@ const ImageSelectionPage: React.FC<ImageSelectionPageProps> = ({
                 alt={`Image ${getImageName(imagePath)}`}
                 className="h-40 w-full rounded-lg object-cover"
               />
-              <div className="absolute bottom-0 left-0 right-0 truncate rounded-b-lg bg-black bg-opacity-50 p-1 text-xs text-white">
+              <div className="bg-opacity-50 absolute right-0 bottom-0 left-0 truncate rounded-b-lg bg-black p-1 text-xs text-white">
                 {getImageName(imagePath)}
               </div>
             </div>

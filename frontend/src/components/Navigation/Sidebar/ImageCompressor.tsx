@@ -257,7 +257,7 @@ const ImageCompressor: React.FC = () => {
       {/* Compressing Indicator */}
       {isCompressing && (
         <div className="mb-6 flex items-center justify-center rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
-          <div className="rounded-full mr-3 h-4 w-4 animate-spin border-2 border-blue-600 border-t-transparent"></div>
+          <div className="mr-3 h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
           <p className="font-medium text-blue-600 dark:text-blue-400">
             Compressing images...
           </p>
@@ -341,7 +341,7 @@ const ImageCompressor: React.FC = () => {
                       1024
                     ).toFixed(2)}{' '}
                     KB
-                    <span className="rounded-full ml-1 inline-block bg-green-100 px-2 py-0.5 text-xs text-green-800 dark:bg-green-800/40 dark:text-green-300">
+                    <span className="ml-1 inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800 dark:bg-green-800/40 dark:text-green-300">
                       {(
                         ((image.originalSize - image.compressedSize) /
                           image.originalSize) *

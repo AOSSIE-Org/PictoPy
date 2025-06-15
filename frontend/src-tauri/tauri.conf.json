@@ -7,12 +7,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "nsis",
-      "deb",
-      "dmg",
-      "app"
-    ],
+    "targets": ["nsis", "deb", "dmg", "app"],
     "createUpdaterArtifacts": true,
     "linux": {
       "deb": {
@@ -60,9 +55,7 @@
     ],
     "security": {
       "assetProtocol": {
-        "scope": [
-          "**"
-        ],
+        "scope": ["**"],
         "enable": true
       },
       "csp": null
