@@ -4,7 +4,7 @@ import Layout from '@/layout/layout';
 import { InitialSteps } from '@/pages/InitialSteps/InitialSteps';
 // Layout Components
 import { ROUTES } from '@/constants/routes';
-import AITagging from '@/pages/AITagging/AITaging';
+import AITagging from '@/pages/AITagging/AITagging';
 import Album from '@/pages/Album/Album';
 import Dashboard from '@/pages/Dashboard/Dashboard';
 import SecureFolder from '@/pages/SecureFolderPage/SecureFolder';

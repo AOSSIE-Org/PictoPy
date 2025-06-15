@@ -88,6 +88,7 @@
     "ts-jest": "^29.2.5",
     "tw-animate-css": "^1.3.4",
     "typescript": "5.1.x",
+    "util": "^0.12.5",
     "vite": "^6.3.5",
     "vite-plugin-eslint": "^1.8.1"
   }

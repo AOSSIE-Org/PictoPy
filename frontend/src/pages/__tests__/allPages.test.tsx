@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import AITagging from '../AITagging/AITaging';
+import AITagging from '../AITagging/AITagging';
 import Album from '../Album/Album';
 import Dashboard from '../Dashboard/Dashboard';
 import Memories from '../Memories/Memories';
@@ -10,6 +10,18 @@ import { ROUTES } from '@/constants/routes';
 import QueryClientProviders from '@/config/QueryClientProvider';
 import { BrowserRouter } from 'react-router';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+
+beforeAll(() => {
+  window.matchMedia =
+    window.matchMedia ||
+    function () {
+      return {
+        matches: false,
+        addListener: () => {}, // deprecated
+        removeListener: () => {}, // deprecated
+      };
+    };
+});
 
 const pages = [
   { path: ROUTES.LAYOUT.HOME, Component: Dashboard },
