@@ -17,7 +17,6 @@ import {
   deleteThumbnails,
   generateThumbnails,
 } from '../../../api/api-functions/images.ts';
-import { on } from 'events';
 const Settings: React.FC = () => {
   const {
     updateAvailable,

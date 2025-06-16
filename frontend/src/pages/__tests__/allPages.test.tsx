@@ -10,6 +10,7 @@ import { ROUTES } from '@/constants/routes';
 import QueryClientProviders from '@/config/QueryClientProvider';
 import { BrowserRouter } from 'react-router';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { LoadingProvider } from '@/contexts/LoadingContext';
 
 beforeAll(() => {
   window.matchMedia =
@@ -40,7 +41,9 @@ describe('Page rendering tests', () => {
         <ThemeProvider>
           <QueryClientProviders>
             <BrowserRouter>
-              <Component />
+              <LoadingProvider>
+                <Component />
+              </LoadingProvider>
             </BrowserRouter>
           </QueryClientProviders>
         </ThemeProvider>,
