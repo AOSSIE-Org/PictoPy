@@ -1,22 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import FolderPicker from '@/components/FolderPicker/FolderPicker';
-import { deleteCache } from '@/services/cacheService';
-import { Button } from '@/components/ui/button';
-import { restartServer } from '@/utils/serverUtils';
-import { isProd } from '../../utils/isProd';
 import { FolderSync, Trash2, Server, RefreshCw } from 'lucide-react';
-import { useLocalStorage } from '@/hooks/LocalStorage';
+
+import FolderPicker from '@/components/FolderPicker/FolderPicker';
+import { Button } from '@/components/ui/button';
 import LoadingScreen from '@/components/ui/LoadingScreen/LoadingScreen';
 import ErrorDialog from '@/components/Album/Error';
-import { useUpdater } from '@/hooks/useUpdater';
 import UpdateDialog from '@/components/Updater/UpdateDialog';
+
+import { deleteCache } from '@/services/cacheService';
+import { restartServer } from '@/utils/serverUtils';
+import { isProd } from '../../utils/isProd';
+
+import { useLocalStorage } from '@/hooks/LocalStorage';
+import { useUpdater } from '@/hooks/useUpdater';
 import { useLoading } from '@/hooks/useLoading';
 import { usePictoMutation } from '@/hooks/useQueryExtensio';
+
 import {
   deleteFolder,
   deleteThumbnails,
   generateThumbnails,
 } from '../../../api/api-functions/images.ts';
+
 const Settings: React.FC = () => {
   const {
     updateAvailable,
@@ -27,21 +32,16 @@ const Settings: React.FC = () => {
     downloadAndInstall,
     dismissUpdate,
   } = useUpdater();
+
   const { showLoader, hideLoader } = useLoading();
-  const [updateDialogOpen, setUpdateDialogOpen] = useState<boolean>(false);
-  const onCheckUpdatesClick = () => {
-    let check = async () => {
-      showLoader('Checking for updates...');
-      const hasUpdate = await checkForUpdates();
-      if (hasUpdate) {
-        setUpdateDialogOpen(true);
-      }
-      console.log('Update check completed:', hasUpdate);
-      hideLoader();
-    };
-    check();
-  };
+
   const [isLoading, setIsLoading] = useState(false);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState<boolean>(false);
+  const [errorDialogContent, setErrorDialogContent] = useState<{
+    title: string;
+    description: string;
+  } | null>(null);
+
   const [currentPaths, setCurrentPaths] = useLocalStorage<string[]>(
     'folderPaths',
     [],
@@ -50,15 +50,12 @@ const Settings: React.FC = () => {
     'auto-add-folder',
     'false',
   );
+  const [check, setCheck] = useState<boolean>(autoFolderSetting === 'true');
   const [addedFolders, setAddedFolders] = useLocalStorage<string[]>(
     'addedFolders',
     [],
   );
-  const [check, setCheck] = useState<boolean>(autoFolderSetting === 'true');
-  const [errorDialogContent, setErrorDialogContent] = useState<{
-    title: string;
-    description: string;
-  } | null>(null);
+
   const { mutate: generateThumbnailsAPI, isPending: isGeneratingThumbnails } =
     usePictoMutation({
       mutationFn: generateThumbnails,
@@ -79,8 +76,20 @@ const Settings: React.FC = () => {
     setCheck(autoFolderSetting === 'true');
   }, [autoFolderSetting]);
 
+  const onCheckUpdatesClick = () => {
+    let check = async () => {
+      showLoader('Checking for updates...');
+      const hasUpdate = await checkForUpdates();
+      if (hasUpdate) {
+        setUpdateDialogOpen(true);
+      }
+      console.log('Update check completed:', hasUpdate);
+      hideLoader();
+    };
+    check();
+  };
+
   const handleFolderPathChange = async (newPaths: string[]) => {
-    //Error if newPaths contains a path that is already in currentPaths
     const duplicatePaths = newPaths.filter((path) =>
       currentPaths.includes(path),
     );
@@ -97,6 +106,7 @@ const Settings: React.FC = () => {
     setCurrentPaths([...currentPaths, ...newPaths]);
     await deleteCache();
   };
+
   const handleDeleteCache = async () => {
     try {
       const result = await deleteCache();
@@ -122,14 +132,6 @@ const Settings: React.FC = () => {
     }
   };
 
-  if (isGeneratingThumbnails || isDeletingThumbnails || isLoading) {
-    return (
-      <div className="flex h-full w-full items-center justify-center">
-        <LoadingScreen variant="fullscreen" />
-      </div>
-    );
-  }
-
   const showErrorDialog = (title: string, err: unknown) => {
     setErrorDialogContent({
       title,
@@ -137,6 +139,14 @@ const Settings: React.FC = () => {
         err instanceof Error ? err.message : 'An unknown error occurred',
     });
   };
+
+  if (isGeneratingThumbnails || isDeletingThumbnails || isLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <LoadingScreen variant="fullscreen" />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex-1 px-4 pt-1">
@@ -167,6 +177,7 @@ const Settings: React.FC = () => {
             </div>
           )}
         </div>
+
         <div className="max-w-46 space-y-4">
           <FolderPicker
             setFolderPaths={handleFolderPathChange}
@@ -199,6 +210,7 @@ const Settings: React.FC = () => {
             </Button>
           )}
         </div>
+
         <div>
           <label className="inline-flex cursor-pointer items-center gap-2">
             <input
@@ -222,6 +234,7 @@ const Settings: React.FC = () => {
           </p>
         </div>
       </div>
+
       <ErrorDialog
         content={errorDialogContent}
         onClose={() => setErrorDialogContent(null)}
