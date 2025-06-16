@@ -4,17 +4,44 @@ import { deleteCache } from '@/services/cacheService';
 import { Button } from '@/components/ui/button';
 import { restartServer } from '@/utils/serverUtils';
 import { isProd } from '../../utils/isProd';
-import { FolderSync, Trash2, Server } from 'lucide-react';
+import { FolderSync, Trash2, Server, RefreshCw } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/LocalStorage';
 import LoadingScreen from '@/components/ui/LoadingScreen/LoadingScreen';
 import ErrorDialog from '@/components/Album/Error';
+import { useUpdater } from '@/hooks/useUpdater';
+import UpdateDialog from '@/components/Updater/UpdateDialog';
+import { useLoading } from '@/hooks/useLoading';
 import { usePictoMutation } from '@/hooks/useQueryExtensio';
 import {
   deleteFolder,
   deleteThumbnails,
   generateThumbnails,
 } from '../../../api/api-functions/images.ts';
+import { on } from 'events';
 const Settings: React.FC = () => {
+  const {
+    updateAvailable,
+    isDownloading,
+    downloadProgress,
+    error,
+    checkForUpdates,
+    downloadAndInstall,
+    dismissUpdate,
+  } = useUpdater();
+  const { showLoader, hideLoader } = useLoading();
+  const [updateDialogOpen, setUpdateDialogOpen] = useState<boolean>(false);
+  const onCheckUpdatesClick = () => {
+    let check = async () => {
+      showLoader('Checking for updates...');
+      const hasUpdate = await checkForUpdates();
+      if (hasUpdate) {
+        setUpdateDialogOpen(true);
+      }
+      console.log('Update check completed:', hasUpdate);
+      hideLoader();
+    };
+    check();
+  };
   const [isLoading, setIsLoading] = useState(false);
   const [currentPaths, setCurrentPaths] = useLocalStorage<string[]>(
     'folderPaths',
@@ -141,7 +168,7 @@ const Settings: React.FC = () => {
             </div>
           )}
         </div>
-        <div className="w-40 space-y-4">
+        <div className="max-w-46 space-y-4">
           <FolderPicker
             setFolderPaths={handleFolderPathChange}
             className="h-10 w-full"
@@ -151,8 +178,16 @@ const Settings: React.FC = () => {
             variant="outline"
             className="hover:bg-accent h-10 w-full border-gray-500 dark:hover:bg-white/10"
           >
-            <FolderSync className="text-gray-5 mr-2 h-5 w-5 dark:text-gray-50" />
-            Refresh Cache
+            <FolderSync className="text-gray-5 mr-1 h-5 w-5 dark:text-gray-50" />
+            Refresh cache
+          </Button>
+          <Button
+            onClick={onCheckUpdatesClick}
+            variant="outline"
+            className="hover:bg-accent h-10 w-full border-gray-500 dark:hover:bg-white/10"
+          >
+            <RefreshCw className="text-gray-5 mr-1 h-5 w-5 dark:text-gray-50" />
+            Check for updates
           </Button>
           {isProd() && (
             <Button
@@ -161,7 +196,7 @@ const Settings: React.FC = () => {
               className="hover:bg-accent h-10 w-full border-gray-500 dark:hover:bg-white/10"
             >
               <Server className="text-gray-5 mr-2 h-5 w-5 dark:text-gray-50" />
-              Restart Server
+              Restart server
             </Button>
           )}
         </div>
@@ -191,6 +226,25 @@ const Settings: React.FC = () => {
       <ErrorDialog
         content={errorDialogContent}
         onClose={() => setErrorDialogContent(null)}
+      />
+      <UpdateDialog
+        update={updateAvailable}
+        open={updateDialogOpen}
+        onOpenChange={(open: boolean) => {
+          if (!open && !isDownloading) {
+            setUpdateDialogOpen(open);
+            setTimeout(dismissUpdate, 1000);
+          }
+        }}
+        onDownload={downloadAndInstall}
+        onLater={() => {
+          setUpdateDialogOpen(false);
+          setTimeout(dismissUpdate, 1000);
+        }}
+        isDownloading={isDownloading}
+        downloadProgress={downloadProgress}
+        error={error}
+        showCloseButton={false || !isDownloading}
       />
     </div>
   );

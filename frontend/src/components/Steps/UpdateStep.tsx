@@ -41,6 +41,7 @@ export const UpdateStep: React.FC<Props> = ({ onNext }) => {
         isDownloading={isDownloading}
         downloadProgress={downloadProgress}
         error={error}
+        showCloseButton={false}
       />
     );
   }

@@ -17,13 +17,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertTriangle, Download, Clock, Calendar, Tag } from 'lucide-react';
 
 interface UpdateDialogProps {
-  update: Update;
+  update: Update | null;
   onDownload: () => void;
   onLater: () => void;
   isDownloading: boolean;
   downloadProgress: { downloaded: number; total: number };
   error?: string | null;
   open?: boolean;
+  showCloseButton?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const UpdateDialog: React.FC<UpdateDialogProps> = ({
@@ -34,6 +36,8 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
   downloadProgress,
   error,
   open = true,
+  showCloseButton = true,
+  onOpenChange,
 }) => {
   const progressPercentage =
     downloadProgress.total > 0
@@ -45,8 +49,8 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md" showCloseButton={false}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md" showCloseButton={showCloseButton}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Download className="h-5 w-5" />
@@ -66,7 +70,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
                 Current Version:
               </span>
               <Badge variant="outline" className="font-mono">
-                {update.currentVersion}
+                {update?.currentVersion}
               </Badge>
             </div>
             <div className="flex items-center justify-between">
@@ -75,7 +79,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
                 New Version:
               </span>
               <Badge variant="default" className="font-mono">
-                {update.version}
+                {update?.version}
               </Badge>
             </div>
             <div className="flex items-center justify-between">
@@ -84,7 +88,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
                 Release Date:
               </span>
               <span className="text-sm">
-                {update.date
+                {update?.date
                   ? new Date(update.date).toLocaleDateString()
                   : 'N/A'}
               </span>
@@ -94,7 +98,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
           <Separator />
 
           {/* Release Notes */}
-          {update.body && (
+          {update?.body && (
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Release Notes:</h4>
               <ScrollArea className="h-32 w-full rounded-md border p-3">
