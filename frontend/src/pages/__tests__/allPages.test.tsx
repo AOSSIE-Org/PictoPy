@@ -10,8 +10,8 @@ import { ROUTES } from '@/constants/routes';
 import QueryClientProviders from '@/config/QueryClientProvider';
 import { BrowserRouter } from 'react-router';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import { LoadingProvider } from '@/contexts/LoadingContext';
-
+import { Provider } from 'react-redux';
+import { store } from '@/app/store';
 beforeAll(() => {
   window.matchMedia =
     window.matchMedia ||
@@ -38,15 +38,15 @@ describe('Page rendering tests', () => {
   pages.forEach(({ path, Component }) => {
     test(`renders ${path} without crashing`, () => {
       render(
-        <ThemeProvider>
-          <QueryClientProviders>
-            <BrowserRouter>
-              <LoadingProvider>
+        <Provider store={store}>
+          <ThemeProvider>
+            <QueryClientProviders>
+              <BrowserRouter>
                 <Component />
-              </LoadingProvider>
-            </BrowserRouter>
-          </QueryClientProviders>
-        </ThemeProvider>,
+              </BrowserRouter>
+            </QueryClientProviders>
+          </ThemeProvider>
+        </Provider>,
       );
     });
   });
