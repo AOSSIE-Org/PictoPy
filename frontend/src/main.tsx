@@ -62,6 +62,6 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
 
 if (isProd()) {
   onCloseListener();
-  console.log('Starting PictoPy Server');
+  console.log('Starting PictoPy Server..');
   startServer();
 }
