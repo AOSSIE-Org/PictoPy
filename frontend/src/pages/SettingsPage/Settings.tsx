@@ -13,8 +13,10 @@ import { isProd } from '../../utils/isProd';
 
 import { useLocalStorage } from '@/hooks/LocalStorage';
 import { useUpdater } from '@/hooks/useUpdater';
-import { useLoading } from '@/hooks/useLoading';
 import { usePictoMutation } from '@/hooks/useQueryExtensio';
+
+import { useDispatch } from 'react-redux';
+import { showLoader, hideLoader } from '@/features/loaderSlice';
 
 import {
   deleteFolder,
@@ -23,6 +25,8 @@ import {
 } from '../../../api/api-functions/images.ts';
 
 const Settings: React.FC = () => {
+  const dispatch = useDispatch();
+
   const {
     updateAvailable,
     isDownloading,
@@ -32,8 +36,6 @@ const Settings: React.FC = () => {
     downloadAndInstall,
     dismissUpdate,
   } = useUpdater();
-
-  const { showLoader, hideLoader } = useLoading();
 
   const [isLoading, setIsLoading] = useState(false);
   const [updateDialogOpen, setUpdateDialogOpen] = useState<boolean>(false);
@@ -77,16 +79,15 @@ const Settings: React.FC = () => {
   }, [autoFolderSetting]);
 
   const onCheckUpdatesClick = () => {
-    let check = async () => {
-      showLoader('Checking for updates...');
+    let checkUpdates = async () => {
+      dispatch(showLoader('Checking for updates...'));
       const hasUpdate = await checkForUpdates();
       if (hasUpdate) {
         setUpdateDialogOpen(true);
       }
-      console.log('Update check completed:', hasUpdate);
-      hideLoader();
+      dispatch(hideLoader());
     };
-    check();
+    checkUpdates();
   };
 
   const handleFolderPathChange = async (newPaths: string[]) => {

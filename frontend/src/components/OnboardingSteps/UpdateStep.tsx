@@ -1,13 +1,16 @@
 import React, { useEffect } from 'react';
 import { useUpdater } from '@/hooks/useUpdater';
 import UpdateDialog from '@/components/Updater/UpdateDialog';
-import { useLoading } from '@/hooks/useLoading';
+import { useDispatch } from 'react-redux';
+import { showLoader, hideLoader } from '@/features/loaderSlice';
+import { markCompleted } from '@/features/onboardingSlice';
 
-type Props = {
-  onNext: () => void;
-};
-
-export const UpdateStep: React.FC<Props> = ({ onNext }) => {
+interface UpdateStepProps {
+  stepIndex: number;
+}
+export const UpdateStep: React.FC<UpdateStepProps> = ({
+  stepIndex,
+}: UpdateStepProps) => {
   const {
     updateAvailable,
     isDownloading,
@@ -17,14 +20,15 @@ export const UpdateStep: React.FC<Props> = ({ onNext }) => {
     downloadAndInstall,
     dismissUpdate,
   } = useUpdater();
-  const { showLoader, hideLoader } = useLoading();
+  const dispatch = useDispatch();
   useEffect(() => {
     let check = async () => {
-      showLoader('Checking for updates...');
+      dispatch(showLoader('Checking for updates...'));
       const hasUpdate = await checkForUpdates();
-      console.log('Update check completed:', hasUpdate);
-      hideLoader();
-      if (!hasUpdate) onNext();
+      dispatch(hideLoader());
+      if (!hasUpdate) {
+        dispatch(markCompleted(stepIndex));
+      }
     };
     check();
   }, []);
@@ -36,7 +40,7 @@ export const UpdateStep: React.FC<Props> = ({ onNext }) => {
         onDownload={downloadAndInstall}
         onLater={() => {
           dismissUpdate();
-          onNext();
+          dispatch(markCompleted(stepIndex));
         }}
         isDownloading={isDownloading}
         downloadProgress={downloadProgress}

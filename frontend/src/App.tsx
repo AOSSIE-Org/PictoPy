@@ -3,17 +3,19 @@ import React from 'react';
 import { BrowserRouter } from 'react-router';
 import { AppRoutes } from '@/routes/AppRoutes';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import { LoadingProvider } from '@/contexts/LoadingContext';
 import QueryClientProviders from '@/config/QueryClientProvider';
+import { GlobalLoader } from './components/Loader/GlobalLoader';
+import { useSelector } from 'react-redux';
+import { RootState } from './app/store';
 const App: React.FC = () => {
+  const { loading, message } = useSelector((state: RootState) => state.loader);
   return (
     <ThemeProvider>
       <QueryClientProviders>
-        <LoadingProvider>
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </LoadingProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+        <GlobalLoader loading={loading} message={message} />
       </QueryClientProviders>
     </ThemeProvider>
   );

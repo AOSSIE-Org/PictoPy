@@ -1,13 +1,4 @@
-import { Step } from '@/types/steps';
-import { UpdateStep } from '@/components/Steps/UpdateStep';
-import { FolderSetupStep } from '@/components/Steps/FolderSetupStep';
-export const STEPS: Step[] = [
-  {
-    id: 'update',
-    component: UpdateStep,
-  },
-  {
-    id: 'folderSetup',
-    component: FolderSetupStep,
-  },
-];
+export const STEPS = {
+  UPDATE_STEP: 'updates',
+  FOLDER_SETUP_STEP: 'folderSetup',
+};
