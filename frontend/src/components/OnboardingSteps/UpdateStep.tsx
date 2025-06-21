@@ -48,5 +48,5 @@ export const UpdateStep: React.FC<UpdateStepProps> = ({
         showCloseButton={false}
       />
     );
-  }
+  } else return null;
 };

@@ -23,16 +23,13 @@ export const FolderSetupStep: React.FC<FolderSetupStepProps> = ({
       setShowSetupScreen(false);
       dispatch(markCompleted(stepIndex));
     }
-  }, [folderPaths]);
+  }, [folderPaths, stepIndex, dispatch]);
 
   const handleFolderPathsChange = (paths: string[]) => {
     setFolderPaths(paths);
     FolderService.saveFolderPaths(paths);
-    dispatch(markCompleted(stepIndex));
   };
   return showSetupScreen ? (
     <SetupScreen onFolderPathsChange={handleFolderPathsChange} />
-  ) : (
-    <div></div>
-  );
+  ) : null;
 };

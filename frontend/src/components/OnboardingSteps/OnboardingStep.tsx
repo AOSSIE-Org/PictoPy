@@ -11,6 +11,9 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
   stepIndex,
   stepName,
 }: OnboardingStepProps) => {
+  console.log(
+    `Rendering OnboardingStep: stepIndex=${stepIndex}, stepName=${stepName}`,
+  );
   switch (stepName) {
     case STEPS.UPDATE_STEP:
       return <UpdateStep stepIndex={stepIndex} />;

@@ -22,10 +22,14 @@ const onboardingSlice = createSlice({
       const stepIndex = action.payload;
       if (stepIndex >= 0 && stepIndex < state.stepStatus.length) {
         state.stepStatus[stepIndex] = true;
+      } else {
+        console.warn(
+          `Invalid step index: ${stepIndex}. Valid range: 0-${state.stepStatus.length - 1}`,
+        );
       }
       // Update current step index and name
       state.currentStepIndex = state.stepStatus.findIndex((status) => !status);
-      state.currentStepName = STEP_NAMES[state.currentStepIndex];
+      state.currentStepName = STEP_NAMES[state.currentStepIndex] || '';
     },
     previousStep(state) {
       //Mark the last completed step as incomplete
@@ -35,7 +39,7 @@ const onboardingSlice = createSlice({
       }
       // Update current step index and name
       state.currentStepIndex = state.stepStatus.findIndex((status) => !status);
-      state.currentStepName = STEP_NAMES[state.currentStepIndex];
+      state.currentStepName = STEP_NAMES[state.currentStepIndex] || '';
     },
   },
 });
