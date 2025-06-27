@@ -402,7 +402,7 @@ const MediaView: React.FC<MediaViewProps> = ({
 
   return (
     <div className="to-black/98 fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-black/95 backdrop-blur-lg">
-      <div className="absolute right-4 top-4 z-50 flex items-center gap-3">
+      <div className="absolute right-4 top-4 z-20 flex items-center gap-3">
         <button
           onClick={toggleInfo}
           className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
@@ -699,7 +699,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                 </button>
                 <select
                   onChange={(e) => setFilter(e.target.value)}
-                  className="rounded-md bg-white/10 px-2 py-2 text-sm text-white transition-all duration-200 hover:bg-white/20"
+                  className="rounded-md bg-white/10 px-2 py-2 text-sm text-black transition-all duration-200 hover:bg-white/20"
                 >
                   <option value="">No Filter</option>
                   <option value="grayscale(100%)">Grayscale</option>
@@ -722,8 +722,9 @@ const MediaView: React.FC<MediaViewProps> = ({
                   <Crops />
                 </button>
                 {showAdjustMenu && (
-                  <div className="absolute bottom-full right-5 mb-2 grid w-64 grid-cols-2 gap-2 rounded-md border-2 bg-white/10 p-4 backdrop-blur-md hover:border-white lg:grid-cols-1">
-                    <div className="mb-1">
+
+  <div className="absolute bottom-full right-5 mb-2 z-[9999] grid w-64 grid-cols-2 gap-2 rounded-md border-2 bg-gray-500 p-4 hover:border-white lg:grid-cols-1 max-h-60 overflow-y-auto">
+<div className="mb-1">
                       <label className="block text-sm font-medium text-white">
                         Brightness
                       </label>
