@@ -1,6 +1,6 @@
 import { Command } from '@tauri-apps/plugin-shell';
 import { invoke } from '@tauri-apps/api/core';
-import { BACKEND_URL } from '../Config/Backend.ts';
+import { BACKEND_URL } from '@/config/Backend.ts';
 const isWindows = () => navigator.platform.startsWith('Win');
 
 const isServerRunning = async (): Promise<boolean> => {

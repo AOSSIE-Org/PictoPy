@@ -15,7 +15,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from '@radix-ui/react-dropdown-menu';
+} from '@/components/ui/dropdown-menu';
 import { Filter } from 'lucide-react';
 import { MediaItem } from '@/types/Media';
 import DeleteImagesDialog from './DeleteImageDialog';
@@ -128,10 +128,10 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className="flex items-center gap-2 rounded-lg border-gray-500 px-4 py-2 shadow-sm transition duration-300 ease-in-out hover:bg-accent dark:hover:bg-white/10"
+                className="hover:bg-accent flex items-center gap-2 rounded-lg border-gray-500 px-4 py-2 shadow-sm transition duration-300 ease-in-out dark:hover:bg-white/10"
               >
                 <Filter className="h-4 w-4 text-gray-700 dark:text-white" />
-                <p className="hidden text-sm text-gray-700 dark:text-white lg:inline">
+                <p className="hidden text-sm text-gray-700 lg:inline dark:text-white">
                   Select Tag : {filterTag || 'tags'}
                 </p>
               </Button>
@@ -172,7 +172,7 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
           return (
             <div key={index} className="relative">
               <div
-                className={`rounded-full absolute -right-2 -top-2 z-10 h-6 w-6 cursor-pointer border-2 border-white ${
+                className={`absolute -top-2 -right-2 z-10 h-6 w-6 cursor-pointer rounded-full border-2 border-white ${
                   imagePath && selectedImages.includes(imagePath)
                     ? 'bg-blue-500'
                     : 'bg-gray-300'
@@ -184,7 +184,7 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
                 alt={`Image ${imagePath && getImageName(imagePath)}`}
                 className="h-40 w-full rounded-lg object-cover"
               />
-              <div className="absolute bottom-0 left-0 right-0 truncate rounded-b-lg bg-black bg-opacity-50 p-1 text-xs text-white">
+              <div className="bg-opacity-50 absolute right-0 bottom-0 left-0 truncate rounded-b-lg bg-black p-1 text-xs text-white">
                 {imagePath && getImageName(imagePath)}
               </div>
             </div>
@@ -198,7 +198,7 @@ const DeleteSelectedImagePage: React.FC<DeleteSelectedImageProps> = ({
           executeDeleteImages={handleAddSelectedImages}
         />
       )}
-      <div className="fixed bottom-0 left-0 right-0 z-50 mb-4 flex justify-evenly bg-transparent p-4 shadow-lg">
+      <div className="fixed right-0 bottom-0 left-0 z-50 mb-4 flex justify-evenly bg-transparent p-4 shadow-lg">
         <Button
           variant="secondary"
           onClick={() => setIsVisibleSelectedImage(true)}

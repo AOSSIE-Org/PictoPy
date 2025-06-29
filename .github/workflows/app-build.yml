@@ -187,13 +187,14 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5NlF2SjE3cWNXOVlQQ0JBTlNITEpOUVoyQ3ZuNTdOSkwyNE1NN2RmVWQ1a0FBQkFBQUFBQUFBQUFBQUlBQUFBQU9XOGpTSFNRd0Q4SjNSbm5Oc1E0OThIUGx6SS9lWXI3ZjJxN3BESEh1QTRiQXlkR2E5aG1oK1g0Tk5kcmFzc0IvZFZScEpubnptRkxlbDlUR2R1d1Y5OGRSYUVmUGoxNTFBcHpQZ1dSS2lHWklZVHNkV1Byd1VQSnZCdTZFWlVGOUFNVENBRlgweUU9Cg==
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: pass
+          TAURI_SIGNING_PRIVATE_KEY: dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5YzZCUHNpNjQzalN3SllaeGI0TUU1Ky9VQjZOZjI0aklxdXJ6WVhrTEVVUUFBQkFBQUFBQUFBQUFBQUlBQUFBQWxRSUV5LzJkSXlMWUZrWE44MC9HQXFKQ1piYkhDUmJvTDlIVnlPQXpKeFJTWVBDdGZCcHp6RGpJMTlTWkp0RGhCNzRyT2lHc0JsYWFBTTdzcEN0ZnNuaE1EcjZxYWlEOHArbU9hcnFIUjUvQ1VpOERGeU55M2ttZE5xNnBvSE5ONllGOWN0YmkvS289Cg==
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: 123456
         with:
           projectPath: ./frontend
           tagName: app-v__VERSION__
           releaseName: "PictoPy v__VERSION__"
           releaseBody: "See the assets to download this version and install."
+          includeUpdaterJson: true
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

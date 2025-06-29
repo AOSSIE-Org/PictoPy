@@ -58,7 +58,7 @@ const SortingControls: React.FC<SortingControlsProps> = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="rounded-xl w-[240px] border border-gray-200/80 bg-white/95 p-1.5 shadow-lg backdrop-blur-sm transition-all dark:border-gray-800/80 dark:bg-gray-800/95 dark:text-gray-100"
+        className="w-[240px] rounded-xl border border-gray-200/80 bg-white/95 p-1.5 shadow-lg backdrop-blur-sm transition-all dark:border-gray-800/80 dark:bg-gray-800/95 dark:text-gray-100"
         align="end"
         sideOffset={5}
       >

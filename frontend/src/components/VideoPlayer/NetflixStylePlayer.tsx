@@ -139,7 +139,7 @@ export default function NetflixStylePlayer({
 
       {/* Progress Bar */}
       <div
-        className={`absolute bottom-16 left-0 right-0 px-4 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute right-0 bottom-16 left-0 px-4 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}
       >
         <div
           className="h-1 w-full cursor-pointer bg-gray-600"
@@ -154,7 +154,7 @@ export default function NetflixStylePlayer({
 
       {/* Controls */}
       <div
-        className={`absolute bottom-4 left-0 right-0 flex items-center justify-between px-4 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute right-0 bottom-4 left-0 flex items-center justify-between px-4 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}
       >
         <div className="flex items-center space-x-4">
           <button onClick={() => skipTime(-10)} className="p-2 text-white">

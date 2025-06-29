@@ -111,7 +111,7 @@ const SecureFolder: React.FC = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="rounded-xl overflow-hidden border border-gray-100 bg-white/80 p-6 shadow-lg backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/90 dark:shadow-gray-900/30"
+          className="overflow-hidden rounded-xl border border-gray-100 bg-white/80 p-6 shadow-lg backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/90 dark:shadow-gray-900/30"
         >
           <div className="mb-6 flex flex-col items-center">
             <Shield className="mb-2 h-16 w-16 text-blue-500 dark:text-blue-400" />
@@ -126,9 +126,9 @@ const SecureFolder: React.FC = () => {
                 placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white/50 px-4 py-3 text-gray-700 shadow-sm transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-200"
+                className="w-full rounded-lg border border-gray-300 bg-white/50 px-4 py-3 text-gray-700 shadow-sm transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-200"
               />
-              <Lock className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
+              <Lock className="absolute top-3 right-3 h-5 w-5 text-gray-400" />
             </div>
             <div className="relative">
               <input
@@ -136,9 +136,9 @@ const SecureFolder: React.FC = () => {
                 placeholder="Confirm password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white/50 px-4 py-3 text-gray-700 shadow-sm transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-200"
+                className="w-full rounded-lg border border-gray-300 bg-white/50 px-4 py-3 text-gray-700 shadow-sm transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-200"
               />
-              <Lock className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
+              <Lock className="absolute top-3 right-3 h-5 w-5 text-gray-400" />
             </div>
             <motion.button
               whileHover={{ scale: 1.03 }}
@@ -186,7 +186,7 @@ const SecureFolder: React.FC = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="rounded-xl overflow-hidden border border-gray-100 bg-white/80 p-6 shadow-lg backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/90 dark:shadow-gray-900/30"
+          className="overflow-hidden rounded-xl border border-gray-100 bg-white/80 p-6 shadow-lg backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/90 dark:shadow-gray-900/30"
         >
           <div className="mb-6 flex flex-col items-center">
             <Shield className="mb-2 h-16 w-16 text-blue-500 dark:text-blue-400" />
@@ -201,9 +201,9 @@ const SecureFolder: React.FC = () => {
                 placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white/50 px-4 py-3 text-gray-700 shadow-sm transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-200"
+                className="w-full rounded-lg border border-gray-300 bg-white/50 px-4 py-3 text-gray-700 shadow-sm transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-200"
               />
-              <Lock className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
+              <Lock className="absolute top-3 right-3 h-5 w-5 text-gray-400" />
             </div>
             <motion.button
               whileHover={{ scale: 1.03 }}
@@ -243,7 +243,7 @@ const SecureFolder: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.05 }}
-            className="rounded-xl group relative aspect-square cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-xl"
+            className="group relative aspect-square cursor-pointer overflow-hidden rounded-xl transition-all duration-300 hover:shadow-xl"
             onClick={() => handleMediaClick(index)}
           >
             <img
@@ -257,7 +257,7 @@ const SecureFolder: React.FC = () => {
                 e.stopPropagation();
                 handleRemoveFromSecureFolder(media.id);
               }}
-              className="rounded-full absolute right-2 top-2 scale-90 transform bg-white/20 p-2 text-white opacity-0 shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-white/40 group-hover:scale-100 group-hover:opacity-100"
+              className="absolute top-2 right-2 scale-90 transform rounded-full bg-white/20 p-2 text-white opacity-0 shadow-lg backdrop-blur-md transition-all duration-300 group-hover:scale-100 group-hover:opacity-100 hover:bg-white/40"
               aria-label="Remove from secure folder"
             >
               <Unlock className="h-4 w-4" />

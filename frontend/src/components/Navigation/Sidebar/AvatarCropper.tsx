@@ -74,7 +74,7 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({
   return (
     <div className="flex flex-col items-center gap-6 p-4">
       {/* Cropper Container with Stylish Border */}
-      <div className="rounded-xl relative h-72 w-72 bg-gradient-to-r from-blue-500 to-purple-600 p-1 shadow-xl">
+      <div className="relative h-72 w-72 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 p-1 shadow-xl">
         <div className="h-full w-full overflow-hidden rounded-lg bg-gray-900">
           <Cropper
             image={image}
@@ -119,7 +119,7 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({
       <div className="flex gap-4">
         <button
           onClick={handleCropImage}
-          className="rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-2.5 text-white shadow-lg transition-all duration-300 hover:translate-y-[-1px] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 active:translate-y-[1px]"
+          className="rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-2.5 text-white shadow-lg transition-all duration-300 hover:translate-y-[-1px] hover:shadow-xl focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none active:translate-y-[1px]"
         >
           Apply Crop
         </button>
@@ -131,7 +131,7 @@ const AvatarCropper: React.FC<AvatarCropperProps> = ({
           <h3 className="mb-2 text-center text-sm font-semibold text-gray-600 dark:text-gray-300">
             Preview
           </h3>
-          <div className="rounded-full mx-auto h-32 w-32 overflow-hidden border-4 border-white shadow-md dark:border-gray-700">
+          <div className="mx-auto h-32 w-32 overflow-hidden rounded-full border-4 border-white shadow-md dark:border-gray-700">
             <img
               src={croppedPreview}
               alt="Cropped Preview"

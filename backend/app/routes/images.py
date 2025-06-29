@@ -3,7 +3,6 @@ import asyncio
 from fastapi import APIRouter, Query, HTTPException
 from fastapi import status as fastapi_status
 from fastapi.responses import JSONResponse
-import shutil
 
 from app.config.settings import IMAGES_PATH
 
@@ -45,11 +44,9 @@ from app.schemas.images import (
     GenerateThumbnailsResponse,
     ClassIDsResponse,
     GetImagesResponse,
-    AddMultipleImagesRequest,
     DeleteThumbnailsRequest,
     DeleteThumbnailsResponse,
     FailedDeletionThumbnailResponse,
-    AddMultipleImagesResponse,
 )
 
 router = APIRouter()
@@ -87,82 +84,12 @@ def get_images():
         )
 
     except Exception:
-
         raise HTTPException(
             status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
                 message="Failed to get all images",
-            ).model_dump(),
-        )
-
-
-@router.post(
-    "/images",
-    response_model=AddMultipleImagesResponse,
-    responses={code: {"model": ErrorResponse} for code in [400, 500]},
-)
-async def add_multiple_images(payload: AddMultipleImagesRequest):
-    try:
-
-        image_paths = payload.paths
-        if not isinstance(image_paths, list):
-
-            raise HTTPException(
-                status_code=fastapi_status.HTTP_400_BAD_REQUEST,
-                detail=ErrorResponse(
-                    success=False,
-                    error="Invalid 'paths' format",
-                    message="'paths' should be a list",
-                ).model_dump(),
-            )
-
-        tasks = []
-        for image_path in image_paths:
-            if not os.path.isfile(image_path):
-                raise HTTPException(
-                    status_code=fastapi_status.HTTP_400_BAD_REQUEST,
-                    detail=ErrorResponse(
-                        success=False,
-                        error="Invalid file path",
-                        message=f"Invalid file path: {image_path}",
-                    ).model_dump(),
-                )
-
-            image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
-            file_extension = os.path.splitext(image_path)[1].lower()
-            if file_extension not in image_extensions:
-
-                raise HTTPException(
-                    status_code=fastapi_status.HTTP_400_BAD_REQUEST,
-                    detail=ErrorResponse(
-                        success=False,
-                        error="Invalid file type",
-                        message=f"File is not an image: {image_path}",
-                    ).model_dump(),
-                )
-
-            destination_path = os.path.join(IMAGES_PATH, os.path.basename(image_path))
-            shutil.copy(image_path, destination_path)
-            tasks.append(asyncio.create_task(run_get_classes(destination_path)))
-
-        asyncio.create_task(process_images(tasks))
-
-        return AddMultipleImagesResponse(
-            data=len(tasks),
-            message="Images are being processed in the background",
-            success=True,
-        )
-
-    except Exception as e:
-        print(e)
-        raise HTTPException(
-            status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False,
-                error="Internal server error",
-                message="Failed to add Images",
             ).model_dump(),
         )
 
@@ -188,7 +115,6 @@ async def process_images(tasks, folder_id):
 )
 def delete_image(payload: DeleteImageRequest):
     try:
-
         filename = payload.path
         file_path = os.path.join(IMAGES_PATH, filename)
 
@@ -209,7 +135,6 @@ def delete_image(payload: DeleteImageRequest):
         )
 
     except Exception as e:
-
         raise HTTPException(
             status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
@@ -224,7 +149,6 @@ def delete_image(payload: DeleteImageRequest):
     responses={code: {"model": ErrorResponse} for code in [404, 500]},
 )
 def delete_multiple_images(payload: DeleteMultipleImagesRequest):
-
     try:
         paths = payload.paths
         is_from_device = payload.isFromDevice
@@ -233,7 +157,6 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
 
         for path in paths:
             if not os.path.isfile(path):
-
                 raise HTTPException(
                     status_code=fastapi_status.HTTP_404_NOT_FOUND,
                     detail=ErrorResponse(
@@ -334,7 +257,6 @@ def get_all_image_objects():
         )
 
     except Exception:
-
         raise HTTPException(
             status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
@@ -353,7 +275,6 @@ def get_all_image_objects():
 def get_class_ids(path: str = Query(...)):
     try:
         if not path:
-
             raise HTTPException(
                 status_code=fastapi_status.HTTP_400_BAD_REQUEST,
                 detail=ErrorResponse(
@@ -373,7 +294,6 @@ def get_class_ids(path: str = Query(...)):
         )
 
     except Exception:
-
         raise HTTPException(
             status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
@@ -410,7 +330,6 @@ async def add_folder(payload: AddFolderRequest):
                 or not os.access(folder, os.W_OK)
                 or not os.access(folder, os.X_OK)
             ):
-
                 raise HTTPException(
                     status_code=fastapi_status.HTTP_401_UNAUTHORIZED,
                     detail=ErrorResponse(
@@ -538,11 +457,9 @@ def delete_folder_ai_tagging(payload: dict):
 @router.post("/generate-thumbnails")
 @exception_handler_wrapper
 def generate_thumbnails(payload: GenerateThumbnailsRequest):
-
     folder_paths = payload.folder_paths
     failed_paths = generate_thumbnails_for_folders(folder_paths)
     if failed_paths:
-
         return GenerateThumbnailsResponse(
             success=False,
             message="Some folders or files could not be processed",
@@ -582,11 +499,9 @@ def get_thumbnail_path():
 )
 @exception_handler_wrapper
 def delete_thumbnails(payload: DeleteThumbnailsRequest):
-
     folder_path = payload.folder_path
 
     if not os.path.isdir(folder_path):
-
         raise HTTPException(
             status_code=fastapi_status.HTTP_400_BAD_REQUEST,
             detail=ErrorResponse(
@@ -610,7 +525,6 @@ def delete_thumbnails(payload: DeleteThumbnailsRequest):
             failed_deletions.append(thumbnail_image_path)
 
     if failed_deletions:
-
         raise HTTPException(
             status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=FailedDeletionThumbnailResponse(

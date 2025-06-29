@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router';
 import {
   Home,
   Sparkles,
@@ -16,6 +16,7 @@ import CustomizationPopup from './CustomizationPopup';
 import ImageCompressor from './ImageCompressor';
 import AvatarCropper from './AvatarCropper';
 import { defaultStyles, type CustomStyles } from './styles';
+import { ROUTES } from '@/constants/routes';
 
 // Define the NavItem interface for navigation items
 interface NavItem {
@@ -120,13 +121,17 @@ const Sidebar: React.FC = () => {
 
   // Define the navigation items
   const navItems: NavItem[] = [
-    { path: '/home', label: 'Home', Icon: Home },
-    { path: '/ai-tagging', label: 'AI Tagging', Icon: Sparkles },
-    { path: '/videos', label: 'Videos', Icon: Video },
-    { path: '/albums', label: 'Albums', Icon: Images },
-    { path: '/settings', label: 'Settings', Icon: Settings },
-    { path: '/secure-folder', label: 'Secure Folder', Icon: Lock },
-    { path: '/memories', label: 'Memories', Icon: BookImage },
+    { path: `/${ROUTES.LAYOUT.HOME}`, label: 'Home', Icon: Home },
+    { path: `/${ROUTES.LAYOUT.AI}`, label: 'AI Tagging', Icon: Sparkles },
+    { path: `/${ROUTES.LAYOUT.VIDEOS}`, label: 'Videos', Icon: Video },
+    { path: `/${ROUTES.LAYOUT.ALBUMS}`, label: 'Albums', Icon: Images },
+    { path: `/${ROUTES.LAYOUT.SETTINGS}`, label: 'Settings', Icon: Settings },
+    {
+      path: `/${ROUTES.LAYOUT.SECURE_FOLDER}`,
+      label: 'Secure Folder',
+      Icon: Lock,
+    },
+    { path: `/${ROUTES.LAYOUT.MEMORIES}`, label: 'Memories', Icon: BookImage },
   ];
 
   return (
@@ -139,7 +144,7 @@ const Sidebar: React.FC = () => {
             loop
             muted
             playsInline
-            className="absolute left-1/2 top-1/2 h-auto min-h-full w-auto min-w-full -translate-x-1/2 -translate-y-1/2 transform object-cover"
+            className="absolute top-1/2 left-1/2 h-auto min-h-full w-auto min-w-full -translate-x-1/2 -translate-y-1/2 transform object-cover"
           >
             <source src={styles.backgroundVideo} type="video/mp4" />
             Your browser does not support the video tag.
@@ -150,7 +155,7 @@ const Sidebar: React.FC = () => {
       {/* Sidebar */}
       <div className="h-fit p-4">
         <nav
-          className="sidebar rounded-3xl relative z-10 flex h-[calc(100vh-2rem)] flex-col justify-between overflow-hidden border-r backdrop-blur-sm transition-all duration-300 ease-in-out"
+          className="sidebar relative z-10 flex h-[calc(100vh-2rem)] flex-col justify-between overflow-hidden rounded-3xl border-r backdrop-blur-sm transition-all duration-300 ease-in-out"
           style={sidebarStyle}
           aria-label="Main Navigation"
         >
@@ -167,7 +172,7 @@ const Sidebar: React.FC = () => {
                 role="button"
                 aria-label="Change profile picture"
               >
-                <div className="rounded-full relative h-20 w-20 overflow-hidden border-4 border-white/30 shadow-xl transition-all duration-300 hover:border-primary hover:shadow-2xl sm:h-24 sm:w-24">
+                <div className="hover:border-primary relative h-20 w-20 overflow-hidden rounded-full border-4 border-white/30 shadow-xl transition-all duration-300 hover:shadow-2xl sm:h-24 sm:w-24">
                   {croppedAvatar ? (
                     <img
                       src={croppedAvatar || '/placeholder.svg'}
@@ -195,7 +200,7 @@ const Sidebar: React.FC = () => {
 
                 {isAvatarLoading && (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="rounded-full h-8 w-8 animate-spin border-b-2 border-white"></div>
+                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-white"></div>
                   </div>
                 )}
               </div>
@@ -222,7 +227,7 @@ const Sidebar: React.FC = () => {
                 <Link
                   key={path}
                   to={path}
-                  className={`rounded-xl group flex flex-col items-center gap-1 px-2 py-3 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
+                  className={`group flex flex-col items-center gap-1 rounded-xl px-2 py-3 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
                     isActive(path)
                       ? 'bg-[var(--bg-active)] text-[var(--text-active)] shadow-lg'
                       : 'text-default hover:bg-[var(--bg-hover)]'
@@ -240,7 +245,7 @@ const Sidebar: React.FC = () => {
                     aria-hidden="true"
                     className="transition-transform duration-300 group-hover:scale-110"
                   />
-                  <span className="mt-1 whitespace-nowrap text-xs font-medium tracking-wide">
+                  <span className="mt-1 text-xs font-medium tracking-wide whitespace-nowrap">
                     {label}
                   </span>
                 </Link>
@@ -249,7 +254,7 @@ const Sidebar: React.FC = () => {
               {/* Image Compressor Button */}
               <button
                 onClick={() => setShowImageCompressor(true)}
-                className="text-default rounded-xl group flex w-full flex-col items-center gap-1 px-2 py-3 transition-all duration-300 hover:scale-[1.02] hover:bg-[var(--bg-hover)] active:scale-[0.98]"
+                className="text-default group flex w-full flex-col items-center gap-1 rounded-xl px-2 py-3 transition-all duration-300 hover:scale-[1.02] hover:bg-[var(--bg-hover)] active:scale-[0.98]"
                 aria-label="Open Image Compressor"
                 onKeyDown={handleKeyDown}
               >
@@ -286,8 +291,8 @@ const Sidebar: React.FC = () => {
       {/* Customization Popup */}
 
       {showCustomize && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm transition-opacity duration-300">
-          <div className="rounded-2xl m-4 max-h-[90vh] w-full max-w-md overflow-y-auto bg-white/90 p-4 shadow-2xl dark:bg-gray-800/90">
+        <div className="bg-opacity-70 fixed inset-0 z-50 flex items-center justify-center bg-black backdrop-blur-sm transition-opacity duration-300">
+          <div className="m-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white/90 p-4 shadow-2xl dark:bg-gray-800/90">
             <CustomizationPopup
               styles={styles}
               setStyles={setStyles}
@@ -301,7 +306,7 @@ const Sidebar: React.FC = () => {
 
       {showImageCompressor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm transition-opacity duration-300">
-          <div className="rounded-2xl m-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-white/90 p-6 shadow-2xl dark:bg-gray-800/90">
+          <div className="m-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white/90 p-6 shadow-2xl dark:bg-gray-800/90">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-xl font-bold text-transparent sm:text-2xl">
                 Image Compressor
@@ -335,7 +340,7 @@ const Sidebar: React.FC = () => {
       {/* Avatar Cropper Popup */}
       {showAvatarCropper && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm transition-opacity duration-300">
-          <div className="rounded-2xl m-4 max-h-[90vh] w-full max-w-lg overflow-y-auto bg-white/90 p-6 shadow-2xl dark:bg-gray-800/90">
+          <div className="m-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white/90 p-6 shadow-2xl dark:bg-gray-800/90">
             <div className="mb-6">
               <h2 className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-xl font-bold text-transparent sm:text-2xl">
                 Crop Avatar
