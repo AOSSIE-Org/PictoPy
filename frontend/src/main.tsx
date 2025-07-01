@@ -3,16 +3,26 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { isProd } from './utils/isProd';
 import { stopServer, startServer } from './utils/serverUtils';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { isTauriEnvironment } from './utils/tauriUtils';
 import { imagesEndpoints } from '../api/apiEndpoints';
 import { store } from './app/store';
 import { Provider } from 'react-redux';
 
 //Listen for window close event and stop server.
 const onCloseListener = async () => {
-  await getCurrentWindow().onCloseRequested(async () => {
-    await stopServer();
-  });
+  if (!isTauriEnvironment()) {
+    console.log('Window close listener is only available in Tauri environment');
+    return;
+  }
+
+  try {
+    const { getCurrentWindow } = await import('@tauri-apps/api/window');
+    await getCurrentWindow().onCloseRequested(async () => {
+      await stopServer();
+    });
+  } catch (error) {
+    console.error('Error setting up close listener:', error);
+  }
 };
 
 const fetchFilePath = async () => {
@@ -60,7 +70,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   </React.StrictMode>,
 );
 
-if (isProd()) {
+if (isProd() && isTauriEnvironment()) {
   onCloseListener();
   console.log('Starting PictoPy Server');
   startServer();
