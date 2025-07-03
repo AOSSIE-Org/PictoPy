@@ -48,10 +48,10 @@ Handles file system operations and provides a secure bridge between the frontend
 | Object Detection  | YOLOv8               |
 | Face Recognition  | FaceNet              |
 | API Framework     | FastAPI              |
-| State Management  | React Hooks          |
+| State Management  | Redux Toolkit        |
 | Styling           | Tailwind CSS         |
 | Routing           | React Router         |
-| UI Components     | Radix UI             |
+| UI Components     | ShadCN               |
 | Build Tool        | Vite                 |
 | Type Checking     | TypeScript           |
 
