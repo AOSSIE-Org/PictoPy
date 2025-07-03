@@ -63,10 +63,8 @@ The Rust backend provides the following commands that can be invoked from the fr
 ### 8. get_server_path
 
 - **Description**: Retrieves the path to the server resources directory.
-- **Parameters**:
-  - `handle`: tauri::AppHandle
+- **Parameters**: *None*
 - **Returns**: `Result<String, String>`
-
 ### 9. move_to_secure_folder
 
 - **Description**: Moves a file to the secure folder with encryption.
