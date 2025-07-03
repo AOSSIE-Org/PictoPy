@@ -49,7 +49,7 @@ const AlbumsView: React.FC = () => {
     return (
       <div className="container mx-auto pb-4">
         <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Albums</h1>
+          <h1 className="text-2xl font-bold text-gray-100 dark:text-gray-900 bg-gray-800 dark:bg-gray-100 px-4 py-2 rounded-lg">Albums</h1>
           <Button
             onClick={() => setIsCreateFormOpen(true)}
             variant="outline"
@@ -114,7 +114,7 @@ const AlbumsView: React.FC = () => {
       ) : (
         <>
           <div className="mb-4 flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Albums</h1>
+            <h1 className="text-2xl font-bold text-gray-100 dark:text-gray-900 bg-gray-800 dark:bg-gray-100 px-4 py-2 rounded-lg">Albums</h1>
             <Button
               onClick={() => setIsCreateFormOpen(true)}
               variant="outline"
