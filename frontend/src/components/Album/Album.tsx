@@ -58,7 +58,7 @@ const AlbumsView: React.FC = () => {
             Create New Album
           </Button>
         </div>
-        <div className="text-center">No albums found.</div>
+        <div className="text-xl text-center font-bold text-gray-900 dark:text-gray-100 px-4 py-2 rounded-lg">No albums found.</div>
         <CreateAlbumForm
           isOpen={isCreateFormOpen}
           closeForm={() => setIsCreateFormOpen(false)}
