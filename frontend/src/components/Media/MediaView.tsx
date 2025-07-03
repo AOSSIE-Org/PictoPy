@@ -29,9 +29,10 @@ import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { invoke } from '@tauri-apps/api/core';
 import { readFile } from '@tauri-apps/plugin-fs';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import NetflixStylePlayer from '../VideoPlayer/NetflixStylePlayer';
 import { save } from '@tauri-apps/plugin-dialog';
+import { ROUTES } from '@/constants/routes';
 
 const MediaView: React.FC<MediaViewProps> = ({
   initialIndex,
@@ -339,7 +340,7 @@ const MediaView: React.FC<MediaViewProps> = ({
       'check_secure_folder_status',
     );
     if (!secureFolderCreated) {
-      navigate('/secure-folder');
+      navigate(`/${ROUTES.LAYOUT.SECURE_FOLDER}`);
       return;
     }
 
@@ -401,8 +402,8 @@ const MediaView: React.FC<MediaViewProps> = ({
   };
 
   return (
-    <div className="to-black/98 fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-black/95 backdrop-blur-lg">
-      <div className="absolute right-4 top-4 z-50 flex items-center gap-3">
+    <div className="fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-black/95 to-black/98 backdrop-blur-lg">
+      <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
         <button
           onClick={toggleInfo}
           className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
@@ -481,7 +482,7 @@ const MediaView: React.FC<MediaViewProps> = ({
         {type === 'image' && (
           <button
             onClick={toggleSlideshow}
-            className="rounded-full flex items-center gap-2 bg-indigo-500/70 px-4 py-2 text-white transition-all duration-200 hover:bg-indigo-600/80 hover:shadow-lg"
+            className="flex items-center gap-2 rounded-full bg-indigo-500/70 px-4 py-2 text-white transition-all duration-200 hover:bg-indigo-600/80 hover:shadow-lg"
             aria-label="Toggle Slideshow"
           >
             {isSlideshowActive ? (
@@ -497,7 +498,7 @@ const MediaView: React.FC<MediaViewProps> = ({
 
         <button
           onClick={onClose}
-          className="rounded-full ml-2 bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
+          className="ml-2 rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
           aria-label="Close"
         >
           <X className="h-5 w-5" />
@@ -605,7 +606,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                 }
                 alt={`image-${globalIndex}`}
                 draggable={false}
-                className="h-full w-full select-none object-contain"
+                className="h-full w-full object-contain select-none"
                 onError={(e) => {
                   const img = e.target as HTMLImageElement;
                   img.onerror = null;
@@ -635,13 +636,13 @@ const MediaView: React.FC<MediaViewProps> = ({
           <>
             <button
               onClick={handlePrevItem}
-              className="rounded-full absolute left-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+              className="absolute top-1/2 left-4 z-50 flex items-center rounded-full bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
             <button
               onClick={handleNextItem}
-              className="rounded-full absolute right-4 top-1/2 z-50 flex items-center bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
+              className="absolute top-1/2 right-4 z-50 flex items-center rounded-full bg-white/20 p-3 text-white transition-colors duration-200 hover:bg-white/40"
             >
               <ChevronRight className="h-6 w-6" />
             </button>
@@ -650,7 +651,7 @@ const MediaView: React.FC<MediaViewProps> = ({
       </div>
 
       {type === 'image' ? (
-        <div className="rounded-xl absolute bottom-32 right-4 flex flex-col gap-4 bg-black/30 p-3 backdrop-blur-md">
+        <div className="absolute right-4 bottom-32 flex flex-col gap-4 rounded-xl bg-black/30 p-3 backdrop-blur-md">
           <div className="flex gap-2">
             <button
               onClick={handleZoomOut}
@@ -722,7 +723,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                   <Crops />
                 </button>
                 {showAdjustMenu && (
-                  <div className="absolute bottom-full right-5 mb-2 grid w-64 grid-cols-2 gap-2 rounded-md border-2 bg-white/10 p-4 backdrop-blur-md hover:border-white lg:grid-cols-1">
+                  <div className="absolute right-5 bottom-full mb-2 grid w-64 grid-cols-2 gap-2 rounded-md border-2 bg-white/10 p-4 backdrop-blur-md hover:border-white lg:grid-cols-1">
                     <div className="mb-1">
                       <label className="block text-sm font-medium text-white">
                         Brightness
@@ -831,7 +832,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                 )}
                 {onaspect && (
                   <div className="absolute bottom-full mb-2 w-32 rounded-md bg-white/20 backdrop-blur-md sm:right-1">
-                    <div className="mb-1 mt-1 flex flex-col justify-center gap-1">
+                    <div className="mt-1 mb-1 flex flex-col justify-center gap-1">
                       <div
                         className="w-full p-2 text-center hover:bg-slate-400"
                         onClick={() => setaspect(16 / 9)}
@@ -896,7 +897,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                 } cursor-pointer transition-all duration-200 hover:scale-105`}
               >
                 {isFavorite(media.path || '') && (
-                  <div className="rounded-full absolute right-1 top-1 z-10 bg-black/30 p-0.5">
+                  <div className="absolute top-1 right-1 z-10 rounded-full bg-black/30 p-0.5">
                     <Heart className="h-3 w-3 fill-current text-rose-500" />
                   </div>
                 )}
@@ -916,16 +917,16 @@ const MediaView: React.FC<MediaViewProps> = ({
       {/* Improved notification */}
       {notification && (
         <div
-          className={`rounded-full fixed left-1/2 top-4 -translate-x-1/2 transform ${
+          className={`fixed top-4 left-1/2 -translate-x-1/2 transform rounded-full ${
             notification.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'
-          } px-6 py-2 text-sm font-medium text-white shadow-lg transition-all duration-300 animate-in fade-in`}
+          } animate-in fade-in px-6 py-2 text-sm font-medium text-white shadow-lg transition-all duration-300`}
         >
           {notification.message}
         </div>
       )}
       {/* Improved info panel */}
       {showInfo && (
-        <div className="rounded-xl absolute left-4 top-4 z-50 max-w-md bg-black/50 p-4 backdrop-blur-lg transition-all duration-300 animate-in slide-in-from-left">
+        <div className="animate-in slide-in-from-left absolute top-4 left-4 z-50 max-w-md rounded-xl bg-black/50 p-4 backdrop-blur-lg transition-all duration-300">
           <h3 className="mb-3 text-lg font-medium text-white">
             File Information
           </h3>

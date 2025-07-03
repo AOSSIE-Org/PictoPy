@@ -86,7 +86,7 @@ const AlbumView: React.FC<AlbumViewProps> = ({
 
   // console.log(convertedImagePaths);
   return (
-    <div className="mx-auto pb-4 pt-1">
+    <div className="mx-auto pt-1 pb-4">
       <div className="mb-4 flex items-center justify-between">
         <Button onClick={onBack} variant="outline">
           <ArrowLeft className="h-[18px] w-[18px]" />
@@ -111,7 +111,7 @@ const AlbumView: React.FC<AlbumViewProps> = ({
               <button
                 onClick={() => handleRemoveImage(albumData.photos[index])}
                 disabled={isRemovingImage}
-                className="rounded-[50%]transition-transform absolute right-2 top-2 h-6 w-6 duration-300"
+                className="rounded-[50%]transition-transform absolute top-2 right-2 h-6 w-6 duration-300"
               >
                 <CircleX className="h-6 w-6 fill-red-500 stroke-1 text-white opacity-50 hover:opacity-100" />
               </button>

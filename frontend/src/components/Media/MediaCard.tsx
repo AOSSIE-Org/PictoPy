@@ -39,7 +39,7 @@ export default function MediaCard({ item, type }: MediaCardProps) {
 
   return (
     <div
-      className="rounded-xl group relative h-full w-full overflow-hidden shadow-sm transition-all duration-500 ease-out hover:-translate-y-1 hover:shadow-xl dark:bg-card dark:text-card-foreground"
+      className="group dark:bg-card dark:text-card-foreground relative h-full w-full overflow-hidden rounded-xl shadow-sm transition-all duration-500 ease-out hover:-translate-y-1 hover:shadow-xl"
       onClick={handleMediaClick}
       role={type === 'video' ? 'button' : 'img'}
       tabIndex={0}
@@ -47,7 +47,7 @@ export default function MediaCard({ item, type }: MediaCardProps) {
     >
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-900/30 backdrop-blur-sm">
-          <div className="animate-pulse-ring rounded-full flex h-16 w-16 items-center justify-center bg-blue-500/20">
+          <div className="animate-pulse-ring flex h-16 w-16 items-center justify-center rounded-full bg-blue-500/20">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
           </div>
         </div>
@@ -70,7 +70,7 @@ export default function MediaCard({ item, type }: MediaCardProps) {
           src={item.thumbnailUrl || item.url}
           alt={item.title}
           className={cn(
-            'rounded-xl h-full w-full object-cover transition-all duration-700 ease-out group-hover:scale-105',
+            'h-full w-full rounded-xl object-cover transition-all duration-700 ease-out group-hover:scale-105',
             isLoading && 'opacity-0',
             isError && 'hidden',
           )}
@@ -83,7 +83,7 @@ export default function MediaCard({ item, type }: MediaCardProps) {
             ref={videoRef}
             src={item.url}
             className={cn(
-              'rounded-xl h-full w-full object-cover transition-all duration-700 ease-out group-hover:scale-105',
+              'h-full w-full rounded-xl object-cover transition-all duration-700 ease-out group-hover:scale-105',
               isLoading && 'opacity-0',
               isError && 'hidden',
             )}
@@ -101,7 +101,7 @@ export default function MediaCard({ item, type }: MediaCardProps) {
               strokeWidth={1.5}
             />
             <button
-              className="rounded-full absolute bottom-4 right-4 bg-black/50 p-2 transition-colors duration-300 hover:bg-black/70"
+              className="absolute right-4 bottom-4 rounded-full bg-black/50 p-2 transition-colors duration-300 hover:bg-black/70"
               onClick={toggleMute}
               aria-label={isMuted ? 'Unmute' : 'Mute'}
             >
@@ -128,7 +128,7 @@ export default function MediaCard({ item, type }: MediaCardProps) {
         </div>
       </div>
 
-      <div className="rounded-xl absolute inset-0 ring-0 ring-blue-500/50 ring-offset-2 ring-offset-transparent transition-all duration-300 group-focus-visible:ring-2" />
+      <div className="absolute inset-0 rounded-xl ring-0 ring-blue-500/50 ring-offset-2 ring-offset-transparent transition-all duration-300 group-focus-visible:ring-2" />
     </div>
   );
 }

@@ -105,7 +105,7 @@ export default function AIGallery({
 
   return (
     <div className="w-full">
-      <div className="mx-auto px-2 pb-8 dark:bg-background dark:text-foreground">
+      <div className="dark:bg-background dark:text-foreground mx-auto px-2 pb-8">
         <div className="mb-2 flex items-center justify-between">
           {isVisibleSelectedImage && (
             <div className="flex items-center">
@@ -163,7 +163,7 @@ export default function AIGallery({
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      className="flex items-center gap-2 border-gray-500 hover:bg-accent dark:hover:bg-white/10"
+                      className="hover:bg-accent flex items-center gap-2 border-gray-500 dark:hover:bg-white/10"
                     >
                       <p className="hidden lg:inline">
                         Num of images per page : {pageNo}

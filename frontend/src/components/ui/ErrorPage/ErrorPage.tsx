@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaRedoAlt } from 'react-icons/fa';
+import { RotateCw } from 'lucide-react';
 
 interface ErrorPageProps {
   errorCode?: number; // Optional error code, defaults to 404
@@ -36,7 +36,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
                 onClick={onRetry}
                 className="inline-flex items-center rounded-lg bg-green-600 px-6 py-3 font-semibold text-white shadow-md transition duration-300 ease-in-out hover:bg-green-700"
               >
-                <FaRedoAlt className="mr-2 text-xl" />
+                <RotateCw className="mr-2 text-xl" />
                 Reload
               </button>
             )}

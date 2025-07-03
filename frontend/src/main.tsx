@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { isProd } from './utils/isProd';
 import { stopServer, startServer } from './utils/serverUtils';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { imagesEndpoints } from '../api/apiEndpoints';
+import { store } from './app/store';
+import { Provider } from 'react-redux';
 
 //Listen for window close event and stop server.
 const onCloseListener = async () => {
@@ -34,8 +36,6 @@ const fetchFilePath = async () => {
 };
 
 const Main = () => {
-  const [isReady, setIsReady] = useState(false);
-
   useEffect(() => {
     const init = async () => {
       const storedPath = localStorage.getItem('thumbnailPath');
@@ -43,15 +43,15 @@ const Main = () => {
       if (!storedPath) {
         await fetchFilePath();
       }
-      setIsReady(true);
     };
 
     init();
   }, []);
-
-  if (!isReady) return <p>Loading...</p>;
-
-  return <App />;
+  return (
+    <Provider store={store}>
+      <App />
+    </Provider>
+  );
 };
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(

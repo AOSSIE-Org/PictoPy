@@ -1,21 +1,49 @@
 import React, { useEffect, useState } from 'react';
+import { FolderSync, Trash2, Server, RefreshCw } from 'lucide-react';
+
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
-import { deleteCache } from '@/services/cacheService';
 import { Button } from '@/components/ui/button';
-import { restartServer } from '@/utils/serverUtils';
-import { isProd } from '../../utils/isProd';
-import { FolderSync, Trash2, Server } from 'lucide-react';
-import { useLocalStorage } from '@/hooks/LocalStorage';
 import LoadingScreen from '@/components/ui/LoadingScreen/LoadingScreen';
 import ErrorDialog from '@/components/Album/Error';
+import UpdateDialog from '@/components/Updater/UpdateDialog';
+
+import { deleteCache } from '@/services/cacheService';
+import { restartServer } from '@/utils/serverUtils';
+import { isProd } from '../../utils/isProd';
+
+import { useLocalStorage } from '@/hooks/LocalStorage';
+import { useUpdater } from '@/hooks/useUpdater';
 import { usePictoMutation } from '@/hooks/useQueryExtensio';
+
+import { useDispatch } from 'react-redux';
+import { showLoader, hideLoader } from '@/features/loaderSlice';
+
 import {
   deleteFolder,
   deleteThumbnails,
   generateThumbnails,
 } from '../../../api/api-functions/images.ts';
+
 const Settings: React.FC = () => {
+  const dispatch = useDispatch();
+
+  const {
+    updateAvailable,
+    isDownloading,
+    downloadProgress,
+    error,
+    checkForUpdates,
+    downloadAndInstall,
+    dismissUpdate,
+  } = useUpdater();
+
   const [isLoading, setIsLoading] = useState(false);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState<boolean>(false);
+  const [errorDialogContent, setErrorDialogContent] = useState<{
+    title: string;
+    description: string;
+  } | null>(null);
+
   const [currentPaths, setCurrentPaths] = useLocalStorage<string[]>(
     'folderPaths',
     [],
@@ -24,15 +52,12 @@ const Settings: React.FC = () => {
     'auto-add-folder',
     'false',
   );
+  const [check, setCheck] = useState<boolean>(autoFolderSetting === 'true');
   const [addedFolders, setAddedFolders] = useLocalStorage<string[]>(
     'addedFolders',
     [],
   );
-  const [check, setCheck] = useState<boolean>(autoFolderSetting === 'true');
-  const [errorDialogContent, setErrorDialogContent] = useState<{
-    title: string;
-    description: string;
-  } | null>(null);
+
   const { mutate: generateThumbnailsAPI, isPending: isGeneratingThumbnails } =
     usePictoMutation({
       mutationFn: generateThumbnails,
@@ -53,8 +78,19 @@ const Settings: React.FC = () => {
     setCheck(autoFolderSetting === 'true');
   }, [autoFolderSetting]);
 
+  const onCheckUpdatesClick = () => {
+    let checkUpdates = async () => {
+      dispatch(showLoader('Checking for updates...'));
+      const hasUpdate = await checkForUpdates();
+      if (hasUpdate) {
+        setUpdateDialogOpen(true);
+      }
+      dispatch(hideLoader());
+    };
+    checkUpdates();
+  };
+
   const handleFolderPathChange = async (newPaths: string[]) => {
-    //Error if newPaths contains a path that is already in currentPaths
     const duplicatePaths = newPaths.filter((path) =>
       currentPaths.includes(path),
     );
@@ -71,6 +107,7 @@ const Settings: React.FC = () => {
     setCurrentPaths([...currentPaths, ...newPaths]);
     await deleteCache();
   };
+
   const handleDeleteCache = async () => {
     try {
       const result = await deleteCache();
@@ -96,14 +133,6 @@ const Settings: React.FC = () => {
     }
   };
 
-  if (isGeneratingThumbnails || isDeletingThumbnails || isLoading) {
-    return (
-      <div className="flex h-full w-full items-center justify-center">
-        <LoadingScreen variant="fullscreen" />
-      </div>
-    );
-  }
-
   const showErrorDialog = (title: string, err: unknown) => {
     setErrorDialogContent({
       title,
@@ -112,9 +141,17 @@ const Settings: React.FC = () => {
     });
   };
 
+  if (isGeneratingThumbnails || isDeletingThumbnails || isLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <LoadingScreen variant="fullscreen" />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex-1 px-4 pt-1">
-      <div className="bg-theme-light rounded-2xl space-y-6 border border-white/10 p-6 shadow backdrop-blur-md backdrop-saturate-150 dark:border-white/5 dark:bg-white/5">
+      <div className="bg-theme-light space-y-6 rounded-2xl border border-white/10 p-6 shadow backdrop-blur-md backdrop-saturate-150 dark:border-white/5 dark:bg-white/5">
         <div>
           <h2 className="text-theme-dark dark:text-theme-light mb-2 text-lg font-medium">
             Current Folder Paths
@@ -141,7 +178,8 @@ const Settings: React.FC = () => {
             </div>
           )}
         </div>
-        <div className="w-40 space-y-4">
+
+        <div className="max-w-46 space-y-4">
           <FolderPicker
             setFolderPaths={handleFolderPathChange}
             className="h-10 w-full"
@@ -149,22 +187,31 @@ const Settings: React.FC = () => {
           <Button
             onClick={handleDeleteCache}
             variant="outline"
-            className="h-10 w-full border-gray-500 hover:bg-accent dark:hover:bg-white/10"
+            className="hover:bg-accent h-10 w-full border-gray-500 dark:hover:bg-white/10"
           >
-            <FolderSync className="text-gray-5 mr-2 h-5 w-5 dark:text-gray-50" />
-            Refresh Cache
+            <FolderSync className="text-gray-5 mr-1 h-5 w-5 dark:text-gray-50" />
+            Refresh cache
+          </Button>
+          <Button
+            onClick={onCheckUpdatesClick}
+            variant="outline"
+            className="hover:bg-accent h-10 w-full border-gray-500 dark:hover:bg-white/10"
+          >
+            <RefreshCw className="text-gray-5 mr-1 h-5 w-5 dark:text-gray-50" />
+            Check for updates
           </Button>
           {isProd() && (
             <Button
               onClick={() => restartServer(setIsLoading)}
               variant="outline"
-              className="h-10 w-full border-gray-500 hover:bg-accent dark:hover:bg-white/10"
+              className="hover:bg-accent h-10 w-full border-gray-500 dark:hover:bg-white/10"
             >
               <Server className="text-gray-5 mr-2 h-5 w-5 dark:text-gray-50" />
-              Restart Server
+              Restart server
             </Button>
           )}
         </div>
+
         <div>
           <label className="inline-flex cursor-pointer items-center gap-2">
             <input
@@ -180,17 +227,37 @@ const Settings: React.FC = () => {
             <span className="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">
               Auto Sync Desktop Folders
             </span>
-            <div className="rounded-full after:rounded-full peer relative h-6 w-11 bg-gray-200 after:absolute after:start-[2px] after:top-0.5 after:h-5 after:w-5 after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-4 peer-focus:ring-blue-300 dark:border-gray-600 dark:bg-gray-700 dark:peer-checked:bg-blue-600 dark:peer-focus:ring-blue-800 rtl:peer-checked:after:-translate-x-full"></div>
+            <div className="peer relative h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-600 peer-focus:ring-4 peer-focus:ring-blue-300 after:absolute after:start-[2px] after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white rtl:peer-checked:after:-translate-x-full dark:border-gray-600 dark:bg-gray-700 dark:peer-checked:bg-blue-600 dark:peer-focus:ring-blue-800"></div>
           </label>
-          <p className="ml-3 mt-1 text-xs text-yellow-500">
+          <p className="mt-1 ml-3 text-xs text-yellow-500">
             WARNING: It may impact performance, restart for changes to take
             effect.
           </p>
         </div>
       </div>
+
       <ErrorDialog
         content={errorDialogContent}
         onClose={() => setErrorDialogContent(null)}
+      />
+      <UpdateDialog
+        update={updateAvailable}
+        open={updateDialogOpen}
+        onOpenChange={(open: boolean) => {
+          if (!open && !isDownloading) {
+            setUpdateDialogOpen(open);
+            setTimeout(dismissUpdate, 1000);
+          }
+        }}
+        onDownload={downloadAndInstall}
+        onLater={() => {
+          setUpdateDialogOpen(false);
+          setTimeout(dismissUpdate, 1000);
+        }}
+        isDownloading={isDownloading}
+        downloadProgress={downloadProgress}
+        error={error}
+        showCloseButton={false || !isDownloading}
       />
     </div>
   );

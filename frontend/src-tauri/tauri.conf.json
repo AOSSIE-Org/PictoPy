@@ -7,7 +7,8 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "deb", "dmg"],
+    "targets": ["nsis", "deb", "dmg", "app"],
+    "createUpdaterArtifacts": true,
     "linux": {
       "deb": {
         "postInstallScript": "./postinstall.sh"
@@ -22,14 +23,23 @@
     ],
     "resources": {
       "../../backend/dist/": "resources/server"
+    },
+    "macOS": {
+      "signingIdentity": "-"
     }
   },
   "productName": "PictoPy",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "identifier": "com.yourcompany.pictopy",
   "plugins": {
     "fs": {
       "requireLiteralLeadingDot": true
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM5REMxNjMwRjgyRjM2OUIKUldTYk5pLzRNQmJjeWVWMTdLWkNxazNiQTY3YkNVKzZva1U3c2taM3lSOGZvTzJzdnJtNVRvakMK",
+      "endpoints": [
+        "https://github.com/rahulharpal1603/PictoPy/releases/latest/download/latest.json"
+      ]
     }
   },
   "app": {

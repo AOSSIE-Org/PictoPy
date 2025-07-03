@@ -16,10 +16,10 @@ const AlbumCard: React.FC<AlbumCardProps> = ({
   onDelete,
 }) => {
   return (
-    <div className="group relative h-64 overflow-hidden rounded-lg bg-slate-200 shadow-lg transition-transform duration-300 ease-in-out hover:-translate-y-2 hover:shadow-xl dark:bg-slate-800 dark:text-card-foreground">
+    <div className="group dark:text-card-foreground relative h-64 overflow-hidden rounded-lg bg-slate-200 shadow-lg transition-transform duration-300 ease-in-out hover:-translate-y-2 hover:shadow-xl dark:bg-slate-800">
       <div onClick={onClick} className="h-full cursor-pointer">
         {album.isHidden && (
-          <div className="rounded absolute left-2 top-2 bg-red-600 px-2 py-1 text-xs text-white">
+          <div className="absolute top-2 left-2 rounded bg-red-600 px-2 py-1 text-xs text-white">
             Hidden
           </div>
         )}
@@ -34,7 +34,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({
             <Images className="h-16 w-16 text-slate-400" />
           </div>
         )}
-        <div className="absolute inset-0 flex items-end bg-black bg-opacity-40 p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+        <div className="bg-opacity-40 absolute inset-0 flex items-end bg-black p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
           <div className="text-white">
             <h3 className="text-lg font-semibold">{album.title}</h3>
             <p className="text-sm">
@@ -43,7 +43,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({
           </div>
         </div>
       </div>
-      <div className="absolute right-2 top-2">
+      <div className="absolute top-2 right-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">

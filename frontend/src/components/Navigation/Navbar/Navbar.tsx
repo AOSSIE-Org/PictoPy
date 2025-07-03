@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { ThemeSelector } from '@/components/ThemeToggle';
 import { motion } from 'framer-motion';
 
 interface NavbarProps {
@@ -63,7 +63,7 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
         initial={{ y: -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="rounded-2xl mb-4 mt-3 flex h-16 w-[90%] transform items-center justify-between border border-gray-200/30 bg-gradient-to-r from-blue-600 to-purple-700 px-4 shadow-lg backdrop-blur-xl backdrop-saturate-200 transition-all duration-300 ease-in-out hover:shadow-blue-500/10 dark:border-white/5 dark:bg-gradient-to-r dark:from-gray-800 dark:to-black sm:w-[70%] sm:px-8 md:w-[55%] md:px-16"
+        className="mt-3 mb-4 flex h-16 w-[90%] transform items-center justify-between rounded-2xl border border-gray-200/30 bg-gradient-to-r from-blue-600 to-purple-700 px-4 shadow-lg backdrop-blur-xl backdrop-saturate-200 transition-all duration-300 ease-in-out hover:shadow-blue-500/10 sm:w-[70%] sm:px-8 md:w-[55%] md:px-16 dark:border-white/5 dark:bg-gradient-to-r dark:from-gray-800 dark:to-black"
       >
         {/* Logo Section */}
         <div className="flex items-center gap-4">
@@ -74,7 +74,7 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
               className="h-8 transition-all duration-300 hover:opacity-90"
               alt="PictoPy Logo"
             />
-            <span className="bg-clip-text font-sans text-lg font-bold text-white drop-shadow-md dark:text-white sm:text-xl">
+            <span className="bg-clip-text font-sans text-lg font-bold text-white drop-shadow-md sm:text-xl dark:text-white">
               PictoPy
             </span>
           </div>
@@ -93,7 +93,7 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
                 defaultValue={name}
                 onKeyDown={handleNameSubmit}
                 onBlur={handleBlur}
-                className="ml-2 w-32 rounded-lg border border-white/30 bg-white/10 px-3 py-1 text-white placeholder-white/60 backdrop-blur-sm transition-colors duration-200 focus:border-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-300/50"
+                className="ml-2 w-32 rounded-lg border border-white/30 bg-white/10 px-3 py-1 text-white placeholder-white/60 backdrop-blur-sm transition-colors duration-200 focus:border-yellow-300 focus:ring-2 focus:ring-yellow-300/50 focus:outline-none"
                 autoFocus
                 aria-label="Enter your name"
               />
@@ -102,14 +102,14 @@ export function Navbar({ title, onNameChange }: NavbarProps) {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleNameClick}
-                className="ml-2 rounded-lg border border-white/20 bg-white/10 px-3 py-0.5 text-white transition-all duration-200 hover:border-white/30 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-yellow-300/50 focus:ring-offset-2 focus:ring-offset-transparent"
+                className="ml-2 rounded-lg border border-white/20 bg-white/10 px-3 py-0.5 text-white transition-all duration-200 hover:border-white/30 hover:bg-white/20 focus:ring-2 focus:ring-yellow-300/50 focus:ring-offset-2 focus:ring-offset-transparent focus:outline-none"
                 aria-label="Click to edit name"
               >
                 {name || 'User'}
               </motion.button>
             )}
           </div>
-          <ThemeToggle />
+          <ThemeSelector />
         </div>
       </motion.div>
     </header>

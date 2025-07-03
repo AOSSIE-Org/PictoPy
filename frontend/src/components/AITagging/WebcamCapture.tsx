@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui/button';
 import { Camera } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import { BACKEND_URL } from '../../Config/Backend';
+import { BACKEND_URL } from '@/config/Backend';
 
 interface WebcamCaptureProps {
   onCapture: (matchedPaths: string[], errorMessage?: string) => void;
@@ -300,7 +300,7 @@ const WebcamCapture: React.FC<WebcamCaptureProps> = ({
                 className="h-[360px] w-full object-cover"
                 alt="Webcam feed"
               />
-              <div className="rounded-full absolute left-2 top-2 bg-black/60 px-3 py-1 text-sm text-white">
+              <div className="absolute top-2 left-2 rounded-full bg-black/60 px-3 py-1 text-sm text-white">
                 {facesDetected > 0
                   ? `${facesDetected} ${facesDetected === 1 ? 'face' : 'faces'} detected`
                   : 'No faces detected'}

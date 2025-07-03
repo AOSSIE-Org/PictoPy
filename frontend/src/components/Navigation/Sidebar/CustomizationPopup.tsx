@@ -62,7 +62,7 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
           className="h-10 w-10 cursor-pointer rounded-md border-2 border-gray-200 shadow-sm dark:border-gray-600"
         />
         <div
-          className="rounded-full absolute -right-1 -top-1 h-4 w-4 border border-white shadow-sm"
+          className="absolute -top-1 -right-1 h-4 w-4 rounded-full border border-white shadow-sm"
           style={{ backgroundColor: styles[key] as string }}
         ></div>
       </div>
@@ -70,7 +70,7 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           {label}
         </label>
-        <div className="rounded mt-1 bg-gray-100 px-2 py-1 font-mono text-xs dark:bg-gray-800">
+        <div className="mt-1 rounded bg-gray-100 px-2 py-1 font-mono text-xs dark:bg-gray-800">
           {styles[key]}
         </div>
       </div>
@@ -198,7 +198,7 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
   );
 
   const SectionHeader: React.FC<{ title: string }> = ({ title }) => (
-    <h3 className="mb-4 border-b border-gray-200 pb-2 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+    <h3 className="mb-4 border-b border-gray-200 pb-2 text-sm font-semibold tracking-wider text-gray-500 uppercase dark:border-gray-700 dark:text-gray-400">
       {title}
     </h3>
   );
@@ -234,7 +234,7 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
                 }}
               ></div>
               <div
-                className="rounded-full relative z-10 p-2"
+                className="relative z-10 rounded-full p-2"
                 style={{
                   backgroundColor: theme.activeBackgroundColor,
                   color: theme.activeTextColor,
@@ -323,7 +323,7 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm"
+      className="bg-opacity-70 fixed inset-0 z-50 flex items-center justify-center bg-black backdrop-blur-sm"
       style={{
         backgroundImage: styles.backgroundImage || undefined,
         backgroundSize: 'cover',
@@ -339,7 +339,7 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
           muted
         />
       )}
-      <div className="rounded-xl max-h-[85vh] w-[450px] overflow-hidden bg-white/90 shadow-2xl backdrop-blur-md dark:bg-gray-800/90">
+      <div className="max-h-[85vh] w-[450px] overflow-hidden rounded-xl bg-white/90 shadow-2xl backdrop-blur-md dark:bg-gray-800/90">
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
             Customize Theme
@@ -363,7 +363,7 @@ const CustomizationPopup: React.FC<CustomizationPopupProps> = ({
             active={activeTab === 'colors'}
             onClick={() => setActiveTab('colors')}
             icon={
-              <div className="rounded-full h-4 w-4 overflow-hidden border border-gray-300 dark:border-gray-500">
+              <div className="h-4 w-4 overflow-hidden rounded-full border border-gray-300 dark:border-gray-500">
                 <div className="h-full w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
               </div>
             }

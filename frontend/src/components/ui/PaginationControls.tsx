@@ -71,7 +71,7 @@ export default function PaginationControls({
               ) : (
                 <PaginationItem key={index}>
                   <PaginationLink
-                    className="cursor-pointer transition-all duration-200 hover:scale-110 hover:bg-primary/90 active:scale-95"
+                    className="hover:bg-primary/90 cursor-pointer transition-all duration-200 hover:scale-110 active:scale-95"
                     isActive={page === currentPage}
                     onClick={() => onPageChange(Number(page))}
                   >

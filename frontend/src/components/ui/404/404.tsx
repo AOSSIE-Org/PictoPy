@@ -18,7 +18,7 @@ const NotFoundPage: React.FC<NotFoundProps> = ({ message }) => {
         </p>
         <a
           href="/"
-          className="rounded inline-block bg-blue-500 px-6 py-3 text-white transition-colors hover:bg-blue-600"
+          className="inline-block rounded bg-blue-500 px-6 py-3 text-white transition-colors hover:bg-blue-600"
         >
           Go Home
         </a>

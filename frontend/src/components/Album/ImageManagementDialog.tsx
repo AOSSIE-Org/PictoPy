@@ -102,11 +102,11 @@ const ImageManagementDialog: React.FC<ImageManagementDialogProps> = ({
                 <Button
                   onClick={() => handleRemoveImage(image)}
                   disabled={isRemovingImage}
-                  className="rounded-full absolute right-0 top-0 bg-red-500 p-1 text-white"
+                  className="absolute top-0 right-0 rounded-full bg-red-500 p-1 text-white"
                 >
                   X
                 </Button>
-                <div className="absolute bottom-0 left-0 right-0 truncate rounded-b-lg bg-black bg-opacity-50 p-1 text-xs text-white">
+                <div className="bg-opacity-50 absolute right-0 bottom-0 left-0 truncate rounded-b-lg bg-black p-1 text-xs text-white">
                   {getImageName(image)}
                 </div>
               </div>

@@ -6,7 +6,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui/button';
 import { MediaItem } from '@/types/Media';
 import AITaggingFolderPicker from '../FolderPicker/AITaggingFolderPicker';
 import DeleteSelectedImagePage from '../FolderPicker/DeleteSelectedImagePage';
@@ -194,7 +194,7 @@ export default function FilterControls({
         <Button
           onClick={() => setIsVisibleSelectedImage(false)}
           variant="outline"
-          className="border-gray-500 hover:bg-accent dark:hover:bg-white/10"
+          className="hover:bg-accent border-gray-500 dark:hover:bg-white/10"
         >
           <Trash2 className="h-4 w-4" />
           <p className="ml-1 hidden lg:inline">Delete Images</p>
@@ -204,7 +204,7 @@ export default function FilterControls({
           <DialogTrigger asChild>
             <Button
               variant="outline"
-              className="border-gray-500 hover:bg-accent dark:hover:bg-white/10"
+              className="hover:bg-accent border-gray-500 dark:hover:bg-white/10"
             >
               <UserSearch className="h-4 w-4" />
               <p className="ml-1 hidden lg:inline">Sort by Face</p>
@@ -270,7 +270,7 @@ export default function FilterControls({
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              className="flex cursor-default items-center gap-2 border-gray-500 p-2 hover:bg-accent dark:hover:bg-white/10"
+              className="hover:bg-accent flex cursor-default items-center gap-2 border-gray-500 p-2 dark:hover:bg-white/10"
               onClick={() => handleToggleDropdown}
             >
               <Filter className="h-4 w-4" />
@@ -280,7 +280,7 @@ export default function FilterControls({
                   ele.isChecked ? (
                     <p
                       key={idx}
-                      className="flex items-center justify-center gap-1 rounded-lg border-white bg-gray-800 pb-1 pl-2 pr-2 pt-1"
+                      className="flex items-center justify-center gap-1 rounded-lg border-white bg-gray-800 pt-1 pr-2 pb-1 pl-2"
                     >
                       {ele.tag}
                     </p>
