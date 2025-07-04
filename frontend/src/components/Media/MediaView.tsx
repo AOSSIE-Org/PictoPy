@@ -700,7 +700,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                 </button>
                 <select
                   onChange={(e) => setFilter(e.target.value)}
-                  className="rounded-md bg-white/10 px-2 py-2 text-sm text-white transition-all duration-200 hover:bg-white/20"
+                  className="rounded-md bg-white/10 px-2 py-2 text-sm text-black transition-all duration-200 hover:bg-white/20"
                 >
                   <option value="">No Filter</option>
                   <option value="grayscale(100%)">Grayscale</option>
@@ -708,6 +708,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                   <option value="invert(100%)">Invert</option>
                   <option value="saturate(200%)">Saturate</option>
                 </select>
+
                 <button
                   onClick={toggleAdjustMenu}
                   className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
