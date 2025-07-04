@@ -830,7 +830,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                     </div>
                   </div>
                 )}
-                )}
+            
                 {onaspect && (
                   <div className="absolute bottom-full mb-2 w-32 rounded-md bg-white/20 backdrop-blur-md sm:right-1">
                     <div className="mt-1 mb-1 flex flex-col justify-center gap-1">
