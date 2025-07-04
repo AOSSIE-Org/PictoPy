@@ -57,16 +57,86 @@ Handles file system operations and provides a secure bridge between the frontend
 
 ## Setup
 
-1. Setup Using Script (Recommended Approach): [Guide](docs/Script_Setup_Guide.md)
-2. Setup Manually: [Guide](docs/Manual_Setup_Guide.md)
-3. Docker Setup:
+### Prerequisites
 
-   - Docker Compose Setup: [Guide](./docs/docker-compose/redme.md)
-   - Setup using Dockerfile
+- [NodeJS](https://nodejs.org/en) (LTS Version Recommended)
+- [Git](https://git-scm.com/downloads) version control system
+- [Python 3.12](https://www.python.org/downloads/)
 
-     - For setting up the frontend, follow the instructions in the [Frontend Setup Guide](./docs/frontend/docker-setup.md).
-       </br>
-     - For setting up the backend, follow the instructions in the [Backend Setup Guide](./docs/backend/docker-setup.md).
+### 1. Clone the Repository
+
+1. Fork the PictoPy repository: https://github.com/AOSSIE-Org/PictoPy
+2. Clone your forked repository:
+   ```bash
+   git clone https://github.com/yourUsername/PictoPy
+   cd PictoPy
+   ```
+3. Add the main repository as "upstream":
+   ```bash
+   git remote add upstream https://github.com/AOSSIE-Org/PictoPy
+   ```
+
+### 2. Automated Setup (Recommended)
+
+Run the automatic setup script:
+```bash
+npm run setup
+```
+
+> **Note:** This step can take a long time depending on your internet connection and system specifications.
+
+### 3. Manual Setup
+
+#### Backend Setup
+
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+
+2. Create and activate a virtual environment:
+   ```bash
+   # Linux/MacOS
+   python3 -m venv .env
+   source .env/bin/activate
+   
+   # Windows (PowerShell)
+   python -m venv .env
+   .env\Scripts\activate.ps1
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Start the backend server:
+   ```bash
+   fastapi dev
+   ```
+
+#### Frontend Setup
+
+1. Install Tauri prerequisites based on your OS using this [guide](https://tauri.app/start/prerequisites/).
+
+2. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+4. Start the development server:
+   ```bash
+   npm run tauri dev
+   ```
+
+### 4. Docker Setup
+
+For Docker setup, refer to the [Docker Compose Guide](./docs/docker-compose/redme.md).
 
 ## Testing
 
