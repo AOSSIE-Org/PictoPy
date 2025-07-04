@@ -34,9 +34,12 @@ const AlbumsView: React.FC = () => {
   } | null>(null);
 
   if (isLoading)
-    <div className="flex h-full w-full items-center justify-center">
-      <LoadingScreen message="Loading Albums..." />
-    </div>;
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <LoadingScreen message="Loading Albums..." />
+      </div>
+    );
+
   const showErrorDialog = (title: string, err: unknown) => {
     setErrorDialogContent({
       title,
@@ -49,7 +52,9 @@ const AlbumsView: React.FC = () => {
     return (
       <div className="container mx-auto pb-4">
         <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-100 dark:text-gray-900 bg-gray-800 dark:bg-gray-100 px-4 py-2 rounded-lg">Albums</h1>
+          <h1 className="rounded-lg bg-gray-800 px-4 py-2 text-2xl font-bold text-gray-100 dark:bg-gray-100 dark:text-gray-900">
+            Albums
+          </h1>
           <Button
             onClick={() => setIsCreateFormOpen(true)}
             variant="outline"
@@ -58,7 +63,9 @@ const AlbumsView: React.FC = () => {
             Create New Album
           </Button>
         </div>
-        <div className="text-xl text-center font-bold text-gray-900 dark:text-gray-100 px-4 py-2 rounded-lg">No albums found.</div>
+        <div className="rounded-lg px-4 py-2 text-center text-xl font-bold text-gray-900 dark:text-gray-100">
+          No albums found.
+        </div>
         <CreateAlbumForm
           isOpen={isCreateFormOpen}
           closeForm={() => setIsCreateFormOpen(false)}
@@ -114,7 +121,9 @@ const AlbumsView: React.FC = () => {
       ) : (
         <>
           <div className="mb-4 flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-100 dark:text-gray-900 bg-gray-800 dark:bg-gray-100 px-4 py-2 rounded-lg">Albums</h1>
+            <h1 className="rounded-lg bg-gray-800 px-4 py-2 text-2xl font-bold text-gray-100 dark:bg-gray-100 dark:text-gray-900">
+              Albums
+            </h1>
             <Button
               onClick={() => setIsCreateFormOpen(true)}
               variant="outline"
