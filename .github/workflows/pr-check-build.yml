@@ -1,13 +1,12 @@
-name: Tauri and Server Build Check
+name: PR Check
 on:
-  pull_request_review:
-    types: [submitted]
   pull_request:
     paths:
       - "frontend/**"
 
 jobs:
   tauri-build-check:
+    name: Tauri Build Check
     strategy:
       fail-fast: false
       matrix:
