@@ -58,8 +58,9 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{vars.TAURI_SAMPLE_KEY}}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{vars.TAURI_SAMPLE_KEY_PASS}}
+          # Don't worry, the below key is just a sample key for PR-Checks. Actual app build workflow uses a secret private key :)
+          TAURI_SIGNING_PRIVATE_KEY: dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5TzhIVE9SbEtZZThpM2RvQWpvV09wZXlEOXR0cVRsVUs3NlR2NXhRTUJsSUFBQkFBQUFBQUFBQUFBQUlBQUFBQTBVZE5kNmR4ZHdScUtDWURsNWtweXQwem01WlJobXQzSmNtQUZydnNrb0UvSzJKQnM0b2ZRcSt6eElmaHFHZ3VzVkRrRkdtSC9jcGVRMDJzZlR3RDRta3V2UDBNdzRUSU1LQlo0dk43NHRHZGdaYTNPbndhYU14YmdqN1Y3VkNRb2l2bDF4NDQ5Tk09Cg==
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: abcd
         with:
           projectPath: ./frontend
           args: ${{ matrix.args }}
