@@ -41,6 +41,8 @@ jobs:
         run: |
           cd frontend
           npm install
+          echo ${{vars.TAURI_SAMPLE_KEY}}
+          echo ${{vars.TAURI_SAMPLE_KEY_PASS}}
 
       - name: cache cargo registry and build
         uses: actions/cache@v3
@@ -56,8 +58,8 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ vars.TAURI_SAMPLE_KEY}}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ vars.TAURI_SAMPLE_KEY_PASS }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{vars.TAURI_SAMPLE_KEY}}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{vars.TAURI_SAMPLE_KEY_PASS}}
         with:
           projectPath: ./frontend
           args: ${{ matrix.args }}
