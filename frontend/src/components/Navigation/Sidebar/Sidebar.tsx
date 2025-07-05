@@ -28,7 +28,6 @@ type CustomCSSProperties = React.CSSProperties & {
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
-  // const [] = useState<boolean>(false);
   const [styles] = useState<CustomStyles>(defaultStyles);
 
   // Check if the current path matches the given path
@@ -74,22 +73,6 @@ const Sidebar: React.FC = () => {
 
   return (
     <>
-      {/* Background Video */}
-      {styles.backgroundVideo && (
-        <div className="fixed inset-0 z-[-1] h-full w-full overflow-hidden">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="absolute top-1/2 left-1/2 h-auto min-h-full w-auto min-w-full -translate-x-1/2 -translate-y-1/2 transform object-cover"
-          >
-            <source src={styles.backgroundVideo} type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
-        </div>
-      )}
-
       {/* Sidebar */}
       <div className="h-fit p-4">
         <nav
@@ -98,7 +81,6 @@ const Sidebar: React.FC = () => {
           aria-label="Main Navigation"
         >
           <div className="scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent mt-4 flex flex-col items-center overflow-y-auto">
-
             {/* Navigation Items */}
             <div className="w-full space-y-1 px-3">
               {navItems.map(({ path, label, Icon }) => (
