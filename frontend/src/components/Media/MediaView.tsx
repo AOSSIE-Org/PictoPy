@@ -700,7 +700,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                 </button>
                 <select
                   onChange={(e) => setFilter(e.target.value)}
-                  className="rounded-md bg-white/10 px-2 py-2 text-sm text-white transition-all duration-200 hover:bg-white/20"
+                  className="rounded-md bg-white/10 px-2 py-2 text-sm text-black transition-all duration-200 hover:bg-white/20"
                 >
                   <option value="">No Filter</option>
                   <option value="grayscale(100%)">Grayscale</option>
@@ -708,6 +708,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                   <option value="invert(100%)">Invert</option>
                   <option value="saturate(200%)">Saturate</option>
                 </select>
+
                 <button
                   onClick={toggleAdjustMenu}
                   className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
@@ -723,7 +724,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                   <Crops />
                 </button>
                 {showAdjustMenu && (
-                  <div className="absolute right-5 bottom-full mb-2 grid w-64 grid-cols-2 gap-2 rounded-md border-2 bg-white/10 p-4 backdrop-blur-md hover:border-white lg:grid-cols-1">
+                  <div className="absolute bottom-full right-5 mb-2 z-[9999] grid w-64 grid-cols-2 gap-2 rounded-md border bg-gray-500 p-4 hover:border-white lg:grid-cols-1 max-h-60 overflow-y-auto">
                     <div className="mb-1">
                       <label className="block text-sm font-medium text-white">
                         Brightness
@@ -830,6 +831,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                     </div>
                   </div>
                 )}
+            
                 {onaspect && (
                   <div className="absolute bottom-full mb-2 w-32 rounded-md bg-white/20 backdrop-blur-md sm:right-1">
                     <div className="mt-1 mb-1 flex flex-col justify-center gap-1">
