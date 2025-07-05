@@ -7,7 +7,11 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "deb", "app"],
+    "targets": [
+      "nsis",
+      "deb",
+      "app"
+    ],
     "createUpdaterArtifacts": true,
     "linux": {
       "deb": {
@@ -36,7 +40,7 @@
       "requireLiteralLeadingDot": true
     },
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhGNzZCQTA5NDE3MzYzOUEKUldTYVkzTkJDYnAyaitmMzAzWFMreHpPd1NzWTNXUEVjQnlVRmcrNWp5Rnk2WHRScVZGQlBLTk4K",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDEzOTBGRjhEM0E3M0U0OUMKUldTYzVITTZqZitRRXdDVmhhMFVhaXkxa0tVUHluZzB6Y0dnRXg0cHMzZHZkMy85MnFKYmFuRzkK",
       "endpoints": [
         "https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/latest.json"
       ]
@@ -57,7 +61,9 @@
     ],
     "security": {
       "assetProtocol": {
-        "scope": ["**"],
+        "scope": [
+          "**"
+        ],
         "enable": true
       },
       "csp": null
