@@ -4,6 +4,7 @@ import UpdateDialog from '@/components/Updater/UpdateDialog';
 import { useDispatch } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { markCompleted } from '@/features/onboardingSlice';
+import { showInfoDialog } from '@/features/infoDialogSlice';
 
 interface UpdateStepProps {
   stepIndex: number;
@@ -28,6 +29,15 @@ export const UpdateStep: React.FC<UpdateStepProps> = ({
       dispatch(hideLoader());
       if (!hasUpdate) {
         dispatch(markCompleted(stepIndex));
+      } else {
+        dispatch(
+          showInfoDialog({
+            title: 'No Updates Available',
+            description:
+              'Your application is already up to date. You are running the latest version.',
+            variant: 'success',
+          }),
+        );
       }
     };
     check();

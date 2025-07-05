@@ -17,6 +17,7 @@ import { usePictoMutation } from '@/hooks/useQueryExtensio';
 
 import { useDispatch } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
+import { showInfoDialog } from '@/features/infoDialogSlice';
 
 import {
   deleteFolder,
@@ -84,6 +85,15 @@ const Settings: React.FC = () => {
       const hasUpdate = await checkForUpdates();
       if (hasUpdate) {
         setUpdateDialogOpen(true);
+      } else {
+        dispatch(
+          showInfoDialog({
+            title: 'No Updates Available',
+            description:
+              'Your application is already up to date. You are running the latest version.',
+            variant: 'success',
+          }),
+        );
       }
       dispatch(hideLoader());
     };
@@ -204,7 +214,7 @@ const Settings: React.FC = () => {
             <Button
               onClick={() => restartServer(setIsLoading)}
               variant="outline"
-              className="hover:bg-accent h-10 w-full border-gray-500 dark:hover:bg-white/10"
+              className="hover:bg-accent dark:hover:bg-world/10 h-10 w-full border-gray-500"
             >
               <Server className="text-gray-5 mr-2 h-5 w-5 dark:text-gray-50" />
               Restart server
