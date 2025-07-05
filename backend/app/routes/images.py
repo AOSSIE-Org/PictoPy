@@ -287,9 +287,11 @@ def get_class_ids(path: str = Query(...)):
         class_ids = get_objects_db(path)
         return ClassIDsResponse(
             success=True,
-            message="Successfully retrieved class IDs"
-            if class_ids
-            else "No class IDs found for the image",
+            message=(
+                "Successfully retrieved class IDs"
+                if class_ids
+                else "No class IDs found for the image"
+            ),
             data=class_ids if class_ids else "None",
         )
 

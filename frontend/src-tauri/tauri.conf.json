@@ -48,6 +48,8 @@
         "title": "PictoPy",
         "width": 800,
         "height": 600,
+        "minWidth": 1280,
+        "minHeight": 720,
         "resizable": true,
         "fullscreen": false,
         "maximized": false
