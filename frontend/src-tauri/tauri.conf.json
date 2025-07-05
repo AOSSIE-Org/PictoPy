@@ -7,7 +7,11 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "deb", "dmg", "app"],
+    "targets": [
+      "nsis",
+      "deb",
+      "app"
+    ],
     "createUpdaterArtifacts": true,
     "linux": {
       "deb": {
@@ -29,16 +33,16 @@
     }
   },
   "productName": "PictoPy",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "identifier": "com.yourcompany.pictopy",
   "plugins": {
     "fs": {
       "requireLiteralLeadingDot": true
     },
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM5REMxNjMwRjgyRjM2OUIKUldTYk5pLzRNQmJjeWVWMTdLWkNxazNiQTY3YkNVKzZva1U3c2taM3lSOGZvTzJzdnJtNVRvakMK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhGNzZCQTA5NDE3MzYzOUEKUldTYVkzTkJDYnAyaitmMzAzWFMreHpPd1NzWTNXUEVjQnlVRmcrNWp5Rnk2WHRScVZGQlBLTk4K",
       "endpoints": [
-        "https://github.com/rahulharpal1603/PictoPy/releases/latest/download/latest.json"
+        "https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/latest.json"
       ]
     }
   },
@@ -57,7 +61,9 @@
     ],
     "security": {
       "assetProtocol": {
-        "scope": ["**"],
+        "scope": [
+          "**"
+        ],
         "enable": true
       },
       "csp": null
