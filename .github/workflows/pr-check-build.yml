@@ -41,8 +41,6 @@ jobs:
         run: |
           cd frontend
           npm install
-          echo ${{vars.TAURI_SAMPLE_KEY}}
-          echo ${{vars.TAURI_SAMPLE_KEY_PASS}}
 
       - name: cache cargo registry and build
         uses: actions/cache@v3
