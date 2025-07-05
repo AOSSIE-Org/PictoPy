@@ -1,7 +1,5 @@
 # Setup Instructions
 
-All setup instructions have been consolidated and moved to the main README.md file for better maintainability and to ensure you always have the most up-to-date information.
-
 **Please refer to the [README.md](https://github.com/AOSSIE-Org/PictoPy/blob/main/README.md#setup) file for complete setup instructions.**
 
 ## Available Setup Methods
