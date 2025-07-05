@@ -724,7 +724,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                   <Crops />
                 </button>
                 {showAdjustMenu && (
-                  <div className="absolute bottom-full right-5 mb-2 z-[9999] grid w-64 grid-cols-2 gap-2 rounded-md border bg-gray-500 p-4 hover:border-white lg:grid-cols-1 max-h-60 overflow-y-auto">
+                  <div className="absolute right-5 bottom-full z-[9999] mb-2 grid max-h-60 w-64 grid-cols-2 gap-2 overflow-y-auto rounded-md border bg-gray-500 p-4 hover:border-white lg:grid-cols-1">
                     <div className="mb-1">
                       <label className="block text-sm font-medium text-white">
                         Brightness
@@ -831,7 +831,7 @@ const MediaView: React.FC<MediaViewProps> = ({
                     </div>
                   </div>
                 )}
-            
+
                 {onaspect && (
                   <div className="absolute bottom-full mb-2 w-32 rounded-md bg-white/20 backdrop-blur-md sm:right-1">
                     <div className="mt-1 mb-1 flex flex-col justify-center gap-1">
