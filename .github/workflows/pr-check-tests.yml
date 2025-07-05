@@ -1,4 +1,4 @@
-name: CI for PictoPy
+name: Linting and Tests
 
 on:
   pull_request:

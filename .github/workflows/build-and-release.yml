@@ -1,5 +1,4 @@
-name: Build and Release
-
+name: Build and Release App
 on:
   workflow_dispatch: # Ability to manually trigger the workflow
 

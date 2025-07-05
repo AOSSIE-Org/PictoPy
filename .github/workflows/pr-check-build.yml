@@ -1,4 +1,4 @@
-name: "PR Check for PictoPy"
+name: Tauri and Server Build Check
 on:
   pull_request_review:
     types: [submitted]
