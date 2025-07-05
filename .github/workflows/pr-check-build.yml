@@ -1,13 +1,12 @@
-name: "PR Check for PictoPy"
+name: PR Check Build
 on:
-  pull_request_review:
-    types: [submitted]
   pull_request:
     paths:
       - "frontend/**"
 
 jobs:
   tauri-build-check:
+    name: Tauri Build Check
     strategy:
       fail-fast: false
       matrix:
@@ -57,8 +56,9 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5NlF2SjE3cWNXOVlQQ0JBTlNITEpOUVoyQ3ZuNTdOSkwyNE1NN2RmVWQ1a0FBQkFBQUFBQUFBQUFBQUlBQUFBQU9XOGpTSFNRd0Q4SjNSbm5Oc1E0OThIUGx6SS9lWXI3ZjJxN3BESEh1QTRiQXlkR2E5aG1oK1g0Tk5kcmFzc0IvZFZScEpubnptRkxlbDlUR2R1d1Y5OGRSYUVmUGoxNTFBcHpQZ1dSS2lHWklZVHNkV1Byd1VQSnZCdTZFWlVGOUFNVENBRlgweUU9Cg==
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: pass
+          # Don't worry, the below key is just a sample key for PR-Checks. Actual app build workflow uses a secret private key :)
+          TAURI_SIGNING_PRIVATE_KEY: dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5TzhIVE9SbEtZZThpM2RvQWpvV09wZXlEOXR0cVRsVUs3NlR2NXhRTUJsSUFBQkFBQUFBQUFBQUFBQUlBQUFBQTBVZE5kNmR4ZHdScUtDWURsNWtweXQwem01WlJobXQzSmNtQUZydnNrb0UvSzJKQnM0b2ZRcSt6eElmaHFHZ3VzVkRrRkdtSC9jcGVRMDJzZlR3RDRta3V2UDBNdzRUSU1LQlo0dk43NHRHZGdaYTNPbndhYU14YmdqN1Y3VkNRb2l2bDF4NDQ5Tk09Cg==
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: abcd
         with:
           projectPath: ./frontend
           args: ${{ matrix.args }}

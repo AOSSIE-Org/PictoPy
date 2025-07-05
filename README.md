@@ -6,11 +6,12 @@ PictoPy is an advanced desktop gallery application that combines the power of Ta
 
 ---
 
-## 💡 **Want to contribute?**  
+## 💡 **Want to contribute?**
+
 For detailed setup instructions, coding guidelines, and the contribution process, please check out our [CONTRIBUTING.md](./CONTRIBUTING.md) file.
 
-
 ---
+
 # Architecture
 
 ### Frontend
