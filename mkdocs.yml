@@ -57,20 +57,7 @@ extra_css:
   - stylesheets/extra.css
 
 nav:
-  - Home:
-      - Introduction: index.md
-      - Overview: overview/features.md
-      - Setup: setup.md
-      - Backend:
-          - Python Backend API: backend/backend_python/api.md
-          - Python Backend Database: backend/backend_python/database.md
-          - Python Backend Directory Structure: backend/backend_python/directory-structure.md
-          - Python Backend Image Processing: backend/backend_python/image-processing.md
-          - Rust Backend API: backend/backend_rust/api.md
-      - Frontend:
-          - UI Components: frontend/ui-components.md
-          - State Management: frontend/state-management.md
-          - Gallery View: frontend/gallery-view.md
+  - Home: index.md
   - Setup: setup.md
   - Overview:
       - Features: overview/features.md
