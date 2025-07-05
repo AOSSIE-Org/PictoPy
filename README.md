@@ -4,7 +4,14 @@
 
 PictoPy is an advanced desktop gallery application that combines the power of Tauri, React, and Rust for the frontend with a Python backend for sophisticated image analysis and management.
 
-## Architecture
+---
+
+## 💡 **Want to contribute?**  
+For detailed setup instructions, coding guidelines, and the contribution process, please check out our [CONTRIBUTING.md](./CONTRIBUTING.md) file.
+
+
+---
+# Architecture
 
 ### Frontend
 
@@ -57,5 +64,4 @@ Handles file system operations and provides a secure bridge between the frontend
 
 ---
 
-💡 **Want to contribute?**  
-For detailed setup instructions, coding guidelines, and the contribution process, please check out our [CONTRIBUTING.md](./CONTRIBUTING.md) file.
+Our Code of Conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
