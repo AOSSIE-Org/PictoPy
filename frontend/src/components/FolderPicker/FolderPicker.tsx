@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { open } from '@tauri-apps/plugin-dialog';
+import { safeTauriDialogOpen, isTauriEnvironment } from '@/utils/tauriUtils';
 import { FolderPlus } from 'lucide-react';
 
 interface FolderPickerProps {
@@ -13,8 +13,13 @@ const FolderPicker: React.FC<FolderPickerProps> = ({
   className,
 }) => {
   const pickFolder = async () => {
+    if (!isTauriEnvironment()) {
+      alert('Folder selection is only available in desktop mode. Please run the app using "npm run tauri dev" instead of "npm run dev".');
+      return;
+    }
+
     try {
-      const selected = await open({
+      const selected = await safeTauriDialogOpen({
         directory: true,
         multiple: true, // Allow multiple folder selection
         title: 'Select folders',
