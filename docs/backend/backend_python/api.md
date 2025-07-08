@@ -175,4 +175,6 @@ We briefly discuss the endpoints related to images, all of these fall under the 
 
 ### Get All Image Objects
 
-- **Endpoint**: `
+- **Endpoint**: `GET /images/all-image-objects`
+- **Description**: Returns detailed metadata (dimensions, MIME type, tags) for every image.
+- **Response**: JSON array of image objects.
