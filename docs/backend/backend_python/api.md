@@ -1,6 +1,6 @@
 # API
 
-The API calls to PictoPy are done via HTTP requests since we are hosting our backend on a Flask server. This was done to ensure low coupling between the frontend and the backend.
+The API calls to PictoPy are done via HTTP requests since we are hosting our backend on a FastAPI server. This was done to ensure low coupling between the frontend and the backend.
 Follow this [Link](https://www.postman.com/cryosat-explorer-62744145/workspace/pictopy/overview) to get example request and response.
 
 ## Table of Contents
@@ -78,7 +78,7 @@ We briefly discuss the endpoints related to albums, all of these fall under the 
 - **Request Format**:
   ```json
   {
-    "name": "string",
+    "album_name": "string",
     "description": "string"
   }
   ```
@@ -100,18 +100,6 @@ We briefly discuss the endpoints related to images, all of these fall under the 
 - **Description**: Retrieves a list of all image files in the system.
 - **Response**: JSON object containing a list of image file paths.
 
-### Add Multiple Images
-
-- **Endpoint**: `POST /images/images`
-- **Description**: Adds multiple images to the system and processes them in the background.
-- **Request Format**:
-  ```json
-  {
-    "paths": ["string", "string", ...]
-  }
-  ```
-- **Response**: Message indicating that images are being processed.
-
 ### Delete Image
 
 - **Endpoint**: `DELETE /images/delete-image`
@@ -124,50 +112,67 @@ We briefly discuss the endpoints related to images, all of these fall under the 
   ```
 - **Response**: Message confirming image deletion.
 
-### Get All Image Objects
+### Delete Multiple Images
 
-- **Endpoint**: `GET /images/all-image-objects`
-- **Description**: Retrieves all images and their associated object classes.
-- **Response**: JSON object mapping image paths to their object classes.
+- **Endpoint**: `DELETE /images/multiple-images`
+- **Description**: Deletes multiple images from the system.
+- **Request Format**:
+  ```json
+  {
+    "paths": ["string", "string", ...],
+    "isFromDevice": true
+  }
+  ```
+- **Response**: Message confirming images deletion.
 
-### Get Class IDs
+### Delete Folder
 
-- **Endpoint**: `GET /images/class-ids`
-- **Description**: Retrieves the object classes for a specific image.
-- **Query Parameters**: `path` (string) - full path to the image
-- **Response**: JSON object containing the classes detected in the image.
-
-### Add Folder
-
-- **Endpoint**: `POST /images/add-folder`
-- **Description**: Adds all images from a specified folder to the system and processes them in the background.
+- **Endpoint**: `DELETE /images/delete-folder`
+- **Description**: Deletes a folder and its images from the system (AI Tagging context).
 - **Request Format**:
   ```json
   {
     "folder_path": "string"
   }
   ```
-- **Response**: Message indicating the number of images being processed from the folder.
+- **Response**: Message confirming folder deletion.
 
-## Face Recognition and Tagging
+### Generate Thumbnails
 
-We briefly discuss the endpoints related to face tagging and recognition, all of these fall under the `/tag` route
+- **Endpoint**: `POST /images/generate-thumbnails`
+- **Description**: Generates thumbnails for images in a folder.
+- **Request Format**:
+  ```json
+  {
+    "folder_path": "string"
+  }
+  ```
+- **Response**: Message confirming thumbnail generation.
 
-### Face Matching
+### Get Thumbnail Path
 
-- **Endpoint**: `GET /tag/match`
-- **Description**: Finds similar faces across all images in the database.
-- **Response**: JSON object containing pairs of similar images and their similarity scores.
+- **Endpoint**: `GET /images/get-thumbnail-path`
+- **Description**: Retrieves the path to the generated thumbnails folder.
+- **Response**: JSON object containing the thumbnail folder path.
 
-### Face Clusters
+### Delete Thumbnails
 
-- **Endpoint**: `GET /tag/clusters`
-- **Description**: Retrieves clusters of similar faces across all images.
-- **Response**: JSON object containing clusters of images with similar faces.
+- **Endpoint**: `DELETE /images/delete-thumbnails`
+- **Description**: Deletes generated thumbnails for a folder.
+- **Request Format**:
+  ```json
+  {
+    "folder_path": "string"
+  }
+  ```
+- **Response**: Message confirming thumbnail deletion.
 
-### Related Images
+### Add Folder Progress
 
-- **Endpoint**: `GET /tag/related-images`
-- **Description**: Finds images with faces related to the face in the given image.
-- **Query Parameters**: `path` (string) - full path to the image
-- **Response**: JSON object containing a list of related image paths.
+- **Endpoint**: `GET /images/add-folder-progress`
+- **Description**: Retrieves the progress of adding images from a folder.
+- **Response**: JSON object containing progress information.
+
+### Get All Image Objects
+
+- **Endpoint**: `
