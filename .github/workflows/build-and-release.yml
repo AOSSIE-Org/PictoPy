@@ -1,5 +1,7 @@
 name: Build and Release App
 on:
+  release:
+    types: [published]
   workflow_dispatch: # Ability to manually trigger the workflow
 
 jobs:
@@ -190,10 +192,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           projectPath: ./frontend
-          tagName: app-v__VERSION__
-          releaseName: "PictoPy v__VERSION__"
-          releaseBody: "See the assets to download this version and install."
+          tagName: ${{ github.event.release.tag_name }}
           includeUpdaterJson: true
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
