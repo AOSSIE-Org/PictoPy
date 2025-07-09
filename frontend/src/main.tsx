@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import BrowserWarning from './components/BrowserWarning';
 import { isProd } from './utils/isProd';
 import { stopServer, startServer } from './utils/serverUtils';
 import { isTauriEnvironment } from './utils/tauriUtils';
@@ -57,6 +58,12 @@ const Main = () => {
 
     init();
   }, []);
+
+  // Show browser warning if not running in Tauri environment
+  if (!isTauriEnvironment()) {
+    return <BrowserWarning />;
+  }
+
   return (
     <Provider store={store}>
       <App />
