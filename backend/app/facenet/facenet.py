@@ -1,16 +1,15 @@
-from app.facecluster.init_face_cluster import get_face_cluster
+# from app.facecluster.init_face_cluster import get_face_cluster
 import cv2
 import onnxruntime
 from app.config.settings import DEFAULT_FACE_DETECTION_MODEL, DEFAULT_FACENET_MODEL
-from app.utils.classification import get_classes
 from app.facenet.preprocess import normalize_embedding, preprocess_image
 from app.yolov8.YOLOv8 import YOLOv8
-from app.database.faces import insert_face_embeddings
+from app.database.faces import db_insert_face_embeddings_by_path
+import numpy as np
+from typing import List, Dict, Union, Optional
 
 providers = (
-    ["CUDAExecutionProvider", "CPUExecutionProvider"]
-    if onnxruntime.get_device() == "GPU"
-    else ["CPUExecutionProvider"]
+    ["CUDAExecutionProvider", "CPUExecutionProvider"] if onnxruntime.get_device() == "GPU" else ["CPUExecutionProvider"]
 )
 
 session = onnxruntime.InferenceSession(DEFAULT_FACENET_MODEL, providers=providers)
@@ -19,32 +18,26 @@ input_tensor_name = session.get_inputs()[0].name
 output_tensor_name = session.get_outputs()[0].name
 
 
-def get_face_embedding(image):
+def get_face_embedding(image: np.ndarray) -> np.ndarray:
     result = session.run([output_tensor_name], {input_tensor_name: image})[0]
     embedding = result[0]
-    return normalize_embedding(embedding)
+    normalized_embedding = normalize_embedding(embedding)
+    # Ensure the result is a numpy array
+    return np.array(normalized_embedding, dtype=np.float64)
 
 
-def extract_face_embeddings(img_path):
+def extract_face_embeddings(img_path: str) -> List[np.ndarray]:
     # Return face embeddings from the image but do not add them to the db.
-    yolov8_detector = YOLOv8(
-        DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.2, iou_thres=0.3
-    )
+    yolov8_detector = YOLOv8(DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.2, iou_thres=0.3)
 
     img = cv2.imread(img_path)
     if img is None:
         print(f"Failed to load image: {img_path}")
-        return None
-
-    # If "person" `class_id` is not found in the image, return early
-    class_ids = get_classes(img_path)
-    if not class_ids or "0" not in class_ids.split(","):
-        print(f"No person detected in image: {img_path}")
-        return "no_person"
+        return []
 
     boxes, scores, class_ids = yolov8_detector(img)
 
-    embeddings = []
+    embeddings: List[np.ndarray] = []
     for box, score in zip(boxes, scores):
         if score > 0.5:
             x1, y1, x2, y2 = map(int, box)
@@ -56,10 +49,8 @@ def extract_face_embeddings(img_path):
     return embeddings
 
 
-def detect_faces(img_path):
-    yolov8_detector = YOLOv8(
-        DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.35, iou_thres=0.45
-    )
+def detect_faces(img_path: str) -> Optional[Dict[str, Union[str, List, int]]]:
+    yolov8_detector = YOLOv8(DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.35, iou_thres=0.45)
     img = cv2.imread(img_path)
     if img is None:
         print(f"Failed to load image: {img_path}")
@@ -67,7 +58,8 @@ def detect_faces(img_path):
 
     boxes, scores, class_ids = yolov8_detector(img)
 
-    processed_faces, embeddings = [], []
+    processed_faces = []
+    embeddings: List[np.ndarray] = []
     for box, score in zip(boxes, scores):
         if score > 0.3:
             x1, y1, x2, y2 = map(int, box)
@@ -84,10 +76,10 @@ def detect_faces(img_path):
             embeddings.append(embedding)
 
     if embeddings:
-        insert_face_embeddings(img_path, embeddings)
-        clusters = get_face_cluster()
-        for embedding in embeddings:
-            clusters.add_face(embedding, img_path)
+        db_insert_face_embeddings_by_path(img_path, embeddings)
+        # clusters = get_face_cluster()
+        # for embedding in embeddings:
+        #     clusters.add_face(embedding, img_path)
 
     return {
         "ids": f"{class_ids}",

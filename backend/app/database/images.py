@@ -1,44 +1,60 @@
 import sqlite3
-import os
-import json
+from typing import List, Tuple, TypedDict
 
 from app.config.settings import (
     DATABASE_PATH,
 )
-from app.facecluster.init_face_cluster import get_face_cluster
-from app.database.albums import remove_image_from_all_albums
+
+# Type definitions
+ImageId = str
+ImagePath = str
+FolderId = str
+ClassId = int
 
 
-def create_image_id_mapping_table():
+class ImageRecord(TypedDict):
+    """Represents the full images table structure"""
+
+    id: ImageId
+    path: ImagePath
+    folder_id: FolderId
+    thumbnailPath: str
+    metadata: str
+    isTagged: bool
+
+
+ImageClassPair = Tuple[ImageId, ClassId]
+FolderIdPath = Tuple[FolderId, str]
+
+
+def db_create_images_table() -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
+
+    # Create new images table with merged fields
     cursor.execute(
         """
-        CREATE TABLE IF NOT EXISTS image_id_mapping (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            path TEXT UNIQUE,
+        CREATE TABLE IF NOT EXISTS images (
+            id TEXT PRIMARY KEY,
+            path VARCHAR UNIQUE,
             folder_id INTEGER,
+            thumbnailPath TEXT UNIQUE,
+            metadata TEXT,
+            isTagged BOOLEAN DEFAULT FALSE,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
     """
     )
-    conn.commit()
-    conn.close()
 
-
-def create_images_table():
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-
-    create_image_id_mapping_table()
-
+    # Create new image_classes junction table
     cursor.execute(
         """
-        CREATE TABLE IF NOT EXISTS images (
-            id INTEGER PRIMARY KEY,
-            class_ids TEXT,
-            metadata TEXT,
-            FOREIGN KEY (id) REFERENCES image_id_mapping(id) ON DELETE CASCADE
+        CREATE TABLE IF NOT EXISTS image_classes (
+            image_id INTEGER,
+            class_id INTEGER,
+            PRIMARY KEY (image_id, class_id),
+            FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
+            FOREIGN KEY (class_id) REFERENCES mappings(class_id) ON DELETE CASCADE
         )
     """
     )
@@ -47,145 +63,154 @@ def create_images_table():
     conn.close()
 
 
-def insert_image_db(path, class_ids, metadata, folder_id=None):
+def db_get_folder_ids_by_path_prefix(root_path: str) -> List[FolderIdPath]:
+    """Get all folder IDs and paths whose path starts with the given root path."""
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
-    abs_path = os.path.abspath(path)
-    class_ids_json = json.dumps(class_ids)
-    metadata_json = json.dumps(metadata)
 
-    cursor.execute(
-        "INSERT OR IGNORE INTO image_id_mapping (path, folder_id) VALUES (?, ?)",
-        (abs_path, folder_id),
-    )
-    cursor.execute("SELECT id FROM image_id_mapping WHERE path = ?", (abs_path,))
-    image_id = cursor.fetchone()[0]
-
-    cursor.execute(
-        """
-        INSERT OR REPLACE INTO images (id, class_ids, metadata)
-        VALUES (?, ?, ?)
-    """,
-        (image_id, class_ids_json, metadata_json),
-    )
-
-    conn.commit()
-    conn.close()
-
-
-def delete_image_db(path):
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    abs_path = os.path.abspath(path)
-
-    cursor.execute("SELECT id FROM image_id_mapping WHERE path = ?", (abs_path,))
-    result = cursor.fetchone()
-    if result:
-        image_id = result[0]
-        cursor.execute("DELETE FROM images WHERE id = ?", (image_id,))
-        cursor.execute("DELETE FROM image_id_mapping WHERE id = ?", (image_id,))
-
-        # Instead of calling delete_face_embeddings directly, for circular import error
-        remove_image_from_all_albums(image_id)
-        from app.database.faces import delete_face_embeddings
-
-        conn.commit()
-        conn.close()
-        clusters = get_face_cluster()
-        clusters.remove_image(image_id)
-        delete_face_embeddings(image_id)
-    conn.close()
-
-
-def get_all_image_ids_from_db():
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id FROM image_id_mapping")
-    ids = [row[0] for row in cursor.fetchall()]
-    conn.close()
-    return ids
-
-
-def get_path_from_id(image_id):
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT path FROM image_id_mapping WHERE id = ?", (image_id,))
-    result = cursor.fetchone()
-    conn.close()
-    return result[0] if result else None
-
-
-def get_id_from_path(path):
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    abs_path = os.path.abspath(path)
-    cursor.execute("SELECT id FROM image_id_mapping WHERE path = ?", (abs_path,))
-    result = cursor.fetchone()
-    conn.close()
-    return result[0] if result else None
-
-
-def get_objects_db(path):
-    conn_images = sqlite3.connect(DATABASE_PATH)
-    cursor_images = conn_images.cursor()
-    image_id = get_id_from_path(path)
-
-    if image_id is None:
-        return None
-
-    cursor_images.execute("SELECT class_ids FROM images WHERE id = ?", (image_id,))
-    result = cursor_images.fetchone()
-    conn_images.close()
-
-    if not result:
-        return None
-
-    class_ids_json = result[0]
-    class_ids = json.loads(class_ids_json)
-    if isinstance(class_ids, list):
-        class_ids = [str(class_id) for class_id in class_ids]
-    else:
-        class_ids = class_ids.split(",")
-
-    conn_mappings = sqlite3.connect(DATABASE_PATH)
-    cursor_mappings = conn_mappings.cursor()
-    class_names = []
-    for class_id in class_ids:
-        cursor_mappings.execute(
-            "SELECT name FROM mappings WHERE class_id = ?", (class_id,)
+    try:
+        # Use path LIKE with wildcard to match all subfolders
+        cursor.execute(
+            """
+            SELECT folder_id, folder_path FROM folders 
+            WHERE folder_path LIKE ? || '%'
+        """,
+            (root_path,),
         )
-        name_result = cursor_mappings.fetchone()
-        if name_result:
-            class_names.append(name_result[0])
 
-    conn_mappings.close()
-    class_names = list(set(class_names))
-    return class_names
+        return cursor.fetchall()  # Returns list of (folder_id, path) tuples
+    finally:
+        conn.close()
 
 
-def is_image_in_database(path):
+def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
+    """Insert multiple image records in a single transaction."""
+    if not image_records:
+        return True
+
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
-    abs_path = os.path.abspath(path)
-    cursor.execute("SELECT COUNT(*) FROM image_id_mapping WHERE path = ?", (abs_path,))
-    count = cursor.fetchone()[0]
-    conn.close()
-    return count > 0
+
+    try:
+        cursor.executemany(
+            """
+            INSERT OR IGNORE INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)
+            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged)
+        """,
+            image_records,
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error inserting image records: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
 
 
-def get_all_image_paths():
-    with sqlite3.connect(DATABASE_PATH) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT path FROM image_id_mapping")
-        paths = [row[0] for row in cursor.fetchall()]
-        return paths if paths else []
+def db_get_untagged_images() -> List[ImageRecord]:
+    """
+    Find all images that need AI tagging.
+    Returns images where:
+    - The image's folder has AI_Tagging enabled (True)
+    - The image has isTagged set to False
 
-
-def get_all_images_from_folder_id(folder_id):
+    Returns:
+        List of dictionaries containing image data: id, path, folder_id, thumbnailPath, metadata
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT path FROM image_id_mapping WHERE folder_id = ?", (folder_id,)
-    )
-    image_paths = cursor.fetchall()
-    return [row[0] for row in image_paths] if image_paths else []
+
+    try:
+        cursor.execute(
+            """
+            SELECT i.id, i.path, i.folder_id, i.thumbnailPath, i.metadata
+            FROM images i
+            JOIN folders f ON i.folder_id = f.folder_id
+            WHERE f.AI_Tagging = TRUE
+            AND i.isTagged = FALSE
+            """
+        )
+
+        results = cursor.fetchall()
+
+        untagged_images = []
+        for image_id, path, folder_id, thumbnail_path, metadata in results:
+            untagged_images.append(
+                {
+                    "id": image_id,
+                    "path": path,
+                    "folder_id": folder_id,
+                    "thumbnailPath": thumbnail_path,
+                    "metadata": metadata,
+                }
+            )
+
+        return untagged_images
+
+    finally:
+        conn.close()
+
+
+def db_update_image_tagged_status(image_id: ImageId, is_tagged: bool = True) -> bool:
+    """
+    Update the isTagged status for a specific image.
+
+    Args:
+        image_id: ID of the image to update
+        is_tagged: Boolean value to set for isTagged (default True)
+
+    Returns:
+        True if update was successful, False otherwise
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            "UPDATE images SET isTagged = ? WHERE id = ?",
+            (is_tagged, image_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        print(f"Error updating image tagged status: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def db_insert_image_classes_batch(image_class_pairs: List[ImageClassPair]) -> bool:
+    """
+    Insert multiple image-class pairs into the image_classes table.
+
+    Args:
+        image_class_pairs: List of tuples containing (image_id, class_id) pairs
+
+    Returns:
+        True if insertion was successful, False otherwise
+    """
+    if not image_class_pairs:
+        return True
+
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        cursor.executemany(
+            """
+            INSERT OR IGNORE INTO image_classes (image_id, class_id)
+            VALUES (?, ?)
+            """,
+            image_class_pairs,
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error inserting image classes: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()

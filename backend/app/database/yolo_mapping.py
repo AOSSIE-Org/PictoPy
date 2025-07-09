@@ -3,7 +3,7 @@ from app.config.settings import DATABASE_PATH
 from app.yolov8.utils import class_names
 
 
-def create_YOLO_mappings():
+def db_create_YOLO_classes_table():
     # print current directory:
     import os
 
@@ -14,15 +14,15 @@ def create_YOLO_mappings():
     cursor.execute(
         """
             CREATE TABLE IF NOT EXISTS mappings (
-            class_id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL
+            class_id TEXT PRIMARY KEY,
+            name VARCHAR NOT NULL
     )
     """
     )
     for class_id, name in enumerate(class_names):
         cursor.execute(
             "INSERT OR REPLACE INTO mappings (class_id, name) VALUES (?, ?)",
-            (class_id, name),
+            (str(class_id), name),  # Convert class_id to string since it's now TEXT
         )
 
     conn.commit()
