@@ -56,6 +56,7 @@ def db_insert_face_embeddings(
     """
     Insert face embeddings with additional metadata.
 
+
     Args:
         image_id: ID of the image this face belongs to
         embeddings: Face embedding vector (numpy array)
