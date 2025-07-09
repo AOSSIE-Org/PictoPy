@@ -1,6 +1,7 @@
 # PictoPy
 
-### Discord Channel [Link](https://discord.com/channels/1022871757289422898/1311271974630330388)
+### Discord Server [Link](https://discord.gg/hjUhu33uAn) (Go to Projects->PictoPy)
+
 
 PictoPy is an advanced desktop gallery application that combines the power of Tauri, React, and Rust for the frontend with a Python backend for sophisticated image analysis and management.
 
