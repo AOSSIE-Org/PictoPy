@@ -121,6 +121,34 @@ def image_util_process_folder_images(root_folder: str) -> bool:
         return False
 
 
+def image_util_classify_and_face_detect_images(untagged_images: List[Dict[str, str]]) -> None:
+    """Classify untagged images and detect faces if applicable."""
+    for image in untagged_images:
+        image_path = image["path"]
+        image_id = image["id"]
+
+        classifier = ObjectClassifier()
+
+        # Step 1: Get classes
+        classes = classifier.get_classes(image_path)
+
+        # Step 2: Update the image status in the database
+        db_update_image_tagged_status(image_id, True)
+
+        # Step 3: Insert class-image pairs if classes were detected
+        if len(classes) > 0:
+            # Create image-class pairs
+            image_class_pairs = [(image_id, class_id) for class_id in classes]
+            print(image_class_pairs)
+
+            # Insert the pairs into the database
+            db_insert_image_classes_batch(image_class_pairs)
+
+        # Step 4: Detect faces if "person" class is present
+        if classes and 0 in classes and 0 < classes.count(0) < 7:
+            detect_faces(image_id, image_path)
+
+
 def image_util_process_untagged_images() -> bool:
     """Process all untagged images in folders with AI tagging enabled."""
     try:
@@ -129,30 +157,8 @@ def image_util_process_untagged_images() -> bool:
         if not untagged_images:
             return True  # No untagged images to process
 
-        classifier = ObjectClassifier()
         # Step 2: Process each untagged image
-        for image in untagged_images:
-            image_path = image["path"]
-            image_id = image["id"]
-
-            # Step 2.1: Get classes and metadata
-            classes = classifier.get_classes(image_path)
-
-            # Step 2.2: Update the image record in the database
-            db_update_image_tagged_status(image_id, True)
-
-            # Step 2.3: Insert class-image pairs if classes were detected
-            if len(classes) > 0:
-                # Create image-class pairs
-                image_class_pairs = [(image_id, class_id) for class_id in classes]
-                print(image_class_pairs)
-
-                # Insert the pairs into the database
-                db_insert_image_classes_batch(image_class_pairs)
-
-            # Step 2.4: Detect faces if "person" class is present
-            if classes and 0 in classes:
-                detect_faces(image_path)
+        image_util_classify_and_face_detect_images(untagged_images)
 
         return True
     except Exception as e:
