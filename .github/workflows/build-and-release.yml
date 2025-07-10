@@ -3,6 +3,11 @@ on:
   release:
     types: [published]
   workflow_dispatch: # Ability to manually trigger the workflow
+    inputs:
+      tag:
+        description: 'Tag name for the release' # used when running manually
+        required: true
+        type: string
 
 jobs:
   build-server-windows:
@@ -192,8 +197,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           projectPath: ./frontend
-          tagName: ${{ github.event.release.tag_name }}
+          tagName: ${{ github.event.release.tag_name || github.event.inputs.tag }}
           includeUpdaterJson: true
+          releaseId: ${{ github.event.release.id || '' }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
