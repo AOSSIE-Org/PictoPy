@@ -28,12 +28,12 @@ export const isTauriEnvironment = (): boolean => {
   if (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window) {
     return true;
   }
-  
+
   // Method 3: Fallback to __TAURI__ for backward compatibility (requires withGlobalTauri: true)
   if (typeof window !== 'undefined' && '__TAURI__' in window) {
     return true;
   }
-  
+
   return false;
 };
 
