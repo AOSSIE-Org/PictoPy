@@ -36,14 +36,3 @@ export const isTauriEnvironment = (): boolean => {
 
   return false;
 };
-
-// Alternative: You can also use the official API directly
-export const isTauriEnvironmentOfficial = async (): Promise<boolean> => {
-  try {
-    const { isTauri } = await import('@tauri-apps/api/core');
-    return isTauri();
-  } catch (error) {
-    // Fallback if @tauri-apps/api is not available
-    return isTauriEnvironment();
-  }
-};
