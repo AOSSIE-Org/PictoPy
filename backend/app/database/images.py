@@ -1,7 +1,9 @@
+# Standard library imports
 import sqlite3
 import os
 import json
 
+# App-specific imports
 from app.config.settings import (
     DATABASE_PATH,
 )
@@ -30,7 +32,7 @@ def create_images_table():
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
-    create_image_id_mapping_table()
+    create_image_id_mapping_table()  # Ensure dependency table exists
 
     cursor.execute(
         """
@@ -54,12 +56,16 @@ def insert_image_db(path, class_ids, metadata, folder_id=None):
     class_ids_json = json.dumps(class_ids)
     metadata_json = json.dumps(metadata)
 
+    # Insert mapping if it doesn't already exist
+
     cursor.execute(
         "INSERT OR IGNORE INTO image_id_mapping (path, folder_id) VALUES (?, ?)",
         (abs_path, folder_id),
     )
     cursor.execute("SELECT id FROM image_id_mapping WHERE path = ?", (abs_path,))
     image_id = cursor.fetchone()[0]
+
+    # Insert or update the image data in the 'images' table
 
     cursor.execute(
         """
@@ -78,21 +84,31 @@ def delete_image_db(path):
     cursor = conn.cursor()
     abs_path = os.path.abspath(path)
 
+    # Get image ID from path
+
     cursor.execute("SELECT id FROM image_id_mapping WHERE path = ?", (abs_path,))
     result = cursor.fetchone()
     if result:
         image_id = result[0]
+        # Remove from both tables
         cursor.execute("DELETE FROM images WHERE id = ?", (image_id,))
         cursor.execute("DELETE FROM image_id_mapping WHERE id = ?", (image_id,))
 
-        # Instead of calling delete_face_embeddings directly, for circular import error
+        # Instead of calling delete_face_embeddings directly, for circular import
+
+        # Remove image from albums (handled separately to avoid circular imports)
+
         remove_image_from_all_albums(image_id)
+        # Import only after removing image from albums to avoid circular import error
         from app.database.faces import delete_face_embeddings
 
         conn.commit()
         conn.close()
+        # Remove image from face clusters
         clusters = get_face_cluster()
         clusters.remove_image(image_id)
+
+        # Delete associated face embeddings
         delete_face_embeddings(image_id)
     conn.close()
 
@@ -132,6 +148,8 @@ def get_objects_db(path):
 
     if image_id is None:
         return None
+
+    # Decode class_ids from JSON or comma-separated format
 
     cursor_images.execute("SELECT class_ids FROM images WHERE id = ?", (image_id,))
     result = cursor_images.fetchone()
