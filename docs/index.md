@@ -27,11 +27,6 @@ This project was announced by [AOSSIE](https://aossie.org/), an umbrella organiz
         <h2>Backend Python</h2>
         <ul>
             <li>
-                <a href="./backend/backend_python/setup">
-                    Setup
-                </a>
-            </li>
-            <li>
                 <a href="./backend/backend_python/database">
                     Database
                 </a>
@@ -57,17 +52,14 @@ This project was announced by [AOSSIE](https://aossie.org/), an umbrella organiz
         <h2>Backend Rust</h2>
         <ul>
             <li>
-                <a href="./backend/backend_rust/setup">
-                    Setup
-                </a>
-            </li>
-            <li>
                 <a href="./backend/backend_rust/api">
                     API
                 </a>
             </li>
             <li>
-              <a href="./backend/docker-setup.md">Docker setup</a>
+                <a href="./backend/docker-setup">
+                    Docker setup
+                </a>
             </li>
         </ul>
     </div>
@@ -75,12 +67,7 @@ This project was announced by [AOSSIE](https://aossie.org/), an umbrella organiz
         <h2>Frontend</h2>
         <ul>
             <li>
-                <a href="./frontend/setup">
-                    Setup
-                </a>
-            </li>
-            <li>
-               <a href="./frontend/docker-setup.md">
+               <a href="./frontend/docker-setup">
                     Docker Setup
                 </a>
             </li>
