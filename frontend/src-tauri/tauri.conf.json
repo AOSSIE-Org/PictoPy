@@ -29,7 +29,11 @@
     }
   },
   "productName": "PictoPy",
+<<<<<<< HEAD
   "version": "0.0.1",
+=======
+  "version": "0.1.1",
+>>>>>>> 7c42a05 (Added backend DB schema section with iframe (updated height & link))
   "identifier": "com.yourcompany.pictopy",
   "plugins": {
     "fs": {
