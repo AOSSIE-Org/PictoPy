@@ -6,23 +6,28 @@ from app.utils.classification import get_classes
 from app.facenet.preprocess import normalize_embedding, preprocess_image
 from app.yolov8.YOLOv8 import YOLOv8
 from app.database.faces import insert_face_embeddings
+from app.utils.onnx_manager import onnx_session
 
-providers = (
-    ["CUDAExecutionProvider", "CPUExecutionProvider"]
-    if onnxruntime.get_device() == "GPU"
-    else ["CPUExecutionProvider"]
-)
+_session = None
 
-session = onnxruntime.InferenceSession(DEFAULT_FACENET_MODEL, providers=providers)
-
-input_tensor_name = session.get_inputs()[0].name
-output_tensor_name = session.get_outputs()[0].name
-
+def get_session():
+    global _session
+    if _session is None:
+        providers = (
+            ["CUDAExecutionProvider", "CPUExecutionProvider"]
+            if "CUDAExecutionProvider" in onnxruntime.get_available_providers()
+            else ["CPUExecutionProvider"]
+        )
+        _session = onnxruntime.InferenceSession(DEFAULT_FACENET_MODEL, providers=providers)
+    return _session
 
 def get_face_embedding(image):
-    result = session.run([output_tensor_name], {input_tensor_name: image})[0]
-    embedding = result[0]
-    return normalize_embedding(embedding)
+    with onnx_session(DEFAULT_FACENET_MODEL) as session:
+        input_name = session.get_inputs()[0].name
+        output_name = session.get_outputs()[0].name
+        result = session.run([output_name], {input_name: image})[0]
+        embedding = result[0]
+        return normalize_embedding(embedding)
 
 
 def extract_face_embeddings(img_path):
