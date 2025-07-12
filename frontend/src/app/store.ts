@@ -1,10 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import loaderReducer from '@/features/loaderSlice';
 import onboardingReducer from '@/features/onboardingSlice';
+import infoDialogReducer from '@/features/infoDialogSlice';
+
 export const store = configureStore({
   reducer: {
     loader: loaderReducer,
     onboarding: onboardingReducer,
+    infoDialog: infoDialogReducer,
   },
 });
 
