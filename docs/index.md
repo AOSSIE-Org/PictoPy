@@ -56,21 +56,11 @@ This project was announced by [AOSSIE](https://aossie.org/), an umbrella organiz
                     API
                 </a>
             </li>
-            <li>
-                <a href="./backend/docker-setup">
-                    Docker setup
-                </a>
-            </li>
         </ul>
     </div>
     <div style="width:25%">
         <h2>Frontend</h2>
         <ul>
-            <li>
-               <a href="./frontend/docker-setup">
-                    Docker Setup
-                </a>
-            </li>
             <li>
                 <a href="./frontend/ui-components">
                     UI Components
