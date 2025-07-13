@@ -60,6 +60,7 @@ nav:
   - Home:
       - Introduction: index.md
       - Overview: overview/features.md
+      - DB Schema: backend/db-schema.md
       - Setup: setup.md
       - Backend:
           - Python Backend API: backend/backend_python/api.md
