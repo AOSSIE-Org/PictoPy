@@ -1,6 +1,6 @@
 # API
 
-The API calls to PictoPy are done via HTTP requests since we are hosting our backend on a Flask server. This was done to ensure low coupling between the frontend and the backend.
+The API calls to PictoPy are done via HTTP requests since we are hosting our backend on a FastAPI server. This was done to ensure low coupling between the frontend and the backend.
 Follow this [Link](https://www.postman.com/cryosat-explorer-62744145/workspace/pictopy/overview) to get example request and response.
 
 ## Table of Contents
@@ -16,15 +16,17 @@ We briefly discuss the endpoints related to albums, all of these fall under the 
 ### Create Album
 
 - **Endpoint**: `POST /albums/create-album`
-- **Description**: Creates a new album with the given name and optional description.
+- **Description**: Creates a new album with the given name, optional description, and optional hidden/password fields.
 - **Request Format**:
   ```json
   {
     "name": "string",
-    "description": "string" (optional)
+    "description": "string" (optional),
+    "is_hidden": true (optional),
+    "password": "string" (optional)
   }
   ```
-- **Response**: Message confirming album creation.
+- **Response**: Message confirming album creation, with album details in a `data` field.
 
 ### Delete Album
 
@@ -67,9 +69,9 @@ We briefly discuss the endpoints related to albums, all of these fall under the 
 ### View Album Photos
 
 - **Endpoint**: `GET /albums/view-album`
-- **Description**: Retrieves all photos in a specified album.
-- **Query Parameters**: `album_name` (string)
-- **Response**: JSON object containing album name and list of photos.
+- **Description**: Retrieves all photos in a specified album. Supports password for hidden albums.
+- **Query Parameters**: `album_name` (string), `password` (string, optional)
+- **Response**: JSON object containing album name, list of photos, and `folder_path`.
 
 ### Edit Album Description
 
@@ -78,7 +80,7 @@ We briefly discuss the endpoints related to albums, all of these fall under the 
 - **Request Format**:
   ```json
   {
-    "name": "string",
+    "album_name": "string",
     "description": "string"
   }
   ```
@@ -98,19 +100,7 @@ We briefly discuss the endpoints related to images, all of these fall under the 
 
 - **Endpoint**: `GET /images/all-images`
 - **Description**: Retrieves a list of all image files in the system.
-- **Response**: JSON object containing a list of image file paths.
-
-### Add Multiple Images
-
-- **Endpoint**: `POST /images/images`
-- **Description**: Adds multiple images to the system and processes them in the background.
-- **Request Format**:
-  ```json
-  {
-    "paths": ["string", "string", ...]
-  }
-  ```
-- **Response**: Message indicating that images are being processed.
+- **Response**: JSON object containing `image_files` (list of file paths) and `folder_path`.
 
 ### Delete Image
 
@@ -124,50 +114,71 @@ We briefly discuss the endpoints related to images, all of these fall under the 
   ```
 - **Response**: Message confirming image deletion.
 
-### Get All Image Objects
+### Delete Multiple Images
 
-- **Endpoint**: `GET /images/all-image-objects`
-- **Description**: Retrieves all images and their associated object classes.
-- **Response**: JSON object mapping image paths to their object classes.
+- **Endpoint**: `DELETE /images/multiple-images` *(Deprecated: Not present in current backend code)*
+- **Description**: Deletes multiple images from the system. *(Deprecated)*
 
-### Get Class IDs
+### Delete Folder
 
-- **Endpoint**: `GET /images/class-ids`
-- **Description**: Retrieves the object classes for a specific image.
-- **Query Parameters**: `path` (string) - full path to the image
-- **Response**: JSON object containing the classes detected in the image.
+- **Endpoint**: `DELETE /images/delete-folder` *(Deprecated: Not present in current backend code)*
+- **Description**: Deletes a folder and its images from the system (AI Tagging context). *(Deprecated)*
 
-### Add Folder
+### Generate Thumbnails
 
-- **Endpoint**: `POST /images/add-folder`
-- **Description**: Adds all images from a specified folder to the system and processes them in the background.
+- **Endpoint**: `POST /images/generate-thumbnails`
+- **Description**: Generates thumbnails for images in one or more folders.
+- **Request Format**:
+  ```json
+  {
+    "folder_paths": ["string", "string", ...]
+  }
+  ```
+- **Response**: Message confirming thumbnail generation, with failed paths if any.
+
+### Get Thumbnail Path
+
+- **Endpoint**: `GET /images/get-thumbnail-path` *(Deprecated: Not present in current backend code)*
+- **Description**: Retrieves the path to the generated thumbnails folder. *(Deprecated)*
+
+### Delete Thumbnails
+
+- **Endpoint**: `DELETE /images/delete-thumbnails`
+- **Description**: Deletes generated thumbnails for a folder.
 - **Request Format**:
   ```json
   {
     "folder_path": "string"
   }
   ```
-- **Response**: Message indicating the number of images being processed from the folder.
+- **Response**: Message confirming thumbnail deletion.
 
-## Face Recognition and Tagging
+### Add Folder Progress
 
-We briefly discuss the endpoints related to face tagging and recognition, all of these fall under the `/tag` route
+- **Endpoint**: `GET /images/add-folder-progress` *(Deprecated: Not present in current backend code)*
+- **Description**: Retrieves the progress of adding images from a folder. *(Deprecated)*
 
-### Face Matching
+### Get All Image Objects
 
-- **Endpoint**: `GET /tag/match`
-- **Description**: Finds similar faces across all images in the database.
-- **Response**: JSON object containing pairs of similar images and their similarity scores.
+- **Endpoint**: `GET /images/all-image-objects`
+- **Description**: Returns detailed metadata (dimensions, MIME type, tags) for every image.
+- **Response**: JSON object with `images` (dict of image path to classes/tags) and `image_path` (thumbnail path).
 
-### Face Clusters
+### Get Class IDs
 
-- **Endpoint**: `GET /tag/clusters`
-- **Description**: Retrieves clusters of similar faces across all images.
-- **Response**: JSON object containing clusters of images with similar faces.
+- **Endpoint**: `GET /images/class-ids`
+- **Description**: Returns class IDs (tags/objects) for a given image path.
+- **Query Parameters**: `path` (string, required)
+- **Response**: JSON object with class IDs or 'None'.
 
-### Related Images
+### Add Folder
 
-- **Endpoint**: `GET /tag/related-images`
-- **Description**: Finds images with faces related to the face in the given image.
-- **Query Parameters**: `path` (string) - full path to the image
-- **Response**: JSON object containing a list of related image paths.
+- **Endpoint**: `POST /images/add-folder`
+- **Description**: Adds one or more folders to the system for image management.
+- **Request Format**:
+  ```json
+  {
+    "folder_path": ["string", "string", ...]
+  }
+  ```
+- **Response**: Message confirming folder addition.
