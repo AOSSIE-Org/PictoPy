@@ -16,15 +16,17 @@ We briefly discuss the endpoints related to albums, all of these fall under the 
 ### Create Album
 
 - **Endpoint**: `POST /albums/create-album`
-- **Description**: Creates a new album with the given name and optional description.
+- **Description**: Creates a new album with the given name, optional description, and optional hidden/password fields.
 - **Request Format**:
   ```json
   {
     "name": "string",
-    "description": "string" (optional)
+    "description": "string" (optional),
+    "is_hidden": true (optional),
+    "password": "string" (optional)
   }
   ```
-- **Response**: Message confirming album creation.
+- **Response**: Message confirming album creation, with album details in a `data` field.
 
 ### Delete Album
 
@@ -67,9 +69,9 @@ We briefly discuss the endpoints related to albums, all of these fall under the 
 ### View Album Photos
 
 - **Endpoint**: `GET /albums/view-album`
-- **Description**: Retrieves all photos in a specified album.
-- **Query Parameters**: `album_name` (string)
-- **Response**: JSON object containing album name and list of photos.
+- **Description**: Retrieves all photos in a specified album. Supports password for hidden albums.
+- **Query Parameters**: `album_name` (string), `password` (string, optional)
+- **Response**: JSON object containing album name, list of photos, and `folder_path`.
 
 ### Edit Album Description
 
@@ -98,7 +100,7 @@ We briefly discuss the endpoints related to images, all of these fall under the 
 
 - **Endpoint**: `GET /images/all-images`
 - **Description**: Retrieves a list of all image files in the system.
-- **Response**: JSON object containing a list of image file paths.
+- **Response**: JSON object containing `image_files` (list of file paths) and `folder_path`.
 
 ### Delete Image
 
@@ -114,46 +116,30 @@ We briefly discuss the endpoints related to images, all of these fall under the 
 
 ### Delete Multiple Images
 
-- **Endpoint**: `DELETE /images/multiple-images`
-- **Description**: Deletes multiple images from the system.
-- **Request Format**:
-  ```json
-  {
-    "paths": ["string", "string", ...],
-    "isFromDevice": true
-  }
-  ```
-- **Response**: Message confirming images deletion.
+- **Endpoint**: `DELETE /images/multiple-images` *(Deprecated: Not present in current backend code)*
+- **Description**: Deletes multiple images from the system. *(Deprecated)*
 
 ### Delete Folder
 
-- **Endpoint**: `DELETE /images/delete-folder`
-- **Description**: Deletes a folder and its images from the system (AI Tagging context).
-- **Request Format**:
-  ```json
-  {
-    "folder_path": "string"
-  }
-  ```
-- **Response**: Message confirming folder deletion.
+- **Endpoint**: `DELETE /images/delete-folder` *(Deprecated: Not present in current backend code)*
+- **Description**: Deletes a folder and its images from the system (AI Tagging context). *(Deprecated)*
 
 ### Generate Thumbnails
 
 - **Endpoint**: `POST /images/generate-thumbnails`
-- **Description**: Generates thumbnails for images in a folder.
+- **Description**: Generates thumbnails for images in one or more folders.
 - **Request Format**:
   ```json
   {
-    "folder_path": "string"
+    "folder_paths": ["string", "string", ...]
   }
   ```
-- **Response**: Message confirming thumbnail generation.
+- **Response**: Message confirming thumbnail generation, with failed paths if any.
 
 ### Get Thumbnail Path
 
-- **Endpoint**: `GET /images/get-thumbnail-path`
-- **Description**: Retrieves the path to the generated thumbnails folder.
-- **Response**: JSON object containing the thumbnail folder path.
+- **Endpoint**: `GET /images/get-thumbnail-path` *(Deprecated: Not present in current backend code)*
+- **Description**: Retrieves the path to the generated thumbnails folder. *(Deprecated)*
 
 ### Delete Thumbnails
 
@@ -169,12 +155,30 @@ We briefly discuss the endpoints related to images, all of these fall under the 
 
 ### Add Folder Progress
 
-- **Endpoint**: `GET /images/add-folder-progress`
-- **Description**: Retrieves the progress of adding images from a folder.
-- **Response**: JSON object containing progress information.
+- **Endpoint**: `GET /images/add-folder-progress` *(Deprecated: Not present in current backend code)*
+- **Description**: Retrieves the progress of adding images from a folder. *(Deprecated)*
 
 ### Get All Image Objects
 
 - **Endpoint**: `GET /images/all-image-objects`
 - **Description**: Returns detailed metadata (dimensions, MIME type, tags) for every image.
-- **Response**: JSON array of image objects.
+- **Response**: JSON object with `images` (dict of image path to classes/tags) and `image_path` (thumbnail path).
+
+### Get Class IDs
+
+- **Endpoint**: `GET /images/class-ids`
+- **Description**: Returns class IDs (tags/objects) for a given image path.
+- **Query Parameters**: `path` (string, required)
+- **Response**: JSON object with class IDs or 'None'.
+
+### Add Folder
+
+- **Endpoint**: `POST /images/add-folder`
+- **Description**: Adds one or more folders to the system for image management.
+- **Request Format**:
+  ```json
+  {
+    "folder_path": ["string", "string", ...]
+  }
+  ```
+- **Response**: Message confirming folder addition.
