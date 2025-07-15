@@ -88,7 +88,7 @@ def delete_image_db(path):
         # Get image ID from path
         cursor.execute("SELECT id FROM image_id_mapping WHERE path = ?", (abs_path,))
         result = cursor.fetchone()
-        
+
         if result:
             image_id = result[0]
             # Remove from both tables
@@ -97,12 +97,12 @@ def delete_image_db(path):
 
             # Remove image from albums (handled separately to avoid circular imports)
             remove_image_from_all_albums(image_id)
-            
+
             # Import only after removing image from albums to avoid circular import error
             from app.database.faces import delete_face_embeddings
 
             conn.commit()
-            
+
             # Remove image from face clusters
             clusters = get_face_cluster()
             clusters.remove_image(image_id)
@@ -151,11 +151,11 @@ def get_objects_db(path):
     # Get class_ids from images table
     conn_images = sqlite3.connect(DATABASE_PATH)
     cursor_images = conn_images.cursor()
-    
+
     try:
         cursor_images.execute("SELECT class_ids FROM images WHERE id = ?", (image_id,))
         result = cursor_images.fetchone()
-        
+
         if not result:
             return None
 
@@ -171,7 +171,7 @@ def get_objects_db(path):
     # Get class names from mappings table
     conn_mappings = sqlite3.connect(DATABASE_PATH)
     cursor_mappings = conn_mappings.cursor()
-    
+
     try:
         class_names = []
         for class_id in class_ids:
@@ -183,7 +183,7 @@ def get_objects_db(path):
                 class_names.append(name_result[0])
     finally:
         conn_mappings.close()
-    
+
     class_names = list(set(class_names))
     return class_names
 
