@@ -9,7 +9,7 @@ FaceId = int
 ImageId = str
 ClusterId = int
 BoundingBox = Dict[str, Union[int, float]]
-FaceEmbedding = str
+FaceEmbedding = np.ndarray
 
 
 class FaceData(TypedDict):
@@ -18,7 +18,7 @@ class FaceData(TypedDict):
     face_id: FaceId
     image_id: ImageId
     cluster_id: Optional[ClusterId]
-    embeddings: FaceEmbedding
+    embeddings: FaceEmbedding  # Numpy array in application, stored as JSON string in DB
     confidence: Optional[float]
     bbox: Optional[BoundingBox]
 
@@ -38,7 +38,8 @@ def db_create_faces_table() -> None:
             embeddings TEXT,
             confidence REAL,
             bbox TEXT,
-            FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE
+            FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
+            FOREIGN KEY (cluster_id) REFERENCES face_clusters(cluster_id) ON DELETE SET NULL
         )
     """
     )
@@ -117,3 +118,150 @@ def db_insert_face_embeddings_by_image_id(
     else:
         # Single face
         return db_insert_face_embeddings(image_id, embeddings, confidence, bbox, cluster_id)
+
+
+def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbedding]]]:
+    """
+    Get all faces that don't have assigned clusters.
+
+    Returns:
+        List of dictionaries containing face_id and embeddings (as numpy array)
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT face_id, embeddings FROM faces WHERE cluster_id IS NULL")
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    faces = []
+    for row in rows:
+        face_id, embeddings_json = row
+        # Convert JSON string back to numpy array
+        embeddings = np.array(json.loads(embeddings_json))
+        faces.append({"face_id": face_id, "embeddings": embeddings})
+
+    return faces
+
+
+def db_get_all_faces_with_cluster_names() -> List[Dict[str, Union[FaceId, FaceEmbedding, Optional[str]]]]:
+    """
+    Get all faces with their corresponding cluster names.
+
+    Returns:
+        List of dictionaries containing face_id, embeddings (as numpy array), and cluster_name
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT f.face_id, f.embeddings, fc.cluster_name
+        FROM faces f
+        LEFT JOIN face_clusters fc ON f.cluster_id = fc.cluster_id
+        ORDER BY f.face_id
+        """
+    )
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    faces = []
+    for row in rows:
+        face_id, embeddings_json, cluster_name = row
+        # Convert JSON string back to numpy array
+        embeddings = np.array(json.loads(embeddings_json))
+        faces.append({"face_id": face_id, "embeddings": embeddings, "cluster_name": cluster_name})
+
+    return faces
+
+
+def db_update_face_cluster_ids_batch(face_cluster_mapping: List[Dict[str, Union[FaceId, ClusterId]]]) -> None:
+    """
+    Update cluster IDs for multiple faces in batch.
+
+    Args:
+        face_cluster_mapping: List of dictionaries containing face_id and cluster_id pairs
+                             Each dict should have keys: 'face_id' and 'cluster_id'
+
+    Example:
+        face_cluster_mapping = [
+            {'face_id': 1, 'cluster_id': 'uuid-cluster-1'},
+            {'face_id': 2, 'cluster_id': 'uuid-cluster-2'},
+            {'face_id': 3, 'cluster_id': None}  # To unassign cluster
+        ]
+    """
+    if not face_cluster_mapping:
+        return
+
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    # Prepare update data as tuples (cluster_id, face_id)
+    update_data = []
+    for mapping in face_cluster_mapping:
+        face_id = mapping.get("face_id")
+        cluster_id = mapping.get("cluster_id")
+        update_data.append((cluster_id, face_id))
+
+    cursor.executemany(
+        """
+        UPDATE faces 
+        SET cluster_id = ? 
+        WHERE face_id = ?
+        """,
+        update_data,
+    )
+
+    conn.commit()
+    conn.close()
+
+
+def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]]]:
+    """
+    Get cluster IDs and their corresponding mean face embeddings.
+
+    Returns:
+        List of dictionaries containing cluster_id and mean_embedding (as numpy array)
+        Only returns clusters that have at least one face assigned
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT f.cluster_id, f.embeddings
+        FROM faces f
+        WHERE f.cluster_id IS NOT NULL
+        ORDER BY f.cluster_id
+        """
+    )
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        return []
+
+    # Group embeddings by cluster_id
+    cluster_embeddings = {}
+    for row in rows:
+        cluster_id, embeddings_json = row
+        # Convert JSON string back to numpy array
+        embeddings = np.array(json.loads(embeddings_json))
+
+        if cluster_id not in cluster_embeddings:
+            cluster_embeddings[cluster_id] = []
+        cluster_embeddings[cluster_id].append(embeddings)
+
+    # Calculate mean embeddings for each cluster
+    cluster_means = []
+    for cluster_id, embeddings_list in cluster_embeddings.items():
+        # Stack all embeddings for this cluster and calculate mean
+        stacked_embeddings = np.stack(embeddings_list)
+        mean_embedding = np.mean(stacked_embeddings, axis=0)
+
+        cluster_means.append({"cluster_id": cluster_id, "mean_embedding": mean_embedding})
+
+    return cluster_means

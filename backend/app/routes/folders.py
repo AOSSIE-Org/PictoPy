@@ -17,9 +17,41 @@ import os
 from app.utils.folders import folder_util_add_folder_tree
 from concurrent.futures import ProcessPoolExecutor
 from app.utils.images import image_util_process_folder_images, image_util_process_untagged_images
+from app.utils.face_clusters import cluster_util_face_clusters_sync
 
 
 router = APIRouter()
+
+
+def post_folder_add_sequence(folder_path: str):
+    """
+    Post-addition sequence for a folder.
+    This function is called after a folder is successfully added.
+    It processes images in the folder and updates the database.
+    """
+    try:
+        # Process images in the folder
+        image_util_process_folder_images(folder_path)
+
+    except Exception as e:
+        print(f"Error in post processing after folder {folder_path} was added: {e}")
+        return False
+    return True
+
+
+def post_AI_tagging_enabled_sequence():
+    """
+    Post-enabling AI tagging sequence.
+    This function is called after AI tagging is enabled for a folder.
+    It processes untagged images in the database.
+    """
+    try:
+        image_util_process_untagged_images()
+        cluster_util_face_clusters_sync()
+    except Exception as e:
+        print(f"Error in post processing after AI tagging was enabled: {e}")
+        return False
+    return True
 
 
 def get_state(request: Request):
@@ -84,7 +116,7 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
 
         # Step 6: Process images in the folder
         executor: ProcessPoolExecutor = app_state.executor
-        executor.submit(image_util_process_folder_images, request.folder_path)
+        executor.submit(post_folder_add_sequence, request.folder_path)
 
         return AddFolderResponse(
             success=True,
@@ -128,7 +160,7 @@ def enable_ai_tagging(request: UpdateAITaggingRequest, app_state=Depends(get_sta
         updated_count = db_enable_ai_tagging_batch(request.folder_ids)
 
         executor: ProcessPoolExecutor = app_state.executor
-        executor.submit(image_util_process_untagged_images)
+        executor.submit(post_AI_tagging_enabled_sequence)
 
         return UpdateAITaggingResponse(
             success=True,

@@ -9,35 +9,23 @@ from contextlib import asynccontextmanager
 from concurrent.futures import ProcessPoolExecutor
 from app.database.faces import db_create_faces_table
 from app.database.images import db_create_images_table
-from app.database.albums import create_albums_table
+from app.database.face_clusters import db_create_clusters_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 from app.database.folders import db_create_folders_table
-# from app.facecluster.init_face_cluster import get_face_cluster, init_face_cluster
 
-# from app.routes.test import router as test_router
-# from app.routes.images import router as images_router
-# from app.routes.albums import router as albums_router
-# from app.routes.facetagging import router as tagging_router
 from app.routes.folders import router as folders_router
+from app.routes.face_clusters import router as face_clusters_router
 import multiprocessing
-import os
-
-
-# Create thumbnails directory if not exists
-thumbnails_dir = os.path.join("images", "PictoPy.thumbnails")
-os.makedirs(thumbnails_dir, exist_ok=True)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create tables and initialize systems
     db_create_YOLO_classes_table()
+    db_create_clusters_table()  # Create clusters table first since faces references it
     db_create_faces_table()
     db_create_folders_table()
     db_create_images_table()
-    # create_albums_table()
-    # cleanup_face_embeddings()
-    # init_face_cluster()
 
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor()
@@ -45,12 +33,6 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        # Save face clustering data to DB if available
-        # face_cluster = get_face_cluster()
-        # if face_cluster:
-        #     face_cluster.save_to_db()
-
-        # Shutdown the executor gracefully
         app.state.executor.shutdown(wait=True)
 
 
@@ -73,12 +55,8 @@ async def root():
     return {"message": "PictoPy Server is up and running!"}
 
 
-# Register routers
-# app.include_router(test_router, prefix="/test", tags=["Test"])
-# app.include_router(images_router, prefix="/images", tags=["Images"])
-# app.include_router(albums_router, prefix="/albums", tags=["Albums"])
-# app.include_router(tagging_router, prefix="/tag", tags=["Tagging"])
 app.include_router(folders_router, prefix="/folders", tags=["Folders"])
+app.include_router(face_clusters_router, prefix="/face-clusters", tags=["Face Clusters"])
 
 
 # Entry point for running with: python3 main.py
