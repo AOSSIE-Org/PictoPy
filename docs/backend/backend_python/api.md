@@ -21,7 +21,9 @@ We briefly discuss the endpoints related to albums, all of these fall under the 
   ```json
   {
     "name": "string",
-    "description": "string" (optional)
+    "description": "string" (optional),
+    "is_hidden": "	boolean"(default: false),
+    "password":	"string"
   }
   ```
 - **Response**: Message confirming album creation.
@@ -68,7 +70,8 @@ We briefly discuss the endpoints related to albums, all of these fall under the 
 
 - **Endpoint**: `GET /albums/view-album`
 - **Description**: Retrieves all photos in a specified album.
-- **Query Parameters**: `album_name` (string)
+- **Query Parameters**: `album_name` (string),
+                        `password` (string) (Required if hidden album)
 - **Response**: JSON object containing album name and list of photos.
 
 ### Edit Album Description
@@ -119,10 +122,22 @@ We briefly discuss the endpoints related to images, all of these fall under the 
 - **Request Format**:
   ```json
   {
-    "path": "string"
+    "filename": "string"
   }
   ```
 - **Response**: Message confirming image deletion.
+
+### Delete Multiple Images
+- **Endpoint**: `DELETE /images/multiple-images`
+- **Description**: 
+- **Request Format**:
+```json
+{
+  "paths": ["string", "string", ...]
+}
+```
+- **Response**:Message confirming images deletion.
+
 
 ### Get All Image Objects
 
@@ -148,6 +163,29 @@ We briefly discuss the endpoints related to images, all of these fall under the 
   }
   ```
 - **Response**: Message indicating the number of images being processed from the folder.
+
+### Generate Thumbnails
+- **Endpoint**: `POST /images/generate-thumbnails`
+- **Description**: Generates 400px width or height thumbnails for all the images present the given folder using pillow library
+- **Request Format**:
+  ```json
+  {
+    "folder_paths": ["string","string",...]
+  }
+  ```
+- **Response**: Message indicating that thumbnails generated successfully for all valid folders
+
+### Delete Thumbnails
+- **Endpoint**: `DELETE/images/generate-thumbnails`
+- **Description**:Delete all the thumbnails present in the given folder
+- **Request Format**:
+  ```json
+  {
+    "folder_path":"string"
+  }
+  ```
+- **Response**: Message indicating that all PictoPy.thumbnails folders have been successfully deleted
+
 
 ## Face Recognition and Tagging
 
