@@ -84,33 +84,34 @@ def delete_image_db(path):
     cursor = conn.cursor()
     abs_path = os.path.abspath(path)
 
-    # Get image ID from path
+    try:
+        # Get image ID from path
+        cursor.execute("SELECT id FROM image_id_mapping WHERE path = ?", (abs_path,))
+        result = cursor.fetchone()
+        
+        if result:
+            image_id = result[0]
+            # Remove from both tables
+            cursor.execute("DELETE FROM images WHERE id = ?", (image_id,))
+            cursor.execute("DELETE FROM image_id_mapping WHERE id = ?", (image_id,))
 
-    cursor.execute("SELECT id FROM image_id_mapping WHERE path = ?", (abs_path,))
-    result = cursor.fetchone()
-    if result:
-        image_id = result[0]
-        # Remove from both tables
-        cursor.execute("DELETE FROM images WHERE id = ?", (image_id,))
-        cursor.execute("DELETE FROM image_id_mapping WHERE id = ?", (image_id,))
+            # Remove image from albums (handled separately to avoid circular imports)
+            remove_image_from_all_albums(image_id)
+            
+            # Import only after removing image from albums to avoid circular import error
+            from app.database.faces import delete_face_embeddings
 
-        # Instead of calling delete_face_embeddings directly, for circular import
+            conn.commit()
+            
+            # Remove image from face clusters
+            clusters = get_face_cluster()
+            clusters.remove_image(image_id)
 
-        # Remove image from albums (handled separately to avoid circular imports)
-
-        remove_image_from_all_albums(image_id)
-        # Import only after removing image from albums to avoid circular import error
-        from app.database.faces import delete_face_embeddings
-
-        conn.commit()
+            # Delete associated face embeddings
+            delete_face_embeddings(image_id)
+    finally:
+        # Always close the connection, regardless of success or failure
         conn.close()
-        # Remove image from face clusters
-        clusters = get_face_cluster()
-        clusters.remove_image(image_id)
-
-        # Delete associated face embeddings
-        delete_face_embeddings(image_id)
-    conn.close()
 
 
 def get_all_image_ids_from_db():
@@ -142,41 +143,47 @@ def get_id_from_path(path):
 
 
 def get_objects_db(path):
-    conn_images = sqlite3.connect(DATABASE_PATH)
-    cursor_images = conn_images.cursor()
     image_id = get_id_from_path(path)
 
     if image_id is None:
         return None
 
-    # Decode class_ids from JSON or comma-separated format
+    # Get class_ids from images table
+    conn_images = sqlite3.connect(DATABASE_PATH)
+    cursor_images = conn_images.cursor()
+    
+    try:
+        cursor_images.execute("SELECT class_ids FROM images WHERE id = ?", (image_id,))
+        result = cursor_images.fetchone()
+        
+        if not result:
+            return None
 
-    cursor_images.execute("SELECT class_ids FROM images WHERE id = ?", (image_id,))
-    result = cursor_images.fetchone()
-    conn_images.close()
+        class_ids_json = result[0]
+        class_ids = json.loads(class_ids_json)
+        if isinstance(class_ids, list):
+            class_ids = [str(class_id) for class_id in class_ids]
+        else:
+            class_ids = class_ids.split(",")
+    finally:
+        conn_images.close()
 
-    if not result:
-        return None
-
-    class_ids_json = result[0]
-    class_ids = json.loads(class_ids_json)
-    if isinstance(class_ids, list):
-        class_ids = [str(class_id) for class_id in class_ids]
-    else:
-        class_ids = class_ids.split(",")
-
+    # Get class names from mappings table
     conn_mappings = sqlite3.connect(DATABASE_PATH)
     cursor_mappings = conn_mappings.cursor()
-    class_names = []
-    for class_id in class_ids:
-        cursor_mappings.execute(
-            "SELECT name FROM mappings WHERE class_id = ?", (class_id,)
-        )
-        name_result = cursor_mappings.fetchone()
-        if name_result:
-            class_names.append(name_result[0])
-
-    conn_mappings.close()
+    
+    try:
+        class_names = []
+        for class_id in class_ids:
+            cursor_mappings.execute(
+                "SELECT name FROM mappings WHERE class_id = ?", (class_id,)
+            )
+            name_result = cursor_mappings.fetchone()
+            if name_result:
+                class_names.append(name_result[0])
+    finally:
+        conn_mappings.close()
+    
     class_names = list(set(class_names))
     return class_names
 
@@ -202,8 +209,11 @@ def get_all_image_paths():
 def get_all_images_from_folder_id(folder_id):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT path FROM image_id_mapping WHERE folder_id = ?", (folder_id,)
-    )
-    image_paths = cursor.fetchall()
-    return [row[0] for row in image_paths] if image_paths else []
+    try:
+        cursor.execute(
+            "SELECT path FROM image_id_mapping WHERE folder_id = ?", (folder_id,)
+        )
+        image_paths = cursor.fetchall()
+        return [row[0] for row in image_paths] if image_paths else []
+    finally:
+        conn.close()
