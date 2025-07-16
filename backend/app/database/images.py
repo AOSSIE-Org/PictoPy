@@ -24,7 +24,6 @@ class ImageRecord(TypedDict):
 
 
 ImageClassPair = Tuple[ImageId, ClassId]
-FolderIdPath = Tuple[FolderId, str]
 
 
 def db_create_images_table() -> None:
@@ -40,7 +39,7 @@ def db_create_images_table() -> None:
             folder_id INTEGER,
             thumbnailPath TEXT UNIQUE,
             metadata TEXT,
-            isTagged BOOLEAN DEFAULT FALSE,
+            isTagged BOOLEAN DEFAULT 0,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
     """
@@ -61,26 +60,6 @@ def db_create_images_table() -> None:
 
     conn.commit()
     conn.close()
-
-
-def db_get_folder_ids_by_path_prefix(root_path: str) -> List[FolderIdPath]:
-    """Get all folder IDs and paths whose path starts with the given root path."""
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-
-    try:
-        # Use path LIKE with wildcard to match all subfolders
-        cursor.execute(
-            """
-            SELECT folder_id, folder_path FROM folders 
-            WHERE folder_path LIKE ? || '%'
-        """,
-            (root_path,),
-        )
-
-        return cursor.fetchall()  # Returns list of (folder_id, path) tuples
-    finally:
-        conn.close()
 
 
 def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:

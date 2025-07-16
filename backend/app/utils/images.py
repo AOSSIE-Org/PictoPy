@@ -7,12 +7,11 @@ from pathlib import Path
 from app.config.settings import THUMBNAIL_IMAGES_PATH
 from app.database.images import (
     db_bulk_insert_images,
-    db_get_folder_ids_by_path_prefix,
     db_get_untagged_images,
     db_update_image_tagged_status,
     db_insert_image_classes_batch,
 )
-
+from app.database.folders import db_get_folder_ids_by_path_prefix
 from app.facenet.facenet import detect_faces
 from app.utils.classification import ObjectClassifier
 
@@ -77,7 +76,7 @@ def image_util_process_folder_images(root_folder: str) -> bool:
         # Create a dictionary mapping folder paths to their IDs
         folder_path_to_id: Dict[str, int] = {}
         for folder_id in folder_ids:
-            path = os.path.dirname(folder_id[1])  # Assuming db_get_folder_ids_by_path_prefix returns (id, path) tuples
+            path = os.path.abspath(folder_id[1])  # Assuming db_get_folder_ids_by_path_prefix returns (id, path) tuples
             folder_path_to_id[path] = folder_id[0]
 
         # Prepare image records

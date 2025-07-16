@@ -149,14 +149,16 @@ def cluster_util_cluster_all_face_embeddings(eps: float = 0.3, min_samples: int 
     )
 
     cluster_labels = dbscan.fit_predict(embeddings_array)
-    print(f"DBSCAN found {len(set(cluster_labels))} clusters")
+    print(f"DBSCAN found {len(set(cluster_labels)) - 1} clusters")
 
     # Group faces by cluster labels
     clusters = defaultdict(list)
     for i, label in enumerate(cluster_labels):
-        clusters[label].append(
-            {"face_id": face_ids[i], "embedding": embeddings[i], "existing_cluster_name": existing_cluster_names[i]}
-        )
+        # Ignore noise points (label -1)
+        if label != -1:
+            clusters[label].append(
+                {"face_id": face_ids[i], "embedding": embeddings[i], "existing_cluster_name": existing_cluster_names[i]}
+            )
 
     # Generate cluster UUIDs and determine cluster names
     results = []
@@ -202,7 +204,6 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(similarity_threshold:
     """
     # Get faces without cluster assignments
     unassigned_faces = db_get_faces_unassigned_clusters()
-
     if not unassigned_faces:
         return []
 

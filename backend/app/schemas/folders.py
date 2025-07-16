@@ -6,9 +6,7 @@ from typing import Optional, List
 class AddFolderRequest(BaseModel):
     folder_path: str
     parent_folder_id: Optional[str] = None  # UUID as string
-    AI_Tagging: Optional[bool] = False
     taggingCompleted: Optional[bool] = False
-    # app: FastAPI
 
 
 class UpdateAITaggingRequest(BaseModel):

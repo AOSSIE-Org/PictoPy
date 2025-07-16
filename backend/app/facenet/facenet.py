@@ -1,3 +1,4 @@
+from numpy import shape
 import cv2
 import onnxruntime
 from app.config.settings import DEFAULT_FACE_DETECTION_MODEL, DEFAULT_FACENET_MODEL

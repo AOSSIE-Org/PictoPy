@@ -9,6 +9,7 @@ FolderId = str
 FolderPath = str
 FolderData = Tuple[FolderId, FolderPath, Optional[FolderId], int, bool, Optional[bool]]
 FolderMap = Dict[FolderPath, Tuple[FolderId, Optional[FolderId]]]
+FolderIdPath = Tuple[FolderId, str]
 
 
 def db_create_folders_table() -> None:
@@ -265,3 +266,23 @@ def db_disable_ai_tagging_batch(folder_ids: List[FolderId]) -> int:
     Returns the number of folders updated
     """
     return db_update_ai_tagging_batch(folder_ids, False)
+
+
+def db_get_folder_ids_by_path_prefix(root_path: str) -> List[FolderIdPath]:
+    """Get all folder IDs and paths whose path starts with the given root path."""
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        # Use path LIKE with wildcard to match all subfolders
+        cursor.execute(
+            """
+            SELECT folder_id, folder_path FROM folders 
+            WHERE folder_path LIKE ? || '%'
+        """,
+            (root_path,),
+        )
+
+        return cursor.fetchall()
+    finally:
+        conn.close()

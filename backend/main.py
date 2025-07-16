@@ -12,6 +12,7 @@ from app.database.images import db_create_images_table
 from app.database.face_clusters import db_create_clusters_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 from app.database.folders import db_create_folders_table
+from app.database.metadata import db_create_metadata_table
 
 from app.routes.folders import router as folders_router
 from app.routes.face_clusters import router as face_clusters_router
@@ -26,7 +27,7 @@ async def lifespan(app: FastAPI):
     db_create_faces_table()
     db_create_folders_table()
     db_create_images_table()
-
+    db_create_metadata_table()
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor()
 

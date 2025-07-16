@@ -107,14 +107,14 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
         root_folder_id, folder_map = folder_util_add_folder_tree(
             root_path=request.folder_path,
             parent_folder_id=parent_folder_id,
-            AI_Tagging=request.AI_Tagging or False,
+            AI_Tagging=False,
             taggingCompleted=request.taggingCompleted,
         )
 
         # Step 5: Update parent ids for the subtree
         db_update_parent_ids_for_subtree(request.folder_path, folder_map)
 
-        # Step 6: Process images in the folder
+        # Step 6: Call the post-addition sequence in a separate process
         executor: ProcessPoolExecutor = app_state.executor
         executor.submit(post_folder_add_sequence, request.folder_path)
 
