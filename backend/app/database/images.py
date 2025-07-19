@@ -1,6 +1,8 @@
+# Standard library imports
 import sqlite3
 from typing import List, Tuple, TypedDict
 
+# App-specific imports
 from app.config.settings import (
     DATABASE_PATH,
 )
