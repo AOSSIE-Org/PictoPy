@@ -3,7 +3,9 @@ import os
 from app.database.folders import db_insert_folders_batch
 
 
-def folder_util_add_folder_tree(root_path, parent_folder_id=None, AI_Tagging=False, taggingCompleted=None):
+def folder_util_add_folder_tree(
+    root_path, parent_folder_id=None, AI_Tagging=False, taggingCompleted=None
+):
     """
     Recursively collect folder data and insert all folders in a single database transaction.
     All folders are initially inserted with NULL parent_id, which is updated after insertion.
@@ -22,7 +24,9 @@ def folder_util_add_folder_tree(root_path, parent_folder_id=None, AI_Tagging=Fal
             parent_id = parent_folder_id
         else:
             parent_path = os.path.dirname(dirpath)
-            parent_id = folder_map[parent_path][0] if parent_path in folder_map else None
+            parent_id = (
+                folder_map[parent_path][0] if parent_path in folder_map else None
+            )
 
         # Store both folder_id and parent_id in the map
         folder_map[dirpath] = (this_folder_id, parent_id)

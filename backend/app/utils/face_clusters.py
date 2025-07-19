@@ -23,7 +23,13 @@ from app.database.metadata import (
 class ClusterResult:
     """Result class for clustering operation"""
 
-    def __init__(self, face_id: int, embedding: NDArray, cluster_uuid: str, cluster_name: Optional[str]):
+    def __init__(
+        self,
+        face_id: int,
+        embedding: NDArray,
+        cluster_uuid: str,
+        cluster_name: Optional[str],
+    ):
         self.face_id = face_id
         self.embedding = embedding
         self.cluster_uuid = cluster_uuid
@@ -92,7 +98,10 @@ def cluster_util_face_clusters_sync():
             cluster_id = result["cluster_id"]
             cluster_name = result["cluster_name"]
             if cluster_id not in unique_clusters:
-                unique_clusters[cluster_id] = {"cluster_id": cluster_id, "cluster_name": cluster_name}
+                unique_clusters[cluster_id] = {
+                    "cluster_id": cluster_id,
+                    "cluster_name": cluster_name,
+                }
 
         # Convert to list for batch insert
         cluster_list = list(unique_clusters.values())
@@ -108,7 +117,9 @@ def cluster_util_face_clusters_sync():
         db_update_face_cluster_ids_batch(face_cluster_mappings)
 
 
-def cluster_util_cluster_all_face_embeddings(eps: float = 0.3, min_samples: int = 2) -> List[ClusterResult]:
+def cluster_util_cluster_all_face_embeddings(
+    eps: float = 0.3, min_samples: int = 2
+) -> List[ClusterResult]:
     """
     Cluster face embeddings using DBSCAN and assign cluster names based on majority voting.
 
@@ -157,7 +168,11 @@ def cluster_util_cluster_all_face_embeddings(eps: float = 0.3, min_samples: int 
         # Ignore noise points (label -1)
         if label != -1:
             clusters[label].append(
-                {"face_id": face_ids[i], "embedding": embeddings[i], "existing_cluster_name": existing_cluster_names[i]}
+                {
+                    "face_id": face_ids[i],
+                    "embedding": embeddings[i],
+                    "existing_cluster_name": existing_cluster_names[i],
+                }
             )
 
     # Generate cluster UUIDs and determine cluster names
@@ -183,7 +198,9 @@ def cluster_util_cluster_all_face_embeddings(eps: float = 0.3, min_samples: int 
     return results
 
 
-def cluster_util_assign_cluster_to_faces_without_clusterId(similarity_threshold: float = 0.7) -> List[Dict]:
+def cluster_util_assign_cluster_to_faces_without_clusterId(
+    similarity_threshold: float = 0.7,
+) -> List[Dict]:
     """
     Assign cluster IDs to faces that don't have clusters using nearest mean method with similarity threshold.
 
@@ -242,12 +259,16 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(similarity_threshold:
             nearest_cluster_idx = np.argmin(distances)
             nearest_cluster_id = cluster_ids[nearest_cluster_idx]
 
-            face_cluster_mappings.append({"face_id": face_id, "cluster_id": nearest_cluster_id})
+            face_cluster_mappings.append(
+                {"face_id": face_id, "cluster_id": nearest_cluster_id}
+            )
 
     return face_cluster_mappings
 
 
-def _calculate_cosine_distances(face_embedding: NDArray, cluster_means: NDArray) -> NDArray:
+def _calculate_cosine_distances(
+    face_embedding: NDArray, cluster_means: NDArray
+) -> NDArray:
     """
     Calculate cosine distances between a face embedding and cluster means.
 
@@ -285,7 +306,9 @@ def _determine_cluster_name(faces_in_cluster: List[Dict]) -> Optional[str]:
     """
     # Extract non-null cluster names
     existing_names = [
-        face["existing_cluster_name"] for face in faces_in_cluster if face["existing_cluster_name"] is not None
+        face["existing_cluster_name"]
+        for face in faces_in_cluster
+        if face["existing_cluster_name"] is not None
     ]
 
     if not existing_names:

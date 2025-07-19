@@ -2,7 +2,11 @@ import onnxruntime
 import time
 import cv2
 import numpy as np
-from app.utils.YOLO import YOLO_util_xywh2xyxy, YOLO_util_draw_detections, YOLO_util_multiclass_nms
+from app.utils.YOLO import (
+    YOLO_util_xywh2xyxy,
+    YOLO_util_draw_detections,
+    YOLO_util_multiclass_nms,
+)
 from app.utils.memory_monitor import log_memory_usage
 from app.utils.ONNX import ONNX_util_get_execution_providers
 
@@ -13,7 +17,9 @@ class YOLO:
         self.conf_threshold = conf_thres
         self.iou_threshold = iou_thres
         # Create ONNX session once and reuse it
-        self.session = onnxruntime.InferenceSession(self.model_path, providers=ONNX_util_get_execution_providers())
+        self.session = onnxruntime.InferenceSession(
+            self.model_path, providers=ONNX_util_get_execution_providers()
+        )
 
         # Initialize model info
         self.get_input_details()
@@ -34,7 +40,9 @@ class YOLO:
 
     def inference(self, input_tensor):
         time.perf_counter()
-        outputs = self.session.run(self.output_names, {self.input_names[0]: input_tensor})
+        outputs = self.session.run(
+            self.output_names, {self.input_names[0]: input_tensor}
+        )
         return outputs
 
     def get_input_details(self):
@@ -79,10 +87,16 @@ class YOLO:
         return boxes
 
     def rescale_boxes(self, boxes):
-        input_shape = np.array([self.input_width, self.input_height, self.input_width, self.input_height])
+        input_shape = np.array(
+            [self.input_width, self.input_height, self.input_width, self.input_height]
+        )
         boxes = np.divide(boxes, input_shape, dtype=np.float32)
-        boxes *= np.array([self.img_width, self.img_height, self.img_width, self.img_height])
+        boxes *= np.array(
+            [self.img_width, self.img_height, self.img_width, self.img_height]
+        )
         return boxes
 
     def draw_detections(self, image, draw_scores=True, mask_alpha=0.4):
-        return YOLO_util_draw_detections(image, self.boxes, self.scores, self.class_ids, mask_alpha)
+        return YOLO_util_draw_detections(
+            image, self.boxes, self.scores, self.class_ids, mask_alpha
+        )

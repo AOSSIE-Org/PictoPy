@@ -10,8 +10,12 @@ class ObjectClassifier:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(ObjectClassifier, cls).__new__(cls)
-            print("Using YOLO model path:", YOLO_util_get_model_path("object"))  # Debugging line
-            cls.yolo_classifier = YOLO(YOLO_util_get_model_path("object"), conf_thres=0.4, iou_thres=0.5)
+            print(
+                "Using YOLO model path:", YOLO_util_get_model_path("object")
+            )  # Debugging line
+            cls.yolo_classifier = YOLO(
+                YOLO_util_get_model_path("object"), conf_thres=0.4, iou_thres=0.5
+            )
         return cls._instance
 
     def get_classes(self, img_path) -> list[int] | None:

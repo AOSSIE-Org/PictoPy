@@ -16,7 +16,10 @@ from app.schemas.folders import (
 import os
 from app.utils.folders import folder_util_add_folder_tree
 from concurrent.futures import ProcessPoolExecutor
-from app.utils.images import image_util_process_folder_images, image_util_process_untagged_images
+from app.utils.images import (
+    image_util_process_folder_images,
+    image_util_process_untagged_images,
+)
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 
 
@@ -68,7 +71,9 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
         # Step 1: Data Validation
 
         if not os.path.isdir(request.folder_path):
-            raise ValueError(f"Error: '{request.folder_path}' is not a valid directory.")
+            raise ValueError(
+                f"Error: '{request.folder_path}' is not a valid directory."
+            )
 
         if (
             not os.access(request.folder_path, os.R_OK)

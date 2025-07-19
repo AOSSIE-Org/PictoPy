@@ -3,7 +3,7 @@ This module contains the main FastAPI application.
 """
 
 from uvicorn import Config, Server
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from concurrent.futures import ProcessPoolExecutor
@@ -58,8 +58,12 @@ async def root():
 
 
 app.include_router(folders_router, prefix="/folders", tags=["Folders"])
-app.include_router(face_clusters_router, prefix="/face-clusters", tags=["Face Clusters"])
-app.include_router(user_preferences_router, prefix="/user-preferences", tags=["User Preferences"])
+app.include_router(
+    face_clusters_router, prefix="/face-clusters", tags=["Face Clusters"]
+)
+app.include_router(
+    user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
+)
 
 
 # Entry point for running with: python3 main.py

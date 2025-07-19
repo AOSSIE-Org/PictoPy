@@ -35,14 +35,15 @@ def db_create_folders_table() -> None:
 def db_insert_folders_batch(folders_data: List[FolderData]) -> None:
     """
     Insert multiple folders in a single database transaction.
-    folders_data: list of tuples (folder_id, folder_path, parent_folder_id, last_modified_time, AI_Tagging, taggingCompleted)
+    folders_data: list of tuples (folder_id, folder_path,
+    parent_folder_id,last_modified_time, AI_Tagging, taggingCompleted)
     """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     try:
         cursor.executemany(
-            "INSERT OR IGNORE INTO folders (folder_id, folder_path, parent_folder_id, last_modified_time, AI_Tagging, taggingCompleted) VALUES (?, ?, ?, ?, ?, ?)",
+            """INSERT OR IGNORE INTO folders (folder_id, folder_path, parent_folder_id, last_modified_time, AI_Tagging, taggingCompleted) VALUES (?, ?, ?, ?, ?, ?)""",
             folders_data,
         )
         conn.commit()
@@ -86,7 +87,14 @@ def db_insert_folder(
 
     cursor.execute(
         "INSERT INTO folders (folder_id, folder_path, parent_folder_id, last_modified_time, AI_Tagging, taggingCompleted) VALUES (?, ?, ?, ?, ?, ?)",
-        (folder_id, abs_folder_path, parent_folder_id, last_modified_time, AI_Tagging, taggingCompleted),
+        (
+            folder_id,
+            abs_folder_path,
+            parent_folder_id,
+            last_modified_time,
+            AI_Tagging,
+            taggingCompleted,
+        ),
     )
 
     conn.commit()
@@ -149,7 +157,9 @@ def db_delete_folder(folder_path: FolderPath) -> None:
 
     if not existing_folder:
         conn.close()
-        raise ValueError(f"Error: Folder '{folder_path}' does not exist in the database.")
+        raise ValueError(
+            f"Error: Folder '{folder_path}' does not exist in the database."
+        )
 
     cursor.execute(
         "DELETE FROM folders WHERE folder_path = ?",
@@ -160,7 +170,9 @@ def db_delete_folder(folder_path: FolderPath) -> None:
     conn.close()
 
 
-def db_update_parent_ids_for_subtree(root_folder_path: FolderPath, folder_map: FolderMap) -> None:
+def db_update_parent_ids_for_subtree(
+    root_folder_path: FolderPath, folder_map: FolderMap
+) -> None:
     """
     Update parent_folder_id for all folders in the subtree rooted at root_folder_path.
     Only updates folders whose parent_folder_id is NULL.
@@ -193,7 +205,9 @@ def db_folder_exists(folder_path: FolderPath) -> bool:
     cursor = conn.cursor()
     try:
         abs_path = os.path.abspath(folder_path)
-        cursor.execute("SELECT folder_id FROM folders WHERE folder_path = ?", (abs_path,))
+        cursor.execute(
+            "SELECT folder_id FROM folders WHERE folder_path = ?", (abs_path,)
+        )
         result = cursor.fetchone()
         return bool(result)
     finally:
@@ -212,14 +226,18 @@ def db_find_parent_folder_id(folder_path: FolderPath) -> Optional[FolderId]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT folder_id FROM folders WHERE folder_path = ?", (parent_path,))
+        cursor.execute(
+            "SELECT folder_id FROM folders WHERE folder_path = ?", (parent_path,)
+        )
         result = cursor.fetchone()
         return result[0] if result else None
     finally:
         conn.close()
 
 
-def db_update_ai_tagging_batch(folder_ids: List[FolderId], ai_tagging_enabled: bool) -> int:
+def db_update_ai_tagging_batch(
+    folder_ids: List[FolderId], ai_tagging_enabled: bool
+) -> int:
     """
     Update AI_Tagging status for multiple folders in a single transaction.
     folder_ids: list of folder IDs to update
@@ -237,7 +255,8 @@ def db_update_ai_tagging_batch(folder_ids: List[FolderId], ai_tagging_enabled: b
         placeholders = ",".join("?" * len(folder_ids))
 
         cursor.execute(
-            f"UPDATE folders SET AI_Tagging = ? WHERE folder_id IN ({placeholders})", [ai_tagging_enabled] + folder_ids
+            f"UPDATE folders SET AI_Tagging = ? WHERE folder_id IN ({placeholders})",
+            [ai_tagging_enabled] + folder_ids,
         )
 
         updated_count = cursor.rowcount

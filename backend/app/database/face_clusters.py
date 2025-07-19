@@ -110,7 +110,9 @@ def db_get_all_clusters() -> List[ClusterData]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
-    cursor.execute("SELECT cluster_id, cluster_name FROM face_clusters ORDER BY cluster_id")
+    cursor.execute(
+        "SELECT cluster_id, cluster_name FROM face_clusters ORDER BY cluster_id"
+    )
 
     rows = cursor.fetchall()
     conn.close()
@@ -153,7 +155,10 @@ def db_update_cluster(
 
     update_values.append(cluster_id)
 
-    cursor.execute(f"UPDATE face_clusters SET {', '.join(update_fields)} WHERE cluster_id = ?", update_values)
+    cursor.execute(
+        f"UPDATE face_clusters SET {', '.join(update_fields)} WHERE cluster_id = ?",
+        update_values,
+    )
 
     updated = cursor.rowcount > 0
     conn.commit()
@@ -181,7 +186,9 @@ def db_delete_all_clusters() -> int:
     return deleted_count
 
 
-def db_get_all_clusters_with_face_counts() -> List[Dict[str, Union[str, Optional[str], int]]]:
+def db_get_all_clusters_with_face_counts() -> List[
+    Dict[str, Union[str, Optional[str], int]]
+]:
     """
     Retrieve all clusters with their face counts.
 
@@ -206,6 +213,8 @@ def db_get_all_clusters_with_face_counts() -> List[Dict[str, Union[str, Optional
 
     clusters = []
     for row in rows:
-        clusters.append({"cluster_id": row[0], "cluster_name": row[1], "face_count": row[2]})
+        clusters.append(
+            {"cluster_id": row[0], "cluster_name": row[1], "face_count": row[2]}
+        )
 
     return clusters
