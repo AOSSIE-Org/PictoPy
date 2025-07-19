@@ -51,7 +51,7 @@ def db_create_images_table() -> None:
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS image_classes (
-            image_id INTEGER,
+            image_id TEXT,
             class_id INTEGER,
             PRIMARY KEY (image_id, class_id),
             FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
