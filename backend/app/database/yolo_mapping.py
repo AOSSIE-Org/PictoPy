@@ -1,6 +1,6 @@
 import sqlite3
 from app.config.settings import DATABASE_PATH
-from app.yolov8.utils import class_names
+from app.utils.YOLO import class_names
 
 
 def db_create_YOLO_classes_table():

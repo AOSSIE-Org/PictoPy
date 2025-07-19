@@ -6,7 +6,7 @@ import sys
 import os
 from pathlib import Path
 import shutil
-from app.utils.metadata import extract_metadata
+from backend.app.utils.image_metatdata import extract_metadata
 from app.database.images import (
     insert_image_db,
 )
@@ -135,8 +135,6 @@ def test_get_albums():
 
 def test_delete_existing_album():
     with patch("app.database.albums.delete_album"):
-        response = client.request(
-            "DELETE", "/albums/delete-album", json={"name": "Test Album"}
-        )
+        response = client.request("DELETE", "/albums/delete-album", json={"name": "Test Album"})
         assert response.status_code == 200
         assert response.json()["success"] is True

@@ -16,6 +16,7 @@ from app.database.metadata import db_create_metadata_table
 
 from app.routes.folders import router as folders_router
 from app.routes.face_clusters import router as face_clusters_router
+from app.routes.user_preferences import router as user_preferences_router
 import multiprocessing
 
 
@@ -29,7 +30,7 @@ async def lifespan(app: FastAPI):
     db_create_images_table()
     db_create_metadata_table()
     # Create ProcessPoolExecutor and attach it to app.state
-    app.state.executor = ProcessPoolExecutor()
+    app.state.executor = ProcessPoolExecutor(max_workers=1)
 
     try:
         yield
@@ -58,6 +59,7 @@ async def root():
 
 app.include_router(folders_router, prefix="/folders", tags=["Folders"])
 app.include_router(face_clusters_router, prefix="/face-clusters", tags=["Face Clusters"])
+app.include_router(user_preferences_router, prefix="/user-preferences", tags=["User Preferences"])
 
 
 # Entry point for running with: python3 main.py

@@ -1,3 +1,4 @@
+# This DB table contains metadata about the application and user preferences.
 import sqlite3
 import json
 from typing import Optional, Dict, Any

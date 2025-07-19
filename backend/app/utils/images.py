@@ -12,8 +12,8 @@ from app.database.images import (
     db_insert_image_classes_batch,
 )
 from app.database.folders import db_get_folder_ids_by_path_prefix
-from app.facenet.facenet import detect_faces
-from app.utils.classification import ObjectClassifier
+from app.models.FaceDetector import FaceDetector
+from app.models.ObjectClassifier import ObjectClassifier
 
 
 def image_util_is_valid_image(file_path: str) -> bool:
@@ -39,6 +39,11 @@ def image_util_generate_thumbnail(image_path: str, thumbnail_path: str, size: Tu
     try:
         with Image.open(image_path) as img:
             img.thumbnail(size)
+
+            # Convert to RGB if the image has an alpha channel or is not RGB
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+
             img.save(thumbnail_path, "JPEG")  # Always save thumbnails as JPEG
         return True
     except Exception as e:
@@ -126,10 +131,10 @@ def image_util_classify_and_face_detect_images(untagged_images: List[Dict[str, s
         image_path = image["path"]
         image_id = image["id"]
 
-        classifier = ObjectClassifier()
-
+        object_classifier = ObjectClassifier()
+        face_detector = FaceDetector()
         # Step 1: Get classes
-        classes = classifier.get_classes(image_path)
+        classes = object_classifier.get_classes(image_path)
 
         # Step 2: Update the image status in the database
         db_update_image_tagged_status(image_id, True)
@@ -145,7 +150,9 @@ def image_util_classify_and_face_detect_images(untagged_images: List[Dict[str, s
 
         # Step 4: Detect faces if "person" class is present
         if classes and 0 in classes and 0 < classes.count(0) < 7:
-            detect_faces(image_id, image_path)
+            face_detector.detect_faces(image_id, image_path)
+    ObjectClassifier.close()  # Clean up the classifier instance
+    FaceDetector.close()  # Clean up the face detector instance
 
 
 def image_util_process_untagged_images() -> bool:
