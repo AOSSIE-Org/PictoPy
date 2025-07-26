@@ -28,6 +28,12 @@ os.makedirs(thumbnails_dir, exist_ok=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    Async context manager that handles application startup and shutdown events.
+    On startup, it initializes database tables, cleans up face embeddings, 
+    and initializes the face clustering system.
+    On shutdown, it saves the current face cluster state to the database.
+    """
     create_YOLO_mappings()
     create_faces_table()
     create_folders_table()
@@ -45,6 +51,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 start_scheduler()
+# Starts the background scheduler to handle periodic or scheduled tasks.
 
 
 # Add CORS middleware
@@ -59,6 +66,9 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
+    """
+    Root endpoint returning a simple JSON message confirming the server is running.
+    """
     return {"message": "PictoPy Server is up and running!"}
 
 
@@ -70,6 +80,10 @@ app.include_router(tagging_router, prefix="/tag", tags=["Tagging"])
 
 # Runs when we use this command: python3 main.py (As in production)
 if __name__ == "__main__":
+    """
+    Main entry point for running the FastAPI server using Uvicorn.
+    Configures multiprocessing support for Windows, sets up logging, and runs the server.
+    """
     multiprocessing.freeze_support()  # Required for Windows.
     app.logger = CustomizeLogger.make_logger("app/logging_config.json")
     config = Config(app=app, host="0.0.0.0", port=8000, log_config=None)

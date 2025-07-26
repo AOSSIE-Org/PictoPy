@@ -46,6 +46,7 @@ def create_new_album(payload: AlbumCreate):
             "is_hidden": payload.is_hidden,
         },
     )
+# Creates a new album with the provided name, description, visibility, and password.
 
 
 @router.delete(
@@ -72,6 +73,7 @@ def delete_existing_album(payload: AlbumDeleteRequest):
                 success=False, error="Server Error", message="Failed to delete album"
             ).model_dump(),  #  # Convert Pydantic model to a dict
         )
+# Deletes the specified album by name. Returns success or raises error if deletion fails.
 
 
 @router.post(
@@ -104,6 +106,8 @@ def add_multiple_images_to_album(payload: AddMultipleImagesRequest):
         message=f"Images added to album '{album_name}' successfully",
         data={"album_name": album_name, "paths": paths},
     )
+# Adds multiple photos to an album. Iterates through each path and adds it to the album,
+# raising an error if any addition fails.
 
 
 @router.delete(
@@ -132,6 +136,7 @@ def remove_image_from_album(payload: RemoveImagFromAlbumRequest):
                 error="Failed to remove photo from Album",
             ).model_dump(),
         )
+# Removes a specific photo from an album. Returns success or raises error if removal fails.
 
 
 @router.get(
@@ -168,6 +173,8 @@ def view_album_photos(
             "folder_path": folder_path,
         },
     )
+# Retrieves all photos from the specified album, checking password if album is hidden.
+# Returns photos and folder path or raises 404 if album doesn’t exist.
 
 
 @router.put(
@@ -196,6 +203,7 @@ def update_album_description(payload: UpdateAlbumDescriptionRequest):
                 success=False, message="Server error", error="Failed to update Album"
             ).model_dump(),
         )
+# Updates the description of the given album. Returns success or raises an error on failure.
 
 
 @router.get(
@@ -217,3 +225,4 @@ def get_albums():
                 success=False, message="Server error", error="Failed to update Album"
             ).model_dump(),
         )
+# Retrieves a list of all albums. Returns the album list or raises error if retrieval fails.

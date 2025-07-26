@@ -53,7 +53,7 @@ router = APIRouter()
 
 progress_status = {}
 
-
+# Run image classification and face detection, and insert data into DB
 async def run_get_classes(img_path, folder_id=None):
     loop = asyncio.get_event_loop()
     result = await loop.run_in_executor(None, get_classes, img_path)
@@ -63,7 +63,7 @@ async def run_get_classes(img_path, folder_id=None):
         if "0" in classes and classes.count("0") < 8:
             detect_faces(img_path)
 
-
+# Fetch all image paths from the database
 @router.get(
     "/all-images",
     response_model=GetImagesResponse,
@@ -82,7 +82,6 @@ def get_images():
             message="Successfully retrieved all images",
             success=True,
         )
-
     except Exception:
         raise HTTPException(
             status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -93,7 +92,7 @@ def get_images():
             ).model_dump(),
         )
 
-
+# Background task to process all images with progress tracking
 async def process_images(tasks, folder_id):
     total = len(tasks)
     completed = 0
@@ -107,7 +106,7 @@ async def process_images(tasks, folder_id):
 
     progress_status[folder_id]["status"] = "completed"
 
-
+# Delete a single image file and its DB entry
 @router.delete(
     "/delete-image",
     response_model=DeleteImageResponse,
@@ -133,7 +132,6 @@ def delete_image(payload: DeleteImageRequest):
         return DeleteImageResponse(
             data=file_path, message="Image deleted successfully", success=True
         )
-
     except Exception as e:
         raise HTTPException(
             status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -142,7 +140,7 @@ def delete_image(payload: DeleteImageRequest):
             ).model_dump(),
         )
 
-
+# Delete multiple images and corresponding thumbnails and DB entries
 @router.delete(
     "/multiple-images",
     response_model=DeleteMultipleImagesResponse,
@@ -177,7 +175,6 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
 
             print("File = ", filename)
 
-            # Check and remove the original file
             if os.path.exists(path):
                 try:
                     if is_from_device:
@@ -189,7 +186,6 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
             else:
                 print(f"File '{path}' does not exist.")
 
-            # Check and remove the thumbnail file
             if os.path.exists(thumb_nail_image_path):
                 try:
                     os.remove(thumb_nail_image_path)
@@ -204,7 +200,6 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
             delete_image_db(path)
             deleted_paths.append(path)
 
-        # Delete those folders , no image left
         for folder_path in folder_paths:
             try:
                 folder_id = get_folder_id_from_path(folder_path)
@@ -217,7 +212,6 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
         return DeleteMultipleImagesResponse(
             data=deleted_paths, message="Images deleted successfully", success=True
         )
-
     except Exception as e:
         print(e)
         raise HTTPException(
@@ -229,7 +223,7 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
             ).model_dump(),
         )
 
-
+# Retrieve all image objects (labels/classes) from DB
 @router.get(
     "/all-image-objects",
     response_model=GetAllImageObjectsResponse,
@@ -255,7 +249,6 @@ def get_all_image_objects():
             message="Successfully retrieved all image objects",
             success=True,
         )
-
     except Exception:
         raise HTTPException(
             status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -266,7 +259,7 @@ def get_all_image_objects():
             ).model_dump(),
         )
 
-
+# Retrieve class IDs associated with a specific image path
 @router.get(
     "/class-ids",
     response_model=ClassIDsResponse,
@@ -294,7 +287,6 @@ def get_class_ids(path: str = Query(...)):
             ),
             data=class_ids if class_ids else "None",
         )
-
     except Exception:
         raise HTTPException(
             status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -305,7 +297,7 @@ def get_class_ids(path: str = Query(...)):
             ).model_dump(),
         )
 
-
+# Add folder, scan and classify all valid images inside it
 @router.post(
     "/add-folder",
     response_model=AddFolderResponse,
@@ -393,10 +385,8 @@ async def add_folder(payload: AddFolderRequest):
             message=f"Processing {len(tasks)} images from the folder in the background",
             success=True,
         )
-
     except Exception as e:
         print(e)
-
         raise HTTPException(
             status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
@@ -406,7 +396,7 @@ async def add_folder(payload: AddFolderRequest):
             ).model_dump(),
         )
 
-
+# Delete folder and its associated images from DB
 @router.delete("/delete-folder")
 @exception_handler_wrapper
 def delete_folder_ai_tagging(payload: dict):
@@ -455,7 +445,7 @@ def delete_folder_ai_tagging(payload: dict):
         },
     )
 
-
+# Generate thumbnails for provided folder paths
 @router.post("/generate-thumbnails")
 @exception_handler_wrapper
 def generate_thumbnails(payload: GenerateThumbnailsRequest):
@@ -472,7 +462,7 @@ def generate_thumbnails(payload: GenerateThumbnailsRequest):
         success=True, message="Thumbnails generated successfully for all valid folders"
     )
 
-
+# Return the absolute path to the thumbnail directory
 @router.get("/get-thumbnail-path")
 @exception_handler_wrapper
 def get_thumbnail_path():
@@ -489,8 +479,7 @@ def get_thumbnail_path():
         },
     )
 
-
-# Delete all the thumbnails present in the given folder
+# Delete all thumbnails from a specific folder
 @router.delete(
     "/delete-thumbnails",
     response_model=DeleteThumbnailsResponse,
@@ -513,7 +502,6 @@ def delete_thumbnails(payload: DeleteThumbnailsRequest):
             ).model_dump(),
         )
 
-    # List to store any errors encountered while deleting thumbnails
     failed_deletions = []
 
     for file in os.listdir(folder_path):
@@ -542,7 +530,7 @@ def delete_thumbnails(payload: DeleteThumbnailsRequest):
         message="All PictoPy.thumbnails folders have been successfully deleted.",
     )
 
-
+# Get overall progress of image classification tasks
 @router.get("/add-folder-progress")
 @exception_handler_wrapper
 def combined_progress():

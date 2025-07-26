@@ -23,7 +23,7 @@ client = TestClient(app)
 
 @pytest.fixture(scope="session", autouse=True)
 def initialize_database_and_services():
-    # Run your initialization functions before any tests are executed
+    # Initialize all necessary database tables and services before running tests
     create_YOLO_mappings()
     create_faces_table()
     create_image_id_mapping_table()
@@ -36,13 +36,13 @@ def initialize_database_and_services():
 
 @pytest.fixture(scope="module")
 def test_images(tmp_path_factory):
-    # Create a temporary directory for test images
+    # Prepare a temporary directory containing test images copied from inputs directory
     test_dir = tmp_path_factory.mktemp("test_images")
 
     # Get the path to the inputs directory (relative to test file)
     inputs_dir = Path(__file__).parent / "inputs"
 
-    # Copy some test images from inputs to temp directory
+    # Copy specified test images into the temporary test directory
     test_files = [
         "000000000009.jpg",
     ]
@@ -56,16 +56,18 @@ def test_images(tmp_path_factory):
 
     yield str(test_dir)
 
-    # Cleanup after tests
+    # Cleanup the temporary directory after tests finish
     shutil.rmtree(test_dir)
 
 
 @pytest.fixture
 def mock_album_data():
+    # Provide mock data for creating a test album
     return {"name": "Test Album", "description": "This is a test album"}
 
 
 def test_create_new_album(mock_album_data):
+    # Test the album creation endpoint with mock album data
     with patch("app.database.albums.create_album"):
         response = client.post("/albums/create-album", json=mock_album_data)
         assert response.status_code == 200
@@ -73,11 +75,13 @@ def test_create_new_album(mock_album_data):
 
 
 def test_add_multiple_images_to_album(test_images):
+    # Test adding multiple images to an album
     payload = {
         "album_name": "Test Album",
         "paths": [str(Path(test_images) / "000000000009.jpg")],
     }
     with patch("app.database.albums.add_photo_to_album"):
+        # Insert an image entry into the database before adding to album
         insert_image_db(
             str(Path(test_images) / "000000000009.jpg"),
             [],
@@ -89,6 +93,7 @@ def test_add_multiple_images_to_album(test_images):
 
 
 def test_remove_image_from_album(test_images):
+    # Test removing a single image from an album and deleting multiple images endpoint
     payload = {
         "album_name": "Test Album",
         "path": str(Path(test_images) / "000000000009.jpg"),
@@ -97,6 +102,8 @@ def test_remove_image_from_album(test_images):
         response = client.request("DELETE", "/albums/remove-from-album", json=payload)
         assert response.status_code == 200
         assert response.json()["success"] is True
+
+        # Also test deleting multiple images (in this case only one)
         payload2 = {
             "paths": [str(Path(test_images) / "000000000009.jpg")],
             "isFromDevice": False,
@@ -107,6 +114,7 @@ def test_remove_image_from_album(test_images):
 
 
 def test_view_album_photos():
+    # Test viewing photos in a specified album with mocked photo list
     with patch(
         "app.database.albums.get_album_photos",
         return_value=["image1.jpg", "image2.jpg"],
@@ -116,6 +124,7 @@ def test_view_album_photos():
 
 
 def test_update_album_description():
+    # Test updating the description of an album
     payload = {"album_name": "Test Album", "description": "Updated description"}
     with patch("app.database.albums.edit_album_description"):
         response = client.put("/albums/edit-album-description", json=payload)
@@ -124,6 +133,7 @@ def test_update_album_description():
 
 
 def test_get_albums():
+    # Test retrieving the list of all albums with mocked album data
     mock_albums = [
         {"name": "Album1", "description": "Desc1"},
         {"name": "Album2", "description": "Desc2"},
@@ -134,6 +144,7 @@ def test_get_albums():
 
 
 def test_delete_existing_album():
+    # Test deleting an existing album by name
     with patch("app.database.albums.delete_album"):
         response = client.request(
             "DELETE", "/albums/delete-album", json={"name": "Test Album"}

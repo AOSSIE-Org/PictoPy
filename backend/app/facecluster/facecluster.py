@@ -95,6 +95,9 @@ def database_connection(db_path: Union[str, Path]):
     finally:
         conn.close()
 
+    # Provides a context manager that opens a database connection
+    # and ensures it is closed after use.
+
 
 class FaceCluster:
     """

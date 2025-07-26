@@ -30,3 +30,5 @@ def test_onnx_session_context_manager():
 
     # Allow for some memory overhead, but it shouldn't be excessive
     assert memory_diff < 100, f"Memory leak detected: {memory_diff:.2f}MB increase"
+# Tests the ONNX session context manager by creating multiple sessions, running dummy inferences,
+# and verifying no significant memory leaks occur during repeated session usage.

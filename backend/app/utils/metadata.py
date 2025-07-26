@@ -75,3 +75,11 @@ def extract_metadata(image_path):
             f"Warning: Could not retrieve creation date for {image_path}. Error: {time_error}"
         )
     return metadata
+
+
+# This function attempts to extract and return metadata from an image file specified by image_path.
+# It first verifies the file exists, then opens the image and retrieves basic info such as size, format, and mode.
+# It extracts EXIF metadata, converting rational numbers and bytes to readable formats.
+# It also safely handles errors related to image processing and EXIF extraction.
+# After image metadata extraction, it attempts to add file size and file creation date to the metadata dictionary.
+# The resulting metadata dictionary contains all gathered information about the image.

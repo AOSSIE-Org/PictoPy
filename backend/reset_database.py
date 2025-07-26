@@ -3,6 +3,10 @@ import glob
 
 
 def delete_db_files():
+    """
+    Deletes all .db files located in the 'app/database/' directory.
+    Handles and reports any PermissionError or other exceptions encountered during deletion.
+    """
     db_files = glob.glob("app/database/*.db")
     for db_file in db_files:
         try:

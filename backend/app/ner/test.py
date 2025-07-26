@@ -97,6 +97,10 @@ def ner_marking(text1):
 
     return compare_ner_results(text1, session, tokenizer, id2label)
 
+# Performs Named Entity Recognition (NER) on the input text using a pre-trained BERT ONNX model.
+# It tokenizes the input, runs the model inference, decodes predicted labels, and combines subword tokens.
+# Finally, it filters out non-entity tokens and returns a list of entity tokens found in the text.
+
 
 def preprocess_face_for_onnx(face_image):
     """
@@ -121,6 +125,11 @@ def preprocess_face_for_onnx(face_image):
 
     return preprocessed_face
 
+# Takes a cropped face image and prepares it for input into the FaceNet ONNX model.
+# The preprocessing includes resizing to 160x160, converting BGR to RGB,
+# normalizing pixel values to [0,1], adding a batch dimension,
+# and rearranging axes to match the model input format.
+
 
 # change the path if required
 session = onnxruntime.InferenceSession(
@@ -135,11 +144,16 @@ output_tensor_name = session.get_outputs()[0].name
 def normalize_embedding(embedding):
     return embedding / np.linalg.norm(embedding)
 
+# Normalizes the embedding vector to unit length for consistent comparison and similarity calculation.
+
 
 def get_face_embeddings(image):
     result = session.run([output_tensor_name], {input_tensor_name: image})[0]
     embedding = result[0]
     return normalize_embedding(embedding)
+
+# Runs the FaceNet ONNX model on the preprocessed face image to get the face embedding vector,
+# then normalizes and returns this embedding.
 
 
 def scanned_embeddings(name):
@@ -218,6 +232,12 @@ def scanned_embeddings(name):
     cv2.destroyAllWindows()
 
     return {"status": "processing completed"}
+
+# Uses the webcam to scan faces one by one while displaying names extracted from NER on screen.
+# Detects faces using Haar cascades, draws bounding boxes and instructions,
+# captures and preprocesses the detected face upon Enter key press,
+# extracts and prints the face embeddings, then repeats for all names.
+# Cleans up resources and returns status after processing all names.
 
 
 if __name__ == "__main__":

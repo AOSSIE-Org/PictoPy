@@ -57,6 +57,11 @@ def generate_thumbnails_for_folders(folder_paths: list):
 
     return failed_paths
 
+# This function takes a list of folder paths, iterates through each folder and its files,
+# skipping the "PictoPy.thumbnails" directory, and generates thumbnails for supported image files.
+# It saves thumbnails in a designated thumbnails folder and collects any errors for invalid paths
+# or thumbnail generation failures, returning a list of failed paths and error details.
+
 
 def generate_thumbnails_for_existing_folders():
     try:
@@ -86,3 +91,8 @@ def generate_thumbnails_for_existing_folders():
 
     except Exception:
         return []
+
+# This function retrieves all folder IDs from the database, then for each folder,
+# it fetches all associated image paths and generates thumbnails for each image
+# if a thumbnail does not already exist. Any image paths causing errors during processing
+# are recorded and returned. In case of any top-level failure, it returns an empty list.

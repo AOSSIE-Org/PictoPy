@@ -28,3 +28,9 @@ def onnx_session(model_path: str):
     finally:
         if session:
             del session
+
+
+# This context manager function creates and yields an ONNX runtime InferenceSession for the given model path.
+# It ensures that the session is properly initialized with available providers and that resources are cleaned up afterwards.
+# If an error occurs during session creation or usage, it logs the error and re-raises the exception.
+# Using this context manager helps manage the ONNX session lifecycle safely and cleanly within a `with` statement.

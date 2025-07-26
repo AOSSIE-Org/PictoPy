@@ -12,6 +12,11 @@ from app.database.albums import remove_image_from_all_albums
 
 
 def create_image_id_mapping_table():
+    """
+    Creates the 'image_id_mapping' table if it does not exist.
+    This table maps image file paths to a unique ID and associates them with folder IDs.
+    Enforces a foreign key constraint linking folder_id to the 'folders' table.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute(
@@ -29,6 +34,12 @@ def create_image_id_mapping_table():
 
 
 def create_images_table():
+    """
+    Creates the 'images' table if it does not exist.
+    This table stores additional image data such as class IDs and metadata,
+    referencing the primary key from 'image_id_mapping'.
+    Also ensures that the dependent 'image_id_mapping' table is created first.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -50,6 +61,11 @@ def create_images_table():
 
 
 def insert_image_db(path, class_ids, metadata, folder_id=None):
+    """
+    Inserts or updates an image record in the database.
+    Adds a new entry in 'image_id_mapping' with the image path and optional folder ID,
+    then inserts or replaces the corresponding data in 'images' with class IDs and metadata.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_path = os.path.abspath(path)
@@ -80,6 +96,12 @@ def insert_image_db(path, class_ids, metadata, folder_id=None):
 
 
 def delete_image_db(path):
+    """
+    Deletes an image record from the database given its file path.
+    Removes entries from both 'images' and 'image_id_mapping' tables,
+    removes the image from all albums, face clusters, and deletes associated face embeddings.
+    Handles circular import issues by importing only after certain operations.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_path = os.path.abspath(path)
@@ -114,6 +136,9 @@ def delete_image_db(path):
 
 
 def get_all_image_ids_from_db():
+    """
+    Retrieves a list of all image IDs stored in the 'image_id_mapping' table.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM image_id_mapping")
@@ -123,6 +148,10 @@ def get_all_image_ids_from_db():
 
 
 def get_path_from_id(image_id):
+    """
+    Given an image ID, retrieves the corresponding image file path.
+    Returns None if the ID is not found.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT path FROM image_id_mapping WHERE id = ?", (image_id,))
@@ -132,6 +161,10 @@ def get_path_from_id(image_id):
 
 
 def get_id_from_path(path):
+    """
+    Given an image file path, retrieves the corresponding image ID.
+    Returns None if the path is not found.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_path = os.path.abspath(path)
@@ -142,6 +175,12 @@ def get_id_from_path(path):
 
 
 def get_objects_db(path):
+    """
+    Retrieves the list of class names (objects) detected in the image specified by the path.
+    Looks up the image's class IDs stored as JSON in the 'images' table,
+    then maps those class IDs to class names via the 'mappings' table.
+    Returns None if the image or classes are not found.
+    """
     conn_images = sqlite3.connect(DATABASE_PATH)
     cursor_images = conn_images.cursor()
     image_id = get_id_from_path(path)
@@ -182,6 +221,10 @@ def get_objects_db(path):
 
 
 def is_image_in_database(path):
+    """
+    Checks if an image with the given file path exists in the 'image_id_mapping' table.
+    Returns True if it exists, False otherwise.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_path = os.path.abspath(path)
@@ -192,6 +235,10 @@ def is_image_in_database(path):
 
 
 def get_all_image_paths():
+    """
+    Retrieves a list of all image file paths stored in the 'image_id_mapping' table.
+    Returns an empty list if no paths are found.
+    """
     with sqlite3.connect(DATABASE_PATH) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT path FROM image_id_mapping")
@@ -200,6 +247,10 @@ def get_all_image_paths():
 
 
 def get_all_images_from_folder_id(folder_id):
+    """
+    Given a folder ID, retrieves all image file paths that belong to that folder.
+    Returns an empty list if no images are found for the folder.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute(
