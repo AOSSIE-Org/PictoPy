@@ -103,13 +103,13 @@ def delete_image_db(path):
         from app.database.faces import delete_face_embeddings
 
         conn.commit()
-        conn.close()
         # Remove image from face clusters
         clusters = get_face_cluster()
         clusters.remove_image(image_id)
 
         # Delete associated face embeddings
         delete_face_embeddings(image_id)
+        
     conn.close()
 
 
