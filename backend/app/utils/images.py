@@ -34,9 +34,7 @@ def image_util_is_valid_image(file_path: str) -> bool:
         return False
 
 
-def image_util_generate_thumbnail(
-    image_path: str, thumbnail_path: str, size: Tuple[int, int] = (200, 200)
-) -> bool:
+def image_util_generate_thumbnail(image_path: str, thumbnail_path: str, size: Tuple[int, int] = (200, 200)) -> bool:
     """Generate thumbnail for a single image."""
     try:
         with Image.open(image_path) as img:
@@ -83,9 +81,7 @@ def image_util_process_folder_images(root_folder: str) -> bool:
         # Create a dictionary mapping folder paths to their IDs
         folder_path_to_id: Dict[str, int] = {}
         for folder_id in folder_ids:
-            path = os.path.abspath(
-                folder_id[1]
-            )  # Assuming db_get_folder_ids_by_path_prefix returns (id, path) tuples
+            path = os.path.abspath(folder_id[1])  # Assuming db_get_folder_ids_by_path_prefix returns (id, path) tuples
             folder_path_to_id[path] = folder_id[0]
 
         # Prepare image records
@@ -129,36 +125,37 @@ def image_util_process_folder_images(root_folder: str) -> bool:
         return False
 
 
-def image_util_classify_and_face_detect_images(
-    untagged_images: List[Dict[str, str]]
-) -> None:
+def image_util_classify_and_face_detect_images(untagged_images: List[Dict[str, str]]) -> None:
     """Classify untagged images and detect faces if applicable."""
-    for image in untagged_images:
-        image_path = image["path"]
-        image_id = image["id"]
+    object_classifier = ObjectClassifier()
+    face_detector = FaceDetector()
+    try:
+        for image in untagged_images:
+            image_path = image["path"]
+            image_id = image["id"]
 
-        object_classifier = ObjectClassifier()
-        face_detector = FaceDetector()
-        # Step 1: Get classes
-        classes = object_classifier.get_classes(image_path)
+            # Step 1: Get classes
+            classes = object_classifier.get_classes(image_path)
 
-        # Step 2: Update the image status in the database
-        db_update_image_tagged_status(image_id, True)
+            # Step 2: Update the image status in the database
+            db_update_image_tagged_status(image_id, True)
 
-        # Step 3: Insert class-image pairs if classes were detected
-        if len(classes) > 0:
-            # Create image-class pairs
-            image_class_pairs = [(image_id, class_id) for class_id in classes]
-            print(image_class_pairs)
+            # Step 3: Insert class-image pairs if classes were detected
+            if len(classes) > 0:
+                # Create image-class pairs
+                image_class_pairs = [(image_id, class_id) for class_id in classes]
+                print(image_class_pairs)
 
-            # Insert the pairs into the database
-            db_insert_image_classes_batch(image_class_pairs)
+                # Insert the pairs into the database
+                db_insert_image_classes_batch(image_class_pairs)
 
-        # Step 4: Detect faces if "person" class is present
-        if classes and 0 in classes and 0 < classes.count(0) < 7:
-            face_detector.detect_faces(image_id, image_path)
-    ObjectClassifier.close()  # Clean up the classifier instance
-    FaceDetector.close()  # Clean up the face detector instance
+            # Step 4: Detect faces if "person" class is present
+            if classes and 0 in classes and 0 < classes.count(0) < 7:
+                face_detector.detect_faces(image_id, image_path)
+    finally:
+        # Ensure resources are cleaned up
+        object_classifier.close()
+        face_detector.close()
 
 
 def image_util_process_untagged_images() -> bool:

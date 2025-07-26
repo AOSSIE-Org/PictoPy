@@ -9,22 +9,15 @@ from app.database.faces import db_insert_face_embeddings_by_image_id
 
 
 class FaceDetector:
-    _instance = None
-    yolo_detector = None
-    facenet = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(FaceDetector, cls).__new__(cls)
-
-            cls.yolo_detector = YOLO(
-                YOLO_util_get_model_path("face"),
-                conf_thres=0.35,
-                iou_thres=0.45,
-            )
-            cls.facenet = FaceNet(FaceNet_util_get_model_path())
-
-        return cls._instance
+    def __init__(self):
+        self.yolo_detector = YOLO(
+            YOLO_util_get_model_path("face"),
+            conf_threshold=0.35,
+            iou_threshold=0.45,
+        )
+        self.facenet = FaceNet(FaceNet_util_get_model_path())
+        self._initialized = True
+        print("FaceDetector initialized with YOLO and FaceNet models.")
 
     def detect_faces(self, image_id: int, image_path: str):
         img = cv2.imread(image_path)
@@ -38,7 +31,7 @@ class FaceDetector:
         processed_faces, embeddings = [], []
 
         for box, score in zip(boxes, scores):
-            if score > 0.3:
+            if score > self.yolo_detector.conf_threshold:
                 x1, y1, x2, y2 = map(int, box)
                 padding = 20
                 face_img = img[
@@ -60,35 +53,14 @@ class FaceDetector:
             "num_faces": len(embeddings),
         }
 
-    @classmethod
-    def close(cls):
+    def close(self):
         """
-        Close and cleanup the FaceDetector singleton.
-        This will reset the singleton instance and cleanup both YOLO detector and FaceNet.
+        Close the resources held by the FaceDetector.
         """
-        if cls.yolo_detector is not None:
-            # If YOLO detector has a cleanup method, call it
-            if hasattr(cls.yolo_detector, "close"):
-                cls.yolo_detector.close()
-            elif hasattr(cls.yolo_detector, "cleanup"):
-                cls.yolo_detector.cleanup()
+        if self.yolo_detector is not None:
+            self.yolo_detector.close()
+            self.yolo_detector = None
 
-            cls.yolo_detector = None
-
-        if cls.facenet is not None:
-            # If FaceNet has a cleanup method, call it
-            if hasattr(cls.facenet, "close"):
-                cls.facenet.close()
-            elif hasattr(cls.facenet, "cleanup"):
-                cls.facenet.cleanup()
-
-            cls.facenet = None
-
-        cls._instance = None
-        print("FaceDetector singleton closed and cleaned up")
-
-    def __del__(self):
-        """
-        Destructor to ensure cleanup when object is garbage collected.
-        """
-        self.close()
+        if self.facenet is not None:
+            self.facenet.close()
+            self.facenet = None
