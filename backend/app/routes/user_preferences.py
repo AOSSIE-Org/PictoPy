@@ -94,7 +94,7 @@ def update_user_preferences(request: UpdateUserPreferencesRequest):
         # Step 7: Create response with updated preferences
         user_preferences = UserPreferencesData(
             YOLO_model_size=current_user_prefs.get("YOLO_model_size", "small"),
-            GPU_Acceleration=current_user_prefs.get("GPU_Acceleration", False),
+            GPU_Acceleration=current_user_prefs.get("GPU_Acceleration", True),
         )
 
         return UpdateUserPreferencesResponse(
