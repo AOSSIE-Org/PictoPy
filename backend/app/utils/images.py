@@ -34,7 +34,9 @@ def image_util_is_valid_image(file_path: str) -> bool:
         return False
 
 
-def image_util_generate_thumbnail(image_path: str, thumbnail_path: str, size: Tuple[int, int] = (200, 200)) -> bool:
+def image_util_generate_thumbnail(
+    image_path: str, thumbnail_path: str, size: Tuple[int, int] = (200, 200)
+) -> bool:
     """Generate thumbnail for a single image."""
     try:
         with Image.open(image_path) as img:
@@ -81,7 +83,9 @@ def image_util_process_folder_images(root_folder: str) -> bool:
         # Create a dictionary mapping folder paths to their IDs
         folder_path_to_id: Dict[str, int] = {}
         for folder_id in folder_ids:
-            path = os.path.abspath(folder_id[1])  # Assuming db_get_folder_ids_by_path_prefix returns (id, path) tuples
+            path = os.path.abspath(
+                folder_id[1]
+            )  # Assuming db_get_folder_ids_by_path_prefix returns (id, path) tuples
             folder_path_to_id[path] = folder_id[0]
 
         # Prepare image records
@@ -125,7 +129,9 @@ def image_util_process_folder_images(root_folder: str) -> bool:
         return False
 
 
-def image_util_classify_and_face_detect_images(untagged_images: List[Dict[str, str]]) -> None:
+def image_util_classify_and_face_detect_images(
+    untagged_images: List[Dict[str, str]]
+) -> None:
     """Classify untagged images and detect faces if applicable."""
     object_classifier = ObjectClassifier()
     face_detector = FaceDetector()
