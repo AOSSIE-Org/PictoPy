@@ -12,6 +12,10 @@ def get_path_from_id(image_id):
     return result[0] if result else None
 
 
+# This function takes an image ID as input and queries the SQLite database
+# to retrieve the corresponding file path from the image_id_mapping table.
+# If the ID exists, it returns the associated path as a string; otherwise, it returns None.
+
 def get_id_from_path(path):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
@@ -20,3 +24,8 @@ def get_id_from_path(path):
     result = cursor.fetchone()
     conn.close()
     return result[0] if result else None
+
+
+# This function takes a file path as input, converts it to an absolute path,
+# and queries the SQLite database to find the associated image ID in the image_id_mapping table.
+# If the path exists in the database, it returns the corresponding ID; otherwise, it returns None.

@@ -7,6 +7,11 @@ face_cluster = None
 
 
 def init_face_cluster(db_path=DATABASE_PATH):
+    # Initializes the face_cluster object.
+    # - If the object already exists, it returns the existing instance.
+    # - If a database exists at the specified path, it loads the FaceCluster from it.
+    # - If no database is found, it creates a new FaceCluster instance,
+    #   fits it with all available face embeddings, and saves it to the database.
     global face_cluster
     if face_cluster is not None:
         return face_cluster
@@ -33,6 +38,8 @@ def init_face_cluster(db_path=DATABASE_PATH):
 
 
 def get_face_cluster():
+    # Returns the global face_cluster instance.
+    # If it hasn't been initialized yet, it calls init_face_cluster() to set it up.
     global face_cluster
     if face_cluster is None:
         face_cluster = init_face_cluster()

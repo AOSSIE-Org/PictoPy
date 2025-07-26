@@ -47,7 +47,15 @@ def log_memory_usage(func: Callable) -> Callable:
     return wrapper
 
 
+# This decorator function wraps any function passed to it and logs the memory usage (in MB)
+# before and after the function's execution, along with the difference and the execution time.
+# It helps to monitor the memory impact of specific function calls during runtime.
+
 def get_current_memory_usage() -> float:
     """Returns current memory usage in MB."""
     process = psutil.Process()
     return process.memory_info().rss / 1024 / 1024
+
+
+# This function returns the current memory usage of the running process in megabytes (MB).
+# It can be called anytime to check how much memory the process is consuming at that moment.

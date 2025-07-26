@@ -15,3 +15,7 @@ def get_classes(img_path):
     id_str = ",".join(id_str)
     print(id_str, flush=True)
     return id_str
+
+# This function loads an image from the given path, runs the YOLOv8 object detector
+# on it to get detected class IDs, converts the class IDs to a comma-separated string,
+# prints the string, and returns it. If the image can't be loaded, it prints an error and returns None.

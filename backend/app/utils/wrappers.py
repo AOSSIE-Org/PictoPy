@@ -28,6 +28,11 @@ def album_exists(func):
     return wrapper
 
 
+# This decorator checks if an album with the given album_name exists in the database.
+# If the album does not exist, it raises an APIError with HTTP 404 status.
+# Otherwise, it allows the wrapped function to execute normally.
+
+
 def image_exists(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -55,6 +60,12 @@ def image_exists(func):
     return wrapper
 
 
+# This decorator verifies whether an image exists in the database by checking its absolute file path.
+# If the image path is missing or the image is not found in the database,
+# it raises an APIError with appropriate HTTP status codes.
+# Otherwise, it proceeds to execute the wrapped function.
+
+
 def exception_handler_wrapper(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -72,3 +83,9 @@ def exception_handler_wrapper(func):
             )
 
     return wrapper
+
+
+# This decorator wraps any function to provide a generic exception handling mechanism.
+# If an exception occurs during the function execution,
+# it catches the exception and returns a JSONResponse with the error message and status code.
+# This helps standardize API error responses.

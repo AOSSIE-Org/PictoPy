@@ -6,6 +6,14 @@ from app.config.settings import DATABASE_PATH
 
 
 def get_all_face_embeddings():
+    """
+    Retrieves all face embeddings and their associated image paths from the database.
+    Skips images that contain more than 10 faces.
+    Returns:
+        - all_embeddings: numpy array of all face embeddings
+        - image_paths: list of corresponding image paths for each embedding
+        - skipped_images: list of image paths skipped due to having more than 10 faces
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -33,6 +41,11 @@ def get_all_face_embeddings():
 
 
 def main():
+    """
+    Main function to load face embeddings, perform clustering using DBSCAN,
+    and print out clusters containing faces from more than one unique image.
+    Also outputs information about embeddings shape, skipped images, and number of valid clusters.
+    """
     embedding_array, image_paths, skipped_images = get_all_face_embeddings()
     print(f"Shape of embeddings: {embedding_array.shape}")
     print(f"Number of images skipped (>10 faces): {len(skipped_images)}")

@@ -5,6 +5,8 @@ from app.config.settings import DATABASE_PATH
 
 
 def create_faces_table():
+    # Creates the 'faces' table to store facial embeddings associated with images.
+    # Each entry links to an image_id from the image_id_mapping table.
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute(
@@ -22,6 +24,8 @@ def create_faces_table():
 
 
 def insert_face_embeddings(image_path, embeddings):
+    # Inserts or replaces face embeddings for a given image.
+    # Converts embeddings to JSON and stores them along with the image ID.
     from app.database.images import get_id_from_path
 
     conn = sqlite3.connect(DATABASE_PATH)
@@ -47,6 +51,8 @@ def insert_face_embeddings(image_path, embeddings):
 
 
 def get_face_embeddings(image_path):
+    # Retrieves the facial embeddings for a given image path.
+    # Returns a NumPy array of embeddings, or None if the image is not found.
     from app.database.images import get_id_from_path
 
     conn = sqlite3.connect(DATABASE_PATH)
@@ -77,6 +83,8 @@ def get_face_embeddings(image_path):
 
 
 def get_all_face_embeddings():
+    # Retrieves all face embeddings from the database.
+    # Returns a list of dictionaries containing image paths and corresponding embeddings.
     from app.database.images import get_path_from_id
 
     conn = sqlite3.connect(DATABASE_PATH)
@@ -100,6 +108,7 @@ def get_all_face_embeddings():
 
 
 def delete_face_embeddings(image_id):
+    # Deletes the face embeddings associated with a specific image ID.
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -110,6 +119,7 @@ def delete_face_embeddings(image_id):
 
 
 def cleanup_face_embeddings():
+    # Removes face embeddings that reference non-existent image IDs (i.e., orphaned entries).
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 

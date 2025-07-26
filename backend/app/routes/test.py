@@ -26,6 +26,10 @@ router = APIRouter()
 
 
 async def run_get_classes(img_path):
+    """
+    Asynchronously run the get_classes function in a separate thread to avoid blocking.
+    This function is used to process image classification without delaying the main flow.
+    """
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, get_classes, img_path)
 
@@ -36,6 +40,12 @@ async def run_get_classes(img_path):
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
 async def test_route(payload: TestRouteRequest):
+    """
+    Endpoint to perform object detection on an image specified by the payload's path.
+    Uses YOLOv8 for detection, returns detected class IDs and names.
+    Also triggers asynchronous classification processing.
+    Raises HTTP exceptions on image loading failure or internal errors.
+    """
     try:
         model_path = DEFAULT_FACE_DETECTION_MODEL
         yolov8_detector = YOLOv8(model_path, conf_thres=0.2, iou_thres=0.3)
@@ -84,6 +94,11 @@ async def test_route(payload: TestRouteRequest):
 )
 @exception_handler_wrapper
 def get_images():
+    """
+    Endpoint to retrieve all images from the configured images directory.
+    Filters files by common image extensions and returns absolute paths.
+    Handles exceptions and returns error responses on failure.
+    """
     try:
         files = os.listdir(IMAGES_PATH)
         image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
@@ -116,6 +131,11 @@ def get_images():
 )
 @exception_handler_wrapper
 def add_single_image(payload: AddSingleImageRequest):
+    """
+    Endpoint to add a single image to the gallery by copying it to the images directory.
+    Validates the provided file path and image type before copying.
+    Raises HTTP exceptions for invalid paths or unsupported file types.
+    """
     try:
         image_path = payload.path
         if not os.path.isfile(image_path):
@@ -168,6 +188,11 @@ def add_single_image(payload: AddSingleImageRequest):
     responses={code: {"model": ErrorResponse} for code in [400]},
 )
 def test_images():
+    """
+    Endpoint to test retrieval of folder IDs and associated image paths from the database.
+    Prints folder IDs and image paths for debugging, returns a success response.
+    Raises HTTP exceptions on errors.
+    """
     try:
         folder_ids = get_all_folder_ids()
         for folder_id in folder_ids:

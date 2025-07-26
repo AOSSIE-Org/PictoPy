@@ -30,6 +30,7 @@ def initialize_database_and_services():
     cleanup_face_embeddings()
     init_face_cluster()
     yield
+# Initializes the database tables and face clustering services once per test session
 
 
 @pytest.fixture(scope="module")
@@ -54,52 +55,61 @@ def test_images(tmp_path_factory):
 
     # Cleanup after tests
     shutil.rmtree(test_dir)
+# Creates a temporary folder with sample test images for use in tests and cleans up afterward
 
 
 def test_get_images(test_images):
     response = client.get("/images/all-images")
     assert response.status_code == 200
+# Tests that the API endpoint to retrieve all images responds successfully
 
 
 def test_get_all_image_objects():
     response = client.get("/images/all-image-objects")
     assert response.status_code == 200
+# Tests that the API endpoint to retrieve all image objects responds successfully
 
 
 def test_add_folder(test_images):
     payload = {"folder_path": [test_images]}
     response = client.post("/images/add-folder", json=payload)
     assert response.status_code == 200
+# Tests adding a folder containing images to the system via the API
 
 
 def test_generate_thumbnails(test_images):
     payload = {"folder_paths": [test_images]}
     response = client.post("/images/generate-thumbnails", json=payload)
     assert response.status_code == 200
+# Tests generating thumbnails for images within a folder through the API
 
 
 def test_delete_image_missing_path():
     payload = {}
     response = client.request("DELETE", "/images/delete-image", json=payload)
     assert response.status_code == 422
+# Tests that deleting an image without providing a path results in a validation error
 
 
 def test_delete_multiple_images_invalid_format():
     payload = {"paths": "not_a_list"}
     response = client.request("DELETE", "/images/multiple-images", json=payload)
     assert response.status_code == 422
+# Tests that deleting multiple images with invalid format (non-list paths) returns validation error
 
 
 def test_add_folder_missing_folder_path():
     payload = {}
     response = client.post("/images/add-folder", json=payload)
     assert response.status_code == 422
+# Tests that adding a folder without folder_path in payload returns a validation error
 
 
 def test_generate_thumbnails_missing_folder_path():
     payload = {}
     response = client.request("POST", "/images/generate-thumbnails", json=payload)
     assert response.status_code == 422
+# Tests that generating thumbnails without specifying folder_paths returns validation error
 
 
 def test_delete_multiple_images(test_images):
@@ -112,14 +122,17 @@ def test_delete_multiple_images(test_images):
     }
     response = client.request("DELETE", "/images/multiple-images", json=payload)
     assert response.status_code == 200
+# Tests deleting multiple images by providing valid paths
 
 
 def test_delete_thumbnails(test_images):
     params = {"folder_path": test_images}
     response = client.delete("/images/delete-thumbnails", params=params)
     assert response.status_code == 422
+# Tests that deleting thumbnails with invalid or incomplete parameters results in a validation error
 
 
 def test_delete_thumbnails_missing_folder_path():
     response = client.delete("/images/delete-thumbnails")
     assert response.status_code == 422
+# Tests that deleting thumbnails without folder_path parameter returns validation error

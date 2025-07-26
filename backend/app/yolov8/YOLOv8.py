@@ -17,11 +17,13 @@ class YOLOv8:
             self.get_input_details(session)
             self.get_output_details(session)
 
+    # __call__ method allows instance to be called like a function to detect objects
     def __call__(self, image):
         return self.detect_objects(image)
 
     @log_memory_usage
     def detect_objects(self, image):
+        # Runs the detection pipeline on the input image
         with onnx_session(self.model_path) as session:
             input_tensor = self.prepare_input(image)
             outputs = self.inference(session, input_tensor)
@@ -29,11 +31,13 @@ class YOLOv8:
             return self.boxes, self.scores, self.class_ids
 
     def inference(self, session, input_tensor):
+        # Performs inference on the input tensor using ONNX runtime session
         time.perf_counter()
         outputs = session.run(self.output_names, {self.input_names[0]: input_tensor})
         return outputs
 
     def get_input_details(self, session):
+        # Retrieves input layer names and shape from the ONNX model
         model_inputs = session.get_inputs()
         self.input_names = [model_inputs[i].name for i in range(len(model_inputs))]
         self.input_shape = model_inputs[0].shape
@@ -41,10 +45,13 @@ class YOLOv8:
         self.input_width = self.input_shape[3]
 
     def get_output_details(self, session):
+        # Retrieves output layer names from the ONNX model
         model_outputs = session.get_outputs()
         self.output_names = [model_outputs[i].name for i in range(len(model_outputs))]
 
     def prepare_input(self, image):
+        # Prepares the input image for the model:
+        # Converts BGR to RGB, resizes, normalizes, and reshapes to (1, C, H, W)
         self.img_height, self.img_width = image.shape[:2]
 
         input_img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -60,6 +67,8 @@ class YOLOv8:
         return input_tensor
 
     def process_output(self, output):
+        # Processes raw model output to extract boxes, scores, and class IDs,
+        # filters detections by confidence threshold and applies non-max suppression
         predictions = np.squeeze(output[0]).T
 
         # Filter out object confidence scores below threshold
@@ -83,7 +92,8 @@ class YOLOv8:
         return boxes[indices], scores[indices], class_ids[indices]
 
     def extract_boxes(self, predictions):
-        # Extract boxes from predictions
+        # Extract bounding box coordinates from predictions,
+        # scale them back to original image size and convert to xyxy format
         boxes = predictions[:, :4]
 
         # Scale boxes to original image dimensions
@@ -95,8 +105,7 @@ class YOLOv8:
         return boxes
 
     def rescale_boxes(self, boxes):
-
-        # Rescale boxes to original image dimensions
+        # Rescales boxes from model input scale back to the original image scale
         input_shape = np.array(
             [self.input_width, self.input_height, self.input_width, self.input_height]
         )
@@ -107,7 +116,7 @@ class YOLOv8:
         return boxes
 
     def draw_detections(self, image, draw_scores=True, mask_alpha=0.4):
-
+        # Draws detection bounding boxes, masks, and labels on the image
         return draw_detections(
             image, self.boxes, self.scores, self.class_ids, mask_alpha
         )

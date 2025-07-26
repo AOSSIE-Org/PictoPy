@@ -69,6 +69,8 @@ def face_matching():
                 message="Unable to get face embedding",
             ),
         )
+# Retrieves all face embeddings and compares each pair using cosine similarity.
+# Returns a list of image pairs with similarity above 0.7, indicating matched faces.
 
 
 @router.get(
@@ -105,6 +107,8 @@ def face_clusters():
                 message="Unable to get face clusters",
             ).model_dump(),
         )
+# Retrieves clusters of faces grouped by similarity.
+# Converts cluster image IDs to their corresponding paths and returns the clusters.
 
 
 @router.get(
@@ -135,3 +139,5 @@ def get_related_images(path: str = Query(..., description="full path to the imag
                 message="Uanble to get related images",
             ).model_dump(),
         )
+# Given an image path, retrieves related images based on face clustering.
+# Uses the image ID derived from path to find related images in the same cluster.

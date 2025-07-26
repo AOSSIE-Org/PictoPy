@@ -4,6 +4,8 @@ from app.config.settings import DATABASE_PATH
 
 
 def create_folders_table():
+    # Creates the 'folders' table in the database if it doesn't exist.
+    # This table stores folder path, a unique ID, and its last modified timestamp.
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute(
@@ -20,6 +22,8 @@ def create_folders_table():
 
 
 def insert_folder(folder_path):
+    # Inserts a folder path into the 'folders' table.
+    # Returns the folder_id. If it already exists, returns the existing folder_id.
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -59,6 +63,7 @@ def insert_folder(folder_path):
 
 
 def get_folder_id_from_path(folder_path):
+    # Retrieves the folder_id corresponding to a given folder path.
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_folder_path = os.path.abspath(folder_path)
@@ -72,6 +77,7 @@ def get_folder_id_from_path(folder_path):
 
 
 def get_folder_path_from_id(folder_id):
+    # Retrieves the folder path corresponding to a given folder_id.
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute(
@@ -84,12 +90,14 @@ def get_folder_path_from_id(folder_id):
 
 
 def get_all_folders():
+    # Returns a list of all folder paths stored in the database.
     with sqlite3.connect(DATABASE_PATH) as conn:
         rows = conn.execute("SELECT folder_path FROM folders").fetchall()
         return [row[0] for row in rows] if rows else []
 
 
 def get_all_folder_ids():
+    # Returns a list of all folder IDs stored in the database.
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT folder_id from folders")
@@ -98,6 +106,8 @@ def get_all_folder_ids():
 
 
 def delete_folder(folder_path):
+    # Deletes a folder entry from the database based on folder path.
+    # Enables foreign key constraints to cascade deletions in dependent tables.
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     abs_folder_path = os.path.abspath(folder_path)

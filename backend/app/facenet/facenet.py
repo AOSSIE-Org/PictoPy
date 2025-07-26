@@ -24,6 +24,8 @@ def get_face_embedding(image):
     embedding = result[0]
     return normalize_embedding(embedding)
 
+# Generates a normalized face embedding vector by running inference on the preprocessed face image using the Facenet ONNX model.
+
 
 def extract_face_embeddings(img_path):
     # Return face embeddings from the image but do not add them to the db.
@@ -54,6 +56,9 @@ def extract_face_embeddings(img_path):
             embeddings.append(embedding)
 
     return embeddings
+
+# Detects faces in the given image path using YOLOv8, extracts their embeddings if confidence is above threshold,
+# and returns a list of face embeddings without saving them to the database.
 
 
 def detect_faces(img_path):
@@ -94,3 +99,7 @@ def detect_faces(img_path):
         "processed_faces": processed_faces,
         "num_faces": len(embeddings),
     }
+
+# Detects faces in the given image path with a stricter confidence threshold,
+# extracts face embeddings, inserts these embeddings into the database,
+# updates the face clusters with new embeddings, and returns info about detected faces.
