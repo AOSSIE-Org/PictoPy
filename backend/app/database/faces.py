@@ -19,6 +19,8 @@ def create_faces_table():
     )
     conn.commit()
     conn.close()
+# Creates the 'faces' table to store face embeddings linked to images by image_id.
+# The embeddings are stored as JSON text. Enforces foreign key constraint with image_id_mapping.
 
 
 def insert_face_embeddings(image_path, embeddings):
@@ -44,6 +46,8 @@ def insert_face_embeddings(image_path, embeddings):
 
     conn.commit()
     conn.close()
+# Inserts or replaces face embeddings for a given image identified by its path.
+# Converts numpy embeddings to JSON for storage.
 
 
 def get_face_embeddings(image_path):
@@ -74,6 +78,8 @@ def get_face_embeddings(image_path):
         return embeddings
     else:
         return None
+# Retrieves and returns the face embeddings as a numpy array for a given image path.
+# Returns None if no embeddings are found or image is missing.
 
 
 def get_all_face_embeddings():
@@ -97,6 +103,8 @@ def get_all_face_embeddings():
     print("returning")
     conn.close()
     return all_embeddings
+# Retrieves all face embeddings from the database.
+# Returns a list of dictionaries each containing the image path and its associated embeddings.
 
 
 def delete_face_embeddings(image_id):
@@ -107,6 +115,7 @@ def delete_face_embeddings(image_id):
 
     conn.commit()
     conn.close()
+# Deletes face embeddings from the database for a specific image ID.
 
 
 def cleanup_face_embeddings():
@@ -126,3 +135,5 @@ def cleanup_face_embeddings():
 
     conn.commit()
     conn.close()
+# Cleans up the faces table by removing embeddings linked to image IDs
+# that no longer exist in the image_id_mapping table (orphans).

@@ -34,6 +34,10 @@ router = APIRouter()
 @router.post("/create-album", response_model=AlbumCreateResponse)
 @exception_handler_wrapper
 def create_new_album(payload: AlbumCreate):
+    """
+    Creates a new album with the given details such as name, description,
+    visibility, and optional password.
+    """
     # Call the function to create an album
     create_album(payload.name, payload.description, payload.is_hidden, payload.password)
     # Success Response
@@ -55,7 +59,10 @@ def create_new_album(payload: AlbumCreate):
 )
 @exception_handler_wrapper
 def delete_existing_album(payload: AlbumDeleteRequest):
-
+    """
+    Deletes an existing album identified by its name.
+    Raises HTTP 500 error if the deletion fails.
+    """
     album_name = payload.name
     try:
         delete_album(album_name)
@@ -81,7 +88,10 @@ def delete_existing_album(payload: AlbumDeleteRequest):
 )
 @exception_handler_wrapper
 def add_multiple_images_to_album(payload: AddMultipleImagesRequest):
-
+    """
+    Adds multiple image paths to a specified album.
+    If any image addition fails, raises HTTP 500 error with details.
+    """
     album_name = payload.album_name
     paths = payload.paths
 
@@ -113,6 +123,10 @@ def add_multiple_images_to_album(payload: AddMultipleImagesRequest):
 )
 @exception_handler_wrapper
 def remove_image_from_album(payload: RemoveImagFromAlbumRequest):
+    """
+    Removes a specific image path from a given album.
+    Raises HTTP 500 error if removal fails.
+    """
     album_name = payload.album_name
     path = payload.path
     try:
@@ -144,7 +158,12 @@ def view_album_photos(
     album_name: str = Query(..., description="Name of the album to view"),
     password: str = Query(None, description="Password for hidden albums"),
 ):
-
+    """
+    Retrieves all photo paths for a specified album.
+    If album is hidden, password may be required.
+    Returns folder path along with photos.
+    Raises HTTP 404 if album does not exist.
+    """
     photos = get_album_photos(album_name, password)
 
     if photos is None:
@@ -177,7 +196,10 @@ def view_album_photos(
 )
 @exception_handler_wrapper
 def update_album_description(payload: UpdateAlbumDescriptionRequest):
-
+    """
+    Updates the description of a specified album.
+    Raises HTTP 500 error if the update fails.
+    """
     album_name = payload.album_name
     new_description = payload.description
 
@@ -205,6 +227,10 @@ def update_album_description(payload: UpdateAlbumDescriptionRequest):
 )
 @exception_handler_wrapper
 def get_albums():
+    """
+    Retrieves all existing albums.
+    Raises HTTP 500 error if retrieval fails.
+    """
     try:
         albums = get_all_albums()
         return GetAlbumsResponse(

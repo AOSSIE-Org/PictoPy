@@ -6,6 +6,13 @@ from app.config.settings import THUMBNAIL_IMAGES_PATH
 
 
 def generate_thumbnails_for_folders(folder_paths: list):
+    """
+    Generate thumbnails (400x400 max) for all supported image files
+    found in the given list of folder paths. Thumbnails are saved in
+    a 'PictoPy.thumbnails' directory under THUMBNAIL_IMAGES_PATH.
+    Skips folders named 'PictoPy.thumbnails' to avoid recursion.
+    Returns a list of failed paths with error details.
+    """
     image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"]
     failed_paths = []
 
@@ -59,6 +66,13 @@ def generate_thumbnails_for_folders(folder_paths: list):
 
 
 def generate_thumbnails_for_existing_folders():
+    """
+    Retrieve all folder IDs from the database, then generate thumbnails
+    (max 400x400) for all images in those folders. Thumbnails are saved
+    in the 'PictoPy.thumbnails' folder under THUMBNAIL_IMAGES_PATH.
+    Skips existing thumbnails. Returns a list of image paths for which
+    thumbnail generation failed.
+    """
     try:
         folder_ids = get_all_folder_ids()
         thumbnail_folder = os.path.join(THUMBNAIL_IMAGES_PATH, "PictoPy.thumbnails")

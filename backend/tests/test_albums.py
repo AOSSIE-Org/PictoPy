@@ -23,7 +23,7 @@ client = TestClient(app)
 
 @pytest.fixture(scope="session", autouse=True)
 def initialize_database_and_services():
-    # Run your initialization functions before any tests are executed
+    # Initialize all required database tables and services before running tests
     create_YOLO_mappings()
     create_faces_table()
     create_image_id_mapping_table()
@@ -36,17 +36,18 @@ def initialize_database_and_services():
 
 @pytest.fixture(scope="module")
 def test_images(tmp_path_factory):
-    # Create a temporary directory for test images
+    # Prepare a temporary directory with test images copied from inputs directory
     test_dir = tmp_path_factory.mktemp("test_images")
 
-    # Get the path to the inputs directory (relative to test file)
+    # Locate the inputs directory relative to the test file
     inputs_dir = Path(__file__).parent / "inputs"
 
-    # Copy some test images from inputs to temp directory
+    # List of test image files to copy
     test_files = [
         "000000000009.jpg",
     ]
 
+    # Copy each test file into the temporary test directory
     for file in test_files:
         src = inputs_dir / file
         if src.exists():
@@ -56,16 +57,18 @@ def test_images(tmp_path_factory):
 
     yield str(test_dir)
 
-    # Cleanup after tests
+    # Clean up temporary test images directory after tests finish
     shutil.rmtree(test_dir)
 
 
 @pytest.fixture
 def mock_album_data():
+    # Provide mock data representing an album with a name and description
     return {"name": "Test Album", "description": "This is a test album"}
 
 
 def test_create_new_album(mock_album_data):
+    # Test album creation endpoint, mocking the underlying DB call
     with patch("app.database.albums.create_album"):
         response = client.post("/albums/create-album", json=mock_album_data)
         assert response.status_code == 200
@@ -73,6 +76,7 @@ def test_create_new_album(mock_album_data):
 
 
 def test_add_multiple_images_to_album(test_images):
+    # Test adding multiple images to an album, insert image metadata before API call
     payload = {
         "album_name": "Test Album",
         "paths": [str(Path(test_images) / "000000000009.jpg")],
@@ -89,6 +93,7 @@ def test_add_multiple_images_to_album(test_images):
 
 
 def test_remove_image_from_album(test_images):
+    # Test removing a single image from an album and deleting multiple images via API
     payload = {
         "album_name": "Test Album",
         "path": str(Path(test_images) / "000000000009.jpg"),
@@ -97,6 +102,8 @@ def test_remove_image_from_album(test_images):
         response = client.request("DELETE", "/albums/remove-from-album", json=payload)
         assert response.status_code == 200
         assert response.json()["success"] is True
+
+        # Additional test for deleting multiple images
         payload2 = {
             "paths": [str(Path(test_images) / "000000000009.jpg")],
             "isFromDevice": False,
@@ -107,6 +114,7 @@ def test_remove_image_from_album(test_images):
 
 
 def test_view_album_photos():
+    # Test retrieval of photos within an album by mocking DB response
     with patch(
         "app.database.albums.get_album_photos",
         return_value=["image1.jpg", "image2.jpg"],
@@ -116,6 +124,7 @@ def test_view_album_photos():
 
 
 def test_update_album_description():
+    # Test updating album description endpoint with mocked DB call
     payload = {"album_name": "Test Album", "description": "Updated description"}
     with patch("app.database.albums.edit_album_description"):
         response = client.put("/albums/edit-album-description", json=payload)
@@ -124,6 +133,7 @@ def test_update_album_description():
 
 
 def test_get_albums():
+    # Test retrieval of all albums by mocking the DB to return sample albums
     mock_albums = [
         {"name": "Album1", "description": "Desc1"},
         {"name": "Album2", "description": "Desc2"},
@@ -134,6 +144,7 @@ def test_get_albums():
 
 
 def test_delete_existing_album():
+    # Test deleting an album with mocked DB delete_album function
     with patch("app.database.albums.delete_album"):
         response = client.request(
             "DELETE", "/albums/delete-album", json={"name": "Test Album"}

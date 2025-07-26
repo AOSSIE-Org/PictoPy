@@ -6,6 +6,20 @@ from PIL.TiffImagePlugin import IFDRational
 
 
 def extract_metadata(image_path):
+    """
+    Extract metadata from an image file, including basic image information,
+    EXIF data, file size, and creation date.
+
+    Steps:
+    - Verify the image file exists.
+    - Open the image and retrieve basic properties (size, format, mode).
+    - Extract EXIF metadata if available, handling various data types.
+    - Retrieve file size and creation date from the file system.
+    - Handles exceptions related to file access and image decoding.
+    
+    Returns:
+        A dictionary containing all extracted metadata.
+    """
     metadata = {}
 
     # Check if file exists

@@ -17,8 +17,15 @@ class YOLOv8:
             self.get_input_details(session)
             self.get_output_details(session)
 
+    # Initializes the YOLOv8 model with specified confidence and IoU thresholds.
+    # Loads model input/output details from the ONNX session.
+
+
     def __call__(self, image):
         return self.detect_objects(image)
+
+    # Makes the class instance callable to perform detection on an input image.
+
 
     @log_memory_usage
     def detect_objects(self, image):
@@ -28,10 +35,18 @@ class YOLOv8:
             self.boxes, self.scores, self.class_ids = self.process_output(outputs)
             return self.boxes, self.scores, self.class_ids
 
+    # Runs object detection on the input image.
+    # Prepares input, runs inference, and processes model output.
+    # Decorated to log memory usage during detection.
+
+
     def inference(self, session, input_tensor):
         time.perf_counter()
         outputs = session.run(self.output_names, {self.input_names[0]: input_tensor})
         return outputs
+
+    # Performs the forward pass on the ONNX model session with the given input tensor.
+
 
     def get_input_details(self, session):
         model_inputs = session.get_inputs()
@@ -40,9 +55,15 @@ class YOLOv8:
         self.input_height = self.input_shape[2]
         self.input_width = self.input_shape[3]
 
+    # Retrieves and stores the input layer names and expected input shape from the model.
+
+
     def get_output_details(self, session):
         model_outputs = session.get_outputs()
         self.output_names = [model_outputs[i].name for i in range(len(model_outputs))]
+
+    # Retrieves and stores the output layer names from the model.
+
 
     def prepare_input(self, image):
         self.img_height, self.img_width = image.shape[:2]
@@ -58,6 +79,10 @@ class YOLOv8:
         input_tensor = input_img[np.newaxis, :, :, :].astype(np.float32)
 
         return input_tensor
+
+    # Converts the input image to the format expected by the model:
+    # RGB color, resized, normalized, transposed, and batched.
+
 
     def process_output(self, output):
         predictions = np.squeeze(output[0]).T
@@ -82,6 +107,10 @@ class YOLOv8:
 
         return boxes[indices], scores[indices], class_ids[indices]
 
+    # Processes raw model output to filter detections by confidence threshold,
+    # extracts class ids and bounding boxes, and applies non-maximum suppression.
+
+
     def extract_boxes(self, predictions):
         # Extract boxes from predictions
         boxes = predictions[:, :4]
@@ -93,6 +122,10 @@ class YOLOv8:
         boxes = xywh2xyxy(boxes)
 
         return boxes
+
+    # Extracts bounding box coordinates from predictions, rescales to original image size,
+    # and converts from center-width-height format to corner coordinates.
+
 
     def rescale_boxes(self, boxes):
 
@@ -106,11 +139,16 @@ class YOLOv8:
         )
         return boxes
 
+    # Rescales bounding boxes from the model input size to the original image size.
+
+
     def draw_detections(self, image, draw_scores=True, mask_alpha=0.4):
 
         return draw_detections(
             image, self.boxes, self.scores, self.class_ids, mask_alpha
         )
+
+    # Draws detection results (masks, bounding boxes, labels) on the image using utility function.
 
 
 if __name__ == "__main__":

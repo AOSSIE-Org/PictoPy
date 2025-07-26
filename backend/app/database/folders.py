@@ -17,6 +17,8 @@ def create_folders_table():
     )
     conn.commit()
     conn.close()
+# Creates the 'folders' table to store folder paths and their last modification times.
+# folder_path is unique and folder_id is the primary key.
 
 
 def insert_folder(folder_path):
@@ -56,6 +58,9 @@ def insert_folder(folder_path):
 
     conn.close()
     return result[0] if result else None
+# Inserts a new folder record if it doesn't exist.
+# Returns the folder_id of the inserted or existing folder.
+# Raises an error if the folder path is not a valid directory.
 
 
 def get_folder_id_from_path(folder_path):
@@ -69,6 +74,8 @@ def get_folder_id_from_path(folder_path):
     result = cursor.fetchone()
     conn.close()
     return result[0] if result else None
+# Retrieves the folder_id given an absolute folder path.
+# Returns None if folder does not exist in the database.
 
 
 def get_folder_path_from_id(folder_id):
@@ -81,12 +88,16 @@ def get_folder_path_from_id(folder_id):
     result = cursor.fetchone()
     conn.close()
     return result[0] if result else None
+# Retrieves the folder path given a folder_id.
+# Returns None if no folder with that ID exists.
 
 
 def get_all_folders():
     with sqlite3.connect(DATABASE_PATH) as conn:
         rows = conn.execute("SELECT folder_path FROM folders").fetchall()
         return [row[0] for row in rows] if rows else []
+# Returns a list of all folder paths stored in the database.
+# Returns an empty list if no folders are found.
 
 
 def get_all_folder_ids():
@@ -95,6 +106,8 @@ def get_all_folder_ids():
     cursor.execute("SELECT folder_id from folders")
     rows = cursor.fetchall()
     return [row[0] for row in rows] if rows else []
+# Returns a list of all folder IDs stored in the database.
+# Returns an empty list if no folder IDs are found.
 
 
 def delete_folder(folder_path):
@@ -124,3 +137,6 @@ def delete_folder(folder_path):
 
     conn.commit()
     conn.close()
+# Deletes a folder record from the database by its folder path.
+# Enforces foreign key constraints to cascade delete related records.
+# Raises an error if the folder does not exist in the database.

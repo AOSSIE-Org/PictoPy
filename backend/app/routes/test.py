@@ -26,6 +26,10 @@ router = APIRouter()
 
 
 async def run_get_classes(img_path):
+    """
+    Run the get_classes function asynchronously in a separate thread
+    to avoid blocking the main event loop.
+    """
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, get_classes, img_path)
 
@@ -36,6 +40,11 @@ async def run_get_classes(img_path):
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
 async def test_route(payload: TestRouteRequest):
+    """
+    Perform object detection on an image provided via the request payload.
+    Loads the image, applies the YOLOv8 detector, extracts class IDs and names,
+    and returns the detection results.
+    """
     try:
         model_path = DEFAULT_FACE_DETECTION_MODEL
         yolov8_detector = YOLOv8(model_path, conf_thres=0.2, iou_thres=0.3)
@@ -59,6 +68,7 @@ async def test_route(payload: TestRouteRequest):
         print(scores, "\n", class_ids)
         detected_classes = [class_names[x] for x in class_ids]
 
+        # Run classification asynchronously without blocking the response
         asyncio.create_task(run_get_classes(img_path))
 
         return TestRouteResponse(
@@ -84,6 +94,10 @@ async def test_route(payload: TestRouteRequest):
 )
 @exception_handler_wrapper
 def get_images():
+    """
+    Retrieve all image files from the configured images directory.
+    Filters by common image file extensions and returns absolute file paths.
+    """
     try:
         files = os.listdir(IMAGES_PATH)
         image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif"]
@@ -116,6 +130,10 @@ def get_images():
 )
 @exception_handler_wrapper
 def add_single_image(payload: AddSingleImageRequest):
+    """
+    Validate and copy a single image from a provided file path into the images directory.
+    Checks that the file exists and is of a supported image type before copying.
+    """
     try:
         image_path = payload.path
         if not os.path.isfile(image_path):
@@ -168,6 +186,10 @@ def add_single_image(payload: AddSingleImageRequest):
     responses={code: {"model": ErrorResponse} for code in [400]},
 )
 def test_images():
+    """
+    Retrieve and print all folder IDs and their corresponding image paths
+    from the database for testing purposes.
+    """
     try:
         folder_ids = get_all_folder_ids()
         for folder_id in folder_ids:

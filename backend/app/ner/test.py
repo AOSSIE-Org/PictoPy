@@ -7,6 +7,15 @@ import time
 
 # Run the ner_onnx.py to create the onnx model in the models folder
 def ner_marking(text1):
+    """
+    Perform Named Entity Recognition (NER) on the input text using a BERT ONNX model.
+
+    Args:
+        text1 (str): Input text string to be processed.
+
+    Returns:
+        list: List of tuples containing (token, label) after combining subword tokens.
+    """
     # change the path is required
     model_path = r"""C:\Users\sanid\Downloads\gsoc_@pictopy\PictoPy\backend\app\models\bert-base-NER.onnx"""
     session = onnxruntime.InferenceSession(model_path)
@@ -133,16 +142,43 @@ output_tensor_name = session.get_outputs()[0].name
 
 
 def normalize_embedding(embedding):
+    """
+    Normalize a face embedding vector to unit length.
+
+    Args:
+        embedding (numpy.ndarray): Raw embedding vector.
+
+    Returns:
+        numpy.ndarray: L2-normalized embedding vector.
+    """
     return embedding / np.linalg.norm(embedding)
 
 
 def get_face_embeddings(image):
+    """
+    Run the ONNX FaceNet model to extract face embeddings from a preprocessed image.
+
+    Args:
+        image (numpy.ndarray): Preprocessed face image tensor.
+
+    Returns:
+        numpy.ndarray: Normalized face embedding vector.
+    """
     result = session.run([output_tensor_name], {input_tensor_name: image})[0]
     embedding = result[0]
     return normalize_embedding(embedding)
 
 
 def scanned_embeddings(name):
+    """
+    Use webcam to detect faces and capture face embeddings while displaying NER-processed names.
+
+    Args:
+        name (str): Text input to extract entities (names) for display during face scanning.
+
+    Returns:
+        dict: Status message after processing is complete.
+    """
     text_to_display = ner_marking(name)
     print(f"Text to Display: {text_to_display}")
 

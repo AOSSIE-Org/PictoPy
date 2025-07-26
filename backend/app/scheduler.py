@@ -16,6 +16,8 @@ from app.database.folders import delete_folder
 async def process_images(tasks):
     await asyncio.gather(*tasks)
 
+# Awaits completion of multiple asynchronous tasks concurrently using asyncio.gather.
+
 
 async def run_get_classes(img_path, folder_id=None):
     loop = asyncio.get_event_loop()
@@ -25,6 +27,10 @@ async def run_get_classes(img_path, folder_id=None):
         classes = result.split(",")
         if "0" in classes and classes.count("0") < 8:
             detect_faces(img_path)
+
+# Runs the classification on an image in a separate thread using run_in_executor,
+# inserts the results and metadata into the database,
+# and triggers face detection if class '0' is detected fewer than 8 times.
 
 
 async def my_scheduled_task():
@@ -47,10 +53,10 @@ async def my_scheduled_task():
 
         need_to_delete_files = image_file_paths.difference(
             curr_files
-        )  # {Image Paths Exists in Database} \ {curr_files}
+        )  # Files in DB but no longer exist on disk
         need_to_add_files = curr_files.difference(
             image_file_paths
-        )  # {curr_files} \ {Image Paths Exists in Database}
+        )  # New files found on disk not in DB
 
         image_extensions = ["jpg", "jpeg", "png", "bmp", "gif"]
         tasks = []
@@ -96,12 +102,20 @@ async def my_scheduled_task():
     except Exception as e:
         print(f"Exception Occurred in Scheduler: {e}")
 
+# Scheduled asynchronous task that synchronizes the image database with the filesystem.
+# It processes new images by creating thumbnails and running classification and face detection.
+# It also deletes database entries and thumbnails for removed images and folders.
+
 
 def run_async_task():
     asyncio.run(my_scheduled_task())
+
+# Helper function to run the asynchronous scheduled task synchronously, needed by the scheduler.
 
 
 def start_scheduler():
     scheduler = BackgroundScheduler()
     scheduler.add_job(run_async_task, "interval", minutes=15)
     scheduler.start()
+
+# Starts the APScheduler background scheduler that runs the task every 15 minutes.

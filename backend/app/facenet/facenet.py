@@ -20,13 +20,34 @@ output_tensor_name = session.get_outputs()[0].name
 
 
 def get_face_embedding(image):
+    """
+    Generate a normalized face embedding vector from a preprocessed face image.
+
+    Args:
+        image: Preprocessed image tensor suitable for the facenet model.
+
+    Returns:
+        Normalized face embedding vector.
+    """
     result = session.run([output_tensor_name], {input_tensor_name: image})[0]
     embedding = result[0]
     return normalize_embedding(embedding)
 
 
 def extract_face_embeddings(img_path):
-    # Return face embeddings from the image but do not add them to the db.
+    """
+    Detect faces in the image and extract their embeddings without saving to the database.
+
+    Uses YOLOv8 to detect faces and filters detections based on confidence scores.
+    If no person is detected, returns "no_person".
+
+    Args:
+        img_path: Path to the input image.
+
+    Returns:
+        List of face embeddings or None if image fails to load.
+        Returns "no_person" if no person detected in the image.
+    """
     yolov8_detector = YOLOv8(
         DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.2, iou_thres=0.3
     )
@@ -57,6 +78,20 @@ def extract_face_embeddings(img_path):
 
 
 def detect_faces(img_path):
+    """
+    Detect faces in an image, extract embeddings, insert them into the database,
+    and add them to the global face clustering instance.
+
+    Uses YOLOv8 with higher confidence threshold for detection.
+    Adds padding around detected faces before preprocessing.
+
+    Args:
+        img_path: Path to the input image.
+
+    Returns:
+        Dictionary containing detected face class IDs, processed face tensors,
+        and the number of detected faces.
+    """
     yolov8_detector = YOLOv8(
         DEFAULT_FACE_DETECTION_MODEL, conf_thres=0.35, iou_thres=0.45
     )

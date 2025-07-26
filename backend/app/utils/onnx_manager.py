@@ -18,13 +18,16 @@ def onnx_session(model_path: str):
     """
     session = None
     try:
+        # Create an ONNX runtime inference session using available providers
         session = onnxruntime.InferenceSession(
             model_path, providers=onnxruntime.get_available_providers()
         )
-        yield session
+        yield session  # Provide the session to the context block
     except Exception as e:
+        # Log any error encountered during session creation or use
         logger.error(f"Error in ONNX session: {str(e)}")
         raise
     finally:
+        # Ensure session is properly deleted/freed after use
         if session:
             del session

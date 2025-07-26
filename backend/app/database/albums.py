@@ -25,6 +25,9 @@ def create_albums_table():
     )
     conn.commit()
     conn.close()
+# Creates the 'albums' table in the database if it doesn't already exist,
+# with columns for album name, image IDs, description, creation date,
+# hidden status, and a password hash.
 
 
 def create_album(album_name, description=None, is_hidden=False, password=None):
@@ -53,6 +56,9 @@ def create_album(album_name, description=None, is_hidden=False, password=None):
     )
     conn.commit()
     conn.close()
+# Creates a new album with the given name, optional description, hidden status, and password.
+# Ensures the album does not already exist. If hidden and password provided,
+# stores a bcrypt-hashed password. Initializes the album with an empty list of images.
 
 
 def verify_album_access(album_name, password=None):
@@ -81,6 +87,8 @@ def verify_album_access(album_name, password=None):
             raise APIError("Invalid password", status.HTTP_401_UNAUTHORIZED)
 
     return True
+# Checks if the album exists and verifies access if the album is hidden.
+# Requires a password for hidden albums and verifies it using bcrypt.
 
 
 @album_exists
@@ -90,6 +98,7 @@ def delete_album(album_name):
     cursor.execute("DELETE FROM albums WHERE album_name = ?", (album_name,))
     conn.commit()
     conn.close()
+# Deletes the album with the specified name from the database.
 
 
 @album_exists
@@ -116,6 +125,8 @@ def add_photo_to_album(album_name, image_path):
         )
         conn.commit()
     conn.close()
+# Adds a photo to an album by converting the image path to its ID and
+# appending it to the album's image ID list, if not already present.
 
 
 @album_exists
@@ -133,6 +144,8 @@ def get_album_photos(album_name, password=None):
         image_ids = json.loads(result[0])
         return [get_path_from_id(image_id) for image_id in image_ids]
     return None
+# Retrieves all photo paths in the album after verifying access.
+# Returns a list of image paths corresponding to stored image IDs.
 
 
 @album_exists
@@ -159,6 +172,7 @@ def remove_photo_from_album(album_name, image_path):
         )
         conn.commit()
     conn.close()
+# Removes a specified photo from an album by deleting its ID from the album's image list.
 
 
 def get_all_albums(include_hidden=False):
@@ -188,6 +202,8 @@ def get_all_albums(include_hidden=False):
 
     conn.close()
     return albums
+# Retrieves all albums from the database, optionally including hidden albums.
+# Returns album details including name, image paths, description, and hidden status.
 
 
 @album_exists
@@ -201,6 +217,7 @@ def edit_album_description(album_name, new_description):
     )
     conn.commit()
     conn.close()
+# Updates the description of the specified album with the new description provided.
 
 
 def remove_image_from_all_albums(image_id):
@@ -221,3 +238,5 @@ def remove_image_from_all_albums(image_id):
 
     conn.commit()
     conn.close()
+# Removes a specific image ID from all albums where it appears.
+# Useful when deleting an image from the database entirely.

@@ -4,6 +4,11 @@ from app.yolov8.YOLOv8 import YOLOv8
 
 
 def get_classes(img_path):
+    """
+    Load an image from the given path and perform object detection using
+    the YOLOv8 model. Returns a comma-separated string of detected class IDs.
+    If the image fails to load, prints an error and returns None.
+    """
     yolov8_detector = YOLOv8(DEFAULT_OBJ_DETECTION_MODEL, conf_thres=0.4, iou_thres=0.5)
     img = cv2.imread(img_path)
     if img is None:

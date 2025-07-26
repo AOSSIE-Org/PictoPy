@@ -27,3 +27,6 @@ def create_YOLO_mappings():
 
     conn.commit()
     conn.close()
+# Creates the 'mappings' table (if it doesn't exist) to store class IDs and their corresponding class names.
+# Then populates or updates the table with class IDs and names from the YOLOv8 model's class_names list.
+# Prints the current working directory before executing database operations.

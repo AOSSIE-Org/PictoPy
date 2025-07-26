@@ -110,6 +110,9 @@ def nms(boxes, scores, iou_threshold):
 
     return keep_boxes
 
+# Performs Non-Maximum Suppression (NMS) on a set of bounding boxes and their scores.
+# It removes overlapping boxes based on the IoU threshold to keep only the best ones.
+
 
 def multiclass_nms(boxes, scores, class_ids, iou_threshold):
 
@@ -125,6 +128,8 @@ def multiclass_nms(boxes, scores, class_ids, iou_threshold):
         keep_boxes.extend(class_indices[class_keep_boxes])
 
     return keep_boxes
+
+# Applies Non-Maximum Suppression separately for each class to avoid suppressing boxes of different classes.
 
 
 def compute_iou(box, boxes):
@@ -147,6 +152,9 @@ def compute_iou(box, boxes):
 
     return iou
 
+# Computes Intersection over Union (IoU) between one box and multiple other boxes.
+# IoU measures the overlap between two bounding boxes.
+
 
 def xywh2xyxy(x):
     # Convert bounding box (x, y, w, h) to bounding box (x1, y1, x2, y2)
@@ -156,6 +164,9 @@ def xywh2xyxy(x):
     y[..., 2] = x[..., 0] + x[..., 2] / 2
     y[..., 3] = x[..., 1] + x[..., 3] / 2
     return y
+
+# Converts bounding boxes from center x,y width,height format to
+# top-left and bottom-right corner coordinates format.
 
 
 def draw_detections(
@@ -183,6 +194,9 @@ def draw_detections(
 
     return det_img
 
+# Draws detection results on the image: colored masks, bounding boxes,
+# and class labels with confidence scores. Filters out low confidence detections.
+
 
 def draw_box(
     image: np.ndarray,
@@ -192,6 +206,8 @@ def draw_box(
 ) -> np.ndarray:
     x1, y1, x2, y2 = box.astype(int)
     return cv2.rectangle(image, (x1, y1), (x2, y2), color, thickness)
+
+# Draws a single bounding box rectangle on the image with a specified color and thickness.
 
 
 def draw_text(
@@ -224,6 +240,8 @@ def draw_text(
         cv2.LINE_AA,
     )
 
+# Draws a filled rectangle as background and overlays text (label + confidence) on top of the bounding box.
+
 
 def draw_masks(
     image: np.ndarray, boxes: np.ndarray, classes: np.ndarray, mask_alpha: float = 0.3
@@ -240,3 +258,6 @@ def draw_masks(
         cv2.rectangle(mask_img, (x1, y1), (x2, y2), color, -1)
 
     return cv2.addWeighted(mask_img, mask_alpha, image, 1 - mask_alpha, 0)
+
+# Draws semi-transparent colored masks over detected objects on the image,
+# blending with the original image according to mask_alpha.

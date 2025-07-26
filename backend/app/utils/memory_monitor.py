@@ -48,6 +48,9 @@ def log_memory_usage(func: Callable) -> Callable:
 
 
 def get_current_memory_usage() -> float:
-    """Returns current memory usage in MB."""
+    """
+    Returns the current memory usage of the running process in megabytes (MB).
+    Useful for monitoring or logging purposes.
+    """
     process = psutil.Process()
     return process.memory_info().rss / 1024 / 1024

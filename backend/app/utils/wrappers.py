@@ -9,6 +9,18 @@ from fastapi.responses import JSONResponse
 
 
 def album_exists(func):
+    """
+    Decorator to check if an album exists in the database before executing the function.
+
+    Args:
+        func: The function to be wrapped
+
+    Raises:
+        APIError with 404 status if album does not exist
+
+    Returns:
+        The wrapped function's return value if album exists
+    """
     @wraps(func)
     def wrapper(album_name, *args, **kwargs):
         conn = sqlite3.connect(DATABASE_PATH)
@@ -29,8 +41,22 @@ def album_exists(func):
 
 
 def image_exists(func):
+    """
+    Decorator to check if an image exists in the database before executing the function.
+
+    Args:
+        func: The function to be wrapped
+
+    Raises:
+        APIError with 400 status if image path not provided
+        APIError with 404 status if image does not exist in the database
+
+    Returns:
+        The wrapped function's return value if image exists
+    """
     @wraps(func)
     def wrapper(*args, **kwargs):
+        # Extract image_path from args or kwargs
         image_path = args[1] if len(args) > 1 else kwargs.get("image_path")
         if not image_path:
             raise APIError("Image path not provided", status.HTTP_400_BAD_REQUEST)
@@ -56,6 +82,17 @@ def image_exists(func):
 
 
 def exception_handler_wrapper(func):
+    """
+    Decorator to wrap a function and handle any exceptions raised,
+    returning a JSONResponse with appropriate status code and error message.
+
+    Args:
+        func: The function to be wrapped
+
+    Returns:
+        JSONResponse containing error details if an exception occurs,
+        otherwise the function's return value.
+    """
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:

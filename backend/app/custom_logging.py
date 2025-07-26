@@ -33,6 +33,9 @@ class InterceptHandler(logging.Handler):
         log = logger.bind(request_id="app")
         log.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
+    # Intercepts standard logging messages and redirects them to Loguru's logger.
+    # It maps standard logging levels to Loguru levels and maintains correct stack depth for tracebacks.
+
 
 class CustomizeLogger:
     @classmethod
@@ -49,6 +52,10 @@ class CustomizeLogger:
             format=logging_config.get("format"),
         )
         return logger
+
+    # Creates and returns a customized logger based on the JSON config file specified by config_path.
+    # Loads logging configuration and applies the settings.
+
 
     @classmethod
     def customize_logging(
@@ -71,9 +78,16 @@ class CustomizeLogger:
 
         return logger.bind(request_id=None, method=None)
 
+    # Configures Loguru logger with handlers for stdout and file output.
+    # Enables rotation and retention of log files, sets log level and format.
+    # Also overrides Python's standard logging with the InterceptHandler to unify logs.
+
+
     @classmethod
     def load_logging_config(cls, config_path):
         config = None
         with open(config_path) as config_file:
             config = json.load(config_file)
         return config
+
+    # Loads logging configuration from a JSON file at the given path.

@@ -157,6 +157,7 @@ class FaceCluster:
                 )
             """
             )
+    # This function creates the necessary database table to store face cluster data if it doesn't already exist.
 
     def _validate_input(
         self, embeddings: List[NDArray], image_paths: List[str]
@@ -175,6 +176,7 @@ class FaceCluster:
             raise ValueError("Number of embeddings must match number of image paths")
         if not all(isinstance(path, str) for path in image_paths):
             raise ValueError("All image paths must be strings")
+    # This function checks that the number of embeddings matches the number of image paths and verifies all paths are strings.
 
     def fit(
         self, embeddings: List[NDArray], image_paths: List[str]
@@ -202,6 +204,7 @@ class FaceCluster:
 
         self._clear_caches()
         return self.get_clusters()
+    # Fits the DBSCAN clustering algorithm on the provided embeddings, assigns cluster labels, and returns the clusters.
 
     @TTLCache(maxsize=128, ttl=3600)
     def get_clusters(self) -> Dict[int, List[str]]:
@@ -216,6 +219,7 @@ class FaceCluster:
             for i, label in enumerate(self.labels):
                 clusters[int(label)].add(self.image_ids[i])
         return {k: list(v) for k, v in clusters.items()}
+    # Returns the current clustering results as a dictionary of cluster labels to image IDs, cached for efficiency.
 
     def add_face(self, embedding: NDArray, image_path: str) -> Dict[int, List[str]]:
         """
@@ -253,6 +257,7 @@ class FaceCluster:
         self._clear_caches()
         self.save_to_db()
         return self.get_clusters()
+    # Adds a new face embedding to the dataset, assigns it to an existing cluster if close enough, or creates a new cluster otherwise, then saves and returns updated clusters.
 
     @TTLCache(maxsize=128, ttl=3600)
     def get_related_images(self, image_id: str) -> List[str]:
@@ -279,6 +284,7 @@ class FaceCluster:
                     related_images.add(self.image_ids[i])
 
         return list(related_images)
+    # Returns a list of image IDs that are similar to the given image ID based on embedding distance, cached for efficiency.
 
     def remove_image(self, image_id: str) -> Dict[int, List[str]]:
         """
@@ -306,11 +312,13 @@ class FaceCluster:
         self._clear_caches()
         self.save_to_db()
         return self.get_clusters()
+    # Removes a specified image and its embeddings from the dataset, refits clustering, saves, and returns updated clusters.
 
     def _clear_caches(self) -> None:
         """Clear all internal caches."""
         self.get_clusters.clear_cache()  # type: ignore
         self.get_related_images.clear_cache()  # type: ignore
+    # Clears the cached results of get_clusters and get_related_images to ensure consistency after data changes.
 
     def save_to_db(self) -> None:
         """Save current state to the database."""
@@ -328,6 +336,7 @@ class FaceCluster:
                    VALUES (:image_ids, :labels)""",
                 state,
             )
+    # Saves the current clustering state (image IDs and labels) into the SQLite database.
 
     @classmethod
     def load_from_db(cls, db_path: Union[str, Path] = DATABASE_PATH) -> "FaceCluster":
@@ -364,3 +373,4 @@ class FaceCluster:
             logger.error(f"Database error: {e}")
 
         return instance
+    # Loads clustering state from the database and reconstructs the embeddings and labels in a new FaceCluster instance.

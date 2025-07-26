@@ -7,6 +7,19 @@ face_cluster = None
 
 
 def init_face_cluster(db_path=DATABASE_PATH):
+    """
+    Initialize the face clustering system.
+
+    Loads existing face clusters from the database if the database file exists.
+    Otherwise, creates a new FaceCluster instance, loads all face embeddings,
+    fits the clustering model with those embeddings, and saves the state to the database.
+
+    Args:
+        db_path: Path to the SQLite database file.
+
+    Returns:
+        The initialized FaceCluster instance.
+    """
     global face_cluster
     if face_cluster is not None:
         return face_cluster
@@ -33,6 +46,15 @@ def init_face_cluster(db_path=DATABASE_PATH):
 
 
 def get_face_cluster():
+    """
+    Retrieve the global face cluster instance.
+
+    If the face cluster is not yet initialized, this function initializes it by
+    calling init_face_cluster(). Otherwise, it returns the existing instance.
+
+    Returns:
+        The global FaceCluster instance.
+    """
     global face_cluster
     if face_cluster is None:
         face_cluster = init_face_cluster()
