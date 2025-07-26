@@ -16,6 +16,7 @@ The Rust backend provides the following commands that can be invoked from the fr
   - `folder_path`: String
 - **Returns**: `Vec<PathBuf>`
 
+
 ### 3. get_all_images_with_cache
 
 - **Description**: Retrieves all images from multiple directories, organized by year and month, with caching.
