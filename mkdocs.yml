@@ -62,11 +62,16 @@ nav:
       - Overview: overview/features.md
       - Setup: setup.md
       - Backend:
+          - API Overview: backend/backend_python/api-overview.md
+          - API Documentation: backend/backend_python/api-documentation.md
+          - API Quick Reference: backend/backend_python/api-quick-reference.md
+          - Interactive Swagger UI: backend/backend_python/swagger-ui.md
+          - Swagger Setup Guide: backend/backend_python/swagger-setup-guide.md
           - Python Backend API: backend/backend_python/api.md
           - Python Backend Database: backend/backend_python/database.md
           - Python Backend Directory Structure: backend/backend_python/directory-structure.md
           - Python Backend Image Processing: backend/backend_python/image-processing.md
-          - Rust Backend API: backend/backend_rust/api.md
+          - Rust Backend API: backend/backend_rust/api.md 
       - Frontend:
           - UI Components: frontend/ui-components.md
           - State Management: frontend/state-management.md

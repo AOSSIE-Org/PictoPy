@@ -17,6 +17,26 @@ Hi there! Thank you for considering contributing to **PictoPy** – we’re exci
        </br>
      - For setting up the backend, follow the instructions in the [Backend Setup Guide](./docs/backend/docker-setup.md).
 
+## Documentation Setup
+
+To build and serve the documentation locally:
+
+```bash
+# Install documentation dependencies
+pip install -r docs/requirements.txt
+
+# Or install from root requirements.txt
+pip install -r requirements.txt
+
+# Build the documentation
+mkdocs build
+
+# Serve the documentation locally
+mkdocs serve
+```
+
+The documentation will be available at `http://127.0.0.1:8000/`
+
 ## Testing
 
 ### Frontend

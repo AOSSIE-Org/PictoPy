@@ -1,0 +1,13 @@
+# Documentation Dependencies for PictoPy
+# This file contains dependencies needed to build and serve the documentation
+
+# Core MkDocs and Material Theme
+mkdocs-material>=9.6.0
+mkdocs>=1.6.0
+
+# Markdown Extensions
+pymdown-extensions>=10.16.0
+
+# Additional Extensions (if needed in the future)
+# mkdocs-git-revision-date-localized-plugin
+# mkdocs-minify-plugin 

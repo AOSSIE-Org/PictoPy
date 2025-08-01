@@ -1,0 +1,9 @@
+# Documentation Dependencies
+mkdocs-material>=9.6.0
+mkdocs>=1.6.0
+pymdown-extensions>=10.16.0
+
+# Development Dependencies
+pre-commit>=2.21.0
+black>=23.3.0
+ruff>=0.0.241 
