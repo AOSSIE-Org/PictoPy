@@ -11,10 +11,13 @@ from app.database.faces import db_create_faces_table
 from app.database.images import db_create_images_table
 from app.database.face_clusters import db_create_clusters_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
+from app.database.albums import db_create_albums_table
+from app.database.albums import db_create_album_images_table
 from app.database.folders import db_create_folders_table
 from app.database.metadata import db_create_metadata_table
 
 from app.routes.folders import router as folders_router
+from app.routes.albums import router as albums_router
 from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
 import multiprocessing
@@ -27,6 +30,8 @@ async def lifespan(app: FastAPI):
     db_create_clusters_table()  # Create clusters table first since faces references it
     db_create_faces_table()
     db_create_folders_table()
+    db_create_albums_table()
+    db_create_album_images_table()
     db_create_images_table()
     db_create_metadata_table()
     # Create ProcessPoolExecutor and attach it to app.state
@@ -58,6 +63,7 @@ async def root():
 
 
 app.include_router(folders_router, prefix="/folders", tags=["Folders"])
+app.include_router(albums_router, prefix="/albums", tags=["Albums"])
 app.include_router(
     face_clusters_router, prefix="/face-clusters", tags=["Face Clusters"]
 )
