@@ -1,9 +1,13 @@
-# API
-
+<!-- # API -->
+<!-- 
 The API calls to PictoPy are done via HTTP requests since we are hosting our backend on a Flask server. This was done to ensure low coupling between the frontend and the backend.
-Follow this [Link](https://www.postman.com/cryosat-explorer-62744145/workspace/pictopy/overview) to get example request and response.
+Follow this [Link](https://www.postman.com/cryosat-explorer-62744145/workspace/pictopy/overview) to get example request and response. -->
 
-## Table of Contents
+<!-- # API Reference -->
+
+<swagger-ui src="openapi.json"/>
+
+<!-- ## Table of Contents
 
 1. [Albums](#albums)
 2. [Image](#image)
@@ -170,4 +174,4 @@ We briefly discuss the endpoints related to face tagging and recognition, all of
 - **Endpoint**: `GET /tag/related-images`
 - **Description**: Finds images with faces related to the face in the given image.
 - **Query Parameters**: `path` (string) - full path to the image
-- **Response**: JSON object containing a list of related image paths.
+- **Response**: JSON object containing a list of related image paths. -->

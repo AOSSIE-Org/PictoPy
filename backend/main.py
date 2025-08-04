@@ -41,8 +41,59 @@ async def lifespan(app: FastAPI):
     if face_cluster:
         face_cluster.save_to_db()
 
+app = FastAPI(
+    lifespan=lifespan,
+    title="API", 
+    description="The API calls to PictoPy are done via HTTP requests since we are hosting our backend on a Flask server. This was done to ensure low coupling between the frontend and the backend.",
+    contact={
+        "name": "PictoPy Postman collection",
+        "url": "https://www.postman.com/cryosat-explorer-62744145/workspace/pictopy/overview",
+    },
+    servers=[
+        {"url": "http://localhost:8000", "description": "Local Development server"},
+        # Add your other environment server URLs here if needed
+    ],
+    openapi_tags=[
+        {
+            "name": "Albums",
+            "description": "We briefly discuss the endpoints related to albums, all of these fall under the /albums route"
+        },
+        {
+            "name": "Images",
+            "description": "We briefly discuss the endpoints related to images, all of these fall under the /images route"
+        },
+        {
+            "name": "Tagging",
+            "x-displayName": "Face recognition and Tagging",  
+            "description": "We briefly discuss the endpoints related to face tagging and recognition, all of these fall under the /tag route"
+        }
+    ]
+)
+def generate_openapi_json():
+    import os, json
+    from fastapi.openapi.utils import get_openapi
 
-app = FastAPI(lifespan=lifespan)
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+        tags=app.openapi_tags
+        
+    )
+    openapi_schema["info"]["contact"]=app.contact
+    openapi_schema["servers"] = app.servers
+
+
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    openapi_path = os.path.join(project_root, "docs", "backend", "backend_python", "openapi.json")
+
+    os.makedirs(os.path.dirname(openapi_path), exist_ok=True)
+
+    with open(openapi_path, "w") as f:
+        json.dump(openapi_schema, f, indent=2)
+
+
 
 start_scheduler()
 
@@ -67,11 +118,18 @@ app.include_router(images_router, prefix="/images", tags=["Images"])
 app.include_router(albums_router, prefix="/albums", tags=["Albums"])
 app.include_router(tagging_router, prefix="/tag", tags=["Tagging"])
 
+#Generate OpenAPI JSON file on all environments by all commands (python,fastapi,uvicorn)
+generate_openapi_json()
+
+# Trigger on production startup
+@app.on_event("startup")
+async def on_startup():
+    generate_openapi_json()
 
 # Runs when we use this command: python3 main.py (As in production)
 if __name__ == "__main__":
     multiprocessing.freeze_support()  # Required for Windows.
-    app.logger = CustomizeLogger.make_logger("app/logging_config.json")
+    pp.logger = CustomizeLogger.make_logger("app/logging_config.json")
     config = Config(app=app, host="0.0.0.0", port=8000, log_config=None)
     server = Server(config)
     server.run()
