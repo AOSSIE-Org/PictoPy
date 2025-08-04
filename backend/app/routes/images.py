@@ -66,6 +66,10 @@ async def run_get_classes(img_path, folder_id=None):
 
 @router.get(
     "/all-images",
+    tags=["Images"],
+    summary="Get All Images",
+    description="Retrieves a list of all image files in the system.",
+    response_description="JSON object containing a list of image file paths",
     response_model=GetImagesResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
@@ -110,6 +114,10 @@ async def process_images(tasks, folder_id):
 
 @router.delete(
     "/delete-image",
+    tags=["Images"],
+    summary="Delete Image",
+    description="Deletes a single image from the system.",
+    response_description="Message confirming image deletion",
     response_model=DeleteImageResponse,
     responses={code: {"model": ErrorResponse} for code in [404, 500]},
 )
@@ -145,6 +153,10 @@ def delete_image(payload: DeleteImageRequest):
 
 @router.delete(
     "/multiple-images",
+    tags=["Images"],
+    summary="Delete Multiple Images",
+    description="Deletes multiple images from the system.",
+    response_description="Message confirming multiple image deletion",
     response_model=DeleteMultipleImagesResponse,
     responses={code: {"model": ErrorResponse} for code in [404, 500]},
 )
@@ -232,6 +244,10 @@ def delete_multiple_images(payload: DeleteMultipleImagesRequest):
 
 @router.get(
     "/all-image-objects",
+    tags=["Images"],
+    summary="Get All Image Objects",
+    description="Retrieves all images and their associated object classes.",
+    response_description="JSON object mapping image paths to their object classes",
     response_model=GetAllImageObjectsResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
@@ -269,6 +285,10 @@ def get_all_image_objects():
 
 @router.get(
     "/class-ids",
+    tags=["Images"],
+    summary="Get Class IDs",
+    description="Retrieves the object classes for a specific image.",
+    response_description="JSON object containing the classes detected in the image",
     response_model=ClassIDsResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
@@ -308,6 +328,10 @@ def get_class_ids(path: str = Query(...)):
 
 @router.post(
     "/add-folder",
+    tags=["Images"],
+    summary="Add Folder",
+    description="Adds all images from a specified folder to the system and processes them in the background.",
+    response_description="Message indicating the number of images being processed from the folder",
     response_model=AddFolderResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 401, 500]},
 )
@@ -407,7 +431,11 @@ async def add_folder(payload: AddFolderRequest):
         )
 
 
-@router.delete("/delete-folder")
+@router.delete("/delete-folder",
+    tags=["Images"],
+    summary="Delete Folder",
+    description="Deletes a folder and all its images from the system.",
+    response_description="Message confirming folder deletion")
 @exception_handler_wrapper
 def delete_folder_ai_tagging(payload: dict):
     if "folder_path" not in payload:
@@ -456,7 +484,11 @@ def delete_folder_ai_tagging(payload: dict):
     )
 
 
-@router.post("/generate-thumbnails")
+@router.post("/generate-thumbnails",
+    tags=["Images"],
+    summary="Generate Thumbnails",
+    description="Generates thumbnails for images in specified folders.",
+    response_description="Message confirming thumbnail generation")
 @exception_handler_wrapper
 def generate_thumbnails(payload: GenerateThumbnailsRequest):
     folder_paths = payload.folder_paths
@@ -493,6 +525,10 @@ def get_thumbnail_path():
 # Delete all the thumbnails present in the given folder
 @router.delete(
     "/delete-thumbnails",
+     tags=["Images"],
+    summary="Delete Thumbnails",
+    description="Deletes thumbnails for a specified folder.",
+    response_description="Message confirming thumbnail deletion",
     response_model=DeleteThumbnailsResponse,
     responses={
         500: {"model": FailedDeletionThumbnailResponse},
@@ -543,7 +579,11 @@ def delete_thumbnails(payload: DeleteThumbnailsRequest):
     )
 
 
-@router.get("/add-folder-progress")
+@router.get("/add-folder-progress",
+    tags=["Images"],
+    summary="Add Folder Progress",
+    description="Gets the progress of folder addition operation.",
+    response_description="JSON object containing progress information")
 @exception_handler_wrapper
 def combined_progress():
     total_tasks = 0

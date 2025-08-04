@@ -129,7 +129,7 @@ async def on_startup():
 # Runs when we use this command: python3 main.py (As in production)
 if __name__ == "__main__":
     multiprocessing.freeze_support()  # Required for Windows.
-    pp.logger = CustomizeLogger.make_logger("app/logging_config.json")
+    app.logger = CustomizeLogger.make_logger("app/logging_config.json")
     config = Config(app=app, host="0.0.0.0", port=8000, log_config=None)
     server = Server(config)
     server.run()

@@ -20,6 +20,10 @@ router = APIRouter()
 
 @router.get(
     "/match",
+    tags=["Tagging"],
+    summary="Face Matching",
+    description="Finds similar faces across all images in the database.",
+    response_description="JSON object containing pairs of similar images and their similarity scores",
     response_model=FaceMatchingResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
@@ -73,6 +77,10 @@ def face_matching():
 
 @router.get(
     "/clusters",
+    tags=["Tagging"],
+    summary="Face Clusters",
+    description="Retrieves clusters of similar faces across all images.",
+    response_description="JSON object containing clusters of images with similar faces",
     response_model=FaceClustersResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
@@ -109,6 +117,10 @@ def face_clusters():
 
 @router.get(
     "/related-images",
+    tags=["Tagging"],
+    summary="Related Images",
+    description="Finds images with faces related to the face in the given image.",
+    response_description="JSON object containing a list of related image paths",
     response_model=GetRelatedImagesResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )

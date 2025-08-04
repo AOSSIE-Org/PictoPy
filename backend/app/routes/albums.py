@@ -31,7 +31,11 @@ from app.schemas.album import (
 router = APIRouter()
 
 
-@router.post("/create-album", response_model=AlbumCreateResponse)
+@router.post("/create-album",tags=["Albums"],
+    summary="Create Album",
+    description="Creates a new album with the given name and optional description.",
+    response_description="Message confirming album creation",
+    response_model=AlbumCreateResponse)
 @exception_handler_wrapper
 def create_new_album(payload: AlbumCreate):
     # Call the function to create an album
@@ -50,6 +54,10 @@ def create_new_album(payload: AlbumCreate):
 
 @router.delete(
     "/delete-album",
+    tags=["Albums"],
+    summary="Delete Album",
+    description="Deletes an existing album by name.",
+    response_description="Message confirming album deletion",
     response_model=AlbumDeleteResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
@@ -76,6 +84,10 @@ def delete_existing_album(payload: AlbumDeleteRequest):
 
 @router.post(
     "/add-multiple-to-album",
+    tags=["Albums"],
+    summary="Add Multiple Images to Album",
+    description="Adds multiple images to an existing album.",
+    response_description="Message confirming images were added to the album",
     response_model=AddMultipleImagesResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
@@ -108,6 +120,10 @@ def add_multiple_images_to_album(payload: AddMultipleImagesRequest):
 
 @router.delete(
     "/remove-from-album",
+    tags=["Albums"],
+    summary="Remove Image from Album",
+    description="Removes a single image from an album.",
+    response_description="Message confirming image removal from the album",
     response_model=RemoveImagFromAlbumResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
@@ -136,6 +152,10 @@ def remove_image_from_album(payload: RemoveImagFromAlbumRequest):
 
 @router.get(
     "/view-album",
+   tags=["Albums"],
+    summary="View Album Photos",
+    description="Retrieves all photos in a specified album.",
+    response_description="JSON object containing album name and list of photos",
     response_model=ViewAlbumResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 404]},
 )
@@ -172,6 +192,10 @@ def view_album_photos(
 
 @router.put(
     "/edit-album-description",
+    tags=["Albums"],
+    summary="Edit Album Description",
+    description="Updates the description of an existing album.",
+    response_description="Message confirming album description update",
     response_model=UpdateAlbumDescriptionResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
@@ -200,6 +224,10 @@ def update_album_description(payload: UpdateAlbumDescriptionRequest):
 
 @router.get(
     "/view-all",
+    tags=["Albums"],
+    summary="View All Albums",
+    description="Retrieves a list of all albums.",
+    response_description="JSON object containing a list of all albums",
     response_model=GetAlbumsResponse,
     responses={code: {"model": ErrorResponse} for code in [404]},
 )
