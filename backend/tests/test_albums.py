@@ -194,7 +194,9 @@ class TestAlbumRoutes:
             assert response.status_code == 404
             json_response = response.json()
 
-            assert json_response["detail"] == "Album not found"
+            assert json_response["detail"]["error"] == "Album Not Found"
+            assert json_response["detail"]["message"] == "Album not found"
+            assert json_response["detail"]["success"] is False
             mock_get_album.assert_called_once_with(non_existent_id)
 
 
@@ -353,7 +355,7 @@ class TestAlbumImageManagement:
             mock_get_album.return_value = album_tuple
             mock_get_images.return_value = expected_image_ids
 
-            response = client.get(f"/albums/{album_id}/images")
+            response = client.post(f"/albums/{album_id}/images/get", json={})
             assert response.status_code == 200
 
             json_response = response.json()
@@ -413,59 +415,3 @@ class TestAlbumImageManagement:
             assert str(len(image_ids_to_remove["image_ids"])) in json_response["msg"]
             mock_get.assert_called_once_with(album_id)
             mock_remove_bulk.assert_called_once_with(album_id, image_ids_to_remove["image_ids"])
-
-
-class TestAlbumSecurity:
-    """Test suite for album security features like password protection."""
-
-    def test_unlock_album_correct_password(self, mock_db_hidden_album):
-        """
-        Test unlocking a password-protected album with the correct password.
-        """
-        album_id = mock_db_hidden_album["album_id"]
-        password_data = {"password": "correct_password"}
-        db_return_value = tuple(mock_db_hidden_album.values())
-
-        with patch("app.routes.albums.db_get_album") as mock_get, \
-             patch("app.routes.albums.verify_album_password") as mock_verify:
-            mock_get.return_value = db_return_value
-            mock_verify.return_value = True
-            response = client.post(f"/albums/{album_id}/unlock", json=password_data)
-            assert response.status_code == 200
-            assert response.json() == {"success": True, "msg": "Album unlocked successfully"}
-            mock_get.assert_called_once_with(album_id)
-            mock_verify.assert_called_once_with(album_id, password_data["password"])
-
-    def test_unlock_album_incorrect_password(self, mock_db_hidden_album):
-        """
-        Test that unlocking a password-protected album with an incorrect password fails.
-        """
-        album_id = mock_db_hidden_album["album_id"]
-        password_data = {"password": "wrong_password"}
-        db_return_value = tuple(mock_db_hidden_album.values())
-
-        with patch("app.routes.albums.db_get_album") as mock_get, \
-             patch("app.routes.albums.verify_album_password") as mock_verify:
-            mock_get.return_value = db_return_value
-            mock_verify.return_value = False
-            response = client.post(f"/albums/{album_id}/unlock", json=password_data)
-            assert response.status_code == 401
-            assert response.json()["detail"] == "Invalid password"
-            mock_get.assert_called_once_with(album_id)
-            mock_verify.assert_called_once_with(album_id, password_data["password"])
-
-    def test_unlock_non_protected_album(self, mock_db_album):
-        """
-        Test that trying to unlock an album that isn't password-protected fails.
-        """
-        album_id = mock_db_album["album_id"]
-        password_data = {"password": "any_password"}
-        mock_db_album["password_hash"] = None
-        db_return_value = tuple(mock_db_album.values())
-        
-        with patch("app.routes.albums.db_get_album") as mock_get:
-            mock_get.return_value = db_return_value
-            response = client.post(f"/albums/{album_id}/unlock", json=password_data)
-            assert response.status_code == 400
-            assert response.json()["detail"] == "Album is not password protected"
-            mock_get.assert_called_once_with(album_id)

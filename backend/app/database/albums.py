@@ -83,6 +83,14 @@ def db_get_all_albums(show_hidden: bool = False):
     conn.close()
     return albums
 
+def db_get_album_by_name(name: str):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM albums WHERE album_name = ?", (name,))
+    album = cursor.fetchone()
+    conn.close()
+    return album if album else None
+
 def db_get_album(album_id: str):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()

@@ -41,9 +41,8 @@ class UpdateAlbumRequest(BaseModel):
             raise ValueError("Password is required for hidden albums")
         return value
 
-
-class UnlockRequest(BaseModel):
-    password: str
+class GetAlbumImagesRequest(BaseModel):
+    password: Optional[str] = None
 
 
 class ImageIdsRequest(BaseModel):
@@ -78,3 +77,8 @@ class GetAlbumImagesResponse(BaseModel):
 class SuccessResponse(BaseModel):
     success: bool
     msg: str
+
+class ErrorResponse(BaseModel):
+    success: bool = False
+    message: str
+    error: str
