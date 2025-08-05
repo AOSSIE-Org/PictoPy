@@ -19,9 +19,9 @@ from app.routes.facetagging import router as tagging_router
 import multiprocessing
 from app.scheduler import start_scheduler
 from app.custom_logging import CustomizeLogger
-import os, json
+import os
+import json
 from fastapi.openapi.utils import get_openapi
-
 
 
 thumbnails_dir = os.path.join("images", "PictoPy.thumbnails")
@@ -30,6 +30,7 @@ os.makedirs(thumbnails_dir, exist_ok=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    generate_openapi_json()
     create_YOLO_mappings()
     create_faces_table()
     create_folders_table()
@@ -43,38 +44,36 @@ async def lifespan(app: FastAPI):
     if face_cluster:
         face_cluster.save_to_db()
 
+
 app = FastAPI(
     lifespan=lifespan,
-    title="API", 
-    description="The API calls to PictoPy are done via HTTP requests since we are hosting our backend on a Flask server. This was done to ensure low coupling between the frontend and the backend.",
+    title="PictoPy",
+    description="The API calls to PictoPy are done via HTTP requests. This backend is built using FastAPI.",
     contact={
-        "name": "PictoPy Postman collection",
+        "name": "PictoPy Postman Collection",
         "url": "https://www.postman.com/cryosat-explorer-62744145/workspace/pictopy/overview",
     },
-    # It seems mkdocs does not allow dynamic editable URLs like plain swagger does.   
-#this is necessary for apis to work . Need to add production endpoints here   
-    servers=[
-        {"url": "http://localhost:8000", "description": "Local Development server"},
-        {"url": "https://aossie-org.github.io/PictoPy", "description": "Production server"}
-    ],
+    servers=[{"url": "http://localhost:8000", "description": "Local Development server"}],
     openapi_tags=[
         {
             "name": "Albums",
-            "description": "We briefly discuss the endpoints related to albums, all of these fall under the /albums route"
+            "description": "We briefly discuss the endpoints related to albums, all of these fall under the /albums route",
         },
         {
             "name": "Images",
-            "description": "We briefly discuss the endpoints related to images, all of these fall under the /images route"
+            "description": "We briefly discuss the endpoints related to images, all of these fall under the /images route",
         },
         {
             "name": "Tagging",
-            "x-displayName": "Face recognition and Tagging",  
-            "description": "We briefly discuss the endpoints related to face tagging and recognition, all of these fall under the /tag route"
-        }
-    ]
+            "x-displayName": "Face recognition and Tagging",
+            "description": "We briefly discuss the endpoints related to face tagging and recognition, all of these fall under the /tag route",
+        },
+    ],
 )
 
 app.logger = CustomizeLogger.make_logger("app/logging_config.json")
+
+
 def generate_openapi_json():
     try:
         openapi_schema = get_openapi(
@@ -83,13 +82,9 @@ def generate_openapi_json():
             description=app.description,
             routes=app.routes,
             tags=app.openapi_tags,
-            servers=app.servers
-            
+            servers=app.servers,
         )
-        openapi_schema["info"]["contact"]=app.contact
-   
-        
-
+        openapi_schema["info"]["contact"] = app.contact
 
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         openapi_path = os.path.join(project_root, "docs", "backend", "backend_python", "openapi.json")
@@ -126,13 +121,6 @@ app.include_router(images_router, prefix="/images", tags=["Images"])
 app.include_router(albums_router, prefix="/albums", tags=["Albums"])
 app.include_router(tagging_router, prefix="/tag", tags=["Tagging"])
 
-#Generate OpenAPI JSON file on all environments by all commands (python,fastapi,uvicorn)
-generate_openapi_json()
-
-# Trigger on production startup
-@app.on_event("startup")
-async def on_startup():
-    generate_openapi_json()
 
 # Runs when we use this command: python3 main.py (As in production)
 if __name__ == "__main__":
