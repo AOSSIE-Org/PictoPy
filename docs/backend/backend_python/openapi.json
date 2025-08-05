@@ -1,0 +1,2183 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PictoPy",
+    "description": "The API calls to PictoPy are done via HTTP requests. This backend is built using FastAPI.",
+    "version": "0.1.0",
+    "contact": {
+      "name": "PictoPy Postman Collection",
+      "url": "https://www.postman.com/cryosat-explorer-62744145/workspace/pictopy/overview"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local Development server"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Root",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/return": {
+      "post": {
+        "tags": [
+          "Test",
+          "Test"
+        ],
+        "summary": "Test Route",
+        "description": "Test endpoint for object detection on a single image.",
+        "operationId": "test_route_test_return_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestRouteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Test results with detected objects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestRouteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/images": {
+      "get": {
+        "tags": [
+          "Test",
+          "Test"
+        ],
+        "summary": "Get Test Images",
+        "description": "Retrieves test images for development purposes.",
+        "operationId": "get_images_test_images_get",
+        "responses": {
+          "200": {
+            "description": "List of test images",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__test__GetImagesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/single-image": {
+      "post": {
+        "tags": [
+          "Test",
+          "Test"
+        ],
+        "summary": "Add Single Test Image",
+        "description": "Adds a single image for testing purposes.",
+        "operationId": "add_single_image_test_single_image_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddSingleImageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Confirmation of test image addition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddSingleImageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/test-image": {
+      "get": {
+        "tags": [
+          "Test",
+          "Test"
+        ],
+        "summary": "Test Image Processing",
+        "description": "Tests image processing functionality.",
+        "operationId": "test_images_test_test_image_get",
+        "responses": {
+          "200": {
+            "description": "Test processing results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestImageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/all-images": {
+      "get": {
+        "tags": [
+          "Images",
+          "Images"
+        ],
+        "summary": "Get All Images",
+        "description": "Retrieves a list of all image files in the system.",
+        "operationId": "get_images_images_all_images_get",
+        "responses": {
+          "200": {
+            "description": "JSON object containing a list of image file paths",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__GetImagesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/delete-image": {
+      "delete": {
+        "tags": [
+          "Images",
+          "Images"
+        ],
+        "summary": "Delete Image",
+        "description": "Deletes a single image from the system.",
+        "operationId": "delete_image_images_delete_image_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteImageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Message confirming image deletion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteImageResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/multiple-images": {
+      "delete": {
+        "tags": [
+          "Images",
+          "Images"
+        ],
+        "summary": "Delete Multiple Images",
+        "description": "Deletes multiple images from the system.",
+        "operationId": "delete_multiple_images_images_multiple_images_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteMultipleImagesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Message confirming multiple image deletion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteMultipleImagesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/all-image-objects": {
+      "get": {
+        "tags": [
+          "Images",
+          "Images"
+        ],
+        "summary": "Get All Image Objects",
+        "description": "Retrieves all images and their associated object classes.",
+        "operationId": "get_all_image_objects_images_all_image_objects_get",
+        "responses": {
+          "200": {
+            "description": "JSON object mapping image paths to their object classes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAllImageObjectsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/class-ids": {
+      "get": {
+        "tags": [
+          "Images",
+          "Images"
+        ],
+        "summary": "Get Class IDs",
+        "description": "Retrieves the object classes for a specific image.",
+        "operationId": "get_class_ids_images_class_ids_get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON object containing the classes detected in the image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassIDsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/add-folder": {
+      "post": {
+        "tags": [
+          "Images",
+          "Images"
+        ],
+        "summary": "Add Folder",
+        "description": "Adds all images from a specified folder to the system and processes them in the background.",
+        "operationId": "add_folder_images_add_folder_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddFolderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Message indicating the number of images being processed from the folder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddFolderResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/delete-folder": {
+      "delete": {
+        "tags": [
+          "Images",
+          "Images"
+        ],
+        "summary": "Delete Folder",
+        "description": "Deletes a folder and all its images from the system.",
+        "operationId": "delete_folder_ai_tagging_images_delete_folder_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "title": "Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Message confirming folder deletion",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/generate-thumbnails": {
+      "post": {
+        "tags": [
+          "Images",
+          "Images"
+        ],
+        "summary": "Generate Thumbnails",
+        "description": "Generates thumbnails for images in specified folders.",
+        "operationId": "generate_thumbnails_images_generate_thumbnails_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateThumbnailsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Message confirming thumbnail generation",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/get-thumbnail-path": {
+      "get": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Get Thumbnail Path",
+        "operationId": "get_thumbnail_path_images_get_thumbnail_path_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/delete-thumbnails": {
+      "delete": {
+        "tags": [
+          "Images",
+          "Images"
+        ],
+        "summary": "Delete Thumbnails",
+        "description": "Deletes thumbnails for a specified folder.",
+        "operationId": "delete_thumbnails_images_delete_thumbnails_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteThumbnailsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Message confirming thumbnail deletion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteThumbnailsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FailedDeletionThumbnailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/add-folder-progress": {
+      "get": {
+        "tags": [
+          "Images",
+          "Images"
+        ],
+        "summary": "Add Folder Progress",
+        "description": "Gets the progress of folder addition operation.",
+        "operationId": "combined_progress_images_add_folder_progress_get",
+        "responses": {
+          "200": {
+            "description": "JSON object containing progress information",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/albums/create-album": {
+      "post": {
+        "tags": [
+          "Albums",
+          "Albums"
+        ],
+        "summary": "Create Album",
+        "description": "Creates a new album with the given name and optional description.",
+        "operationId": "create_new_album_albums_create_album_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlbumCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Message confirming album creation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlbumCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/albums/delete-album": {
+      "delete": {
+        "tags": [
+          "Albums",
+          "Albums"
+        ],
+        "summary": "Delete Album",
+        "description": "Deletes an existing album by name.",
+        "operationId": "delete_existing_album_albums_delete_album_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlbumDeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Message confirming album deletion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlbumDeleteResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/albums/add-multiple-to-album": {
+      "post": {
+        "tags": [
+          "Albums",
+          "Albums"
+        ],
+        "summary": "Add Multiple Images to Album",
+        "description": "Adds multiple images to an existing album.",
+        "operationId": "add_multiple_images_to_album_albums_add_multiple_to_album_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMultipleImagesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Message confirming images were added to the album",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddMultipleImagesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/albums/remove-from-album": {
+      "delete": {
+        "tags": [
+          "Albums",
+          "Albums"
+        ],
+        "summary": "Remove Image from Album",
+        "description": "Removes a single image from an album.",
+        "operationId": "remove_image_from_album_albums_remove_from_album_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveImagFromAlbumRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Message confirming image removal from the album",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoveImagFromAlbumResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/albums/view-album": {
+      "get": {
+        "tags": [
+          "Albums",
+          "Albums"
+        ],
+        "summary": "View Album Photos",
+        "description": "Retrieves all photos in a specified album.",
+        "operationId": "view_album_photos_albums_view_album_get",
+        "parameters": [
+          {
+            "name": "album_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Name of the album to view",
+              "title": "Album Name"
+            },
+            "description": "Name of the album to view"
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Password for hidden albums",
+              "title": "Password"
+            },
+            "description": "Password for hidden albums"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON object containing album name and list of photos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewAlbumResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/albums/edit-album-description": {
+      "put": {
+        "tags": [
+          "Albums",
+          "Albums"
+        ],
+        "summary": "Edit Album Description",
+        "description": "Updates the description of an existing album.",
+        "operationId": "update_album_description_albums_edit_album_description_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAlbumDescriptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Message confirming album description update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateAlbumDescriptionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/albums/view-all": {
+      "get": {
+        "tags": [
+          "Albums",
+          "Albums"
+        ],
+        "summary": "View All Albums",
+        "description": "Retrieves a list of all albums.",
+        "operationId": "get_albums_albums_view_all_get",
+        "responses": {
+          "200": {
+            "description": "JSON object containing a list of all albums",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAlbumsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tag/match": {
+      "get": {
+        "tags": [
+          "Tagging",
+          "Tagging"
+        ],
+        "summary": "Face Matching",
+        "description": "Finds similar faces across all images in the database.",
+        "operationId": "face_matching_tag_match_get",
+        "responses": {
+          "200": {
+            "description": "JSON object containing pairs of similar images and their similarity scores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FaceMatchingResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tag/clusters": {
+      "get": {
+        "tags": [
+          "Tagging",
+          "Tagging"
+        ],
+        "summary": "Face Clusters",
+        "description": "Retrieves clusters of similar faces across all images.",
+        "operationId": "face_clusters_tag_clusters_get",
+        "responses": {
+          "200": {
+            "description": "JSON object containing clusters of images with similar faces",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FaceClustersResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tag/related-images": {
+      "get": {
+        "tags": [
+          "Tagging",
+          "Tagging"
+        ],
+        "summary": "Related Images",
+        "description": "Finds images with faces related to the face in the given image.",
+        "operationId": "get_related_images_tag_related_images_get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "full path to the image",
+              "title": "Path"
+            },
+            "description": "full path to the image"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON object containing a list of related image paths",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetRelatedImagesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddFolderRequest": {
+        "properties": {
+          "folder_path": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Folder Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder_path"
+        ],
+        "title": "AddFolderRequest"
+      },
+      "AddFolderResponse": {
+        "properties": {
+          "data": {
+            "type": "integer",
+            "title": "Data"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "message",
+          "success"
+        ],
+        "title": "AddFolderResponse"
+      },
+      "AddMultipleImagesRequest": {
+        "properties": {
+          "album_name": {
+            "type": "string",
+            "title": "Album Name"
+          },
+          "paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Paths"
+          }
+        },
+        "type": "object",
+        "required": [
+          "album_name",
+          "paths"
+        ],
+        "title": "AddMultipleImagesRequest"
+      },
+      "AddMultipleImagesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "AddMultipleImagesResponse"
+      },
+      "AddSingleImageRequest": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "title": "AddSingleImageRequest"
+      },
+      "AddSingleImageResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "AddSingleImageResponse"
+      },
+      "AlbumCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "is_hidden": {
+            "type": "boolean",
+            "title": "Is Hidden",
+            "default": false
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "AlbumCreate"
+      },
+      "AlbumCreateResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "AlbumCreateResponse"
+      },
+      "AlbumDeleteRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "AlbumDeleteRequest"
+      },
+      "AlbumDeleteResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "AlbumDeleteResponse"
+      },
+      "ClassIDsResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "ClassIDsResponse"
+      },
+      "DeleteImageRequest": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "title": "DeleteImageRequest"
+      },
+      "DeleteImageResponse": {
+        "properties": {
+          "data": {
+            "type": "string",
+            "title": "Data"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "message",
+          "success"
+        ],
+        "title": "DeleteImageResponse"
+      },
+      "DeleteMultipleImagesRequest": {
+        "properties": {
+          "paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Paths"
+          },
+          "isFromDevice": {
+            "type": "boolean",
+            "title": "Isfromdevice"
+          }
+        },
+        "type": "object",
+        "required": [
+          "paths",
+          "isFromDevice"
+        ],
+        "title": "DeleteMultipleImagesRequest"
+      },
+      "DeleteMultipleImagesResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "message",
+          "success"
+        ],
+        "title": "DeleteMultipleImagesResponse"
+      },
+      "DeleteThumbnailsRequest": {
+        "properties": {
+          "folder_path": {
+            "type": "string",
+            "title": "Folder Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder_path"
+        ],
+        "title": "DeleteThumbnailsRequest"
+      },
+      "DeleteThumbnailsResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "failed_deletions": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FailedDeletionThumbnailResponse"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Deletions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "DeleteThumbnailsResponse"
+      },
+      "DetectionData": {
+        "properties": {
+          "class_ids": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Class Ids"
+          },
+          "detected_classes": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Detected Classes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "class_ids",
+          "detected_classes"
+        ],
+        "title": "DetectionData"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "error"
+        ],
+        "title": "ErrorResponse"
+      },
+      "FaceClustersResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "clusters": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Clusters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "clusters"
+        ],
+        "title": "FaceClustersResponse"
+      },
+      "FaceMatchingResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "similar_pairs": {
+            "items": {
+              "$ref": "#/components/schemas/SimilarPair"
+            },
+            "type": "array",
+            "title": "Similar Pairs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "similar_pairs"
+        ],
+        "title": "FaceMatchingResponse"
+      },
+      "FailedDeletionThumbnailResponse": {
+        "properties": {
+          "folder": {
+            "type": "string",
+            "title": "Folder"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder",
+          "error"
+        ],
+        "title": "FailedDeletionThumbnailResponse"
+      },
+      "GenerateThumbnailsRequest": {
+        "properties": {
+          "folder_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Folder Paths"
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder_paths"
+        ],
+        "title": "GenerateThumbnailsRequest"
+      },
+      "GetAlbumsResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "message",
+          "success"
+        ],
+        "title": "GetAlbumsResponse"
+      },
+      "GetAllImageObjectsResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetAllImageObjectsResponse"
+      },
+      "GetRelatedImagesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetRelatedImagesResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ImagesResponse": {
+        "properties": {
+          "image_files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Image Files"
+          },
+          "folder_path": {
+            "type": "string",
+            "title": "Folder Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_files",
+          "folder_path"
+        ],
+        "title": "ImagesResponse"
+      },
+      "RemoveImagFromAlbumRequest": {
+        "properties": {
+          "album_name": {
+            "type": "string",
+            "title": "Album Name"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "album_name",
+          "path"
+        ],
+        "title": "RemoveImagFromAlbumRequest"
+      },
+      "RemoveImagFromAlbumResponse": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "title": "Data"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "message",
+          "success"
+        ],
+        "title": "RemoveImagFromAlbumResponse"
+      },
+      "SimilarPair": {
+        "properties": {
+          "image1": {
+            "type": "string",
+            "title": "Image1"
+          },
+          "image2": {
+            "type": "string",
+            "title": "Image2"
+          },
+          "similarity": {
+            "type": "number",
+            "title": "Similarity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image1",
+          "image2",
+          "similarity"
+        ],
+        "title": "SimilarPair"
+      },
+      "TestImageResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "TestImageResponse"
+      },
+      "TestRouteRequest": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "title": "TestRouteRequest"
+      },
+      "TestRouteResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DetectionData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "TestRouteResponse"
+      },
+      "UpdateAlbumDescriptionRequest": {
+        "properties": {
+          "album_name": {
+            "type": "string",
+            "title": "Album Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "album_name",
+          "description"
+        ],
+        "title": "UpdateAlbumDescriptionRequest"
+      },
+      "UpdateAlbumDescriptionResponse": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "title": "Data"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "message",
+          "success"
+        ],
+        "title": "UpdateAlbumDescriptionResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ViewAlbumResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "ViewAlbumResponse"
+      },
+      "app__schemas__images__GetImagesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ImagesResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetImagesResponse"
+      },
+      "app__schemas__test__GetImagesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetImagesResponse"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Albums",
+      "description": "We briefly discuss the endpoints related to albums, all of these fall under the /albums route"
+    },
+    {
+      "name": "Images",
+      "description": "We briefly discuss the endpoints related to images, all of these fall under the /images route"
+    },
+    {
+      "name": "Tagging",
+      "description": "We briefly discuss the endpoints related to face tagging and recognition, all of these fall under the /tag route",
+      "x-displayName": "Face recognition and Tagging"
+    }
+  ]
+}
