@@ -32,6 +32,10 @@ async def run_get_classes(img_path):
 
 @router.post(
     "/return",
+    tags=["Test"],
+    summary="Test Route",
+    description="Test endpoint for object detection on a single image.",
+    response_description="Test results with detected objects",
     response_model=TestRouteResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
@@ -79,6 +83,10 @@ async def test_route(payload: TestRouteRequest):
 
 @router.get(
     "/images",
+    tags=["Test"],
+    summary="Get Test Images",
+    description="Retrieves test images for development purposes.",
+    response_description="List of test images",
     response_model=GetImagesResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
@@ -111,6 +119,10 @@ def get_images():
 
 @router.post(
     "/single-image",
+    tags=["Test"],
+    summary="Add Single Test Image",
+    description="Adds a single image for testing purposes.",
+    response_description="Confirmation of test image addition",
     response_model=AddSingleImageResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
@@ -164,6 +176,10 @@ def add_single_image(payload: AddSingleImageRequest):
 
 @router.get(
     "/test-image",
+    tags=["Test"],
+    summary="Test Image Processing",
+    description="Tests image processing functionality.",
+    response_description="Test processing results",
     response_model=TestImageResponse,
     responses={code: {"model": ErrorResponse} for code in [400]},
 )
