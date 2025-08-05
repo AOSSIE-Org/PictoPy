@@ -31,11 +31,14 @@ from app.schemas.album import (
 router = APIRouter()
 
 
-@router.post("/create-album",tags=["Albums"],
+@router.post(
+    "/create-album",
+    tags=["Albums"],
     summary="Create Album",
     description="Creates a new album with the given name and optional description.",
     response_description="Message confirming album creation",
-    response_model=AlbumCreateResponse)
+    response_model=AlbumCreateResponse,
+)
 @exception_handler_wrapper
 def create_new_album(payload: AlbumCreate):
     # Call the function to create an album
@@ -152,7 +155,7 @@ def remove_image_from_album(payload: RemoveImagFromAlbumRequest):
 
 @router.get(
     "/view-album",
-   tags=["Albums"],
+    tags=["Albums"],
     summary="View Album Photos",
     description="Retrieves all photos in a specified album.",
     response_description="JSON object containing album name and list of photos",
