@@ -19,7 +19,9 @@ from app.routes.facetagging import router as tagging_router
 import multiprocessing
 from app.scheduler import start_scheduler
 from app.custom_logging import CustomizeLogger
-import os
+import os, json
+from fastapi.openapi.utils import get_openapi
+
 
 
 thumbnails_dir = os.path.join("images", "PictoPy.thumbnails")
@@ -49,9 +51,11 @@ app = FastAPI(
         "name": "PictoPy Postman collection",
         "url": "https://www.postman.com/cryosat-explorer-62744145/workspace/pictopy/overview",
     },
+    # It seems mkdocs does not allow dynamic editable URLs like plain swagger does.   
+#this is necessary for apis to work . Need to add production endpoints here   
     servers=[
         {"url": "http://localhost:8000", "description": "Local Development server"},
-        # Add your other environment server URLs here if needed
+        {"url": "https://aossie-org.github.io/PictoPy", "description": "Production server"}
     ],
     openapi_tags=[
         {
@@ -69,30 +73,34 @@ app = FastAPI(
         }
     ]
 )
+
+app.logger = CustomizeLogger.make_logger("app/logging_config.json")
 def generate_openapi_json():
-    import os, json
-    from fastapi.openapi.utils import get_openapi
-
-    openapi_schema = get_openapi(
-        title=app.title,
-        version=app.version,
-        description=app.description,
-        routes=app.routes,
-        tags=app.openapi_tags
+    try:
+        openapi_schema = get_openapi(
+            title=app.title,
+            version=app.version,
+            description=app.description,
+            routes=app.routes,
+            tags=app.openapi_tags,
+            servers=app.servers
+            
+        )
+        openapi_schema["info"]["contact"]=app.contact
+   
         
-    )
-    openapi_schema["info"]["contact"]=app.contact
-    openapi_schema["servers"] = app.servers
 
 
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    openapi_path = os.path.join(project_root, "docs", "backend", "backend_python", "openapi.json")
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        openapi_path = os.path.join(project_root, "docs", "backend", "backend_python", "openapi.json")
 
-    os.makedirs(os.path.dirname(openapi_path), exist_ok=True)
+        os.makedirs(os.path.dirname(openapi_path), exist_ok=True)
 
-    with open(openapi_path, "w") as f:
-        json.dump(openapi_schema, f, indent=2)
-
+        with open(openapi_path, "w") as f:
+            json.dump(openapi_schema, f, indent=2)
+        app.logger.info(f"OpenAPI JSON generated at {openapi_path}")
+    except Exception as e:
+        app.logger.error(f"Failed to generate openapi.json: {e}")
 
 
 start_scheduler()
