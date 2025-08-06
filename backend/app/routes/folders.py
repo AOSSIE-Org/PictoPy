@@ -82,7 +82,9 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
         # Step 1: Data Validation
 
         if not os.path.isdir(request.folder_path):
-            raise ValueError(f"Error: '{request.folder_path}' is not a valid directory.")
+            raise ValueError(
+                f"Error: '{request.folder_path}' is not a valid directory."
+            )
 
         if (
             not os.access(request.folder_path, os.R_OK)
@@ -292,7 +294,9 @@ def sync_folder(request: SyncFolderRequest):
 
         # Step 2: Get current state from both sources
         db_child_folders = db_get_direct_child_folders(request.folder_id)
-        filesystem_folders = folder_util_get_filesystem_direct_child_folders(request.folder_path)
+        filesystem_folders = folder_util_get_filesystem_direct_child_folders(
+            request.folder_path
+        )
 
         # Step 3: Compare and identify differences
         filesystem_folder_set = set(filesystem_folders)
@@ -302,8 +306,12 @@ def sync_folder(request: SyncFolderRequest):
         folders_to_add = filesystem_folder_set - db_folder_paths
 
         # Step 4: Perform synchronization operations
-        deleted_count, deleted_folders = folder_util_delete_obsolete_folders(db_child_folders, folders_to_delete)
-        added_count, added_folders = folder_util_add_multiple_folder_trees(folders_to_add, request.folder_id)
+        deleted_count, deleted_folders = folder_util_delete_obsolete_folders(
+            db_child_folders, folders_to_delete
+        )
+        added_count, added_folders = folder_util_add_multiple_folder_trees(
+            folders_to_add, request.folder_id
+        )
 
         # Step 5: Return comprehensive response
         return SyncFolderResponse(

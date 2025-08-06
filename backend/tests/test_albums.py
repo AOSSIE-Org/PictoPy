@@ -2,10 +2,9 @@ import sys
 import os
 import pytest
 import bcrypt
-import json
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock, ANY
+from unittest.mock import patch, ANY
 import uuid
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -20,6 +19,7 @@ client = TestClient(app)
 # Pytest Fixtures
 # ##############################
 
+
 @pytest.fixture
 def mock_db_album():
     return {
@@ -29,6 +29,7 @@ def mock_db_album():
         "is_hidden": False,
         "password_hash": None,
     }
+
 
 @pytest.fixture
 def mock_db_hidden_album():
@@ -40,9 +41,11 @@ def mock_db_hidden_album():
         "password_hash": "a_very_secure_hash",
     }
 
+
 # ##############################
 # Test Classes
 # ##############################
+
 
 class TestAlbumRoutes:
     """Test suite for the main album CRUD routes."""
@@ -64,7 +67,6 @@ class TestAlbumRoutes:
             },
         ],
     )
-    
     def test_create_album_variants(self, album_data):
         with patch("app.routes.albums.db_insert_album") as mock_insert:
             mock_insert.return_value = None
@@ -83,18 +85,20 @@ class TestAlbumRoutes:
                 album_data["is_hidden"],
                 album_data.get("password"),
             )
-            
+
     def test_get_all_albums_public_only(self, mock_db_album):
         """
         Test fetching only public albums (default behavior).
         """
         with patch("app.routes.albums.db_get_all_albums") as mock_get_all:
-            mock_get_all.return_value = [(
-                mock_db_album["album_id"],
-                mock_db_album["album_name"],
-                mock_db_album["description"],
-                mock_db_album["is_hidden"]
-            )]
+            mock_get_all.return_value = [
+                (
+                    mock_db_album["album_id"],
+                    mock_db_album["album_name"],
+                    mock_db_album["description"],
+                    mock_db_album["is_hidden"],
+                )
+            ]
 
             response = client.get("/albums/")
             assert response.status_code == 200
@@ -107,7 +111,6 @@ class TestAlbumRoutes:
 
             mock_get_all.assert_called_once_with(False)
 
-
     def test_get_all_albums_include_hidden(self, mock_db_album, mock_db_hidden_album):
         """
         Test fetching all albums including hidden ones.
@@ -118,14 +121,14 @@ class TestAlbumRoutes:
                     mock_db_album["album_id"],
                     mock_db_album["album_name"],
                     mock_db_album["description"],
-                    mock_db_album["is_hidden"]
+                    mock_db_album["is_hidden"],
                 ),
                 (
                     mock_db_hidden_album["album_id"],
                     mock_db_hidden_album["album_name"],
                     mock_db_hidden_album["description"],
-                    mock_db_hidden_album["is_hidden"]
-                )
+                    mock_db_hidden_album["is_hidden"],
+                ),
             ]
 
             response = client.get("/albums/?show_hidden=true")
@@ -141,7 +144,6 @@ class TestAlbumRoutes:
             assert mock_db_hidden_album["album_id"] in ids
 
             mock_get_all.assert_called_once_with(True)
-
 
     def test_get_all_albums_empty_list(self):
         """
@@ -168,7 +170,7 @@ class TestAlbumRoutes:
                 mock_db_album["album_id"],
                 mock_db_album["album_name"],
                 mock_db_album["description"],
-                mock_db_album["is_hidden"]
+                mock_db_album["is_hidden"],
             )
 
             response = client.get(f"/albums/{mock_db_album['album_id']}")
@@ -198,54 +200,70 @@ class TestAlbumRoutes:
             assert json_response["detail"]["success"] is False
             mock_get_album.assert_called_once_with(non_existent_id)
 
-
-    @pytest.mark.parametrize("album_data, request_data, verify_password_return, expected_status", [
-        # Case 1: Public album (no password protection)
-        (
-            ("abc-123", "Old Name", "Old Desc", 0, None),
-            {
-                "name": "Updated Public Album",
-                "description": "Updated description",
-                "is_hidden": False,
-                "password": None,
-                "current_password": None,
-            },
-            True,
-            200
-        ),
-
-        # Case 2: Hidden album with correct current password
-        (
-            ("abc-456", "Hidden Album", "Secret", 1, bcrypt.hashpw("oldpass".encode(), bcrypt.gensalt()).decode()),
-            {
-                "name": "Updated Hidden Album",
-                "description": "Updated hidden description",
-                "is_hidden": True,
-                "password": "newpass123",
-                "current_password": "oldpass"
-            },
-            True,
-            200
-        ),
-
-        # Case 3: Hidden album with incorrect current password
-        (
-            ("abc-789", "Hidden Album", "Secret", 1, bcrypt.hashpw("correctpass".encode(), bcrypt.gensalt()).decode()),
-            {
-                "name": "Invalid Attempt",
-                "description": "Wrong password used",
-                "is_hidden": True,
-                "password": "newpass123",
-                "current_password": "wrongpass"
-            },
-            False,
-            401
-        ),
-    ])
-    def test_update_album(self, album_data, request_data, verify_password_return, expected_status):
-        with patch("app.routes.albums.db_get_album") as mock_get_album, \
-            patch("app.routes.albums.db_update_album") as mock_update_album, \
-            patch("app.routes.albums.verify_album_password") as mock_verify:
+    @pytest.mark.parametrize(
+        "album_data, request_data, verify_password_return, expected_status",
+        [
+            # Case 1: Public album (no password protection)
+            (
+                ("abc-123", "Old Name", "Old Desc", 0, None),
+                {
+                    "name": "Updated Public Album",
+                    "description": "Updated description",
+                    "is_hidden": False,
+                    "password": None,
+                    "current_password": None,
+                },
+                True,
+                200,
+            ),
+            # Case 2: Hidden album with correct current password
+            (
+                (
+                    "abc-456",
+                    "Hidden Album",
+                    "Secret",
+                    1,
+                    bcrypt.hashpw("oldpass".encode(), bcrypt.gensalt()).decode(),
+                ),
+                {
+                    "name": "Updated Hidden Album",
+                    "description": "Updated hidden description",
+                    "is_hidden": True,
+                    "password": "newpass123",
+                    "current_password": "oldpass",
+                },
+                True,
+                200,
+            ),
+            # Case 3: Hidden album with incorrect current password
+            (
+                (
+                    "abc-789",
+                    "Hidden Album",
+                    "Secret",
+                    1,
+                    bcrypt.hashpw("correctpass".encode(), bcrypt.gensalt()).decode(),
+                ),
+                {
+                    "name": "Invalid Attempt",
+                    "description": "Wrong password used",
+                    "is_hidden": True,
+                    "password": "newpass123",
+                    "current_password": "wrongpass",
+                },
+                False,
+                401,
+            ),
+        ],
+    )
+    def test_update_album(
+        self, album_data, request_data, verify_password_return, expected_status
+    ):
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_update_album"
+        ) as mock_update_album, patch(
+            "app.routes.albums.verify_album_password"
+        ) as mock_verify:
 
             mock_get_album.return_value = album_data
             mock_verify.return_value = verify_password_return
@@ -270,11 +288,12 @@ class TestAlbumRoutes:
             mock_db_album["album_name"],
             mock_db_album["description"],
             int(mock_db_album["is_hidden"]),
-            mock_db_album["password_hash"]
+            mock_db_album["password_hash"],
         )
 
-        with patch("app.routes.albums.db_get_album") as mock_get_album, \
-            patch("app.routes.albums.db_delete_album") as mock_delete_album:
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_delete_album"
+        ) as mock_delete_album:
 
             mock_get_album.return_value = album_tuple
             mock_delete_album.return_value = None
@@ -287,6 +306,7 @@ class TestAlbumRoutes:
             assert json_response["success"] is True
             assert json_response["msg"] == "Album deleted successfully"
             mock_delete_album.assert_called_once_with(album_id)
+
 
 class TestAlbumImageManagement:
     """
@@ -301,7 +321,7 @@ class TestAlbumImageManagement:
         request_body = {
             "image_ids": [
                 "71abff29-27b4-43a4-9e76-b78504bea325",
-                "2d4bff29-1111-43a4-9e76-b78504bea999"
+                "2d4bff29-1111-43a4-9e76-b78504bea999",
             ]
         }
 
@@ -310,12 +330,13 @@ class TestAlbumImageManagement:
             mock_db_album["album_name"],
             mock_db_album["description"],
             int(mock_db_album["is_hidden"]),
-            mock_db_album["password_hash"]
+            mock_db_album["password_hash"],
         )
 
-        with patch("app.routes.albums.db_get_album") as mock_get_album, \
-             patch("app.routes.albums.db_add_images_to_album") as mock_add_images:
-            
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_add_images_to_album"
+        ) as mock_add_images:
+
             mock_get_album.return_value = album_tuple
             mock_add_images.return_value = None
 
@@ -337,7 +358,7 @@ class TestAlbumImageManagement:
         album_id = mock_db_album["album_id"]
         expected_image_ids = [
             "71abff29-27b4-43a4-9e76-b78504bea325",
-            "2d4bff29-1111-43a4-9e76-b78504bea999"
+            "2d4bff29-1111-43a4-9e76-b78504bea999",
         ]
 
         album_tuple = (
@@ -345,11 +366,12 @@ class TestAlbumImageManagement:
             mock_db_album["album_name"],
             mock_db_album["description"],
             int(mock_db_album["is_hidden"]),
-            mock_db_album["password_hash"]
+            mock_db_album["password_hash"],
         )
 
-        with patch("app.routes.albums.db_get_album") as mock_get_album, \
-             patch("app.routes.albums.db_get_album_images") as mock_get_images:
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_get_album_images"
+        ) as mock_get_images:
 
             mock_get_album.return_value = album_tuple
             mock_get_images.return_value = expected_image_ids
@@ -377,11 +399,12 @@ class TestAlbumImageManagement:
             mock_db_album["album_name"],
             mock_db_album["description"],
             int(mock_db_album["is_hidden"]),
-            mock_db_album["password_hash"]
+            mock_db_album["password_hash"],
         )
 
-        with patch("app.routes.albums.db_get_album") as mock_get_album, \
-             patch("app.routes.albums.db_remove_image_from_album") as mock_remove:
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_remove_image_from_album"
+        ) as mock_remove:
 
             mock_get_album.return_value = album_tuple
             mock_remove.return_value = None
@@ -404,13 +427,18 @@ class TestAlbumImageManagement:
         album_id = mock_db_album["album_id"]
         image_ids_to_remove = {"image_ids": [str(uuid.uuid4()), str(uuid.uuid4())]}
 
-        with patch("app.routes.albums.db_get_album") as mock_get, \
-             patch("app.routes.albums.db_remove_images_from_album") as mock_remove_bulk:
+        with patch("app.routes.albums.db_get_album") as mock_get, patch(
+            "app.routes.albums.db_remove_images_from_album"
+        ) as mock_remove_bulk:
             mock_get.return_value = tuple(mock_db_album.values())
-            response = client.request("DELETE", f"/albums/{album_id}/images", json=image_ids_to_remove)
+            response = client.request(
+                "DELETE", f"/albums/{album_id}/images", json=image_ids_to_remove
+            )
             assert response.status_code == 200
             json_response = response.json()
             assert json_response["success"] is True
             assert str(len(image_ids_to_remove["image_ids"])) in json_response["msg"]
             mock_get.assert_called_once_with(album_id)
-            mock_remove_bulk.assert_called_once_with(album_id, image_ids_to_remove["image_ids"])
+            mock_remove_bulk.assert_called_once_with(
+                album_id, image_ids_to_remove["image_ids"]
+            )

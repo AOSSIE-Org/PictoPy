@@ -1,13 +1,18 @@
 import uuid
 import os
 from app.database.folders import db_insert_folders_batch
-from typing import List, Tuple, Dict
+from typing import List, Tuple
 from fastapi import HTTPException, status
 from app.schemas.folders import ErrorResponse
-from app.database.folders import db_update_parent_ids_for_subtree, db_delete_folders_batch
+from app.database.folders import (
+    db_update_parent_ids_for_subtree,
+    db_delete_folders_batch,
+)
 
 
-def folder_util_add_folder_tree(root_path, parent_folder_id=None, AI_Tagging=False, taggingCompleted=None):
+def folder_util_add_folder_tree(
+    root_path, parent_folder_id=None, AI_Tagging=False, taggingCompleted=None
+):
     """
     Recursively collect folder data and insert all folders in a single database transaction.
     All folders are initially inserted with NULL parent_id, which is updated after insertion.
@@ -26,7 +31,9 @@ def folder_util_add_folder_tree(root_path, parent_folder_id=None, AI_Tagging=Fal
             parent_id = parent_folder_id
         else:
             parent_path = os.path.dirname(dirpath)
-            parent_id = folder_map[parent_path][0] if parent_path in folder_map else None
+            parent_id = (
+                folder_map[parent_path][0] if parent_path in folder_map else None
+            )
 
         # Store both folder_id and parent_id in the map
         folder_map[dirpath] = (this_folder_id, parent_id)
@@ -92,7 +99,9 @@ def folder_util_get_filesystem_direct_child_folders(folder_path: str) -> List[st
         )
 
 
-def folder_util_delete_obsolete_folders(db_child_folders: List[Tuple[str, str]], folders_to_delete: set) -> Tuple[int, List[str]]:
+def folder_util_delete_obsolete_folders(
+    db_child_folders: List[Tuple[str, str]], folders_to_delete: set
+) -> Tuple[int, List[str]]:
     """
     Delete folders from the database that are no longer present in the filesystem.
 
@@ -107,7 +116,11 @@ def folder_util_delete_obsolete_folders(db_child_folders: List[Tuple[str, str]],
         return 0, []
 
     # Get the folder IDs for the folders to delete
-    folder_ids_to_delete = [folder_id for folder_id, folder_path in db_child_folders if folder_path in folders_to_delete]
+    folder_ids_to_delete = [
+        folder_id
+        for folder_id, folder_path in db_child_folders
+        if folder_path in folders_to_delete
+    ]
 
     if folder_ids_to_delete:
         deleted_count = db_delete_folders_batch(folder_ids_to_delete)
@@ -116,7 +129,9 @@ def folder_util_delete_obsolete_folders(db_child_folders: List[Tuple[str, str]],
     return 0, []
 
 
-def folder_util_add_multiple_folder_trees(folders_to_add: set, parent_folder_id: str) -> Tuple[int, List[str]]:
+def folder_util_add_multiple_folder_trees(
+    folders_to_add: set, parent_folder_id: str
+) -> Tuple[int, List[str]]:
     """
     Add multiple folder trees with same parent to the database.
 
