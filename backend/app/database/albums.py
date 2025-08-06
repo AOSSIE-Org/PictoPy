@@ -1,0 +1,202 @@
+import sqlite3
+import bcrypt
+import time
+from contextlib import contextmanager
+from app.config.settings import DATABASE_PATH
+
+
+@contextmanager
+def get_db_connection():
+    """Context manager for database connections with proper error handling and retries"""
+    max_retries = 3
+    retry_delay = 0.1
+    
+    for attempt in range(max_retries):
+        try:
+            conn = sqlite3.connect(DATABASE_PATH, timeout=30.0)
+            # Enable WAL mode for better concurrency
+            conn.execute("PRAGMA journal_mode=WAL")
+            # Set busy timeout
+            conn.execute("PRAGMA busy_timeout=30000")
+            # Enable foreign keys
+            conn.execute("PRAGMA foreign_keys=ON")
+            
+            try:
+                yield conn
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                raise e
+            finally:
+                conn.close()
+            break
+            
+        except sqlite3.OperationalError as e:
+            if "database is locked" in str(e).lower() and attempt < max_retries - 1:
+                time.sleep(retry_delay * (2 ** attempt))  # Exponential backoff
+                continue
+            else:
+                raise e
+
+def db_create_albums_table() -> None:
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS albums (
+            album_id TEXT PRIMARY KEY,
+            album_name TEXT UNIQUE,
+            description TEXT,
+            is_hidden BOOLEAN DEFAULT 0,
+            password_hash TEXT
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+
+def db_create_album_images_table() -> None:
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS album_images (
+            album_id TEXT,
+            image_id TEXT,
+            PRIMARY KEY (album_id, image_id),
+            FOREIGN KEY (album_id) REFERENCES albums(album_id) ON DELETE CASCADE,
+            FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+
+def db_get_all_albums(show_hidden: bool = False):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    if show_hidden:
+        cursor.execute("SELECT * FROM albums")
+    else:
+        cursor.execute("SELECT * FROM albums WHERE is_hidden = 0")
+    albums = cursor.fetchall()
+    conn.close()
+    return albums
+
+def db_get_album_by_name(name: str):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM albums WHERE album_name = ?", (name,))
+    album = cursor.fetchone()
+    conn.close()
+    return album if album else None
+
+def db_get_album(album_id: str):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM albums WHERE album_id = ?", (album_id,))
+    album = cursor.fetchone()
+    conn.close()
+    return album if album else None
+
+def db_insert_album(album_id: str, album_name: str, description: str = "", is_hidden: bool = False, password: str = None):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    password_hash = None
+    if password:
+        password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    cursor.execute(
+        """
+        INSERT INTO albums (album_id, album_name, description, is_hidden, password_hash)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (album_id, album_name, description, int(is_hidden), password_hash)
+    )
+    conn.commit()
+    conn.close()
+
+def db_update_album(album_id: str, album_name: str, description: str, is_hidden: bool, password: str = None):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    password_hash = None
+    if password:
+        password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    cursor.execute(
+        """
+        UPDATE albums
+        SET album_name = ?, description = ?, is_hidden = ?, password_hash = ?
+        WHERE album_id = ?
+        """,
+        (album_name, description, int(is_hidden), password_hash, album_id)
+    )
+    conn.commit()
+    conn.close()
+
+def db_delete_album(album_id: str):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM albums WHERE album_id = ?", (album_id,))
+    conn.commit()
+    conn.close()
+
+def db_get_album_images(album_id: str):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT image_id FROM album_images WHERE album_id = ?", (album_id,))
+    images = cursor.fetchall()
+    conn.close()
+    return [img[0] for img in images]
+
+def db_add_images_to_album(album_id: str, image_ids: list[str]):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        query = f"SELECT id FROM images WHERE id IN ({','.join('?' for _ in image_ids)})"
+        cursor.execute(query, image_ids)
+        valid_images = [row[0] for row in cursor.fetchall()]
+
+        if valid_images:
+            cursor.executemany(
+                "INSERT OR IGNORE INTO album_images (album_id, image_id) VALUES (?, ?)",
+                [(album_id, img_id) for img_id in valid_images]
+            )
+        else:
+            raise ValueError("None of the provided image IDs exist in the database.")
+
+def db_remove_image_from_album(album_id: str, image_id: str):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT 1 FROM album_images WHERE album_id = ? AND image_id = ?",
+            (album_id, image_id)
+        )
+        exists = cursor.fetchone()
+
+        if exists:
+            cursor.execute(
+                "DELETE FROM album_images WHERE album_id = ? AND image_id = ?",
+                (album_id, image_id)
+            )
+        else:
+            raise ValueError("Image not found in the specified album")
+
+def db_remove_images_from_album(album_id: str, image_ids: list[str]):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.executemany(
+        "DELETE FROM album_images WHERE album_id = ? AND image_id = ?",
+        [(album_id, img_id) for img_id in image_ids]
+    )
+    conn.commit()
+    conn.close()
+
+def verify_album_password(album_id: str, password: str) -> bool:
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT password_hash FROM albums WHERE album_id = ?", (album_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row or not row[0]:
+        return False
+    return bcrypt.checkpw(password.encode("utf-8"), row[0].encode("utf-8"))
