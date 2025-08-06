@@ -5,6 +5,8 @@ from app.database.folders import (
     db_find_parent_folder_id,
     db_enable_ai_tagging_batch,
     db_disable_ai_tagging_batch,
+    db_delete_folders_batch,
+    db_get_direct_child_folders,
 )
 from app.schemas.folders import (
     AddFolderRequest,
@@ -12,9 +14,18 @@ from app.schemas.folders import (
     ErrorResponse,
     UpdateAITaggingRequest,
     UpdateAITaggingResponse,
+    DeleteFoldersRequest,
+    DeleteFoldersResponse,
+    SyncFolderRequest,
+    SyncFolderResponse,
 )
 import os
-from app.utils.folders import folder_util_add_folder_tree
+from app.utils.folders import (
+    folder_util_add_folder_tree,
+    folder_util_add_multiple_folder_trees,
+    folder_util_delete_obsolete_folders,
+    folder_util_get_filesystem_direct_child_folders,
+)
 from concurrent.futures import ProcessPoolExecutor
 from app.utils.images import (
     image_util_process_folder_images,
@@ -71,9 +82,7 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
         # Step 1: Data Validation
 
         if not os.path.isdir(request.folder_path):
-            raise ValueError(
-                f"Error: '{request.folder_path}' is not a valid directory."
-            )
+            raise ValueError(f"Error: '{request.folder_path}' is not a valid directory.")
 
         if (
             not os.access(request.folder_path, os.R_OK)
@@ -228,5 +237,102 @@ def disable_ai_tagging(request: UpdateAITaggingRequest):
                 success=False,
                 error="Internal server error",
                 message=f"Unable to disable AI tagging: {str(e)}",
+            ).model_dump(),
+        )
+
+
+@router.delete(
+    "/delete-folders",
+    response_model=DeleteFoldersResponse,
+    responses={code: {"model": ErrorResponse} for code in [400, 500]},
+)
+def delete_folders(request: DeleteFoldersRequest):
+    """Delete multiple folders by their IDs."""
+    try:
+        if not request.folder_ids:
+            raise ValueError("No folder IDs provided")
+
+        deleted_count = db_delete_folders_batch(request.folder_ids)
+
+        return DeleteFoldersResponse(
+            success=True,
+            message=f"Successfully deleted {deleted_count} folder(s)",
+            deleted_count=deleted_count,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="Validation Error",
+                message=str(e),
+            ).model_dump(),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Unable to delete folders: {str(e)}",
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/sync-folder",
+    response_model=SyncFolderResponse,
+    responses={code: {"model": ErrorResponse} for code in [400, 404, 500]},
+)
+def sync_folder(request: SyncFolderRequest):
+    """Sync a folder by comparing filesystem folders with database entries and removing extra DB entries."""
+    try:
+        # Step 1: Validate request
+
+        # Step 2: Get current state from both sources
+        db_child_folders = db_get_direct_child_folders(request.folder_id)
+        filesystem_folders = folder_util_get_filesystem_direct_child_folders(request.folder_path)
+
+        # Step 3: Compare and identify differences
+        filesystem_folder_set = set(filesystem_folders)
+        db_folder_paths = {folder_path for folder_id, folder_path in db_child_folders}
+
+        folders_to_delete = db_folder_paths - filesystem_folder_set
+        folders_to_add = filesystem_folder_set - db_folder_paths
+
+        # Step 4: Perform synchronization operations
+        deleted_count, deleted_folders = folder_util_delete_obsolete_folders(db_child_folders, folders_to_delete)
+        added_count, added_folders = folder_util_add_multiple_folder_trees(folders_to_add, request.folder_id)
+
+        # Step 5: Return comprehensive response
+        return SyncFolderResponse(
+            success=True,
+            message=f"Successfully synced folder. Added {added_count} folder(s), deleted {deleted_count} folder(s)",
+            deleted_count=deleted_count,
+            deleted_folders=deleted_folders,
+            added_count=added_count,
+            added_folders=added_folders,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="Validation Error",
+                message=str(e),
+            ).model_dump(),
+        )
+    except HTTPException as e:
+        # Re-raise HTTPExceptions to preserve the status code and detail
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Unable to sync folder: {str(e)}",
             ).model_dump(),
         )

@@ -10,7 +10,6 @@ import uuid
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from app.routes import albums as albums_router
-from app.schemas.album import CreateAlbumRequest
 
 app = FastAPI()
 app.include_router(albums_router.router, prefix="/albums", tags=["albums"])

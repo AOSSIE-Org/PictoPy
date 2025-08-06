@@ -1,0 +1,1121 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PictoPy",
+    "description": "The API calls to PictoPy are done via HTTP requests. This backend is built using FastAPI.",
+    "version": "0.1.0",
+    "contact": {
+      "name": "PictoPy Postman Collection",
+      "url": "https://www.postman.com/cryosat-explorer-62744145/workspace/pictopy/overview"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local Development server"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Root",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/folders/add-folder": {
+      "post": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Add Folder",
+        "operationId": "add_folder_folders_add_folder_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddFolderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddFolderResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__folders__ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__folders__ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__folders__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__folders__ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/folders/enable-ai-tagging": {
+      "post": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Enable Ai Tagging",
+        "description": "Enable AI tagging for multiple folders.",
+        "operationId": "enable_ai_tagging_folders_enable_ai_tagging_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAITaggingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateAITaggingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__folders__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__folders__ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/folders/disable-ai-tagging": {
+      "post": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Disable Ai Tagging",
+        "description": "Disable AI tagging for multiple folders.",
+        "operationId": "disable_ai_tagging_folders_disable_ai_tagging_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAITaggingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateAITaggingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__folders__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__folders__ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/folders/delete-folders": {
+      "delete": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Delete Folders",
+        "description": "Delete multiple folders by their IDs.",
+        "operationId": "delete_folders_folders_delete_folders_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteFoldersRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteFoldersResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__folders__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__folders__ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/folders/sync-folder": {
+      "post": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Sync Folder",
+        "description": "Sync a folder by comparing filesystem folders with database entries and removing extra DB entries.",
+        "operationId": "sync_folder_folders_sync_folder_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncFolderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncFolderResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__folders__ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__folders__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__folders__ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/face-clusters/{cluster_id}": {
+      "put": {
+        "tags": [
+          "Face Clusters"
+        ],
+        "summary": "Rename Cluster",
+        "description": "Rename a face cluster by its ID.",
+        "operationId": "rename_cluster_face_clusters__cluster_id__put",
+        "parameters": [
+          {
+            "name": "cluster_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cluster Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameClusterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenameClusterResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/face-clusters/": {
+      "get": {
+        "tags": [
+          "Face Clusters"
+        ],
+        "summary": "Get All Clusters",
+        "description": "Get metadata for all face clusters including face counts.",
+        "operationId": "get_all_clusters_face_clusters__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetClustersResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user-preferences/": {
+      "get": {
+        "tags": [
+          "User Preferences"
+        ],
+        "summary": "Get User Preferences",
+        "description": "Get user preferences from metadata.",
+        "operationId": "get_user_preferences_user_preferences__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserPreferencesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__user_preferences__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "User Preferences"
+        ],
+        "summary": "Update User Preferences",
+        "description": "Update user preferences in metadata.",
+        "operationId": "update_user_preferences_user_preferences__put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserPreferencesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateUserPreferencesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__user_preferences__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__user_preferences__ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddFolderRequest": {
+        "properties": {
+          "folder_path": {
+            "type": "string",
+            "title": "Folder Path"
+          },
+          "parent_folder_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Folder Id"
+          },
+          "taggingCompleted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taggingcompleted",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder_path"
+        ],
+        "title": "AddFolderRequest"
+      },
+      "AddFolderResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "folder_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "AddFolderResponse"
+      },
+      "ClusterMetadata": {
+        "properties": {
+          "cluster_id": {
+            "type": "string",
+            "title": "Cluster Id"
+          },
+          "cluster_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cluster Name"
+          },
+          "face_count": {
+            "type": "integer",
+            "title": "Face Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cluster_id",
+          "cluster_name",
+          "face_count"
+        ],
+        "title": "ClusterMetadata"
+      },
+      "DeleteFoldersRequest": {
+        "properties": {
+          "folder_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Folder Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder_ids"
+        ],
+        "title": "DeleteFoldersRequest"
+      },
+      "DeleteFoldersResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "deleted_count": {
+            "type": "integer",
+            "title": "Deleted Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "deleted_count"
+        ],
+        "title": "DeleteFoldersResponse"
+      },
+      "GetClustersResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "clusters": {
+            "items": {
+              "$ref": "#/components/schemas/ClusterMetadata"
+            },
+            "type": "array",
+            "title": "Clusters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "clusters"
+        ],
+        "title": "GetClustersResponse"
+      },
+      "GetUserPreferencesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "user_preferences": {
+            "$ref": "#/components/schemas/UserPreferencesData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "user_preferences"
+        ],
+        "title": "GetUserPreferencesResponse",
+        "description": "Response model for getting user preferences"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "RenameClusterRequest": {
+        "properties": {
+          "cluster_name": {
+            "type": "string",
+            "title": "Cluster Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cluster_name"
+        ],
+        "title": "RenameClusterRequest"
+      },
+      "RenameClusterResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "cluster_id": {
+            "type": "string",
+            "title": "Cluster Id"
+          },
+          "cluster_name": {
+            "type": "string",
+            "title": "Cluster Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "cluster_id",
+          "cluster_name"
+        ],
+        "title": "RenameClusterResponse"
+      },
+      "SyncFolderRequest": {
+        "properties": {
+          "folder_path": {
+            "type": "string",
+            "title": "Folder Path"
+          },
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder_path",
+          "folder_id"
+        ],
+        "title": "SyncFolderRequest"
+      },
+      "SyncFolderResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "deleted_count": {
+            "type": "integer",
+            "title": "Deleted Count"
+          },
+          "deleted_folders": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Deleted Folders"
+          },
+          "added_count": {
+            "type": "integer",
+            "title": "Added Count"
+          },
+          "added_folders": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Added Folders"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "deleted_count",
+          "deleted_folders",
+          "added_count",
+          "added_folders"
+        ],
+        "title": "SyncFolderResponse"
+      },
+      "UpdateAITaggingRequest": {
+        "properties": {
+          "folder_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Folder Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder_ids"
+        ],
+        "title": "UpdateAITaggingRequest"
+      },
+      "UpdateAITaggingResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "updated_count": {
+            "type": "integer",
+            "title": "Updated Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "updated_count"
+        ],
+        "title": "UpdateAITaggingResponse"
+      },
+      "UpdateUserPreferencesRequest": {
+        "properties": {
+          "YOLO_model_size": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "nano",
+                  "small",
+                  "medium"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yolo Model Size"
+          },
+          "GPU_Acceleration": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gpu Acceleration"
+          }
+        },
+        "type": "object",
+        "title": "UpdateUserPreferencesRequest",
+        "description": "Request model for updating user preferences"
+      },
+      "UpdateUserPreferencesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "user_preferences": {
+            "$ref": "#/components/schemas/UserPreferencesData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "user_preferences"
+        ],
+        "title": "UpdateUserPreferencesResponse",
+        "description": "Response model for updating user preferences"
+      },
+      "UserPreferencesData": {
+        "properties": {
+          "YOLO_model_size": {
+            "type": "string",
+            "enum": [
+              "nano",
+              "small",
+              "medium"
+            ],
+            "title": "Yolo Model Size",
+            "default": "small"
+          },
+          "GPU_Acceleration": {
+            "type": "boolean",
+            "title": "Gpu Acceleration",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "UserPreferencesData",
+        "description": "User preferences data structure"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "app__schemas__face_clusters__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "error"
+        ],
+        "title": "ErrorResponse"
+      },
+      "app__schemas__folders__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "error"
+        ],
+        "title": "ErrorResponse"
+      },
+      "app__schemas__user_preferences__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "error",
+          "message"
+        ],
+        "title": "ErrorResponse",
+        "description": "Error response model"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Albums",
+      "description": "We briefly discuss the endpoints related to albums, all of these fall under the /albums route"
+    },
+    {
+      "name": "Images",
+      "description": "We briefly discuss the endpoints related to images, all of these fall under the /images route"
+    },
+    {
+      "name": "Tagging",
+      "description": "We briefly discuss the endpoints related to face tagging and recognition, all of these fall under the /tag route",
+      "x-displayName": "Face recognition and Tagging"
+    }
+  ]
+}

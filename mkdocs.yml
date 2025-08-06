@@ -37,6 +37,8 @@ theme:
 
 plugins:
   - search
+  - swagger-ui-tag:
+  
 
 markdown_extensions:
   - pymdownx.highlight:
