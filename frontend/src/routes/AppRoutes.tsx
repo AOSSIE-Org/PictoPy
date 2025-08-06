@@ -12,10 +12,18 @@ import Memories from '@/pages/Memories/Memories';
 import Settings from '@/pages/SettingsPage/Settings';
 import Videos from '@/pages/VideosPage/Videos';
 
+// ✅ Import OnboardingPage
+import OnboardingPage from '@/pages/OnboardingPage';
+
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      <Route index element={<InitialSteps />} />
+      {/* ✅ Set OnboardingPage as default route */}
+      <Route index element={<OnboardingPage />} />
+
+      {/* ✅ Additional route if needed for direct access */}
+      <Route path="/onboarding" element={<OnboardingPage />} />
+
       <Route element={<Layout />}>
         <Route path={ROUTES.LAYOUT.HOME} element={<Dashboard />} />
         <Route path={ROUTES.LAYOUT.VIDEOS} element={<Videos />} />
@@ -28,3 +36,4 @@ export const AppRoutes: React.FC = () => {
     </Routes>
   );
 };
+//app routes
