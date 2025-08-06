@@ -3,12 +3,21 @@ from typing import Optional, List
 from pydantic_core.core_schema import ValidationInfo
 
 
+class Album(BaseModel):
+    album_id: str
+    album_name: str
+    description: str
+    is_hidden: bool
+
+
+# ##############################
 # Request Handler
+# ##############################
 
 
-class AlbumCreate(BaseModel):
-    name: str
-    description: Optional[str] = None
+class CreateAlbumRequest(BaseModel):
+    name: str = Field(..., min_length=1)
+    description: Optional[str] = ""
     is_hidden: bool = False
     password: Optional[str] = None
 
@@ -19,76 +28,59 @@ class AlbumCreate(BaseModel):
         return value
 
 
-class AlbumDeleteRequest(BaseModel):
+class UpdateAlbumRequest(BaseModel):
     name: str
+    description: Optional[str] = ""
+    is_hidden: bool
+    current_password: Optional[str] = None
+    password: Optional[str] = None
+
+    @field_validator("password")
+    def check_password(cls, value, info: ValidationInfo):
+        if info.data.get("is_hidden") and not value:
+            raise ValueError("Password is required for hidden albums")
+        return value
 
 
-class AddMultipleImagesRequest(BaseModel):
-    album_name: str
-    paths: List[str]
+class GetAlbumImagesRequest(BaseModel):
+    password: Optional[str] = None
 
 
-class RemoveImagFromAlbumRequest(BaseModel):
-    album_name: str
-    path: str
+class ImageIdsRequest(BaseModel):
+    image_ids: List[str]
 
 
-class UpdateAlbumDescriptionRequest(BaseModel):
-    album_name: str
-    description: str
-
-
+# ##############################
 # Response Handler
+# ##############################
 
 
-class AlbumCreateResponse(BaseModel):
+class GetAlbumsResponse(BaseModel):
     success: bool
-    message: str
-    data: dict
+    albums: List[Album]
 
 
-class AlbumDeleteResponse(BaseModel):
+class CreateAlbumResponse(BaseModel):
     success: bool
-    message: str
-    data: str | None = None  # Data can be None if an error occurs
+    album_id: str
+
+
+class GetAlbumResponse(BaseModel):
+    success: bool
+    data: Album
+
+
+class GetAlbumImagesResponse(BaseModel):
+    success: bool
+    image_ids: List[str]
+
+
+class SuccessResponse(BaseModel):
+    success: bool
+    msg: str
 
 
 class ErrorResponse(BaseModel):
     success: bool = False
     message: str
     error: str
-
-
-class AddMultipleImagesResponse(BaseModel):
-    success: bool
-    message: str
-    data: Optional[dict] = None
-
-
-class ViewAlbumRequest(BaseModel):
-    album_name: str = Field(..., description="Name of the album to view")
-    password: Optional[str] = Field(None, description="Password for hidden albums")
-
-
-class ViewAlbumResponse(BaseModel):
-    success: bool
-    message: str
-    data: Optional[dict] = None
-
-
-class RemoveImagFromAlbumResponse(BaseModel):
-    data: dict
-    message: str
-    success: bool
-
-
-class UpdateAlbumDescriptionResponse(BaseModel):
-    data: dict
-    message: str
-    success: bool
-
-
-class GetAlbumsResponse(BaseModel):
-    data: List[dict | None]
-    message: str
-    success: bool

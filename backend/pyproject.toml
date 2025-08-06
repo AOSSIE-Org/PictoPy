@@ -1,2 +1,2 @@
 [tool.ruff]
-line-length = 1000
+line-length = 300
