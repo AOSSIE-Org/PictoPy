@@ -6,9 +6,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import patch, ANY
 import uuid
+from app.routes import albums as albums_router
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from app.routes import albums as albums_router
 
 app = FastAPI()
 app.include_router(albums_router.router, prefix="/albums", tags=["albums"])
@@ -264,7 +264,6 @@ class TestAlbumRoutes:
         ) as mock_update_album, patch(
             "app.routes.albums.verify_album_password"
         ) as mock_verify:
-
             mock_get_album.return_value = album_data
             mock_verify.return_value = verify_password_return
 
@@ -294,7 +293,6 @@ class TestAlbumRoutes:
         with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
             "app.routes.albums.db_delete_album"
         ) as mock_delete_album:
-
             mock_get_album.return_value = album_tuple
             mock_delete_album.return_value = None
 
@@ -336,7 +334,6 @@ class TestAlbumImageManagement:
         with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
             "app.routes.albums.db_add_images_to_album"
         ) as mock_add_images:
-
             mock_get_album.return_value = album_tuple
             mock_add_images.return_value = None
 
@@ -372,7 +369,6 @@ class TestAlbumImageManagement:
         with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
             "app.routes.albums.db_get_album_images"
         ) as mock_get_images:
-
             mock_get_album.return_value = album_tuple
             mock_get_images.return_value = expected_image_ids
 
@@ -405,7 +401,6 @@ class TestAlbumImageManagement:
         with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
             "app.routes.albums.db_remove_image_from_album"
         ) as mock_remove:
-
             mock_get_album.return_value = album_tuple
             mock_remove.return_value = None
 
