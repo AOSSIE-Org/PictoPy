@@ -1,250 +1,356 @@
-import os
-from fastapi import APIRouter, status, Query, HTTPException
-from app.database.albums import (
-    add_photo_to_album,
-    delete_album,
-    remove_photo_from_album,
-    create_album,
-    get_all_albums,
-    get_album_photos,
-    edit_album_description,
-)
-from app.utils.wrappers import exception_handler_wrapper
-from app.config.settings import IMAGES_PATH
+from fastapi import APIRouter, HTTPException, status, Query, Body, Path
+import uuid
 from app.schemas.album import (
-    AlbumCreate,
-    AlbumCreateResponse,
-    AlbumDeleteResponse,
-    AlbumDeleteRequest,
-    AddMultipleImagesRequest,
-    AddMultipleImagesResponse,
-    RemoveImagFromAlbumRequest,
-    RemoveImagFromAlbumResponse,
-    ViewAlbumResponse,
-    UpdateAlbumDescriptionRequest,
-    UpdateAlbumDescriptionResponse,
     GetAlbumsResponse,
+    CreateAlbumRequest,
+    CreateAlbumResponse,
+    GetAlbumResponse,
+    GetAlbumImagesRequest,
+    GetAlbumImagesResponse,
+    UpdateAlbumRequest,
+    SuccessResponse,
     ErrorResponse,
+    ImageIdsRequest,
+    Album,
 )
-
+from app.database.albums import (
+    db_get_all_albums,
+    db_get_album_by_name,
+    db_get_album,
+    db_insert_album,
+    db_update_album,
+    db_delete_album,
+    db_get_album_images,
+    db_add_images_to_album,
+    db_remove_image_from_album,
+    db_remove_images_from_album,
+    verify_album_password,
+)
 
 router = APIRouter()
 
-
-@router.post(
-    "/create-album",
-    tags=["Albums"],
-    summary="Create Album",
-    description="Creates a new album with the given name and optional description.",
-    response_description="Message confirming album creation",
-    response_model=AlbumCreateResponse,
-)
-@exception_handler_wrapper
-def create_new_album(payload: AlbumCreate):
-    # Call the function to create an album
-    create_album(payload.name, payload.description, payload.is_hidden, payload.password)
-    # Success Response
-    return AlbumCreateResponse(
-        success=True,
-        message=f"Album '{payload.name}' created successfully",
-        data={
-            "album_name": payload.name,
-            "description": payload.description,
-            "is_hidden": payload.is_hidden,
-        },
-    )
-
-
-@router.delete(
-    "/delete-album",
-    tags=["Albums"],
-    summary="Delete Album",
-    description="Deletes an existing album by name.",
-    response_description="Message confirming album deletion",
-    response_model=AlbumDeleteResponse,
-    responses={code: {"model": ErrorResponse} for code in [500]},
-)
-@exception_handler_wrapper
-def delete_existing_album(payload: AlbumDeleteRequest):
-
-    album_name = payload.name
-    try:
-        delete_album(album_name)
-        return AlbumDeleteResponse(
-            success=True,
-            message=f"Album '{album_name}' deleted successfully",
-            data=album_name,
-        )
-
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False, error="Server Error", message="Failed to delete album"
-            ).model_dump(),  #  # Convert Pydantic model to a dict
-        )
-
-
-@router.post(
-    "/add-multiple-to-album",
-    tags=["Albums"],
-    summary="Add Multiple Images to Album",
-    description="Adds multiple images to an existing album.",
-    response_description="Message confirming images were added to the album",
-    response_model=AddMultipleImagesResponse,
-    responses={code: {"model": ErrorResponse} for code in [500]},
-)
-@exception_handler_wrapper
-def add_multiple_images_to_album(payload: AddMultipleImagesRequest):
-
-    album_name = payload.album_name
-    paths = payload.paths
-
-    for path in paths:
-        try:
-            add_photo_to_album(album_name, path)
-        except Exception as e:
-
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=ErrorResponse(
-                    success=False,
-                    message=f"Error adding image '{path}' to album '{album_name}'",
-                    error=str(e),
-                ).model_dump(),
+# GET /albums/ - Get all albums
+@router.get("/", response_model=GetAlbumsResponse)
+def get_albums(show_hidden: bool = Query(False)):
+    albums = db_get_all_albums(show_hidden)
+    album_list = []
+    for album in albums:
+        album_list.append(
+            Album(
+                album_id=album[0],
+                album_name=album[1],
+                description=album[2] or "",
+                is_hidden=bool(album[3]),
             )
-
-    return AddMultipleImagesResponse(
-        success=True,
-        message=f"Images added to album '{album_name}' successfully",
-        data={"album_name": album_name, "paths": paths},
-    )
+        )
+    return GetAlbumsResponse(success=True, albums=album_list)
 
 
-@router.delete(
-    "/remove-from-album",
-    tags=["Albums"],
-    summary="Remove Image from Album",
-    description="Removes a single image from an album.",
-    response_description="Message confirming image removal from the album",
-    response_model=RemoveImagFromAlbumResponse,
-    responses={code: {"model": ErrorResponse} for code in [500]},
-)
-@exception_handler_wrapper
-def remove_image_from_album(payload: RemoveImagFromAlbumRequest):
-    album_name = payload.album_name
-    path = payload.path
-    try:
-        remove_photo_from_album(album_name, path)
-        return RemoveImagFromAlbumResponse(
-            data={"album_name": album_name, "path": path},
-            message=f"Image '{path}' removed from album '{album_name}' successfully",
-            success=True,
+# POST /albums/ - Create a new album
+@router.post("/", response_model=CreateAlbumResponse)
+def create_album(body: CreateAlbumRequest):
+    existing_album = db_get_album_by_name(body.name)
+    if existing_album:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=ErrorResponse(
+                success=False,
+                error="Album Already Exists",
+                message=f"Album '{body.name}' is already in the database.",
+            ).model_dump(),
         )
 
-    except Exception:
+    album_id = str(uuid.uuid4())
+    try:
+        db_insert_album(
+            album_id, body.name, body.description, body.is_hidden, body.password
+        )
+        return CreateAlbumResponse(success=True, album_id=album_id)
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
                 success=False,
-                message="Internal server Error",
-                error="Failed to remove photo from Album",
+                error="Internal Server Error",
+                message=f"Failed to create album: {str(e)}",
             ).model_dump(),
         )
 
 
-@router.get(
-    "/view-album",
-    tags=["Albums"],
-    summary="View Album Photos",
-    description="Retrieves all photos in a specified album.",
-    response_description="JSON object containing album name and list of photos",
-    response_model=ViewAlbumResponse,
-    responses={code: {"model": ErrorResponse} for code in [400, 404]},
-)
-@exception_handler_wrapper
-def view_album_photos(
-    album_name: str = Query(..., description="Name of the album to view"),
-    password: str = Query(None, description="Password for hidden albums"),
-):
+# GET /albums/{album_id} - Get specific album details
+@router.get("/{album_id}", response_model=GetAlbumResponse)
+def get_album(album_id: str = Path(...)):
+    album = db_get_album(album_id)
+    if not album:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ErrorResponse(
+                success=False, error="Album Not Found", message="Album not found"
+            ).model_dump(),
+        )
 
-    photos = get_album_photos(album_name, password)
+    try:
+        album_obj = Album(
+            album_id=album[0],
+            album_name=album[1],
+            description=album[2] or "",
+            is_hidden=bool(album[3]),
+        )
+        return GetAlbumResponse(success=True, data=album_obj)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal Server Error",
+                message=f"Failed to fetch album: {str(e)}",
+            ).model_dump(),
+        )
 
-    if photos is None:
+
+# PUT /albums/{album_id} - Update Album
+@router.put("/{album_id}", response_model=SuccessResponse)
+def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)):
+    album = db_get_album(album_id)
+    if not album:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ErrorResponse(
                 success=False,
-                error=f"Album '{album_name}' does not exist",
-                message="Album not found",
+                error="Album Not Found",
+                message="No album exists with the given ID.",
             ).model_dump(),
         )
 
-    folder_path = os.path.abspath(IMAGES_PATH)
+    album_dict = {
+        "album_id": album[0],
+        "album_name": album[1],
+        "description": album[2],
+        "is_hidden": bool(album[3]),
+        "password_hash": album[4],
+    }
 
-    return ViewAlbumResponse(
-        success=True,
-        message=f"Successfully retrieved photos for album '{album_name}'",
-        data={
-            "album_name": album_name,
-            "photos": photos if photos else [],
-            "folder_path": folder_path,
-        },
-    )
+    if album_dict["password_hash"]:
+        if not body.current_password:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Missing Password",
+                    message="Current password is required to update this album.",
+                ).model_dump(),
+            )
 
-
-@router.put(
-    "/edit-album-description",
-    tags=["Albums"],
-    summary="Edit Album Description",
-    description="Updates the description of an existing album.",
-    response_description="Message confirming album description update",
-    response_model=UpdateAlbumDescriptionResponse,
-    responses={code: {"model": ErrorResponse} for code in [500]},
-)
-@exception_handler_wrapper
-def update_album_description(payload: UpdateAlbumDescriptionRequest):
-
-    album_name = payload.album_name
-    new_description = payload.description
+        if not verify_album_password(album_id, body.current_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Incorrect Password",
+                    message="The current password is incorrect.",
+                ).model_dump(),
+            )
 
     try:
-        edit_album_description(album_name, new_description)
-        return UpdateAlbumDescriptionResponse(
-            data={"album_name": album_name, "new_description": new_description},
-            message=f"Description for album '{album_name}' updated successfully",
-            success=True,
+        db_update_album(
+            album_id, body.name, body.description, body.is_hidden, body.password
         )
-    except Exception:
-
+        return SuccessResponse(success=True, msg="Album updated successfully")
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=ErrorResponse(
-                success=False, message="Server error", error="Failed to update Album"
+                success=False, error="Failed to Update Album", message=str(e)
             ).model_dump(),
         )
 
 
-@router.get(
-    "/view-all",
-    tags=["Albums"],
-    summary="View All Albums",
-    description="Retrieves a list of all albums.",
-    response_description="JSON object containing a list of all albums",
-    response_model=GetAlbumsResponse,
-    responses={code: {"model": ErrorResponse} for code in [404]},
-)
-@exception_handler_wrapper
-def get_albums():
-    try:
-        albums = get_all_albums()
-        return GetAlbumsResponse(
-            data=albums, message="Successfully retrieved all albums", success=True
+# DELETE /albums/{album_id} - Delete an album
+@router.delete("/{album_id}", response_model=SuccessResponse)
+def delete_album(album_id: str = Path(...)):
+    album = db_get_album(album_id)
+    if not album:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ErrorResponse(
+                success=False,
+                error="Album Not Found",
+                message="No album exists with the provided ID.",
+            ).model_dump(),
         )
-    except Exception:
+
+    try:
+        db_delete_album(album_id)
+        return SuccessResponse(success=True, msg="Album deleted successfully")
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
-                success=False, message="Server error", error="Failed to update Album"
+                success=False, error="Failed to Delete Album", message=str(e)
+            ).model_dump(),
+        )
+
+
+# GET /albums/{album_id}/images - Get all images in an album
+@router.post("/{album_id}/images/get", response_model=GetAlbumImagesResponse)
+# GET requests do not accept a body by default.
+# Since we need to send a password securely, switching this to POST -- necessary.
+# Open to suggestions if better approach possible.
+def get_album_images(
+    album_id: str = Path(...), body: GetAlbumImagesRequest = Body(...)
+):
+    album = db_get_album(album_id)
+    if not album:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ErrorResponse(
+                success=False,
+                error="Album Not Found",
+                message="No album exists with the provided ID.",
+            ).model_dump(),
+        )
+
+    album_dict = {
+        "album_id": album[0],
+        "album_name": album[1],
+        "description": album[2],
+        "is_hidden": bool(album[3]),
+        "password_hash": album[4],
+    }
+
+    if album_dict["is_hidden"]:
+        if not body.password:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Password Required",
+                    message="Password is required to access this hidden album.",
+                ).model_dump(),
+            )
+        if not verify_album_password(album_id, body.password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Invalid Password",
+                    message="The password provided is incorrect.",
+                ).model_dump(),
+            )
+
+    try:
+        image_ids = db_get_album_images(album_id)
+        return GetAlbumImagesResponse(success=True, image_ids=image_ids)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False, error="Failed to Retrieve Images", message=str(e)
+            ).model_dump(),
+        )
+
+
+# POST /albums/{album_id}/images - Add images to an album
+@router.post("/{album_id}/images", response_model=SuccessResponse)
+def add_images_to_album(album_id: str = Path(...), body: ImageIdsRequest = Body(...)):
+    album = db_get_album(album_id)
+    if not album:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ErrorResponse(
+                success=False,
+                error="Album Not Found",
+                message="No album exists with the provided ID.",
+            ).model_dump(),
+        )
+
+    if not body.image_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="No Image IDs",
+                message="You must provide a list of image IDs to add.",
+            ).model_dump(),
+        )
+
+    try:
+        db_add_images_to_album(album_id, body.image_ids)
+        return SuccessResponse(
+            success=True, msg=f"Added {len(body.image_ids)} images to album"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False, error="Failed to Add Images", message=str(e)
+            ).model_dump(),
+        )
+
+
+# DELETE /albums/{album_id}/images/{image_id} - Remove image from album
+@router.delete("/{album_id}/images/{image_id}", response_model=SuccessResponse)
+def remove_image_from_album(album_id: str = Path(...), image_id: str = Path(...)):
+    album = db_get_album(album_id)
+    if not album:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ErrorResponse(
+                success=False,
+                error="Album Not Found",
+                message="No album exists with the provided ID.",
+            ).model_dump(),
+        )
+
+    try:
+        db_remove_image_from_album(album_id, image_id)
+        return SuccessResponse(
+            success=True, msg="Image removed from album successfully"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False, error="Failed to Remove Image", message=str(e)
+            ).model_dump(),
+        )
+
+
+# DELETE /albums/{album_id}/images - Remove multiple images from album
+@router.delete("/{album_id}/images", response_model=SuccessResponse)
+def remove_images_from_album(
+    album_id: str = Path(...), body: ImageIdsRequest = Body(...)
+):
+    album = db_get_album(album_id)
+    if not album:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ErrorResponse(
+                success=False,
+                error="Album Not Found",
+                message="No album exists with the provided ID.",
+            ).model_dump(),
+        )
+
+    if not body.image_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="No Image IDs Provided",
+                message="You must provide at least one image ID to remove.",
+            ).model_dump(),
+        )
+
+    try:
+        db_remove_images_from_album(album_id, body.image_ids)
+        return SuccessResponse(
+            success=True, msg=f"Removed {len(body.image_ids)} images from album"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False, error="Failed to Remove Images", message=str(e)
             ).model_dump(),
         )

@@ -5,7 +5,7 @@ on:
   workflow_dispatch: # Ability to manually trigger the workflow
     inputs:
       tag:
-        description: 'Tag name for the release' # used when running manually
+        description: "Tag name for the release" # used when running manually
         required: true
         type: string
 
@@ -26,6 +26,8 @@ jobs:
           cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip uninstall onnxruntime
+          pip install onnxruntime-directml
 
       - name: Build executable with PyInstaller
         run: |
@@ -66,6 +68,8 @@ jobs:
           cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip uninstall onnxruntime
+          pip install onnxruntime-gpu
 
       - name: Build executable with PyInstaller
         run: |
