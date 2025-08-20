@@ -197,7 +197,9 @@ def db_insert_image_classes_batch(image_class_pairs: List[ImageClassPair]) -> bo
         conn.close()
 
 
-def db_get_images_by_folder_ids(folder_ids: List[int]) -> List[Tuple[ImageId, ImagePath, str]]:
+def db_get_images_by_folder_ids(
+    folder_ids: List[int],
+) -> List[Tuple[ImageId, ImagePath, str]]:
     """
     Get all images that belong to the specified folder IDs.
 

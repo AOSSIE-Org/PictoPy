@@ -79,7 +79,9 @@ def post_AI_tagging_enabled_sequence():
     return True
 
 
-def post_sync_folder_sequence(folder_path: str, folder_id: int, added_folders: List[Tuple[str, str]]):
+def post_sync_folder_sequence(
+    folder_path: str, folder_id: int, added_folders: List[Tuple[str, str]]
+):
     """
     Post-sync sequence for a folder.
     This function is called after a folder is synced.
@@ -119,7 +121,9 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
         # Step 1: Data Validation
 
         if not os.path.isdir(request.folder_path):
-            raise ValueError(f"Error: '{request.folder_path}' is not a valid directory.")
+            raise ValueError(
+                f"Error: '{request.folder_path}' is not a valid directory."
+            )
 
         if (
             not os.access(request.folder_path, os.R_OK)
@@ -327,7 +331,9 @@ def sync_folder(request: SyncFolderRequest, app_state=Depends(get_state)):
     try:
         # Step 1: Get current state from both sources
         db_child_folders = db_get_direct_child_folders(request.folder_id)
-        filesystem_folders = folder_util_get_filesystem_direct_child_folders(request.folder_path)
+        filesystem_folders = folder_util_get_filesystem_direct_child_folders(
+            request.folder_path
+        )
 
         # Step 2: Compare and identify differences
         filesystem_folder_set = set(filesystem_folders)
@@ -337,14 +343,25 @@ def sync_folder(request: SyncFolderRequest, app_state=Depends(get_state)):
         folders_to_add = filesystem_folder_set - db_folder_paths
 
         # Step 3: Perform synchronization operations
-        deleted_count, deleted_folders = folder_util_delete_obsolete_folders(db_child_folders, folders_to_delete)
-        added_count, added_folders_with_ids = folder_util_add_multiple_folder_trees(folders_to_add, request.folder_id)
+        deleted_count, deleted_folders = folder_util_delete_obsolete_folders(
+            db_child_folders, folders_to_delete
+        )
+        added_count, added_folders_with_ids = folder_util_add_multiple_folder_trees(
+            folders_to_add, request.folder_id
+        )
 
         # Extract just the paths for the API response
-        added_folders = [folder_path for folder_id, folder_path in added_folders_with_ids]
+        added_folders = [
+            folder_path for folder_id, folder_path in added_folders_with_ids
+        ]
 
         executor: ProcessPoolExecutor = app_state.executor
-        executor.submit(post_sync_folder_sequence, request.folder_path, request.folder_id, added_folders_with_ids)
+        executor.submit(
+            post_sync_folder_sequence,
+            request.folder_path,
+            request.folder_id,
+            added_folders_with_ids,
+        )
         # Step 4: Return comprehensive response
         return SyncFolderResponse(
             success=True,
