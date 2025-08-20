@@ -195,3 +195,75 @@ def db_insert_image_classes_batch(image_class_pairs: List[ImageClassPair]) -> bo
         return False
     finally:
         conn.close()
+
+
+def db_get_images_by_folder_ids(
+    folder_ids: List[int],
+) -> List[Tuple[ImageId, ImagePath, str]]:
+    """
+    Get all images that belong to the specified folder IDs.
+
+    Args:
+        folder_ids: List of folder IDs to search for images
+
+    Returns:
+        List of tuples containing (image_id, image_path, thumbnail_path)
+    """
+    if not folder_ids:
+        return []
+
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        # Create placeholders for the IN clause
+        placeholders = ",".join("?" for _ in folder_ids)
+        cursor.execute(
+            f"""
+            SELECT id, path, thumbnailPath
+            FROM images
+            WHERE folder_id IN ({placeholders})
+            """,
+            folder_ids,
+        )
+        return cursor.fetchall()
+    except Exception as e:
+        print(f"Error getting images by folder IDs: {e}")
+        return []
+    finally:
+        conn.close()
+
+
+def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
+    """
+    Delete multiple images from the database by their IDs.
+    This will also delete associated records in image_classes due to CASCADE.
+
+    Args:
+        image_ids: List of image IDs to delete
+
+    Returns:
+        True if deletion was successful, False otherwise
+    """
+    if not image_ids:
+        return True
+
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        # Create placeholders for the IN clause
+        placeholders = ",".join("?" for _ in image_ids)
+        cursor.execute(
+            f"DELETE FROM images WHERE id IN ({placeholders})",
+            image_ids,
+        )
+        conn.commit()
+        print(f"Deleted {cursor.rowcount} obsolete image(s) from database")
+        return True
+    except Exception as e:
+        print(f"Error deleting images: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()

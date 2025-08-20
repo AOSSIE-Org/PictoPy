@@ -131,7 +131,7 @@ def folder_util_delete_obsolete_folders(
 
 def folder_util_add_multiple_folder_trees(
     folders_to_add: set, parent_folder_id: str
-) -> Tuple[int, List[str]]:
+) -> Tuple[int, List[Tuple[str, str]]]:
     """
     Add multiple folder trees with same parent to the database.
 
@@ -140,12 +140,12 @@ def folder_util_add_multiple_folder_trees(
         parent_folder_id: ID of the parent folder
 
     Returns:
-        Tuple of (added_count, added_folders_list)
+        Tuple of (added_count, added_folders_list) where added_folders_list contains (folder_id, folder_path) tuples
     """
     if not folders_to_add:
         return 0, []
 
-    added_folders = []
+    added_folders = []  # List of (folder_id, folder_path) tuples
     added_count = 0
 
     for folder_path in folders_to_add:
@@ -161,7 +161,10 @@ def folder_util_add_multiple_folder_trees(
             # Update parent IDs for the new folder tree
             db_update_parent_ids_for_subtree(folder_path, folder_map)
 
-            added_folders.append(folder_path)
+            # Add all folders from the folder_map as (folder_id, folder_path) tuples
+            for folder_path_in_map, (folder_id_in_map, _) in folder_map.items():
+                added_folders.append((folder_id_in_map, folder_path_in_map))
+
             added_count += len(folder_map)  # Count all folders in the tree
 
         except Exception as e:

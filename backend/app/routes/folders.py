@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Request
+from typing import List, Tuple
 from app.database.folders import (
     db_update_parent_ids_for_subtree,
     db_folder_exists,
@@ -7,6 +8,7 @@ from app.database.folders import (
     db_disable_ai_tagging_batch,
     db_delete_folders_batch,
     db_get_direct_child_folders,
+    db_get_folder_ids_by_path_prefix,
 )
 from app.schemas.folders import (
     AddFolderRequest,
@@ -37,15 +39,24 @@ from app.utils.face_clusters import cluster_util_face_clusters_sync
 router = APIRouter()
 
 
-def post_folder_add_sequence(folder_path: str):
+def post_folder_add_sequence(folder_path: str, folder_id: int):
     """
     Post-addition sequence for a folder.
     This function is called after a folder is successfully added.
     It processes images in the folder and updates the database.
     """
     try:
-        # Process images in the folder
-        image_util_process_folder_images(folder_path)
+        # Get all folder IDs and paths that match the root path prefix
+        folder_data = []
+        folder_ids_and_paths = db_get_folder_ids_by_path_prefix(folder_path)
+
+        # Set all folders to non-recursive (False)
+        for folder_id_from_db, folder_path_from_db in folder_ids_and_paths:
+            folder_data.append((folder_path_from_db, folder_id_from_db, False))
+
+        print("Add folder: ", folder_data)
+        # Process images in all folders
+        image_util_process_folder_images(folder_data)
 
     except Exception as e:
         print(f"Error in post processing after folder {folder_path} was added: {e}")
@@ -64,6 +75,34 @@ def post_AI_tagging_enabled_sequence():
         cluster_util_face_clusters_sync()
     except Exception as e:
         print(f"Error in post processing after AI tagging was enabled: {e}")
+        return False
+    return True
+
+
+def post_sync_folder_sequence(
+    folder_path: str, folder_id: int, added_folders: List[Tuple[str, str]]
+):
+    """
+    Post-sync sequence for a folder.
+    This function is called after a folder is synced.
+    It processes images in the folder and updates the database.
+    """
+    try:
+        # Create folder data array
+        folder_data = []
+
+        folder_data.append((folder_path, folder_id, False))
+
+        for added_folder_id, added_folder_path in added_folders:
+            folder_data.append((added_folder_path, added_folder_id, False))
+
+        print("Sync folder: ", folder_data)
+        # Process images in all folders
+        image_util_process_folder_images(folder_data)
+        image_util_process_untagged_images()
+        cluster_util_face_clusters_sync()
+    except Exception as e:
+        print(f"Error in post processing after folder {folder_path} was synced: {e}")
         return False
     return True
 
@@ -132,7 +171,7 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
 
         # Step 6: Call the post-addition sequence in a separate process
         executor: ProcessPoolExecutor = app_state.executor
-        executor.submit(post_folder_add_sequence, request.folder_path)
+        executor.submit(post_folder_add_sequence, request.folder_path, root_folder_id)
 
         return AddFolderResponse(
             success=True,
@@ -287,33 +326,43 @@ def delete_folders(request: DeleteFoldersRequest):
     response_model=SyncFolderResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 404, 500]},
 )
-def sync_folder(request: SyncFolderRequest):
+def sync_folder(request: SyncFolderRequest, app_state=Depends(get_state)):
     """Sync a folder by comparing filesystem folders with database entries and removing extra DB entries."""
     try:
-        # Step 1: Validate request
-
-        # Step 2: Get current state from both sources
+        # Step 1: Get current state from both sources
         db_child_folders = db_get_direct_child_folders(request.folder_id)
         filesystem_folders = folder_util_get_filesystem_direct_child_folders(
             request.folder_path
         )
 
-        # Step 3: Compare and identify differences
+        # Step 2: Compare and identify differences
         filesystem_folder_set = set(filesystem_folders)
         db_folder_paths = {folder_path for folder_id, folder_path in db_child_folders}
 
         folders_to_delete = db_folder_paths - filesystem_folder_set
         folders_to_add = filesystem_folder_set - db_folder_paths
 
-        # Step 4: Perform synchronization operations
+        # Step 3: Perform synchronization operations
         deleted_count, deleted_folders = folder_util_delete_obsolete_folders(
             db_child_folders, folders_to_delete
         )
-        added_count, added_folders = folder_util_add_multiple_folder_trees(
+        added_count, added_folders_with_ids = folder_util_add_multiple_folder_trees(
             folders_to_add, request.folder_id
         )
 
-        # Step 5: Return comprehensive response
+        # Extract just the paths for the API response
+        added_folders = [
+            folder_path for folder_id, folder_path in added_folders_with_ids
+        ]
+
+        executor: ProcessPoolExecutor = app_state.executor
+        executor.submit(
+            post_sync_folder_sequence,
+            request.folder_path,
+            request.folder_id,
+            added_folders_with_ids,
+        )
+        # Step 4: Return comprehensive response
         return SyncFolderResponse(
             success=True,
             message=f"Successfully synced folder. Added {added_count} folder(s), deleted {deleted_count} folder(s)",

@@ -342,6 +342,46 @@ def db_get_folder_ids_by_path_prefix(root_path: str) -> List[FolderIdPath]:
         conn.close()
 
 
+def db_get_folder_ids_by_paths(
+    folder_paths: List[FolderPath],
+) -> Dict[FolderPath, FolderId]:
+    """
+    Get folder IDs for multiple folder paths in a single database query.
+
+    Args:
+        folder_paths: List of folder paths to look up
+
+    Returns:
+        Dictionary mapping folder paths to their corresponding folder IDs
+    """
+    if not folder_paths:
+        return {}
+
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        # Convert all paths to absolute paths
+        abs_paths = [os.path.abspath(path) for path in folder_paths]
+
+        # Create placeholders for the IN clause
+        placeholders = ",".join("?" * len(abs_paths))
+
+        cursor.execute(
+            f"SELECT folder_path, folder_id FROM folders WHERE folder_path IN ({placeholders})",
+            abs_paths,
+        )
+
+        results = cursor.fetchall()
+
+        # Create a mapping from folder_path to folder_id
+        path_to_id = {folder_path: folder_id for folder_path, folder_id in results}
+
+        return path_to_id
+    finally:
+        conn.close()
+
+
 def db_get_direct_child_folders(parent_folder_id: str) -> List[Tuple[str, str]]:
     """
     Get all direct child folders (not subfolders) for a given parent folder.
