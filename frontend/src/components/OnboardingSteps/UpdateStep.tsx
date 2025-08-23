@@ -8,9 +8,8 @@ import { markCompleted } from '@/features/onboardingSlice';
 interface UpdateStepProps {
   stepIndex: number;
 }
-export const UpdateStep: React.FC<UpdateStepProps> = ({
-  stepIndex,
-}: UpdateStepProps) => {
+
+export const UpdateStep: React.FC<UpdateStepProps> = ({ stepIndex }) => {
   const {
     updateAvailable,
     isDownloading,
@@ -20,12 +19,17 @@ export const UpdateStep: React.FC<UpdateStepProps> = ({
     downloadAndInstall,
     dismissUpdate,
   } = useUpdater();
+
   const dispatch = useDispatch();
+
   useEffect(() => {
-    let check = async () => {
+    // Check for updates on mount
+    const check = async () => {
       dispatch(showLoader('Checking for updates...'));
       const hasUpdate = await checkForUpdates();
       dispatch(hideLoader());
+
+      // If no update, mark onboarding step complete
       if (!hasUpdate) {
         dispatch(markCompleted(stepIndex));
       }
@@ -33,6 +37,7 @@ export const UpdateStep: React.FC<UpdateStepProps> = ({
     check();
   }, []);
 
+  // Show update dialog only if update is available
   if (updateAvailable) {
     return (
       <UpdateDialog
