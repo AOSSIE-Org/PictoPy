@@ -10,7 +10,7 @@ Hi there! Thank you for considering contributing to **PictoPy** – we’re exci
 2. Setup Manually: [Guide](docs/Manual_Setup_Guide.md)
 3. Docker Setup:
 
-   - Docker Compose Setup: [Guide](./docs/docker-compose/redme.md)
+   - Docker Compose Setup: [Guide](./docs/docker-compose/readme.md)
    - Setup using Dockerfile
 
      - For setting up the frontend, follow the instructions in the [Frontend Setup Guide](./docs/frontend/docker-setup.md).
