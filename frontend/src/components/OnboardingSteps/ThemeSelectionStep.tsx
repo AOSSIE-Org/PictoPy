@@ -20,34 +20,12 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 
+import { AppFeatures } from './AppFeatures';
+
 interface ThemeSelectionStepProps {
   stepIndex: number;
   totalSteps: number;
 }
-
-const features = [
-  {
-    title: 'Smart Tagging',
-    description:
-      'Automatically tag photos based on detected objects and faces.',
-    icon: '🏷️',
-  },
-  {
-    title: 'Album Management',
-    description: 'Easily organize your photos into albums with AI suggestions.',
-    icon: '📁',
-  },
-  {
-    title: 'Advanced Image Analysis',
-    description: 'Analyze image content for smarter organization and search.',
-    icon: '🧠',
-  },
-  {
-    title: 'Privacy & Offline Access',
-    description: 'Your data stays with you. Full offline access and privacy.',
-    icon: '🔒',
-  },
-];
 
 export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
   stepIndex,
@@ -57,6 +35,7 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
   const selectedTheme = useSelector(
     (state: RootState) => state.onboarding.theme,
   );
+
   const [featureIndex, setFeatureIndex] = useState(0);
 
   useEffect(() => {
@@ -88,15 +67,6 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
       localStorage.setItem('theme', selectedTheme);
     }
   }, [selectedTheme]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setFeatureIndex((prev) => (prev + 1) % features.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const currentFeature = features[featureIndex];
 
   const handleThemeChange = (value: string) => {
     dispatch(setTheme(value));
@@ -130,7 +100,7 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
             </div>
           </CardHeader>
 
-          <CardTitle className="mb-1 ml-4 text-lg font-semibold">
+          <CardTitle className="mb-0 ml-4 text-lg font-semibold">
             Choose Your Theme
           </CardTitle>
           <p className="text-muted-foreground mb-4 ml-4 text-sm">
@@ -172,32 +142,9 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
           </CardFooter>
         </Card>
 
-        {/* Right Card */}
-        <Card className="flex basis-1/2 flex-col items-center justify-center overflow-hidden border p-2 text-center">
-          <div className="flex flex-col items-center justify-center">
-            <div className="mb-3 text-5xl">{currentFeature.icon}</div>{' '}
-            {/* Increased from text-4xl */}
-            <h2 className="mb-2 text-lg font-semibold">
-              {currentFeature.title}
-            </h2>{' '}
-            {/* text-base -> text-lg */}
-            <p className="text-muted-foreground mb-4 text-sm">
-              {currentFeature.description}
-            </p>
-            <div className="flex justify-center gap-1">
-              {features.map((_, index) => (
-                <div
-                  key={index}
-                  className={`h-2 w-2 rounded-full ${
-                    index === featureIndex
-                      ? 'bg-foreground'
-                      : 'bg-muted-foreground/40'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        </Card>
+        {}
+
+        <AppFeatures />
       </div>
     </div>
   );

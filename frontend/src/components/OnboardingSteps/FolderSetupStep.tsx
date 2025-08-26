@@ -19,53 +19,20 @@ import {
   addFolder,
   removeFolder,
 } from '@/features/onboardingSlice';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { AppFeatures } from './AppFeatures';
 
 interface FolderSetupStepProps {
   stepIndex: number;
+  totalSteps: number;
 }
 
-const features = [
-  {
-    title: 'Advanced Image Analysis',
-    description: 'Detect objects and recognize faces in your photos.',
-    icon: '🔍',
-  },
-  {
-    title: 'Smart Tagging',
-    description:
-      'Automatically tag photos based on detected objects and faces.',
-    icon: '🏷️',
-  },
-  {
-    title: 'Album Management',
-    description: 'Easily organize your photos into albums with AI suggestions.',
-    icon: '📁',
-  },
-  {
-    title: 'Privacy & Offline Access',
-    description: 'Your data stays with you. Full offline access and privacy.',
-    icon: '🔒',
-  },
-];
-
-export function FolderSetupStep({ stepIndex }: FolderSetupStepProps) {
+export function FolderSetupStep({
+  stepIndex,
+  totalSteps,
+}: FolderSetupStepProps) {
   const dispatch = useDispatch<AppDispatch>();
   const folders = useSelector((state: RootState) => state.onboarding.folders);
-  const totalSteps = useSelector(
-    (state: RootState) => state.onboarding.stepStatus.length,
-  );
-
-  const [featureIndex, setFeatureIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setFeatureIndex((prev) => (prev + 1) % features.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const currentFeature = features[featureIndex];
 
   const handleSelectFolders = () => {
     const mockFolder = `/home/NewFolder${folders.length + 1}`;
@@ -162,34 +129,8 @@ export function FolderSetupStep({ stepIndex }: FolderSetupStepProps) {
           </CardFooter>
         </Card>
 
-        {/* Right Card - Exact width match */}
-        <Card className="flex max-h-full w-1/2 flex-col border p-4">
-          <CardHeader className="p-6 pb-4">
-            <CardTitle className="text-center text-xl font-semibold" />
-          </CardHeader>
-
-          <CardContent className="flex flex-1 flex-col items-center justify-center space-y-3 p-6 text-center">
-            <div className="text-5xl">{currentFeature.icon}</div>
-            <h2 className="text-lg font-semibold">{currentFeature.title}</h2>
-            <p className="text-muted-foreground text-sm">
-              {currentFeature.description}
-            </p>
-            <div className="flex justify-center gap-1 pt-2">
-              {features.map((_, index) => (
-                <div
-                  key={index}
-                  className={`h-2 w-2 rounded-full ${
-                    index === featureIndex
-                      ? 'bg-foreground'
-                      : 'bg-muted-foreground/40'
-                  }`}
-                />
-              ))}
-            </div>
-          </CardContent>
-
-          <CardFooter className="p-0" />
-        </Card>
+        {/* Right Card */}
+        <AppFeatures />
       </div>
     </div>
   );

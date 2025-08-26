@@ -7,6 +7,7 @@ import { FolderSetupStep } from '@/components/OnboardingSteps/FolderSetupStep';
 import { AvatarSelectionStep } from '@/components/OnboardingSteps/AvatarSelectionStep';
 import { ThemeSelectionStep } from '@/components/OnboardingSteps/ThemeSelectionStep';
 import { STEPS } from '@/constants/steps';
+import { UpdateStep } from '@/components/OnboardingSteps/UpdateStep';
 
 interface OnboardingStepProps {
   stepIndex: number;
@@ -42,6 +43,8 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
         return <FolderSetupStep {...sharedProps} />;
       case STEPS.THEME_SELECTION_STEP:
         return <ThemeSelectionStep {...sharedProps} />;
+      case STEPS.UPDATE_STEP:
+        return <UpdateStep {...sharedProps} />;
       default:
         return <div></div>;
     }
