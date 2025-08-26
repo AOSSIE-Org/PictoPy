@@ -4,7 +4,7 @@ import {
   usePictoQuery,
   usePictoMutation,
   queryClient,
-} from '@/hooks/useQueryExtensio';
+} from '@/hooks/useQueryExtension';
 import {
   delMultipleImages,
   fetchAllImages,

@@ -6,7 +6,7 @@ import {
   queryClient,
   usePictoMutation,
   usePictoQuery,
-} from '@/hooks/useQueryExtensio';
+} from '@/hooks/useQueryExtension';
 import { addFolder, getProgress } from '../../../api/api-functions/images';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 

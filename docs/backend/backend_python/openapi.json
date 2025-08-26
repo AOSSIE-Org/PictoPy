@@ -790,6 +790,38 @@
         }
       }
     },
+    "/images/": {
+      "get": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Get All Images",
+        "description": "Get all images from the database.",
+        "operationId": "get_all_images_images__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAllImagesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/face-clusters/{cluster_id}": {
       "put": {
         "tags": [
@@ -905,6 +937,69 @@
         }
       }
     },
+    "/face-clusters/{cluster_id}/images": {
+      "get": {
+        "tags": [
+          "Face Clusters"
+        ],
+        "summary": "Get Cluster Images",
+        "description": "Get all images that contain faces belonging to a specific cluster.",
+        "operationId": "get_cluster_images_face_clusters__cluster_id__images_get",
+        "parameters": [
+          {
+            "name": "cluster_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cluster Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetClusterImagesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/user-preferences/": {
       "get": {
         "tags": [
@@ -1000,6 +1095,24 @@
   },
   "components": {
     "schemas": {
+      "AddFolderData": {
+        "properties": {
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          },
+          "folder_path": {
+            "type": "string",
+            "title": "Folder Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder_id",
+          "folder_path"
+        ],
+        "title": "AddFolderData"
+      },
       "AddFolderRequest": {
         "properties": {
           "folder_path": {
@@ -1043,10 +1156,6 @@
             "title": "Success"
           },
           "message": {
-            "type": "string",
-            "title": "Message"
-          },
-          "folder_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -1055,13 +1164,33 @@
                 "type": "null"
               }
             ],
-            "title": "Folder Id"
+            "title": "Message"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AddFolderData"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "required": [
-          "success",
-          "message"
+          "success"
         ],
         "title": "AddFolderResponse"
       },
@@ -1110,6 +1239,17 @@
             ],
             "title": "Cluster Name"
           },
+          "face_image_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Face Image Base64"
+          },
           "face_count": {
             "type": "integer",
             "title": "Face Count"
@@ -1119,6 +1259,7 @@
         "required": [
           "cluster_id",
           "cluster_name",
+          "face_image_base64",
           "face_count"
         ],
         "title": "ClusterMetadata"
@@ -1183,6 +1324,27 @@
         ],
         "title": "CreateAlbumResponse"
       },
+      "DeleteFoldersData": {
+        "properties": {
+          "deleted_count": {
+            "type": "integer",
+            "title": "Deleted Count"
+          },
+          "folder_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Folder Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deleted_count",
+          "folder_ids"
+        ],
+        "title": "DeleteFoldersData"
+      },
       "DeleteFoldersRequest": {
         "properties": {
           "folder_ids": {
@@ -1206,19 +1368,41 @@
             "title": "Success"
           },
           "message": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Message"
           },
-          "deleted_count": {
-            "type": "integer",
-            "title": "Deleted Count"
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeleteFoldersData"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "required": [
-          "success",
-          "message",
-          "deleted_count"
+          "success"
         ],
         "title": "DeleteFoldersResponse"
       },
@@ -1298,7 +1482,7 @@
         ],
         "title": "GetAlbumsResponse"
       },
-      "GetClustersResponse": {
+      "GetAllImagesResponse": {
         "properties": {
           "success": {
             "type": "boolean",
@@ -1308,6 +1492,108 @@
             "type": "string",
             "title": "Message"
           },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ImageData"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetAllImagesResponse"
+      },
+      "GetClusterImagesData": {
+        "properties": {
+          "cluster_id": {
+            "type": "string",
+            "title": "Cluster Id"
+          },
+          "cluster_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cluster Name"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/ImageInCluster"
+            },
+            "type": "array",
+            "title": "Images"
+          },
+          "total_images": {
+            "type": "integer",
+            "title": "Total Images"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cluster_id",
+          "images",
+          "total_images"
+        ],
+        "title": "GetClusterImagesData",
+        "description": "Data model for cluster images response."
+      },
+      "GetClusterImagesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GetClusterImagesData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "GetClusterImagesResponse",
+        "description": "Response model for getting images in a cluster."
+      },
+      "GetClustersData": {
+        "properties": {
           "clusters": {
             "items": {
               "$ref": "#/components/schemas/ClusterMetadata"
@@ -1318,9 +1604,52 @@
         },
         "type": "object",
         "required": [
-          "success",
-          "message",
           "clusters"
+        ],
+        "title": "GetClustersData"
+      },
+      "GetClustersResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GetClustersData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
         ],
         "title": "GetClustersResponse"
       },
@@ -1360,6 +1689,58 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "ImageData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          },
+          "thumbnailPath": {
+            "type": "string",
+            "title": "Thumbnailpath"
+          },
+          "metadata": {
+            "type": "string",
+            "title": "Metadata"
+          },
+          "isTagged": {
+            "type": "boolean",
+            "title": "Istagged"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "folder_id",
+          "thumbnailPath",
+          "metadata",
+          "isTagged"
+        ],
+        "title": "ImageData"
+      },
       "ImageIdsRequest": {
         "properties": {
           "image_ids": {
@@ -1375,6 +1756,102 @@
           "image_ids"
         ],
         "title": "ImageIdsRequest"
+      },
+      "ImageInCluster": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "thumbnailPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnailpath"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "face_id": {
+            "type": "integer",
+            "title": "Face Id"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "bbox": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bbox"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "face_id"
+        ],
+        "title": "ImageInCluster",
+        "description": "Represents an image that contains faces from a specific cluster."
+      },
+      "RenameClusterData": {
+        "properties": {
+          "cluster_id": {
+            "type": "string",
+            "title": "Cluster Id"
+          },
+          "cluster_name": {
+            "type": "string",
+            "title": "Cluster Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cluster_id",
+          "cluster_name"
+        ],
+        "title": "RenameClusterData"
       },
       "RenameClusterRequest": {
         "properties": {
@@ -1396,24 +1873,41 @@
             "title": "Success"
           },
           "message": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Message"
           },
-          "cluster_id": {
-            "type": "string",
-            "title": "Cluster Id"
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
           },
-          "cluster_name": {
-            "type": "string",
-            "title": "Cluster Name"
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RenameClusterData"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "required": [
-          "success",
-          "message",
-          "cluster_id",
-          "cluster_name"
+          "success"
         ],
         "title": "RenameClusterResponse"
       },
@@ -1434,6 +1928,50 @@
           "msg"
         ],
         "title": "SuccessResponse"
+      },
+      "SyncFolderData": {
+        "properties": {
+          "deleted_count": {
+            "type": "integer",
+            "title": "Deleted Count"
+          },
+          "deleted_folders": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Deleted Folders"
+          },
+          "added_count": {
+            "type": "integer",
+            "title": "Added Count"
+          },
+          "added_folders": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Added Folders"
+          },
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          },
+          "folder_path": {
+            "type": "string",
+            "title": "Folder Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deleted_count",
+          "deleted_folders",
+          "added_count",
+          "added_folders",
+          "folder_id",
+          "folder_path"
+        ],
+        "title": "SyncFolderData"
       },
       "SyncFolderRequest": {
         "properties": {
@@ -1460,42 +1998,64 @@
             "title": "Success"
           },
           "message": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Message"
           },
-          "deleted_count": {
-            "type": "integer",
-            "title": "Deleted Count"
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
           },
-          "deleted_folders": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Deleted Folders"
-          },
-          "added_count": {
-            "type": "integer",
-            "title": "Added Count"
-          },
-          "added_folders": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Added Folders"
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SyncFolderData"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "required": [
-          "success",
-          "message",
-          "deleted_count",
-          "deleted_folders",
-          "added_count",
-          "added_folders"
+          "success"
         ],
         "title": "SyncFolderResponse"
+      },
+      "UpdateAITaggingData": {
+        "properties": {
+          "updated_count": {
+            "type": "integer",
+            "title": "Updated Count"
+          },
+          "folder_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Folder Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "updated_count",
+          "folder_ids"
+        ],
+        "title": "UpdateAITaggingData"
       },
       "UpdateAITaggingRequest": {
         "properties": {
@@ -1520,19 +2080,41 @@
             "title": "Success"
           },
           "message": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Message"
           },
-          "updated_count": {
-            "type": "integer",
-            "title": "Updated Count"
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UpdateAITaggingData"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "required": [
-          "success",
-          "message",
-          "updated_count"
+          "success"
         ],
         "title": "UpdateAITaggingResponse"
       },
@@ -1708,22 +2290,65 @@
             "default": false
           },
           "message": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Message"
           },
           "error": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Error"
           }
         },
         "type": "object",
-        "required": [
-          "message",
-          "error"
-        ],
         "title": "ErrorResponse"
       },
       "app__schemas__folders__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "title": "ErrorResponse"
+      },
+      "app__schemas__images__ErrorResponse": {
         "properties": {
           "success": {
             "type": "boolean",

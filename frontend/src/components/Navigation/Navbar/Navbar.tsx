@@ -1,119 +1,148 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { Input } from '@/components/ui/input';
 import { ThemeSelector } from '@/components/ThemeToggle';
-import { motion } from 'framer-motion';
+import {
+  Bell,
+  Search,
+  User,
+  Upload,
+  Camera,
+  Scan,
+  X,
+  ScanFace,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from '@/components/ui/dialog';
 
-interface NavbarProps {
-  title?: string;
-  onNameChange?: (name: string) => void;
-}
-
-export function Navbar({ title, onNameChange }: NavbarProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(title || '');
-  const [showPlaceholder, setShowPlaceholder] = useState(!title);
-
-  // Handle initial load and localStorage
-  useEffect(() => {
-    const storedName = localStorage.getItem('pictopy-username');
-    if (storedName) {
-      setName(storedName);
-      setShowPlaceholder(false);
-    }
-  }, []);
-
-  const handleNameSubmit = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        const inputValue = (e.target as HTMLInputElement).value.trim();
-        if (inputValue) {
-          setName(inputValue);
-          setShowPlaceholder(false);
-          setIsEditing(false);
-          localStorage.setItem('pictopy-username', inputValue);
-          onNameChange?.(inputValue);
-        }
-      }
-    },
-    [onNameChange],
-  );
-
-  const handleNameClick = useCallback(() => {
-    if (!isEditing) {
-      setIsEditing(true);
-    }
-  }, [isEditing]);
-
-  const handleBlur = useCallback(
-    (e: React.FocusEvent<HTMLInputElement>) => {
-      const inputValue = e.target.value.trim();
-      if (inputValue) {
-        setName(inputValue);
-        setShowPlaceholder(false);
-        localStorage.setItem('pictopy-username', inputValue);
-        onNameChange?.(inputValue);
-      }
-      setIsEditing(false);
-    },
-    [onNameChange],
+export function Navbar() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  let savedData = JSON.parse(
+    localStorage.getItem('pictopy-user-data') || '{"name":"Guest"}',
   );
 
   return (
-    <header className="flex w-full flex-row items-center justify-center align-middle">
-      <motion.div
-        initial={{ y: -10, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="mt-3 mb-4 flex h-16 w-[90%] transform items-center justify-between rounded-2xl border border-gray-200/30 bg-gradient-to-r from-blue-600 to-purple-700 px-4 shadow-lg backdrop-blur-xl backdrop-saturate-200 transition-all duration-300 ease-in-out hover:shadow-blue-500/10 sm:w-[70%] sm:px-8 md:w-[55%] md:px-16 dark:border-white/5 dark:bg-gradient-to-r dark:from-gray-800 dark:to-black"
-      >
-        {/* Logo Section */}
-        <div className="flex items-center gap-4">
-          <div className="group flex items-center gap-2">
-            <motion.img
-              whileHover={{ rotate: 10 }}
-              src="/PictoPy_Logo.png"
-              className="h-8 transition-all duration-300 hover:opacity-90"
-              alt="PictoPy Logo"
-            />
-            <span className="bg-clip-text font-sans text-lg font-bold text-white drop-shadow-md sm:text-xl dark:text-white">
-              PictoPy
-            </span>
-          </div>
-        </div>
+    <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur">
+      <div className="flex w-[256px] items-center justify-center">
+        <a href="/" className="flex items-center space-x-2">
+          <img src="/128x128.png" width={32} height={32} alt="PictoPy Logo" />
+          <span className="text-xl font-bold">PictoPy</span>
+        </a>
+      </div>
 
-        {/* Welcome Section and Theme Toggle */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center">
-            <span className="font-sans text-lg font-medium text-white/90 drop-shadow-sm">
-              Welcome{' '}
-            </span>
-            {isEditing || showPlaceholder ? (
-              <input
-                type="text"
-                placeholder="Enter your name"
-                defaultValue={name}
-                onKeyDown={handleNameSubmit}
-                onBlur={handleBlur}
-                className="ml-2 w-32 rounded-lg border border-white/30 bg-white/10 px-3 py-1 text-white placeholder-white/60 backdrop-blur-sm transition-colors duration-200 focus:border-yellow-300 focus:ring-2 focus:ring-yellow-300/50 focus:outline-none"
-                autoFocus
-                aria-label="Enter your name"
-              />
-            ) : (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleNameClick}
-                className="ml-2 rounded-lg border border-white/20 bg-white/10 px-3 py-0.5 text-white transition-all duration-200 hover:border-white/30 hover:bg-white/20 focus:ring-2 focus:ring-yellow-300/50 focus:ring-offset-2 focus:ring-offset-transparent focus:outline-none"
-                aria-label="Click to edit name"
+      <div className="mx-auto flex max-w-md flex-1 justify-center px-4">
+        <div className="relative w-full">
+          <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
+          <Input
+            type="search"
+            placeholder="Search images..."
+            className="bg-muted/50 w-full pr-10 pl-8"
+          />
+
+          {/* Face Detection Trigger Button */}
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute top-0.5 right-1 h-8 w-8 p-1"
               >
-                {name || 'User'}
-              </motion.button>
-            )}
-          </div>
-          <ThemeSelector />
+                <ScanFace className="text-muted-foreground h-4 w-4" />
+                <span className="sr-only">Face Detection Search</span>
+              </Button>
+            </DialogTrigger>
+
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Face Detection Search</DialogTitle>
+                <DialogDescription>
+                  Search for images containing specific faces by uploading a
+                  photo or using your webcam.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid grid-cols-2 gap-4 py-4">
+                <Button
+                  onClick={() => {}}
+                  disabled={false}
+                  className="flex h-32 flex-col items-center justify-center gap-2 p-0"
+                  variant="outline"
+                >
+                  {false ? (
+                    <>
+                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+                      <span className="text-center text-xs">Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="text-muted-foreground mb-1 h-8 w-8" />
+                      <span className="text-sm font-medium">Upload Photo</span>
+                      <span className="text-muted-foreground text-center text-xs">
+                        Browse your computer
+                      </span>
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  onClick={() => {}}
+                  disabled={false}
+                  className="flex h-32 flex-col items-center justify-center gap-2 p-0"
+                  variant="outline"
+                >
+                  {false ? (
+                    <>
+                      <span className="h-5 w-5 animate-pulse rounded-full bg-red-500"></span>
+                      <span className="text-center text-xs">Capturing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="text-muted-foreground mb-1 h-8 w-8" />
+                      <span className="text-sm font-medium">Use Webcam</span>
+                      <span className="text-muted-foreground text-center text-xs">
+                        Capture with camera
+                      </span>
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <p className="text-muted-foreground mt-2 text-xs">
+                PictoPy will analyze the face and find matching images in your
+                gallery.
+              </p>
+            </DialogContent>
+          </Dialog>
         </div>
-      </motion.div>
-    </header>
+      </div>
+
+      <div className="flex items-center space-x-4">
+        <Button variant="ghost" size="icon" className="relative">
+          <Bell className="h-5 w-5" />
+          <span className="bg-brand-orange absolute top-1 right-1 h-2 w-2 rounded-full" />
+          <span className="sr-only">Notifications</span>
+        </Button>
+        <ThemeSelector />
+        <div className="flex items-center space-x-2">
+          <span className="hidden text-sm sm:inline-block">
+            Welcome <span className="text-muted-foreground">Rahul</span>
+          </span>
+          <a href="/settings" className="p-2">
+            <img
+              src={savedData.avatarUrl || '/photo1.png'}
+              className="hover:ring-primary/50 h-8 w-8 cursor-pointer rounded-full transition-all hover:ring-2"
+              alt="User avatar"
+            />
+          </a>
+        </div>
+      </div>
+    </div>
   );
 }
-
-export default Navbar;

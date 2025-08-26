@@ -26,13 +26,20 @@ class FaceDetector:
             return None
 
         boxes, scores, class_ids = self.yolo_detector(img)
+        print(boxes)
         print(f"Detected {len(boxes)} faces in image {image_id}.")
 
-        processed_faces, embeddings = [], []
+        processed_faces, embeddings, bboxes, confidences = [], [], [], []
 
         for box, score in zip(boxes, scores):
             if score > self.yolo_detector.conf_threshold:
                 x1, y1, x2, y2 = map(int, box)
+
+                # Create bounding box dictionary in JSON format
+                bbox = {"x": x1, "y": y1, "width": x2 - x1, "height": y2 - y1}
+                bboxes.append(bbox)
+                confidences.append(float(score))
+
                 padding = 20
                 face_img = img[
                     max(0, y1 - padding) : min(img.shape[0], y2 + padding),
@@ -45,7 +52,7 @@ class FaceDetector:
                 embeddings.append(embedding)
 
         if embeddings:
-            db_insert_face_embeddings_by_image_id(image_id, embeddings)
+            db_insert_face_embeddings_by_image_id(image_id, embeddings, confidence=confidences, bbox=bboxes)
 
         return {
             "ids": f"{class_ids}",

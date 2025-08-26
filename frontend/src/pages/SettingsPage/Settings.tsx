@@ -3,26 +3,16 @@ import { FolderSync, Trash2, Server, RefreshCw } from 'lucide-react';
 
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
 import { Button } from '@/components/ui/button';
-import LoadingScreen from '@/components/ui/LoadingScreen/LoadingScreen';
-import ErrorDialog from '@/components/Album/Error';
 import UpdateDialog from '@/components/Updater/UpdateDialog';
 
-import { deleteCache } from '@/services/cacheService';
 import { restartServer } from '@/utils/serverUtils';
 import { isProd } from '../../utils/isProd';
 
 import { useLocalStorage } from '@/hooks/LocalStorage';
 import { useUpdater } from '@/hooks/useUpdater';
-import { usePictoMutation } from '@/hooks/useQueryExtensio';
 
 import { useDispatch } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
-
-import {
-  deleteFolder,
-  deleteThumbnails,
-  generateThumbnails,
-} from '../../../api/api-functions/images.ts';
 
 const Settings: React.FC = () => {
   const dispatch = useDispatch();
@@ -58,21 +48,21 @@ const Settings: React.FC = () => {
     [],
   );
 
-  const { mutate: generateThumbnailsAPI, isPending: isGeneratingThumbnails } =
-    usePictoMutation({
-      mutationFn: generateThumbnails,
-      autoInvalidateTags: ['ai-tagging-images', 'ai'],
-    });
+  // const { mutate: generateThumbnailsAPI, isPending: isGeneratingThumbnails } =
+  //   usePictoMutation({
+  //     mutationFn: generateThumbnails,
+  //     autoInvalidateTags: ['ai-tagging-images', 'ai'],
+  //   });
 
-  const { mutate: deleteFolderAITagging } = usePictoMutation({
-    mutationFn: deleteFolder,
-    autoInvalidateTags: ['ai-tagging-images', 'ai'],
-  });
+  // const { mutate: deleteFolderAITagging } = usePictoMutation({
+  //   mutationFn: deleteFolder,
+  //   autoInvalidateTags: ['ai-tagging-images', 'ai'],
+  // });
 
-  const { mutate: deleteThumbnail, isPending: isDeletingThumbnails } =
-    usePictoMutation({
-      mutationFn: deleteThumbnails,
-    });
+  // const { mutate: deleteThumbnail, isPending: isDeletingThumbnails } =
+  //   usePictoMutation({
+  //     mutationFn: deleteThumbnails,
+  //   });
 
   useEffect(() => {
     setCheck(autoFolderSetting === 'true');
@@ -103,20 +93,8 @@ const Settings: React.FC = () => {
       );
       return;
     }
-    generateThumbnailsAPI([...currentPaths, ...newPaths]);
+    // generateThumbnailsAPI([...currentPaths, ...newPaths]);
     setCurrentPaths([...currentPaths, ...newPaths]);
-    await deleteCache();
-  };
-
-  const handleDeleteCache = async () => {
-    try {
-      const result = await deleteCache();
-      if (result) {
-        console.log('Cache deleted');
-      }
-    } catch (error) {
-      console.error('Error deleting cache:', error);
-    }
   };
 
   const handleRemoveFolderPath = async (pathToRemove: string) => {
@@ -124,9 +102,8 @@ const Settings: React.FC = () => {
       const updatedPaths = currentPaths.filter((path) => path !== pathToRemove);
       setCurrentPaths(updatedPaths);
       setAddedFolders(addedFolders.filter((path) => path !== pathToRemove));
-      deleteThumbnail(pathToRemove);
-      deleteFolderAITagging(pathToRemove);
-      await deleteCache();
+      // deleteThumbnail(pathToRemove);
+      // deleteFolderAITagging(pathToRemove);
       console.log(`Removed folder path: ${pathToRemove}`);
     } catch (error) {
       console.error('Error removing folder path:', error);
@@ -141,13 +118,13 @@ const Settings: React.FC = () => {
     });
   };
 
-  if (isGeneratingThumbnails || isDeletingThumbnails || isLoading) {
-    return (
-      <div className="flex h-full w-full items-center justify-center">
-        <LoadingScreen variant="fullscreen" />
-      </div>
-    );
-  }
+  // if (isGeneratingThumbnails || isDeletingThumbnails || isLoading) {
+  //   return (
+  //     <div className="flex h-full w-full items-center justify-center">
+  //       <LoadingScreen variant="fullscreen" />
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="mx-auto flex-1 px-4 pt-1">
@@ -184,14 +161,6 @@ const Settings: React.FC = () => {
             setFolderPaths={handleFolderPathChange}
             className="h-10 w-full"
           />
-          <Button
-            onClick={handleDeleteCache}
-            variant="outline"
-            className="hover:bg-accent h-10 w-full border-gray-500 dark:hover:bg-white/10"
-          >
-            <FolderSync className="text-gray-5 mr-1 h-5 w-5 dark:text-gray-50" />
-            Refresh cache
-          </Button>
           <Button
             onClick={onCheckUpdatesClick}
             variant="outline"
@@ -236,10 +205,6 @@ const Settings: React.FC = () => {
         </div>
       </div>
 
-      <ErrorDialog
-        content={errorDialogContent}
-        onClose={() => setErrorDialogContent(null)}
-      />
       <UpdateDialog
         update={updateAvailable}
         open={updateDialogOpen}

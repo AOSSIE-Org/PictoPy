@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 
 # Request Models
@@ -22,35 +22,61 @@ class SyncFolderRequest(BaseModel):
     folder_id: str  # UUID of the folder to sync
 
 
-# Response Models
-class AddFolderResponse(BaseModel):
-    success: bool
-    message: str
-    folder_id: Optional[str] = None  # UUID as string
+# Response Data Models (for the 'data' field)
+class AddFolderData(BaseModel):
+    folder_id: str  # UUID as string
+    folder_path: str
 
 
-class UpdateAITaggingResponse(BaseModel):
-    success: bool
-    message: str
+class UpdateAITaggingData(BaseModel):
     updated_count: int
+    folder_ids: List[str]
 
 
-class DeleteFoldersResponse(BaseModel):
-    success: bool
-    message: str
+class DeleteFoldersData(BaseModel):
     deleted_count: int
+    folder_ids: List[str]
 
 
-class SyncFolderResponse(BaseModel):
-    success: bool
-    message: str
+class SyncFolderData(BaseModel):
     deleted_count: int
     deleted_folders: List[str]  # List of folder paths that were deleted
     added_count: int
     added_folders: List[str]  # List of folder paths that were added
+    folder_id: str
+    folder_path: str
+
+
+# Response Models
+class AddFolderResponse(BaseModel):
+    success: bool
+    message: Optional[str] = None
+    error: Optional[str] = None
+    data: Optional[AddFolderData] = None
+
+
+class UpdateAITaggingResponse(BaseModel):
+    success: bool
+    message: Optional[str] = None
+    error: Optional[str] = None
+    data: Optional[UpdateAITaggingData] = None
+
+
+class DeleteFoldersResponse(BaseModel):
+    success: bool
+    message: Optional[str] = None
+    error: Optional[str] = None
+    data: Optional[DeleteFoldersData] = None
+
+
+class SyncFolderResponse(BaseModel):
+    success: bool
+    message: Optional[str] = None
+    error: Optional[str] = None
+    data: Optional[SyncFolderData] = None
 
 
 class ErrorResponse(BaseModel):
     success: bool = False
-    message: str
-    error: str
+    message: Optional[str] = None
+    error: Optional[str] = None

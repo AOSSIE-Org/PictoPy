@@ -3,13 +3,19 @@ from app.database.face_clusters import (
     db_get_cluster_by_id,
     db_update_cluster,
     db_get_all_clusters_with_face_counts,
+    db_get_images_by_cluster_id,  # Add this import
 )
 from app.schemas.face_clusters import (
     RenameClusterRequest,
     RenameClusterResponse,
+    RenameClusterData,
     ErrorResponse,
     GetClustersResponse,
+    GetClustersData,
     ClusterMetadata,
+    GetClusterImagesResponse,
+    GetClusterImagesData,
+    ImageInCluster,
 )
 
 
@@ -62,8 +68,10 @@ def rename_cluster(cluster_id: str, request: RenameClusterRequest):
         return RenameClusterResponse(
             success=True,
             message=f"Successfully renamed cluster to '{request.cluster_name}'",
-            cluster_id=cluster_id,
-            cluster_name=request.cluster_name.strip(),
+            data=RenameClusterData(
+                cluster_id=cluster_id,
+                cluster_name=request.cluster_name.strip(),
+            ),
         )
 
     except ValueError as e:
@@ -104,6 +112,7 @@ def get_all_clusters():
                 cluster_id=cluster["cluster_id"],
                 cluster_name=cluster["cluster_name"],
                 face_count=cluster["face_count"],
+                face_image_base64=cluster["face_image_base64"],
             )
             for cluster in clusters_data
         ]
@@ -111,7 +120,7 @@ def get_all_clusters():
         return GetClustersResponse(
             success=True,
             message=f"Successfully retrieved {len(clusters)} cluster(s)",
-            clusters=clusters,
+            data=GetClustersData(clusters=clusters),
         )
 
     except Exception as e:
@@ -121,5 +130,47 @@ def get_all_clusters():
                 success=False,
                 error="Internal server error",
                 message=f"Unable to retrieve clusters: {str(e)}",
+            ).model_dump(),
+        )
+
+
+@router.get(
+    "/{cluster_id}/images",
+    response_model=GetClusterImagesResponse,
+    responses={code: {"model": ErrorResponse} for code in [404, 500]},
+)
+def get_cluster_images(cluster_id: str):
+    """Get all images that contain faces belonging to a specific cluster."""
+    try:
+        # Step 1: Validate cluster exists
+        cluster = db_get_cluster_by_id(cluster_id)
+        if not cluster:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Cluster Not Found",
+                    message=f"Cluster with ID '{cluster_id}' does not exist.",
+                ).model_dump(),
+            )
+
+        # Step 2: Get images for this cluster
+        images_data = db_get_images_by_cluster_id(cluster_id)
+
+        # Step 3: Convert to response models
+        images = [ImageInCluster(id=img["image_id"], path=img["image_path"], thumbnailPath=img["thumbnail_path"], metadata=img["metadata"], face_id=img["face_id"], confidence=img["confidence"], bbox=img["bbox"]) for img in images_data]
+
+        return GetClusterImagesResponse(success=True, message=f"Successfully retrieved {len(images)} image(s) for cluster '{cluster_id}'", data=GetClusterImagesData(cluster_id=cluster_id, cluster_name=cluster["cluster_name"], images=images, total_images=len(images)))
+
+    except HTTPException as e:
+        # Re-raise HTTPExceptions to preserve the status code and detail
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Unable to retrieve images for cluster: {str(e)}",
             ).model_dump(),
         )

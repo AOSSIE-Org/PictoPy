@@ -12,6 +12,7 @@ class ClusterData(TypedDict):
 
     cluster_id: ClusterId
     cluster_name: Optional[ClusterName]
+    face_image_base64: Optional[str]
 
 
 ClusterMap = Dict[ClusterId, ClusterData]
@@ -25,7 +26,8 @@ def db_create_clusters_table() -> None:
         """
         CREATE TABLE IF NOT EXISTS face_clusters (
             cluster_id TEXT PRIMARY KEY,
-            cluster_name TEXT
+            cluster_name TEXT,
+            face_image_base64 TEXT
         )
     """
     )
@@ -56,14 +58,15 @@ def db_insert_clusters_batch(clusters: List[ClusterData]) -> List[ClusterId]:
     for cluster in clusters:
         cluster_id = cluster.get("cluster_id")
         cluster_name = cluster.get("cluster_name")
+        face_image_base64 = cluster.get("face_image_base64")
 
-        insert_data.append((cluster_id, cluster_name))
+        insert_data.append((cluster_id, cluster_name, face_image_base64))
         cluster_ids.append(cluster_id)
 
     cursor.executemany(
         """
-        INSERT INTO face_clusters (cluster_id, cluster_name)
-        VALUES (?, ?)
+        INSERT INTO face_clusters (cluster_id, cluster_name, face_image_base64)
+        VALUES (?, ?, ?)
     """,
         insert_data,
     )
@@ -88,7 +91,7 @@ def db_get_cluster_by_id(cluster_id: ClusterId) -> Optional[ClusterData]:
     cursor = conn.cursor()
 
     cursor.execute(
-        "SELECT cluster_id, cluster_name FROM face_clusters WHERE cluster_id = ?",
+        "SELECT cluster_id, cluster_name, face_image_base64 FROM face_clusters WHERE cluster_id = ?",
         (cluster_id,),
     )
 
@@ -96,7 +99,7 @@ def db_get_cluster_by_id(cluster_id: ClusterId) -> Optional[ClusterData]:
     conn.close()
 
     if row:
-        return ClusterData(cluster_id=row[0], cluster_name=row[1])
+        return ClusterData(cluster_id=row[0], cluster_name=row[1], face_image_base64=row[2])
     return None
 
 
@@ -110,16 +113,14 @@ def db_get_all_clusters() -> List[ClusterData]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT cluster_id, cluster_name FROM face_clusters ORDER BY cluster_id"
-    )
+    cursor.execute("SELECT cluster_id, cluster_name, face_image_base64 FROM face_clusters ORDER BY cluster_id")
 
     rows = cursor.fetchall()
     conn.close()
 
     clusters = []
     for row in rows:
-        clusters.append(ClusterData(cluster_id=row[0], cluster_name=row[1]))
+        clusters.append(ClusterData(cluster_id=row[0], cluster_name=row[1], face_image_base64=row[2]))
 
     return clusters
 
@@ -186,24 +187,26 @@ def db_delete_all_clusters() -> int:
     return deleted_count
 
 
-def db_get_all_clusters_with_face_counts() -> List[
-    Dict[str, Union[str, Optional[str], int]]
-]:
+def db_get_all_clusters_with_face_counts() -> List[Dict[str, Union[str, Optional[str], int]]]:
     """
-    Retrieve all clusters with their face counts.
+    Retrieve all clusters with their face counts and stored face images.
 
     Returns:
-        List of dictionaries containing cluster_id, cluster_name, and face_count
+        List of dictionaries containing cluster_id, cluster_name, face_count, and face_image_base64
     """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     cursor.execute(
         """
-        SELECT fc.cluster_id, fc.cluster_name, COUNT(f.face_id) as face_count
+        SELECT 
+            fc.cluster_id, 
+            fc.cluster_name, 
+            COUNT(f.face_id) as face_count,
+            fc.face_image_base64
         FROM face_clusters fc
         LEFT JOIN faces f ON fc.cluster_id = f.cluster_id
-        GROUP BY fc.cluster_id, fc.cluster_name
+        GROUP BY fc.cluster_id, fc.cluster_name, fc.face_image_base64
         ORDER BY fc.cluster_id
         """
     )
@@ -213,8 +216,57 @@ def db_get_all_clusters_with_face_counts() -> List[
 
     clusters = []
     for row in rows:
-        clusters.append(
-            {"cluster_id": row[0], "cluster_name": row[1], "face_count": row[2]}
-        )
+        cluster_id, cluster_name, face_count, face_image_base64 = row
+        clusters.append({"cluster_id": cluster_id, "cluster_name": cluster_name, "face_count": face_count, "face_image_base64": face_image_base64})
 
     return clusters
+
+
+def db_get_images_by_cluster_id(cluster_id: ClusterId) -> List[Dict[str, Union[str, int]]]:
+    """
+    Get all images that contain faces belonging to a specific cluster.
+
+    Args:
+        cluster_id: The ID of the cluster to get images for
+
+    Returns:
+        List of dictionaries containing image data with face information
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT DISTINCT 
+            i.id as image_id,
+            i.path as image_path,
+            i.thumbnailPath as thumbnail_path,
+            i.metadata,
+            f.face_id,
+            f.confidence,
+            f.bbox
+        FROM images i
+        INNER JOIN faces f ON i.id = f.image_id
+        WHERE f.cluster_id = ?
+        ORDER BY i.path
+        """,
+        (cluster_id,),
+    )
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    images = []
+    for row in rows:
+        image_id, image_path, thumbnail_path, metadata, face_id, confidence, bbox_json = row
+
+        # Parse bbox JSON if it exists
+        bbox = None
+        if bbox_json:
+            import json
+
+            bbox = json.loads(bbox_json)
+
+        images.append({"image_id": image_id, "image_path": image_path, "thumbnail_path": thumbnail_path, "metadata": metadata, "face_id": face_id, "confidence": confidence, "bbox": bbox})
+
+    return images

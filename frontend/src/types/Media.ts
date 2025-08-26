@@ -1,51 +1,46 @@
-export interface MediaItem {
-  original?: string;
-  url: string;
-  thumbnailUrl?: string;
-  date?: string;
-  title?: string;
+export interface Image {
+  id: string;
+  path: string;
+  thumbnailPath: string;
+  folder_id: string;
+  isTagged: boolean;
+  metadata?: string;
   tags?: string[];
-  imagePath?: string;
+  bboxes?: { x: number; y: number; width: number; height: number }[];
 }
-export interface MediaCardProps {
-  item: MediaItem;
-  type: 'image' | 'video';
+export interface ImageCardProps {
+  item: Image;
 }
 
-export interface MediaGalleryProps {
-  mediaItems: MediaItem[];
+export interface ImageGalleryProps {
+  mediaItems: Image[];
   title?: string;
-  type: 'image' | 'video';
 }
 
-export interface MediaGridProps {
-  mediaItems: MediaItem[];
+export interface ImageGridProps {
+  mediaItems: Image[];
   itemsPerRow: number;
   openMediaViewer: (index: number) => void;
-  type: 'image' | 'video';
 }
 export interface MediaViewProps {
-  initialIndex: number;
-  onClose: () => void;
-  allMedia: { url: string; path?: string; thumbnailUrl?: string }[];
-  currentPage: number;
-  itemsPerPage: number;
-  type: 'image' | 'video';
-  isSecureFolder?: boolean;
-}
-
-export interface YearOption {
-  value: string;
-  label: string;
+  onClose?: () => void;
+  type?: string;
 }
 
 export interface SortingControlsProps {
   sortBy: string;
   setSortBy: (value: string) => void;
-  mediaItems: MediaItem[];
+  mediaItems: Image[];
 }
 export interface PaginationControlsProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+}
+
+export interface Cluster {
+  cluster_id: string;
+  cluster_name: string;
+  face_count: number;
+  face_image_base64?: string;
 }

@@ -13,13 +13,17 @@ from app.database.folders import (
 from app.schemas.folders import (
     AddFolderRequest,
     AddFolderResponse,
+    AddFolderData,
     ErrorResponse,
     UpdateAITaggingRequest,
     UpdateAITaggingResponse,
+    UpdateAITaggingData,
     DeleteFoldersRequest,
     DeleteFoldersResponse,
+    DeleteFoldersData,
     SyncFolderRequest,
     SyncFolderResponse,
+    SyncFolderData,
 )
 import os
 from app.utils.folders import (
@@ -79,9 +83,7 @@ def post_AI_tagging_enabled_sequence():
     return True
 
 
-def post_sync_folder_sequence(
-    folder_path: str, folder_id: int, added_folders: List[Tuple[str, str]]
-):
+def post_sync_folder_sequence(folder_path: str, folder_id: int, added_folders: List[Tuple[str, str]]):
     """
     Post-sync sequence for a folder.
     This function is called after a folder is synced.
@@ -121,9 +123,7 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
         # Step 1: Data Validation
 
         if not os.path.isdir(request.folder_path):
-            raise ValueError(
-                f"Error: '{request.folder_path}' is not a valid directory."
-            )
+            raise ValueError(f"Error: '{request.folder_path}' is not a valid directory.")
 
         if (
             not os.access(request.folder_path, os.R_OK)
@@ -137,7 +137,7 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
                     success=False,
                     error="Permission denied",
                     message="The app does not have read permission for the specified folder",
-                ),
+                ).model_dump(),
             )
 
         request.folder_path = os.path.abspath(request.folder_path)
@@ -174,9 +174,9 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
         executor.submit(post_folder_add_sequence, request.folder_path, root_folder_id)
 
         return AddFolderResponse(
+            data=AddFolderData(folder_id=root_folder_id, folder_path=request.folder_path),
             success=True,
             message=f"Successfully added folder tree starting at: {request.folder_path}",
-            folder_id=root_folder_id,
         )
     except ValueError as e:
         raise HTTPException(
@@ -218,9 +218,9 @@ def enable_ai_tagging(request: UpdateAITaggingRequest, app_state=Depends(get_sta
         executor.submit(post_AI_tagging_enabled_sequence)
 
         return UpdateAITaggingResponse(
+            data=UpdateAITaggingData(updated_count=updated_count, folder_ids=request.folder_ids),
             success=True,
             message=f"Successfully enabled AI tagging for {updated_count} folder(s)",
-            updated_count=updated_count,
         )
 
     except ValueError as e:
@@ -257,9 +257,9 @@ def disable_ai_tagging(request: UpdateAITaggingRequest):
         updated_count = db_disable_ai_tagging_batch(request.folder_ids)
 
         return UpdateAITaggingResponse(
+            data=UpdateAITaggingData(updated_count=updated_count, folder_ids=request.folder_ids),
             success=True,
             message=f"Successfully disabled AI tagging for {updated_count} folder(s)",
-            updated_count=updated_count,
         )
 
     except ValueError as e:
@@ -296,9 +296,9 @@ def delete_folders(request: DeleteFoldersRequest):
         deleted_count = db_delete_folders_batch(request.folder_ids)
 
         return DeleteFoldersResponse(
+            data=DeleteFoldersData(deleted_count=deleted_count, folder_ids=request.folder_ids),
             success=True,
             message=f"Successfully deleted {deleted_count} folder(s)",
-            deleted_count=deleted_count,
         )
 
     except ValueError as e:
@@ -331,9 +331,7 @@ def sync_folder(request: SyncFolderRequest, app_state=Depends(get_state)):
     try:
         # Step 1: Get current state from both sources
         db_child_folders = db_get_direct_child_folders(request.folder_id)
-        filesystem_folders = folder_util_get_filesystem_direct_child_folders(
-            request.folder_path
-        )
+        filesystem_folders = folder_util_get_filesystem_direct_child_folders(request.folder_path)
 
         # Step 2: Compare and identify differences
         filesystem_folder_set = set(filesystem_folders)
@@ -343,17 +341,11 @@ def sync_folder(request: SyncFolderRequest, app_state=Depends(get_state)):
         folders_to_add = filesystem_folder_set - db_folder_paths
 
         # Step 3: Perform synchronization operations
-        deleted_count, deleted_folders = folder_util_delete_obsolete_folders(
-            db_child_folders, folders_to_delete
-        )
-        added_count, added_folders_with_ids = folder_util_add_multiple_folder_trees(
-            folders_to_add, request.folder_id
-        )
+        deleted_count, deleted_folders = folder_util_delete_obsolete_folders(db_child_folders, folders_to_delete)
+        added_count, added_folders_with_ids = folder_util_add_multiple_folder_trees(folders_to_add, request.folder_id)
 
         # Extract just the paths for the API response
-        added_folders = [
-            folder_path for folder_id, folder_path in added_folders_with_ids
-        ]
+        added_folders = [folder_path for folder_id, folder_path in added_folders_with_ids]
 
         executor: ProcessPoolExecutor = app_state.executor
         executor.submit(
@@ -364,12 +356,9 @@ def sync_folder(request: SyncFolderRequest, app_state=Depends(get_state)):
         )
         # Step 4: Return comprehensive response
         return SyncFolderResponse(
+            data=SyncFolderData(deleted_count=deleted_count, deleted_folders=deleted_folders, added_count=added_count, added_folders=added_folders, folder_id=request.folder_id, folder_path=request.folder_path),
             success=True,
             message=f"Successfully synced folder. Added {added_count} folder(s), deleted {deleted_count} folder(s)",
-            deleted_count=deleted_count,
-            deleted_folders=deleted_folders,
-            added_count=added_count,
-            added_folders=added_folders,
         )
 
     except ValueError as e:

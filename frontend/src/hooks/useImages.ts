@@ -2,7 +2,7 @@
 
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { useState, useEffect } from 'react';
-import { usePictoMutation } from '@/hooks/useQueryExtensio';
+import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { generateThumbnails } from '../../api/api-functions/images';
 
 interface ImageData {

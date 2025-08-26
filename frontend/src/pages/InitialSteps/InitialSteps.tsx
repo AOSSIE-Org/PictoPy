@@ -11,7 +11,7 @@ export const InitialSteps: React.FC = () => {
   );
   useEffect(() => {
     if (currentStepIndex === -1) {
-      navigate(ROUTES.LAYOUT.HOME);
+      navigate(ROUTES.HOME);
     }
   }, [currentStepIndex]);
 
