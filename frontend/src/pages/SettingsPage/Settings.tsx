@@ -118,15 +118,6 @@ const Settings: React.FC = () => {
     setCurrentPaths([...currentPaths, ...newPaths]);
     await deleteCache();
   };
-  const testErrorDialog = () => {
-  dispatch(
-    showInfoDialog({
-      title: 'Error Test',
-      message: 'This is a test error message to verify the error styling.',
-      variant: 'error',
-    })
-  );
-};
 
   const handleDeleteCache = async () => {
     try {
@@ -280,7 +271,6 @@ const Settings: React.FC = () => {
           </p>
         </div>
       </div>
-      <Button onClick={testErrorDialog}>Test Error Dialog</Button>
       <ErrorDialog
         content={errorDialogContent}
         onClose={() => setErrorDialogContent(null)}
