@@ -17,6 +17,7 @@ import { usePictoMutation } from '@/hooks/useQueryExtensio';
 
 import { useDispatch } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
+import { showInfoDialog } from '@/features/infoDialogSlice';
 
 import {
   deleteFolder,
@@ -84,6 +85,12 @@ const Settings: React.FC = () => {
       const hasUpdate = await checkForUpdates();
       if (hasUpdate) {
         setUpdateDialogOpen(true);
+      } else {
+        // Show info dialog when no updates are available
+        dispatch(showInfoDialog({
+          title: 'No Updates Available',
+          message: 'Your application is already up to date with the latest version.'
+        }));
       }
       dispatch(hideLoader());
     };
