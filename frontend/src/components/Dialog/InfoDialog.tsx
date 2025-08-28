@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info } from 'lucide-react';
+import { Info, AlertTriangle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,12 +17,31 @@ export const InfoDialog: React.FC<InfoDialogProps> = ({
   isOpen,
   title,
   message,
+  variant = 'info',
 }) => {
   const dispatch = useDispatch();
 
   const handleClose = () => {
     dispatch(hideInfoDialog());
   };
+
+  // Define styles and icons based on variant
+  const variantStyles = {
+    info: {
+      iconColor: 'text-primary',
+      messageColor: '',
+      icon: <Info className="h-5 w-5" />,
+      buttonVariant: 'default' as const,
+    },
+    error: {
+      iconColor: 'text-destructive',
+      messageColor: 'text-destructive',
+      icon: <AlertTriangle className="h-5 w-5" />,
+      buttonVariant: 'destructive' as const,
+    },
+  };
+
+  const { icon, iconColor, messageColor, buttonVariant } = variantStyles[variant];
 
   return (
     <Dialog
@@ -34,13 +53,15 @@ export const InfoDialog: React.FC<InfoDialogProps> = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Info className="text-primary h-5 w-5" />
+            <span className={iconColor}>{icon}</span>
             {title}
           </DialogTitle>
-          <DialogDescription>{message}</DialogDescription>
+          <DialogDescription className={messageColor}>{message}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button onClick={handleClose}>Close</Button>
+          <Button variant={buttonVariant} onClick={handleClose}>
+            Close
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

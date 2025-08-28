@@ -14,6 +14,7 @@ const App: React.FC = () => {
     isOpen,
     title,
     message: infoMessage,
+    variant,
   } = useSelector((state: RootState) => state.infoDialog);
   return (
     <ThemeProvider>
@@ -22,7 +23,7 @@ const App: React.FC = () => {
           <AppRoutes />
         </BrowserRouter>
         <GlobalLoader loading={loading} message={message} />
-        <InfoDialog isOpen={isOpen} title={title} message={infoMessage} />
+        <InfoDialog isOpen={isOpen} title={title} message={infoMessage} variant={variant} />
       </QueryClientProviders>
     </ThemeProvider>
   );

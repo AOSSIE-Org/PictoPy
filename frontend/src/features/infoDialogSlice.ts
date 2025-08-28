@@ -1,15 +1,11 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { InfoDialogProps, InfoDialogVariant } from '@/types/infoDialog';
 
-interface InfoDialogState {
-  isOpen: boolean;
-  title: string;
-  message: string;
-}
-
-const initialState: InfoDialogState = {
+const initialState: InfoDialogProps = {
   isOpen: false,
   title: '',
   message: '',
+  variant: 'info',
 };
 
 const infoDialogSlice = createSlice({
@@ -18,16 +14,22 @@ const infoDialogSlice = createSlice({
   reducers: {
     showInfoDialog(
       state,
-      action: PayloadAction<{ title: string; message: string }>,
+      action: PayloadAction<{ 
+        title: string; 
+        message: string;
+        variant?: InfoDialogVariant;
+      }>,
     ) {
       state.isOpen = true;
       state.title = action.payload.title;
       state.message = action.payload.message;
+      state.variant = action.payload.variant || 'info';
     },
     hideInfoDialog(state) {
       state.isOpen = false;
       state.title = '';
       state.message = '';
+      state.variant = 'info';
     },
   },
 });

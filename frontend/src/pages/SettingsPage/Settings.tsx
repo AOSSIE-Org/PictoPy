@@ -92,6 +92,7 @@ const Settings: React.FC = () => {
             title: 'No Updates Available',
             message:
               'Your application is already up to date with the latest version.',
+            variant: 'info',
           }),
         );
       }
@@ -117,15 +118,38 @@ const Settings: React.FC = () => {
     setCurrentPaths([...currentPaths, ...newPaths]);
     await deleteCache();
   };
+  const testErrorDialog = () => {
+  dispatch(
+    showInfoDialog({
+      title: 'Error Test',
+      message: 'This is a test error message to verify the error styling.',
+      variant: 'error',
+    })
+  );
+};
 
   const handleDeleteCache = async () => {
     try {
       const result = await deleteCache();
       if (result) {
         console.log('Cache deleted');
+        dispatch(
+          showInfoDialog({
+            title: 'Cache Refreshed',
+            message: 'The application cache has been successfully refreshed.',
+            variant: 'info',
+          }),
+        );
       }
     } catch (error) {
       console.error('Error deleting cache:', error);
+      dispatch(
+        showInfoDialog({
+          title: 'Cache Refresh Error',
+          message: 'Failed to refresh the application cache. Please try again.',
+          variant: 'error',
+        }),
+      );
     }
   };
 
@@ -144,10 +168,21 @@ const Settings: React.FC = () => {
   };
 
   const showErrorDialog = (title: string, err: unknown) => {
+    const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+    
+    // Use the InfoDialog with error variant for consistent UI
+    dispatch(
+      showInfoDialog({
+        title,
+        message: errorMessage,
+        variant: 'error',
+      }),
+    );
+    
+    // Also set the legacy error dialog content for backward compatibility
     setErrorDialogContent({
       title,
-      description:
-        err instanceof Error ? err.message : 'An unknown error occurred',
+      description: errorMessage,
     });
   };
 
@@ -245,7 +280,7 @@ const Settings: React.FC = () => {
           </p>
         </div>
       </div>
-
+      <Button onClick={testErrorDialog}>Test Error Dialog</Button>
       <ErrorDialog
         content={errorDialogContent}
         onClose={() => setErrorDialogContent(null)}
