@@ -1,12 +1,12 @@
 import React from 'react';
 import { Info } from 'lucide-react';
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { InfoDialogProps } from '@/types/infoDialog';
@@ -16,7 +16,7 @@ import { hideInfoDialog } from '@/features/infoDialogSlice';
 export const InfoDialog: React.FC<InfoDialogProps> = ({
   isOpen,
   title,
-  message
+  message,
 }) => {
   const dispatch = useDispatch();
 
@@ -25,23 +25,22 @@ export const InfoDialog: React.FC<InfoDialogProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) handleClose();
-    }}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) handleClose();
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Info className="h-5 w-5 text-primary" />
+            <Info className="text-primary h-5 w-5" />
             {title}
           </DialogTitle>
-          <DialogDescription>
-            {message}
-          </DialogDescription>
+          <DialogDescription>{message}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button onClick={handleClose}>
-            Close
-          </Button>
+          <Button onClick={handleClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

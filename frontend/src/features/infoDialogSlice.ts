@@ -16,7 +16,10 @@ const infoDialogSlice = createSlice({
   name: 'infoDialog',
   initialState,
   reducers: {
-    showInfoDialog(state, action: PayloadAction<{ title: string; message: string }>) {
+    showInfoDialog(
+      state,
+      action: PayloadAction<{ title: string; message: string }>,
+    ) {
       state.isOpen = true;
       state.title = action.payload.title;
       state.message = action.payload.message;

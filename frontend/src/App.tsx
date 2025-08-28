@@ -10,7 +10,11 @@ import { useSelector } from 'react-redux';
 import { RootState } from './app/store';
 const App: React.FC = () => {
   const { loading, message } = useSelector((state: RootState) => state.loader);
-  const { isOpen, title, message: infoMessage } = useSelector((state: RootState) => state.infoDialog);
+  const {
+    isOpen,
+    title,
+    message: infoMessage,
+  } = useSelector((state: RootState) => state.infoDialog);
   return (
     <ThemeProvider>
       <QueryClientProviders>

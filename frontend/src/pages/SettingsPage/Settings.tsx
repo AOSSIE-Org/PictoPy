@@ -87,10 +87,13 @@ const Settings: React.FC = () => {
         setUpdateDialogOpen(true);
       } else {
         // Show info dialog when no updates are available
-        dispatch(showInfoDialog({
-          title: 'No Updates Available',
-          message: 'Your application is already up to date with the latest version.'
-        }));
+        dispatch(
+          showInfoDialog({
+            title: 'No Updates Available',
+            message:
+              'Your application is already up to date with the latest version.',
+          }),
+        );
       }
       dispatch(hideLoader());
     };
