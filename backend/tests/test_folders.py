@@ -88,6 +88,29 @@ def sample_add_folder_request():
     }
 
 
+@pytest.fixture
+def sample_folder_details():
+    """Sample folder details data."""
+    return [
+        (
+            "folder-id-1",
+            "/home/user/photos",
+            None,
+            1693526400,  # timestamp
+            True,  # AI_Tagging
+            False,  # taggingCompleted
+        ),
+        (
+            "folder-id-2",
+            "/home/user/documents",
+            None,
+            1693526500,
+            False,
+            True,
+        ),
+    ]
+
+
 # ##############################
 # Test Classes
 # ##############################
@@ -132,7 +155,8 @@ class TestFoldersAPI:
         data = response.json()
         assert data["success"] is True
         assert "Successfully added folder tree" in data["message"]
-        assert data["folder_id"] == "test-folder-id-123"
+        assert data["data"]["folder_id"] == "test-folder-id-123"
+        assert data["data"]["folder_path"] == folder_path
 
         # Verify mocks were called correctly
         mock_folder_exists.assert_called_once_with(folder_path)
@@ -227,7 +251,7 @@ class TestFoldersAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert data["folder_id"] == "child-folder-id"
+        assert data["data"]["folder_id"] == "child-folder-id"
 
         # Verify parent lookup was not called since parent_id was provided
         mock_find_parent.assert_not_called()
@@ -316,7 +340,8 @@ class TestFoldersAPI:
         data = response.json()
         assert data["success"] is True
         assert "Successfully enabled AI tagging for 3 folder(s)" in data["message"]
-        assert data["updated_count"] == 3
+        assert data["data"]["updated_count"] == 3
+        assert data["data"]["folder_ids"] == ["folder-1", "folder-2", "folder-3"]
 
         mock_enable_batch.assert_called_once_with(["folder-1", "folder-2", "folder-3"])
 
@@ -332,7 +357,7 @@ class TestFoldersAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert data["updated_count"] == 1
+        assert data["data"]["updated_count"] == 1
 
     def test_enable_ai_tagging_empty_list(self, client):
         """Test enabling AI tagging with empty folder_ids list."""
@@ -404,7 +429,14 @@ class TestFoldersAPI:
         data = response.json()
         assert data["success"] is True
         assert "Successfully disabled AI tagging for 5 folder(s)" in data["message"]
-        assert data["updated_count"] == 5
+        assert data["data"]["updated_count"] == 5
+        assert data["data"]["folder_ids"] == [
+            "folder-1",
+            "folder-2",
+            "folder-3",
+            "folder-4",
+            "folder-5",
+        ]
 
         mock_disable_batch.assert_called_once_with(
             ["folder-1", "folder-2", "folder-3", "folder-4", "folder-5"]
@@ -422,7 +454,7 @@ class TestFoldersAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert data["updated_count"] == 1
+        assert data["data"]["updated_count"] == 1
 
     def test_disable_ai_tagging_empty_list(self, client):
         """Test disabling AI tagging with empty folder_ids list."""
@@ -476,6 +508,136 @@ class TestFoldersAPI:
         app_state.executor.submit.assert_not_called()
 
     # ============================================================================
+    # DELETE /folders/delete-folders - Delete Folders Tests
+    # ============================================================================
+
+    @patch("app.routes.folders.db_delete_folders_batch")
+    def test_delete_folders_success(self, mock_delete_batch, client):
+        """Test successfully deleting multiple folders."""
+        mock_delete_batch.return_value = 3
+
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["folder-1", "folder-2", "folder-3"]}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "Successfully deleted 3 folder(s)" in data["message"]
+        assert data["data"]["deleted_count"] == 3
+        assert data["data"]["folder_ids"] == ["folder-1", "folder-2", "folder-3"]
+
+        mock_delete_batch.assert_called_once_with(["folder-1", "folder-2", "folder-3"])
+
+    @patch("app.routes.folders.db_delete_folders_batch")
+    def test_delete_folders_single_folder(self, mock_delete_batch, client):
+        """Test deleting a single folder."""
+        mock_delete_batch.return_value = 1
+
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["single-folder-id"]}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["data"]["deleted_count"] == 1
+
+    def test_delete_folders_empty_list(self, client):
+        """Test deleting folders with empty folder_ids list."""
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": []}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 400
+        data = response.json()
+        assert data["detail"]["success"] is False
+        assert data["detail"]["error"] == "Validation Error"
+        assert "No folder IDs provided" in data["detail"]["message"]
+
+    @patch("app.routes.folders.db_delete_folders_batch")
+    def test_delete_folders_database_error(self, mock_delete_batch, client):
+        """Test handling database errors during folder deletion."""
+        mock_delete_batch.side_effect = Exception("Database connection failed")
+
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["folder-1", "folder-2"]}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 500
+        data = response.json()
+        assert data["detail"]["success"] is False
+        assert data["detail"]["error"] == "Internal server error"
+
+    # ============================================================================
+    # GET /folders/all-folders - Get All Folders Tests
+    # ============================================================================
+
+    @patch("app.routes.folders.db_get_all_folder_details")
+    def test_get_all_folders_success(
+        self, mock_get_all_folders, client, sample_folder_details
+    ):
+        """Test successfully retrieving all folders."""
+        mock_get_all_folders.return_value = sample_folder_details
+
+        response = client.get("/folders/all-folders")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "Successfully retrieved 2 folder(s)" in data["message"]
+        assert data["data"]["total_count"] == 2
+        assert len(data["data"]["folders"]) == 2
+
+        # Check first folder details
+        first_folder = data["data"]["folders"][0]
+        assert first_folder["folder_id"] == "folder-id-1"
+        assert first_folder["folder_path"] == "/home/user/photos"
+        assert first_folder["parent_folder_id"] is None
+        assert first_folder["AI_Tagging"] is True
+        assert first_folder["taggingCompleted"] is False
+
+        mock_get_all_folders.assert_called_once()
+
+    @patch("app.routes.folders.db_get_all_folder_details")
+    def test_get_all_folders_empty(self, mock_get_all_folders, client):
+        """Test retrieving all folders when none exist."""
+        mock_get_all_folders.return_value = []
+
+        response = client.get("/folders/all-folders")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "Successfully retrieved 0 folder(s)" in data["message"]
+        assert data["data"]["total_count"] == 0
+        assert data["data"]["folders"] == []
+
+    @patch("app.routes.folders.db_get_all_folder_details")
+    def test_get_all_folders_database_error(self, mock_get_all_folders, client):
+        """Test handling database errors during folder retrieval."""
+        mock_get_all_folders.side_effect = Exception("Database connection failed")
+
+        response = client.get("/folders/all-folders")
+
+        assert response.status_code == 500
+        data = response.json()
+        assert data["detail"]["success"] is False
+        assert data["detail"]["error"] == "Internal server error"
+
+    # ============================================================================
     # Edge Cases and Error Handling Tests
     # ============================================================================
 
@@ -507,7 +669,7 @@ class TestFoldersAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert data["updated_count"] == 2
+        assert data["data"]["updated_count"] == 2
 
     @patch("app.routes.folders.db_disable_ai_tagging_batch")
     def test_disable_ai_tagging_no_folders_updated(self, mock_disable_batch, client):
@@ -523,7 +685,7 @@ class TestFoldersAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert data["updated_count"] == 0
+        assert data["data"]["updated_count"] == 0
 
     # ============================================================================
     # Integration & Workflow Tests
@@ -562,13 +724,13 @@ class TestFoldersAPI:
 
         add_response = client.post("/folders/add-folder", json=add_request)
         assert add_response.status_code == 200
-        folder_id = add_response.json()["folder_id"]
+        folder_id = add_response.json()["data"]["folder_id"]
 
         enable_request = {"folder_ids": [folder_id]}
 
         enable_response = client.post("/folders/enable-ai-tagging", json=enable_request)
         assert enable_response.status_code == 200
-        assert enable_response.json()["updated_count"] == 1
+        assert enable_response.json()["data"]["updated_count"] == 1
 
         mock_add_folder_tree.assert_called_once()
         mock_enable_batch.assert_called_once_with([folder_id])
@@ -587,14 +749,14 @@ class TestFoldersAPI:
         enable_request = {"folder_ids": folder_ids}
         enable_response = client.post("/folders/enable-ai-tagging", json=enable_request)
         assert enable_response.status_code == 200
-        assert enable_response.json()["updated_count"] == 2
+        assert enable_response.json()["data"]["updated_count"] == 2
 
         disable_request = {"folder_ids": folder_ids}
         disable_response = client.post(
             "/folders/disable-ai-tagging", json=disable_request
         )
         assert disable_response.status_code == 200
-        assert disable_response.json()["updated_count"] == 2
+        assert disable_response.json()["data"]["updated_count"] == 2
 
         mock_enable_batch.assert_called_once_with(folder_ids)
         mock_disable_batch.assert_called_once_with(folder_ids)
@@ -643,3 +805,31 @@ class TestFoldersAPI:
         assert child_response.status_code == 200
 
         assert mock_find_parent.call_count >= 1
+
+    @patch("app.routes.folders.db_delete_folders_batch")
+    @patch("app.routes.folders.db_enable_ai_tagging_batch")
+    def test_complete_folder_lifecycle(
+        self, mock_enable_batch, mock_delete_batch, client
+    ):
+        """Test complete folder lifecycle: enable AI -> delete."""
+        folder_ids = ["folder-1", "folder-2"]
+
+        # Enable AI tagging
+        mock_enable_batch.return_value = 2
+        enable_request = {"folder_ids": folder_ids}
+        enable_response = client.post("/folders/enable-ai-tagging", json=enable_request)
+        assert enable_response.status_code == 200
+
+        # Delete folders
+        mock_delete_batch.return_value = 2
+        delete_response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["folder-1", "folder-2"]}',
+            headers={"Content-Type": "application/json"},
+        )
+        assert delete_response.status_code == 200
+        assert delete_response.json()["data"]["deleted_count"] == 2
+
+        mock_enable_batch.assert_called_once_with(folder_ids)
+        mock_delete_batch.assert_called_once_with(folder_ids)

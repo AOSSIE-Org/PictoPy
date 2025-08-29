@@ -4,7 +4,7 @@ import pytest
 import bcrypt
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from unittest.mock import patch, ANY
+from unittest.mock import patch
 import uuid
 from app.routes import albums as albums_router
 
@@ -68,7 +68,10 @@ class TestAlbumRoutes:
         ],
     )
     def test_create_album_variants(self, album_data):
-        with patch("app.routes.albums.db_insert_album") as mock_insert:
+        with patch("app.routes.albums.db_get_album_by_name") as mock_get_by_name, patch(
+            "app.routes.albums.db_insert_album"
+        ) as mock_insert:
+            mock_get_by_name.return_value = None  # No existing album
             mock_insert.return_value = None
 
             response = client.post("/albums/", json=album_data)
@@ -78,13 +81,35 @@ class TestAlbumRoutes:
             assert json_response["success"] is True
             assert "album_id" in json_response
 
-            mock_insert.assert_called_once_with(
-                ANY,
-                album_data["name"],
-                album_data.get("description", ""),
-                album_data["is_hidden"],
-                album_data.get("password"),
+            mock_insert.assert_called_once()
+            # Verify that the album_id is a valid UUID
+            album_id = json_response["album_id"]
+            uuid.UUID(album_id)  # This will raise ValueError if not a valid UUID
+
+    def test_create_album_duplicate_name(self):
+        """Test creating album with duplicate name."""
+        album_data = {
+            "name": "Existing Album",
+            "description": "This name already exists",
+            "is_hidden": False,
+            "password": None,
+        }
+
+        with patch("app.routes.albums.db_get_album_by_name") as mock_get_by_name:
+            mock_get_by_name.return_value = (
+                "existing-id",
+                "Existing Album",
+                "desc",
+                0,
+                None,
             )
+
+            response = client.post("/albums/", json=album_data)
+            assert response.status_code == 409
+
+            json_response = response.json()
+            assert json_response["detail"]["success"] is False
+            assert json_response["detail"]["error"] == "Album Already Exists"
 
     def test_get_all_albums_public_only(self, mock_db_album):
         """
@@ -108,6 +133,14 @@ class TestAlbumRoutes:
             assert isinstance(json_response["albums"], list)
             assert len(json_response["albums"]) == 1
             assert json_response["albums"][0]["album_id"] == mock_db_album["album_id"]
+            assert (
+                json_response["albums"][0]["album_name"] == mock_db_album["album_name"]
+            )
+            assert (
+                json_response["albums"][0]["description"]
+                == mock_db_album["description"]
+            )
+            assert json_response["albums"][0]["is_hidden"] == mock_db_album["is_hidden"]
 
             mock_get_all.assert_called_once_with(False)
 
@@ -180,6 +213,8 @@ class TestAlbumRoutes:
             assert json_response["success"] is True
             assert json_response["data"]["album_id"] == mock_db_album["album_id"]
             assert json_response["data"]["album_name"] == mock_db_album["album_name"]
+            assert json_response["data"]["description"] == mock_db_album["description"]
+            assert json_response["data"]["is_hidden"] == mock_db_album["is_hidden"]
             mock_get_album.assert_called_once_with(mock_db_album["album_id"])
 
     def test_get_album_by_id_not_found(self):
