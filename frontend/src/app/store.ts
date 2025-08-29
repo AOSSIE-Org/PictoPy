@@ -4,6 +4,7 @@ import onboardingReducer from '@/features/onboardingSlice';
 import imageReducer from '@/features/imageSlice';
 import faceClustersReducer from '@/features/faceClustersSlice';
 import infoDialogReducer from '@/features/infoDialogSlice';
+import folderReducer from '@/features/folderSlice';
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     images: imageReducer,
     faceClusters: faceClustersReducer,
     infoDialog: infoDialogReducer,
+    folders: folderReducer,
   },
 });
 

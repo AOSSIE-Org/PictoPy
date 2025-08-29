@@ -1,38 +1,25 @@
-import React from 'react';
 import { Button } from '@/components/ui/button';
-import { open } from '@tauri-apps/plugin-dialog';
 import { FolderPlus } from 'lucide-react';
+import { useFolder } from '@/hooks/useFolder';
 
-interface FolderPickerProps {
-  setFolderPaths: (paths: string[]) => void;
-  className?: string;
-}
+export const FolderPicker = () => {
+  const { pickSingleFolder, addFolderMutate } = useFolder({
+    title: 'Select folders',
+  });
 
-const FolderPicker: React.FC<FolderPickerProps> = ({
-  setFolderPaths,
-  className,
-}) => {
-  const pickFolder = async () => {
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: true, // Allow multiple folder selection
-        title: 'Select folders',
-      });
-      if (selected && Array.isArray(selected)) {
-        setFolderPaths(selected);
-      }
-    } catch (error) {
-      console.error('Error picking folders:', error);
+  const handlePickFolder = async () => {
+    const selectedFolder = await pickSingleFolder();
+    if (selectedFolder) {
+      addFolderMutate(selectedFolder);
     }
   };
 
   return (
     <div className="flex w-full gap-3">
       <Button
-        onClick={pickFolder}
+        onClick={handlePickFolder}
         variant="outline"
-        className={`hover:bg-accent flex items-center justify-center border-gray-500 text-gray-700 dark:text-gray-50 dark:hover:bg-white/10 ${className} `}
+        className={`hover:bg-accent flex items-center justify-center border-gray-500 text-gray-700 dark:text-gray-50 dark:hover:bg-white/10`}
       >
         <FolderPlus className="h-[18px] w-[18px]" />
         <p className={`ml-2 inline`}>Add folders</p>

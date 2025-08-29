@@ -19,6 +19,7 @@ from app.database.albums import db_create_albums_table
 from app.database.albums import db_create_album_images_table
 from app.database.folders import db_create_folders_table
 from app.database.metadata import db_create_metadata_table
+from app.utils.microservice import microservice_util_start_sync_service
 
 from app.routes.folders import router as folders_router
 from app.routes.albums import router as albums_router
@@ -41,6 +42,7 @@ async def lifespan(app: FastAPI):
     db_create_albums_table()
     db_create_album_images_table()
     db_create_metadata_table()
+    microservice_util_start_sync_service()
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor(max_workers=1)
 
@@ -60,21 +62,6 @@ app = FastAPI(
         "url": "https://www.postman.com/cryosat-explorer-62744145/workspace/pictopy/overview",
     },
     servers=[{"url": "http://localhost:8000", "description": "Local Development server"}],
-    openapi_tags=[
-        {
-            "name": "Albums",
-            "description": "We briefly discuss the endpoints related to albums, all of these fall under the /albums route",
-        },
-        {
-            "name": "Images",
-            "description": "We briefly discuss the endpoints related to images, all of these fall under the /images route",
-        },
-        {
-            "name": "Tagging",
-            "x-displayName": "Face recognition and Tagging",
-            "description": "We briefly discuss the endpoints related to face tagging and recognition, all of these fall under the /tag route",
-        },
-    ],
 )
 
 app.logger = CustomizeLogger.make_logger("app/logging_config.json")
@@ -115,7 +102,7 @@ app.add_middleware(
 
 
 # Basic health check endpoint
-@app.get("/")
+@app.get("/", tags=["Health"])
 async def root():
     return {"message": "PictoPy Server is up and running!"}
 

@@ -9,18 +9,14 @@ interface OnboardingState {
   stepStatus: boolean[];
   avatar: string | null;
   name: string;
-  theme: string;
-  folders: string[];
 }
 
 const initialState: OnboardingState = {
   currentStepIndex: 0,
   currentStepName: STEP_NAMES[0],
   stepStatus: STEP_NAMES.map(() => false),
-  avatar: null,
-  name: '',
-  theme: localStorage.getItem('theme') || 'light',
-  folders: ['/home/Downloads', '/home/Pictures'],
+  avatar: localStorage.getItem('avatar'),
+  name: localStorage.getItem('name') || '',
 };
 const onboardingSlice = createSlice({
   name: 'onboarding',
@@ -31,19 +27,6 @@ const onboardingSlice = createSlice({
     },
     setName(state, action: PayloadAction<string>) {
       state.name = action.payload;
-    },
-    setTheme(state, action: PayloadAction<string>) {
-      state.theme = action.payload;
-    },
-    addFolder(state, action: PayloadAction<string>) {
-      if (!state.folders.includes(action.payload)) {
-        state.folders.push(action.payload);
-      }
-    },
-    removeFolder(state, action: PayloadAction<string>) {
-      state.folders = state.folders.filter(
-        (folder) => folder !== action.payload,
-      );
     },
     markCompleted(state, action: PayloadAction<number>) {
       const stepIndex = action.payload;
@@ -68,14 +51,7 @@ const onboardingSlice = createSlice({
   },
 });
 
-export const {
-  setAvatar,
-  setName,
-  setTheme,
-  addFolder,
-  removeFolder,
-  markCompleted,
-  previousStep,
-} = onboardingSlice.actions;
+export const { setAvatar, setName, markCompleted, previousStep } =
+  onboardingSlice.actions;
 
 export default onboardingSlice.reducer;

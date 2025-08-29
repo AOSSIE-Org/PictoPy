@@ -23,6 +23,20 @@ class SyncFolderRequest(BaseModel):
 
 
 # Response Data Models (for the 'data' field)
+class FolderDetails(BaseModel):
+    folder_id: str
+    folder_path: str
+    parent_folder_id: Optional[str] = None
+    last_modified_time: int
+    AI_Tagging: bool
+    taggingCompleted: Optional[bool] = None
+
+
+class GetAllFoldersData(BaseModel):
+    folders: List[FolderDetails]
+    total_count: int
+
+
 class AddFolderData(BaseModel):
     folder_id: str  # UUID as string
     folder_path: str
@@ -48,6 +62,13 @@ class SyncFolderData(BaseModel):
 
 
 # Response Models
+class GetAllFoldersResponse(BaseModel):
+    success: bool
+    message: Optional[str] = None
+    error: Optional[str] = None
+    data: Optional[GetAllFoldersData] = None
+
+
 class AddFolderResponse(BaseModel):
     success: bool
     message: Optional[str] = None

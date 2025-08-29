@@ -23,6 +23,13 @@ export interface SyncFolderRequest {
 }
 
 // API Functions
+export const getAllFolders = async (): Promise<APIResponse> => {
+  const response = await apiClient.get<APIResponse>(
+    foldersEndpoints.getAllFolders,
+  );
+  return response.data;
+};
+
 export const addFolder = async (
   request: AddFolderRequest,
 ): Promise<APIResponse> => {
@@ -59,16 +66,6 @@ export const deleteFolders = async (
   const response = await apiClient.delete<APIResponse>(
     foldersEndpoints.deleteFolders,
     { data: request },
-  );
-  return response.data;
-};
-
-export const syncFolder = async (
-  request: SyncFolderRequest,
-): Promise<APIResponse> => {
-  const response = await apiClient.post<APIResponse>(
-    foldersEndpoints.syncFolder,
-    request,
   );
   return response.data;
 };

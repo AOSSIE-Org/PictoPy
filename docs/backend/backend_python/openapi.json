@@ -18,6 +18,9 @@
   "paths": {
     "/": {
       "get": {
+        "tags": [
+          "Health"
+        ],
         "summary": "Root",
         "operationId": "root__get",
         "responses": {
@@ -364,6 +367,38 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/folders/all-folders": {
+      "get": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Get All Folders",
+        "description": "Get details of all folders in the database.",
+        "operationId": "get_all_folders_folders_all_folders_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAllFoldersResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__folders__ErrorResponse"
                 }
               }
             }
@@ -1406,6 +1441,56 @@
         ],
         "title": "DeleteFoldersResponse"
       },
+      "FolderDetails": {
+        "properties": {
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          },
+          "folder_path": {
+            "type": "string",
+            "title": "Folder Path"
+          },
+          "parent_folder_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Folder Id"
+          },
+          "last_modified_time": {
+            "type": "integer",
+            "title": "Last Modified Time"
+          },
+          "AI_Tagging": {
+            "type": "boolean",
+            "title": "Ai Tagging"
+          },
+          "taggingCompleted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taggingcompleted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder_id",
+          "folder_path",
+          "last_modified_time",
+          "AI_Tagging"
+        ],
+        "title": "FolderDetails"
+      },
       "GetAlbumImagesRequest": {
         "properties": {
           "password": {
@@ -1481,6 +1566,72 @@
           "albums"
         ],
         "title": "GetAlbumsResponse"
+      },
+      "GetAllFoldersData": {
+        "properties": {
+          "folders": {
+            "items": {
+              "$ref": "#/components/schemas/FolderDetails"
+            },
+            "type": "array",
+            "title": "Folders"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "folders",
+          "total_count"
+        ],
+        "title": "GetAllFoldersData"
+      },
+      "GetAllFoldersResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GetAllFoldersData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "GetAllFoldersResponse"
       },
       "GetAllImagesResponse": {
         "properties": {
@@ -2396,20 +2547,5 @@
         "description": "Error response model"
       }
     }
-  },
-  "tags": [
-    {
-      "name": "Albums",
-      "description": "We briefly discuss the endpoints related to albums, all of these fall under the /albums route"
-    },
-    {
-      "name": "Images",
-      "description": "We briefly discuss the endpoints related to images, all of these fall under the /images route"
-    },
-    {
-      "name": "Tagging",
-      "description": "We briefly discuss the endpoints related to face tagging and recognition, all of these fall under the /tag route",
-      "x-displayName": "Face recognition and Tagging"
-    }
-  ]
+  }
 }

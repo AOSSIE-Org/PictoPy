@@ -25,12 +25,12 @@ export const PersonImages = () => {
   const { data, error, isLoading, isSuccess, isError, errorMessage } =
     usePictoQuery({
       queryKey: ['person-images', clusterId],
-      queryFn: async () => fetchClusterImages(clusterId || ''),
+      queryFn: async () => fetchClusterImages({ clusterId: clusterId || '' }),
     });
 
   const { mutate: renameClusterMutate } = usePictoMutation({
     mutationFn: async (newName: string) =>
-      renameCluster(clusterId || '', newName),
+      renameCluster({ clusterId: clusterId || '', newName }),
   });
 
   useEffect(() => {

@@ -1,5 +1,3 @@
-'use client';
-
 import '@/App.css';
 import React from 'react';
 
@@ -51,8 +49,10 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
   };
 
   return (
-    <div className="bg-background text-foreground flex min-h-screen w-full items-center justify-center p-10">
-      <div className="w-full max-w-4xl">{renderStepComponent()}</div>
+    <div className="bg-background text-foreground flex min-h-screen w-full items-center justify-center">
+      <div className="flex h-[540px] w-full max-w-4xl gap-3">
+        {renderStepComponent()}
+      </div>
     </div>
   );
 };

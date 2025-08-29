@@ -1,16 +1,7 @@
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { ThemeSelector } from '@/components/ThemeToggle';
-import {
-  Bell,
-  Search,
-  User,
-  Upload,
-  Camera,
-  Scan,
-  X,
-  ScanFace,
-} from 'lucide-react';
+import { Bell, Search, Upload, Camera, ScanFace } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,14 +10,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from '@/components/ui/dialog';
+import { useSelector } from 'react-redux';
+import { selectAvatar, selectName } from '@/features/onboardingSelectors';
 
 export function Navbar() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  let savedData = JSON.parse(
-    localStorage.getItem('pictopy-user-data') || '{"name":"Guest"}',
-  );
+  const userName = useSelector(selectName);
+  const userAvatar = useSelector(selectAvatar);
 
   return (
     <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur">
@@ -132,11 +123,11 @@ export function Navbar() {
         <ThemeSelector />
         <div className="flex items-center space-x-2">
           <span className="hidden text-sm sm:inline-block">
-            Welcome <span className="text-muted-foreground">Rahul</span>
+            Welcome <span className="text-muted-foreground">{userName}</span>
           </span>
           <a href="/settings" className="p-2">
             <img
-              src={savedData.avatarUrl || '/photo1.png'}
+              src={userAvatar || '/photo1.png'}
               className="hover:ring-primary/50 h-8 w-8 cursor-pointer rounded-full transition-all hover:ring-2"
               alt="User avatar"
             />

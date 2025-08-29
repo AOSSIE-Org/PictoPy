@@ -5,7 +5,7 @@ import { APIResponse } from '@/types/API';
 //Request Types
 export interface RenameClusterRequest {
   clusterId: string;
-  newClusterName: string;
+  newName: string;
 }
 export interface FetchClusterImagesRequest {
   clusterId: string;
@@ -23,7 +23,7 @@ export const renameCluster = async (
 ): Promise<APIResponse> => {
   const response = await apiClient.put<APIResponse>(
     faceClustersEndpoints.renameCluster(request.clusterId),
-    { cluster_name: request.newClusterName },
+    { cluster_name: request.newName },
   );
   return response.data;
 };

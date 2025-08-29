@@ -1,13 +1,7 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '@/store';
-import {
-  setTheme,
-  markCompleted,
-  previousStep,
-} from '@/features/onboardingSlice';
+import { AppDispatch } from '@/app/store';
+import { markCompleted, previousStep } from '@/features/onboardingSlice';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -16,12 +10,14 @@ import {
   CardTitle,
   CardContent,
   CardFooter,
+  CardDescription,
 } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Sun, Moon, Monitor } from 'lucide-react';
 
-import { AppFeatures } from './AppFeatures';
-
+import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
+import { useTheme } from '@/contexts/ThemeContext';
 interface ThemeSelectionStepProps {
   stepIndex: number;
   totalSteps: number;
@@ -31,121 +27,110 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
   stepIndex,
   totalSteps,
 }) => {
+  const { setTheme, theme } = useTheme();
   const dispatch = useDispatch<AppDispatch>();
-  const selectedTheme = useSelector(
-    (state: RootState) => state.onboarding.theme,
-  );
-
-  const [featureIndex, setFeatureIndex] = useState(0);
 
   useEffect(() => {
-    const stored = localStorage.getItem('theme') || 'system';
-    dispatch(setTheme(stored));
-
-    if (stored === 'system') {
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.setAttribute(
-        'data-theme',
-        isDark ? 'dark' : 'light',
-      );
-    } else {
-      document.documentElement.setAttribute('data-theme', stored);
+    if (localStorage.getItem('themeChosen')) {
+      dispatch(markCompleted(stepIndex));
     }
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (selectedTheme === 'system') {
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.setAttribute(
-        'data-theme',
-        isDark ? 'dark' : 'light',
-      );
-    } else if (selectedTheme) {
-      document.documentElement.setAttribute('data-theme', selectedTheme);
-    }
-    if (selectedTheme) {
-      localStorage.setItem('theme', selectedTheme);
-    }
-  }, [selectedTheme]);
-
-  const handleThemeChange = (value: string) => {
-    dispatch(setTheme(value));
+  }, []);
+  const handleThemeChange = (value: 'light' | 'dark' | 'system') => {
+    setTheme(value);
   };
 
   const handleNext = () => {
+    localStorage.setItem('themeChosen', 'true');
     dispatch(markCompleted(stepIndex));
   };
 
   const handleBack = () => {
     dispatch(previousStep());
   };
+  if (localStorage.getItem('themeChosen')) {
+    return null;
+  }
 
+  const progressPercent = Math.round(((stepIndex + 1) / totalSteps) * 100);
   return (
-    <div className="flex h-screen w-full items-center justify-start pr-4 pl-6">
-      <div className="flex h-[75vh] w-full max-w-7xl gap-3">
-        {/* Left Card */}
-        <Card className="flex basis-1/2 flex-col overflow-hidden border p-2">
-          <CardHeader className="mt-2 pb-2">
-            <div className="text-muted-foreground mb-1 flex justify-between text-xs">
-              <span>
-                Step {stepIndex + 1} of {totalSteps}
-              </span>
-              <span>{Math.round(((stepIndex + 1) / totalSteps) * 100)}%</span>
-            </div>
-            <div className="bg-muted mb-2 h-1.5 w-full rounded-full">
-              <div
-                className="bg-primary h-full rounded-full transition-all duration-300"
-                style={{ width: `${((stepIndex + 1) / totalSteps) * 100}%` }}
-              />
-            </div>
-          </CardHeader>
+    <>
+      <Card className="flex max-h-full w-1/2 flex-col border p-4">
+        <CardHeader className="p-3">
+          <div className="text-muted-foreground mb-1 flex justify-between text-xs">
+            <span>
+              Step {stepIndex + 1} of {totalSteps}
+            </span>
+            <span>{progressPercent}%</span>
+          </div>
+          <div className="bg-muted mb-4 h-2 w-full rounded-full">
+            <div
+              className="bg-primary h-full rounded-full transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
 
-          <CardTitle className="mb-0 ml-4 text-lg font-semibold">
+          <CardTitle className="text-xl font-semibold">
             Choose Your Theme
           </CardTitle>
-          <p className="text-muted-foreground mb-4 ml-4 text-sm">
-            Select your preferred appearance
-          </p>
-
-          <CardContent className="flex-1 space-y-8 text-[16px]">
-            <RadioGroup
-              value={selectedTheme}
-              onValueChange={handleThemeChange}
-              className="space-y-8"
+          <CardDescription className="mt-2 text-base">
+            Choose your preferred appearance
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex-1 space-y-6 overflow-y-auto p-1 px-2">
+          <RadioGroup
+            value={theme}
+            onValueChange={handleThemeChange}
+            className="space-y-4"
+          >
+            <Label
+              htmlFor="light"
+              className="hover:bg-muted/50 flex cursor-pointer items-center space-x-4 rounded-lg border p-4 transition-colors"
             >
-              <div className="ml-4 flex items-center space-x-2">
-                <RadioGroupItem value="light" id="light" />
-                <Label htmlFor="light">🌞 Light Mode</Label>
+              <RadioGroupItem value="light" id="light" />
+              <div className="flex items-center space-x-3">
+                <Sun className="text-primary h-5 w-5" />
+                <span className="text-base font-medium">Light Mode</span>
               </div>
-              <div className="ml-4 flex items-center space-x-2">
-                <RadioGroupItem value="dark" id="dark" />
-                <Label htmlFor="dark">🌙 Dark Mode</Label>
-              </div>
-              <div className="ml-4 flex items-center space-x-2">
-                <RadioGroupItem value="system" id="system" />
-                <Label htmlFor="system">🖥️ System Default</Label>
-              </div>
-            </RadioGroup>
-          </CardContent>
+            </Label>
 
-          <CardFooter className="mt-auto mb-4 flex justify-between px-4">
-            <Button
-              variant="outline"
-              onClick={handleBack}
-              className="px-5 py-2 text-sm"
+            <Label
+              htmlFor="dark"
+              className="hover:bg-muted/50 flex cursor-pointer items-center space-x-4 rounded-lg border p-4 transition-colors"
             >
-              Back
-            </Button>
-            <Button onClick={handleNext} className="px-5 py-2 text-sm">
-              Next
-            </Button>
-          </CardFooter>
-        </Card>
+              <RadioGroupItem value="dark" id="dark" />
+              <div className="flex items-center space-x-3">
+                <Moon className="text-primary h-5 w-5" />
+                <span className="text-base font-medium">Dark Mode</span>
+              </div>
+            </Label>
 
-        {}
+            <Label
+              htmlFor="system"
+              className="hover:bg-muted/50 flex cursor-pointer items-center space-x-4 rounded-lg border p-4 transition-colors"
+            >
+              <RadioGroupItem value="system" id="system" />
+              <div className="flex items-center space-x-3">
+                <Monitor className="text-primary h-5 w-5" />
+                <span className="text-base font-medium">System Default</span>
+              </div>
+            </Label>
+          </RadioGroup>
+        </CardContent>
 
-        <AppFeatures />
-      </div>
-    </div>
+        <CardFooter className="flex justify-between p-3">
+          <Button
+            variant="outline"
+            onClick={handleBack}
+            className="px-4 py-1 text-sm"
+          >
+            Back
+          </Button>
+          <Button onClick={handleNext} className="px-4 py-1 text-sm">
+            Next
+          </Button>
+        </CardFooter>
+      </Card>
+      <AppFeatures />
+    </>
   );
 };
