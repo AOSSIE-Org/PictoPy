@@ -131,7 +131,9 @@ def cluster_util_face_clusters_sync():
         db_update_face_cluster_ids_batch(face_cluster_mappings)
 
 
-def cluster_util_cluster_all_face_embeddings(eps: float = 0.3, min_samples: int = 2) -> List[ClusterResult]:
+def cluster_util_cluster_all_face_embeddings(
+    eps: float = 0.3, min_samples: int = 2
+) -> List[ClusterResult]:
     """
     Cluster face embeddings using DBSCAN and assign cluster names based on majority voting.
 
@@ -271,12 +273,16 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
             nearest_cluster_idx = np.argmin(distances)
             nearest_cluster_id = cluster_ids[nearest_cluster_idx]
 
-            face_cluster_mappings.append({"face_id": face_id, "cluster_id": nearest_cluster_id})
+            face_cluster_mappings.append(
+                {"face_id": face_id, "cluster_id": nearest_cluster_id}
+            )
 
     return face_cluster_mappings
 
 
-def _calculate_cosine_distances(face_embedding: NDArray, cluster_means: NDArray) -> NDArray:
+def _calculate_cosine_distances(
+    face_embedding: NDArray, cluster_means: NDArray
+) -> NDArray:
     """
     Calculate cosine distances between a face embedding and cluster means.
 
@@ -320,7 +326,10 @@ def _update_cluster_face_image(cluster_id: str, face_image_base64: str) -> bool:
     cursor = conn.cursor()
 
     try:
-        cursor.execute("UPDATE face_clusters SET face_image_base64 = ? WHERE cluster_id = ?", (face_image_base64, cluster_id))
+        cursor.execute(
+            "UPDATE face_clusters SET face_image_base64 = ? WHERE cluster_id = ?",
+            (face_image_base64, cluster_id),
+        )
 
         updated = cursor.rowcount > 0
         conn.commit()
@@ -384,7 +393,9 @@ def _get_cluster_face_data(cluster_uuid: str) -> Optional[tuple]:
         conn.close()
 
 
-def _calculate_square_crop_bounds(bbox: Dict, img_shape: tuple, padding: int = 50) -> tuple:
+def _calculate_square_crop_bounds(
+    bbox: Dict, img_shape: tuple, padding: int = 50
+) -> tuple:
     """
     Calculate square crop bounds centered on a face bounding box.
 
@@ -447,7 +458,9 @@ def _calculate_square_crop_bounds(bbox: Dict, img_shape: tuple, padding: int = 5
     return (square_x_start, square_y_start, square_x_end, square_y_end)
 
 
-def _crop_and_resize_face(img: np.ndarray, crop_bounds: tuple, target_size: int = 300) -> Optional[np.ndarray]:
+def _crop_and_resize_face(
+    img: np.ndarray, crop_bounds: tuple, target_size: int = 300
+) -> Optional[np.ndarray]:
     """
     Crop and resize a face region from an image.
 
@@ -547,7 +560,11 @@ def _determine_cluster_name(faces_in_cluster: List[Dict]) -> Optional[str]:
         Most common non-null cluster name, or None if no named clusters exist
     """
     # Extract non-null cluster names
-    existing_names = [face["existing_cluster_name"] for face in faces_in_cluster if face["existing_cluster_name"] is not None]
+    existing_names = [
+        face["existing_cluster_name"]
+        for face in faces_in_cluster
+        if face["existing_cluster_name"] is not None
+    ]
 
     if not existing_names:
         return None

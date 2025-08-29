@@ -10,7 +10,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def microservice_util_start_sync_service(sync_service_path: Optional[str] = None) -> bool:
+def microservice_util_start_sync_service(
+    sync_service_path: Optional[str] = None,
+) -> bool:
     """
     Start the sync microservice with automatic virtual environment management.
 
@@ -116,7 +118,14 @@ def _get_venv_python_executable(venv_path: Path) -> Optional[Path]:
 def _install_requirements(python_executable: Path, requirements_file: Path) -> bool:
     """Install requirements using pip in the virtual environment."""
     try:
-        cmd = [str(python_executable), "-m", "pip", "install", "-r", str(requirements_file)]
+        cmd = [
+            str(python_executable),
+            "-m",
+            "pip",
+            "install",
+            "-r",
+            str(requirements_file),
+        ]
 
         result = subprocess.run(
             cmd,
@@ -152,7 +161,9 @@ def _start_fastapi_service(python_executable: Path, service_path: Path) -> bool:
         cmd = [str(python_executable), "-m", "fastapi", "dev", "--port", "8001"]
 
         # Start the process (non-blocking)
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        process = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        )
 
         # Restore original working directory
         os.chdir(original_cwd)

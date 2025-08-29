@@ -1,9 +1,8 @@
 import { render } from '@testing-library/react';
-import AITagging from '../AITagging/AITagging';
+import { AITagging } from '@/pages/AITagging/AITagging';
 import Album from '../Album/Album';
-import Dashboard from '../Home/Home';
+import { Home } from '@/pages/Home/Home';
 import Memories from '../Memories/Memories';
-import SecureFolder from '../SecureFolderPage/SecureFolder';
 import Settings from '../SettingsPage/Settings';
 import Videos from '../VideosPage/Videos';
 import { ROUTES } from '@/constants/routes';
@@ -25,12 +24,11 @@ beforeAll(() => {
 });
 
 const pages = [
-  { path: ROUTES.HOME, Component: Dashboard },
+  { path: ROUTES.HOME, Component: Home },
   { path: ROUTES.VIDEOS, Component: Videos },
   { path: ROUTES.SETTINGS, Component: Settings },
   { path: ROUTES.AI, Component: AITagging },
   { path: ROUTES.ALBUMS, Component: Album },
-  { path: ROUTES.SECURE_FOLDER, Component: SecureFolder },
   { path: ROUTES.MEMORIES, Component: Memories },
 ];
 

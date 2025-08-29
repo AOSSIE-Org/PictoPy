@@ -15,7 +15,6 @@ import {
   Video,
   BookImage,
   ClockFading,
-  Shield,
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router';
 import { ROUTES } from '@/constants/routes';

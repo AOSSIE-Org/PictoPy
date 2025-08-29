@@ -10,8 +10,6 @@ import { UpdateStep } from '@/components/OnboardingSteps/UpdateStep';
 interface OnboardingStepProps {
   stepIndex: number;
   stepName: string;
-  onNext: () => void;
-  onBack: () => void;
 }
 
 const VISIBLE_STEPS = [
@@ -23,14 +21,10 @@ const VISIBLE_STEPS = [
 export const OnboardingStep: React.FC<OnboardingStepProps> = ({
   stepIndex,
   stepName,
-  onNext,
-  onBack,
 }) => {
   const sharedProps = {
     stepIndex,
     totalSteps: VISIBLE_STEPS.length,
-    onNext,
-    onBack,
   };
 
   const renderStepComponent = () => {

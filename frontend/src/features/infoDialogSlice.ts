@@ -14,8 +14,8 @@ const infoDialogSlice = createSlice({
   reducers: {
     showInfoDialog(
       state,
-      action: PayloadAction<{ 
-        title: string; 
+      action: PayloadAction<{
+        title: string;
         message: string;
         variant?: InfoDialogVariant;
       }>,

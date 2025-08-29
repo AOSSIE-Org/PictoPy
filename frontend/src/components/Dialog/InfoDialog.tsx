@@ -41,7 +41,8 @@ export const InfoDialog: React.FC<InfoDialogProps> = ({
     },
   };
 
-  const { icon, iconColor, messageColor, buttonVariant } = variantStyles[variant];
+  const { icon, iconColor, messageColor, buttonVariant } =
+    variantStyles[variant];
 
   return (
     <Dialog
@@ -56,7 +57,9 @@ export const InfoDialog: React.FC<InfoDialogProps> = ({
             <span className={iconColor}>{icon}</span>
             {title}
           </DialogTitle>
-          <DialogDescription className={messageColor}>{message}</DialogDescription>
+          <DialogDescription className={messageColor}>
+            {message}
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant={buttonVariant} onClick={handleClose}>

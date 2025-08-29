@@ -99,7 +99,9 @@ def db_get_cluster_by_id(cluster_id: ClusterId) -> Optional[ClusterData]:
     conn.close()
 
     if row:
-        return ClusterData(cluster_id=row[0], cluster_name=row[1], face_image_base64=row[2])
+        return ClusterData(
+            cluster_id=row[0], cluster_name=row[1], face_image_base64=row[2]
+        )
     return None
 
 
@@ -113,14 +115,20 @@ def db_get_all_clusters() -> List[ClusterData]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
-    cursor.execute("SELECT cluster_id, cluster_name, face_image_base64 FROM face_clusters ORDER BY cluster_id")
+    cursor.execute(
+        "SELECT cluster_id, cluster_name, face_image_base64 FROM face_clusters ORDER BY cluster_id"
+    )
 
     rows = cursor.fetchall()
     conn.close()
 
     clusters = []
     for row in rows:
-        clusters.append(ClusterData(cluster_id=row[0], cluster_name=row[1], face_image_base64=row[2]))
+        clusters.append(
+            ClusterData(
+                cluster_id=row[0], cluster_name=row[1], face_image_base64=row[2]
+            )
+        )
 
     return clusters
 
@@ -187,7 +195,9 @@ def db_delete_all_clusters() -> int:
     return deleted_count
 
 
-def db_get_all_clusters_with_face_counts() -> List[Dict[str, Union[str, Optional[str], int]]]:
+def db_get_all_clusters_with_face_counts() -> List[
+    Dict[str, Union[str, Optional[str], int]]
+]:
     """
     Retrieve all clusters with their face counts and stored face images.
 
@@ -217,12 +227,21 @@ def db_get_all_clusters_with_face_counts() -> List[Dict[str, Union[str, Optional
     clusters = []
     for row in rows:
         cluster_id, cluster_name, face_count, face_image_base64 = row
-        clusters.append({"cluster_id": cluster_id, "cluster_name": cluster_name, "face_count": face_count, "face_image_base64": face_image_base64})
+        clusters.append(
+            {
+                "cluster_id": cluster_id,
+                "cluster_name": cluster_name,
+                "face_count": face_count,
+                "face_image_base64": face_image_base64,
+            }
+        )
 
     return clusters
 
 
-def db_get_images_by_cluster_id(cluster_id: ClusterId) -> List[Dict[str, Union[str, int]]]:
+def db_get_images_by_cluster_id(
+    cluster_id: ClusterId,
+) -> List[Dict[str, Union[str, int]]]:
     """
     Get all images that contain faces belonging to a specific cluster.
 
@@ -258,7 +277,15 @@ def db_get_images_by_cluster_id(cluster_id: ClusterId) -> List[Dict[str, Union[s
 
     images = []
     for row in rows:
-        image_id, image_path, thumbnail_path, metadata, face_id, confidence, bbox_json = row
+        (
+            image_id,
+            image_path,
+            thumbnail_path,
+            metadata,
+            face_id,
+            confidence,
+            bbox_json,
+        ) = row
 
         # Parse bbox JSON if it exists
         bbox = None
@@ -267,6 +294,16 @@ def db_get_images_by_cluster_id(cluster_id: ClusterId) -> List[Dict[str, Union[s
 
             bbox = json.loads(bbox_json)
 
-        images.append({"image_id": image_id, "image_path": image_path, "thumbnail_path": thumbnail_path, "metadata": metadata, "face_id": face_id, "confidence": confidence, "bbox": bbox})
+        images.append(
+            {
+                "image_id": image_id,
+                "image_path": image_path,
+                "thumbnail_path": thumbnail_path,
+                "metadata": metadata,
+                "face_id": face_id,
+                "confidence": confidence,
+                "bbox": bbox,
+            }
+        )
 
     return images

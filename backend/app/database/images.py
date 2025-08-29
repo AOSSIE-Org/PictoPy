@@ -122,9 +122,25 @@ def db_get_all_images() -> List[dict]:
 
         # Group results by image ID
         images_dict = {}
-        for image_id, path, folder_id, thumbnail_path, metadata, is_tagged, tag_name in results:
+        for (
+            image_id,
+            path,
+            folder_id,
+            thumbnail_path,
+            metadata,
+            is_tagged,
+            tag_name,
+        ) in results:
             if image_id not in images_dict:
-                images_dict[image_id] = {"id": image_id, "path": path, "folder_id": folder_id, "thumbnailPath": thumbnail_path, "metadata": metadata, "isTagged": bool(is_tagged), "tags": []}
+                images_dict[image_id] = {
+                    "id": image_id,
+                    "path": path,
+                    "folder_id": folder_id,
+                    "thumbnailPath": thumbnail_path,
+                    "metadata": metadata,
+                    "isTagged": bool(is_tagged),
+                    "tags": [],
+                }
 
             # Add tag if it exists
             if tag_name:

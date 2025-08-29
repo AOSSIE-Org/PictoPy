@@ -8,7 +8,7 @@ import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
 import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtension';
 import { fetchClusterImages, renameCluster } from '@/api/api-functions';
-import { data, useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ROUTES } from '@/constants/routes';
@@ -22,11 +22,10 @@ export const PersonImages = () => {
   const images = useSelector(selectImages);
   const [clusterName, setClusterName] = useState<string>('random_name');
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  const { data, error, isLoading, isSuccess, isError, errorMessage } =
-    usePictoQuery({
-      queryKey: ['person-images', clusterId],
-      queryFn: async () => fetchClusterImages({ clusterId: clusterId || '' }),
-    });
+  const { data, isLoading, isSuccess, isError } = usePictoQuery({
+    queryKey: ['person-images', clusterId],
+    queryFn: async () => fetchClusterImages({ clusterId: clusterId || '' }),
+  });
 
   const { mutate: renameClusterMutate } = usePictoMutation({
     mutationFn: async (newName: string) =>

@@ -158,9 +158,29 @@ def get_cluster_images(cluster_id: str):
         images_data = db_get_images_by_cluster_id(cluster_id)
 
         # Step 3: Convert to response models
-        images = [ImageInCluster(id=img["image_id"], path=img["image_path"], thumbnailPath=img["thumbnail_path"], metadata=img["metadata"], face_id=img["face_id"], confidence=img["confidence"], bbox=img["bbox"]) for img in images_data]
+        images = [
+            ImageInCluster(
+                id=img["image_id"],
+                path=img["image_path"],
+                thumbnailPath=img["thumbnail_path"],
+                metadata=img["metadata"],
+                face_id=img["face_id"],
+                confidence=img["confidence"],
+                bbox=img["bbox"],
+            )
+            for img in images_data
+        ]
 
-        return GetClusterImagesResponse(success=True, message=f"Successfully retrieved {len(images)} image(s) for cluster '{cluster_id}'", data=GetClusterImagesData(cluster_id=cluster_id, cluster_name=cluster["cluster_name"], images=images, total_images=len(images)))
+        return GetClusterImagesResponse(
+            success=True,
+            message=f"Successfully retrieved {len(images)} image(s) for cluster '{cluster_id}'",
+            data=GetClusterImagesData(
+                cluster_id=cluster_id,
+                cluster_name=cluster["cluster_name"],
+                images=images,
+                total_images=len(images),
+            ),
+        )
 
     except HTTPException as e:
         # Re-raise HTTPExceptions to preserve the status code and detail

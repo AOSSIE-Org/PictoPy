@@ -15,12 +15,7 @@ export function FaceCollections() {
 
   const { clusters } = useSelector((state: RootState) => state.faceClusters);
 
-  const {
-    data: clustersData,
-    isLoading: clustersLoading,
-    isSuccess: clustersSuccess,
-    isError: clustersError,
-  } = usePictoQuery({
+  const { data: clustersData, isSuccess: clustersSuccess } = usePictoQuery({
     queryKey: ['clusters'],
     queryFn: fetchAllClusters,
   });

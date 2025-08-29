@@ -13,11 +13,10 @@ export const Home = () => {
   const dispatch = useDispatch();
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const images = useSelector(selectImages);
-  const { data, error, isLoading, isSuccess, isError, errorMessage } =
-    usePictoQuery({
-      queryKey: ['images'],
-      queryFn: fetchAllImages,
-    });
+  const { data, isLoading, isSuccess, isError } = usePictoQuery({
+    queryKey: ['images'],
+    queryFn: fetchAllImages,
+  });
 
   useEffect(() => {
     if (isLoading) {
