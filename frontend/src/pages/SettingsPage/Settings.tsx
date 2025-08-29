@@ -13,6 +13,7 @@ import { useUpdater } from '@/hooks/useUpdater';
 
 import { useDispatch } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
+import { showInfoDialog } from '@/features/infoDialogSlice';
 
 const Settings: React.FC = () => {
   const dispatch = useDispatch();
@@ -74,6 +75,16 @@ const Settings: React.FC = () => {
       const hasUpdate = await checkForUpdates();
       if (hasUpdate) {
         setUpdateDialogOpen(true);
+      } else {
+        // Show info dialog when no updates are available
+        dispatch(
+          showInfoDialog({
+            title: 'No Updates Available',
+            message:
+              'Your application is already up to date with the latest version.',
+            variant: 'info',
+          }),
+        );
       }
       dispatch(hideLoader());
     };
@@ -111,10 +122,22 @@ const Settings: React.FC = () => {
   };
 
   const showErrorDialog = (title: string, err: unknown) => {
+    const errorMessage =
+      err instanceof Error ? err.message : 'An unknown error occurred';
+
+    // Use the InfoDialog with error variant for consistent UI
+    dispatch(
+      showInfoDialog({
+        title,
+        message: errorMessage,
+        variant: 'error',
+      }),
+    );
+
+    // Also set the legacy error dialog content for backward compatibility
     setErrorDialogContent({
       title,
-      description:
-        err instanceof Error ? err.message : 'An unknown error occurred',
+      description: errorMessage,
     });
   };
 
@@ -204,7 +227,10 @@ const Settings: React.FC = () => {
           </p>
         </div>
       </div>
-
+      <ErrorDialog
+        content={errorDialogContent}
+        onClose={() => setErrorDialogContent(null)}
+      />
       <UpdateDialog
         update={updateAvailable}
         open={updateDialogOpen}
