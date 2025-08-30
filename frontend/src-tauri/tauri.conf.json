@@ -22,7 +22,8 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../../backend/dist/": "resources/server"
+      "../../backend/dist/": "resources/server",
+      "../../sync-microservice/dist/": "resources/sync-microservice"
     },
     "macOS": {
       "signingIdentity": "-"
