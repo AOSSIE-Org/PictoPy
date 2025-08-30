@@ -16,12 +16,87 @@ def microservice_util_start_sync_service(
     """
     Start the sync microservice with automatic virtual environment management.
 
+    When running as a frozen executable (PyInstaller), it will use the bundled
+    PictoPy_Sync executable. Otherwise, it uses the development setup with venv.
+
     Args:
         sync_service_path: Path to the sync microservice directory.
                           If None, defaults to 'sync-microservice' relative to project root.
 
     Returns:
         bool: True if service started successfully, False otherwise.
+    """
+    try:
+        # Check if running as a frozen executable (PyInstaller)
+        if getattr(sys, "frozen", False):
+            logger.info(
+                "Running as frozen executable, using bundled sync microservice..."
+            )
+            return _start_frozen_sync_service()
+
+        # Development mode - use virtual environment setup
+        logger.info("Running in development mode, using virtual environment...")
+        return _start_dev_sync_service(sync_service_path)
+
+    except Exception as e:
+        logger.error(f"Error starting sync microservice: {e}")
+        return False
+
+
+def _start_frozen_sync_service() -> bool:
+    """
+    Start the sync microservice when running as a frozen executable.
+    The sync microservice executable should be in the PictoPy_Sync folder.
+    """
+    try:
+        # Get the directory where the current executable is located
+        if getattr(sys, "frozen", False):
+            # When frozen, sys.executable points to the main executable
+            app_dir = Path(sys.executable).parent
+        else:
+            # Fallback (shouldn't happen in this function)
+            app_dir = Path(__file__).parent.parent.parent.parent
+
+        # Look for the PictoPy_Sync directory and executable
+        sync_dir = app_dir / "PictoPy_Sync"
+
+        # Determine executable name based on platform
+        system = platform.system().lower()
+        if system == "windows":
+            sync_executable = sync_dir / "PictoPy_Sync.exe"
+        else:
+            sync_executable = sync_dir / "PictoPy_Sync"
+
+        if not sync_executable.exists():
+            logger.error(
+                f"Sync microservice executable not found at: {sync_executable}"
+            )
+            return False
+
+        logger.info(f"Starting sync microservice from: {sync_executable}")
+
+        # Start the sync microservice executable
+        process = subprocess.Popen(
+            [str(sync_executable)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            cwd=str(sync_dir),  # Set working directory to sync service directory
+        )
+
+        logger.info(f"Sync microservice started with PID: {process.pid}")
+        logger.info("Service should be available at http://localhost:8001")
+
+        return True
+
+    except Exception as e:
+        logger.error(f"Error starting frozen sync microservice: {e}")
+        return False
+
+
+def _start_dev_sync_service(sync_service_path: Optional[str] = None) -> bool:
+    """
+    Start the sync microservice in development mode using virtual environment.
     """
     try:
         # Determine the sync service path
@@ -65,7 +140,7 @@ def microservice_util_start_sync_service(
         return _start_fastapi_service(python_executable, sync_service_path)
 
     except Exception as e:
-        logger.error(f"Error starting sync microservice: {e}")
+        logger.error(f"Error starting dev sync microservice: {e}")
         return False
 
 

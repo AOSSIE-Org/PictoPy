@@ -70,12 +70,22 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Python Dependencies & Run Tests
+      - name: Build check(Main backend)
         run: |
           cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
+
+      - name: Build check(Sync Microservice)
+        run: |
+          cd sync-microservice
+          pip install -r requirements.txt
+          pyinstaller main.py --name PictoPy_Sync_Microservice --onedir --distpath dist
+
+      - name: Run Tests
+        run: |
+          cd backend
           pytest
 
   # Tauri Test Job
