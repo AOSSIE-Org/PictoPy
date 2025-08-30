@@ -146,7 +146,9 @@ def image_util_prepare_image_records(
 
         image_id = str(uuid.uuid4())
         thumbnail_name = f"thumbnail_{image_id}.jpg"
-        thumbnail_path = os.path.join(THUMBNAIL_IMAGES_PATH, thumbnail_name)
+        thumbnail_path = os.path.abspath(
+            os.path.join(THUMBNAIL_IMAGES_PATH, thumbnail_name)
+        )
 
         # Generate thumbnail
         if image_util_generate_thumbnail(image_path, thumbnail_path):
@@ -199,7 +201,7 @@ def image_util_get_images_from_folder(
 
 
 def image_util_generate_thumbnail(
-    image_path: str, thumbnail_path: str, size: Tuple[int, int] = (200, 200)
+    image_path: str, thumbnail_path: str, size: Tuple[int, int] = (600, 600)
 ) -> bool:
     """Generate thumbnail for a single image."""
     try:

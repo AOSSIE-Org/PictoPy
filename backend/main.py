@@ -19,9 +19,11 @@ from app.database.albums import db_create_albums_table
 from app.database.albums import db_create_album_images_table
 from app.database.folders import db_create_folders_table
 from app.database.metadata import db_create_metadata_table
+from app.utils.microservice import microservice_util_start_sync_service
 
 from app.routes.folders import router as folders_router
 from app.routes.albums import router as albums_router
+from app.routes.images import router as images_router
 from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
 from fastapi.openapi.utils import get_openapi
@@ -40,6 +42,7 @@ async def lifespan(app: FastAPI):
     db_create_albums_table()
     db_create_album_images_table()
     db_create_metadata_table()
+    microservice_util_start_sync_service()
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor(max_workers=1)
 
@@ -56,25 +59,10 @@ app = FastAPI(
     description="The API calls to PictoPy are done via HTTP requests. This backend is built using FastAPI.",
     contact={
         "name": "PictoPy Postman Collection",
-        "url": "https://www.postman.com/cryosat-explorer-62744145/workspace/pictopy/overview",
+        "url": "https://www.postman.com/aossie-pictopy/pictopy/overview",
     },
     servers=[
         {"url": "http://localhost:8000", "description": "Local Development server"}
-    ],
-    openapi_tags=[
-        {
-            "name": "Albums",
-            "description": "We briefly discuss the endpoints related to albums, all of these fall under the /albums route",
-        },
-        {
-            "name": "Images",
-            "description": "We briefly discuss the endpoints related to images, all of these fall under the /images route",
-        },
-        {
-            "name": "Tagging",
-            "x-displayName": "Face recognition and Tagging",
-            "description": "We briefly discuss the endpoints related to face tagging and recognition, all of these fall under the /tag route",
-        },
     ],
 )
 
@@ -118,13 +106,14 @@ app.add_middleware(
 
 
 # Basic health check endpoint
-@app.get("/")
+@app.get("/", tags=["Health"])
 async def root():
     return {"message": "PictoPy Server is up and running!"}
 
 
 app.include_router(folders_router, prefix="/folders", tags=["Folders"])
 app.include_router(albums_router, prefix="/albums", tags=["Albums"])
+app.include_router(images_router, prefix="/images", tags=["Images"])
 app.include_router(
     face_clusters_router, prefix="/face-clusters", tags=["Face Clusters"]
 )

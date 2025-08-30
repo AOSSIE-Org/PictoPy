@@ -1,5 +1,8 @@
 import numpy as np
 import uuid
+import json
+import base64
+import cv2
 from datetime import datetime
 from sklearn.cluster import DBSCAN
 from collections import defaultdict, Counter
@@ -88,11 +91,11 @@ def cluster_util_face_clusters_sync():
             return 0
 
         results = [result.to_dict() for result in results]
-        # Update database with new clusters
-        db_update_face_cluster_ids_batch(results)
-        # Clear old clusters
+
+        # Clear old clusters first
         db_delete_all_clusters()
-        # Extract unique clusters with their names
+
+        # Extract unique clusters with their names (without face images yet)
         unique_clusters = {}
         for result in results:
             cluster_id = result["cluster_id"]
@@ -101,12 +104,23 @@ def cluster_util_face_clusters_sync():
                 unique_clusters[cluster_id] = {
                     "cluster_id": cluster_id,
                     "cluster_name": cluster_name,
+                    "face_image_base64": None,  # Will be updated later
                 }
 
         # Convert to list for batch insert
         cluster_list = list(unique_clusters.values())
-        # Update the database with new clusters
+        # Insert the new clusters into database first
         db_insert_clusters_batch(cluster_list)
+
+        # Now update face cluster assignments (foreign keys will be valid)
+        db_update_face_cluster_ids_batch(results)
+
+        # Finally, generate and update face images for each cluster
+        for cluster_id in unique_clusters.keys():
+            face_image_base64 = _generate_cluster_face_image(cluster_id)
+            if face_image_base64:
+                # Update the cluster with the generated face image
+                _update_cluster_face_image(cluster_id, face_image_base64)
 
         # Update metadata with new reclustering time, preserving other values
         current_metadata = metadata or {}
@@ -292,6 +306,247 @@ def _calculate_cosine_distances(
     cosine_distances = 1 - cosine_similarities
 
     return cosine_distances
+
+
+def _update_cluster_face_image(cluster_id: str, face_image_base64: str) -> bool:
+    """
+    Update the face image for a specific cluster.
+
+    Args:
+        cluster_id: The UUID of the cluster
+        face_image_base64: Base64 encoded face image string
+
+    Returns:
+        True if update was successful, False otherwise
+    """
+    import sqlite3
+    from app.config.settings import DATABASE_PATH
+
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            "UPDATE face_clusters SET face_image_base64 = ? WHERE cluster_id = ?",
+            (face_image_base64, cluster_id),
+        )
+
+        updated = cursor.rowcount > 0
+        conn.commit()
+        return updated
+
+    except Exception as e:
+        print(f"Error updating face image for cluster {cluster_id}: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def _get_cluster_face_data(cluster_uuid: str) -> Optional[tuple]:
+    """
+    Get the image path and bounding box for the first face in a cluster.
+
+    Args:
+        cluster_uuid: The UUID of the cluster
+
+    Returns:
+        Tuple of (image_path, bbox_dict) or None if not found
+    """
+    import sqlite3
+    from app.config.settings import DATABASE_PATH
+
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT i.path, f.bbox
+            FROM faces f
+            JOIN images i ON f.image_id = i.id
+            WHERE f.cluster_id = ?
+            LIMIT 1
+            """,
+            (cluster_uuid,),
+        )
+
+        face_data = cursor.fetchone()
+        if not face_data:
+            return None
+
+        image_path, bbox_json = face_data
+
+        if not bbox_json or not image_path:
+            return None
+
+        try:
+            bbox = json.loads(bbox_json)
+            return (image_path, bbox)
+        except json.JSONDecodeError:
+            return None
+
+    except Exception as e:
+        print(f"Error getting face data for cluster {cluster_uuid}: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def _calculate_square_crop_bounds(
+    bbox: Dict, img_shape: tuple, padding: int = 50
+) -> tuple:
+    """
+    Calculate square crop bounds centered on a face bounding box.
+
+    Args:
+        bbox: Dictionary with x, y, width, height keys
+        img_shape: Tuple of (height, width, channels) from image
+        padding: Padding around the face in pixels
+
+    Returns:
+        Tuple of (x_start, y_start, x_end, y_end) for square crop
+    """
+    img_height, img_width = img_shape[:2]
+
+    x = int(bbox.get("x", 0))
+    y = int(bbox.get("y", 0))
+    width = int(bbox.get("width", 100))
+    height = int(bbox.get("height", 100))
+
+    # Add padding around the face
+    x_start = max(0, x - padding)
+    y_start = max(0, y - padding)
+    x_end = min(img_width, x + width + padding)
+    y_end = min(img_height, y + height + padding)
+
+    # Calculate square crop dimensions centered on the face
+    crop_width = x_end - x_start
+    crop_height = y_end - y_start
+
+    # Use the larger dimension to create a square crop
+    square_size = max(crop_width, crop_height)
+
+    # Calculate center of the current crop
+    center_x = x_start + crop_width // 2
+    center_y = y_start + crop_height // 2
+
+    # Calculate square crop bounds centered on the face
+    half_square = square_size // 2
+    square_x_start = max(0, center_x - half_square)
+    square_y_start = max(0, center_y - half_square)
+    square_x_end = min(img_width, center_x + half_square)
+    square_y_end = min(img_height, center_y + half_square)
+
+    # Adjust if we hit image boundaries to maintain square shape
+    actual_width = square_x_end - square_x_start
+    actual_height = square_y_end - square_y_start
+    actual_square_size = min(actual_width, actual_height)
+
+    # Recalculate final square crop
+    square_x_start = center_x - actual_square_size // 2
+    square_y_start = center_y - actual_square_size // 2
+    square_x_end = square_x_start + actual_square_size
+    square_y_end = square_y_start + actual_square_size
+
+    # Ensure bounds are within image
+    square_x_start = max(0, square_x_start)
+    square_y_start = max(0, square_y_start)
+    square_x_end = min(img_width, square_x_end)
+    square_y_end = min(img_height, square_y_end)
+
+    return (square_x_start, square_y_start, square_x_end, square_y_end)
+
+
+def _crop_and_resize_face(
+    img: np.ndarray, crop_bounds: tuple, target_size: int = 300
+) -> Optional[np.ndarray]:
+    """
+    Crop and resize a face region from an image.
+
+    Args:
+        img: Input image as numpy array
+        crop_bounds: Tuple of (x_start, y_start, x_end, y_end)
+        target_size: Target size for the output square image
+
+    Returns:
+        Cropped and resized face image or None if cropping fails
+    """
+    try:
+        x_start, y_start, x_end, y_end = crop_bounds
+
+        # Crop the square region
+        face_crop = img[y_start:y_end, x_start:x_end]
+
+        # Check if crop is valid
+        if face_crop.size == 0:
+            return None
+
+        # Resize to target size (maintaining square aspect ratio)
+        face_crop = cv2.resize(face_crop, (target_size, target_size))
+
+        return face_crop
+    except Exception as e:
+        print(f"Error cropping and resizing face: {e}")
+        return None
+
+
+def _encode_image_to_base64(img: np.ndarray, format: str = ".jpg") -> Optional[str]:
+    """
+    Encode an image to base64 string.
+
+    Args:
+        img: Image as numpy array
+        format: Image format for encoding (e.g., ".jpg", ".png")
+
+    Returns:
+        Base64 encoded string or None if encoding fails
+    """
+    try:
+        _, buffer = cv2.imencode(format, img)
+        return base64.b64encode(buffer).decode("utf-8")
+    except Exception as e:
+        print(f"Error encoding image to base64: {e}")
+        return None
+
+
+def _generate_cluster_face_image(cluster_uuid: str) -> Optional[str]:
+    """
+    Generate a base64 encoded face image for a cluster.
+
+    Args:
+        cluster_uuid: The UUID of the cluster
+
+    Returns:
+        Base64 encoded face image string, or None if generation fails
+    """
+    try:
+        # Get face data from database
+        face_data = _get_cluster_face_data(cluster_uuid)
+        if not face_data:
+            return None
+
+        image_path, bbox = face_data
+
+        # Load the image
+        img = cv2.imread(image_path)
+        if img is None:
+            return None
+
+        # Calculate square crop bounds
+        crop_bounds = _calculate_square_crop_bounds(bbox, img.shape)
+
+        # Crop and resize the face
+        face_crop = _crop_and_resize_face(img, crop_bounds)
+        if face_crop is None:
+            return None
+
+        # Encode to base64
+        return _encode_image_to_base64(face_crop)
+
+    except Exception as e:
+        print(f"Error generating face image for cluster {cluster_uuid}: {e}")
+        return None
 
 
 def _determine_cluster_name(faces_in_cluster: List[Dict]) -> Optional[str]:

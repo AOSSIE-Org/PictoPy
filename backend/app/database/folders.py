@@ -382,6 +382,30 @@ def db_get_folder_ids_by_paths(
         conn.close()
 
 
+def db_get_all_folder_details() -> List[
+    Tuple[str, str, Optional[str], int, bool, Optional[bool]]
+]:
+    """
+    Get all folder details including folder_id, folder_path, parent_folder_id,
+    last_modified_time, AI_Tagging, and taggingCompleted.
+    Returns list of tuples with all folder information.
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT folder_id, folder_path, parent_folder_id, last_modified_time, AI_Tagging, taggingCompleted 
+            FROM folders 
+            ORDER BY folder_path
+            """
+        )
+        return cursor.fetchall()
+    finally:
+        conn.close()
+
+
 def db_get_direct_child_folders(parent_folder_id: str) -> List[Tuple[str, str]]:
     """
     Get all direct child folders (not subfolders) for a given parent folder.

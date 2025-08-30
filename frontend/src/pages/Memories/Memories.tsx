@@ -1,11 +1,5 @@
-import MemoriesComponent from '@/components/Memories/Memories';
-
 const Memories = () => {
-  return (
-    <>
-      <MemoriesComponent />
-    </>
-  );
+  return <></>;
 };
 
 export default Memories;

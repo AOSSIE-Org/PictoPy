@@ -23,7 +23,12 @@ const App: React.FC = () => {
           <AppRoutes />
         </BrowserRouter>
         <GlobalLoader loading={loading} message={message} />
-        <InfoDialog isOpen={isOpen} title={title} message={infoMessage} variant={variant} />
+        <InfoDialog
+          isOpen={isOpen}
+          title={title}
+          message={infoMessage}
+          variant={variant}
+        />
       </QueryClientProviders>
     </ThemeProvider>
   );

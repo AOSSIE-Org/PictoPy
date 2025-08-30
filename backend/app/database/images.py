@@ -90,6 +90,81 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
         conn.close()
 
 
+def db_get_all_images() -> List[dict]:
+    """
+    Get all images from the database with their tags.
+
+    Returns:
+        List of dictionaries containing all image data including tags
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT 
+                i.id, 
+                i.path, 
+                i.folder_id, 
+                i.thumbnailPath, 
+                i.metadata, 
+                i.isTagged,
+                m.name as tag_name
+            FROM images i
+            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN mappings m ON ic.class_id = m.class_id
+            ORDER BY i.path, m.name
+            """
+        )
+
+        results = cursor.fetchall()
+
+        # Group results by image ID
+        images_dict = {}
+        for (
+            image_id,
+            path,
+            folder_id,
+            thumbnail_path,
+            metadata,
+            is_tagged,
+            tag_name,
+        ) in results:
+            if image_id not in images_dict:
+                images_dict[image_id] = {
+                    "id": image_id,
+                    "path": path,
+                    "folder_id": folder_id,
+                    "thumbnailPath": thumbnail_path,
+                    "metadata": metadata,
+                    "isTagged": bool(is_tagged),
+                    "tags": [],
+                }
+
+            # Add tag if it exists
+            if tag_name:
+                images_dict[image_id]["tags"].append(tag_name)
+
+        # Convert to list and set tags to None if empty
+        images = []
+        for image_data in images_dict.values():
+            if not image_data["tags"]:
+                image_data["tags"] = None
+            images.append(image_data)
+
+        # Sort by path
+        images.sort(key=lambda x: x["path"])
+
+        return images
+
+    except Exception as e:
+        print(f"Error getting all images: {e}")
+        return []
+    finally:
+        conn.close()
+
+
 def db_get_untagged_images() -> List[ImageRecord]:
     """
     Find all images that need AI tagging.

@@ -1,32 +1,134 @@
 import React, { useEffect, useState } from 'react';
-import { FolderSync, Trash2, Server, RefreshCw } from 'lucide-react';
+import {
+  Trash2,
+  Server,
+  RefreshCw,
+  Folder,
+  Settings as SettingsIcon,
+} from 'lucide-react';
 
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
 import { Button } from '@/components/ui/button';
-import LoadingScreen from '@/components/ui/LoadingScreen/LoadingScreen';
-import ErrorDialog from '@/components/Album/Error';
+import { Switch } from '@/components/ui/switch';
 import UpdateDialog from '@/components/Updater/UpdateDialog';
 
-import { deleteCache } from '@/services/cacheService';
 import { restartServer } from '@/utils/serverUtils';
-import { isProd } from '../../utils/isProd';
 
-import { useLocalStorage } from '@/hooks/LocalStorage';
 import { useUpdater } from '@/hooks/useUpdater';
-import { usePictoMutation } from '@/hooks/useQueryExtensio';
 
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
-import { showInfoDialog } from '@/features/infoDialogSlice';
-
+import { selectAllFolders } from '@/features/folderSelectors';
+import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtension';
 import {
-  deleteFolder,
-  deleteThumbnails,
-  generateThumbnails,
-} from '../../../api/api-functions/images.ts';
+  enableAITagging,
+  getAllFolders,
+  disableAITagging,
+  deleteFolders,
+} from '@/api/api-functions';
+import { setFolders } from '@/features/folderSlice';
+import { showInfoDialog } from '@/features/infoDialogSlice';
+import { FolderDetails } from '@/types/Folder';
 
 const Settings: React.FC = () => {
   const dispatch = useDispatch();
+
+  const folders = useSelector(selectAllFolders);
+
+  const {
+    data: foldersData,
+    isLoading: foldersLoading,
+    isSuccess: foldersSuccess,
+    isError: foldersError,
+  } = usePictoQuery({
+    queryKey: ['folders'],
+    queryFn: getAllFolders,
+  });
+
+  const {
+    mutate: enableAITaggingMutate,
+    isSuccess: enableAITaggingSuccess,
+    isError: enableAITaggingError,
+    isPending: enableAITaggingPending,
+  } = usePictoMutation({
+    mutationFn: async (folder_id: string) =>
+      enableAITagging({ folder_ids: [folder_id] }),
+    autoInvalidateTags: ['folders'],
+  });
+  const {
+    mutate: disableAITaggingMutate,
+    isSuccess: disableAITaggingSuccess,
+    isError: disableAITaggingError,
+    isPending: disableAITaggingPending,
+  } = usePictoMutation({
+    mutationFn: async (folder_id: string) =>
+      disableAITagging({ folder_ids: [folder_id] }),
+    autoInvalidateTags: ['folders'],
+  });
+  const {
+    mutate: deleteFolderMutate,
+    isSuccess: deleteFolderSuccess,
+    isError: deleteFolderError,
+    isPending: deleteFolderPending,
+  } = usePictoMutation({
+    mutationFn: async (folder_id: string) =>
+      deleteFolders({ folder_ids: [folder_id] }),
+    autoInvalidateTags: ['folders'],
+  });
+
+  useEffect(() => {
+    if (foldersLoading) {
+      dispatch(showLoader('Loading folders'));
+    } else if (foldersError) {
+      dispatch(hideLoader());
+    } else if (foldersSuccess) {
+      const folders = foldersData?.data?.folders as FolderDetails[];
+      dispatch(setFolders(folders));
+      dispatch(hideLoader());
+    }
+  }, [foldersData, foldersSuccess, foldersError, foldersLoading, dispatch]);
+
+  useEffect(() => {
+    if (enableAITaggingPending) {
+      console.log('Enabling AI tagging...');
+    } else if (enableAITaggingSuccess) {
+      console.log('AI tagging enabled successfully');
+    } else if (enableAITaggingError) {
+      console.error('Error enabling AI tagging');
+    }
+  }, [enableAITaggingSuccess, enableAITaggingError, enableAITaggingPending]);
+
+  useEffect(() => {
+    if (disableAITaggingPending) {
+      console.log('Disabling AI tagging...');
+    } else if (disableAITaggingSuccess) {
+      console.log('AI tagging disabled successfully');
+    } else if (disableAITaggingError) {
+      console.error('Error disabling AI tagging');
+    }
+  }, [disableAITaggingSuccess, disableAITaggingError, disableAITaggingPending]);
+
+  useEffect(() => {
+    if (deleteFolderPending) {
+      console.log('Deleting folder...');
+    } else if (deleteFolderSuccess) {
+      console.log('Folder deleted successfully');
+    } else if (deleteFolderError) {
+      console.error('Error deleting folder');
+    }
+  }, [deleteFolderSuccess, deleteFolderError, deleteFolderPending]);
+
+  const handleToggleAITagging = (folder: FolderDetails) => {
+    if (folder.AI_Tagging) {
+      disableAITaggingMutate(folder.folder_id);
+    } else {
+      enableAITaggingMutate(folder.folder_id);
+    }
+  };
+
+  const handleDeleteFolder = (folderId: string) => {
+    deleteFolderMutate(folderId);
+  };
 
   const {
     updateAvailable,
@@ -38,46 +140,7 @@ const Settings: React.FC = () => {
     dismissUpdate,
   } = useUpdater();
 
-  const [isLoading, setIsLoading] = useState(false);
   const [updateDialogOpen, setUpdateDialogOpen] = useState<boolean>(false);
-  const [errorDialogContent, setErrorDialogContent] = useState<{
-    title: string;
-    description: string;
-  } | null>(null);
-
-  const [currentPaths, setCurrentPaths] = useLocalStorage<string[]>(
-    'folderPaths',
-    [],
-  );
-  const [autoFolderSetting, setAutoFolder] = useLocalStorage(
-    'auto-add-folder',
-    'false',
-  );
-  const [check, setCheck] = useState<boolean>(autoFolderSetting === 'true');
-  const [addedFolders, setAddedFolders] = useLocalStorage<string[]>(
-    'addedFolders',
-    [],
-  );
-
-  const { mutate: generateThumbnailsAPI, isPending: isGeneratingThumbnails } =
-    usePictoMutation({
-      mutationFn: generateThumbnails,
-      autoInvalidateTags: ['ai-tagging-images', 'ai'],
-    });
-
-  const { mutate: deleteFolderAITagging } = usePictoMutation({
-    mutationFn: deleteFolder,
-    autoInvalidateTags: ['ai-tagging-images', 'ai'],
-  });
-
-  const { mutate: deleteThumbnail, isPending: isDeletingThumbnails } =
-    usePictoMutation({
-      mutationFn: deleteThumbnails,
-    });
-
-  useEffect(() => {
-    setCheck(autoFolderSetting === 'true');
-  }, [autoFolderSetting]);
 
   const onCheckUpdatesClick = () => {
     let checkUpdates = async () => {
@@ -101,180 +164,126 @@ const Settings: React.FC = () => {
     checkUpdates();
   };
 
-  const handleFolderPathChange = async (newPaths: string[]) => {
-    const duplicatePaths = newPaths.filter((path) =>
-      currentPaths.includes(path),
-    );
-    if (duplicatePaths.length > 0) {
-      showErrorDialog(
-        'Duplicate Paths',
-        new Error(
-          `The following paths are already selected: ${duplicatePaths.join(', ')}`,
-        ),
-      );
-      return;
-    }
-    generateThumbnailsAPI([...currentPaths, ...newPaths]);
-    setCurrentPaths([...currentPaths, ...newPaths]);
-    await deleteCache();
-  };
-
-  const handleDeleteCache = async () => {
-    try {
-      const result = await deleteCache();
-      if (result) {
-        console.log('Cache deleted');
-        dispatch(
-          showInfoDialog({
-            title: 'Cache Refreshed',
-            message: 'The application cache has been successfully refreshed.',
-            variant: 'info',
-          }),
-        );
-      }
-    } catch (error) {
-      console.error('Error deleting cache:', error);
-      dispatch(
-        showInfoDialog({
-          title: 'Cache Refresh Error',
-          message: 'Failed to refresh the application cache. Please try again.',
-          variant: 'error',
-        }),
-      );
-    }
-  };
-
-  const handleRemoveFolderPath = async (pathToRemove: string) => {
-    try {
-      const updatedPaths = currentPaths.filter((path) => path !== pathToRemove);
-      setCurrentPaths(updatedPaths);
-      setAddedFolders(addedFolders.filter((path) => path !== pathToRemove));
-      deleteThumbnail(pathToRemove);
-      deleteFolderAITagging(pathToRemove);
-      await deleteCache();
-      console.log(`Removed folder path: ${pathToRemove}`);
-    } catch (error) {
-      console.error('Error removing folder path:', error);
-    }
-  };
-
-  const showErrorDialog = (title: string, err: unknown) => {
-    const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
-    
-    // Use the InfoDialog with error variant for consistent UI
-    dispatch(
-      showInfoDialog({
-        title,
-        message: errorMessage,
-        variant: 'error',
-      }),
-    );
-    
-    // Also set the legacy error dialog content for backward compatibility
-    setErrorDialogContent({
-      title,
-      description: errorMessage,
-    });
-  };
-
-  if (isGeneratingThumbnails || isDeletingThumbnails || isLoading) {
-    return (
-      <div className="flex h-full w-full items-center justify-center">
-        <LoadingScreen variant="fullscreen" />
-      </div>
-    );
-  }
-
   return (
-    <div className="mx-auto flex-1 px-4 pt-1">
-      <div className="bg-theme-light space-y-6 rounded-2xl border border-white/10 p-6 shadow backdrop-blur-md backdrop-saturate-150 dark:border-white/5 dark:bg-white/5">
-        <div>
-          <h2 className="text-theme-dark dark:text-theme-light mb-2 text-lg font-medium">
-            Current Folder Paths
-          </h2>
-          {currentPaths.length > 0 ? (
-            currentPaths.map((path, index) => (
-              <div
-                key={index}
-                className="text-theme-dark dark:text-theme-light mt-2 flex items-center justify-between rounded-md border bg-gray-100 px-4 py-2 backdrop-blur-sm dark:border-white/5 dark:bg-white/5"
-              >
-                <span className="truncate">{path}</span>
-                <Button
-                  onClick={() => handleRemoveFolderPath(path)}
-                  variant="outline"
-                  className="h-10 w-10 border-gray-500 p-2 hover:bg-red-500 hover:text-white"
+    <div className="mx-auto flex-1 px-8 py-6">
+      <div className="mx-auto max-w-5xl space-y-8">
+        {/* Folder Management Card */}
+        <div className="bg-card rounded-xl border p-6 shadow-sm">
+          <div className="border-border mb-6 flex items-center gap-3 border-b pb-4">
+            <Folder className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <div>
+              <h2 className="text-card-foreground text-lg font-medium">
+                Folder Management
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                Configure your photo library folders and AI settings
+              </p>
+            </div>
+          </div>
+
+          {folders.length > 0 ? (
+            <div className="space-y-3">
+              {folders.map((folder, index) => (
+                <div
+                  key={index}
+                  className="group border-border bg-background/50 relative rounded-lg border p-4 transition-all hover:border-gray-300 hover:shadow-sm dark:hover:border-gray-600"
                 >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-3">
+                        <Folder className="h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
+                        <span className="text-foreground truncate">
+                          {folder.folder_path}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="ml-4 flex items-center gap-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-muted-foreground text-sm">
+                          AI Tagging
+                        </span>
+                        <Switch
+                          checked={folder.AI_Tagging}
+                          onCheckedChange={() => handleToggleAITagging(folder)}
+                          disabled={
+                            enableAITaggingPending || disableAITaggingPending
+                          }
+                        />
+                      </div>
+
+                      <Button
+                        onClick={() => handleDeleteFolder(folder.folder_id)}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 text-gray-500 hover:border-red-300 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                        disabled={deleteFolderPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
-            <div className="text-theme-dark dark:text-theme-light mt-4 flex items-center justify-between rounded-md border bg-gray-100 px-4 py-2 backdrop-blur-sm dark:border-white/5 dark:bg-white/5">
-              No folder paths selected
+            <div className="py-8 text-center">
+              <Folder className="mx-auto mb-3 h-12 w-12 text-gray-400" />
+              <h3 className="text-foreground mb-1 text-lg font-medium">
+                No folders configured
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Add your first photo library folder to get started
+              </p>
             </div>
           )}
+
+          <div className="border-border mt-6 border-t pt-6">
+            <FolderPicker />
+          </div>
         </div>
 
-        <div className="max-w-46 space-y-4">
-          <FolderPicker
-            setFolderPaths={handleFolderPathChange}
-            className="h-10 w-full"
-          />
-          <Button
-            onClick={handleDeleteCache}
-            variant="outline"
-            className="hover:bg-accent h-10 w-full border-gray-500 dark:hover:bg-white/10"
-          >
-            <FolderSync className="text-gray-5 mr-1 h-5 w-5 dark:text-gray-50" />
-            Refresh cache
-          </Button>
-          <Button
-            onClick={onCheckUpdatesClick}
-            variant="outline"
-            className="hover:bg-accent h-10 w-full border-gray-500 dark:hover:bg-white/10"
-          >
-            <RefreshCw className="text-gray-5 mr-1 h-5 w-5 dark:text-gray-50" />
-            Check for updates
-          </Button>
-          {isProd() && (
+        {/* Application Controls Card */}
+        <div className="bg-card rounded-xl border p-6 shadow-sm">
+          <div className="border-border mb-6 flex items-center gap-3 border-b pb-4">
+            <SettingsIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <div>
+              <h2 className="text-card-foreground text-lg font-medium">
+                Application Controls
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                Manage updates and server operations
+              </p>
+            </div>
+          </div>
+
+          <div className="flex w-50 gap-4">
             <Button
-              onClick={() => restartServer(setIsLoading)}
+              onClick={onCheckUpdatesClick}
               variant="outline"
-              className="hover:bg-accent h-10 w-full border-gray-500 dark:hover:bg-white/10"
+              className="flex h-12 w-full gap-3"
             >
-              <Server className="text-gray-5 mr-2 h-5 w-5 dark:text-gray-50" />
-              Restart server
+              <RefreshCw className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              <div className="text-left">
+                <div className="font-medium">Check for Updates</div>
+              </div>
             </Button>
-          )}
-        </div>
 
-        <div>
-          <label className="inline-flex cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
-              value=""
-              className="peer sr-only"
-              checked={check}
-              onClick={() => {
-                setCheck(!check);
-                setAutoFolder(check ? 'false' : 'true');
-              }}
-            />
-            <span className="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">
-              Auto Sync Desktop Folders
-            </span>
-            <div className="peer relative h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-600 peer-focus:ring-4 peer-focus:ring-blue-300 after:absolute after:start-[2px] after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white rtl:peer-checked:after:-translate-x-full dark:border-gray-600 dark:bg-gray-700 dark:peer-checked:bg-blue-600 dark:peer-focus:ring-blue-800"></div>
-          </label>
-          <p className="mt-1 ml-3 text-xs text-yellow-500">
-            WARNING: It may impact performance, restart for changes to take
-            effect.
-          </p>
+            {true && (
+              <Button
+                onClick={() => restartServer()}
+                variant="outline"
+                className="flex h-12 w-full gap-3"
+              >
+                <Server className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                <div className="text-left">
+                  <div className="font-medium">Restart Server</div>
+                </div>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
-      <ErrorDialog
-        content={errorDialogContent}
-        onClose={() => setErrorDialogContent(null)}
-      />
       <UpdateDialog
         update={updateAvailable}
         open={updateDialogOpen}

@@ -1,9 +1,8 @@
 import { render } from '@testing-library/react';
-import AITagging from '../AITagging/AITagging';
+import { AITagging } from '@/pages/AITagging/AITagging';
 import Album from '../Album/Album';
-import Dashboard from '../Dashboard/Dashboard';
+import { Home } from '@/pages/Home/Home';
 import Memories from '../Memories/Memories';
-import SecureFolder from '../SecureFolderPage/SecureFolder';
 import Settings from '../SettingsPage/Settings';
 import Videos from '../VideosPage/Videos';
 import { ROUTES } from '@/constants/routes';
@@ -25,13 +24,12 @@ beforeAll(() => {
 });
 
 const pages = [
-  { path: ROUTES.LAYOUT.HOME, Component: Dashboard },
-  { path: ROUTES.LAYOUT.VIDEOS, Component: Videos },
-  { path: ROUTES.LAYOUT.SETTINGS, Component: Settings },
-  { path: ROUTES.LAYOUT.AI, Component: AITagging },
-  { path: ROUTES.LAYOUT.ALBUMS, Component: Album },
-  { path: ROUTES.LAYOUT.SECURE_FOLDER, Component: SecureFolder },
-  { path: ROUTES.LAYOUT.MEMORIES, Component: Memories },
+  { path: ROUTES.HOME, Component: Home },
+  { path: ROUTES.VIDEOS, Component: Videos },
+  { path: ROUTES.SETTINGS, Component: Settings },
+  { path: ROUTES.AI, Component: AITagging },
+  { path: ROUTES.ALBUMS, Component: Album },
+  { path: ROUTES.MEMORIES, Component: Memories },
 ];
 
 describe('Page rendering tests', () => {

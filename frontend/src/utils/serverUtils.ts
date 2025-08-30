@@ -53,16 +53,13 @@ export const stopServer = async () => {
   }
 };
 
-export const restartServer = async (setIsLoading: (val: boolean) => void) => {
+export const restartServer = async () => {
   try {
-    setIsLoading(true);
     await stopServer();
     setTimeout(async () => {
       await startServer();
-      setIsLoading(false);
     }, 2000);
   } catch (error) {
-    setIsLoading(false);
     console.error('Error restarting server:', error);
     throw error;
   }

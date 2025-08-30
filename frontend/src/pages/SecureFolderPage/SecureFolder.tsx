@@ -1,11 +1,5 @@
-import SecureFolderPage from '../../components/SecureFolder/SecureFolder';
-
 const SecureFolder = () => {
-  return (
-    <>
-      <SecureFolderPage />
-    </>
-  );
+  return <></>;
 };
 
 export default SecureFolder;

@@ -9,17 +9,25 @@ from app.database.folders import (
     db_delete_folders_batch,
     db_get_direct_child_folders,
     db_get_folder_ids_by_path_prefix,
+    db_get_all_folder_details,
 )
 from app.schemas.folders import (
     AddFolderRequest,
     AddFolderResponse,
+    AddFolderData,
     ErrorResponse,
     UpdateAITaggingRequest,
     UpdateAITaggingResponse,
+    UpdateAITaggingData,
     DeleteFoldersRequest,
     DeleteFoldersResponse,
+    DeleteFoldersData,
     SyncFolderRequest,
     SyncFolderResponse,
+    SyncFolderData,
+    GetAllFoldersResponse,
+    GetAllFoldersData,
+    FolderDetails,
 )
 import os
 from app.utils.folders import (
@@ -34,6 +42,7 @@ from app.utils.images import (
     image_util_process_untagged_images,
 )
 from app.utils.face_clusters import cluster_util_face_clusters_sync
+from app.utils.API import API_util_restart_sync_microservice_watcher
 
 
 router = APIRouter()
@@ -57,6 +66,9 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
         print("Add folder: ", folder_data)
         # Process images in all folders
         image_util_process_folder_images(folder_data)
+
+        # Restart sync microservice watcher after processing images
+        API_util_restart_sync_microservice_watcher()
 
     except Exception as e:
         print(f"Error in post processing after folder {folder_path} was added: {e}")
@@ -101,6 +113,9 @@ def post_sync_folder_sequence(
         image_util_process_folder_images(folder_data)
         image_util_process_untagged_images()
         cluster_util_face_clusters_sync()
+
+        # Restart sync microservice watcher after processing images
+        API_util_restart_sync_microservice_watcher()
     except Exception as e:
         print(f"Error in post processing after folder {folder_path} was synced: {e}")
         return False
@@ -137,7 +152,7 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
                     success=False,
                     error="Permission denied",
                     message="The app does not have read permission for the specified folder",
-                ),
+                ).model_dump(),
             )
 
         request.folder_path = os.path.abspath(request.folder_path)
@@ -174,9 +189,11 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
         executor.submit(post_folder_add_sequence, request.folder_path, root_folder_id)
 
         return AddFolderResponse(
+            data=AddFolderData(
+                folder_id=root_folder_id, folder_path=request.folder_path
+            ),
             success=True,
             message=f"Successfully added folder tree starting at: {request.folder_path}",
-            folder_id=root_folder_id,
         )
     except ValueError as e:
         raise HTTPException(
@@ -218,9 +235,11 @@ def enable_ai_tagging(request: UpdateAITaggingRequest, app_state=Depends(get_sta
         executor.submit(post_AI_tagging_enabled_sequence)
 
         return UpdateAITaggingResponse(
+            data=UpdateAITaggingData(
+                updated_count=updated_count, folder_ids=request.folder_ids
+            ),
             success=True,
             message=f"Successfully enabled AI tagging for {updated_count} folder(s)",
-            updated_count=updated_count,
         )
 
     except ValueError as e:
@@ -257,9 +276,11 @@ def disable_ai_tagging(request: UpdateAITaggingRequest):
         updated_count = db_disable_ai_tagging_batch(request.folder_ids)
 
         return UpdateAITaggingResponse(
+            data=UpdateAITaggingData(
+                updated_count=updated_count, folder_ids=request.folder_ids
+            ),
             success=True,
             message=f"Successfully disabled AI tagging for {updated_count} folder(s)",
-            updated_count=updated_count,
         )
 
     except ValueError as e:
@@ -296,9 +317,11 @@ def delete_folders(request: DeleteFoldersRequest):
         deleted_count = db_delete_folders_batch(request.folder_ids)
 
         return DeleteFoldersResponse(
+            data=DeleteFoldersData(
+                deleted_count=deleted_count, folder_ids=request.folder_ids
+            ),
             success=True,
             message=f"Successfully deleted {deleted_count} folder(s)",
-            deleted_count=deleted_count,
         )
 
     except ValueError as e:
@@ -364,12 +387,16 @@ def sync_folder(request: SyncFolderRequest, app_state=Depends(get_state)):
         )
         # Step 4: Return comprehensive response
         return SyncFolderResponse(
+            data=SyncFolderData(
+                deleted_count=deleted_count,
+                deleted_folders=deleted_folders,
+                added_count=added_count,
+                added_folders=added_folders,
+                folder_id=request.folder_id,
+                folder_path=request.folder_path,
+            ),
             success=True,
             message=f"Successfully synced folder. Added {added_count} folder(s), deleted {deleted_count} folder(s)",
-            deleted_count=deleted_count,
-            deleted_folders=deleted_folders,
-            added_count=added_count,
-            added_folders=added_folders,
         )
 
     except ValueError as e:
@@ -391,5 +418,54 @@ def sync_folder(request: SyncFolderRequest, app_state=Depends(get_state)):
                 success=False,
                 error="Internal server error",
                 message=f"Unable to sync folder: {str(e)}",
+            ).model_dump(),
+        )
+
+
+@router.get(
+    "/all-folders",
+    response_model=GetAllFoldersResponse,
+    responses={code: {"model": ErrorResponse} for code in [500]},
+)
+def get_all_folders():
+    """Get details of all folders in the database."""
+    try:
+        folder_details_raw = db_get_all_folder_details()
+
+        # Convert raw tuples to FolderDetails objects
+        folders = []
+        for folder_data in folder_details_raw:
+            (
+                folder_id,
+                folder_path,
+                parent_folder_id,
+                last_modified_time,
+                ai_tagging,
+                tagging_completed,
+            ) = folder_data
+            folders.append(
+                FolderDetails(
+                    folder_id=folder_id,
+                    folder_path=folder_path,
+                    parent_folder_id=parent_folder_id,
+                    last_modified_time=last_modified_time,
+                    AI_Tagging=ai_tagging,
+                    taggingCompleted=tagging_completed,
+                )
+            )
+
+        return GetAllFoldersResponse(
+            data=GetAllFoldersData(folders=folders, total_count=len(folders)),
+            success=True,
+            message=f"Successfully retrieved {len(folders)} folder(s)",
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Unable to retrieve folders: {str(e)}",
             ).model_dump(),
         )
