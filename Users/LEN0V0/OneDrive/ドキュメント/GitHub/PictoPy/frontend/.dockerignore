@@ -1,0 +1,33 @@
+# Node.js dependencies
+node_modules/
+.npm/
+
+# Build output
+dist/
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Logs and temp files
+*.log
+*.tmp
+*.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Git files
+.git/
+.gitignore
+
+# Docker-related files
+Dockerfile
+docker-compose.yml
+
+# OS generated files
+.DS_Store
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Environment files
+.env*

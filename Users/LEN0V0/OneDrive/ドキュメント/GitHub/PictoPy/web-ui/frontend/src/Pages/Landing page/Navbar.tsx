@@ -45,8 +45,8 @@ const NavLink: React.FC<NavLinkProps> = ({
     <Link
       to={to}
       onClick={handleClick}
-      className="text-gray-700 dark:text-gray-300 text-lg font-medium 
-      hover:text-black dark:hover:text-white 
+      className="text-gray-300 text-lg font-medium 
+      hover:text-white 
       relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0
       after:bg-gradient-to-r after:from-yellow-500 after:to-green-500
       hover:after:w-full after:transition-all after:duration-300
@@ -60,30 +60,92 @@ const NavLink: React.FC<NavLinkProps> = ({
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [isClient, setIsClient] = useState(false);
 
-  // Load dark mode setting from localStorage or fallback to system preference
+  // Ensure we're on client side
   useEffect(() => {
-    const savedDarkMode = localStorage.getItem("darkMode");
-
-    if (savedDarkMode !== null) {
-      setDarkMode(savedDarkMode === "true");
-    } else {
-      const prefersDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      setDarkMode(prefersDarkMode);
-    }
+    setIsClient(true);
   }, []);
 
-  // Apply dark mode class to body when darkMode state changes
+  // Force dark mode on component mount and keep it
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("darkMode", "true");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("darkMode", "false");
-    }
-  }, [darkMode]);
+    if (!isClient) return;
+
+    const applyDarkMode = () => {
+      try {
+        const html = document.documentElement;
+        const body = document.body;
+
+        // Force dark mode classes
+        html.classList.add("dark");
+        html.setAttribute("data-theme", "dark");
+        body.classList.add("dark");
+
+        // Set color scheme for mobile browsers
+        html.style.colorScheme = "dark";
+        
+        // Force background color change for mobile
+        body.style.backgroundColor = "#000000";
+        body.style.color = "#ffffff";
+        html.style.backgroundColor = "#000000";
+        
+        // Force theme-color meta update for mobile browsers
+        const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+        if (themeColorMeta) {
+          themeColorMeta.setAttribute('content', '#000000');
+        } else {
+          // Create theme-color meta if it doesn't exist
+          const meta = document.createElement('meta');
+          meta.name = 'theme-color';
+          meta.content = '#000000';
+          document.head.appendChild(meta);
+        }
+
+        // Save dark mode to localStorage
+        if (typeof Storage !== 'undefined' && window.localStorage) {
+          try {
+            localStorage.setItem("darkMode", "true");
+          } catch (e) {
+            console.warn("Cannot save to localStorage:", e);
+          }
+        }
+
+        // Mobile repaint logic
+        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+          const forceRepaint = () => {
+            html.style.transform = 'translateZ(0)';
+            html.style.backfaceVisibility = 'hidden';
+            
+            requestAnimationFrame(() => {
+              html.style.transform = '';
+              html.style.backfaceVisibility = '';
+              
+              const originalDisplay = html.style.display;
+              html.style.display = 'none';
+              html.offsetHeight; // Force reflow
+              html.style.display = originalDisplay;
+            });
+          };
+
+          forceRepaint();
+          setTimeout(forceRepaint, 100);
+        }
+
+        // Dispatch custom event for other components
+        window.dispatchEvent(new CustomEvent('themeChanged', { 
+          detail: { darkMode: true } 
+        }));
+
+      } catch (error) {
+        console.error("Error applying dark mode:", error);
+      }
+    };
+
+    // Apply dark mode immediately
+    applyDarkMode();
+  }, [isClient]);
 
   // Handle scroll to adjust navbar styles
   useEffect(() => {
@@ -91,9 +153,19 @@ const Navbar: React.FC = () => {
       setScrolled(window.scrollY > 50);
     };
 
-    window.addEventListener("scroll", handleScroll);
-
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Add viewport meta tag check for mobile
+  useEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport) {
+      const meta = document.createElement('meta');
+      meta.name = 'viewport';
+      meta.content = 'width=device-width, initial-scale=1.0, user-scalable=yes';
+      document.getElementsByTagName('head')[0].appendChild(meta);
+    }
   }, []);
 
   return (
@@ -101,9 +173,9 @@ const Navbar: React.FC = () => {
       <nav
         className={`fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-6xl z-50 
         transition-all duration-300 ease-in-out 
-        bg-white/70 dark:bg-black/50 backdrop-blur-md 
+        bg-black/50 backdrop-blur-md 
         rounded-3xl overflow-hidden
-        ${scrolled ? "shadow-lg shadow-gray-300/50 dark:shadow-black/40" : "shadow-none"}
+        ${scrolled ? "shadow-lg shadow-black/40" : "shadow-none"}
         ${scrolled ? "w-[90%]" : "w-[95%]"}`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -145,38 +217,30 @@ const Navbar: React.FC = () => {
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
               <NavLink to="/">Home</NavLink>
-
-              {/* Dark Mode Toggle Button */}
-              <button
-                onClick={() => setDarkMode(!darkMode)}
-                className="text-gray-800 dark:text-gray-300 
-                hover:text-black dark:hover:text-white 
-                transition-colors duration-300"
-              >
-                <span className="sr-only">Toggle dark mode</span>
-                {darkMode ? <span>🌙</span> : <span>🌞</span>}
-              </button>
             </div>
 
             {/* Mobile menu button */}
-            <div className="md:hidden flex items-center space-x-4">
-              <button
-                onClick={() => setDarkMode(!darkMode)}
-                className="text-gray-800 dark:text-gray-300 
-                hover:text-black dark:hover:text-white 
-                transition-colors duration-300"
-              >
-                <span className="sr-only">Toggle dark mode</span>
-                {darkMode ? <span>🌙</span> : <span>🌞</span>}
-              </button>
+            <div className="md:hidden flex items-center">
+              {/* Mobile Menu Toggle */}
               <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="text-gray-800 dark:text-gray-300 
-                hover:text-black dark:hover:text-white 
-                transition-colors duration-300"
+                className="p-3 rounded-full text-gray-300 
+                hover:text-white
+                bg-black/80 backdrop-blur-sm
+                hover:bg-gray-800
+                border border-gray-700
+                shadow-sm hover:shadow-md
+                transition-all duration-300 touch-manipulation
+                active:scale-95"
+                type="button"
+                aria-label="Toggle menu"
+                style={{ 
+                  WebkitTapHighlightColor: 'transparent',
+                  minWidth: '48px',
+                  minHeight: '48px'
+                }}
               >
-                <span className="sr-only">Open menu</span>
-                {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
             </div>
           </div>
@@ -185,7 +249,7 @@ const Navbar: React.FC = () => {
         {/* Mobile menu */}
         <div
           className={`md:hidden fixed inset-0 z-50 
-          bg-white dark:bg-black
+          bg-black
           transform transition-transform duration-300 ease-in-out 
           ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
         >
@@ -200,10 +264,11 @@ const Navbar: React.FC = () => {
               <NavLink to="#about" isScrollLink={true} onClick={() => setIsOpen(false)}>
                 About
               </NavLink>
+
               <Button
-                className="w-full bg-gray-800 dark:bg-black 
+                className="w-full bg-black 
                 text-white 
-                hover:bg-green-700 dark:hover:bg-green-800 
+                hover:bg-green-700 
                 transition-colors duration-300 mt-4"
                 onClick={() => setIsOpen(false)}
               >

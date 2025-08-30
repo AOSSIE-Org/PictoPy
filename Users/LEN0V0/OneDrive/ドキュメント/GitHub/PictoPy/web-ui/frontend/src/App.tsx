@@ -11,13 +11,11 @@ import HowItWorks from "./Pages/HowItWorks/HowItWorks";
 import Footer from "./Pages/Footer/Footer";
 import PictopyLanding from "./Pages/pictopy-landing";
 import BouncyCardsFeatures from "./components/ui/Bouncy Card Features";
-import { ScrollProgress } from "./components/ui/ScrollProgress";
 
 function HomePage() {
   return (
     <>
       <Home /> {/* This will now render the Home component */}
-      <ScrollProgress></ScrollProgress>
       <InteractiveDemo />
       <HowItWorks />
       <BouncyCardsFeatures />

@@ -34,6 +34,7 @@ const ShuffleHero = () => {
         
         <div className="flex space-x-4">
           <motion.button 
+            id="main-download"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.6 }}

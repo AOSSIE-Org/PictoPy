@@ -1,4 +1,4 @@
-// FAQ.tsx
+
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, Tag, Lock, Globe } from "lucide-react";
@@ -25,24 +25,93 @@ const faqs = [
   {
     question: "What platforms does PictoPy support?",
     answer:
-      "PictoPy is designed for cross-platform compatibility. It's available on iOS, Android, macOS, and Windows, allowing you to manage your photo collection seamlessly across all your devices with synchronization options that respect your privacy preferences.",
+      "PictoPy is designed for cross-platform compatibility. It's available on Linux,MacOS, and Windows allowing you to manage your photo collection seamlessly across all your devices with synchronization options that respect your privacy preferences.",
     icon: <Globe className="w-5 h-5" />
   }
 ];
 
 export default function FAQ() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [darkMode, ] = useState<boolean>(() => {
-    return (
-      localStorage.getItem("darkMode") === "true" ||
-      (!("darkMode" in localStorage) && window.matchMedia("(prefers-color-scheme: dark)").matches)
-    );
-  });
+  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [isClient, setIsClient] = useState(false);
 
+  // Ensure we're on client side
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
-    localStorage.setItem("darkMode", darkMode.toString());
-  }, [darkMode]);
+    setIsClient(true);
+  }, []);
+
+  // Listen for theme changes - Enhanced for mobile
+  useEffect(() => {
+    if (!isClient) return;
+
+    const handleThemeChange = (event: CustomEvent) => {
+      setDarkMode(event.detail.darkMode);
+    };
+
+    const initializeDarkMode = () => {
+      try {
+        // Check current document state first (most reliable)
+        const isDark = document.documentElement.classList.contains('dark');
+        if (isDark) {
+          setDarkMode(true);
+          return;
+        }
+
+        // Fallback to localStorage if available
+        if (typeof Storage !== 'undefined' && window.localStorage) {
+          const savedDarkMode = localStorage.getItem("darkMode");
+          if (savedDarkMode !== null) {
+            const savedIsDark = savedDarkMode === "true";
+            setDarkMode(savedIsDark);
+            return;
+          }
+        }
+
+        // Final fallback to system preference
+        const prefersDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        setDarkMode(prefersDarkMode);
+      } catch (error) {
+        console.warn("Error loading dark mode in FAQ:", error);
+        setDarkMode(false);
+      }
+    };
+
+    // Initialize
+    initializeDarkMode();
+
+    // Listen for custom theme change events
+    window.addEventListener('themeChanged', handleThemeChange as EventListener);
+
+    // Enhanced MutationObserver for better mobile support
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && 
+            (mutation.attributeName === 'class' || mutation.attributeName === 'data-theme')) {
+          const isDark = document.documentElement.classList.contains('dark');
+          setDarkMode(isDark);
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme']
+    });
+
+    // Additional check for mobile browsers that might not trigger MutationObserver
+    const intervalCheck = setInterval(() => {
+      const currentDark = document.documentElement.classList.contains('dark');
+      if (currentDark !== darkMode) {
+        setDarkMode(currentDark);
+      }
+    }, 500);
+
+    return () => {
+      window.removeEventListener('themeChanged', handleThemeChange as EventListener);
+      observer.disconnect();
+      clearInterval(intervalCheck);
+    };
+  }, [isClient, darkMode]);
 
   return (
     <section className="relative py-20 overflow-hidden min-h-screen transition-colors duration-300 bg-gray-50 text-black dark:bg-black dark:text-white">
@@ -59,7 +128,7 @@ export default function FAQ() {
             Frequently Asked Questions
           </h2>
           <p className="max-w-2xl mx-auto text-lg text-gray-600 dark:text-gray-300">
-            Everything you need to know about PictoCopy's smart photo organization 
+            Everything you need to know about PictoPy's smart photo organization 
             and AI-powered tagging features.
           </p>
         </motion.div>
@@ -105,9 +174,15 @@ function FAQItem({ question, answer, isOpen, onClick, index, icon }: FAQItemProp
       viewport={{ once: true }}
     >
       <button
-        className="flex justify-between items-center w-full text-left p-6 group"
+        className="flex justify-between items-center w-full text-left p-6 group touch-manipulation
+        active:bg-gray-50 dark:active:bg-gray-900 transition-colors duration-150"
         onClick={onClick}
         aria-expanded={isOpen}
+        style={{ 
+          WebkitTapHighlightColor: 'transparent',
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none'
+        }}
       >
         <div className="flex items-center">
           <div className={`mr-4 p-2 rounded-full 

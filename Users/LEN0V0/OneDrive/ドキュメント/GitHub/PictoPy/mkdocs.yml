@@ -1,0 +1,102 @@
+site_name: PictoPy
+repo_name: AOSSIE-Org/PictoPy
+repo_url: https://github.com/AOSSIE-Org/PictoPy
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  logo: assets/PictoPy-logo.png
+  favicon: assets/PictoPy-logo.png
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+    - navigation.footer
+  language: en
+  palette:
+    - scheme: default
+      primary: red
+      accent: red
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: red
+      accent: red
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - pymdownx.arithmatex:
+      generic: true
+  - footnotes
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.mark
+  - attr_list
+
+extra_css:
+  - stylesheets/output.css
+  - stylesheets/extra.css
+
+nav:
+  - Home:
+      - Introduction: index.md
+      - Overview: overview/features.md
+      - Backend:
+          - Python Backend: backend/backend_python/setup.md
+          - Rust Backend: backend/backend_rust/setup.md
+      - Frontend: frontend/setup.md
+  - Overview:
+      - Features: overview/features.md
+      - Architecture: overview/architecture.md
+  - Backend:
+      - Python Backend:
+          - Setup: backend/backend_python/setup.md
+          - Directory Structure: backend/backend_python/directory-structure.md
+          - Database: backend/backend_python/database.md
+          - API: backend/backend_python/api.md
+          - Image Processing: backend/backend_python/image-processing.md
+      - Rust Backend:
+          - Setup: backend/backend_rust/setup.md
+          - API: backend/backend_rust/api.md
+  - Frontend:
+      - Setup: frontend/setup.md
+      - UI Components: frontend/ui-components.md
+      - State Management: frontend/state-management.md
+      - Gallery View: frontend/gallery-view.md
+
+extra:
+  social:
+    - icon: fontawesome/solid/envelope
+      link: mailto:aossie.oss@gmail.com
+      name: Contact by Email
+    - icon: fontawesome/brands/gitlab
+      link: https://gitlab.com/aossie
+      name: AOSSIE on GitLab
+    - icon: fontawesome/brands/github
+      link: https://github.com/AOSSIE-Org/PictoPy/
+      name: PictoPy on GitHub
+    - icon: fontawesome/brands/discord
+      link: https://discord.com/invite/6mFZ2S846n
+      name: Join AOSSIE on Discord
+    - icon: fontawesome/brands/x-twitter
+      link: https://x.com/aossie_org
+      name: Follow AOSSIE on Twitter
