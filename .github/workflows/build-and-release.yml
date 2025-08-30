@@ -26,7 +26,7 @@ jobs:
           cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip uninstall onnxruntime
+          pip uninstall -y onnxruntime
           pip install onnxruntime-directml
 
       - name: Build executable with PyInstaller
@@ -68,7 +68,7 @@ jobs:
           cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip uninstall onnxruntime
+          pip uninstall -y onnxruntime
           pip install onnxruntime-gpu
 
       - name: Build executable with PyInstaller
