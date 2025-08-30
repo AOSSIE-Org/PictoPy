@@ -5,8 +5,8 @@ edit_uri: edit/main/docs/
 
 theme:
   name: material
-  logo: assets/PictoPy-logo.png
-  favicon: assets/PictoPy-logo.png
+  logo: assets/favicon.png
+  favicon: assets/favicon.png
   icon:
     repo: fontawesome/brands/github
   features:
@@ -37,6 +37,8 @@ theme:
 
 plugins:
   - search
+  - swagger-ui-tag:
+  
 
 markdown_extensions:
   - pymdownx.highlight:

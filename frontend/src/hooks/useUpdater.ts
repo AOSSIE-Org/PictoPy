@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { check, Update } from '@tauri-apps/plugin-updater';
+import { Update, check } from '@tauri-apps/plugin-updater';
+import { isTauriEnvironment } from '@/utils/tauriUtils';
 
 interface DownloadProgress {
   downloaded: number;
@@ -32,6 +33,12 @@ export const useUpdater = (): UseUpdaterReturn => {
   const checkForUpdates = useCallback(async (): Promise<boolean> => {
     setError(null);
 
+    // Skip update check in browser mode (though this shouldn't happen with BrowserWarning)
+    if (!isTauriEnvironment()) {
+      console.log('Skipping update check in browser mode');
+      return false;
+    }
+
     try {
       console.log('Checking for updates...');
       const update = await check();
@@ -58,6 +65,11 @@ export const useUpdater = (): UseUpdaterReturn => {
   const downloadAndInstall = useCallback(async (): Promise<void> => {
     if (!updateAvailable) {
       console.warn('No update available to download');
+      return;
+    }
+
+    if (!isTauriEnvironment()) {
+      console.warn('Update download is not available in browser mode');
       return;
     }
 
