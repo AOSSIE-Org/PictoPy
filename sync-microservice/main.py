@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from uvicorn import Config, Server
 from app.core.lifespan import lifespan
 from app.routes import health, watcher, folders
 
@@ -14,3 +15,8 @@ app = FastAPI(
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(watcher.router, prefix="/api/v1")
 app.include_router(folders.router, prefix="/api/v1")
+
+if __name__ == "__main__":
+    config = Config(app=app, host="0.0.0.0", port=8001, log_config=None)
+    server = Server(config)
+    server.run()
