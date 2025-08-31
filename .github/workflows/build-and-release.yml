@@ -319,7 +319,20 @@ jobs:
           unzip -o *.zip
           rm *.zip
           ls -l
+      - name: List files
+        run: |
+          pwd
+          cd sync-microservice/dist
+          ls -l
 
+      - name: List files
+        run: |
+          pwd
+          cd backend/dist
+          ls -l
+      - name: List files
+        run: |
+          ls -l
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
