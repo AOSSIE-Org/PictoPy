@@ -27,7 +27,6 @@ from app.routes.images import router as images_router
 from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
 from fastapi.openapi.utils import get_openapi
-from app.custom_logging import CustomizeLogger
 
 
 @asynccontextmanager
@@ -61,12 +60,8 @@ app = FastAPI(
         "name": "PictoPy Postman Collection",
         "url": "https://www.postman.com/aossie-pictopy/pictopy/overview",
     },
-    servers=[
-        {"url": "http://localhost:8000", "description": "Local Development server"}
-    ],
+    servers=[{"url": "http://localhost:8000", "description": "Local Development server"}],
 )
-
-app.logger = CustomizeLogger.make_logger("app/logging_config.json")
 
 
 def generate_openapi_json():
@@ -82,17 +77,15 @@ def generate_openapi_json():
         openapi_schema["info"]["contact"] = app.contact
 
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        openapi_path = os.path.join(
-            project_root, "docs", "backend", "backend_python", "openapi.json"
-        )
+        openapi_path = os.path.join(project_root, "docs", "backend", "backend_python", "openapi.json")
 
         os.makedirs(os.path.dirname(openapi_path), exist_ok=True)
 
         with open(openapi_path, "w") as f:
             json.dump(openapi_schema, f, indent=2)
-        app.logger.info(f"OpenAPI JSON generated at {openapi_path}")
+        print(f"OpenAPI JSON generated at {openapi_path}")
     except Exception as e:
-        app.logger.error(f"Failed to generate openapi.json: {e}")
+        print(f"Failed to generate openapi.json: {e}")
 
 
 # Add CORS middleware
@@ -114,12 +107,8 @@ async def root():
 app.include_router(folders_router, prefix="/folders", tags=["Folders"])
 app.include_router(albums_router, prefix="/albums", tags=["Albums"])
 app.include_router(images_router, prefix="/images", tags=["Images"])
-app.include_router(
-    face_clusters_router, prefix="/face-clusters", tags=["Face Clusters"]
-)
-app.include_router(
-    user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
-)
+app.include_router(face_clusters_router, prefix="/face-clusters", tags=["Face Clusters"])
+app.include_router(user_preferences_router, prefix="/user-preferences", tags=["User Preferences"])
 
 
 # Entry point for running with: python3 main.py

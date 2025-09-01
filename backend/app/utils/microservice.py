@@ -29,9 +29,7 @@ def microservice_util_start_sync_service(
     try:
         # Check if running as a frozen executable (PyInstaller)
         if getattr(sys, "frozen", False):
-            logger.info(
-                "Running as frozen executable, using bundled sync microservice..."
-            )
+            logger.info("Running as frozen executable, using bundled sync microservice...")
             return _start_frozen_sync_service()
 
         # Development mode - use virtual environment setup
@@ -52,13 +50,13 @@ def _start_frozen_sync_service() -> bool:
         # Get the directory where the current executable is located
         if getattr(sys, "frozen", False):
             # When frozen, sys.executable points to the main executable
-            app_dir = Path(sys.executable).parent
+            app_dir = Path(sys.executable).parent.parent
         else:
             # Fallback (shouldn't happen in this function)
             app_dir = Path(__file__).parent.parent.parent.parent
 
-        # Look for the PictoPy_Sync directory and executable
-        sync_dir = app_dir / "PictoPy_Sync"
+        # Look for the sync-microservice directory and executable
+        sync_dir = app_dir / "sync-microservice"
 
         # Determine executable name based on platform
         system = platform.system().lower()
@@ -68,9 +66,7 @@ def _start_frozen_sync_service() -> bool:
             sync_executable = sync_dir / "PictoPy_Sync"
 
         if not sync_executable.exists():
-            logger.error(
-                f"Sync microservice executable not found at: {sync_executable}"
-            )
+            logger.error(f"Sync microservice executable not found at: {sync_executable}")
             return False
 
         logger.info(f"Starting sync microservice from: {sync_executable}")
@@ -236,9 +232,7 @@ def _start_fastapi_service(python_executable: Path, service_path: Path) -> bool:
         cmd = [str(python_executable), "-m", "fastapi", "dev", "--port", "8001"]
 
         # Start the process (non-blocking)
-        process = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-        )
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
         # Restore original working directory
         os.chdir(original_cwd)
