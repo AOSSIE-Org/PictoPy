@@ -7,7 +7,11 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "deb", "app"],
+    "targets": [
+      "nsis",
+      "deb",
+      "app"
+    ],
     "createUpdaterArtifacts": true,
     "linux": {
       "deb": {
@@ -22,7 +26,7 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../../backend/dist/": "resources/server",
+      "../../backend/dist/": "resources/backend",
       "../../sync-microservice/dist/": "resources/sync-microservice"
     },
     "macOS": {
@@ -58,7 +62,9 @@
     ],
     "security": {
       "assetProtocol": {
-        "scope": ["**"],
+        "scope": [
+          "**"
+        ],
         "enable": true
       },
       "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost"

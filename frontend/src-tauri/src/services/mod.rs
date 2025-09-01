@@ -963,7 +963,7 @@ pub async fn open_with(path: String) -> Result<(), String> {
 pub fn get_server_path(handle: tauri::AppHandle) -> Result<String, String> {
     let resource_path = handle
         .path()
-        .resolve("resources/server", BaseDirectory::Resource)
+        .resolve("resources/backend", BaseDirectory::Resource)
         .map_err(|e| e.to_string())?;
     Ok(resource_path.to_string_lossy().to_string())
 }

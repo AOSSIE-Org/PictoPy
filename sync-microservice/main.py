@@ -17,6 +17,6 @@ app.include_router(watcher.router, prefix="/api/v1")
 app.include_router(folders.router, prefix="/api/v1")
 
 if __name__ == "__main__":
-    config = Config(app=app, host="0.0.0.0", port=8001, log_config=None)
+    config = Config(app=app, host="0.0.0.0", port=8001, log_level="info")
     server = Server(config)
     server.run()

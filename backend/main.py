@@ -114,6 +114,11 @@ app.include_router(user_preferences_router, prefix="/user-preferences", tags=["U
 # Entry point for running with: python3 main.py
 if __name__ == "__main__":
     multiprocessing.freeze_support()  # Required for Windows
-    config = Config(app=app, host="0.0.0.0", port=8000, log_config=None)
+    config = Config(
+        app=app,
+        host="0.0.0.0",
+        port=8000,
+        log_level="info",
+    )
     server = Server(config)
     server.run()
