@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* app.css */
+
+/* Custom Scrollbar for smooth scrolling */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #000000 #ffffff; /* Black thumb, white track */
+}
+
+/* Webkit browsers (Chrome, Safari) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;  /* Adjust width */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #000000;  /* Black thumb */
+  border-radius: 10px;
+  border: 2px solid #ffffff;  /* White border */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background-color: #ffffff;  /* White track */
+}
+
+/* Smooth Scroll behavior */
+.smooth-scroll {
+  overflow-y: auto;
+  max-height: 75vh;  /* Adjust based on your layout */
+  padding-right: 10px;  /* Space for scrollbar */
+}
+
+/* Refined button styling */
+button:hover {
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* Input box styling */
+input:focus {
+  outline: none;
+  border-color: #4A90E2;
+  box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
+}
+
+/* Typing indicator */
+.typing-indicator {
+  background-color: #f0f0f0;
+  border-left: 5px solid #888;
+  padding: 8px;
+  font-size: 0.9rem;
+  font-style: italic;
+}
