@@ -23,7 +23,7 @@ fn main() {
             let cache_service = CacheService::new();
             let resource_path = app
                 .path()
-                .resolve("resources/server", BaseDirectory::Resource)?;
+                .resolve("resources/backend", BaseDirectory::Resource)?;
             println!("Resource path: {:?}", resource_path);
             app.manage(file_service);
             app.manage(cache_service);
