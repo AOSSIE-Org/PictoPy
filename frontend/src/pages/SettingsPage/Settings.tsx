@@ -5,11 +5,21 @@ import {
   RefreshCw,
   Folder,
   Settings as SettingsIcon,
+  Cpu,
+  Zap,
+  ChevronDown,
 } from 'lucide-react';
 
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Label } from '@/components/ui/label';
 import UpdateDialog from '@/components/Updater/UpdateDialog';
 
 import { restartServer } from '@/utils/serverUtils';
@@ -26,6 +36,11 @@ import {
   disableAITagging,
   deleteFolders,
 } from '@/api/api-functions';
+import {
+  getUserPreferences,
+  updateUserPreferences,
+  UserPreferencesData,
+} from '@/api/api-functions/user_preferences';
 import { setFolders } from '@/features/folderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { FolderDetails } from '@/types/Folder';
@@ -75,6 +90,68 @@ const Settings: React.FC = () => {
       deleteFolders({ folder_ids: [folder_id] }),
     autoInvalidateTags: ['folders'],
   });
+
+  // User preferences state
+  const [userPreferences, setUserPreferences] = useState<UserPreferencesData>({
+    YOLO_model_size: 'nano',
+    GPU_Acceleration: false,
+  });
+
+  // Query for user preferences
+  const {
+    data: preferencesData,
+    isLoading: preferencesLoading,
+    isError: preferencesError,
+  } = usePictoQuery({
+    queryKey: ['userPreferences'],
+    queryFn: getUserPreferences,
+  });
+
+  // Mutation for updating user preferences
+  const {
+    mutate: updatePreferencesMutate,
+    isSuccess: updatePreferencesSuccess,
+    isError: updatePreferencesError,
+    isPending: updatePreferencesPending,
+  } = usePictoMutation({
+    mutationFn: updateUserPreferences,
+  });
+
+  // Update local state when preferences data changes
+  useEffect(() => {
+    if (preferencesData?.success && preferencesData.user_preferences) {
+      setUserPreferences(preferencesData.user_preferences);
+    }
+  }, [preferencesData]);
+
+  // Handle preference updates
+  const handlePreferenceUpdate = (updatedPreferences: UserPreferencesData) => {
+    setUserPreferences(updatedPreferences);
+    updatePreferencesMutate(updatedPreferences);
+  };
+
+  // Handle preference update success/error
+  useEffect(() => {
+    if (updatePreferencesSuccess) {
+      dispatch(
+        showInfoDialog({
+          title: 'Preferences Updated',
+          message: 'Your preferences have been saved successfully.',
+        }),
+      );
+    }
+  }, [updatePreferencesSuccess, dispatch]);
+
+  useEffect(() => {
+    if (updatePreferencesError) {
+      dispatch(
+        showInfoDialog({
+          title: 'Error',
+          message: 'Failed to update preferences. Please try again.',
+        }),
+      );
+    }
+  }, [updatePreferencesError, dispatch]);
 
   useEffect(() => {
     if (foldersLoading) {
@@ -240,6 +317,109 @@ const Settings: React.FC = () => {
 
           <div className="border-border mt-6 border-t pt-6">
             <FolderPicker />
+          </div>
+        </div>
+
+        {/* User Preferences Card */}
+        <div className="bg-card rounded-xl border p-6 shadow-sm">
+          <div className="border-border mb-6 flex items-center gap-3 border-b pb-4">
+            <Cpu className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <div>
+              <h2 className="text-card-foreground text-lg font-medium">
+                User Preferences
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                Configure AI model settings and performance options
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {/* YOLO Model Size Setting */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label
+                  htmlFor="yolo-model"
+                  className="text-foreground text-sm font-medium"
+                >
+                  YOLO Model Size
+                </Label>
+                <p className="text-muted-foreground text-xs">
+                  Choose the AI model size for object detection (larger models
+                  are more accurate but slower)
+                </p>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-32 justify-between">
+                    {userPreferences.YOLO_model_size.charAt(0).toUpperCase() +
+                      userPreferences.YOLO_model_size.slice(1)}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-32">
+                  <DropdownMenuItem
+                    onClick={() =>
+                      handlePreferenceUpdate({
+                        ...userPreferences,
+                        YOLO_model_size: 'nano',
+                      })
+                    }
+                  >
+                    Nano
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      handlePreferenceUpdate({
+                        ...userPreferences,
+                        YOLO_model_size: 'small',
+                      })
+                    }
+                  >
+                    Small
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      handlePreferenceUpdate({
+                        ...userPreferences,
+                        YOLO_model_size: 'medium',
+                      })
+                    }
+                  >
+                    Medium
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {/* GPU Acceleration Setting */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label
+                  htmlFor="gpu-acceleration"
+                  className="text-foreground text-sm font-medium"
+                >
+                  GPU Acceleration
+                </Label>
+                <p className="text-muted-foreground text-xs">
+                  Enable GPU acceleration for faster AI processing (requires
+                  compatible hardware)
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-gray-500" />
+                <Switch
+                  id="gpu-acceleration"
+                  checked={userPreferences.GPU_Acceleration}
+                  onCheckedChange={(checked) =>
+                    handlePreferenceUpdate({
+                      ...userPreferences,
+                      GPU_Acceleration: checked,
+                    })
+                  }
+                />
+              </div>
+            </div>
           </div>
         </div>
 
