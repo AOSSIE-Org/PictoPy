@@ -1,2 +1,1 @@
-# DebateAI
-testing
+# PictoPy Landing Page
