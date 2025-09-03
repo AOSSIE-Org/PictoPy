@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* app.css */
+
+/* Refined button styling */
+button:hover {
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* Input box styling */
+input:focus {
+  outline: none;
+  border-color: #4A90E2;
+  box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
+}
+
+/* Typing indicator */
+.typing-indicator {
+  background-color: #f0f0f0;
+  border-left: 5px solid #888;
+  padding: 8px;
+  font-size: 0.9rem;
+  font-style: italic;
+}

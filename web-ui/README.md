@@ -1,1 +1,0 @@
-# PictoPy Landing Page
