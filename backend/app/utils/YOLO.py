@@ -1,112 +1,164 @@
+"""
+YOLO Object Detection Utilities
+
+This module provides utility functions for YOLO-based object detection in PictoPy.
+It includes functions for non-maximum suppression, IoU computation, bounding box
+conversion, and visualization of detection results.
+
+Key Features:
+- COCO dataset class names and color mapping
+- Non-maximum suppression for removing duplicate detections
+- IoU (Intersection over Union) computation for bounding box overlap
+- Bounding box format conversion utilities
+- Detection visualization with bounding boxes and labels
+- Model path resolution based on user preferences
+
+The module supports both object detection and face detection models with
+configurable model sizes (nano, small, medium) based on user preferences.
+"""
+
+# Standard library imports
 import numpy as np
 import cv2
+
+# Application imports
 from app.config import settings
 
+# =============================================================================
+# COCO DATASET CLASS NAMES
+# =============================================================================
+
+# COCO dataset class names for object detection
+# These correspond to the 80 classes that YOLO models are trained to detect
 class_names = [
-    "person",
-    "bicycle",
-    "car",
-    "motorcycle",
-    "airplane",
-    "bus",
-    "train",
-    "truck",
-    "boat",
-    "traffic light",
-    "fire hydrant",
-    "stop sign",
-    "parking meter",
-    "bench",
-    "bird",
-    "cat",
-    "dog",
-    "horse",
-    "sheep",
-    "cow",
-    "elephant",
-    "bear",
-    "zebra",
-    "giraffe",
-    "backpack",
-    "umbrella",
-    "handbag",
-    "tie",
-    "suitcase",
-    "frisbee",
-    "skis",
-    "snowboard",
-    "sports ball",
-    "kite",
-    "baseball bat",
-    "baseball glove",
-    "skateboard",
-    "surfboard",
-    "tennis racket",
-    "bottle",
-    "wine glass",
-    "cup",
-    "fork",
-    "knife",
-    "spoon",
-    "bowl",
-    "banana",
-    "apple",
-    "sandwich",
-    "orange",
-    "broccoli",
-    "carrot",
-    "hot dog",
-    "pizza",
-    "donut",
-    "cake",
-    "chair",
-    "couch",
-    "potted plant",
-    "bed",
-    "dining table",
-    "toilet",
-    "tv",
-    "laptop",
-    "mouse",
-    "remote",
-    "keyboard",
-    "cell phone",
-    "microwave",
-    "oven",
-    "toaster",
-    "sink",
-    "refrigerator",
-    "book",
-    "clock",
-    "vase",
-    "scissors",
-    "teddy bear",
-    "hair drier",
-    "toothbrush",
+    "person",        # 0
+    "bicycle",       # 1
+    "car",           # 2
+    "motorcycle",    # 3
+    "airplane",      # 4
+    "bus",           # 5
+    "train",         # 6
+    "truck",         # 7
+    "boat",          # 8
+    "traffic light", # 9
+    "fire hydrant",  # 10
+    "stop sign",     # 11
+    "parking meter", # 12
+    "bench",         # 13
+    "bird",          # 14
+    "cat",           # 15
+    "dog",           # 16
+    "horse",         # 17
+    "sheep",         # 18
+    "cow",           # 19
+    "elephant",      # 20
+    "bear",          # 21
+    "zebra",         # 22
+    "giraffe",       # 23
+    "backpack",      # 24
+    "umbrella",      # 25
+    "handbag",       # 26
+    "tie",           # 27
+    "suitcase",      # 28
+    "frisbee",       # 29
+    "skis",          # 30
+    "snowboard",     # 31
+    "sports ball",   # 32
+    "kite",          # 33
+    "baseball bat",  # 34
+    "baseball glove", # 35
+    "skateboard",    # 36
+    "surfboard",     # 37
+    "tennis racket", # 38
+    "bottle",        # 39
+    "wine glass",    # 40
+    "cup",           # 41
+    "fork",          # 42
+    "knife",         # 43
+    "spoon",         # 44
+    "bowl",          # 45
+    "banana",        # 46
+    "apple",         # 47
+    "sandwich",      # 48
+    "orange",        # 49
+    "broccoli",      # 50
+    "carrot",        # 51
+    "hot dog",       # 52
+    "pizza",         # 53
+    "donut",         # 54
+    "cake",          # 55
+    "chair",         # 56
+    "couch",         # 57
+    "potted plant",  # 58
+    "bed",           # 59
+    "dining table",  # 60
+    "toilet",        # 61
+    "tv",            # 62
+    "laptop",        # 63
+    "mouse",         # 64
+    "remote",        # 65
+    "keyboard",      # 66
+    "cell phone",    # 67
+    "microwave",     # 68
+    "oven",          # 69
+    "toaster",       # 70
+    "sink",          # 71
+    "refrigerator",  # 72
+    "book",          # 73
+    "clock",         # 74
+    "vase",          # 75
+    "scissors",      # 76
+    "teddy bear",    # 77
+    "hair drier",    # 78
+    "toothbrush",    # 79
 ]
 
-# Create a list of colors for each class where each color is a tuple of 3 integer values
-rng = np.random.default_rng(3)
+# =============================================================================
+# VISUALIZATION COLORS
+# =============================================================================
+
+# Generate consistent random colors for each class using a fixed seed
+# This ensures the same colors are used across different runs
+rng = np.random.default_rng(3)  # Fixed seed for reproducible colors
 colors = rng.uniform(0, 255, size=(len(class_names), 3))
 
 
+# =============================================================================
+# NON-MAXIMUM SUPPRESSION (NMS) FUNCTIONS
+# =============================================================================
+
 def YOLO_util_nms(boxes, scores, iou_threshold):
-    # Sort by score
+    """
+    Apply Non-Maximum Suppression to remove overlapping bounding boxes.
+    
+    This function implements the standard NMS algorithm to eliminate duplicate
+    detections by keeping only the highest-scoring box when multiple boxes
+    have significant overlap (IoU > threshold).
+    
+    Args:
+        boxes: Array of bounding boxes in format [x1, y1, x2, y2]
+        scores: Array of confidence scores for each box
+        iou_threshold: IoU threshold for considering boxes as overlapping
+        
+    Returns:
+        List of indices of boxes to keep after NMS
+    """
+    # Sort boxes by confidence score in descending order
     sorted_indices = np.argsort(scores)[::-1]
 
     keep_boxes = []
     while sorted_indices.size > 0:
-        # Pick the last box
+        # Pick the box with highest confidence score
         box_id = sorted_indices[0]
         keep_boxes.append(box_id)
 
-        # Compute IoU of the picked box with the rest
+        # Compute IoU of the selected box with all remaining boxes
         ious = YOLO_util_compute_iou(boxes[box_id, :], boxes[sorted_indices[1:], :])
 
-        # Remove boxes with IoU over the threshold
+        # Keep only boxes with IoU below the threshold (non-overlapping)
         keep_indices = np.where(ious < iou_threshold)[0]
 
-        # print(keep_indices.shape, sorted_indices.shape)
+        # Update the list of remaining boxes
         sorted_indices = sorted_indices[keep_indices + 1]
 
     return keep_boxes
@@ -128,21 +180,36 @@ def YOLO_util_multiclass_nms(boxes, scores, class_ids, iou_threshold):
 
 
 def YOLO_util_compute_iou(box, boxes):
-    # Compute xmin, ymin, xmax, ymax for both boxes
-    xmin = np.maximum(box[0], boxes[:, 0])
-    ymin = np.maximum(box[1], boxes[:, 1])
-    xmax = np.minimum(box[2], boxes[:, 2])
-    ymax = np.minimum(box[3], boxes[:, 3])
+    """
+    Compute Intersection over Union (IoU) between a single box and multiple boxes.
+    
+    IoU is a measure of overlap between two bounding boxes, calculated as:
+    IoU = intersection_area / union_area
+    
+    Args:
+        box: Single bounding box [x1, y1, x2, y2]
+        boxes: Array of bounding boxes [N, 4] in format [x1, y1, x2, y2]
+        
+    Returns:
+        Array of IoU values between the single box and each box in the array
+    """
+    # Compute intersection coordinates
+    xmin = np.maximum(box[0], boxes[:, 0])  # Left edge of intersection
+    ymin = np.maximum(box[1], boxes[:, 1])  # Top edge of intersection
+    xmax = np.minimum(box[2], boxes[:, 2])  # Right edge of intersection
+    ymax = np.minimum(box[3], boxes[:, 3])  # Bottom edge of intersection
 
-    # Compute intersection area
+    # Compute intersection area (0 if no intersection)
     intersection_area = np.maximum(0, xmax - xmin) * np.maximum(0, ymax - ymin)
 
-    # Compute union area
+    # Compute individual box areas
     box_area = (box[2] - box[0]) * (box[3] - box[1])
     boxes_area = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+    
+    # Compute union area (sum of areas minus intersection)
     union_area = box_area + boxes_area - intersection_area
 
-    # Compute IoU
+    # Compute IoU (handle division by zero)
     iou = intersection_area / union_area
 
     return iou

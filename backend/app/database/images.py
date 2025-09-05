@@ -1,71 +1,128 @@
+"""
+Images Database Module
+
+This module provides database operations for image management in PictoPy.
+It handles the creation, querying, and manipulation of image records and
+their associated tags in the SQLite database.
+
+Key Features:
+- Image table creation and schema management
+- Bulk image insertion for efficient data loading
+- Image retrieval with tag associations
+- Untagged image identification for AI processing
+- Image deletion and cleanup operations
+- Tag relationship management
+
+Database Schema:
+- images: Main table storing image metadata
+- image_classes: Junction table linking images to detected object classes
+"""
+
 # Standard library imports
 import sqlite3
 from typing import List, Tuple, TypedDict
 
-# App-specific imports
-from app.config.settings import (
-    DATABASE_PATH,
-)
+# Application imports
+from app.config.settings import DATABASE_PATH
 
-# Type definitions
-ImageId = str
-ImagePath = str
-FolderId = str
-ClassId = int
+# =============================================================================
+# TYPE DEFINITIONS
+# =============================================================================
+
+# Type aliases for better code readability
+ImageId = str      # Unique identifier for images
+ImagePath = str    # File system path to image
+FolderId = str     # Unique identifier for folders
+ClassId = int      # Object detection class identifier
 
 
 class ImageRecord(TypedDict):
-    """Represents the full images table structure"""
+    """
+    Type definition for image records in the database.
+    
+    Represents the complete structure of an image record including
+    all metadata and processing status information.
+    """
+    id: ImageId           # Unique image identifier
+    path: ImagePath       # File system path to the image
+    folder_id: FolderId   # ID of the containing folder
+    thumbnailPath: str    # Path to the image thumbnail
+    metadata: str         # JSON string containing image metadata
+    isTagged: bool        # Flag indicating if image has been processed for tags
 
-    id: ImageId
-    path: ImagePath
-    folder_id: FolderId
-    thumbnailPath: str
-    metadata: str
-    isTagged: bool
 
-
+# Type alias for image-class relationship pairs
 ImageClassPair = Tuple[ImageId, ClassId]
 
 
+# =============================================================================
+# DATABASE SCHEMA CREATION
+# =============================================================================
+
 def db_create_images_table() -> None:
+    """
+    Create the images and image_classes tables in the database.
+    
+    This function sets up the database schema for image storage including:
+    - Main images table with metadata and processing status
+    - Junction table for image-tag relationships
+    - Proper foreign key constraints and cascading deletes
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
-    # Create new images table with merged fields
+    # Create main images table with comprehensive metadata
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS images (
-            id TEXT PRIMARY KEY,
-            path VARCHAR UNIQUE,
-            folder_id INTEGER,
-            thumbnailPath TEXT UNIQUE,
-            metadata TEXT,
-            isTagged BOOLEAN DEFAULT 0,
+            id TEXT PRIMARY KEY,                    -- Unique image identifier
+            path VARCHAR UNIQUE,                    -- File system path (unique)
+            folder_id INTEGER,                      -- Reference to containing folder
+            thumbnailPath TEXT UNIQUE,              -- Thumbnail path (unique)
+            metadata TEXT,                          -- JSON metadata string
+            isTagged BOOLEAN DEFAULT 0,             -- AI processing status flag
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
     """
     )
 
-    # Create new image_classes junction table
+    # Create junction table for many-to-many image-tag relationships
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS image_classes (
-            image_id TEXT,
-            class_id INTEGER,
-            PRIMARY KEY (image_id, class_id),
+            image_id TEXT,                          -- Reference to image
+            class_id INTEGER,                       -- Reference to object class
+            PRIMARY KEY (image_id, class_id),       -- Composite primary key
             FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
             FOREIGN KEY (class_id) REFERENCES mappings(class_id) ON DELETE CASCADE
         )
     """
     )
 
+    # Commit changes and close connection
     conn.commit()
     conn.close()
 
 
+# =============================================================================
+# IMAGE DATA OPERATIONS
+# =============================================================================
+
 def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
-    """Insert multiple image records in a single transaction."""
+    """
+    Insert multiple image records in a single database transaction.
+    
+    This function efficiently inserts multiple image records using a single
+    database transaction for optimal performance. Uses INSERT OR IGNORE to
+    handle duplicate records gracefully.
+    
+    Args:
+        image_records: List of ImageRecord dictionaries to insert
+        
+    Returns:
+        bool: True if insertion was successful, False otherwise
+    """
+    # Handle empty input gracefully
     if not image_records:
         return True
 
@@ -73,6 +130,7 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
     cursor = conn.cursor()
 
     try:
+        # Use executemany for efficient bulk insertion
         cursor.executemany(
             """
             INSERT OR IGNORE INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)
@@ -92,15 +150,27 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
 
 def db_get_all_images() -> List[dict]:
     """
-    Get all images from the database with their tags.
-
+    Retrieve all images from the database with their associated tags.
+    
+    This function performs an optimized query that joins images with their tags
+    in a single database operation. It groups the results by image ID and
+    aggregates all tags for each image.
+    
     Returns:
-        List of dictionaries containing all image data including tags
+        List[dict]: List of image dictionaries containing:
+            - id: Image identifier
+            - path: File system path
+            - folder_id: Containing folder ID
+            - thumbnailPath: Thumbnail file path
+            - metadata: JSON metadata string
+            - isTagged: Processing status flag
+            - tags: List of associated tag names (or None if no tags)
     """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     try:
+        # Optimized query to get all images with their tags in one operation
         cursor.execute(
             """
             SELECT 
@@ -120,7 +190,7 @@ def db_get_all_images() -> List[dict]:
 
         results = cursor.fetchall()
 
-        # Group results by image ID
+        # Group results by image ID to aggregate tags
         images_dict = {}
         for (
             image_id,
@@ -131,6 +201,7 @@ def db_get_all_images() -> List[dict]:
             is_tagged,
             tag_name,
         ) in results:
+            # Initialize image record if not seen before
             if image_id not in images_dict:
                 images_dict[image_id] = {
                     "id": image_id,
@@ -142,18 +213,19 @@ def db_get_all_images() -> List[dict]:
                     "tags": [],
                 }
 
-            # Add tag if it exists
+            # Add tag to the image's tag list if it exists
             if tag_name:
                 images_dict[image_id]["tags"].append(tag_name)
 
-        # Convert to list and set tags to None if empty
+        # Convert dictionary to list and normalize empty tag lists
         images = []
         for image_data in images_dict.values():
+            # Set tags to None if no tags were found (cleaner API response)
             if not image_data["tags"]:
                 image_data["tags"] = None
             images.append(image_data)
 
-        # Sort by path
+        # Sort images by path for consistent ordering
         images.sort(key=lambda x: x["path"])
 
         return images
@@ -167,18 +239,24 @@ def db_get_all_images() -> List[dict]:
 
 def db_get_untagged_images() -> List[ImageRecord]:
     """
-    Find all images that need AI tagging.
-    Returns images where:
-    - The image's folder has AI_Tagging enabled (True)
-    - The image has isTagged set to False
+    Find all images that require AI tagging processing.
+    
+    This function identifies images that need to be processed by the AI tagging
+    system. It returns images where:
+    - The containing folder has AI tagging enabled
+    - The image has not yet been processed (isTagged = False)
+    
+    This is typically used by background processing services to identify
+    work items for AI analysis.
 
     Returns:
-        List of dictionaries containing image data: id, path, folder_id, thumbnailPath, metadata
+        List[ImageRecord]: List of image records that need AI processing
     """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     try:
+        # Query for images that need AI tagging
         cursor.execute(
             """
             SELECT i.id, i.path, i.folder_id, i.thumbnailPath, i.metadata
@@ -191,6 +269,7 @@ def db_get_untagged_images() -> List[ImageRecord]:
 
         results = cursor.fetchall()
 
+        # Convert query results to ImageRecord format
         untagged_images = []
         for image_id, path, folder_id, thumbnail_path, metadata in results:
             untagged_images.append(
