@@ -99,7 +99,7 @@ app.add_middleware(
 
 
 # Basic health check endpoint
-@app.get("/", tags=["Health"])
+@app.get("/health", tags=["Health"])
 async def root():
     return {"message": "PictoPy Server is up and running!"}
 

@@ -6,6 +6,7 @@ const initialState: InfoDialogProps = {
   title: '',
   message: '',
   variant: 'info',
+  showCloseButton: true,
 };
 
 const infoDialogSlice = createSlice({
@@ -18,18 +19,21 @@ const infoDialogSlice = createSlice({
         title: string;
         message: string;
         variant?: InfoDialogVariant;
+        showCloseButton?: boolean;
       }>,
     ) {
       state.isOpen = true;
       state.title = action.payload.title;
       state.message = action.payload.message;
       state.variant = action.payload.variant || 'info';
+      state.showCloseButton = action.payload.showCloseButton ?? true;
     },
     hideInfoDialog(state) {
       state.isOpen = false;
       state.title = '';
       state.message = '';
       state.variant = 'info';
+      state.showCloseButton = true;
     },
   },
 });

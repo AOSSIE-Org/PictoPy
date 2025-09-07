@@ -98,11 +98,7 @@ const Settings: React.FC = () => {
   });
 
   // Query for user preferences
-  const {
-    data: preferencesData,
-    isLoading: preferencesLoading,
-    isError: preferencesError,
-  } = usePictoQuery({
+  const { data: preferencesData } = usePictoQuery({
     queryKey: ['userPreferences'],
     queryFn: getUserPreferences,
   });
@@ -112,7 +108,6 @@ const Settings: React.FC = () => {
     mutate: updatePreferencesMutate,
     isSuccess: updatePreferencesSuccess,
     isError: updatePreferencesError,
-    isPending: updatePreferencesPending,
   } = usePictoMutation({
     mutationFn: updateUserPreferences,
   });

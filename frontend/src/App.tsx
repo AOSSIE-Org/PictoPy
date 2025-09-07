@@ -15,6 +15,7 @@ const App: React.FC = () => {
     title,
     message: infoMessage,
     variant,
+    showCloseButton,
   } = useSelector((state: RootState) => state.infoDialog);
   return (
     <ThemeProvider>
@@ -28,6 +29,7 @@ const App: React.FC = () => {
           title={title}
           message={infoMessage}
           variant={variant}
+          showCloseButton={showCloseButton}
         />
       </QueryClientProviders>
     </ThemeProvider>

@@ -20,6 +20,7 @@ image = "0.24.6"
 tauri-plugin-fs = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-process = "2.0.0"
 tauri-plugin-store = { version = "2" }
 ring = "0.16.20"
 data-encoding = "2.3.2"

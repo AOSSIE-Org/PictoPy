@@ -18,6 +18,7 @@ export const InfoDialog: React.FC<InfoDialogProps> = ({
   title,
   message,
   variant = 'info',
+  showCloseButton = true,
 }) => {
   const dispatch = useDispatch();
 
@@ -51,7 +52,7 @@ export const InfoDialog: React.FC<InfoDialogProps> = ({
         if (!open) handleClose();
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" showCloseButton={showCloseButton}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span className={iconColor}>{icon}</span>
@@ -62,9 +63,11 @@ export const InfoDialog: React.FC<InfoDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant={buttonVariant} onClick={handleClose}>
-            Close
-          </Button>
+          {showCloseButton && (
+            <Button variant={buttonVariant} onClick={handleClose}>
+              Close
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

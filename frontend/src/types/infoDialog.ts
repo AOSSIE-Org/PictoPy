@@ -5,4 +5,5 @@ export interface InfoDialogProps {
   title: string;
   message: string;
   variant?: InfoDialogVariant;
+  showCloseButton?: boolean;
 }

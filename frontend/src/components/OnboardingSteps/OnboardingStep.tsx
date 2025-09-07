@@ -6,6 +6,7 @@ import { AvatarSelectionStep } from '@/components/OnboardingSteps/AvatarSelectio
 import { ThemeSelectionStep } from '@/components/OnboardingSteps/ThemeSelectionStep';
 import { STEPS } from '@/constants/steps';
 import { UpdateStep } from '@/components/OnboardingSteps/UpdateStep';
+import { ServerCheck } from './ServerCheck';
 
 interface OnboardingStepProps {
   stepIndex: number;
@@ -37,6 +38,8 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
         return <ThemeSelectionStep {...sharedProps} />;
       case STEPS.UPDATE_STEP:
         return <UpdateStep {...sharedProps} />;
+      case STEPS.SERVER_CHECK:
+        return <ServerCheck {...sharedProps} />;
       default:
         return <div></div>;
     }
