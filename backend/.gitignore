@@ -136,5 +136,6 @@ cython_debug/
 
 images/
 
-dist/
+dist/*
+!dist/README.md
 tests/inputs/PictoPy.thumbnails/
