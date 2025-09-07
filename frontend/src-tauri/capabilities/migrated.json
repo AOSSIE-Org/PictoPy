@@ -76,6 +76,7 @@
     "fs:allow-video-write-recursive",
     "fs:write-all",
     "fs:write-files",
+    "process:default",
     {
       "identifier": "fs:scope",
       "allow": ["**"]

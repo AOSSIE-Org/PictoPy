@@ -16,3 +16,12 @@ export const foldersEndpoints = {
   deleteFolders: '/folders/delete-folders',
   syncFolder: '/folders/sync-folder',
 };
+
+export const userPreferencesEndpoints = {
+  getUserPreferences: '/user-preferences/',
+  updateUserPreferences: '/user-preferences/',
+};
+
+export const healthEndpoints = {
+  healthCheck: '/health',
+};

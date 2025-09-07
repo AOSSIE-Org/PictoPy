@@ -1,2 +1,2 @@
 export const BACKEND_URL = 'http://localhost:8000';
-export const IMAGE_ENDPOINT = `${BACKEND_URL}/images`;
+export const SYNC_MICROSERVICE_URL = 'http://localhost:8001/api/v1';

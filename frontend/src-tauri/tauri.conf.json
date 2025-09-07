@@ -22,14 +22,15 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../../backend/dist/": "resources/server"
+      "../../backend/dist/": "resources/backend",
+      "../../sync-microservice/dist/": "resources/sync-microservice"
     },
     "macOS": {
       "signingIdentity": "-"
     }
   },
   "productName": "PictoPy",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "identifier": "com.yourcompany.pictopy",
   "plugins": {
     "fs": {
@@ -52,7 +53,8 @@
         "minHeight": 720,
         "resizable": true,
         "fullscreen": false,
-        "maximized": false
+        "maximized": false,
+        "devtools": true
       }
     ],
     "security": {
@@ -60,7 +62,7 @@
         "scope": ["**"],
         "enable": true
       },
-      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost"
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' data: asset: http://asset.localhost; connect-src 'self' http://localhost:8000 ws://localhost:8000 http://localhost:8001 ws://localhost:8001"
     }
   }
 }

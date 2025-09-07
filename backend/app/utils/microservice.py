@@ -52,13 +52,13 @@ def _start_frozen_sync_service() -> bool:
         # Get the directory where the current executable is located
         if getattr(sys, "frozen", False):
             # When frozen, sys.executable points to the main executable
-            app_dir = Path(sys.executable).parent
+            app_dir = Path(sys.executable).parent.parent
         else:
             # Fallback (shouldn't happen in this function)
             app_dir = Path(__file__).parent.parent.parent.parent
 
-        # Look for the PictoPy_Sync directory and executable
-        sync_dir = app_dir / "PictoPy_Sync"
+        # Look for the sync-microservice directory and executable
+        sync_dir = app_dir / "sync-microservice"
 
         # Determine executable name based on platform
         system = platform.system().lower()

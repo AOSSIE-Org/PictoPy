@@ -16,13 +16,13 @@
     }
   ],
   "paths": {
-    "/": {
+    "/health": {
       "get": {
         "tags": [
           "Health"
         ],
         "summary": "Root",
-        "operationId": "root__get",
+        "operationId": "root_health_get",
         "responses": {
           "200": {
             "description": "Successful Response",

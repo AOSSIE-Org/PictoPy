@@ -18,12 +18,13 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let file_service = FileService::new();
             let cache_service = CacheService::new();
             let resource_path = app
                 .path()
-                .resolve("resources/server", BaseDirectory::Resource)?;
+                .resolve("resources/backend", BaseDirectory::Resource)?;
             println!("Resource path: {:?}", resource_path);
             app.manage(file_service);
             app.manage(cache_service);
