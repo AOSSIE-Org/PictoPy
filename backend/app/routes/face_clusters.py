@@ -1,10 +1,19 @@
-from fastapi import APIRouter, HTTPException, status
+import json
+import numpy as np
+import logging
+import os
+from numpy import random
+from app.config.settings import DEFAULT_FACENET_MODEL, IMAGES_PATH
+from fastapi import APIRouter, HTTPException, UploadFile, status, File
 from app.database.face_clusters import (
     db_get_cluster_by_id,
     db_update_cluster,
     db_get_all_clusters_with_face_counts,
     db_get_images_by_cluster_id,  # Add this import
 )
+from app.database.faces import db_get_faces_unassigned_clusters, get_all_face_embeddings
+from app.models.FaceDetector import FaceDetector
+from app.models.FaceNet import FaceNet
 from app.schemas.face_clusters import (
     RenameClusterRequest,
     RenameClusterResponse,
@@ -17,8 +26,11 @@ from app.schemas.face_clusters import (
     GetClusterImagesData,
     ImageInCluster,
 )
+from app.schemas.images import AddMultipleImagesRequest, AddMultipleImagesResponse, AddSingleImageRequest, FaceTaggingResponse, ImagesResponse
+from app.utils.FaceNet import FaceNet_util_cosine_similarity, FaceNet_util_normalize_embedding, FaceNet_util_preprocess_image
 
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -194,3 +206,61 @@ def get_cluster_images(cluster_id: str):
                 message=f"Unable to retrieve images for cluster: {str(e)}",
             ).model_dump(),
         )
+
+
+@router.post(
+    "/face-tagging",
+    responses={code: {"model": ErrorResponse} for code in [400, 500]},
+)
+def face_tagging(payload: AddSingleImageRequest):
+    image_path = payload.path
+    if not os.path.isfile(image_path):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="Invalid file path",
+                message="The provided path is not a valid file",
+            ).model_dump(),
+        )
+
+    image_id = random.randint(1, 3333)
+    fd = FaceDetector()
+    fn = FaceNet(DEFAULT_FACENET_MODEL)
+    result = fd.detect_faces(image_id, image_path, forSearch=True)
+
+    if not result or result["num_faces"] == 0:
+        return {
+            "success": True,
+            "image_id": image_id,
+            "num_faces": 0,
+            "matches": [],
+        }
+
+    process_face = result["processed_faces"][0]
+    new_embedding = fn.get_embedding(process_face)
+
+    all_embeddings, all_bbox, all_imageid = get_all_face_embeddings()
+
+    matches = []
+    if len(all_embeddings) == 0:
+        print("No embeddings found in database")
+    else:
+        for i, stored_embedding in enumerate(all_embeddings):
+            similarity = FaceNet_util_cosine_similarity(new_embedding, stored_embedding)
+
+            if similarity >= 0.7:
+                matches.append(
+                    {
+                        "match_image_id": all_imageid[i],
+                        "bbox": all_bbox[i],
+                        "similarity": float(similarity),
+                    }
+                )
+
+    return {
+        "success": True,
+        "image_id": image_id,
+        "number of faces": result["num_faces"],
+        "matches": matches,
+    }

@@ -19,7 +19,7 @@ class FaceDetector:
         self._initialized = True
         print("FaceDetector initialized with YOLO and FaceNet models.")
 
-    def detect_faces(self, image_id: int, image_path: str):
+    def detect_faces(self, image_id: int, image_path: str, forSearch: bool = False):
         img = cv2.imread(image_path)
         if img is None:
             print(f"Failed to load image: {image_path}")
@@ -51,7 +51,7 @@ class FaceDetector:
                 embedding = self.facenet.get_embedding(processed_face)
                 embeddings.append(embedding)
 
-        if embeddings:
+        if (not forSearch and embeddings):
             db_insert_face_embeddings_by_image_id(
                 image_id, embeddings, confidence=confidences, bbox=bboxes
             )
