@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 import { FaceCollections } from '@/components/FaceCollections';
 import { Image } from '@/types/Media';
@@ -12,6 +11,7 @@ import {
 } from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
+import { ChronologicalGallery } from '@/components/Media/ChronologicalGallery';
 
 export const AITagging = () => {
   const dispatch = useDispatch();
@@ -49,19 +49,13 @@ export const AITagging = () => {
         <FaceCollections />
       </div>
 
-      {/* Image Grid */}
-      <div className="mb-6">
-        <h2 className="mb-4 text-xl font-semibold">All Images</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {taggedImages.map((image, index) => (
-            <ImageCard
-              key={image.id}
-              image={image}
-              imageIndex={index}
-              className="w-full"
-            />
-          ))}
-        </div>
+      {/* Chronological Gallery of Tagged Images */}
+      <div className="relative flex-1">
+        <ChronologicalGallery
+          images={taggedImages}
+          showTitle={true}
+          title="AI Image Gallery"
+        />
       </div>
 
       {/* Media Viewer Modal */}
