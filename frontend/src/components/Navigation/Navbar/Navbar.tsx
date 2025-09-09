@@ -13,11 +13,22 @@ import {
 } from '@/components/ui/dialog';
 import { useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
+import { useFile } from '@/hooks/selectFile';
 
 export function Navbar() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const userName = useSelector(selectName);
   const userAvatar = useSelector(selectAvatar);
+
+  const { pickSingleFile } = useFile({ title: 'Select File' });
+
+  const handlePickFile = async () => {
+    const selectFilePath = await pickSingleFile();
+    if (selectFilePath) {
+      setIsDialogOpen(false);
+      // Do smth
+    }
+  };
 
   return (
     <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur">
@@ -61,7 +72,7 @@ export function Navbar() {
 
               <div className="grid grid-cols-2 gap-4 py-4">
                 <Button
-                  onClick={() => {}}
+                  onClick={handlePickFile}
                   disabled={false}
                   className="flex h-32 flex-col items-center justify-center gap-2 p-0"
                   variant="outline"

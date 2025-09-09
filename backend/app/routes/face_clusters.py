@@ -1,17 +1,18 @@
-import json
-import numpy as np
 import logging
 import os
+from typing import Optional
+from typing_extensions import List
 from numpy import random
-from app.config.settings import DEFAULT_FACENET_MODEL, IMAGES_PATH
-from fastapi import APIRouter, HTTPException, UploadFile, status, File
+from pydantic import BaseModel
+from app.config.settings import DEFAULT_FACENET_MODEL
+from fastapi import APIRouter, HTTPException, status
 from app.database.face_clusters import (
     db_get_cluster_by_id,
     db_update_cluster,
     db_get_all_clusters_with_face_counts,
     db_get_images_by_cluster_id,  # Add this import
 )
-from app.database.faces import db_get_faces_unassigned_clusters, get_all_face_embeddings
+from app.database.faces import get_all_face_embeddings
 from app.models.FaceDetector import FaceDetector
 from app.models.FaceNet import FaceNet
 from app.schemas.face_clusters import (
@@ -26,9 +27,28 @@ from app.schemas.face_clusters import (
     GetClusterImagesData,
     ImageInCluster,
 )
-from app.schemas.images import AddMultipleImagesRequest, AddMultipleImagesResponse, AddSingleImageRequest, FaceTaggingResponse, ImagesResponse
-from app.utils.FaceNet import FaceNet_util_cosine_similarity, FaceNet_util_normalize_embedding, FaceNet_util_preprocess_image
+from app.schemas.images import AddSingleImageRequest
+from app.utils.FaceNet import FaceNet_util_cosine_similarity
+class BoundingBox(BaseModel):
+    x: float
+    y: float
+    width: float
+    height: float
+class ImageData(BaseModel):
+    id: str
+    path: str
+    folder_id: str
+    thumbnailPath: str
+    metadata: str
+    isTagged: bool
+    tags: Optional[List[str]] = None
+    bboxes: BoundingBox
 
+
+class GetAllImagesResponse(BaseModel):
+    success: bool
+    message: str
+    data: List[ImageData]
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -224,43 +244,50 @@ def face_tagging(payload: AddSingleImageRequest):
             ).model_dump(),
         )
 
+    matches = []
     image_id = random.randint(1, 3333)
     fd = FaceDetector()
     fn = FaceNet(DEFAULT_FACENET_MODEL)
     result = fd.detect_faces(image_id, image_path, forSearch=True)
 
     if not result or result["num_faces"] == 0:
-        return {
-            "success": True,
-            "image_id": image_id,
-            "num_faces": 0,
-            "matches": [],
-        }
+        return GetAllImagesResponse(
+            success=True,
+            message=f"Successfully retrieved {len(matches)} images",
+            data=[]
+        )
 
     process_face = result["processed_faces"][0]
     new_embedding = fn.get_embedding(process_face)
 
-    all_embeddings, all_bbox, all_imageid = get_all_face_embeddings()
+    images= get_all_face_embeddings()
 
-    matches = []
-    if len(all_embeddings) == 0:
-        print("No embeddings found in database")
+    if len(images) == 0:
+        return GetAllImagesResponse(
+            success=True,
+            message=f"Successfully retrieved {len(matches)} images",
+            data=[]
+        )
     else:
-        for i, stored_embedding in enumerate(all_embeddings):
-            similarity = FaceNet_util_cosine_similarity(new_embedding, stored_embedding)
+        for image in images:
+            similarity = FaceNet_util_cosine_similarity(new_embedding, image["embeddings"])
 
             if similarity >= 0.7:
                 matches.append(
-                    {
-                        "match_image_id": all_imageid[i],
-                        "bbox": all_bbox[i],
-                        "similarity": float(similarity),
-                    }
+                    ImageData(
+                    id=image["id"],
+                    path=image["path"],
+                    folder_id=image["folder_id"],
+                    thumbnailPath=image["thumbnailPath"],
+                    metadata=image["metadata"],
+                    isTagged=image["isTagged"],
+                    tags=image["tags"],
+                    bboxes=image["bbox"]
+                    )
                 )
 
-    return {
-        "success": True,
-        "image_id": image_id,
-        "number of faces": result["num_faces"],
-        "matches": matches,
-    }
+        return GetAllImagesResponse(
+            success=True,
+            message=f"Successfully retrieved {len(matches)} images",
+            data=matches,
+        )
