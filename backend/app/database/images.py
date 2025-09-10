@@ -1,5 +1,9 @@
 # Standard library imports
 import sqlite3
+import json
+import os
+import datetime
+from PIL import Image
 from typing import List, Tuple, TypedDict
 
 # App-specific imports
@@ -21,11 +25,60 @@ class ImageRecord(TypedDict):
     path: ImagePath
     folder_id: FolderId
     thumbnailPath: str
-    metadata: str
+    metadata: dict
     isTagged: bool
 
 
 ImageClassPair = Tuple[ImageId, ClassId]
+
+
+def extract_image_metadata(image_path: str) -> dict:
+    """Extract metadata for a given image file with detailed debug logging."""
+    # print(f"[DEBUG] extract_image_metadata called for: {image_path}")
+
+    if not os.path.exists(image_path):
+        # print(f"[ERROR] File not found: {image_path}")
+        return {}
+
+    try:
+        stats = os.stat(image_path)
+        # print(f"[DEBUG] File exists. Size = {stats.st_size} bytes")
+
+        try:
+            with Image.open(image_path) as img:
+                width, height = img.size
+                mime_type = Image.MIME.get(img.format, "unknown")
+                # print(f"[DEBUG] Pillow opened image: {width}x{height}, type={mime_type}")
+
+            return {
+                "name": os.path.basename(image_path),
+                "date_created": datetime.datetime.fromtimestamp(
+                    stats.st_ctime
+                ).isoformat(),
+                "width": width,
+                "height": height,
+                "file_location": image_path,
+                "file_size": stats.st_size,
+                "item_type": mime_type,
+            }
+
+        except Exception:
+            # print(f"[ERROR] Pillow could not open image {image_path} -> {e}")
+            return {
+                "name": os.path.basename(image_path),
+                "date_created": datetime.datetime.fromtimestamp(
+                    stats.st_ctime
+                ).isoformat(),
+                "file_location": image_path,
+                "file_size": stats.st_size,
+                "width": 0,
+                "height": 0,
+                "item_type": "unknown",
+            }
+
+    except Exception:
+        # print(f"[ERROR] Unexpected error in metadata extraction for {image_path} -> {e}")
+        return {}
 
 
 def db_create_images_table() -> None:
@@ -73,12 +126,37 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
     cursor = conn.cursor()
 
     try:
+        # Ensure metadata is properly filled and JSON stringified
+        prepared_records = []
+        for record in image_records:
+            metadata = record.get("metadata")
+
+            # Normalize: if metadata is a string, try to parse it
+            if isinstance(metadata, str):
+                try:
+                    metadata = json.loads(metadata)
+                except Exception:
+                    metadata = {}
+
+            # print(f"[DEBUG] Incoming metadata for {record['path']}: {metadata} (type={type(metadata)})")
+
+            # If no metadata provided or it's empty, extract it
+            if not metadata or metadata == {}:
+                metadata = extract_image_metadata(record["path"])
+
+            # Make sure it's stored as a JSON string in DB
+            record["metadata"] = json.dumps(metadata)
+
+            prepared_records.append(record)
+
+        # print("Prepared metadata:", prepared_records[0]["metadata"])
+
         cursor.executemany(
             """
             INSERT OR IGNORE INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)
             VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged)
-        """,
-            image_records,
+            """,
+            prepared_records,
         )
         conn.commit()
         return True
@@ -132,18 +210,31 @@ def db_get_all_images() -> List[dict]:
             tag_name,
         ) in results:
             if image_id not in images_dict:
+                # Safely parse metadata JSON -> dict
+                metadata_dict = {}
+                if metadata:
+                    try:
+                        parsed = (
+                            json.loads(metadata)
+                            if isinstance(metadata, str)
+                            else metadata
+                        )
+                        metadata_dict = parsed if isinstance(parsed, dict) else {}
+                    except (json.JSONDecodeError, TypeError, ValueError):
+                        metadata_dict = {}
+
                 images_dict[image_id] = {
                     "id": image_id,
                     "path": path,
                     "folder_id": folder_id,
                     "thumbnailPath": thumbnail_path,
-                    "metadata": metadata,
+                    "metadata": metadata_dict,
                     "isTagged": bool(is_tagged),
                     "tags": [],
                 }
 
-            # Add tag if it exists
-            if tag_name:
+            # Add tag if it exists (avoid duplicates)
+            if tag_name and tag_name not in images_dict[image_id]["tags"]:
                 images_dict[image_id]["tags"].append(tag_name)
 
         # Convert to list and set tags to None if empty

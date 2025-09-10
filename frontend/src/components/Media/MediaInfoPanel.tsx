@@ -80,7 +80,11 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           <div>
             <p className="text-xs text-white/50">Location</p>
             <p className="font-medium text-white">
-              {currentImage?.metadata || 'No location data'}
+              {typeof currentImage?.metadata === 'string'
+                ? currentImage.metadata
+                : currentImage?.metadata
+                  ? JSON.stringify(currentImage.metadata)
+                  : 'No location data'}
             </p>
           </div>
         </div>
