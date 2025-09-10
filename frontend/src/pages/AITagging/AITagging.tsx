@@ -49,12 +49,12 @@ export const AITagging = () => {
         <FaceCollections />
       </div>
 
-      {/* Chronological Gallery of Tagged Images */}
-      <div className="relative flex-1">
+      {/* Gallery Section */}
+      <div className="flex-1">
         <ChronologicalGallery
           images={taggedImages}
           showTitle={true}
-          title="AI Image Gallery"
+          title="All Images"
         />
       </div>
 

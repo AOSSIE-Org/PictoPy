@@ -33,10 +33,10 @@ export const Home = () => {
   const handleCloseMediaView = () => {
     // MediaView will handle closing via Redux
   };
-
   return (
-    <div className="flex h-screen flex-col">
-      <div className="relative flex-1">
+    <div className="flex h-full flex-col p-6">
+      {/* Gallery Section */}
+      <div className="flex-1">
         <ChronologicalGallery
           images={images}
           showTitle={true}
@@ -44,6 +44,7 @@ export const Home = () => {
         />
       </div>
 
+      {/* Media viewer modal */}
       {isImageViewOpen && <MediaView onClose={handleCloseMediaView} />}
     </div>
   );
