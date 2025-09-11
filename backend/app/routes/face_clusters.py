@@ -1,4 +1,5 @@
 import logging
+import uuid
 import os
 from typing import Optional
 from typing_extensions import List
@@ -249,10 +250,12 @@ def face_tagging(payload: AddSingleImageRequest):
             ).model_dump(),
         )
 
-    matches = []
-    image_id = random.randint(1, 3333)
     fd = FaceDetector()
     fn = FaceNet(DEFAULT_FACENET_MODEL)
+    matches = []
+
+    image_id = str(uuid.uuid4())
+
     result = fd.detect_faces(image_id, image_path, forSearch=True)
 
     if not result or result["num_faces"] == 0:
