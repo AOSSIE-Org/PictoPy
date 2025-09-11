@@ -37,7 +37,6 @@ export function Navbar() {
       const result = file.result.data as Image[];
       dispatch(setResults(result));
       setIsDialogOpen(false);
-      // Do smth
     }
   };
 
