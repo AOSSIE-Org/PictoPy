@@ -2,7 +2,12 @@ import { RootState } from '@/app/store';
 import { createSelector } from '@reduxjs/toolkit';
 
 // Basic selectors
-export const selectImages = (state: RootState) => state.images.images;
+export const selectImages = (state: RootState) => {
+  if (state.search.active) {
+    return state.search.images;
+  }
+  return state.images.images;
+};
 export const selectCurrentViewIndex = (state: RootState) =>
   state.images.currentViewIndex;
 export const selectTotalImages = (state: RootState) => state.images.totalImages;
