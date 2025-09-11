@@ -4,7 +4,7 @@ from typing import Optional
 from typing_extensions import List
 from numpy import random
 from pydantic import BaseModel
-from app.config.settings import DEFAULT_FACENET_MODEL
+from app.config.settings import CONFIDENCE_PERCENT, DEFAULT_FACENET_MODEL
 from fastapi import APIRouter, HTTPException, status
 from app.database.face_clusters import (
     db_get_cluster_by_id,
@@ -29,11 +29,15 @@ from app.schemas.face_clusters import (
 )
 from app.schemas.images import AddSingleImageRequest
 from app.utils.FaceNet import FaceNet_util_cosine_similarity
+
+
 class BoundingBox(BaseModel):
     x: float
     y: float
     width: float
     height: float
+
+
 class ImageData(BaseModel):
     id: str
     path: str
@@ -49,6 +53,7 @@ class GetAllImagesResponse(BaseModel):
     success: bool
     message: str
     data: List[ImageData]
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -251,40 +256,21 @@ def face_tagging(payload: AddSingleImageRequest):
     result = fd.detect_faces(image_id, image_path, forSearch=True)
 
     if not result or result["num_faces"] == 0:
-        return GetAllImagesResponse(
-            success=True,
-            message=f"Successfully retrieved {len(matches)} images",
-            data=[]
-        )
+        return GetAllImagesResponse(success=True, message=f"Successfully retrieved {len(matches)} images", data=[])
 
     process_face = result["processed_faces"][0]
     new_embedding = fn.get_embedding(process_face)
 
-    images= get_all_face_embeddings()
+    images = get_all_face_embeddings()
 
     if len(images) == 0:
-        return GetAllImagesResponse(
-            success=True,
-            message=f"Successfully retrieved {len(matches)} images",
-            data=[]
-        )
+        return GetAllImagesResponse(success=True, message=f"Successfully retrieved {len(matches)} images", data=[])
     else:
         for image in images:
             similarity = FaceNet_util_cosine_similarity(new_embedding, image["embeddings"])
 
-            if similarity >= 0.7:
-                matches.append(
-                    ImageData(
-                    id=image["id"],
-                    path=image["path"],
-                    folder_id=image["folder_id"],
-                    thumbnailPath=image["thumbnailPath"],
-                    metadata=image["metadata"],
-                    isTagged=image["isTagged"],
-                    tags=image["tags"],
-                    bboxes=image["bbox"]
-                    )
-                )
+            if similarity >= CONFIDENCE_PERCENT:
+                matches.append(ImageData(id=image["id"], path=image["path"], folder_id=image["folder_id"], thumbnailPath=image["thumbnailPath"], metadata=image["metadata"], isTagged=image["isTagged"], tags=image["tags"], bboxes=image["bbox"]))
 
         return GetAllImagesResponse(
             success=True,
