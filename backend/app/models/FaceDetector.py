@@ -55,7 +55,6 @@ class FaceDetector:
             db_insert_face_embeddings_by_image_id(
                 image_id, embeddings, confidence=confidences, bbox=bboxes
             )
-            print("done")
 
         return {
             "ids": f"{class_ids}",

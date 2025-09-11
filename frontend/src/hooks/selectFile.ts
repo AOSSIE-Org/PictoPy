@@ -1,6 +1,5 @@
-import { fetchSearchedFaces } from '@/api/api-functions';
+import { FetchSearchedFacesRequest, fetchSearchedFaces } from '@/api/api-functions';
 import { APIResponse } from '@/types/API';
-import { Image } from '@/types/Media';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback } from 'react';
 interface UseFolderPickerOptions {
@@ -37,7 +36,7 @@ export const useFile = (
       if (selected && typeof selected === 'string') {
         const res: APIResponse = await fetchSearchedFaces({
           path: selected,
-        } as Image);
+        } as FetchSearchedFacesRequest);
         console.log(res)
         return { path: selected, result: res };
       }

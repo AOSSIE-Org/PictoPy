@@ -16,6 +16,7 @@ import { selectAvatar, selectName } from '@/features/onboardingSelectors';
 import { useFile } from '@/hooks/selectFile';
 import { clearSearch, setResults, startSearch } from '@/features/searchSlice';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import type { Image } from '@/types/Media';
 
 export function Navbar() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -34,7 +35,7 @@ export function Navbar() {
     const file = await pickSingleFile();
     if (file) {
       dispatch(startSearch(file.path));
-      const result = file.result.data as Image[];
+      const result = file.result.data as unknown as Image[];
       dispatch(setResults(result));
       setIsDialogOpen(false);
     }

@@ -168,8 +168,11 @@ def get_all_face_embeddings():
         tag_name,
     ) in results:
         if image_id not in images_dict:
-            embeddings_json = json.loads(embeddings)
-            bbox_json = json.loads(bbox)
+            try:
+                embeddings_json = json.loads(embeddings)
+                bbox_json = json.loads(bbox)
+            except json.JSONDecodeError:
+                continue;
             images_dict[image_id] = {
                 "embeddings": embeddings_json,
                 "bbox": bbox_json,
@@ -196,6 +199,7 @@ def get_all_face_embeddings():
     # Sort by path
     images.sort(key=lambda x: x["path"])
 
+    conn.close()
     return images
 
 def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbedding]]]:

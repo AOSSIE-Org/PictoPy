@@ -8,13 +8,14 @@ import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
+import { RootState } from '@/app/store';
 
 export const Home = () => {
   const dispatch = useDispatch();
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const images = useSelector(selectImages);
 
-  const searchState = useSelector((state: any) => state.search);
+  const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
   const searchResults = searchState.images;
   const isSearchLoading = searchState.loading;
