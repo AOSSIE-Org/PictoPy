@@ -29,9 +29,7 @@ def microservice_util_start_sync_service(
     try:
         # Check if running as a frozen executable (PyInstaller)
         if getattr(sys, "frozen", False):
-            logger.info(
-                "Running as frozen executable, using bundled sync microservice..."
-            )
+            logger.info("Running as frozen executable, using bundled sync microservice...")
             return _start_frozen_sync_service()
 
         # Development mode - use virtual environment setup
@@ -68,9 +66,7 @@ def _start_frozen_sync_service() -> bool:
             sync_executable = sync_dir / "PictoPy_Sync"
 
         if not sync_executable.exists():
-            logger.error(
-                f"Sync microservice executable not found at: {sync_executable}"
-            )
+            logger.error(f"Sync microservice executable not found at: {sync_executable}")
             return False
 
         logger.info(f"Starting sync microservice from: {sync_executable}")
@@ -231,17 +227,27 @@ def _start_fastapi_service(python_executable: Path, service_path: Path) -> bool:
         original_cwd = os.getcwd()
         os.chdir(service_path)
 
+        host = "127.0.0.1"
+        port = "8001"
         # On Windows, use a different approach with scripts path
         if platform.system().lower() == "windows":
             # Use uvicorn directly to run the FastAPI app
-            cmd = [str(python_executable), "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+            cmd = [
+                str(python_executable), 
+                "-m", 
+                "uvicorn", 
+                "main:app", 
+                "--host", host,
+                "--port", port,
+                "--reload"  # Add reload flag for development convenience
+            ]        
         else:
             # For non-Windows platforms
             cmd = [str(python_executable), "-m", "fastapi", "dev", "--port", "8001"]
 
         logger.info(f"Executing command: {' '.join(cmd)}")
 
-        # Start the process 
+        # Start the process
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
         # Restore original working directory
