@@ -197,21 +197,6 @@ def get_all_face_embeddings():
     images.sort(key=lambda x: x["path"])
 
     return images
-    results = cursor.fetchall()
-    all_embeddings = []
-    all_bboxes = []
-    all_image_ids = []
-    for image_id, embeddings_json, bbox_json in results:
-        embeddings_list = json.loads(embeddings_json)
-        bbox = json.loads(bbox_json) if bbox_json else None
-        embedding_array = np.array(embeddings_list, dtype=np.float32)
-
-        all_embeddings.append(embedding_array)
-        all_bboxes.append(bbox)
-        all_image_ids.append(image_id)
-
-    conn.close()
-    return all_embeddings, all_bboxes, all_image_ids
 
 def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbedding]]]:
     """
