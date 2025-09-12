@@ -1,22 +1,22 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod models;
-mod repositories;
-mod services;
-mod utils;
-
-use crate::services::{CacheService, FileService};
 use std::env;
-use tauri::path::BaseDirectory;
-use tauri::Manager;
+
+#[tauri::command]
+pub fn get_server_path() -> String {
+    match env::var("SERVER_URL") {
+        Ok(val) => val,
+        Err(_) => String::from("http://127.0.0.1:8000"),
+    }
+}
 
 fn main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_store::Builder::new().build())
-        .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_fs::init())
+        .invoke_handler(tauri::generate_handler![get_server_path])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
