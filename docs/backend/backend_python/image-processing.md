@@ -1,16 +1,15 @@
 # Image Processing
 
-We use `asyncio` for processing multiple images at the same time in the background without blocking the frontend, this can be found in
-`app/routes/images.py`.
+We use Python’s Process Pool Executor for parallel image processing in background worker processes. This allows multiple images to be processed in parallel without blocking the API or frontend.
 
 PictoPy uses different models for achieving its tagging capabilities.
 The discussed models below are default models, you can change them by going to `app/models` directory and change the paths in the configuration files.
 
-## Object Detection with YOLOv8
+## Object Detection with YOLOv11
 
-We use YOLOv8 to spot objects in your photos. Here's what it does:
+We use YOLOv11 to spot objects in your photos. Here's what it does:
 
-YOLOv8 takes your image and runs it through its model. It figures out what objects are in the image and where they are.
+YOLOv11 takes your image and runs it through its model. It figures out what objects are in the image and where they are.
 The result is a list of objects, their locations, and how confident the model is about each detection. If a `person` class is predicted we pass it on
 to the face detection model which we discuss in the next section.
 
@@ -21,13 +20,13 @@ YOLO stands for "You Only Look Once". We use the model provided by [Ultralytics]
 
 For faces, we do a bit more:
 
-We start with a special version of YOLOv8 that's really good at finding faces. Once we find a face, we zoom in on it
+We start with a special version of YOLOv11 that's really good at finding faces. Once we find a face, we zoom in on it
 (by cropping it to `160x160` - the shape FaceNet expects) and pass it to our FaceNet model.
-FaceNet then creates a unique 'embedding' for each face, the representation of of the face in a form of numbers.
+FaceNet then creates a unique 'embedding' for each face, the representation of the face in a form of numbers.
 
 ???+ tip "Fun Fact"
-We use another YOLOv8 model for this as well by default. This was pretrained on top of the one provided by Ultralytics and is called
-[yolov8-face](https://github.com/akanametov/yolo-face)
+We use another YOLOv11 model for this as well by default. This was pretrained on top of the one provided by Ultralytics and is called
+[yolov11-face](https://github.com/akanametov/yolo-face)
 
 ???+ note "What's an embedding?"
 An embedding is a bunch of numbers that represent the face. Similar faces will have similar numbers. FaceNet creates a 512 embedding array
@@ -55,21 +54,21 @@ The system updates clusters as you add or remove photos, so it keeps getting sma
 
 Here are some key parameters for the main models used in PictoPy's image processing pipeline.
 
-### YOLOv8 Object Detection
+### YOLOv11 Object Detection
 
 | Parameter    | Value    | Description                                     |
 | ------------ | -------- | ----------------------------------------------- |
-| `conf_thres` | 0.7      | Confidence threshold for object detection       |
+| `conf_thres` | 0.4      | Confidence threshold for object detection       |
 | `iou_thres`  | 0.5      | IoU (Intersection over Union) threshold for NMS |
 | Input Shape  | Varies   | Determined dynamically from the model           |
 | Output       | Multiple | Includes bounding boxes, scores, and class IDs  |
 
-### Face Detection (YOLOv8 variant)
+### Face Detection (YOLOv11 variant)
 
 | Parameter    | Value                          | Description                             |
 | ------------ | ------------------------------ | --------------------------------------- |
-| `conf_thres` | 0.2                            | Confidence threshold for face detection |
-| `iou_thres`  | 0.3                            | IoU threshold for NMS in face detection |
+| `conf_thres` | 0.35                           | Confidence threshold for face detection |
+| `iou_thres`  | 0.45                           | IoU threshold for NMS in face detection |
 | Model Path   | `DEFAULT_FACE_DETECTION_MODEL` | Path to the face detection model file   |
 
 ### FaceNet (Face Recognition)
