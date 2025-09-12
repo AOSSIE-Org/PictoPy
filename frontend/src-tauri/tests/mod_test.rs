@@ -1,19 +1,19 @@
-use std::fs;
-use std::path::Path;
+use std::env;
+use tauri_backend::get_server_path;
 
-use image::{DynamicImage, GenericImageView, ImageOutputFormat, RgbImage};
-use tauri::State;
-use tempfile::tempdir;
-use tokio;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-use picto_py::services::{
-    adjust_brightness_contrast, apply_sepia, check_secure_folder_status, create_secure_folder,
-    decrypt_data, derive_key, encrypt_data, generate_salt, get_folders_with_images,
-    get_images_in_folder, get_random_memories, get_secure_folder_path, hash_password,
-    is_image_file, move_to_secure_folder, remove_from_secure_folder, save_edited_image, share_file,
-    unlock_secure_folder, CacheService, FileService, SECURE_FOLDER_NAME,
-};
-
+    #[test]
+    fn test_get_server_path() {
+        env::set_var("SERVER_URL", "http://test.com");
+        assert_eq!(get_server_path(), "http://test.com");
+        
+        env::remove_var("SERVER_URL");
+        assert_eq!(get_server_path(), "http://127.0.0.1:8000");
+    }
+}
 /// This unsafe helper is for testing only.
 fn state_from<T: Send + Sync + 'static>(t: &'static T) -> State<'static, T> {
     unsafe { std::mem::transmute(t) }
@@ -256,4 +256,19 @@ fn test_get_random_memories() {
     let images = result.unwrap();
     // With one image available, expect exactly one image.
     assert_eq!(images.len(), 1);
+}
+
+#[cfg(test)]
+mod tests {
+    use std::env;
+    use tauri_backend::get_server_path;
+
+    #[test]
+    fn test_get_server_path() {
+        env::set_var("SERVER_URL", "http://test.com");
+        assert_eq!(get_server_path(), "http://test.com");
+        
+        env::remove_var("SERVER_URL");
+        assert_eq!(get_server_path(), "http://127.0.0.1:8000");
+    }
 }
