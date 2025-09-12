@@ -233,7 +233,28 @@ def _start_fastapi_service(python_executable: Path, service_path: Path) -> bool:
 
         # Command to start FastAPI dev server
         print(python_executable)
-        cmd = [str(python_executable), "-m", "fastapi", "dev", "--port", "8001"]
+        host = "127.0.0.1"
+        port = "8001"
+        # On Windows, use a different approach with scripts path
+
+        if platform.system().lower() == "windows":
+            # Use uvicorn directly to run the FastAPI app
+            cmd = [
+                str(python_executable),
+                "-m",
+                "uvicorn",
+                "main:app",
+                "--host",
+                host,
+                "--port",
+                port,
+                "--reload",  # Add reload flag for development convenience
+            ]
+        else:
+            # For non-Windows platforms
+            cmd = [str(python_executable), "-m", "fastapi", "dev", "--port", "8001"]
+
+        logger.info(f"Executing command: {' '.join(cmd)}")
 
         # Start the process (non-blocking)
         process = subprocess.Popen(
