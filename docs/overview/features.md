@@ -7,7 +7,7 @@
 
 ### Advanced Image Analysis
 
-- Object detection using **YOLOv8** for identifying various items in images
+- Object detection using **YOLOv11** for identifying various items in images
 - Face detection and clustering powered by **FaceNet**.
 
 ### Privacy-Focused Design
@@ -43,7 +43,7 @@
 | Python Backend    | Python               |
 | Database          | SQLite               |
 | Image Processing  | OpenCV, ONNX Runtime |
-| Object Detection  | YOLOv8               |
+| Object Detection  | YOLOv11              |
 | Face Recognition  | FaceNet              |
 | API Framework     | FastAPI              |
 | State Management  | Redux Toolkit        |

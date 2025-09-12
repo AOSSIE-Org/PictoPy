@@ -17,6 +17,19 @@ Hi there! Thank you for considering contributing to **PictoPy** – we’re exci
        </br>
      - For setting up the backend, follow the instructions in the [Backend Setup Guide](./docs/backend/docker-setup.md).
 
+## Docs Website Setup (Local)
+
+PictoPy documentation uses MkDocs with the Material theme and the Swagger UI plugin.
+
+To set up and run the docs website on your local machine:
+
+1. Ensure you have **Python 3** and **pip** installed.
+2. Install the required Python packages using: pip install mkdocs-material mkdocs-swagger-ui-tag
+3. From the project root (where `mkdocs.yml` exists), start the local MkDocs server: mkdocs serve
+4. Open your browser and navigate to: http://127.0.0.1:8000
+5. Edit Markdown files inside the `docs/` folder. The site will automatically reload when changes are saved.
+6. To build the static site for production deployment, run: mkdocs build
+
 ## Testing
 
 ### Frontend
