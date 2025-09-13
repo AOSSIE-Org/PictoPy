@@ -151,7 +151,7 @@ export const loadPhotos = createAsyncThunk(
   'media/loadPhotos',
   async (directories: string[], { rejectWithValue }) => {
     try {
-      const photos = await invoke('get_all_images_with_cache', { directories });
+      const photos = await invoke('get_server_path');
       return photos;
     } catch (error) {
       return rejectWithValue(error.message);
