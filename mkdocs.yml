@@ -70,9 +70,8 @@ nav:
           - Python Backend Image Processing: backend/backend_python/image-processing.md
           - Rust Backend API: backend/backend_rust/api.md
       - Frontend:
-          - UI Components: frontend/ui-components.md
           - State Management: frontend/state-management.md
-          - Gallery View: frontend/gallery-view.md
+          - Screenshots: frontend/screenshots.md
 
 extra:
   social:
