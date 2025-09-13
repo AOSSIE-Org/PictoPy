@@ -53,14 +53,24 @@ export function Navbar() {
 
       {/* Search Bar */}
       <div className="mx-auto flex max-w-md flex-1 justify-center px-4">
-        <div className="bg-muted/50 flex w-full items-center rounded-full px-3">
+        <div className="bg-muted/50 flex w-full items-center rounded-md pr-2">
           {/* Query Image */}
           {queryImage && (
-            <img
-              src={convertFileSrc(queryImage) || 'photo.png'}
-              alt="Query"
-              className="mr-2 h-6 w-6 rounded object-cover"
-            />
+            <div className="relative mr-2 ml-2">
+              <img
+                src={convertFileSrc(queryImage) || 'photo.png'}
+                alt="Query"
+                className="h-7 w-7 rounded object-cover"
+              />
+              {isSearchActive && (
+                <button
+                  onClick={() => dispatch(clearSearch())}
+                  className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           )}
 
           {/* Input */}
@@ -69,16 +79,6 @@ export function Navbar() {
             placeholder="Add to your search"
             className="flex-1 border-0 bg-transparent focus:ring-0"
           />
-
-          {/* Action Icons */}
-          {isSearchActive && (
-            <button
-              onClick={() => dispatch(clearSearch())}
-              className="mx-2 text-sm font-bold text-red-500"
-            >
-              ✕
-            </button>
-          )}
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>

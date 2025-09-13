@@ -3,7 +3,6 @@ import uuid
 import os
 from typing import Optional
 from typing_extensions import List
-from numpy import random
 from pydantic import BaseModel
 from app.config.settings import CONFIDENCE_PERCENT, DEFAULT_FACENET_MODEL
 from fastapi import APIRouter, HTTPException, status
