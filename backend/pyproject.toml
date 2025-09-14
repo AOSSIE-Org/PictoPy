@@ -1,2 +1,74 @@
 [tool.ruff]
 line-length = 300
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.2"
+pytest-cov = "^7.0.0"
+
+[project]
+name = "backend"
+version = "0.1.0"
+description = "The backend for PictoPy, a tool for sorting images based on face encodings."
+authors = [
+    {name = "uju09",email = "24bcs012@iiitdwd.ac.in"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "annotated-types (==0.6.0)",
+    "bcrypt (==3.2.0)",
+    "certifi (==2024.2.2)",
+    "click (==8.1.7)",
+    "coloredlogs (==15.0.1)",
+    "dnspython (==2.6.1)",
+    "email-validator (==2.1.1)",
+    "exceptiongroup (==1.2.1)",
+    "fastapi (==0.111.0)",
+    "fastapi-cli (==0.0.3)",
+    "flatbuffers (==24.3.25)",
+    "h11 (==0.14.0)",
+    "h2 (==4.1.0)",
+    "hpack (==4.0.0)",
+    "httpcore (==1.0.5)",
+    "httptools (==0.6.1)",
+    "httpx (==0.27.0)",
+    "humanfriendly (==10.0)",
+    "hypercorn (==0.17.3)",
+    "hyperframe (==6.0.1)",
+    "idna (==3.7)",
+    "jinja2 (==3.1.4)",
+    "joblib (==1.4.2)",
+    "loguru (==0.4.1)",
+    "markdown-it-py (==3.0.0)",
+    "markupsafe (==2.1.5)",
+    "mdurl (==0.1.2)",
+    "mkdocs (==1.6.1)",
+    "mkdocs-get-deps (==0.2.0)",
+    "mkdocs-material (==9.6.16)",
+    "mkdocs-material-extensions (==1.3.1)",
+    "mkdocs-swagger-ui-tag (==0.7.1)",
+    "mpmath (==1.3.0)",
+    "numpy (==1.26.4)",
+    "onnxruntime (==1.17.1)",
+    "opencv-python (==4.9.0.80)",
+    "orjson (==3.10.3)",
+    "packaging (==24.0)",
+    "pillow (==10.3.0)",
+    "priority (==2.0.0)",
+    "protobuf (==5.26.1)",
+    "pydantic (==2.7.1)",
+    "pydantic-core (==2.18.2)",
+    "pygments (==2.18.0)",
+    "python-dotenv (==1.0.1)",
+    "python-multipart (==0.0.9)",
+    "pyyaml (==6.0.1)",
+    "rich (==13.7.1)",
+    "scikit-learn (==1.5.1)",
+    "scipy (==1.14.0)",
+    "psutil (>=7.0.0,<8.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
