@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, RefObject } from 'react';
 import {
   useScroll,
   useWheel,
@@ -38,6 +38,17 @@ export default function TimelineScrollbar({
   >(null);
   const scrollProgress = useScroll(scrollableRef);
   const scrollTooltipTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const markerPositions = useMemo(() => {
+    const scrollable = scrollableRef.current;
+    if (!scrollable || !monthMarkers.length) return [];
+
+    const scrollableHeight = scrollable.scrollHeight - scrollable.clientHeight;
+    return monthMarkers.map((marker) => ({
+      ...marker,
+      markerTop: (marker.offset / scrollableHeight) * trackHeight,
+    }));
+  }, [monthMarkers, trackHeight, scrollableRef.current?.scrollHeight]);
 
   useWheel(containerRef, (deltaY) => {
     if (scrollableRef.current) {
@@ -196,8 +207,13 @@ export default function TimelineScrollbar({
     updateDragTooltip(e.clientY);
 
     const handleMouseMove = (e: MouseEvent) => {
-      handleScroll(e.clientY);
-      updateDragTooltip(e.clientY);
+      try {
+        handleScroll(e.clientY);
+        updateDragTooltip(e.clientY);
+      } catch (error) {
+        console.error('Error during drag:', error);
+        handleMouseUp();
+      }
     };
 
     const handleMouseUp = () => {
@@ -220,8 +236,9 @@ export default function TimelineScrollbar({
       return;
     }
 
+    if (!trackRef.current) return;
     const { clientY } = e;
-    const { top, height } = trackRef.current!.getBoundingClientRect();
+    const { top, height } = trackRef.current.getBoundingClientRect();
     const hoverY = clientY - top;
 
     const scrollable = scrollableRef.current;
@@ -294,22 +311,14 @@ export default function TimelineScrollbar({
 
         {/* Month Markers */}
         <TooltipProvider>
-          {monthMarkers.map((marker, index) => {
-            const scrollable = scrollableRef.current;
-            if (!scrollable) return null;
-
-            const scrollableHeight =
-              scrollable.scrollHeight - scrollable.clientHeight;
-            const markerProgress = marker.offset / scrollableHeight;
-            const markerTop = markerProgress * trackHeight;
-
+          {markerPositions.map((marker, index) => {
             return (
               <Tooltip key={index}>
                 <TooltipTrigger asChild>
                   <div
                     className="absolute left-1/2 h-1 w-full bg-gray-500 shadow-md"
                     style={{
-                      top: `${markerTop}px`,
+                      top: `${marker.markerTop}px`,
                       transform: 'translate(-50%, -50%)',
                       pointerEvents: isDragging ? 'none' : 'auto',
                     }}

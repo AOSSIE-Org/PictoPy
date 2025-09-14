@@ -3,7 +3,7 @@ import sqlite3
 import json
 import os
 import datetime
-from PIL import Image
+from PIL import Image, ExifTags
 from typing import List, Tuple, TypedDict
 
 # App-specific imports
@@ -37,8 +37,15 @@ def extract_image_metadata(image_path: str) -> dict:
     # print(f"[DEBUG] extract_image_metadata called for: {image_path}")
 
     if not os.path.exists(image_path):
-        # print(f"[ERROR] File not found: {image_path}")
-        return {}
+        return {
+            "name": os.path.basename(image_path),
+            "date_created": None,
+            "width": 0,
+            "height": 0,
+            "file_location": image_path,
+            "file_size": 0,
+            "item_type": "unknown",
+        }
 
     try:
         stats = os.stat(image_path)
@@ -50,11 +57,21 @@ def extract_image_metadata(image_path: str) -> dict:
                 mime_type = Image.MIME.get(img.format, "unknown")
                 # print(f"[DEBUG] Pillow opened image: {width}x{height}, type={mime_type}")
 
+                exif = getattr(img, "_getexif", lambda: None)() or {}
+                dt_original = None
+                for k, v in exif.items() if isinstance(exif, dict) else []:
+                    if ExifTags.TAGS.get(k) == "DateTimeOriginal":
+                        dt_original = v
+                        break
             return {
                 "name": os.path.basename(image_path),
-                "date_created": datetime.datetime.fromtimestamp(
-                    stats.st_ctime
-                ).isoformat(),
+                "date_created": (
+                    datetime.datetime.strptime(
+                        dt_original, "%Y:%m:%d %H:%M:%S"
+                    ).isoformat()
+                    if dt_original
+                    else datetime.datetime.fromtimestamp(stats.st_mtime).isoformat()
+                ),
                 "width": width,
                 "height": height,
                 "file_location": image_path,
@@ -67,7 +84,7 @@ def extract_image_metadata(image_path: str) -> dict:
             return {
                 "name": os.path.basename(image_path),
                 "date_created": datetime.datetime.fromtimestamp(
-                    stats.st_ctime
+                    stats.st_mtime
                 ).isoformat(),
                 "file_location": image_path,
                 "file_size": stats.st_size,
@@ -77,8 +94,15 @@ def extract_image_metadata(image_path: str) -> dict:
             }
 
     except Exception:
-        # print(f"[ERROR] Unexpected error in metadata extraction for {image_path} -> {e}")
-        return {}
+        return {
+            "name": os.path.basename(image_path),
+            "date_created": None,
+            "width": 0,
+            "height": 0,
+            "file_location": image_path,
+            "file_size": 0,
+            "item_type": "unknown",
+        }
 
 
 def db_create_images_table() -> None:
@@ -153,8 +177,14 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
 
         cursor.executemany(
             """
-            INSERT OR IGNORE INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)
+            INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)
             VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged)
+            ON CONFLICT(id) DO UPDATE SET
+              path=excluded.path,
+              folder_id=excluded.folder_id,
+              thumbnailPath=excluded.thumbnailPath,
+              metadata=excluded.metadata,
+              isTagged=excluded.isTagged
             """,
             prepared_records,
         )
@@ -284,13 +314,23 @@ def db_get_untagged_images() -> List[ImageRecord]:
 
         untagged_images = []
         for image_id, path, folder_id, thumbnail_path, metadata in results:
+            md: dict = {}
+            if metadata:
+                try:
+                    md = (
+                        json.loads(metadata)
+                        if isinstance(metadata, str)
+                        else (metadata or {})
+                    )
+                except Exception:
+                    md = {}
             untagged_images.append(
                 {
                     "id": image_id,
                     "path": path,
                     "folder_id": folder_id,
                     "thumbnailPath": thumbnail_path,
-                    "metadata": metadata,
+                    "metadata": md,
                 }
             )
 

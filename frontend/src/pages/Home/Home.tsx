@@ -52,6 +52,7 @@ export const Home = () => {
           showTitle={true}
           title="Image Gallery"
           onMonthOffsetsChange={setMonthMarkers}
+          scrollContainerRef={scrollableRef}
         />
       </div>
 

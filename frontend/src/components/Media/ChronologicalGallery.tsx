@@ -20,6 +20,7 @@ type ChronologicalGalleryProps = {
   title?: string;
   className?: string;
   onMonthOffsetsChange?: (markers: MonthMarker[]) => void;
+  scrollContainerRef?: React.RefObject<HTMLElement | null>;
 };
 
 export const ChronologicalGallery = ({
@@ -28,9 +29,10 @@ export const ChronologicalGallery = ({
   title = 'Image Gallery',
   className = '',
   onMonthOffsetsChange,
+  scrollContainerRef,
 }: ChronologicalGalleryProps) => {
   const allImages = useSelector(selectImages);
-  const monthHeaderRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const monthHeaderRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
 
   // Optimized grouping with proper date handling
   const grouped = useMemo(
@@ -45,23 +47,27 @@ export const ChronologicalGallery = ({
   );
 
   useEffect(() => {
-    if (onMonthOffsetsChange) {
-      const markers = monthHeaderRefs.current.map((ref) => {
-        const year = ref?.parentElement?.parentElement?.dataset.year || '';
-        const month =
-          ref?.parentElement?.dataset.timelineMonth?.split('-')[1] || '';
-        return {
-          offset: ref?.offsetTop ?? 0,
-          month: new Date(Number(year), Number(month) - 1).toLocaleString(
-            'default',
-            { month: 'long' },
-          ),
-          year,
-        };
-      });
-      onMonthOffsetsChange(markers);
-    }
-  }, [images, onMonthOffsetsChange]);
+    if (!onMonthOffsetsChange) return;
+    const entries = Array.from(monthHeaderRefs.current.entries()).flatMap(
+      ([key, el]) => {
+        if (!el) return [];
+        const [y, m] = key.split('-');
+        const monthName = new Date(Number(y), Number(m) - 1).toLocaleString(
+          'default',
+          { month: 'long' },
+        );
+        const scroller = scrollContainerRef?.current as HTMLElement | undefined;
+        const offset = scroller
+          ? el.getBoundingClientRect().top -
+            scroller.getBoundingClientRect().top +
+            scroller.scrollTop
+          : el.offsetTop;
+        return [{ offset, month: monthName, year: y }];
+      },
+    );
+    entries.sort((a, b) => a.offset - b.offset);
+    onMonthOffsetsChange(entries);
+  }, [images, onMonthOffsetsChange, scrollContainerRef]);
 
   // Check if we have any images to display
   if (!images.length) {
@@ -94,7 +100,7 @@ export const ChronologicalGallery = ({
           <div key={year} data-year={year}>
             {Object.entries(months)
               .sort((a, b) => Number(b[0]) - Number(a[0])) // sort months descending (newest first)
-              .map(([month, imgs], index) => {
+              .map(([month, imgs]) => {
                 const monthName = new Date(
                   Number(year),
                   Number(month) - 1,
@@ -110,7 +116,8 @@ export const ChronologicalGallery = ({
                     {/* Sticky Month/Year Header */}
                     <div
                       ref={(el) => {
-                        monthHeaderRefs.current[index] = el;
+                        const key = `${year}-${month}`;
+                        monthHeaderRefs.current.set(key, el);
                       }}
                       className="bg-background sticky top-0 z-10 py-3 backdrop-blur-sm"
                     >

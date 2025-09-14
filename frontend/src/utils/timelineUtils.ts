@@ -16,7 +16,8 @@ export function useScroll(scrollableRef: RefObject<HTMLElement | null>) {
 
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = scrollable;
-      const progress = scrollTop / (scrollHeight - clientHeight);
+      const denom = Math.max(scrollHeight - clientHeight, 1);
+      const progress = Math.min(1, Math.max(0, scrollTop / denom));
       setScrollProgress(progress);
     };
 
@@ -55,9 +56,14 @@ export const getMarkerForScrollPosition = (
   scrollPosition: number,
   monthMarkers: MonthMarker[],
 ): MonthMarker | undefined => {
-  return [...monthMarkers]
-    .reverse()
-    .find((marker) => marker.offset <= scrollPosition);
+  if (!monthMarkers.length) return undefined;
+  const sorted = monthMarkers.slice().sort((a, b) => a.offset - b.offset);
+  let result: MonthMarker | undefined = undefined;
+  for (const m of sorted) {
+    if (m.offset <= scrollPosition) result = m;
+    else break;
+  }
+  return result;
 };
 
 export const clamp = (value: number, min: number, max: number): number => {

@@ -66,6 +66,7 @@ export const AITagging = () => {
             showTitle={true}
             title="All Images"
             onMonthOffsetsChange={setMonthMarkers}
+            scrollContainerRef={scrollableRef}
           />
         </div>
 
