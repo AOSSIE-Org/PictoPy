@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { MediaView } from '@/components/Media/MediaView';
 import { FaceCollections } from '@/components/FaceCollections';
@@ -11,12 +11,18 @@ import {
 } from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
-import { ChronologicalGallery } from '@/components/Media/ChronologicalGallery';
+import {
+  ChronologicalGallery,
+  MonthMarker,
+} from '@/components/Media/ChronologicalGallery';
+import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 
 export const AITagging = () => {
   const dispatch = useDispatch();
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const taggedImages = useSelector(selectTaggedImages);
+  const scrollableRef = useRef<HTMLDivElement>(null);
+  const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
 
   const {
     data: imagesData,
@@ -41,25 +47,36 @@ export const AITagging = () => {
   }, [imagesData, imagesSuccess, imagesError, imagesLoading, dispatch]);
 
   return (
-    <div className="p-6">
-      <h1 className="mb-6 text-2xl font-bold">AI Tagging</h1>
+    <div className="relative flex h-full flex-col pr-6">
+      <div
+        ref={scrollableRef}
+        className="hide-scrollbar flex-1 overflow-x-hidden overflow-y-auto"
+      >
+        <h1 className="mb-6 text-2xl font-bold">AI Tagging</h1>
 
-      {/* Face Collections Section */}
-      <div className="mb-8">
-        <FaceCollections />
+        {/* Face Collections Section */}
+        <div className="mb-8">
+          <FaceCollections />
+        </div>
+
+        {/* Gallery Section */}
+        <div className="flex-1">
+          <ChronologicalGallery
+            images={taggedImages}
+            showTitle={true}
+            title="All Images"
+            onMonthOffsetsChange={setMonthMarkers}
+          />
+        </div>
+
+        {/* Media Viewer Modal */}
+        {isImageViewOpen && <MediaView />}
       </div>
-
-      {/* Gallery Section */}
-      <div className="flex-1">
-        <ChronologicalGallery
-          images={taggedImages}
-          showTitle={true}
-          title="All Images"
-        />
-      </div>
-
-      {/* Media Viewer Modal */}
-      {isImageViewOpen && <MediaView />}
+      <TimelineScrollbar
+        scrollableRef={scrollableRef}
+        monthMarkers={monthMarkers}
+        className="absolute top-0 right-0 h-full w-4"
+      />
     </div>
   );
 };

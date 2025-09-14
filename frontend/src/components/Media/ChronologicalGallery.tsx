@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { Image } from '@/types/Media';
@@ -8,11 +8,18 @@ import {
   createImageIndexMap,
 } from '@/utils/dateUtils';
 
+export type MonthMarker = {
+  offset: number;
+  month: string;
+  year: string;
+};
+
 type ChronologicalGalleryProps = {
   images: Image[];
   showTitle?: boolean;
   title?: string;
   className?: string;
+  onMonthOffsetsChange?: (markers: MonthMarker[]) => void;
 };
 
 export const ChronologicalGallery = ({
@@ -20,8 +27,10 @@ export const ChronologicalGallery = ({
   showTitle = false,
   title = 'Image Gallery',
   className = '',
+  onMonthOffsetsChange,
 }: ChronologicalGalleryProps) => {
   const allImages = useSelector(selectImages);
+  const monthHeaderRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Optimized grouping with proper date handling
   const grouped = useMemo(
@@ -34,6 +43,25 @@ export const ChronologicalGallery = ({
     () => createImageIndexMap(allImages),
     [allImages],
   );
+
+  useEffect(() => {
+    if (onMonthOffsetsChange) {
+      const markers = monthHeaderRefs.current.map((ref) => {
+        const year = ref?.parentElement?.parentElement?.dataset.year || '';
+        const month =
+          ref?.parentElement?.dataset.timelineMonth?.split('-')[1] || '';
+        return {
+          offset: ref?.offsetTop ?? 0,
+          month: new Date(Number(year), Number(month) - 1).toLocaleString(
+            'default',
+            { month: 'long' },
+          ),
+          year,
+        };
+      });
+      onMonthOffsetsChange(markers);
+    }
+  }, [images, onMonthOffsetsChange]);
 
   // Check if we have any images to display
   if (!images.length) {
@@ -66,7 +94,7 @@ export const ChronologicalGallery = ({
           <div key={year} data-year={year}>
             {Object.entries(months)
               .sort((a, b) => Number(b[0]) - Number(a[0])) // sort months descending (newest first)
-              .map(([month, imgs]) => {
+              .map(([month, imgs], index) => {
                 const monthName = new Date(
                   Number(year),
                   Number(month) - 1,
@@ -80,7 +108,12 @@ export const ChronologicalGallery = ({
                     id={`timeline-section-${year}-${month}`}
                   >
                     {/* Sticky Month/Year Header */}
-                    <div className="bg-background sticky top-0 z-10 mb-4 py-3 backdrop-blur-sm">
+                    <div
+                      ref={(el) => {
+                        monthHeaderRefs.current[index] = el;
+                      }}
+                      className="bg-background sticky top-0 z-10 py-3 backdrop-blur-sm"
+                    >
                       <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
                         {monthName} {year}
                       </h3>
