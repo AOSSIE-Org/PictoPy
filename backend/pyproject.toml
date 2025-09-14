@@ -41,11 +41,6 @@ dependencies = [
     "markdown-it-py (==3.0.0)",
     "markupsafe (==2.1.5)",
     "mdurl (==0.1.2)",
-    "mkdocs (==1.6.1)",
-    "mkdocs-get-deps (==0.2.0)",
-    "mkdocs-material (==9.6.16)",
-    "mkdocs-material-extensions (==1.3.1)",
-    "mkdocs-swagger-ui-tag (==0.7.1)",
     "mpmath (==1.3.0)",
     "numpy (==1.26.4)",
     "onnxruntime (==1.17.1)",
@@ -72,6 +67,16 @@ optional = true
 
 [tool.poetry.group.tools.dependencies]
 fastapi-cli = "^0.0.3"
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "^1.6.1"
+mkdocs-material = "^9.6.16"
+mkdocs-material-extensions = "^1.3.1"
+mkdocs-get-deps = "^0.2.0"
+mkdocs-swagger-ui-tag = "^0.7.1"
 
 
 [build-system]
