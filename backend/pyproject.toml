@@ -51,7 +51,6 @@ dependencies = [
     "priority (==2.0.0)",
     "protobuf (==5.26.1)",
     "pydantic (==2.7.1)",
-    "pydantic-core (==2.18.2)",
     "pygments (==2.18.0)",
     "python-dotenv (==1.0.1)",
     "python-multipart (==0.0.9)",
