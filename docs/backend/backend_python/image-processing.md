@@ -29,8 +29,8 @@ We use another YOLOv11 model for this as well by default. This was pretrained on
 [yolov11-face](https://github.com/akanametov/yolo-face)
 
 ???+ note "What's an embedding?"
-An embedding is a bunch of numbers that represent the face. Similar faces will have similar numbers. FaceNet creates a 512 embedding array
-if an image has
+An embedding is a bunch of numbers that represent the face. Similar faces will have similar numbers. FaceNet creates a
+512-dimensional embedding array for each detected face in the image.
 
 ## Face Clustering
 
