@@ -519,17 +519,6 @@
 │   ├── ./landing-page/tsconfig.node.tsbuildinfo
 │   └── ./landing-page/vite.config.ts
 ├── ./mkdocs.yml
-├── ./node_modules
-│   ├── ./node_modules/.bin
-│   ├── ./node_modules/.package-lock.json
-│   └── ./node_modules/husky
-│       ├── ./node_modules/husky/LICENSE
-│       ├── ./node_modules/husky/README.md
-│       ├── ./node_modules/husky/bin.js
-│       ├── ./node_modules/husky/husky
-│       ├── ./node_modules/husky/index.d.ts
-│       ├── ./node_modules/husky/index.js
-│       └── ./node_modules/husky/package.json
 ├── ./package-lock.json
 ├── ./package.json
 ├── ./project_structure.txt
