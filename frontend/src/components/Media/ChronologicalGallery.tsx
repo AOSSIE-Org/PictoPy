@@ -60,6 +60,10 @@ export const ChronologicalGallery = ({
 
   const recomputeMarkers = useCallback(() => {
     if (!onMonthOffsetsChange) return;
+    if (monthHeaderRefs.current.size === 0) {
+      onMonthOffsetsChange([]);
+      return;
+    }
 
     const scroller = scrollContainerRef?.current;
     const scrollerTop = scroller ? scroller.getBoundingClientRect().top : 0;
@@ -95,7 +99,7 @@ export const ChronologicalGallery = ({
     observer.observe(elementToObserve);
 
     return () => {
-      observer.unobserve(elementToObserve);
+      observer.disconnect();
     };
   }, [recomputeMarkers, scrollContainerRef]);
 
@@ -142,7 +146,11 @@ export const ChronologicalGallery = ({
                 id={`timeline-section-${year}-${month}`}
                 ref={(el) => {
                   const key = `${year}-${month}`;
-                  monthHeaderRefs.current.set(key, el);
+                  if (el) {
+                    monthHeaderRefs.current.set(key, el);
+                  } else {
+                    monthHeaderRefs.current.delete(key);
+                  }
                 }}
               >
                 {/* Sticky Month/Year Header */}

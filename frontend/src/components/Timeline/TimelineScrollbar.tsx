@@ -54,7 +54,7 @@ export default function TimelineScrollbar({
     (TooltipState & { visible: boolean }) | null
   >(null);
   const scrollProgress = useScroll(scrollableRef);
-  const scrollTooltipTimer = useRef<NodeJS.Timeout | null>(null);
+  const scrollTooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [scrollableDimensions, setScrollableDimensions] = useState({
     scrollHeight: 0,
     clientHeight: 0,
@@ -105,9 +105,8 @@ export default function TimelineScrollbar({
   }, [monthMarkers, trackHeight, scrollableDimensions, scrollableRef]);
 
   useWheel(containerRef, (deltaY) => {
-    if (scrollableRef.current) {
-      scrollableRef.current.scrollTop += deltaY;
-    }
+    const scroller = scrollableRef.current;
+    if (scroller) scroller.scrollTop += deltaY;
   });
 
   // Effect to show/hide scroll tooltip
@@ -281,7 +280,7 @@ export default function TimelineScrollbar({
     const scrollable = scrollableRef.current;
     if (!scrollable) return;
 
-    const scrollPercentage = hoverY / height;
+    const scrollPercentage = Math.min(Math.max(hoverY / height, 0), 1);
     const correspondingScrollTop =
       scrollPercentage * (scrollable.scrollHeight - scrollable.clientHeight);
 
@@ -353,7 +352,7 @@ export default function TimelineScrollbar({
               <Tooltip key={index}>
                 <TooltipTrigger asChild>
                   <div
-                    className="absolute left-1/2 h-1 w-full bg-gray-500 shadow-md"
+                    className="absolute left-1/2 h-0.5 w-full bg-gray-500 shadow-md"
                     style={{
                       top: `${marker.markerTop}px`,
                       transform: 'translate(-50%, -50%)',

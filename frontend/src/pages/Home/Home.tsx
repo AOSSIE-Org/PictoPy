@@ -57,7 +57,7 @@ export const Home = () => {
       </div>
 
       {/* Timeline Scrollbar */}
-      {images.length > 0 && (
+      {monthMarkers.length > 0 && (
         <TimelineScrollbar
           scrollableRef={scrollableRef}
           monthMarkers={monthMarkers}

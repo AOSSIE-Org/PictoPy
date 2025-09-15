@@ -29,6 +29,16 @@ class ImageRecord(TypedDict):
     isTagged: bool
 
 
+class UntaggedImageRecord(TypedDict):
+    """Represents an image record returned for tagging."""
+
+    id: ImageId
+    path: ImagePath
+    folder_id: FolderId
+    thumbnailPath: str
+    metadata: Mapping[str, Any]
+
+
 ImageClassPair = Tuple[ImageId, ClassId]
 
 
@@ -212,10 +222,13 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
             INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)
             VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged)
             ON CONFLICT(path) DO UPDATE SET
-              folder_id=excluded.folder_id,
-              thumbnailPath=excluded.thumbnailPath,
-              metadata=excluded.metadata,
-              isTagged=excluded.isTagged
+                folder_id=excluded.folder_id,
+                thumbnailPath=excluded.thumbnailPath,
+                metadata=excluded.metadata,
+                isTagged=CASE
+                    WHEN excluded.isTagged THEN 1
+                    ELSE images.isTagged
+                END
             """,
             prepared_records,
         )
@@ -317,7 +330,7 @@ def db_get_all_images() -> List[dict]:
         conn.close()
 
 
-def db_get_untagged_images() -> List[ImageRecord]:
+def db_get_untagged_images() -> List[UntaggedImageRecord]:
     """
     Find all images that need AI tagging.
     Returns images where:

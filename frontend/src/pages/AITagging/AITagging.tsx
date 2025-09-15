@@ -73,7 +73,7 @@ export const AITagging = () => {
         {/* Media Viewer Modal */}
         {isImageViewOpen && <MediaView />}
       </div>
-      {taggedImages.length > 0 && (
+      {monthMarkers.length > 0 && (
         <TimelineScrollbar
           scrollableRef={scrollableRef}
           monthMarkers={monthMarkers}
