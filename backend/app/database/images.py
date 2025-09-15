@@ -4,7 +4,7 @@ import json
 import os
 import datetime
 from PIL import Image, ExifTags
-from typing import List, Tuple, TypedDict
+from typing import Any, List, Mapping, Tuple, TypedDict, Union
 
 # App-specific imports
 from app.config.settings import (
@@ -25,11 +25,18 @@ class ImageRecord(TypedDict):
     path: ImagePath
     folder_id: FolderId
     thumbnailPath: str
-    metadata: dict
+    metadata: Union[Mapping[str, Any], str]
     isTagged: bool
 
 
 ImageClassPair = Tuple[ImageId, ClassId]
+
+
+def _connect() -> sqlite3.Connection:
+    conn = sqlite3.connect(DATABASE_PATH)
+    # Ensure ON DELETE CASCADE and other FKs are enforced
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
 
 
 def extract_image_metadata(image_path: str) -> dict:
@@ -57,21 +64,46 @@ def extract_image_metadata(image_path: str) -> dict:
                 mime_type = Image.MIME.get(img.format, "unknown")
                 # print(f"[DEBUG] Pillow opened image: {width}x{height}, type={mime_type}")
 
-                exif = getattr(img, "_getexif", lambda: None)() or {}
+                # Robust EXIF extraction with safe fallback
+                try:
+                    exif_data = (
+                        img.getexif()
+                        if hasattr(img, "getexif")
+                        else getattr(img, "_getexif", lambda: None)()
+                    )
+                except Exception:
+                    exif_data = None
+
+                exif = dict(exif_data) if exif_data else {}
                 dt_original = None
-                for k, v in exif.items() if isinstance(exif, dict) else []:
+                for k, v in exif.items():
                     if ExifTags.TAGS.get(k) == "DateTimeOriginal":
-                        dt_original = v
+                        dt_original = (
+                            v.decode("utf-8", "ignore")
+                            if isinstance(v, (bytes, bytearray))
+                            else str(v)
+                        )
                         break
+
+                # Safe parse; fall back to mtime without losing width/height
+                if dt_original:
+                    try:
+                        date_created = datetime.datetime.strptime(
+                            dt_original.strip().split("\x00", 1)[0],
+                            "%Y:%m:%d %H:%M:%S",
+                        ).isoformat()
+                    except ValueError:
+                        date_created = datetime.datetime.fromtimestamp(
+                            stats.st_mtime
+                        ).isoformat()
+                else:
+                    date_created = datetime.datetime.fromtimestamp(
+                        stats.st_mtime
+                    ).isoformat()
+
             return {
                 "name": os.path.basename(image_path),
-                "date_created": (
-                    datetime.datetime.strptime(
-                        dt_original, "%Y:%m:%d %H:%M:%S"
-                    ).isoformat()
-                    if dt_original
-                    else datetime.datetime.fromtimestamp(stats.st_mtime).isoformat()
-                ),
+                "date_created": date_created,
                 "width": width,
                 "height": height,
                 "file_location": image_path,
@@ -106,7 +138,7 @@ def extract_image_metadata(image_path: str) -> dict:
 
 
 def db_create_images_table() -> None:
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     # Create new images table with merged fields
@@ -146,7 +178,7 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
     if not image_records:
         return True
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -179,8 +211,7 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
             """
             INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)
             VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged)
-            ON CONFLICT(id) DO UPDATE SET
-              path=excluded.path,
+            ON CONFLICT(path) DO UPDATE SET
               folder_id=excluded.folder_id,
               thumbnailPath=excluded.thumbnailPath,
               metadata=excluded.metadata,
@@ -205,7 +236,7 @@ def db_get_all_images() -> List[dict]:
     Returns:
         List of dictionaries containing all image data including tags
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -296,7 +327,7 @@ def db_get_untagged_images() -> List[ImageRecord]:
     Returns:
         List of dictionaries containing image data: id, path, folder_id, thumbnailPath, metadata
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -351,7 +382,7 @@ def db_update_image_tagged_status(image_id: ImageId, is_tagged: bool = True) -> 
     Returns:
         True if update was successful, False otherwise
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -382,7 +413,7 @@ def db_insert_image_classes_batch(image_class_pairs: List[ImageClassPair]) -> bo
     if not image_class_pairs:
         return True
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -418,7 +449,7 @@ def db_get_images_by_folder_ids(
     if not folder_ids:
         return []
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -454,7 +485,7 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
     if not image_ids:
         return True
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:

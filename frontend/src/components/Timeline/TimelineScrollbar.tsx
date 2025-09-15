@@ -13,6 +13,23 @@ import {
 } from '@/components/ui/tooltip';
 import { MonthMarker } from '@/components/Media/ChronologicalGallery';
 
+const monthAbbreviations: Record<string, string> = {
+  January: 'Jan',
+  February: 'Feb',
+  March: 'Mar',
+  April: 'Apr',
+  May: 'May',
+  June: 'Jun',
+  July: 'Jul',
+  August: 'Aug',
+  September: 'Sept',
+  October: 'Oct',
+  November: 'Nov',
+  December: 'Dec',
+};
+
+const abbreviateMonth = (month: string) => monthAbbreviations[month] ?? month;
+
 type TimelineScrollbarProps = {
   className?: string;
   scrollableRef: RefObject<HTMLElement | null>;
@@ -38,40 +55,60 @@ export default function TimelineScrollbar({
   >(null);
   const scrollProgress = useScroll(scrollableRef);
   const scrollTooltipTimer = useRef<NodeJS.Timeout | null>(null);
+  const [scrollableDimensions, setScrollableDimensions] = useState({
+    scrollHeight: 0,
+    clientHeight: 0,
+  });
+
+  useEffect(() => {
+    const scrollable = scrollableRef.current;
+    if (!scrollable) return;
+
+    const measure = () => {
+      setScrollableDimensions({
+        scrollHeight: scrollable.scrollHeight,
+        clientHeight: scrollable.clientHeight,
+      });
+    };
+
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(scrollable);
+
+    measure(); // Initial measurement
+
+    return () => resizeObserver.disconnect();
+  }, [scrollableRef]);
 
   const markerPositions = useMemo(() => {
-    const scrollable = scrollableRef.current;
-    if (!scrollable || !monthMarkers.length) return [];
+    if (!scrollableRef.current || !monthMarkers.length) {
+      return [];
+    }
 
-    const scrollableHeight = scrollable.scrollHeight - scrollable.clientHeight;
-    return monthMarkers.map((marker) => ({
-      ...marker,
-      markerTop: (marker.offset / scrollableHeight) * trackHeight,
-    }));
-  }, [monthMarkers, trackHeight, scrollableRef.current?.scrollHeight]);
+    const { scrollHeight, clientHeight } = scrollableDimensions;
+    const scrollableHeight = scrollHeight - clientHeight;
+
+    // Filter out markers that can't reach the top of the viewport
+    const visibleMarkers = monthMarkers.filter(
+      (marker) => marker.offset <= scrollableHeight,
+    );
+
+    const safeDenominator = Math.max(1, scrollableHeight);
+    const maxTop = trackHeight;
+
+    return visibleMarkers.map((marker) => {
+      const markerTop = (marker.offset / safeDenominator) * trackHeight;
+      return {
+        ...marker,
+        markerTop: Math.max(0, Math.min(markerTop, maxTop)),
+      };
+    });
+  }, [monthMarkers, trackHeight, scrollableDimensions, scrollableRef]);
 
   useWheel(containerRef, (deltaY) => {
     if (scrollableRef.current) {
       scrollableRef.current.scrollTop += deltaY;
     }
   });
-
-  const monthAbbreviations: Record<string, string> = {
-    January: 'Jan',
-    February: 'Feb',
-    March: 'Mar',
-    April: 'Apr',
-    May: 'May',
-    June: 'Jun',
-    July: 'Jul',
-    August: 'Aug',
-    September: 'Sept',
-    October: 'Oct',
-    November: 'Nov',
-    December: 'Dec',
-  };
-
-  const abbreviateMonth = (month: string) => monthAbbreviations[month] ?? month;
 
   // Effect to show/hide scroll tooltip
   useEffect(() => {

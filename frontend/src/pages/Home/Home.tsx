@@ -57,11 +57,13 @@ export const Home = () => {
       </div>
 
       {/* Timeline Scrollbar */}
-      <TimelineScrollbar
-        scrollableRef={scrollableRef}
-        monthMarkers={monthMarkers}
-        className="absolute top-0 right-0 h-full w-4"
-      />
+      {images.length > 0 && (
+        <TimelineScrollbar
+          scrollableRef={scrollableRef}
+          monthMarkers={monthMarkers}
+          className="absolute top-0 right-0 h-full w-4"
+        />
+      )}
 
       {/* Media viewer modal */}
       {isImageViewOpen && <MediaView onClose={handleCloseMediaView} />}
