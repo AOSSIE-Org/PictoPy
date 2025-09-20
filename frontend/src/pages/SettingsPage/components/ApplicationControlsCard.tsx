@@ -32,23 +32,50 @@ const ApplicationControlsCard: React.FC = () => {
   const onCheckUpdatesClick = () => {
     const checkUpdates = async () => {
       dispatch(showLoader('Checking for updates...'));
-      const hasUpdate = await checkForUpdates();
 
-      if (hasUpdate) {
-        setUpdateDialogOpen(true);
-      } else {
-        // Show info dialog when no updates are available
-        dispatch(
-          showInfoDialog({
-            title: 'No Updates Available',
-            message:
-              'Your application is already up to date with the latest version.',
-            variant: 'info',
-          }),
-        );
+      try {
+        const hasUpdate = await checkForUpdates();
+
+        if (hasUpdate) {
+          // First hide the loader, then show the update dialog
+          dispatch(hideLoader());
+          // Add small delay to prevent UI flicker
+          setTimeout(() => setUpdateDialogOpen(true), 50);
+        } else {
+          // First hide the loader, then show the info dialog with a small delay
+          dispatch(hideLoader());
+          // Add small delay to prevent UI flicker
+          setTimeout(() => {
+            dispatch(
+              showInfoDialog({
+                title: 'No Updates Available',
+                message:
+                  'Your application is already up to date with the latest version.',
+                variant: 'info',
+              }),
+            );
+          }, 50);
+        }
+      } catch (err: unknown) {
+        // Handle errors during update check
+        const errorMessage = err instanceof Error ? err.message : String(err);
+
+        // First hide the loader, then show the error dialog with a small delay
+        dispatch(hideLoader());
+        // Add small delay to prevent UI flicker
+        setTimeout(() => {
+          dispatch(
+            showInfoDialog({
+              title: 'Error Checking Updates',
+              message: errorMessage,
+              variant: 'error',
+            }),
+          );
+        }, 50);
+      } finally {
+        // We've moved the hideLoader calls into each specific branch to control timing
+        // This empty finally block is kept for clarity and potential future use
       }
-
-      dispatch(hideLoader());
     };
 
     checkUpdates();

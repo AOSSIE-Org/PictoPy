@@ -42,9 +42,11 @@ export const useUserPreferences = () => {
     },
   });
 
-  // Apply feedback to the update preferences mutation
+  // Apply feedback to the update preferences mutation but hide loader and success dialog
   useMutationFeedback(updatePreferencesMutation, {
+    showLoading: false, // Don't show the loading indicator to prevent flicker
     loadingMessage: 'Updating preferences',
+    showSuccess: false, // Don't show the success InfoDialog
     successTitle: 'Preferences Updated',
     successMessage: 'Your preferences have been saved successfully.',
     errorTitle: 'Update Error',
