@@ -1,151 +1,265 @@
-# State Management
+# State Management with Redux
 
-This guide outlines the state management strategies used in our Tauri application, focusing on React hooks and component-level state management.
+This guide outlines the Redux-based state management system used in our PictoPy application, focusing on Redux slices and store configuration.
 
 ## Overview
 
-Our application primarily uses React's built-in hooks for state management, including:
+Our application uses Redux Toolkit for state management, which provides:
 
-- `useState` for local component state
-- `useMemo` for memoized values
-- `useCallback` for memoized functions
-- `Custom hooks` for shared logic and state
+- **Redux slices** for feature-based state organization
+- **Async thunks** for handling asynchronous operations
+- **Immutable state updates** with Immer
+- **TypeScript integration** for type safety
 
-We also utilize props for passing data and functions between components.
+The Redux store serves as the single source of truth for application state that needs to be shared across multiple components.
 
-## Key Concepts
+## Store Structure
 
-### 1. Local Component State
+Our Redux store is organized into the following slices:
 
-We use `useState` for managing local component state. This is suitable for state that doesn't need to be shared across multiple components.
+### 1. Images Slice
 
-Example from `AlbumsView`:
+Manages the state for images and media viewing operations.
 
-```javascript
-const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
-const [editingAlbum, setEditingAlbum] = (useState < Album) | (null > null);
-const [currentAlbum, setCurrentAlbum] = (useState < string) | (null > null);
+**State Structure:**
+```typescript
+interface ImageState {
+  images: Image[];
+  currentViewIndex: number;
+  totalImages: number;
+  error: string | null;
+}
 ```
 
-### 2. Memoization
+**Key Actions:**
+- `setImages` - Updates the images array
+- `addImages` - Adds new images to the array
+- `setCurrentViewIndex` - Sets the currently viewed image index
+- `nextImage` - Navigates to the next image
+- `previousImage` - Navigates to the previous image
+- `closeImageView` - Closes the image viewer
+- `updateImage` - Updates specific image data
+- `removeImage` - Removes an image from the array
+- `setError` - Sets error state
+- `clearImages` - Clears all image data
 
-We use `useMemo` for expensive computations or to prevent unnecessary re-renders.
+### 2. Folders Slice
 
-Example from `MediaGallery`:
+Manages folder-related state and operations.
 
-```javascript
-const sortedMedia = useMemo(() => {
-  return sortMedia(mediaItems, sortBy);
-}, [mediaItems, sortBy]);
-
-const currentItems = useMemo(() => {
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  return sortedMedia.slice(indexOfFirstItem, indexOfLastItem);
-}, [sortedMedia, currentPage, itemsPerPage]);
+**State Structure:**
+```typescript
+interface FolderState {
+  folders: FolderDetails[];
+}
 ```
 
-### 3. Memoized Callbacks
+**Key Actions:**
+- `setFolders` - Updates the folders array
+- `addFolder` - Adds a new folder or updates existing one
+- `updateFolder` - Modifies an existing folder
+- `removeFolders` - Removes folders by IDs
+- `clearFolders` - Clears all folder data
 
-`useCallback` is used to memoize functions, particularly event handlers. This helps to maintain referential equality between renders.
+### 3. Face Clusters Slice
 
-Example from `MediaGallery`:
+Handles face recognition clusters and naming.
 
-```javascript
-const handleSetSortBy = useCallback((value: string) => {
-  setSortBy(value);
-}, []);
-
-const openMediaViewer = useCallback((index: number) => {
-  setSelectedMediaIndex(index);
-  setShowMediaViewer(true);
-}, []);
+**State Structure:**
+```typescript
+interface FaceClustersState {
+  clusters: Cluster[];
+}
 ```
 
-### 4. Custom Hooks
+**Key Actions:**
+- `setClusters` - Updates the clusters array
+- `updateClusterName` - Updates a cluster's name
 
-We create custom hooks to encapsulate and share logic and state across components.
+### 4. Onboarding Slice
 
-Examples:
+Manages the user onboarding process and user profile.
 
-- `useAllAlbums`
-- `useDeleteAlbum`
-- `useAIImage`
-- `etc`
-
-These hooks often manage their own state and provide functions to interact with that state.
-
-### 5. Prop Drilling
-
-We pass state and functions as props to child components. While this works for our current application structure, for deeper component trees, we might consider using Context API or a state management library.
-
-Example from `AlbumsView`:
-
-```javascript
-<AlbumList
-  albums={transformedAlbums}
-  albumsPerRow={3}
-  onAlbumClick={handleAlbumClick}
-  onEditAlbum={(albumId) => {
-    const album = albums.find((a) => a.album_name === albumId);
-    if (album) {
-      setEditingAlbum(album);
-    }
-  }}
-  onDeleteAlbum={handleDeleteAlbum}
-/>
+**State Structure:**
+```typescript
+interface OnboardingState {
+  currentStepIndex: number;
+  currentStepName: string;
+  stepStatus: boolean[];
+  avatar: string | null;
+  name: string;
+}
 ```
 
-## State Management Patterns
+**Key Actions:**
+- `setAvatar` - Sets user avatar
+- `setName` - Sets user name
+- `markCompleted` - Marks an onboarding step as completed
+- `previousStep` - Goes back to the previous onboarding step
 
-### 1. Lifting State Up
+### 5. Loader Slice
 
-When state needs to be shared between sibling components, we lift it up to their closest common ancestor. This is seen in the `AlbumsView` component, which manages state for its child components.
+Manages loading states across the application.
 
-### 2. Derived State
-
-We use `useMemo` to create derived state based on props or other state values. This ensures that expensive calculations are only performed when necessary.
-
-Example from `AIGallery`:
-
-```javascript
-const filteredMediaItems = useMemo(() => {
-  return filterTag
-    ? mediaItems.filter((mediaItem: any) => mediaItem.tags.includes(filterTag))
-    : mediaItems;
-}, [filterTag, mediaItems]);
+**State Structure:**
+```typescript
+interface LoaderState {
+  loading: boolean;
+  message: string;
+}
 ```
 
-### 3. State Initialization from Props
+**Key Actions:**
+- `showLoader` - Shows loading state with message
+- `hideLoader` - Hides loading state
 
-When initializing state based on props, we do it in the component body rather than inside useEffect to avoid unnecessary re-renders.
+### 6. Info Dialog Slice
 
-### 4. Error State Management
+Manages information dialog display and content.
 
-We manage error states at the component level and use a centralized error dialog to display errors.
-
-Example from `AlbumsView`:
-
-```javascript
-const [errorDialogContent, setErrorDialogContent] = useState<{
+**State Structure:**
+```typescript
+interface InfoDialogProps {
+  isOpen: boolean;
   title: string;
-  description: string;
-} | null>(null);
+  message: string;
+  variant: InfoDialogVariant;
+  showCloseButton: boolean;
+}
+```
 
-const showErrorDialog = (title: string, err: unknown) => {
-  setErrorDialogContent({
-    title,
-    description: err instanceof Error ? err.message : "An unknown error occurred",
-  });
+**Key Actions:**
+- `showInfoDialog` - Shows information dialog with content
+- `hideInfoDialog` - Hides information dialog
+
+## Redux Toolkit Configuration
+
+### Store Setup
+
+```typescript
+import { configureStore } from '@reduxjs/toolkit';
+import loaderReducer from '@/features/loaderSlice';
+import onboardingReducer from '@/features/onboardingSlice';
+import imageReducer from '@/features/imageSlice';
+import faceClustersReducer from '@/features/faceClustersSlice';
+import infoDialogReducer from '@/features/infoDialogSlice';
+import folderReducer from '@/features/folderSlice';
+
+export const store = configureStore({
+  reducer: {
+    loader: loaderReducer,
+    onboarding: onboardingReducer,
+    images: imageReducer,
+    faceClusters: faceClustersReducer,
+    infoDialog: infoDialogReducer,
+    folders: folderReducer,
+  },
+});
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+```
+
+### Async Thunks
+
+Currently, async thunks are defined in separate files:
+- `folderThunks.ts` - Contains folder-related async operations (currently empty)
+
+For async operations, we would use createAsyncThunk pattern:
+
+```typescript
+// Example pattern for async thunks
+export const loadImages = createAsyncThunk(
+  'images/loadImages',
+  async (folderId: string, { rejectWithValue }) => {
+    try {
+      // Tauri backend call would go here
+      const images = await invoke('load_images', { folderId });
+      return images;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+```
+
+## Usage in Components
+
+### Connecting Components
+
+Use the `useSelector` and `useDispatch` hooks to connect components to the Redux store:
+
+```typescript
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../app/store';
+import { setImages, nextImage } from '../features/imageSlice';
+import { showLoader, hideLoader } from '../features/loaderSlice';
+
+const ImageViewer = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { images, currentViewIndex } = useSelector((state: RootState) => state.images);
+  const { loading, message } = useSelector((state: RootState) => state.loader);
+
+  const handleNextImage = () => {
+    dispatch(nextImage());
+  };
+
+  // Component logic...
 };
+```
+
+### Typed Hooks
+
+For better TypeScript support, we use typed versions of the hooks:
+
+```typescript
+import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
+import type { RootState, AppDispatch } from '../app/store';
+
+export const useAppDispatch = () => useDispatch<AppDispatch>();
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 ```
 
 ## Best Practices
 
-1. Keep state as close to where it's used as possible.
-2. Use `useMemo` and `useCallback` judiciously to optimize performance.
-3. Create custom hooks to encapsulate complex state logic and side effects.
-4. Use TypeScript to ensure type safety in state management.
-5. Consider using Context API or a state management library if prop drilling becomes cumbersome.
+1. **Keep slices focused** - Each slice should manage a specific domain of your application
+2. **Use createAsyncThunk** - For all async operations that need to update the store
+3. **Normalize state shape** - Use normalized data structures for complex relational data
+4. **Implement error handling** - Always handle loading and error states in async thunks
+5. **Use selectors** - Create reusable selectors for complex state derivations (see `folderSelectors.ts`, `imageSelectors.ts`, `onboardingSelectors.ts`)
 
-By following these patterns and best practices, we maintain a clean and scalable state management system throughout our application.
+## Selectors
+
+The application uses dedicated selector files for complex state derivations:
+
+- `folderSelectors.ts` - Folder-related selectors
+- `imageSelectors.ts` - Image-related selectors
+- `onboardingSelectors.ts` - Onboarding state selectors
+
+Example selector usage:
+```typescript
+import { getFolderById } from '@/features/folderSelectors';
+
+const folder = useSelector((state: RootState) => getFolderById(state, folderId));
+```
+
+## State Persistence
+
+Currently, the onboarding slice persists user data to localStorage:
+- `avatar` - User's avatar image
+- `name` - User's display name
+
+For broader state persistence, Redux Persist could be implemented:
+
+```typescript
+import { persistStore, persistReducer } from 'redux-persist';
+import storage from 'redux-persist/lib/storage';
+
+const persistConfig = {
+  key: 'root',
+  storage,
+  whitelist: ['onboarding', 'folders'], // Persist user settings and folders
+};
+```
+
+This Redux-based architecture provides a scalable and maintainable state management solution that grows with our application's complexity.
