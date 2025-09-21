@@ -6,16 +6,8 @@ Hi there! Thank you for considering contributing to **PictoPy** – we’re exci
 
 ## Setup
 
-1. Setup Using Script (Recommended Approach): [Guide](docs/Script_Setup_Guide.md)
-2. Setup Manually: [Guide](docs/Manual_Setup_Guide.md)
-3. Docker Setup:
-
-   - Docker Compose Setup: [Guide](./docs/docker-compose/readme.md)
-   - Setup using Dockerfile
-
-     - For setting up the frontend, follow the instructions in the [Frontend Setup Guide](./docs/frontend/docker-setup.md).
-       </br>
-     - For setting up the backend, follow the instructions in the [Backend Setup Guide](./docs/backend/docker-setup.md).
+1. Setup Using Script (Recommended only for Windows and Debian-based OS like Ubuntu): [Guide](docs/Script_Setup_Guide.md)
+2. Setup Manually(Recommended for other OSes): [Guide](docs/Manual_Setup_Guide.md)
 
 ## Docs Website Setup
 
