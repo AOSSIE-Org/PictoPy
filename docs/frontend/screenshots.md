@@ -6,7 +6,7 @@ This section showcases the PictoPy application interface with sample photos feat
 
 The main gallery displays photos in a grid layout, organized by date with filtering options.
 
-![Main Gallery](../assets/screenshots/main-gallery.png)
+![Main Gallery](../assets/screenshots/home.png)
 *Main gallery view showing a collection of photos with people, organized in a responsive grid layout*
 
 ## AI Tagging Features
