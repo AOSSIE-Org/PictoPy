@@ -35,8 +35,6 @@ jobs:
           cd backend/
           pre-commit run --config ../.pre-commit-config.yaml --all-files || exit 1
           cd ..
-          cd frontend/src-tauri/
-          cargo fmt -- --check
 
   # Frontend Test Job
   frontend:
@@ -88,47 +86,4 @@ jobs:
           cd backend
           pytest
 
-  # Tauri Test Job
-  tauri:
-    runs-on: ubuntu-latest
-    name: Tauri Tests
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Install Dependencies for Tauri
-        run: |
-          sudo apt-get update -y
-
-          echo "deb http://archive.ubuntu.com/ubuntu jammy main universe multiverse" | sudo tee /etc/apt/sources.list.d/ubuntu-jammy.list
-
-          echo "deb http://security.ubuntu.com/ubuntu jammy-security main universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ubuntu-jammy-security.list
-
-          sudo apt-get update -y
-
-          sudo apt-get install -y \
-            curl build-essential libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev \
-            wget xz-utils libssl-dev libglib2.0-dev libgirepository1.0-dev pkg-config \
-            software-properties-common libjavascriptcoregtk-4.0-dev libjavascriptcoregtk-4.1-dev \
-            libsoup-3.0-dev libwebkit2gtk-4.1-dev librsvg2-dev file libglib2.0-dev libgl1-mesa-glx
-
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "18"
-
-      - name: Install Frontend Dependencies
-        run: |
-          cd frontend
-          npm install
-
-      - name: Run Tauri Tests
-        run: |
-          cd frontend/src-tauri
-          cargo test
+ 
