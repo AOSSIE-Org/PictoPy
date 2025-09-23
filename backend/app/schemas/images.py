@@ -3,6 +3,8 @@ from typing import Optional, List, Union
 
 
 # Request Model
+class AddSingleImageRequest(BaseModel):
+    path: str
 
 
 class AddMultipleImagesRequest(BaseModel):
@@ -31,7 +33,10 @@ class DeleteThumbnailsRequest(BaseModel):
 
 
 # Response Model
-
+class FaceTaggingResponse(BaseModel):
+    success: bool
+    message: str
+    data: dict
 
 class ImagesResponse(BaseModel):
     image_files: List[str]

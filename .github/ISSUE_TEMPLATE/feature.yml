@@ -36,4 +36,3 @@ body:
           required: true
         - label: "Does it contain any style related issues?"
           required: false
-          

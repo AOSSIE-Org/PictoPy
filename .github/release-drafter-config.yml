@@ -1,24 +1,24 @@
 name-template: PictoPy v$RESOLVED_VERSION
-tag-template: 'v$RESOLVED_VERSION'
+tag-template: "v$RESOLVED_VERSION"
 
 categories:
-  - title: 'Features:'
+  - title: "Features:"
     labels:
-      - 'UI'
-      - 'enhancement'
+      - "UI"
+      - "enhancement"
 
-  - title: 'Bug Fixes:'
+  - title: "Bug Fixes:"
     labels:
-      - 'bug'
+      - "bug"
 
-  - title: 'Documentation:'
+  - title: "Documentation:"
     labels:
-      - 'documentation'
+      - "documentation"
 
-  - title: 'Others:'
+  - title: "Others:"
     labels: []
 
-change-template: '- $TITLE (#$NUMBER) by @$AUTHOR'
+change-template: "- $TITLE (#$NUMBER) by @$AUTHOR"
 
 template: |
   # What's Changed
