@@ -6,16 +6,52 @@ Hi there! Thank you for considering contributing to **PictoPy** – we’re exci
 
 ## Setup
 
-1. Setup Using Script (Recommended Approach): [Guide](docs/Script_Setup_Guide.md)
-2. Setup Manually: [Guide](docs/Manual_Setup_Guide.md)
-3. Docker Setup:
+1. Setup Using Script (Recommended only for Windows and Debian-based OS like Ubuntu): [Guide](docs/Script_Setup_Guide.md)
+2. Setup Manually(Recommended for other OSes): [Guide](docs/Manual_Setup_Guide.md)
 
-   - Docker Compose Setup: [Guide](./docs/docker-compose/readme.md)
-   - Setup using Dockerfile
+## Docs Website Setup
 
-     - For setting up the frontend, follow the instructions in the [Frontend Setup Guide](./docs/frontend/docker-setup.md).
-       </br>
-     - For setting up the backend, follow the instructions in the [Backend Setup Guide](./docs/backend/docker-setup.md).
+PictoPy documentation uses MkDocs with the Material theme and the Swagger UI plugin.
+
+To set up and run the docs website on your local machine:
+
+1. Ensure you have **Python 3** and **pip** installed. Navigate to the `/docs` folder.
+2. Create a virtual environment:
+
+```bash
+python -m venv .docs-env
+```
+
+3. Activate the virtual environment:
+
+```bash
+# On macOS/Linux:
+source .docs-env/bin/activate
+# On Windows:
+.docs-env\Scripts\activate
+```
+
+4. Install the required Python packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+5. Start the local MkDocs server:
+
+```bash
+mkdocs serve -f ../mkdocs.yml
+```
+
+6. Open your browser and navigate to: http://127.0.0.1:8000.
+
+7. Edit Markdown files inside the `docs/` folder. The site will automatically reload when changes are saved.
+
+8. To build the static site for production deployment, run:
+
+```bash
+mkdocs build -f ../mkdocs.yml
+```
 
 ## Testing
 
