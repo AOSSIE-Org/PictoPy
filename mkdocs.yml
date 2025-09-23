@@ -70,9 +70,8 @@ nav:
           - Python Backend Image Processing: backend/backend_python/image-processing.md
           - Rust Backend API: backend/backend_rust/api.md
       - Frontend:
-          - UI Components: frontend/ui-components.md
           - State Management: frontend/state-management.md
-          - Gallery View: frontend/gallery-view.md
+          - Screenshots: frontend/screenshots.md
 
 extra:
   social:
@@ -86,7 +85,7 @@ extra:
       link: https://github.com/AOSSIE-Org/PictoPy/
       name: PictoPy on GitHub
     - icon: fontawesome/brands/discord
-      link: https://discord.com/invite/6mFZ2S846n
+      link: https://discord.gg/h3UCtaZWVQ
       name: Join AOSSIE on Discord
     - icon: fontawesome/brands/x-twitter
       link: https://x.com/aossie_org

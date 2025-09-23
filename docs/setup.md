@@ -4,11 +4,11 @@
 
 ## Available Setup Methods
 
-The README.md file contains detailed instructions for:
+The CONTRIBUTING.md file contains detailed instructions for:
 
-1. **Script Setup (Recommended)** - Automated setup using our setup script
-2. **Manual Setup** - Step-by-step manual installation
-3. **Docker Setup** - Using Docker and Docker Compose
+1. **Script Setup** - Automated setup using our setup script, recommended only for Windows and Debian-based OS like Ubuntu.
+2. **Manual Setup** - Step-by-step manual installation, recommended for other operating systems.
+3. **Documentation Website Setup Guide**
 
 ## Quick Links
 

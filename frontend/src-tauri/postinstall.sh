@@ -1,12 +1,18 @@
 #!/bin/bash
 
-# Get the first path matching "resources/server" from dpkg -L picto-py output
-SERVER_PATH=$(dpkg -L picto-py | grep "resources/server" | head -n 1)
-# Check if the path exists
-if [ -n "$SERVER_PATH" ] && [ -d "$SERVER_PATH" ]; then
-  # Change permissions to allow read, write, and execute for all users
-  chmod -R 777 "$SERVER_PATH"
-  echo "Permissions for $SERVER_PATH have been updated to 777."
-else
-  echo "Path not found or is not a directory: $SERVER_PATH"
-fi
+# Function to update permissions for a given path pattern
+update_permissions() {
+  local pattern="$1"
+  local path=$(dpkg -L picto-py | grep "$pattern" | head -n 1)
+  
+  if [ -n "$path" ] && [ -d "$path" ]; then
+    chmod -R 777 "$path"
+    echo "Permissions for $path have been updated to 777."
+  else
+    echo "Path not found or is not a directory: $path (pattern: $pattern)"
+  fi
+}
+
+# Update permissions for both directories
+update_permissions "resources/backend"
+update_permissions "resources/sync-microservice"

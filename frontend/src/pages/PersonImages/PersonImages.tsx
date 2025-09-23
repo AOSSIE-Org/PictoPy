@@ -113,7 +113,7 @@ export const PersonImages = () => {
       </div>
 
       {/* Media Viewer Modal */}
-      {isImageViewOpen && <MediaView />}
+      {isImageViewOpen && <MediaView images={images} />}
     </div>
   );
 };

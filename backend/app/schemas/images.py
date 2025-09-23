@@ -38,6 +38,7 @@ class FaceTaggingResponse(BaseModel):
     message: str
     data: dict
 
+
 class ImagesResponse(BaseModel):
     image_files: List[str]
     folder_path: str

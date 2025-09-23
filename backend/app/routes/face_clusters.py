@@ -255,21 +255,42 @@ def face_tagging(payload: AddSingleImageRequest):
         image_id = str(uuid.uuid4())
         result = fd.detect_faces(image_id, image_path, forSearch=True)
         if not result or result["num_faces"] == 0:
-            return GetAllImagesResponse(success=True, message=f"Successfully retrieved {len(matches)} images", data=[])
+            return GetAllImagesResponse(
+                success=True,
+                message=f"Successfully retrieved {len(matches)} images",
+                data=[],
+            )
 
         process_face = result["processed_faces"][0]
         new_embedding = fn.get_embedding(process_face)
 
         images = get_all_face_embeddings()
         if len(images) == 0:
-            return GetAllImagesResponse(success=True, message=f"Successfully retrieved {len(matches)} images", data=[])
+            return GetAllImagesResponse(
+                success=True,
+                message=f"Successfully retrieved {len(matches)} images",
+                data=[],
+            )
         else:
             for image in images:
                 max_similarity = 0
-                similarity = FaceNet_util_cosine_similarity(new_embedding, image["embeddings"])
+                similarity = FaceNet_util_cosine_similarity(
+                    new_embedding, image["embeddings"]
+                )
                 max_similarity = max(max_similarity, similarity)
                 if max_similarity >= CONFIDENCE_PERCENT:
-                    matches.append(ImageData(id=image["id"], path=image["path"], folder_id=image["folder_id"], thumbnailPath=image["thumbnailPath"], metadata=image["metadata"], isTagged=image["isTagged"], tags=image["tags"], bboxes=image["bbox"]))
+                    matches.append(
+                        ImageData(
+                            id=image["id"],
+                            path=image["path"],
+                            folder_id=image["folder_id"],
+                            thumbnailPath=image["thumbnailPath"],
+                            metadata=image["metadata"],
+                            isTagged=image["isTagged"],
+                            tags=image["tags"],
+                            bboxes=image["bbox"],
+                        )
+                    )
 
             return GetAllImagesResponse(
                 success=True,
