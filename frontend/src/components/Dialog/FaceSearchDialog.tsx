@@ -17,10 +17,12 @@ import { hideLoader, showLoader } from '@/features/loaderSlice';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { fetchSearchedFaces } from '@/api/api-functions';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { useNavigate } from 'react-router';
+import { ROUTES } from '@/constants/routes';
 export function FaceSearchDialog() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { pickSingleFile } = useFile({ title: 'Select File' });
-
+  const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const { mutate: getSearchImages } = usePictoMutation({
@@ -56,6 +58,7 @@ export function FaceSearchDialog() {
   });
 
   const handlePickFile = async () => {
+    navigate(`/${ROUTES.HOME}`);
     setIsDialogOpen(false);
     const filePath = await pickSingleFile();
     if (filePath) {
