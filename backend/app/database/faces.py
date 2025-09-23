@@ -133,12 +133,14 @@ def db_insert_face_embeddings_by_image_id(
             image_id, embeddings, confidence, bbox, cluster_id
         )
 
+
 def get_all_face_embeddings():
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 f.embeddings,
                 f.bbox,
@@ -153,7 +155,8 @@ def get_all_face_embeddings():
             JOIN images i ON f.image_id=i.id
             LEFT JOIN image_classes ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
-        """)
+        """
+        )
         results = cursor.fetchall()
 
         images_dict = {}
@@ -173,7 +176,7 @@ def get_all_face_embeddings():
                     embeddings_json = json.loads(embeddings)
                     bbox_json = json.loads(bbox)
                 except json.JSONDecodeError:
-                    continue;
+                    continue
                 images_dict[image_id] = {
                     "embeddings": embeddings_json,
                     "bbox": bbox_json,
@@ -202,6 +205,7 @@ def get_all_face_embeddings():
         return images
     finally:
         conn.close()
+
 
 def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbedding]]]:
     """
