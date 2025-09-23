@@ -1,0 +1,64 @@
+name: PR Check Build
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+
+jobs:
+  tauri-build-check:
+    name: Tauri Build Check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest"
+            args: "--target aarch64-apple-darwin"
+          - platform: "ubuntu-22.04"
+            args: ""
+          - platform: "windows-latest"
+            args: ""
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: cache cargo registry and build
+        uses: actions/cache@v3
+        with:
+          path: |
+            frontend/src-tauri/target
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('frontend/src-tauri/Cargo.lock', 'frontend/src-tauri/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Don't worry, the below key is just a sample key for PR-Checks. Actual app build workflow uses a secret private key :)
+          TAURI_SIGNING_PRIVATE_KEY: dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5TzhIVE9SbEtZZThpM2RvQWpvV09wZXlEOXR0cVRsVUs3NlR2NXhRTUJsSUFBQkFBQUFBQUFBQUFBQUlBQUFBQTBVZE5kNmR4ZHdScUtDWURsNWtweXQwem01WlJobXQzSmNtQUZydnNrb0UvSzJKQnM0b2ZRcSt6eElmaHFHZ3VzVkRrRkdtSC9jcGVRMDJzZlR3RDRta3V2UDBNdzRUSU1LQlo0dk43NHRHZGdaYTNPbndhYU14YmdqN1Y3VkNRb2l2bDF4NDQ5Tk09Cg==
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: abcd
+        with:
+          projectPath: ./frontend
+          args: ${{ matrix.args }}

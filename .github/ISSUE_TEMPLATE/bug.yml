@@ -1,0 +1,38 @@
+name: "🐞 Bug Report"
+description: "Create a report to help us improve"
+title: "BUG:"
+labels: ["Bug"]
+body:
+  - type: checkboxes
+    attributes:
+      label: "Is there an existing issue for this?"
+      description: "Please search to see if an issue already exists for the bug you encountered."
+      options:
+        - label: "I have searched the existing issues"
+          required: true
+  - type: textarea
+    attributes:
+      label: "What happened?"
+      description: "A concise description of what you're experiencing."
+    validations:
+      required: true
+  - type: checkboxes
+    attributes:
+      label: "Record"
+      options:
+        - label: "I agree to follow this project's Code of Conduct"
+          required: true
+  - type: checkboxes
+    attributes:
+      label: "Checklist before Submitting"
+      options:
+        - label: "Have you updated docs for it?"
+          required: false
+        - label: "Have you added unit tests?"
+          required: false
+        - label: "Have you made sure unit tests pass?"
+          required: false
+        - label: "Have you made sure code formatting is correct?"
+          required: true
+        - label: "Do Your changes passes all tests?"
+          required: false
