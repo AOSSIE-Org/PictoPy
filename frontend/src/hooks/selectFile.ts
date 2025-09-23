@@ -12,8 +12,7 @@ export const useFile = (
   options: UseFolderPickerOptions = {},
 ): UseFilePickerReturn => {
   const { title = 'Select File' } = options;
-  const pickSingleFile = useCallback(async (): Promise<(
-    string) | null> => {
+  const pickSingleFile = useCallback(async (): Promise<string | null> => {
     try {
       const selected = await open({
         multiple: false,
@@ -27,7 +26,7 @@ export const useFile = (
       });
 
       if (selected && typeof selected === 'string') {
-        return selected
+        return selected;
       }
       return null;
     } catch (error) {
@@ -36,5 +35,5 @@ export const useFile = (
     }
   }, [title]);
 
-  return { pickSingleFile} ;
+  return { pickSingleFile };
 };
