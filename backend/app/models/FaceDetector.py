@@ -51,7 +51,7 @@ class FaceDetector:
                 embedding = self.facenet.get_embedding(processed_face)
                 embeddings.append(embedding)
 
-        if (not forSearch and embeddings):
+        if not forSearch and embeddings:
             db_insert_face_embeddings_by_image_id(
                 image_id, embeddings, confidence=confidences, bbox=bboxes
             )
