@@ -7,7 +7,6 @@ This guide outlines the Redux-based state management system used in our PictoPy 
 Our application uses Redux Toolkit for state management, which provides:
 
 - **Redux slices** for feature-based state organization
-- **Async thunks** for handling asynchronous operations
 - **Immutable state updates** with Immer
 - **TypeScript integration** for type safety
 
@@ -22,6 +21,7 @@ Our Redux store is organized into the following slices:
 Manages the state for images and media viewing operations.
 
 **State Structure:**
+
 ```typescript
 interface ImageState {
   images: Image[];
@@ -32,6 +32,7 @@ interface ImageState {
 ```
 
 **Key Actions:**
+
 - `setImages` - Updates the images array
 - `addImages` - Adds new images to the array
 - `setCurrentViewIndex` - Sets the currently viewed image index
@@ -48,6 +49,7 @@ interface ImageState {
 Manages folder-related state and operations.
 
 **State Structure:**
+
 ```typescript
 interface FolderState {
   folders: FolderDetails[];
@@ -55,6 +57,7 @@ interface FolderState {
 ```
 
 **Key Actions:**
+
 - `setFolders` - Updates the folders array
 - `addFolder` - Adds a new folder or updates existing one
 - `updateFolder` - Modifies an existing folder
@@ -66,6 +69,7 @@ interface FolderState {
 Handles face recognition clusters and naming.
 
 **State Structure:**
+
 ```typescript
 interface FaceClustersState {
   clusters: Cluster[];
@@ -73,6 +77,7 @@ interface FaceClustersState {
 ```
 
 **Key Actions:**
+
 - `setClusters` - Updates the clusters array
 - `updateClusterName` - Updates a cluster's name
 
@@ -81,6 +86,7 @@ interface FaceClustersState {
 Manages the user onboarding process and user profile.
 
 **State Structure:**
+
 ```typescript
 interface OnboardingState {
   currentStepIndex: number;
@@ -92,6 +98,7 @@ interface OnboardingState {
 ```
 
 **Key Actions:**
+
 - `setAvatar` - Sets user avatar
 - `setName` - Sets user name
 - `markCompleted` - Marks an onboarding step as completed
@@ -102,6 +109,7 @@ interface OnboardingState {
 Manages loading states across the application.
 
 **State Structure:**
+
 ```typescript
 interface LoaderState {
   loading: boolean;
@@ -110,6 +118,7 @@ interface LoaderState {
 ```
 
 **Key Actions:**
+
 - `showLoader` - Shows loading state with message
 - `hideLoader` - Hides loading state
 
@@ -118,6 +127,7 @@ interface LoaderState {
 Manages information dialog display and content.
 
 **State Structure:**
+
 ```typescript
 interface InfoDialogProps {
   isOpen: boolean;
@@ -129,6 +139,7 @@ interface InfoDialogProps {
 ```
 
 **Key Actions:**
+
 - `showInfoDialog` - Shows information dialog with content
 - `hideInfoDialog` - Hides information dialog
 
@@ -137,13 +148,13 @@ interface InfoDialogProps {
 ### Store Setup
 
 ```typescript
-import { configureStore } from '@reduxjs/toolkit';
-import loaderReducer from '@/features/loaderSlice';
-import onboardingReducer from '@/features/onboardingSlice';
-import imageReducer from '@/features/imageSlice';
-import faceClustersReducer from '@/features/faceClustersSlice';
-import infoDialogReducer from '@/features/infoDialogSlice';
-import folderReducer from '@/features/folderSlice';
+import { configureStore } from "@reduxjs/toolkit";
+import loaderReducer from "@/features/loaderSlice";
+import onboardingReducer from "@/features/onboardingSlice";
+import imageReducer from "@/features/imageSlice";
+import faceClustersReducer from "@/features/faceClustersSlice";
+import infoDialogReducer from "@/features/infoDialogSlice";
+import folderReducer from "@/features/folderSlice";
 
 export const store = configureStore({
   reducer: {
@@ -160,29 +171,6 @@ export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 ```
 
-### Async Thunks
-
-Currently, async thunks are defined in separate files:
-- `folderThunks.ts` - Contains folder-related async operations (currently empty)
-
-For async operations, we would use createAsyncThunk pattern:
-
-```typescript
-// Example pattern for async thunks
-export const loadImages = createAsyncThunk(
-  'images/loadImages',
-  async (folderId: string, { rejectWithValue }) => {
-    try {
-      // Tauri backend call would go here
-      const images = await invoke('load_images', { folderId });
-      return images;
-    } catch (error) {
-      return rejectWithValue((error as Error).message);
-    }
-  }
-);
-```
-
 ## Usage in Components
 
 ### Connecting Components
@@ -190,14 +178,16 @@ export const loadImages = createAsyncThunk(
 Use the `useSelector` and `useDispatch` hooks to connect components to the Redux store:
 
 ```typescript
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../app/store';
-import { setImages, nextImage } from '../features/imageSlice';
-import { showLoader, hideLoader } from '../features/loaderSlice';
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../app/store";
+import { setImages, nextImage } from "../features/imageSlice";
+import { showLoader, hideLoader } from "../features/loaderSlice";
 
 const ImageViewer = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { images, currentViewIndex } = useSelector((state: RootState) => state.images);
+  const { images, currentViewIndex } = useSelector(
+    (state: RootState) => state.images
+  );
   const { loading, message } = useSelector((state: RootState) => state.loader);
 
   const handleNextImage = () => {
@@ -213,8 +203,8 @@ const ImageViewer = () => {
 For better TypeScript support, we use typed versions of the hooks:
 
 ```typescript
-import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
-import type { RootState, AppDispatch } from '../app/store';
+import { useDispatch, useSelector, TypedUseSelectorHook } from "react-redux";
+import type { RootState, AppDispatch } from "../app/store";
 
 export const useAppDispatch = () => useDispatch<AppDispatch>();
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
@@ -223,10 +213,8 @@ export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 ## Best Practices
 
 1. **Keep slices focused** - Each slice should manage a specific domain of your application
-2. **Use createAsyncThunk** - For all async operations that need to update the store
-3. **Normalize state shape** - Use normalized data structures for complex relational data
-4. **Implement error handling** - Always handle loading and error states in async thunks
-5. **Use selectors** - Create reusable selectors for complex state derivations (see `folderSelectors.ts`, `imageSelectors.ts`, `onboardingSelectors.ts`)
+2. **Normalize state shape** - Use normalized data structures for complex relational data
+3. **Use selectors** - Create reusable selectors for complex state derivations (see `folderSelectors.ts`, `imageSelectors.ts`, `onboardingSelectors.ts`)
 
 ## Selectors
 
@@ -237,29 +225,13 @@ The application uses dedicated selector files for complex state derivations:
 - `onboardingSelectors.ts` - Onboarding state selectors
 
 Example selector usage:
-```typescript
-import { getFolderById } from '@/features/folderSelectors';
-
-const folder = useSelector((state: RootState) => getFolderById(state, folderId));
-```
-
-## State Persistence
-
-Currently, the onboarding slice persists user data to localStorage:
-- `avatar` - User's avatar image
-- `name` - User's display name
-
-For broader state persistence, Redux Persist could be implemented:
 
 ```typescript
-import { persistStore, persistReducer } from 'redux-persist';
-import storage from 'redux-persist/lib/storage';
+import { getFolderById } from "@/features/folderSelectors";
 
-const persistConfig = {
-  key: 'root',
-  storage,
-  whitelist: ['onboarding', 'folders'], // Persist user settings and folders
-};
+const folder = useSelector((state: RootState) =>
+  getFolderById(state, folderId)
+);
 ```
 
 This Redux-based architecture provides a scalable and maintainable state management solution that grows with our application's complexity.
