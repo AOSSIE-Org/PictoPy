@@ -233,7 +233,7 @@ def get_cluster_images(cluster_id: str):
 
 
 @router.post(
-    "/face-tagging",
+    "/face-search",
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
 def face_tagging(payload: AddSingleImageRequest):

@@ -1035,13 +1035,13 @@
         }
       }
     },
-    "/face-clusters/face-tagging": {
+    "/face-clusters/face-search": {
       "post": {
         "tags": [
           "Face Clusters"
         ],
         "summary": "Face Tagging",
-        "operationId": "face_tagging_face_clusters_face_tagging_post",
+        "operationId": "face_tagging_face_clusters_face_search_post",
         "requestBody": {
           "content": {
             "application/json": {

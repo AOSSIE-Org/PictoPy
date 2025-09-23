@@ -65,7 +65,7 @@ export const AITagging = () => {
       </div>
 
       {/* Media Viewer Modal */}
-      {isImageViewOpen && <MediaView />}
+      {isImageViewOpen && <MediaView images={taggedImages} />}
     </div>
   );
 };

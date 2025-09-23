@@ -36,8 +36,3 @@ body:
           required: true
         - label: "Do Your changes passes all tests?"
           required: false
-
-
-
-        
-        

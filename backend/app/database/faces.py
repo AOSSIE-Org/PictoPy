@@ -137,70 +137,71 @@ def get_all_face_embeddings():
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT
-            f.embeddings,
-            f.bbox,
-            i.id, 
-            i.path, 
-            i.folder_id, 
-            i.thumbnailPath, 
-            i.metadata, 
-            i.isTagged,
-            m.name as tag_name
-        FROM faces f
-        JOIN images i ON f.image_id=i.id
-        LEFT JOIN image_classes ic ON i.id = ic.image_id
-        LEFT JOIN mappings m ON ic.class_id = m.class_id
-    """)
-    results = cursor.fetchall()
+    try:
+        cursor.execute("""
+            SELECT
+                f.embeddings,
+                f.bbox,
+                i.id, 
+                i.path, 
+                i.folder_id, 
+                i.thumbnailPath, 
+                i.metadata, 
+                i.isTagged,
+                m.name as tag_name
+            FROM faces f
+            JOIN images i ON f.image_id=i.id
+            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN mappings m ON ic.class_id = m.class_id
+        """)
+        results = cursor.fetchall()
 
-    images_dict = {}
-    for (
-        embeddings,
-        bbox,
-        image_id,
-        path,
-        folder_id,
-        thumbnail_path,
-        metadata,
-        is_tagged,
-        tag_name,
-    ) in results:
-        if image_id not in images_dict:
-            try:
-                embeddings_json = json.loads(embeddings)
-                bbox_json = json.loads(bbox)
-            except json.JSONDecodeError:
-                continue;
-            images_dict[image_id] = {
-                "embeddings": embeddings_json,
-                "bbox": bbox_json,
-                "id": image_id,
-                "path": path,
-                "folder_id": folder_id,
-                "thumbnailPath": thumbnail_path,
-                "metadata": metadata,
-                "isTagged": bool(is_tagged),
-                "tags": [],
-            }
+        images_dict = {}
+        for (
+            embeddings,
+            bbox,
+            image_id,
+            path,
+            folder_id,
+            thumbnail_path,
+            metadata,
+            is_tagged,
+            tag_name,
+        ) in results:
+            if image_id not in images_dict:
+                try:
+                    embeddings_json = json.loads(embeddings)
+                    bbox_json = json.loads(bbox)
+                except json.JSONDecodeError:
+                    continue;
+                images_dict[image_id] = {
+                    "embeddings": embeddings_json,
+                    "bbox": bbox_json,
+                    "id": image_id,
+                    "path": path,
+                    "folder_id": folder_id,
+                    "thumbnailPath": thumbnail_path,
+                    "metadata": metadata,
+                    "isTagged": bool(is_tagged),
+                    "tags": [],
+                }
 
-        # Add tag if it exists
-        if tag_name:
-            images_dict[image_id]["tags"].append(tag_name)
+            # Add tag if it exists
+            if tag_name:
+                images_dict[image_id]["tags"].append(tag_name)
 
-    # Convert to list and set tags to None if empty
-    images = []
-    for image_data in images_dict.values():
-        if not image_data["tags"]:
-            image_data["tags"] = None
-        images.append(image_data)
+        # Convert to list and set tags to None if empty
+        images = []
+        for image_data in images_dict.values():
+            if not image_data["tags"]:
+                image_data["tags"] = None
+            images.append(image_data)
 
-    # Sort by path
-    images.sort(key=lambda x: x["path"])
-
-    conn.close()
-    return images
+        # Sort by path
+        images.sort(key=lambda x: x["path"])
+        return images
+    finally:
+        conn.close()
 
 def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbedding]]]:
     """

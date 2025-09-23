@@ -11,8 +11,8 @@ export interface FetchClusterImagesRequest {
   clusterId: string;
 }
 
-export interface FetchSearchedFacesRequest{
-  path: string
+export interface FetchSearchedFacesRequest {
+  path: string;
 }
 
 export const fetchAllClusters = async (): Promise<APIResponse> => {
@@ -46,7 +46,7 @@ export const fetchSearchedFaces = async (
 ): Promise<APIResponse> => {
   const response = await apiClient.post<APIResponse>(
     faceClustersEndpoints.searchForFaces,
-    request, 
+    request,
   );
   return response.data;
 };

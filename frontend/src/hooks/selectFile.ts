@@ -1,5 +1,3 @@
-import { FetchSearchedFacesRequest, fetchSearchedFaces } from '@/api/api-functions';
-import { APIResponse } from '@/types/API';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback } from 'react';
 interface UseFolderPickerOptions {
@@ -7,20 +5,15 @@ interface UseFolderPickerOptions {
 }
 
 interface UseFilePickerReturn {
-  pickSingleFile: () => Promise<{
-    path: string;
-    result: APIResponse;
-  } | null>;
+  pickSingleFile: () => Promise<string | null>;
 }
 
 export const useFile = (
   options: UseFolderPickerOptions = {},
 ): UseFilePickerReturn => {
   const { title = 'Select File' } = options;
-  const pickSingleFile = useCallback(async (): Promise<{
-    path: string;
-    result: APIResponse;
-  } | null> => {
+  const pickSingleFile = useCallback(async (): Promise<(
+    string) | null> => {
     try {
       const selected = await open({
         multiple: false,
@@ -34,11 +27,7 @@ export const useFile = (
       });
 
       if (selected && typeof selected === 'string') {
-        const res: APIResponse = await fetchSearchedFaces({
-          path: selected,
-        } as FetchSearchedFacesRequest);
-        console.log(res)
-        return { path: selected, result: res };
+        return selected
       }
       return null;
     } catch (error) {
@@ -47,5 +36,5 @@ export const useFile = (
     }
   }, [title]);
 
-  return { pickSingleFile };
+  return { pickSingleFile} ;
 };

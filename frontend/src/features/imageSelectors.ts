@@ -3,9 +3,6 @@ import { createSelector } from '@reduxjs/toolkit';
 
 // Basic selectors
 export const selectImages = (state: RootState) => {
-  if (state.search.active) {
-    return state.search.images;
-  }
   return state.images.images;
 };
 export const selectCurrentViewIndex = (state: RootState) =>

@@ -1,12 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { MediaViewProps } from '@/types/Media';
-import {
-  selectImages,
-  selectCurrentViewIndex,
-  selectCurrentImage,
-  selectTotalImages,
-} from '@/features/imageSelectors';
+import { selectCurrentViewIndex } from '@/features/imageSelectors';
 import {
   setCurrentViewIndex,
   nextImage,
@@ -28,14 +23,19 @@ import { useSlideshow } from '@/hooks/useSlideshow';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 
-export function MediaView({ onClose, type = 'image' }: MediaViewProps) {
+export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   const dispatch = useDispatch();
 
   // Redux selectors
-  const images = useSelector(selectImages);
   const currentViewIndex = useSelector(selectCurrentViewIndex);
-  const currentImage = useSelector(selectCurrentImage);
-  const totalImages = useSelector(selectTotalImages);
+  const totalImages = images.length;
+  const currentImage = useMemo(() => {
+    if (currentViewIndex >= 0 && currentViewIndex < images.length) {
+      return images[currentViewIndex];
+    }
+    return null;
+  }, [images, currentViewIndex]);
+  console.log(currentViewIndex);
 
   // Local UI state
   const [showInfo, setShowInfo] = useState(false);

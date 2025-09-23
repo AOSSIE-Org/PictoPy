@@ -4,14 +4,12 @@ import { Image } from '@/types/Media';
 interface SearchState {
   active: boolean;
   images: Image[];
-  loading: boolean;
   queryImage?: string;
 }
 
 const initialState: SearchState = {
   active: false,
   images: [],
-  loading: false,
   queryImage: undefined,
 };
 
@@ -21,17 +19,14 @@ const searchSlice = createSlice({
   reducers: {
     startSearch(state, action: PayloadAction<string>) {
       state.active = true;
-      state.loading = true;
       state.queryImage = action.payload;
     },
     setResults(state, action: PayloadAction<Image[]>) {
       state.images = action.payload;
-      state.loading = false;
     },
     clearSearch(state) {
       state.active = false;
       state.images = [];
-      state.loading = false;
       state.queryImage = undefined;
     },
   },

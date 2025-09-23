@@ -24,6 +24,7 @@ export interface ImageGridProps {
 }
 export interface MediaViewProps {
   onClose?: () => void;
+  images: Image[];
   type?: string;
 }
 
