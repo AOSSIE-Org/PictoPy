@@ -17,6 +17,30 @@ export const useImageViewControls = () => {
     dragStart: { x: 0, y: 0 },
   });
 
+  // handlewheel zoom
+ const handleWheelZoom = useCallback(
+  (e: React.WheelEvent, containerRect: DOMRect) => {
+    e.preventDefault();
+
+    setViewState((prev) => {
+      const mouseX = e.clientX - containerRect.left;
+      const mouseY = e.clientY - containerRect.top;
+      const delta = e.deltaY < 0 ? 0.1 : -0.1;
+      const newScale = Math.min(4, Math.max(0.5, prev.scale + delta));
+      const scaleFactor = newScale / prev.scale;
+      const newPosX = mouseX - (mouseX - prev.position.x) * scaleFactor;
+      const newPosY = mouseY - (mouseY - prev.position.y) * scaleFactor;
+      return {
+        ...prev,
+        scale: newScale,
+        position: { x: newPosX, y: newPosY },
+      };
+    });
+  },
+  []
+);
+
+
   const handleZoomIn = useCallback(() => {
     setViewState((prev) => ({
       ...prev,
@@ -89,6 +113,7 @@ export const useImageViewControls = () => {
       handleMouseDown,
       handleMouseMove,
       handleMouseUp,
+      handleWheelZoom,
     },
   };
 };
