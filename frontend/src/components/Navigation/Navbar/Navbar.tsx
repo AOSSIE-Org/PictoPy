@@ -29,7 +29,7 @@ export function Navbar() {
 
       {/* Search Bar */}
       <div className="mx-auto flex max-w-md flex-1 justify-center px-4">
-        <div className="bg-muted/50 flex w-full items-center rounded-md pr-2">
+        <div className="bg-muted/50 flex w-full items-center rounded-md pr-2 gap-2 ">
           {/* Query Image */}
           {queryImage && (
             <div className="relative mr-2 ml-2">
@@ -53,14 +53,15 @@ export function Navbar() {
           <Input
             type="search"
             placeholder="Add to your search"
-            className="flex-1 border-0 bg-transparent focus:ring-0"
+            className="flex-1 border-0 bg-transparent focus:ring-0 mr-2"
           />
 
           {/* FaceSearch Dialog */}
-          <FaceSearchDialog />
+          
+          <FaceSearchDialog    />
 
-          <button className="text-muted-foreground mx-1 hover:text-white">
-            <Search className="h-4 w-4" />
+          <button className="text-muted-foreground mx-1 hover:bg-accent p-2 rounded-sm hover:text-foreground">
+            <Search className="h-4 w-4 " />
           </button>
         </div>
       </div>
