@@ -42,7 +42,6 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         src={convertFileSrc(imagePath) || '/placeholder.svg'}
         alt={alt}
         draggable={false}
-        className="h-full w-full object-contain select-none"
         onError={(e) => {
           const img = e.target as HTMLImageElement;
           img.onerror = null;
@@ -50,8 +49,13 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         }}
         style={{
           transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
+          transformOrigin: 'top left', // 👈 important
           transition: isDragging ? 'none' : 'transform 0.2s ease-in-out',
           cursor: isDragging ? 'grabbing' : 'grab',
+          maxWidth: '100%',
+          maxHeight: '100%',
+          userSelect: 'none',
+          objectFit: 'contain', // still keeps ratio but no force stretching
         }}
       />
     </div>

@@ -29,6 +29,7 @@ export const Home = () => {
 
   // Handle fetching lifecycle
   useEffect(() => {
+    console.log(displayImages);
     if (!isSearchActive) {
       if (isLoading) {
         dispatch(showLoader('Loading images'));
