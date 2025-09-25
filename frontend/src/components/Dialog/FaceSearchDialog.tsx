@@ -57,6 +57,16 @@ export function FaceSearchDialog() {
     },
   });
 
+  const handleWebCam = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const video = document.querySelector('video');
+      if (video) video.srcObject = stream;
+    } catch (err) {
+      console.error('Webcam error:', err);
+    }
+  };
+
   const handlePickFile = async () => {
     navigate(`/${ROUTES.HOME}`);
     setIsDialogOpen(false);
@@ -104,7 +114,7 @@ export function FaceSearchDialog() {
           </Button>
 
           <Button
-            onClick={() => {}}
+            onClick={handleWebCam}
             disabled={false}
             className="flex h-32 flex-col items-center justify-center gap-2 p-0"
             variant="outline"
