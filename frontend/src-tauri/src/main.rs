@@ -4,7 +4,7 @@
 mod services;
 
 use tauri::path::BaseDirectory;
-use tauri::Manager;
+use tauri::{Manager, WebviewWindowBuilder};
 
 fn main() {
     tauri::Builder::default()
@@ -21,7 +21,6 @@ fn main() {
             println!("Resource path: {:?}", resource_path);
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![services::get_server_path,])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

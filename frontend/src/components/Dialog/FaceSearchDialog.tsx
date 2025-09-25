@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router';
 import { ROUTES } from '@/constants/routes';
 export function FaceSearchDialog() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [setDevices] = useState<MediaDeviceInfo[]>([]);
   const { pickSingleFile } = useFile({ title: 'Select File' });
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -59,11 +60,15 @@ export function FaceSearchDialog() {
 
   const handleWebCam = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      const video = document.querySelector('video');
-      if (video) video.srcObject = stream;
+      await navigator.mediaDevices.getUserMedia({ video: true });
+
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter((d) => d.kind === 'videoinput');
+
+      console.log('Video Inputs:', videoInputs);
     } catch (err) {
-      console.error('Webcam error:', err);
+      console.error('Camera access denied:', err);
+      alert('Could not access camera: ' + err);
     }
   };
 
