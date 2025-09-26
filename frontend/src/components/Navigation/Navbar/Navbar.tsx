@@ -41,7 +41,7 @@ export function Navbar() {
               {isSearchActive && (
                 <button
                   onClick={() => dispatch(clearSearch())}
-                  className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white"
+                  className="absolute -top-1 -right-1 flex h-3 w-3 cursor-pointer items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white"
                 >
                   ✕
                 </button>
@@ -59,7 +59,7 @@ export function Navbar() {
           {/* FaceSearch Dialog */}
           <FaceSearchDialog />
 
-          <button className="text-muted-foreground mx-1 hover:text-white">
+          <button className="text-muted-foreground mx-1 cursor-pointer hover:text-white">
             <Search className="h-4 w-4" />
           </button>
         </div>
