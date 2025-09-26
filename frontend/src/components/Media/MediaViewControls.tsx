@@ -37,7 +37,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
     <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
       <button
         onClick={onToggleInfo}
-        className={`rounded-full cursor-pointer${
+        className={`rounded-full cursor-pointer ${
           showInfo ? 'bg-blue-500/70' : 'bg-white/10'
         } p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg`}
         aria-label="Show Info"
