@@ -30,16 +30,16 @@ function HomePage() {
 
 function AppContent() {
   // Use the ThemeContext and explicitly type the theme
-  const { theme } = useContext(ThemeContext);
+  // const { theme } = useContext(ThemeContext);
 
   // Add or remove the "dark" class based on the theme
-  useEffect(() => {
-    if (theme === ThemeOptions.Dark) {
-      document.body.classList.add("dark");
-    } else {
-      document.body.classList.remove("dark");
-    }
-  }, [theme]);
+  // useEffect(() => {
+  //   if (theme === ThemeOptions.Dark) {
+  //     document.body.classList.add("dark");
+  //   } else {
+  //     document.body.classList.remove("dark");
+  //   }
+  // }, [theme]);
 
   return (
     <Router>
