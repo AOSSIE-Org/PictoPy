@@ -1,4 +1,5 @@
 import React from 'react';
+import { open } from '@tauri-apps/plugin-shell';
 import {
   X,
   ImageIcon as ImageLucide,
@@ -45,7 +46,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
         <h3 className="text-xl font-medium text-white">Image Details</h3>
         <button
           onClick={onClose}
-          className="text-white/70 hover:text-white"
+          className="cursor-pointer text-white/70 hover:text-white"
           aria-label="Close info panel"
         >
           <X className="h-5 w-5" />
@@ -57,9 +58,11 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           <div className="rounded-lg bg-white/10 p-2">
             <ImageLucide className="h-5 w-5 text-blue-400" />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-xs text-white/50">Name</p>
-            <p className="truncate font-medium text-white">{getImageName()}</p>
+            <p className="font-medium break-words whitespace-normal text-white">
+              {getImageName()}
+            </p>
           </div>
         </div>
 
@@ -122,10 +125,10 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
 
         <div className="mt-4 border-t border-white/10 pt-3">
           <button
-            className="w-full rounded-lg bg-white/10 py-2 text-white transition-colors hover:bg-white/20"
+            className="w-full cursor-pointer rounded-lg bg-white/10 py-2 text-white transition-colors hover:bg-white/20"
             onClick={() => {
               if (currentImage?.path) {
-                window.open(currentImage.path, '_blank');
+                open(currentImage.path);
               }
             }}
           >
