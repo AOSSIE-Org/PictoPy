@@ -57,7 +57,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           <div className="rounded-lg bg-white/10 p-2">
             <ImageLucide className="h-5 w-5 text-blue-400" />
           </div>
-          <div>
+          <div className='min-w-0 flex-1'>
             <p className="text-xs text-white/50">Name</p>
             <p className="truncate font-medium text-white">{getImageName()}</p>
           </div>
@@ -77,7 +77,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           <div className="rounded-lg bg-white/10 p-2">
             <MapPin className="h-5 w-5 text-red-400" />
           </div>
-          <div>
+          <div className='min-w-0 flex-1'>
             <p className="text-xs text-white/50">Location</p>
             <p className="font-medium text-white">
               {currentImage?.metadata || 'No location data'}
