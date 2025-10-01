@@ -13,23 +13,27 @@ FolderIdPath = Tuple[FolderId, str]
 
 
 def db_create_folders_table() -> None:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS folders (
-            folder_id TEXT PRIMARY KEY,
-            parent_folder_id TEXT,
-            folder_path TEXT UNIQUE,
-            last_modified_time INTEGER,
-            AI_Tagging BOOLEAN,
-            taggingCompleted BOOLEAN,
-            FOREIGN KEY (parent_folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
+    conn = None
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS folders (
+                folder_id TEXT PRIMARY KEY,
+                parent_folder_id TEXT,
+                folder_path TEXT UNIQUE,
+                last_modified_time INTEGER,
+                AI_Tagging BOOLEAN,
+                taggingCompleted BOOLEAN,
+                FOREIGN KEY (parent_folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
+            )
+            """
         )
-        """
-    )
-    conn.commit()
-    conn.close()
+        conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def db_insert_folders_batch(folders_data: List[FolderData]) -> None:

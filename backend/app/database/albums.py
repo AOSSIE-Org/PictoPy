@@ -40,9 +40,10 @@ def get_db_connection():
 
 
 def db_create_albums_table() -> None:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    conn = None
     try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS albums (
@@ -56,13 +57,15 @@ def db_create_albums_table() -> None:
         )
         conn.commit()
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 def db_create_album_images_table() -> None:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    conn = None
     try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS album_images (
@@ -76,7 +79,8 @@ def db_create_album_images_table() -> None:
         )
         conn.commit()
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 def db_get_all_albums(show_hidden: bool = False):

@@ -27,24 +27,28 @@ FaceClusterMapping = Dict[FaceId, Optional[ClusterId]]
 
 
 def db_create_faces_table() -> None:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    cursor.execute(
+    conn = None
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS faces (
+                face_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                image_id INTEGER,
+                cluster_id INTEGER,
+                embeddings TEXT,
+                confidence REAL,
+                bbox TEXT,
+                FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
+                FOREIGN KEY (cluster_id) REFERENCES face_clusters(cluster_id) ON DELETE SET NULL
+            )
         """
-        CREATE TABLE IF NOT EXISTS faces (
-            face_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            image_id INTEGER,
-            cluster_id INTEGER,
-            embeddings TEXT,
-            confidence REAL,
-            bbox TEXT,
-            FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
-            FOREIGN KEY (cluster_id) REFERENCES face_clusters(cluster_id) ON DELETE SET NULL
         )
-    """
-    )
-    conn.commit()
-    conn.close()
+        conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def db_insert_face_embeddings(

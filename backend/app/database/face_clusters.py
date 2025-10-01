@@ -20,19 +20,23 @@ ClusterMap = Dict[ClusterId, ClusterData]
 
 def db_create_clusters_table() -> None:
     """Create the face_clusters table if it doesn't exist."""
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    cursor.execute(
+    conn = None
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS face_clusters (
+                cluster_id TEXT PRIMARY KEY,
+                cluster_name TEXT,
+                face_image_base64 TEXT
+            )
         """
-        CREATE TABLE IF NOT EXISTS face_clusters (
-            cluster_id TEXT PRIMARY KEY,
-            cluster_name TEXT,
-            face_image_base64 TEXT
         )
-    """
-    )
-    conn.commit()
-    conn.close()
+        conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def db_insert_clusters_batch(clusters: List[ClusterData]) -> List[ClusterId]:

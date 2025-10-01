@@ -7,9 +7,10 @@ from app.config.settings import DATABASE_PATH
 
 def db_create_metadata_table() -> None:
     """Create the metadata table if it doesn't exist."""
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    conn = None
     try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS metadata (
@@ -25,7 +26,8 @@ def db_create_metadata_table() -> None:
 
         conn.commit()
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 def db_get_metadata() -> Optional[Dict[str, Any]]:
