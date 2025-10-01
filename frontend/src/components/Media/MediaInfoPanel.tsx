@@ -130,9 +130,13 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
         <div className="mt-4 border-t border-white/10 pt-3">
           <button
             className="w-full cursor-pointer rounded-lg bg-white/10 py-2 text-white transition-colors hover:bg-white/20"
-            onClick={() => {
+            onClick={async () => {
               if (currentImage?.path) {
-                open(currentImage.path);
+                try {
+                  await open(currentImage.path);
+                } catch (error) {
+                  console.error('Failed to open file:', error);
+                }
               }
             }}
           >
