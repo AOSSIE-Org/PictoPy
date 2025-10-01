@@ -22,10 +22,15 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  LABELS=$(gh issue view ${{ steps.issue.outputs.issue }} --json labels -q '.labels[].name')
-                  for label in $LABELS; do
-                    gh pr edit ${{ github.event.pull_request.number }} --add-label "$label"
-                  done
+                  # Get labels from the linked issue
+                  LABELS=$(gh issue view ${{ steps.issue.outputs.issue }} --json labels -q '.labels[].name' | paste -sd, -)
+
+                  if [ -n "$LABELS" ]; then
+                    echo "Applying labels: $LABELS"
+                    gh pr edit ${{ github.event.pull_request.number }} --add-label "$LABELS"
+                  else
+                    echo "No labels found on issue #${{ steps.issue.outputs.issue }}"
+                  fi
 
             - name: Comment if no linked issue
               if: steps.issue.outputs.issue == ''
