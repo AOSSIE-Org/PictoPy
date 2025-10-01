@@ -5,9 +5,11 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-import logging
+import subprocess
+import threading
+from app.logging.setup_logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def microservice_util_start_sync_service(
@@ -29,9 +31,7 @@ def microservice_util_start_sync_service(
     try:
         # Check if running as a frozen executable (PyInstaller)
         if getattr(sys, "frozen", False):
-            logger.info(
-                "Running as frozen executable, using bundled sync microservice..."
-            )
+            logger.info("Running as frozen executable, using bundled sync microservice...")
             return _start_frozen_sync_service()
 
         # Development mode - use virtual environment setup
@@ -41,6 +41,24 @@ def microservice_util_start_sync_service(
     except Exception as e:
         logger.error(f"Error starting sync microservice: {e}")
         return False
+
+
+CYAN = "\033[96m"
+RED = "\033[91m"
+MAGENTA = "\033[95m"
+RESET = "\033[0m"
+
+
+def stream_logs(pipe, prefix, color):
+    """Read a process pipe and print formatted logs from sync-microservice."""
+    for line in iter(pipe.readline, ""):
+        if line:
+            # Trim any trailing newlines
+            line = line.strip()
+            if line:
+                # All output from sync-microservice is now properly formatted by its logger
+                print(line)
+    pipe.close()
 
 
 def _start_frozen_sync_service() -> bool:
@@ -68,21 +86,29 @@ def _start_frozen_sync_service() -> bool:
             sync_executable = sync_dir / "PictoPy_Sync"
 
         if not sync_executable.exists():
-            logger.error(
-                f"Sync microservice executable not found at: {sync_executable}"
-            )
+            logger.error(f"Sync microservice executable not found at: {sync_executable}")
             return False
 
         logger.info(f"Starting sync microservice from: {sync_executable}")
 
         # Start the sync microservice executable
+        cmd = str(sync_executable)  # Correct the command to use the actual path
+        logger.info(f"Starting sync microservice with command: {cmd}")
+
         process = subprocess.Popen(
-            [str(sync_executable)],
+            cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            cwd=str(sync_dir),  # Set working directory to sync service directory
+            bufsize=1,  # Line buffered output
         )
+
+        # Start background threads to forward output to logger
+        # Stream stdout with consistent SYNC-MICROSERVICE prefix
+        threading.Thread(target=stream_logs, args=(process.stdout, "SYNC-MICROSERVICE", CYAN), daemon=True).start()
+
+        # Stream stderr with consistent SYNC-MICROSERVICE-ERR prefix
+        threading.Thread(target=stream_logs, args=(process.stderr, "SYNC-MICROSERVICE-ERR", RED), daemon=True).start()
 
         logger.info(f"Sync microservice started with PID: {process.pid}")
         logger.info("Service should be available at http://localhost:8001")
@@ -258,8 +284,17 @@ def _start_fastapi_service(python_executable: Path, service_path: Path) -> bool:
 
         # Start the process (non-blocking)
         process = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,  # Line buffered output
         )
+
+        # Start background threads to forward output to logger
+        threading.Thread(target=stream_logs, args=(process.stdout, "SYNC-MICROSERVICE", CYAN), daemon=True).start()
+
+        threading.Thread(target=stream_logs, args=(process.stderr, "SYNC-MICROSERVICE-ERR", RED), daemon=True).start()
 
         # Restore original working directory
         os.chdir(original_cwd)
