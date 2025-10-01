@@ -29,7 +29,9 @@ async def lifespan(app: FastAPI):
         # Check database connection
         if not db_check_database_connection():
             logger.error("Failed to connect to PictoPy database")
-            logger.error("Make sure the main PictoPy backend is set up and the database exists")
+            logger.error(
+                "Make sure the main PictoPy backend is set up and the database exists"
+            )
             raise RuntimeError("Database connection failed")
 
         logger.info("Database connection successful")

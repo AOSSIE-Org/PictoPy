@@ -31,7 +31,9 @@ def microservice_util_start_sync_service(
     try:
         # Check if running as a frozen executable (PyInstaller)
         if getattr(sys, "frozen", False):
-            logger.info("Running as frozen executable, using bundled sync microservice...")
+            logger.info(
+                "Running as frozen executable, using bundled sync microservice..."
+            )
             return _start_frozen_sync_service()
 
         # Development mode - use virtual environment setup
@@ -86,7 +88,9 @@ def _start_frozen_sync_service() -> bool:
             sync_executable = sync_dir / "PictoPy_Sync"
 
         if not sync_executable.exists():
-            logger.error(f"Sync microservice executable not found at: {sync_executable}")
+            logger.error(
+                f"Sync microservice executable not found at: {sync_executable}"
+            )
             return False
 
         logger.info(f"Starting sync microservice from: {sync_executable}")
@@ -105,10 +109,18 @@ def _start_frozen_sync_service() -> bool:
 
         # Start background threads to forward output to logger
         # Stream stdout with consistent SYNC-MICROSERVICE prefix
-        threading.Thread(target=stream_logs, args=(process.stdout, "SYNC-MICROSERVICE", CYAN), daemon=True).start()
+        threading.Thread(
+            target=stream_logs,
+            args=(process.stdout, "SYNC-MICROSERVICE", CYAN),
+            daemon=True,
+        ).start()
 
         # Stream stderr with consistent SYNC-MICROSERVICE-ERR prefix
-        threading.Thread(target=stream_logs, args=(process.stderr, "SYNC-MICROSERVICE-ERR", RED), daemon=True).start()
+        threading.Thread(
+            target=stream_logs,
+            args=(process.stderr, "SYNC-MICROSERVICE-ERR", RED),
+            daemon=True,
+        ).start()
 
         logger.info(f"Sync microservice started with PID: {process.pid}")
         logger.info("Service should be available at http://localhost:8001")
@@ -292,9 +304,17 @@ def _start_fastapi_service(python_executable: Path, service_path: Path) -> bool:
         )
 
         # Start background threads to forward output to logger
-        threading.Thread(target=stream_logs, args=(process.stdout, "SYNC-MICROSERVICE", CYAN), daemon=True).start()
+        threading.Thread(
+            target=stream_logs,
+            args=(process.stdout, "SYNC-MICROSERVICE", CYAN),
+            daemon=True,
+        ).start()
 
-        threading.Thread(target=stream_logs, args=(process.stderr, "SYNC-MICROSERVICE-ERR", RED), daemon=True).start()
+        threading.Thread(
+            target=stream_logs,
+            args=(process.stderr, "SYNC-MICROSERVICE-ERR", RED),
+            daemon=True,
+        ).start()
 
         # Restore original working directory
         os.chdir(original_cwd)

@@ -52,7 +52,9 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
                 folder_path_to_id = {os.path.abspath(folder_path): folder_id}
 
                 # Step 3: Prepare image records for this folder
-                folder_image_records = image_util_prepare_image_records(image_files, folder_path_to_id)
+                folder_image_records = image_util_prepare_image_records(
+                    image_files, folder_path_to_id
+                )
                 all_image_records.extend(folder_image_records)
 
             except Exception as e:
@@ -90,7 +92,9 @@ def image_util_process_untagged_images() -> bool:
         return False
 
 
-def image_util_classify_and_face_detect_images(untagged_images: List[Dict[str, str]]) -> None:
+def image_util_classify_and_face_detect_images(
+    untagged_images: List[Dict[str, str]],
+) -> None:
     """Classify untagged images and detect faces if applicable."""
     object_classifier = ObjectClassifier()
     face_detector = FaceDetector()
@@ -123,7 +127,9 @@ def image_util_classify_and_face_detect_images(untagged_images: List[Dict[str, s
         face_detector.close()
 
 
-def image_util_prepare_image_records(image_files: List[str], folder_path_to_id: Dict[str, int]) -> List[Dict]:
+def image_util_prepare_image_records(
+    image_files: List[str], folder_path_to_id: Dict[str, int]
+) -> List[Dict]:
     """
     Prepare image records with thumbnails for database insertion.
 
@@ -143,7 +149,9 @@ def image_util_prepare_image_records(image_files: List[str], folder_path_to_id: 
 
         image_id = str(uuid.uuid4())
         thumbnail_name = f"thumbnail_{image_id}.jpg"
-        thumbnail_path = os.path.abspath(os.path.join(THUMBNAIL_IMAGES_PATH, thumbnail_name))
+        thumbnail_path = os.path.abspath(
+            os.path.join(THUMBNAIL_IMAGES_PATH, thumbnail_name)
+        )
 
         # Generate thumbnail
         if image_util_generate_thumbnail(image_path, thumbnail_path):
@@ -161,7 +169,9 @@ def image_util_prepare_image_records(image_files: List[str], folder_path_to_id: 
     return image_records
 
 
-def image_util_get_images_from_folder(folder_path: str, recursive: bool = True) -> List[str]:
+def image_util_get_images_from_folder(
+    folder_path: str, recursive: bool = True
+) -> List[str]:
     """Get all image files from a folder.
 
     Args:
@@ -193,7 +203,9 @@ def image_util_get_images_from_folder(folder_path: str, recursive: bool = True) 
     return image_files
 
 
-def image_util_generate_thumbnail(image_path: str, thumbnail_path: str, size: Tuple[int, int] = (600, 600)) -> bool:
+def image_util_generate_thumbnail(
+    image_path: str, thumbnail_path: str, size: Tuple[int, int] = (600, 600)
+) -> bool:
     """Generate thumbnail for a single image."""
     try:
         with Image.open(image_path) as img:
@@ -241,7 +253,9 @@ def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
     return len(obsolete_images)
 
 
-def image_util_create_folder_path_mapping(folder_ids: List[Tuple[int, str]]) -> Dict[str, int]:
+def image_util_create_folder_path_mapping(
+    folder_ids: List[Tuple[int, str]],
+) -> Dict[str, int]:
     """
     Create a dictionary mapping folder paths to their IDs.
 
@@ -258,7 +272,9 @@ def image_util_create_folder_path_mapping(folder_ids: List[Tuple[int, str]]) -> 
     return folder_path_to_id
 
 
-def image_util_find_folder_id_for_image(image_path: str, folder_path_to_id: Dict[str, int]) -> int:
+def image_util_find_folder_id_for_image(
+    image_path: str, folder_path_to_id: Dict[str, int]
+) -> int:
     """
     Find the most specific folder ID for a given image path.
 

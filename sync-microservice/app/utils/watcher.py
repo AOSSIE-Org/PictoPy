@@ -55,10 +55,14 @@ def watcher_util_handle_file_changes(changes: set) -> None:
         if change == Change.deleted:
             deleted_folder_id = watcher_util_get_folder_id_if_watched(file_path)
             if deleted_folder_id:
-                logger.info(f"  Watched folder deleted: {file_path} (ID: {deleted_folder_id})")
+                logger.info(
+                    f"  Watched folder deleted: {file_path} (ID: {deleted_folder_id})"
+                )
                 deleted_folder_ids.append(deleted_folder_id)
         else:
-            closest_folder = watcher_util_find_closest_parent_folder(file_path, watched_folders)
+            closest_folder = watcher_util_find_closest_parent_folder(
+                file_path, watched_folders
+            )
 
             if closest_folder:
                 folder_id, folder_path = closest_folder
@@ -75,7 +79,9 @@ def watcher_util_handle_file_changes(changes: set) -> None:
         watcher_util_restart_folder_watcher()
 
 
-def watcher_util_find_closest_parent_folder(file_path: str, watched_folders: List[FolderIdPath]) -> Optional[Tuple[str, str]]:
+def watcher_util_find_closest_parent_folder(
+    file_path: str, watched_folders: List[FolderIdPath]
+) -> Optional[Tuple[str, str]]:
     """
     Find the closest parent folder for a given file path from the watched folders.
 
@@ -125,9 +131,13 @@ def watcher_util_call_sync_folder_api(folder_id: str, folder_path: str) -> None:
             response = client.request("POST", url, json=payload)
 
             if response.status_code == 200:
-                logger.info(f"Successfully synced folder {folder_path} (ID: {folder_id})")
+                logger.info(
+                    f"Successfully synced folder {folder_path} (ID: {folder_id})"
+                )
             else:
-                logger.error(f"Failed to sync folder {folder_path}. Status: {response.status_code}, Response: {response.text}")
+                logger.error(
+                    f"Failed to sync folder {folder_path}. Status: {response.status_code}, Response: {response.text}"
+                )
 
     except httpx.RequestError as e:
         logger.error(f"Network error while syncing folder {folder_path}: {e}")
@@ -152,7 +162,9 @@ def watcher_util_call_delete_folders_api(folder_ids: List[str]) -> None:
             if response.status_code == 200:
                 logger.info(f"Successfully deleted folders with IDs: {folder_ids}")
             else:
-                logger.error(f"Failed to delete folders. Status: {response.status_code}, Response: {response.text}")
+                logger.error(
+                    f"Failed to delete folders. Status: {response.status_code}, Response: {response.text}"
+                )
 
     except httpx.RequestError as e:
         logger.error(f"Network error while deleting folders {folder_ids}: {e}")
@@ -237,7 +249,9 @@ def watcher_util_start_folder_watcher() -> bool:
             return False
 
         watched_folders = existing_folders
-        folder_id_map = {folder_path: folder_id for folder_id, folder_path in existing_folders}
+        folder_id_map = {
+            folder_path: folder_id for folder_id, folder_path in existing_folders
+        }
 
         folder_paths = [folder_path for _, folder_path in existing_folders]
 
@@ -312,7 +326,10 @@ def watcher_util_get_watcher_info() -> dict:
         "folders_count": len(watched_folders),
         "thread_alive": watcher_thread.is_alive() if watcher_thread else False,
         "thread_id": watcher_thread.ident if watcher_thread else None,
-        "watched_folders": [{"id": folder_id, "path": folder_path} for folder_id, folder_path in watched_folders],
+        "watched_folders": [
+            {"id": folder_id, "path": folder_path}
+            for folder_id, folder_path in watched_folders
+        ],
     }
 
 
