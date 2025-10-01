@@ -1,41 +1,41 @@
 name: Sync Issue Labels to PR
 
 on:
-    pull_request:
-        types: [opened, reopened, synchronize]
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
 
 jobs:
-    sync-labels:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout repo
-              uses: actions/checkout@v4
+  sync-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-            - name: Extract linked issue number
-              id: issue
-              run: |
-                  ISSUE=$(echo "${{ github.event.pull_request.body }}" | grep -oE '#[0-9]+' | head -n1 | tr -d '#')
-                  echo "issue=$ISSUE" >> $GITHUB_OUTPUT
+      - name: Extract linked issue number
+        id: issue
+        run: |
+          ISSUE=$(echo "${{ github.event.pull_request.body }}" | grep -oE '#[0-9]+' | head -n1 | tr -d '#')
+          echo "issue=$ISSUE" >> $GITHUB_OUTPUT
 
-            - name: Copy labels from issue to PR
-              if: steps.issue.outputs.issue != ''
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                  # Get labels from the linked issue
-                  LABELS=$(gh issue view ${{ steps.issue.outputs.issue }} --json labels -q '.labels[].name' | paste -sd, -)
+      - name: Copy labels from issue to PR
+        if: steps.issue.outputs.issue != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get labels from the linked issue
+          LABELS=$(gh issue view ${{ steps.issue.outputs.issue }} --json labels -q '.labels[].name' | paste -sd, -)
 
-                  if [ -n "$LABELS" ]; then
-                    echo "Applying labels: $LABELS"
-                    gh pr edit ${{ github.event.pull_request.number }} --add-label "$LABELS"
-                  else
-                    echo "No labels found on issue #${{ steps.issue.outputs.issue }}"
-                  fi
+          if [ -n "$LABELS" ]; then
+            echo "Applying labels: $LABELS"
+            gh pr edit ${{ github.event.pull_request.number }} --add-label "$LABELS"
+          else
+            echo "No labels found on issue #${{ steps.issue.outputs.issue }}"
+          fi
 
-            - name: Comment if no linked issue
-              if: steps.issue.outputs.issue == ''
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                  gh pr comment ${{ github.event.pull_request.number }} \
-                    --body "⚠️ This pull request does not reference any issue. Please link an issue (e.g. 'Fixes #123') so that labels can be synced."
+      - name: Comment if no linked issue
+        if: steps.issue.outputs.issue == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "⚠️ This pull request does not reference any issue. Please link an issue (e.g. 'Fixes #123') so that labels can be synced."
