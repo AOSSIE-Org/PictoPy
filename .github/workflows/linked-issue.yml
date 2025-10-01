@@ -4,6 +4,11 @@ on:
   pull_request:
     types: [opened, reopened, synchronize, edited]
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   sync-labels:
     runs-on: ubuntu-latest
@@ -15,53 +20,52 @@ jobs:
         id: issues
         run: |
           BODY="${{ github.event.pull_request.body }}"
-          # Grab all #123 style references
           ISSUES=$(echo "$BODY" | grep -oE '#[0-9]+' | tr -d '#' | tr '\n' ' ')
           echo "issues=$ISSUES" >> $GITHUB_OUTPUT
 
       - name: Collect labels from linked issues
-        if: steps.issues.outputs.issues != ''
+        if: ${{ steps.issues.outputs.issues != '' }}
         id: labels
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ALL_LABELS=""
+          REAL_ISSUES=""
 
           for ISSUE_NUM in ${{ steps.issues.outputs.issues }}; do
-            echo "Checking #$ISSUE_NUM"
             IS_PR=$(gh api repos/${{ github.repository }}/issues/$ISSUE_NUM --jq '.pull_request // empty' || echo "")
-
             if [ -n "$IS_PR" ]; then
               echo "#$ISSUE_NUM is a PR, skipping"
               continue
             fi
 
-            LABELS=$(gh issue view $ISSUE_NUM --json labels -q '.labels[].name')
+            REAL_ISSUES="$REAL_ISSUES $ISSUE_NUM"
+            LABELS=$(gh issue view $ISSUE_NUM --json labels -q '.labels[].name' || echo "")
             if [ -n "$LABELS" ]; then
-              echo "Found labels on issue #$ISSUE_NUM: $LABELS"
               ALL_LABELS="$ALL_LABELS"$'\n'"$LABELS"
             fi
           done
 
-          # Deduplicate, remove blanks, and join with commas
-          ALL_LABELS=$(echo "$ALL_LABELS" | sed '/^$/d' | sort -u | paste -sd, -)
+          # Deduplicate, remove blanks, join with commas
+          ALL_LABELS=$(echo "$ALL_LABELS" | sed '/^$/d' | sort -u | paste -sd, - || true)
 
-          if [ -n "$ALL_LABELS" ]; then
-            echo "labels=$ALL_LABELS" >> $GITHUB_OUTPUT
-          fi
+          echo "real_issues=$REAL_ISSUES" >> $GITHUB_OUTPUT
+          echo "labels=$ALL_LABELS" >> $GITHUB_OUTPUT
 
       - name: Apply labels to PR
-        if: steps.labels.outputs.labels != ''
+        if: ${{ steps.labels.outputs.labels != '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Applying labels: ${{ steps.labels.outputs.labels }}"
           gh pr edit ${{ github.event.pull_request.number }} --add-label "${{ steps.labels.outputs.labels }}"
 
-      - name: Comment if no linked issues
-        if: steps.issues.outputs.issues == ''
+      - name: Comment if no labels could be synced
+        if: ${{ steps.labels.outputs.labels == '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUM: ${{ github.event.pull_request.number }}
         run: |
-          gh pr comment ${{ github.event.pull_request.number }} \
-            --body "⚠️ This pull request does not reference any issues. Please link an issue (e.g., 'Fixes #issue_number') so labels can be synced."
+          gh pr comment $PR_NUM --body "⚠️ No issue with labels was found for this PR.
+          Please make sure to link an issue (e.g., 'Fixes #issue_number') so that labels can be synced automatically."
