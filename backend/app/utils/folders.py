@@ -4,7 +4,6 @@ from typing import List, Tuple
 
 from fastapi import HTTPException, status
 from app.database.folders import (
-    db_insert_folders_batch,
     db_update_parent_ids_for_subtree,
     db_delete_folders_batch,
 )

@@ -5,6 +5,7 @@ from app.core.lifespan import lifespan
 from app.routes import health, watcher, folders
 from fastapi.middleware.cors import CORSMiddleware
 from app.logging.setup_logging import get_sync_logger, configure_uvicorn_logging, setup_logging
+from app.utils.logger_writer import LoggerWriter
 
 # Set up standard logging
 setup_logging("sync-microservice")
@@ -14,32 +15,6 @@ configure_uvicorn_logging("sync-microservice")
 
 # Use the sync-specific logger for this module
 logger = get_sync_logger(__name__)
-
-
-class LoggerWriter:
-    """Custom writer that redirects stdout/stderr to logger."""
-
-    def __init__(self, logger, level):
-        self.logger = logger
-        self.level = level
-        self.buffer = ""
-
-    def write(self, message):
-        # Buffer the message until we get a complete line
-        self.buffer += message
-        if message.endswith("\n"):
-            # Log the complete line (minus the newline)
-            line = self.buffer.rstrip("\n")
-            if line:  # Only log non-empty lines
-                self.logger.log(self.level, line)
-            self.buffer = ""
-
-    def flush(self):
-        # Flush any remaining buffer content
-        if self.buffer:
-            self.logger.log(self.level, self.buffer)
-            self.buffer = ""
-
 
 # Redirect stdout and stderr to logger
 sys.stdout = LoggerWriter(logger, 20)  # INFO level
