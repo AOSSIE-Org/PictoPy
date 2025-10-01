@@ -1,0 +1,36 @@
+name: Sync Issue Labels to PR
+
+on:
+    pull_request:
+        types: [opened, reopened, synchronize]
+
+jobs:
+    sync-labels:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Install GitHub CLI
+              uses: cli/cli@latest
+
+            - name: Extract linked issue number
+              id: issue
+              run: |
+                  ISSUE=$(echo "${{ github.event.pull_request.body }}" | grep -oE '#[0-9]+' | head -n1 | tr -d '#')
+                  echo "issue=$ISSUE" >> $GITHUB_OUTPUT
+
+            - name: Copy labels from issue to PR
+              if: steps.issue.outputs.issue != ''
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  LABELS=$(gh issue view ${{ steps.issue.outputs.issue }} --json labels -q '.labels[].name')
+                  for label in $LABELS; do
+                    gh pr edit ${{ github.event.pull_request.number }} --add-label "$label"
+                  done
+
+            - name: Comment if no linked issue
+              if: steps.issue.outputs.issue == ''
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  gh pr comment ${{ github.event.pull_request.number }} \
+                    --body "⚠️ This pull request does not reference any issue. Please link an issue (e.g. 'Fixes #123') so that labels can be synced."
