@@ -43,8 +43,8 @@ jobs:
             fi
           done
 
-          # Deduplicate and join with commas
-          ALL_LABELS=$(echo "$ALL_LABELS" | sort -u | paste -sd, -)
+          # Deduplicate, remove blanks, and join with commas
+          ALL_LABELS=$(echo "$ALL_LABELS" | sed '/^$/d' | sort -u | paste -sd, -)
 
           if [ -n "$ALL_LABELS" ]; then
             echo "labels=$ALL_LABELS" >> $GITHUB_OUTPUT
@@ -64,4 +64,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr comment ${{ github.event.pull_request.number }} \
-            --body "⚠️ This pull request does not reference any issues. Please link an issue (e.g., 'Fixes #issue_number') so labels can be synced."
+            --body "⚠️ This pull request does not reference any issues. Please link an issue (e.g., 'Fixes #123') so labels can be synced."
