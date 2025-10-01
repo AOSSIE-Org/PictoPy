@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-import subprocess
 import threading
 from app.logging.setup_logging import get_logger
 
