@@ -201,9 +201,9 @@ def db_delete_all_clusters() -> int:
         conn.close()
 
 
-def db_get_all_clusters_with_face_counts() -> List[
-    Dict[str, Union[str, Optional[str], int]]
-]:
+def db_get_all_clusters_with_face_counts() -> (
+    List[Dict[str, Union[str, Optional[str], int]]]
+):
     """
     Retrieve all clusters with their face counts and stored face images.
 

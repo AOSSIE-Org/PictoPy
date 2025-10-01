@@ -236,9 +236,9 @@ def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbed
         conn.close()
 
 
-def db_get_all_faces_with_cluster_names() -> List[
-    Dict[str, Union[FaceId, FaceEmbedding, Optional[str]]]
-]:
+def db_get_all_faces_with_cluster_names() -> (
+    List[Dict[str, Union[FaceId, FaceEmbedding, Optional[str]]]]
+):
     """
     Get all faces with their corresponding cluster names.
 
@@ -266,7 +266,11 @@ def db_get_all_faces_with_cluster_names() -> List[
             # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
             faces.append(
-                {"face_id": face_id, "embeddings": embeddings, "cluster_name": cluster_name}
+                {
+                    "face_id": face_id,
+                    "embeddings": embeddings,
+                    "cluster_name": cluster_name,
+                }
             )
 
         return faces
@@ -275,7 +279,7 @@ def db_get_all_faces_with_cluster_names() -> List[
 
 
 def db_update_face_cluster_ids_batch(
-    face_cluster_mapping: List[Dict[str, Union[FaceId, ClusterId]]]
+    face_cluster_mapping: List[Dict[str, Union[FaceId, ClusterId]]],
 ) -> None:
     """
     Update cluster IDs for multiple faces in batch.

@@ -184,7 +184,9 @@ def db_get_album_images(album_id: str):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT image_id FROM album_images WHERE album_id = ?", (album_id,))
+        cursor.execute(
+            "SELECT image_id FROM album_images WHERE album_id = ?", (album_id,)
+        )
         images = cursor.fetchall()
         return [img[0] for img in images]
     finally:
@@ -246,7 +248,9 @@ def verify_album_password(album_id: str, password: str) -> bool:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT password_hash FROM albums WHERE album_id = ?", (album_id,))
+        cursor.execute(
+            "SELECT password_hash FROM albums WHERE album_id = ?", (album_id,)
+        )
         row = cursor.fetchone()
         if not row or not row[0]:
             return False

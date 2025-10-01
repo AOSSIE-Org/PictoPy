@@ -390,9 +390,9 @@ def db_get_folder_ids_by_paths(
         conn.close()
 
 
-def db_get_all_folder_details() -> List[
-    Tuple[str, str, Optional[str], int, bool, Optional[bool]]
-]:
+def db_get_all_folder_details() -> (
+    List[Tuple[str, str, Optional[str], int, bool, Optional[bool]]]
+):
     """
     Get all folder details including folder_id, folder_path, parent_folder_id,
     last_modified_time, AI_Tagging, and taggingCompleted.
