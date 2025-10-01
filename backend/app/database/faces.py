@@ -30,12 +30,13 @@ def db_create_faces_table() -> None:
     conn = None
     try:
         conn = sqlite3.connect(DATABASE_PATH)
+        conn.execute("PRAGMA foreign_keys = ON")
         cursor = conn.cursor()
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS faces (
                 face_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                image_id INTEGER,
+                image_id TEXT,
                 cluster_id INTEGER,
                 embeddings TEXT,
                 confidence REAL,

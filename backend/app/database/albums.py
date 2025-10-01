@@ -156,32 +156,38 @@ def db_update_album(
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
-        password_hash = None
-        if password:
+        if password is not None:
+            # Update with new password
             password_hash = bcrypt.hashpw(
                 password.encode("utf-8"), bcrypt.gensalt()
             ).decode("utf-8")
-        cursor.execute(
-            """
-            UPDATE albums
-            SET album_name = ?, description = ?, is_hidden = ?, password_hash = ?
-            WHERE album_id = ?
-            """,
-            (album_name, description, int(is_hidden), password_hash, album_id),
-        )
+            cursor.execute(
+                """
+                UPDATE albums
+                SET album_name = ?, description = ?, is_hidden = ?, password_hash = ?
+                WHERE album_id = ?
+                """,
+                (album_name, description, int(is_hidden), password_hash, album_id),
+            )
+        else:
+            # Update without changing password
+            cursor.execute(
+                """
+                UPDATE albums
+                SET album_name = ?, description = ?, is_hidden = ?
+                WHERE album_id = ?
+                """,
+                (album_name, description, int(is_hidden), album_id),
+            )
         conn.commit()
     finally:
         conn.close()
 
 
 def db_delete_album(album_id: str):
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         cursor.execute("DELETE FROM albums WHERE album_id = ?", (album_id,))
-        conn.commit()
-    finally:
-        conn.close()
 
 
 def db_get_album_images(album_id: str):
