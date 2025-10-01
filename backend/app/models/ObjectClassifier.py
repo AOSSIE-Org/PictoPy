@@ -8,7 +8,9 @@ logger = get_logger(__name__)
 
 class ObjectClassifier:
     def __init__(self):
-        self.yolo_classifier = YOLO(YOLO_util_get_model_path("object"), conf_threshold=0.4, iou_threshold=0.5)
+        self.yolo_classifier = YOLO(
+            YOLO_util_get_model_path("object"), conf_threshold=0.4, iou_threshold=0.5
+        )
 
     def get_classes(self, img_path) -> list[int] | None:
         img = cv2.imread(img_path)
