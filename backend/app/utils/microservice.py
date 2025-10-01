@@ -6,9 +6,36 @@ from pathlib import Path
 from typing import Optional
 
 import threading
+import atexit
 from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
+
+# Global tracking for subprocess log threads
+_log_threads = []
+
+
+def cleanup_log_threads():
+    """Clean up log threads during shutdown to ensure all buffered logs are processed."""
+    if _log_threads:
+        logger.info("Cleaning up log threads...")
+        for thread in _log_threads:
+            if thread.is_alive():
+                thread.join(timeout=2.0)  # Wait up to 2 seconds for each thread
+        _log_threads.clear()
+        logger.info("Log threads cleanup completed")
+
+
+# Register cleanup function to run at exit
+atexit.register(cleanup_log_threads)
+
+
+def microservice_util_stop_sync_service():
+    """
+    Stop the sync microservice and clean up log threads.
+    This function should be called during application shutdown.
+    """
+    cleanup_log_threads()
 
 
 def microservice_util_start_sync_service(
@@ -108,18 +135,22 @@ def _start_frozen_sync_service() -> bool:
 
         # Start background threads to forward output to logger
         # Stream stdout with consistent SYNC-MICROSERVICE prefix
-        threading.Thread(
+        t1 = threading.Thread(
             target=stream_logs,
             args=(process.stdout, "SYNC-MICROSERVICE", CYAN),
-            daemon=True,
-        ).start()
+            daemon=False,
+        )
 
         # Stream stderr with consistent SYNC-MICROSERVICE-ERR prefix
-        threading.Thread(
+        t2 = threading.Thread(
             target=stream_logs,
             args=(process.stderr, "SYNC-MICROSERVICE-ERR", RED),
-            daemon=True,
-        ).start()
+            daemon=False,
+        )
+
+        t1.start()
+        t2.start()
+        _log_threads.extend([t1, t2])
 
         logger.info(f"Sync microservice started with PID: {process.pid}")
         logger.info("Service should be available at http://localhost:8001")
@@ -303,17 +334,21 @@ def _start_fastapi_service(python_executable: Path, service_path: Path) -> bool:
         )
 
         # Start background threads to forward output to logger
-        threading.Thread(
+        t1 = threading.Thread(
             target=stream_logs,
             args=(process.stdout, "SYNC-MICROSERVICE", CYAN),
-            daemon=True,
-        ).start()
+            daemon=False,
+        )
 
-        threading.Thread(
+        t2 = threading.Thread(
             target=stream_logs,
             args=(process.stderr, "SYNC-MICROSERVICE-ERR", RED),
-            daemon=True,
-        ).start()
+            daemon=False,
+        )
+
+        t1.start()
+        t2.start()
+        _log_threads.extend([t1, t2])
 
         # Restore original working directory
         os.chdir(original_cwd)

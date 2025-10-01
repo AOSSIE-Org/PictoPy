@@ -1,11 +1,15 @@
-import sys
+import logging
 from fastapi import FastAPI
 from uvicorn import Config, Server
 from app.core.lifespan import lifespan
 from app.routes import health, watcher, folders
 from fastapi.middleware.cors import CORSMiddleware
-from app.logging.setup_logging import get_sync_logger, configure_uvicorn_logging, setup_logging
-from app.utils.logger_writer import LoggerWriter
+from app.logging.setup_logging import (
+    get_sync_logger,
+    configure_uvicorn_logging,
+    setup_logging,
+)
+from app.utils.logger_writer import redirect_stdout_stderr
 
 # Set up standard logging
 setup_logging("sync-microservice")
@@ -15,10 +19,6 @@ configure_uvicorn_logging("sync-microservice")
 
 # Use the sync-specific logger for this module
 logger = get_sync_logger(__name__)
-
-# Redirect stdout and stderr to logger
-sys.stdout = LoggerWriter(logger, 20)  # INFO level
-sys.stderr = LoggerWriter(logger, 40)  # ERROR level
 
 logger.info("Starting PictoPy Sync Microservice...")
 
@@ -42,9 +42,7 @@ app.include_router(watcher.router, prefix="/api/v1")
 app.include_router(folders.router, prefix="/api/v1")
 
 if __name__ == "__main__":
-    # Get a logger for this module
-    logger = get_sync_logger(__name__)
-    logger.info("Starting PictoPy Sync Microservice...")
+    logger.info("Starting PictoPy Sync Microservice from main...")
 
     # Create config with log_config=None to disable Uvicorn's default logging
     config = Config(
@@ -55,4 +53,9 @@ if __name__ == "__main__":
         log_config=None,  # Disable uvicorn's default logging config
     )
     server = Server(config)
-    server.run()
+
+    # Use context manager for safe stdout/stderr redirection
+    with redirect_stdout_stderr(
+        logger, stdout_level=logging.INFO, stderr_level=logging.ERROR
+    ):
+        server.run()
