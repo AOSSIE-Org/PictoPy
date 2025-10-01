@@ -8,9 +8,6 @@ jobs:
     sync-labels:
         runs-on: ubuntu-latest
         steps:
-            - name: Install GitHub CLI
-              uses: cli/cli@latest
-
             - name: Extract linked issue number
               id: issue
               run: |
