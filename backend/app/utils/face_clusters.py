@@ -21,6 +21,10 @@ from app.database.metadata import (
     db_get_metadata,
     db_update_metadata,
 )
+from app.logging.setup_logging import get_logger
+
+# Initialize logger
+logger = get_logger(__name__)
 
 
 class ClusterResult:
@@ -131,9 +135,7 @@ def cluster_util_face_clusters_sync():
         db_update_face_cluster_ids_batch(face_cluster_mappings)
 
 
-def cluster_util_cluster_all_face_embeddings(
-    eps: float = 0.3, min_samples: int = 2
-) -> List[ClusterResult]:
+def cluster_util_cluster_all_face_embeddings(eps: float = 0.3, min_samples: int = 2) -> List[ClusterResult]:
     """
     Cluster face embeddings using DBSCAN and assign cluster names based on majority voting.
 
@@ -160,7 +162,7 @@ def cluster_util_cluster_all_face_embeddings(
         embeddings.append(face["embeddings"])
         existing_cluster_names.append(face["cluster_name"])
 
-    print(f"Total faces to cluster: {len(face_ids)}")
+    logger.info(f"Total faces to cluster: {len(face_ids)}")
 
     # Convert to numpy array for DBSCAN
     embeddings_array = np.array(embeddings)
@@ -174,7 +176,7 @@ def cluster_util_cluster_all_face_embeddings(
     )
 
     cluster_labels = dbscan.fit_predict(embeddings_array)
-    print(f"DBSCAN found {len(set(cluster_labels)) - 1} clusters")
+    logger.info(f"DBSCAN found {len(set(cluster_labels)) - 1} clusters")
 
     # Group faces by cluster labels
     clusters = defaultdict(list)
@@ -273,16 +275,12 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
             nearest_cluster_idx = np.argmin(distances)
             nearest_cluster_id = cluster_ids[nearest_cluster_idx]
 
-            face_cluster_mappings.append(
-                {"face_id": face_id, "cluster_id": nearest_cluster_id}
-            )
+            face_cluster_mappings.append({"face_id": face_id, "cluster_id": nearest_cluster_id})
 
     return face_cluster_mappings
 
 
-def _calculate_cosine_distances(
-    face_embedding: NDArray, cluster_means: NDArray
-) -> NDArray:
+def _calculate_cosine_distances(face_embedding: NDArray, cluster_means: NDArray) -> NDArray:
     """
     Calculate cosine distances between a face embedding and cluster means.
 
@@ -336,7 +334,7 @@ def _update_cluster_face_image(cluster_id: str, face_image_base64: str) -> bool:
         return updated
 
     except Exception as e:
-        print(f"Error updating face image for cluster {cluster_id}: {e}")
+        logger.error(f"Error updating face image for cluster {cluster_id}: {e}")
         conn.rollback()
         return False
     finally:
@@ -387,15 +385,13 @@ def _get_cluster_face_data(cluster_uuid: str) -> Optional[tuple]:
             return None
 
     except Exception as e:
-        print(f"Error getting face data for cluster {cluster_uuid}: {e}")
+        logger.error(f"Error getting face data for cluster {cluster_uuid}: {e}")
         return None
     finally:
         conn.close()
 
 
-def _calculate_square_crop_bounds(
-    bbox: Dict, img_shape: tuple, padding: int = 50
-) -> tuple:
+def _calculate_square_crop_bounds(bbox: Dict, img_shape: tuple, padding: int = 50) -> tuple:
     """
     Calculate square crop bounds centered on a face bounding box.
 
@@ -458,9 +454,7 @@ def _calculate_square_crop_bounds(
     return (square_x_start, square_y_start, square_x_end, square_y_end)
 
 
-def _crop_and_resize_face(
-    img: np.ndarray, crop_bounds: tuple, target_size: int = 300
-) -> Optional[np.ndarray]:
+def _crop_and_resize_face(img: np.ndarray, crop_bounds: tuple, target_size: int = 300) -> Optional[np.ndarray]:
     """
     Crop and resize a face region from an image.
 
@@ -487,7 +481,7 @@ def _crop_and_resize_face(
 
         return face_crop
     except Exception as e:
-        print(f"Error cropping and resizing face: {e}")
+        logger.error(f"Error cropping and resizing face: {e}")
         return None
 
 
@@ -506,7 +500,7 @@ def _encode_image_to_base64(img: np.ndarray, format: str = ".jpg") -> Optional[s
         _, buffer = cv2.imencode(format, img)
         return base64.b64encode(buffer).decode("utf-8")
     except Exception as e:
-        print(f"Error encoding image to base64: {e}")
+        logger.error(f"Error encoding image to base64: {e}")
         return None
 
 
@@ -545,7 +539,7 @@ def _generate_cluster_face_image(cluster_uuid: str) -> Optional[str]:
         return _encode_image_to_base64(face_crop)
 
     except Exception as e:
-        print(f"Error generating face image for cluster {cluster_uuid}: {e}")
+        logger.error(f"Error generating face image for cluster {cluster_uuid}: {e}")
         return None
 
 
@@ -560,11 +554,7 @@ def _determine_cluster_name(faces_in_cluster: List[Dict]) -> Optional[str]:
         Most common non-null cluster name, or None if no named clusters exist
     """
     # Extract non-null cluster names
-    existing_names = [
-        face["existing_cluster_name"]
-        for face in faces_in_cluster
-        if face["existing_cluster_name"] is not None
-    ]
+    existing_names = [face["existing_cluster_name"] for face in faces_in_cluster if face["existing_cluster_name"] is not None]
 
     if not existing_names:
         return None

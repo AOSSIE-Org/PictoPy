@@ -15,6 +15,9 @@ from app.database.images import (
 )
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -> bool:
@@ -49,13 +52,11 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
                 folder_path_to_id = {os.path.abspath(folder_path): folder_id}
 
                 # Step 3: Prepare image records for this folder
-                folder_image_records = image_util_prepare_image_records(
-                    image_files, folder_path_to_id
-                )
+                folder_image_records = image_util_prepare_image_records(image_files, folder_path_to_id)
                 all_image_records.extend(folder_image_records)
 
             except Exception as e:
-                print(f"Error processing folder {folder_path}: {e}")
+                logger.error(f"Error processing folder {folder_path}: {e}")
                 continue  # Continue with other folders even if one fails
 
         # Step 4: Remove obsolete images that no longer exist in filesystem
@@ -68,7 +69,7 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
 
         return True  # No images to process is not an error
     except Exception as e:
-        print(f"Error processing folders: {e}")
+        logger.error(f"Error processing folders: {e}")
         return False
 
 
@@ -85,13 +86,11 @@ def image_util_process_untagged_images() -> bool:
 
         return True
     except Exception as e:
-        print(f"Error processing untagged images: {e}")
+        logger.error(f"Error processing untagged images: {e}")
         return False
 
 
-def image_util_classify_and_face_detect_images(
-    untagged_images: List[Dict[str, str]]
-) -> None:
+def image_util_classify_and_face_detect_images(untagged_images: List[Dict[str, str]]) -> None:
     """Classify untagged images and detect faces if applicable."""
     object_classifier = ObjectClassifier()
     face_detector = FaceDetector()
@@ -107,7 +106,7 @@ def image_util_classify_and_face_detect_images(
             if len(classes) > 0:
                 # Create image-class pairs
                 image_class_pairs = [(image_id, class_id) for class_id in classes]
-                print(image_class_pairs)
+                logger.debug(f"Image-class pairs: {image_class_pairs}")
 
                 # Insert the pairs into the database
                 db_insert_image_classes_batch(image_class_pairs)
@@ -124,9 +123,7 @@ def image_util_classify_and_face_detect_images(
         face_detector.close()
 
 
-def image_util_prepare_image_records(
-    image_files: List[str], folder_path_to_id: Dict[str, int]
-) -> List[Dict]:
+def image_util_prepare_image_records(image_files: List[str], folder_path_to_id: Dict[str, int]) -> List[Dict]:
     """
     Prepare image records with thumbnails for database insertion.
 
@@ -146,9 +143,7 @@ def image_util_prepare_image_records(
 
         image_id = str(uuid.uuid4())
         thumbnail_name = f"thumbnail_{image_id}.jpg"
-        thumbnail_path = os.path.abspath(
-            os.path.join(THUMBNAIL_IMAGES_PATH, thumbnail_name)
-        )
+        thumbnail_path = os.path.abspath(os.path.join(THUMBNAIL_IMAGES_PATH, thumbnail_name))
 
         # Generate thumbnail
         if image_util_generate_thumbnail(image_path, thumbnail_path):
@@ -166,9 +161,7 @@ def image_util_prepare_image_records(
     return image_records
 
 
-def image_util_get_images_from_folder(
-    folder_path: str, recursive: bool = True
-) -> List[str]:
+def image_util_get_images_from_folder(folder_path: str, recursive: bool = True) -> List[str]:
     """Get all image files from a folder.
 
     Args:
@@ -195,14 +188,12 @@ def image_util_get_images_from_folder(
                 if os.path.isfile(file_path) and image_util_is_valid_image(file_path):
                     image_files.append(file_path)
         except OSError as e:
-            print(f"Error reading folder {folder_path}: {e}")
+            logger.error(f"Error reading folder {folder_path}: {e}")
 
     return image_files
 
 
-def image_util_generate_thumbnail(
-    image_path: str, thumbnail_path: str, size: Tuple[int, int] = (600, 600)
-) -> bool:
+def image_util_generate_thumbnail(image_path: str, thumbnail_path: str, size: Tuple[int, int] = (600, 600)) -> bool:
     """Generate thumbnail for a single image."""
     try:
         with Image.open(image_path) as img:
@@ -215,7 +206,7 @@ def image_util_generate_thumbnail(
             img.save(thumbnail_path, "JPEG")  # Always save thumbnails as JPEG
         return True
     except Exception as e:
-        print(f"Error generating thumbnail for {image_path}: {e}")
+        logger.error(f"Error generating thumbnail for {image_path}: {e}")
         return False
 
 
@@ -239,20 +230,18 @@ def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
             if thumbnail_path and os.path.exists(thumbnail_path):
                 try:
                     os.remove(thumbnail_path)
-                    print(f"Removed obsolete thumbnail: {thumbnail_path}")
+                    logger.info(f"Removed obsolete thumbnail: {thumbnail_path}")
                 except OSError as e:
-                    print(f"Error removing thumbnail {thumbnail_path}: {e}")
+                    logger.error(f"Error removing thumbnail {thumbnail_path}: {e}")
 
     if obsolete_images:
         db_delete_images_by_ids(obsolete_images)
-        print(f"Removed {len(obsolete_images)} obsolete image(s) from database")
+        logger.info(f"Removed {len(obsolete_images)} obsolete image(s) from database")
 
     return len(obsolete_images)
 
 
-def image_util_create_folder_path_mapping(
-    folder_ids: List[Tuple[int, str]]
-) -> Dict[str, int]:
+def image_util_create_folder_path_mapping(folder_ids: List[Tuple[int, str]]) -> Dict[str, int]:
     """
     Create a dictionary mapping folder paths to their IDs.
 
@@ -269,9 +258,7 @@ def image_util_create_folder_path_mapping(
     return folder_path_to_id
 
 
-def image_util_find_folder_id_for_image(
-    image_path: str, folder_path_to_id: Dict[str, int]
-) -> int:
+def image_util_find_folder_id_for_image(image_path: str, folder_path_to_id: Dict[str, int]) -> int:
     """
     Find the most specific folder ID for a given image path.
 

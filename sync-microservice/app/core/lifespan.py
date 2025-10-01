@@ -7,6 +7,9 @@ from app.utils.watcher import (
     watcher_util_start_folder_watcher,
     watcher_util_stop_folder_watcher,
 )
+from app.logging.setup_logging import get_sync_logger
+
+logger = get_sync_logger(__name__)
 
 # Global variable to track watcher status
 watcher_started = False
@@ -21,34 +24,32 @@ async def lifespan(app: FastAPI):
 
     try:
         # Startup
-        print("Starting PictoPy Sync Microservice...")
+        logger.info("Starting PictoPy Sync Microservice...")
 
         # Check database connection
         if not db_check_database_connection():
-            print("Failed to connect to PictoPy database")
-            print(
-                "Make sure the main PictoPy backend is set up and the database exists"
-            )
+            logger.error("Failed to connect to PictoPy database")
+            logger.error("Make sure the main PictoPy backend is set up and the database exists")
             raise RuntimeError("Database connection failed")
 
-        print("Database connection successful")
+        logger.info("Database connection successful")
 
         watcher_started = watcher_util_start_folder_watcher()
 
-        print("Sync microservice is ready!")
+        logger.info("Sync microservice is ready!")
 
         yield
 
     except KeyboardInterrupt:
-        print("\nReceived keyboard interrupt (Ctrl+C)")
-        print("Initiating graceful shutdown...")
+        logger.info("\nReceived keyboard interrupt (Ctrl+C)")
+        logger.info("Initiating graceful shutdown...")
     except Exception as e:
-        print(f"Unexpected error during startup: {e}")
+        logger.error(f"Unexpected error during startup: {e}")
         raise
     finally:
         # Shutdown
-        print("Shutting down sync microservice...")
+        logger.info("Shutting down sync microservice...")
         if watcher_started:
             watcher_util_stop_folder_watcher()
-            print("Folder watcher stopped")
-        print("Shutdown complete")
+            logger.info("Folder watcher stopped")
+        logger.info("Shutdown complete")

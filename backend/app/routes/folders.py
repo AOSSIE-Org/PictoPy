@@ -11,6 +11,7 @@ from app.database.folders import (
     db_get_folder_ids_by_path_prefix,
     db_get_all_folder_details,
 )
+from app.logging.setup_logging import get_logger
 from app.schemas.folders import (
     AddFolderRequest,
     AddFolderResponse,
@@ -44,6 +45,8 @@ from app.utils.images import (
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.utils.API import API_util_restart_sync_microservice_watcher
 
+# Initialize logger
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -63,7 +66,7 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
         for folder_id_from_db, folder_path_from_db in folder_ids_and_paths:
             folder_data.append((folder_path_from_db, folder_id_from_db, False))
 
-        print("Add folder: ", folder_data)
+        logger.info(f"Add folder: {folder_data}")
         # Process images in all folders
         image_util_process_folder_images(folder_data)
 
@@ -71,7 +74,7 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
         API_util_restart_sync_microservice_watcher()
 
     except Exception as e:
-        print(f"Error in post processing after folder {folder_path} was added: {e}")
+        logger.error(f"Error in post processing after folder {folder_path} was added: {e}")
         return False
     return True
 
@@ -86,14 +89,12 @@ def post_AI_tagging_enabled_sequence():
         image_util_process_untagged_images()
         cluster_util_face_clusters_sync()
     except Exception as e:
-        print(f"Error in post processing after AI tagging was enabled: {e}")
+        logger.error(f"Error in post processing after AI tagging was enabled: {e}")
         return False
     return True
 
 
-def post_sync_folder_sequence(
-    folder_path: str, folder_id: int, added_folders: List[Tuple[str, str]]
-):
+def post_sync_folder_sequence(folder_path: str, folder_id: int, added_folders: List[Tuple[str, str]]):
     """
     Post-sync sequence for a folder.
     This function is called after a folder is synced.
@@ -108,7 +109,7 @@ def post_sync_folder_sequence(
         for added_folder_id, added_folder_path in added_folders:
             folder_data.append((added_folder_path, added_folder_id, False))
 
-        print("Sync folder: ", folder_data)
+        logger.info(f"Sync folder: {folder_data}")
         # Process images in all folders
         image_util_process_folder_images(folder_data)
         image_util_process_untagged_images()
@@ -117,7 +118,7 @@ def post_sync_folder_sequence(
         # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()
     except Exception as e:
-        print(f"Error in post processing after folder {folder_path} was synced: {e}")
+        logger.error(f"Error in post processing after folder {folder_path} was synced: {e}")
         return False
     return True
 
@@ -136,9 +137,7 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
         # Step 1: Data Validation
 
         if not os.path.isdir(request.folder_path):
-            raise ValueError(
-                f"Error: '{request.folder_path}' is not a valid directory."
-            )
+            raise ValueError(f"Error: '{request.folder_path}' is not a valid directory.")
 
         if (
             not os.access(request.folder_path, os.R_OK)
@@ -189,9 +188,7 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
         executor.submit(post_folder_add_sequence, request.folder_path, root_folder_id)
 
         return AddFolderResponse(
-            data=AddFolderData(
-                folder_id=root_folder_id, folder_path=request.folder_path
-            ),
+            data=AddFolderData(folder_id=root_folder_id, folder_path=request.folder_path),
             success=True,
             message=f"Successfully added folder tree starting at: {request.folder_path}",
         )
@@ -235,9 +232,7 @@ def enable_ai_tagging(request: UpdateAITaggingRequest, app_state=Depends(get_sta
         executor.submit(post_AI_tagging_enabled_sequence)
 
         return UpdateAITaggingResponse(
-            data=UpdateAITaggingData(
-                updated_count=updated_count, folder_ids=request.folder_ids
-            ),
+            data=UpdateAITaggingData(updated_count=updated_count, folder_ids=request.folder_ids),
             success=True,
             message=f"Successfully enabled AI tagging for {updated_count} folder(s)",
         )
@@ -276,9 +271,7 @@ def disable_ai_tagging(request: UpdateAITaggingRequest):
         updated_count = db_disable_ai_tagging_batch(request.folder_ids)
 
         return UpdateAITaggingResponse(
-            data=UpdateAITaggingData(
-                updated_count=updated_count, folder_ids=request.folder_ids
-            ),
+            data=UpdateAITaggingData(updated_count=updated_count, folder_ids=request.folder_ids),
             success=True,
             message=f"Successfully disabled AI tagging for {updated_count} folder(s)",
         )
@@ -317,9 +310,7 @@ def delete_folders(request: DeleteFoldersRequest):
         deleted_count = db_delete_folders_batch(request.folder_ids)
 
         return DeleteFoldersResponse(
-            data=DeleteFoldersData(
-                deleted_count=deleted_count, folder_ids=request.folder_ids
-            ),
+            data=DeleteFoldersData(deleted_count=deleted_count, folder_ids=request.folder_ids),
             success=True,
             message=f"Successfully deleted {deleted_count} folder(s)",
         )
@@ -354,9 +345,7 @@ def sync_folder(request: SyncFolderRequest, app_state=Depends(get_state)):
     try:
         # Step 1: Get current state from both sources
         db_child_folders = db_get_direct_child_folders(request.folder_id)
-        filesystem_folders = folder_util_get_filesystem_direct_child_folders(
-            request.folder_path
-        )
+        filesystem_folders = folder_util_get_filesystem_direct_child_folders(request.folder_path)
 
         # Step 2: Compare and identify differences
         filesystem_folder_set = set(filesystem_folders)
@@ -366,17 +355,11 @@ def sync_folder(request: SyncFolderRequest, app_state=Depends(get_state)):
         folders_to_add = filesystem_folder_set - db_folder_paths
 
         # Step 3: Perform synchronization operations
-        deleted_count, deleted_folders = folder_util_delete_obsolete_folders(
-            db_child_folders, folders_to_delete
-        )
-        added_count, added_folders_with_ids = folder_util_add_multiple_folder_trees(
-            folders_to_add, request.folder_id
-        )
+        deleted_count, deleted_folders = folder_util_delete_obsolete_folders(db_child_folders, folders_to_delete)
+        added_count, added_folders_with_ids = folder_util_add_multiple_folder_trees(folders_to_add, request.folder_id)
 
         # Extract just the paths for the API response
-        added_folders = [
-            folder_path for folder_id, folder_path in added_folders_with_ids
-        ]
+        added_folders = [folder_path for folder_id, folder_path in added_folders_with_ids]
 
         executor: ProcessPoolExecutor = app_state.executor
         executor.submit(
