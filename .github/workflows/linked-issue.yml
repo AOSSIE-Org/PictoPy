@@ -64,4 +64,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr comment ${{ github.event.pull_request.number }} \
-            --body "⚠️ This pull request does not reference any issues. Please link an issue (e.g., 'Fixes #123') so labels can be synced."
+            --body "⚠️ This pull request does not reference any issues. Please link an issue (e.g., 'Fixes #issue_number') so labels can be synced."
