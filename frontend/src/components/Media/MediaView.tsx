@@ -22,6 +22,7 @@ import { useImageViewControls } from '@/hooks/useImageViewControls';
 import { useSlideshow } from '@/hooks/useSlideshow';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
+import axios from 'axios';
 
 export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   const dispatch = useDispatch();
@@ -35,7 +36,6 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     }
     return null;
   }, [images, currentViewIndex]);
-  console.log(currentViewIndex);
 
   // Local UI state
   const [showInfo, setShowInfo] = useState(false);
@@ -44,7 +44,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   // Custom hooks
   const { viewState, handlers } = useImageViewControls();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
-
+  const [isfav, setIsfav] = useState(currentImage?.isFavourite || false);
   // Navigation handlers
   const handleNextImage = useCallback(() => {
     dispatch(nextImage());
@@ -69,6 +69,28 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     [dispatch, handlers],
   );
 
+  // handling toogle_favvvvv
+  const handle_favourite_toggle = async () => {
+    // console.log('processing ..');
+    try {
+      const res = await axios.post(
+        'http://localhost:8000/images/toggle-favourite',
+        {
+          image_id: currentImage?.id,
+        },
+      );
+      if (res.data.success) {
+        res?.data?.isFavourite ? alert('Set to Favourite ,refresh'): alert('Removed from Favourite,refresh');
+        console.log('toggled');
+        toggleFavorite(currentImage?.path || '');
+      }
+      console.log(res);
+    } catch (error) {
+      alert('Error toggling favourite');
+      console.log(error);
+    }
+  };
+
   // Slideshow functionality
   const { isSlideshowActive, toggleSlideshow } = useSlideshow(
     totalImages,
@@ -82,9 +104,10 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
 
   const handleToggleFavorite = useCallback(() => {
     if (currentImage) {
-      toggleFavorite(currentImage.path);
+      setIsfav((prev) => !prev);
+      handle_favourite_toggle();
     }
-  }, [currentImage, toggleFavorite]);
+  }, [currentImage, isfav]);
 
   // Keyboard navigation
   useKeyboardNavigation({
@@ -103,6 +126,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   }
 
   const currentImagePath = currentImage.path;
+  // console.log(currentImage);
   const currentImageAlt = `image-${currentViewIndex}`;
 
   return (
@@ -112,7 +136,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
         showInfo={showInfo}
         onToggleInfo={toggleInfo}
         onToggleFavorite={handleToggleFavorite}
-        isFavorite={isFavorite(currentImage.path)}
+        isFavorite={isfav}
         isSlideshowActive={isSlideshowActive}
         onToggleSlideshow={toggleSlideshow}
         onClose={handleClose}

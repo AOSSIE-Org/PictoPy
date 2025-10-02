@@ -857,6 +857,87 @@
         }
       }
     },
+    "/images/toggle-favourite": {
+      "post": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Toggle Favourite",
+        "operationId": "toggle_favourite_images_toggle_favourite_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToggleFavouriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/info/{image_id}": {
+      "get": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Get Image Info",
+        "operationId": "get_image_info_images_info__image_id__get",
+        "parameters": [
+          {
+            "name": "image_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Image Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageInfoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/face-clusters/{cluster_id}": {
       "put": {
         "tags": [
@@ -1938,6 +2019,10 @@
             "type": "boolean",
             "title": "Istagged"
           },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
+          },
           "tags": {
             "anyOf": [
               {
@@ -1960,7 +2045,8 @@
           "folder_id",
           "thumbnailPath",
           "metadata",
-          "isTagged"
+          "isTagged",
+          "isFavourite"
         ],
         "title": "ImageData"
       },
@@ -2057,6 +2143,63 @@
         ],
         "title": "ImageInCluster",
         "description": "Represents an image that contains faces from a specific cluster."
+      },
+      "ImageInfoResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          },
+          "thumbnailPath": {
+            "type": "string",
+            "title": "Thumbnailpath"
+          },
+          "metadata": {
+            "type": "string",
+            "title": "Metadata"
+          },
+          "isTagged": {
+            "type": "boolean",
+            "title": "Istagged"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "folder_id",
+          "thumbnailPath",
+          "metadata",
+          "isTagged",
+          "isFavourite"
+        ],
+        "title": "ImageInfoResponse"
       },
       "RenameClusterData": {
         "properties": {
@@ -2258,6 +2401,19 @@
           "success"
         ],
         "title": "SyncFolderResponse"
+      },
+      "ToggleFavouriteRequest": {
+        "properties": {
+          "image_id": {
+            "type": "string",
+            "title": "Image Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_id"
+        ],
+        "title": "ToggleFavouriteRequest"
       },
       "UpdateAITaggingData": {
         "properties": {

@@ -54,7 +54,6 @@ export const Home = () => {
   };
 
   const displayImages = isSearchActive ? searchResults : images;
-
   const title =
     isSearchActive && searchResults.length > 0
       ? `Face Search Results (${searchResults.length} found)`

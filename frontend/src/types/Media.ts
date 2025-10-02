@@ -5,6 +5,7 @@ export interface Image {
   folder_id: string;
   isTagged: boolean;
   metadata?: string;
+  isFavourite?: boolean;
   tags?: string[];
   bboxes?: { x: number; y: number; width: number; height: number }[];
 }
