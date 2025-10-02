@@ -23,6 +23,18 @@ export const userPreferencesEndpoints = {
   updateUserPreferences: '/user-preferences/',
 };
 
+export const albumsEndpoints = {
+  getAllAlbums: '/albums/',
+  createAlbum: '/albums/',
+  getAlbum: (albumId: string) => `/albums/${albumId}`,
+  updateAlbum: (albumId: string) => `/albums/${albumId}`,
+  deleteAlbum: (albumId: string) => `/albums/${albumId}`,
+  getAlbumImages: (albumId: string) => `/albums/${albumId}/images/get`,
+  addImagesToAlbum: (albumId: string) => `/albums/${albumId}/images`,
+  removeImageFromAlbum: (albumId: string, imageId: string) => `/albums/${albumId}/images/${imageId}`,
+  removeImagesFromAlbum: (albumId: string) => `/albums/${albumId}/images`,
+};
+
 export const healthEndpoints = {
   healthCheck: '/health',
 };
