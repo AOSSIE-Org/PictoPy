@@ -1,10 +1,20 @@
+export interface ImageMetadata {
+  name: string;
+  date_created: string;
+  width: number;
+  height: number;
+  file_location: string;
+  file_size: number;
+  item_type: string;
+}
+
 export interface Image {
   id: string;
   path: string;
   thumbnailPath: string;
   folder_id: string;
   isTagged: boolean;
-  metadata?: string;
+  metadata?: ImageMetadata;
   tags?: string[];
   bboxes?: { x: number; y: number; width: number; height: number }[];
 }
