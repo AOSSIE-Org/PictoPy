@@ -14,6 +14,7 @@ import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { ImageCard } from '@/components/Media/ImageCard';
 
 export const Home = () => {
   const dispatch = useDispatch();
@@ -22,13 +23,15 @@ export const Home = () => {
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
 
-  const { data, isLoading, isSuccess, isError } = usePictoQuery({
-    queryKey: ['images'],
-    queryFn: fetchAllImages,
-  });
   const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
   const searchResults = searchState.images;
+
+  const { data, isLoading, isSuccess, isError } = usePictoQuery({
+    queryKey: ['images'],
+    queryFn: fetchAllImages,
+    enabled: !isSearchActive,
+  });
 
   // Handle fetching lifecycle
   useEffect(() => {
@@ -58,6 +61,36 @@ export const Home = () => {
 
   const displayImages = isSearchActive ? searchResults : images;
 
+  const title =
+    isSearchActive && searchResults.length > 0
+      ? `Face Search Results (${searchResults.length} found)`
+      : 'Image Gallery';
+
+  if (isSearchActive) {
+    return (
+      <div className="p-6">
+        <h1 className="mb-6 text-2xl font-bold">{title}</h1>
+
+        {/* Image Grid */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {displayImages.map((image, index) => (
+            <ImageCard
+              key={image.id}
+              image={image}
+              imageIndex={index}
+              className="w-full"
+            />
+          ))}
+        </div>
+
+        {/* Media Viewer Modal */}
+        {isImageViewOpen && (
+          <MediaView images={displayImages} onClose={handleCloseMediaView} />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex h-full flex-col pr-6">
       {/* Gallery Section */}
@@ -66,9 +99,9 @@ export const Home = () => {
         className="hide-scrollbar flex-1 overflow-x-hidden overflow-y-auto"
       >
         <ChronologicalGallery
-          images={images}
+          images={displayImages}
           showTitle={true}
-          title="Image Gallery"
+          title={title}
           onMonthOffsetsChange={setMonthMarkers}
           scrollContainerRef={scrollableRef}
         />
