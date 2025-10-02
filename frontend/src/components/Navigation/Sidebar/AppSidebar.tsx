@@ -38,6 +38,7 @@ export function AppSidebar() {
 
   const menuItems = [
     { name: 'Home', path: `/${ROUTES.HOME}`, icon: Home },
+    { name: 'Favourites', path: `/${ROUTES.FAVOURITES}`, icon: Heart },
     { name: 'AI Tagging', path: `/${ROUTES.AI}`, icon: Sparkles },
     { name: 'Videos', path: `/${ROUTES.VIDEOS}`, icon: Video },
     { name: 'Albums', path: `/${ROUTES.ALBUMS}`, icon: BookImage },

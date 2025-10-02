@@ -80,7 +80,9 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
         },
       );
       if (res.data.success) {
-        res?.data?.isFavourite ? alert('Set to Favourite ,refresh'): alert('Removed from Favourite,refresh');
+        res?.data?.isFavourite
+          ? alert('Add to Favourite \n please refresh')
+          : alert('Removed from Favourite \n please refresh');
         console.log('toggled');
         toggleFavorite(currentImage?.path || '');
       }
