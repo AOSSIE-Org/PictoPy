@@ -1,15 +1,18 @@
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
+import {
+  selectIsImageSelected,
+  selectIsSelectionMode,
+} from '@/features/albumSelectors';
+import { toggleImageSelection } from '@/features/albumSlice';
+import { setCurrentViewIndex } from '@/features/imageSlice';
 import { cn } from '@/lib/utils';
+import { Image } from '@/types/Media';
+import { convertFileSrc } from '@tauri-apps/api/core';
 import { Check, Heart, Share2 } from 'lucide-react';
 import * as React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Image } from '@/types/Media';
 import { ImageTags } from './ImageTags';
-import { setCurrentViewIndex } from '@/features/imageSlice';
-import { toggleImageSelection } from '@/features/albumSlice';
-import { selectIsSelectionMode, selectIsImageSelected } from '@/features/albumSelectors';
-import { convertFileSrc } from '@tauri-apps/api/core';
 
 interface ImageCardProps {
   image: Image;

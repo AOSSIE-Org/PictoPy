@@ -1,27 +1,26 @@
-
-import { useDispatch, useSelector } from 'react-redux';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { 
-  X, 
-  FolderPlus, 
-  Trash2, 
-  Download, 
-  Share2,
-  SelectAll,
-  RotateCcw,
-} from 'lucide-react';
 import {
   selectSelectedImageCount,
   selectSelectedImageIds,
 } from '@/features/albumSelectors';
 import {
-  disableSelectionMode,
   clearSelectedImages,
+  disableSelectionMode,
   selectAllImages,
 } from '@/features/albumSlice';
 import { selectImages } from '@/features/imageSelectors';
+import {
+  Download,
+  FolderPlus,
+  RotateCcw,
+  SelectAll,
+  Share2,
+  Trash2,
+  X,
+} from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
 
 interface SelectionToolbarProps {
   onAddToAlbum?: () => void;
@@ -62,10 +61,11 @@ export function SelectionToolbar({
     dispatch(selectAllImages(allImageIds));
   };
 
-  const isAllSelected = selectedImageIds.length === allImages.length && allImages.length > 0;
+  const isAllSelected =
+    selectedImageIds.length === allImages.length && allImages.length > 0;
 
   return (
-    <Card className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 transform items-center gap-2 p-3 shadow-lg max-w-[95vw] overflow-x-auto">
+    <Card className="fixed bottom-4 left-1/2 z-50 flex max-w-[95vw] -translate-x-1/2 transform items-center gap-2 overflow-x-auto p-3 shadow-lg">
       {/* Selection count */}
       <Badge variant="secondary" className="px-3 py-1">
         {selectedCount} selected
@@ -92,7 +92,7 @@ export function SelectionToolbar({
       </Button>
 
       {/* Divider */}
-      <div className="h-6 w-px bg-border" />
+      <div className="bg-border h-6 w-px" />
 
       {/* Album actions */}
       {showAlbumActions && (
@@ -170,12 +170,7 @@ export function SelectionToolbar({
       </Button>
 
       {/* Close button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleClose}
-        className="ml-2"
-      >
+      <Button variant="ghost" size="sm" onClick={handleClose} className="ml-2">
         <X className="h-4 w-4" />
       </Button>
     </Card>

@@ -1,15 +1,14 @@
-
-import { Routes, Route } from 'react-router';
+import { AlbumDetail } from '@/components/Album/AlbumDetail';
 import { ROUTES } from '@/constants/routes';
 import Layout from '@/layout/layout';
-import { InitialSteps } from '@/pages/InitialSteps/InitialSteps';
-import Settings from '@/pages/SettingsPage/Settings';
-import { Home } from '@/pages/Home/Home';
 import { AITagging } from '@/pages/AITagging/AITagging';
-import { PersonImages } from '@/pages/PersonImages/PersonImages';
-import { ComingSoon } from '@/pages/ComingSoon/ComingSoon';
 import Album from '@/pages/Album/Album';
-import { AlbumDetail } from '@/components/Album/AlbumDetail';
+import { ComingSoon } from '@/pages/ComingSoon/ComingSoon';
+import { Home } from '@/pages/Home/Home';
+import { InitialSteps } from '@/pages/InitialSteps/InitialSteps';
+import { PersonImages } from '@/pages/PersonImages/PersonImages';
+import Settings from '@/pages/SettingsPage/Settings';
+import { Route, Routes } from 'react-router';
 
 export const AppRoutes = () => {
   return (

@@ -1,38 +1,72 @@
-import * as React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { fetchAllImages } from '@/api/api-functions';
+import { addImagesToAlbum } from '@/api/api-functions/albums';
+import { RootState } from '@/app/store';
+import { AddToAlbumDialog } from '@/components/Album/AddToAlbumDialog';
+import { CreateAlbumDialog } from '@/components/Album/CreateAlbumDialog';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 import { SelectionToolbar } from '@/components/Media/SelectionToolbar';
-import { CreateAlbumDialog } from '@/components/Album/CreateAlbumDialog';
-import { AddToAlbumDialog } from '@/components/Album/AddToAlbumDialog';
 import { Button } from '@/components/ui/button';
-import { Image } from '@/types/Media';
-import { setImages } from '@/features/imageSlice';
-import { showLoader, hideLoader } from '@/features/loaderSlice';
-import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
-import { 
-  selectIsSelectionMode, 
+import {
+  selectIsSelectionMode,
   selectSelectedImageIds,
 } from '@/features/albumSelectors';
-import { 
-  enableSelectionMode, 
+import {
   disableSelectionMode,
+  enableSelectionMode,
 } from '@/features/albumSlice';
-import { usePictoQuery } from '@/hooks/useQueryExtension';
-import { fetchAllImages } from '@/api/api-functions';
-import { RootState } from '@/app/store';
+import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
+import { setImages } from '@/features/imageSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { hideLoader, showLoader } from '@/features/loaderSlice';
+import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtension';
+import { Image } from '@/types/Media';
 import { CheckSquare } from 'lucide-react';
+import React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 
 export const Home = () => {
   const dispatch = useDispatch();
-  const [showCreateAlbumDialog, setShowCreateAlbumDialog] = React.useState(false);
+  const [showCreateAlbumDialog, setShowCreateAlbumDialog] =
+    React.useState(false);
   const [showAddToAlbumDialog, setShowAddToAlbumDialog] = React.useState(false);
 
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const images = useSelector(selectImages);
   const isSelectionMode = useSelector(selectIsSelectionMode);
   const selectedImageIds = useSelector(selectSelectedImageIds);
+
+  // Mutation for adding images to album after creation
+  const addImagesToAlbumMutation = usePictoMutation({
+    mutationFn: ({
+      albumId,
+      imageIds,
+    }: {
+      albumId: string;
+      imageIds: string[];
+    }) => addImagesToAlbum(albumId, imageIds),
+    onSuccess: () => {
+      dispatch(disableSelectionMode());
+      dispatch(
+        showInfoDialog({
+          title: 'Success',
+          message: 'Album created and photos added successfully!',
+          variant: 'info',
+        }),
+      );
+    },
+    onError: () => {
+      dispatch(disableSelectionMode());
+      dispatch(
+        showInfoDialog({
+          title: 'Warning',
+          message:
+            'Album was created but failed to add selected photos. You can add them manually.',
+          variant: 'error',
+        }),
+      );
+    },
+  });
 
   const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
@@ -86,8 +120,14 @@ export const Home = () => {
 
   const handleAlbumCreated = (albumId: string) => {
     console.log('Album created with ID:', albumId);
-    // Optionally navigate to the album or clear selection
-    dispatch(disableSelectionMode());
+
+    // If there are selected images, add them to the newly created album
+    if (selectedImageIds.length > 0) {
+      addImagesToAlbumMutation.mutate({ albumId, imageIds: selectedImageIds });
+    } else {
+      // No images selected, just clear selection mode
+      dispatch(disableSelectionMode());
+    }
   };
 
   const handleImagesAddedToAlbum = () => {
@@ -122,6 +162,7 @@ export const Home = () => {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {displayImages.map((image: any, index: number) => (
           <ImageCard
+            // @ts-expect-error - key is a special React prop not part of component props
             key={image.id}
             image={image}
             imageIndex={index}

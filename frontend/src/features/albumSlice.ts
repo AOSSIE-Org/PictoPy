@@ -48,6 +48,9 @@ const albumSlice = createSlice({
       );
       if (albumIndex !== -1) {
         state.albums[albumIndex] = { ...state.albums[albumIndex], ...updates };
+        if (state.selectedAlbum?.album_id === albumId) {
+          state.selectedAlbum = { ...state.selectedAlbum, ...updates };
+        }
       }
     },
     removeAlbum(state, action: PayloadAction<string>) {
