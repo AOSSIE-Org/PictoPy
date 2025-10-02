@@ -12,6 +12,7 @@ import {
   Bolt,
   Home,
   Sparkles,
+  Heart,
   Video,
   BookImage,
   ClockFading,

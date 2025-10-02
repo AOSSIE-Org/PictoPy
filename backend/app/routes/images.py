@@ -78,7 +78,7 @@ def toggle_favourite(req: ToggleFavouriteRequest):
     try:
         success = db_toggle_image_favourite_status(image_id)
         if not success:
-        raise HTTPException(status_code=404, detail="Image not found or failed to toggle")
+            raise HTTPException(status_code=404, detail="Image not found or failed to toggle")
         # Fetch updated status to return
         image = next((img for img in db_get_all_images() if img["id"] == image_id), None)
         return {"success": True, "image_id": image_id, "isFavourite": image.get("isFavourite", False)}
