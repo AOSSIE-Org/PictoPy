@@ -1,13 +1,18 @@
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { Check, Heart, Share2 } from 'lucide-react';
-import { useState, useCallback } from 'react';
-import { useDispatch } from 'react-redux';
-import { Image } from '@/types/Media';
-import { ImageTags } from './ImageTags';
+import {
+  selectIsImageSelected,
+  selectIsSelectionMode,
+} from '@/features/albumSelectors';
+import { toggleImageSelection } from '@/features/albumSlice';
 import { setCurrentViewIndex } from '@/features/imageSlice';
+import { cn } from '@/lib/utils';
+import { Image } from '@/types/Media';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { Check, Heart, Share2 } from 'lucide-react';
+import * as React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { ImageTags } from './ImageTags';
 
 interface ImageCardProps {
   image: Image;
@@ -25,21 +30,34 @@ export function ImageCard({
   showTags = true,
 }: ImageCardProps) {
   const dispatch = useDispatch();
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [isImageHovered, setIsImageHovered] = useState(false);
+  const [isFavorite, setIsFavorite] = React.useState(false);
+  const [isImageHovered, setIsImageHovered] = React.useState(false);
+
+  // Selection mode state from Redux
+  const isSelectionMode = useSelector(selectIsSelectionMode);
+  const isImageSelected = useSelector(selectIsImageSelected(image.id));
 
   // Default to empty array if no tags are provided
   const tags = image.tags || [];
 
-  const handleImageClick = useCallback(() => {
-    dispatch(setCurrentViewIndex(imageIndex));
-  }, [dispatch, imageIndex]);
+  const handleImageClick = React.useCallback(() => {
+    if (isSelectionMode) {
+      // In selection mode, toggle selection
+      dispatch(toggleImageSelection(image.id));
+    } else {
+      // Normal mode, open image view
+      dispatch(setCurrentViewIndex(imageIndex));
+    }
+  }, [dispatch, imageIndex, isSelectionMode, image.id]);
+
+  // Use selection state from Redux when in selection mode, otherwise use prop
+  const actuallySelected = isSelectionMode ? isImageSelected : isSelected;
 
   return (
     <div
       className={cn(
         'group bg-card cursor-pointer overflow-hidden rounded-lg border transition-all hover:shadow-md',
-        isSelected ? 'ring-2 ring-[#4088fa]' : '',
+        actuallySelected ? 'ring-2 ring-[#4088fa]' : '',
         className,
       )}
       onMouseEnter={() => setIsImageHovered(true)}
@@ -48,7 +66,7 @@ export function ImageCard({
     >
       <div className="relative">
         {/* Selection tick mark */}
-        {isSelected && (
+        {actuallySelected && (
           <div className="absolute top-2 right-2 z-10 rounded-full bg-[#4088fa] p-1">
             <Check className="h-4 w-4 text-white" />
           </div>
@@ -62,7 +80,7 @@ export function ImageCard({
             alt={'Sample Title'}
             className={cn(
               'h-full w-full object-cover transition-transform group-hover:scale-105',
-              isSelected ? 'opacity-95' : '',
+              actuallySelected ? 'opacity-95' : '',
             )}
           />
           {/* Dark overlay on hover */}
@@ -74,7 +92,7 @@ export function ImageCard({
               variant="ghost"
               size="icon"
               className="rounded-full bg-white/20 text-white hover:!bg-white/40 hover:!text-white"
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
                 setIsFavorite(!isFavorite);
               }}
@@ -91,7 +109,7 @@ export function ImageCard({
               variant="ghost"
               size="icon"
               className="rounded-full bg-white/20 text-white hover:!bg-white/40 hover:!text-white"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
             >
               <Share2 className="h-5 w-5" />
               <span className="sr-only">Share</span>

@@ -1,11 +1,12 @@
-import { configureStore } from '@reduxjs/toolkit';
+import albumReducer from '@/features/albumSlice';
+import faceClustersReducer from '@/features/faceClustersSlice';
+import folderReducer from '@/features/folderSlice';
+import imageReducer from '@/features/imageSlice';
+import infoDialogReducer from '@/features/infoDialogSlice';
 import loaderReducer from '@/features/loaderSlice';
 import onboardingReducer from '@/features/onboardingSlice';
 import searchReducer from '@/features/searchSlice';
-import imageReducer from '@/features/imageSlice';
-import faceClustersReducer from '@/features/faceClustersSlice';
-import infoDialogReducer from '@/features/infoDialogSlice';
-import folderReducer from '@/features/folderSlice';
+import { configureStore } from '@reduxjs/toolkit';
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     infoDialog: infoDialogReducer,
     folders: folderReducer,
     search: searchReducer,
+    albums: albumReducer,
   },
 });
 // Infer the `RootState` and `AppDispatch` types from the store itself
