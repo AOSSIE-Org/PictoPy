@@ -19,8 +19,11 @@ jobs:
       - name: Extract linked issues from PR body
         id: issues
         run: |
-          BODY="${{ github.event.pull_request.body }}"
-          ISSUES=$(echo "$BODY" | grep -oE '#[0-9]+' | tr -d '#' | tr '\n' ' ')
+          BODY=$(printf '%s' "${{ github.event.pull_request.body }}")
+
+          ISSUES=$(echo "$BODY" | grep -oE '#[0-9]+' || true)
+          ISSUES=$(echo "$ISSUES" | tr -d '#' | tr '\n' ' ')
+
           echo "issues=$ISSUES" >> $GITHUB_OUTPUT
 
       - name: Collect labels from linked issues
