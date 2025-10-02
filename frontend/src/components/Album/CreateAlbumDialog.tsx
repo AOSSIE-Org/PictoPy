@@ -1,5 +1,5 @@
-import * as React from 'react';
-import { useDispatch } from 'react-redux';
+import { createAlbum, CreateAlbumRequest } from '@/api/api-functions/albums';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,16 +8,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { usePictoMutation } from '@/hooks/useQueryExtension';
-import { useMutationFeedback } from '@/hooks/useMutationFeedback';
-import { createAlbum, CreateAlbumRequest } from '@/api/api-functions/albums';
+import { Textarea } from '@/components/ui/textarea';
 import { addAlbum } from '@/features/albumSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { usePictoMutation } from '@/hooks/useQueryExtension';
+import * as React from 'react';
+import { useDispatch } from 'react-redux';
 
 interface CreateAlbumDialogProps {
   open: boolean;
@@ -135,7 +135,7 @@ export function CreateAlbumDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md w-[95vw] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] w-[95vw] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Create New Album</DialogTitle>
           <DialogDescription>
@@ -155,7 +155,9 @@ export function CreateAlbumDialog({
               id="album-name"
               placeholder="Enter album name"
               value={albumName}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAlbumName(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setAlbumName(e.target.value)
+              }
               className={errors.albumName ? 'border-red-500' : ''}
             />
             {errors.albumName && (
@@ -170,7 +172,9 @@ export function CreateAlbumDialog({
               id="description"
               placeholder="Enter album description"
               value={description}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                setDescription(e.target.value)
+              }
               rows={3}
             />
           </div>
@@ -179,7 +183,7 @@ export function CreateAlbumDialog({
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label htmlFor="hidden-album">Hidden Album</Label>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Hidden albums require a password to view
               </p>
             </div>
@@ -199,7 +203,9 @@ export function CreateAlbumDialog({
                 type="password"
                 placeholder="Enter album password"
                 value={password}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setPassword(e.target.value)
+                }
                 className={errors.password ? 'border-red-500' : ''}
               />
               {errors.password && (
@@ -217,10 +223,7 @@ export function CreateAlbumDialog({
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              disabled={createAlbumMutation.isPending}
-            >
+            <Button type="submit" disabled={createAlbumMutation.isPending}>
               Create Album
             </Button>
           </DialogFooter>

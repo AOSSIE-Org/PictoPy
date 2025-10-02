@@ -1,42 +1,49 @@
-import * as React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { Link } from 'react-router-dom';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { fetchAllAlbums } from '@/api/api-functions/albums';
 import { Badge } from '@/components/ui/badge';
-import { 
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { usePictoQuery } from '@/hooks/useQueryExtension';
-import { fetchAllAlbums } from '@/api/api-functions/albums';
 import { selectAlbums } from '@/features/albumSelectors';
 import { setAlbums } from '@/features/albumSlice';
-import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
-import { 
-  Eye, 
-  EyeOff, 
-  Lock, 
-  MoreHorizontal, 
-  Edit3, 
-  Trash2, 
+import { hideLoader, showLoader } from '@/features/loaderSlice';
+import { usePictoQuery } from '@/hooks/useQueryExtension';
+import {
+  Edit3,
+  Eye,
+  EyeOff,
   FolderOpen,
+  Lock,
+  MoreHorizontal,
   Plus,
+  Trash2,
 } from 'lucide-react';
+import * as React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
 
 interface AlbumListProps {
   onCreateAlbum?: () => void;
   onEditAlbum?: (albumId: string) => void;
-  onDeleteAlbum?: (albumId: string) => void;
+  onDeleteAlbum?: (albumId: string, albumName: string) => void;
 }
 
-export function AlbumList({ 
-  onCreateAlbum, 
-  onEditAlbum, 
-  onDeleteAlbum 
+export function AlbumList({
+  onCreateAlbum,
+  onEditAlbum,
+  onDeleteAlbum,
 }: AlbumListProps) {
   const dispatch = useDispatch();
   const albums = useSelector(selectAlbums);
@@ -74,9 +81,9 @@ export function AlbumList({
   if (albums.length === 0 && !isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <FolderOpen className="h-16 w-16 text-muted-foreground mb-4" />
-        <h2 className="text-xl font-semibold mb-2">No albums yet</h2>
-        <p className="text-muted-foreground text-center mb-6 max-w-md">
+        <FolderOpen className="text-muted-foreground mb-4 h-16 w-16" />
+        <h2 className="mb-2 text-xl font-semibold">No albums yet</h2>
+        <p className="text-muted-foreground mb-6 max-w-md text-center">
           Create your first album to organize your photos into collections.
         </p>
         <Button onClick={onCreateAlbum} className="gap-2">
@@ -104,7 +111,11 @@ export function AlbumList({
             onClick={handleToggleShowHidden}
             className="gap-2"
           >
-            {showHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showHidden ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
             {showHidden ? 'Hide Hidden' : 'Show Hidden'}
           </Button>
           <Button onClick={onCreateAlbum} className="gap-2">
@@ -116,15 +127,20 @@ export function AlbumList({
 
       {/* Album Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {albums.map((album: any) => (
-          <Card key={album.album_id} className="group hover:shadow-md transition-shadow">
+        {albums.map((album: any) => (
+          <Card
+            key={album.album_id}
+            className="group transition-shadow hover:shadow-md"
+          >
             <CardHeader>
               <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="truncate">{album.album_name}</CardTitle>
+                    <CardTitle className="truncate">
+                      {album.album_name}
+                    </CardTitle>
                     {album.is_hidden && (
-                      <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <Lock className="text-muted-foreground h-4 w-4 flex-shrink-0" />
                     )}
                   </div>
                   {album.description && (
@@ -133,28 +149,32 @@ export function AlbumList({
                     </CardDescription>
                   )}
                 </div>
-                
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-8 w-8 p-0 opacity-0 transition-opacity group-hover:opacity-100"
                     >
                       <MoreHorizontal className="h-4 w-4" />
                       <span className="sr-only">Album options</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onEditAlbum?.(album.album_id)}>
-                      <Edit3 className="h-4 w-4 mr-2" />
+                    <DropdownMenuItem
+                      onClick={() => onEditAlbum?.(album.album_id)}
+                    >
+                      <Edit3 className="mr-2 h-4 w-4" />
                       Edit Album
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => onDeleteAlbum?.(album.album_id)}
+                    <DropdownMenuItem
+                      onClick={() =>
+                        onDeleteAlbum?.(album.album_id, album.album_name)
+                      }
                       className="text-red-600"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="mr-2 h-4 w-4" />
                       Delete Album
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -163,9 +183,9 @@ export function AlbumList({
             </CardHeader>
 
             <CardContent>
-              {/* Album preview - TODO: Add image thumbnails */}
-              <div className="aspect-square bg-muted rounded-lg mb-3 flex items-center justify-center">
-                <FolderOpen className="h-8 w-8 text-muted-foreground" />
+              {/* Album preview placeholder */}
+              <div className="bg-muted mb-3 flex aspect-square items-center justify-center rounded-lg">
+                <FolderOpen className="text-muted-foreground h-8 w-8" />
               </div>
 
               {/* Album badges */}
@@ -175,7 +195,7 @@ export function AlbumList({
                     Hidden
                   </Badge>
                 )}
-                {/* TODO: Add photo count badge */}
+                {/* Photo count badge */}
                 <Badge variant="outline" className="text-xs">
                   0 photos
                 </Badge>

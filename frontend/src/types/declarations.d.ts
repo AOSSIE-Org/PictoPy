@@ -1,147 +1,124 @@
-// Type declarations for missing modules
-
+// React type declarations for when @types/react is not available
 declare module 'react' {
-  import { ComponentType, ReactNode, CSSProperties } from 'react';
-  
-  export function useState<T>(initialState: T | (() => T)): [T, (value: T | ((prev: T) => T)) => void];
-  export function useEffect(effect: () => void | (() => void), deps?: any[]): void;
-  export function useCallback<T extends (...args: any[]) => any>(callback: T, deps: any[]): T;
+  export interface Component {
+    render(): JSX.Element | null;
+  }
+
+  export function useState<T>(
+    initialState: T | (() => T),
+  ): [T, (value: T | ((prev: T) => T)) => void];
+  export function useEffect(
+    effect: () => void | (() => void),
+    deps?: any[],
+  ): void;
+  export function useCallback<T extends (...args: any[]) => any>(
+    callback: T,
+    deps: any[],
+  ): T;
   export function useMemo<T>(factory: () => T, deps: any[]): T;
   export function useRef<T>(initialValue: T): { current: T };
-  
+  export function useContext<T>(context: Context<T>): T;
+
+  export interface Context<T> {
+    Provider: ComponentType<{ value: T; children?: ReactNode }>;
+    Consumer: ComponentType<{ children: (value: T) => ReactNode }>;
+  }
+
+  export function createContext<T>(defaultValue: T): Context<T>;
+
+  export type ReactNode =
+    | JSX.Element
+    | string
+    | number
+    | boolean
+    | null
+    | undefined
+    | ReactNode[];
+  export type ComponentType<P = {}> = (props: P) => JSX.Element | null;
+  export type Key = string | number;
+
+  export interface ReactElement<P = any> {
+    type: string | ComponentType<P>;
+    props: P;
+    key: Key | null;
+  }
+
   export interface FormEvent<T = Element> {
     preventDefault(): void;
+    target: T;
+  }
+
+  export interface ChangeEvent<T = Element> {
+    target: T & { value: string };
+  }
+
+  export interface MouseEvent<T = Element> {
+    target: T;
     stopPropagation(): void;
-    currentTarget: T;
-    target: EventTarget;
+    preventDefault(): void;
   }
-  
-  export interface ChangeEvent<T = Element> extends FormEvent<T> {
-    target: EventTarget & T;
+
+  export namespace React {
+    export type FormEvent<T = Element> = import('react').FormEvent<T>;
+    export type ChangeEvent<T = Element> = import('react').ChangeEvent<T>;
+    export type MouseEvent<T = Element> = import('react').MouseEvent<T>;
   }
-  
-  export interface MouseEvent<T = Element> extends FormEvent<T> {}
-  
-  export interface HTMLAttributes<T> {
-    className?: string;
-    id?: string;
-    style?: CSSProperties;
-    onClick?: (event: MouseEvent<T>) => void;
-    children?: ReactNode;
-  }
-  
-  export interface InputHTMLAttributes<T> extends HTMLAttributes<T> {
-    value?: string | number;
-    placeholder?: string;
-    onChange?: (event: ChangeEvent<T>) => void;
-    type?: string;
-  }
-  
-  export interface TextareaHTMLAttributes<T> extends HTMLAttributes<T> {
-    value?: string;
-    placeholder?: string;
-    onChange?: (event: ChangeEvent<T>) => void;
-    rows?: number;
-  }
-  
-  export interface FormHTMLAttributes<T> extends HTMLAttributes<T> {
-    onSubmit?: (event: FormEvent<T>) => void;
-  }
-  
-  export interface ButtonHTMLAttributes<T> extends HTMLAttributes<T> {
-    type?: 'button' | 'submit' | 'reset';
-    disabled?: boolean;
-  }
-  
-  export default React;
 }
 
 declare module 'react-dom' {
-  import * as ReactDOM from 'react-dom';
-  export = ReactDOM;
-}
-
-declare module 'react-redux' {
-  export function useSelector<T>(selector: (state: any) => T): T;
-  export function useDispatch(): any;
-  export function connect(mapStateToProps?: any, mapDispatchToProps?: any): any;
-  export const Provider: any;
-}
-
-declare module 'lucide-react' {
-  import { ComponentType, SVGProps } from 'react';
-  
-  export interface LucideProps extends Partial<Omit<SVGProps<SVGSVGElement>, "ref">> {
-    size?: string | number;
-    absoluteStrokeWidth?: boolean;
-  }
-  
-  export type Icon = ComponentType<LucideProps>;
-  
-  export const Check: Icon;
-  export const Heart: Icon;
-  export const Share2: Icon;
-  export const Eye: Icon;
-  export const EyeOff: Icon;
-  export const Lock: Icon;
-  export const Search: Icon;
-  export const X: Icon;
-  export const FolderPlus: Icon;
-  export const Trash2: Icon;
-  export const Download: Icon;
-  export const SelectAll: Icon;
-  export const RotateCcw: Icon;
-  export const CheckSquare: Icon;
-  export const ArrowLeft: Icon;
-  export const Settings: Icon;
-  export const Users: Icon;
-  export const Calendar: Icon;
-  export const Edit3: Icon;
-  export const MoreHorizontal: Icon;
-  export const Plus: Icon;
-  export const FolderOpen: Icon;
-  export const ImageIcon: Icon;
-}
-
-declare module '@tauri-apps/api/core' {
-  export function convertFileSrc(filePath: string, protocol?: string): string;
-  export function invoke(cmd: string, args?: Record<string, unknown>): Promise<any>;
+  export function render(element: JSX.Element, container: Element): void;
 }
 
 declare module 'react/jsx-runtime' {
   export const jsx: any;
   export const jsxs: any;
-  export const Fragment: any;
 }
 
-declare module 'react/jsx-dev-runtime' {
-  export const jsx: any;
-  export const jsxs: any;
-  export const Fragment: any;
+// React Redux types
+declare module 'react-redux' {
+  export function useSelector<T>(selector: (state: any) => T): T;
+  export function useDispatch(): any;
+  export const Provider: any;
 }
 
-// Global JSX namespace
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      [elemName: string]: any;
-    }
-    
-    interface Element extends React.ReactElement<any, any> { }
-    
-    interface ElementClass extends React.Component<any> {
-      render(): React.ReactNode;
-    }
-    
-    interface ElementAttributesProperty {
-      props: {};
-    }
-    
-    interface ElementChildrenAttribute {
-      children: {};
-    }
-    
-    interface IntrinsicAttributes extends React.Attributes { }
-    interface IntrinsicClassAttributes<T> extends React.ClassAttributes<T> { }
+// Lucide React types
+declare module 'lucide-react' {
+  export const ArrowLeft: any;
+  export const Check: any;
+  export const CheckSquare: any;
+  export const Download: any;
+  export const Edit3: any;
+  export const Eye: any;
+  export const EyeOff: any;
+  export const FolderOpen: any;
+  export const FolderPlus: any;
+  export const Heart: any;
+  export const Lock: any;
+  export const MoreHorizontal: any;
+  export const Plus: any;
+  export const RotateCcw: any;
+  export const Search: any;
+  export const SelectAll: any;
+  export const Settings: any;
+  export const Share: any;
+  export const Share2: any;
+  export const Trash2: any;
+  export const Users: any;
+  export const X: any;
+}
+
+// JSX namespace for intrinsic elements
+declare namespace JSX {
+  interface IntrinsicElements {
+    [elemName: string]: any;
   }
+}
+
+// Tauri API declarations
+declare module '@tauri-apps/api/core' {
+  export function convertFileSrc(filePath: string, protocol?: string): string;
+  export function invoke(
+    cmd: string,
+    args?: Record<string, unknown>,
+  ): Promise<any>;
 }

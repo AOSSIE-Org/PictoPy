@@ -14,8 +14,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "preserve",
-    "jsxImportSource": "react",
+    "jsx": "react-jsx",
 
     /* Linting */
     "strict": true,
@@ -28,8 +27,10 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+
   },
   "include": ["src", "jest.setup.ts", "src/types/**/*"],
+  "exclude": ["src/types/react.d.ts", "src/types/global.d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

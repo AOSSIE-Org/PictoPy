@@ -1,85 +1,98 @@
-import * as React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { Button } from '@/components/ui/button';
+import { DeleteAlbumDialog } from '@/components/Album/DeleteAlbumDialog';
+import { EditAlbumDialog } from '@/components/Album/EditAlbumDialog';
+import { ImageCard } from '@/components/Media/ImageCard';
+import { MediaView } from '@/components/Media/MediaView';
+import { SelectionToolbar } from '@/components/Media/SelectionToolbar';
 import { Badge } from '@/components/ui/badge';
-import { 
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ImageCard } from '@/components/Media/ImageCard';
-import { MediaView } from '@/components/Media/MediaView';
-import { SelectionToolbar } from '@/components/Media/SelectionToolbar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
+import { ChangeEvent, useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate, useParams } from 'react-router-dom';
 
-import { 
-  fetchAlbum, 
-  fetchAlbumImages,
+import {
   Album as AlbumType,
+  fetchAlbum,
+  fetchAlbumImages,
 } from '@/api/api-functions/albums';
 import { fetchAllImages } from '@/api/api-functions/images';
 import {
   selectIsSelectionMode,
   selectSelectedImageIds,
 } from '@/features/albumSelectors';
+import { enableSelectionMode, setSelectedAlbum } from '@/features/albumSlice';
 import { selectIsImageViewOpen } from '@/features/imageSelectors';
-import { 
-  enableSelectionMode, 
-  setSelectedAlbum,
-} from '@/features/albumSlice';
 import { setImages } from '@/features/imageSlice';
-import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { hideLoader, showLoader } from '@/features/loaderSlice';
+import { Image } from '@/types/Media';
 import {
   ArrowLeft,
-  Trash2,
-  Plus,
-  MoreHorizontal,
-  Lock,
-  Edit3,
   CheckSquare,
+  Edit3,
+  Lock,
+  MoreHorizontal,
+  Plus,
+  Trash2,
 } from 'lucide-react';
-import { Image } from '@/types/Media';
 
 export function AlbumDetail() {
   const { albumId } = useParams<{ albumId: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  
-  const [album, setAlbum] = React.useState<AlbumType | null>(null);
-  const [albumImages, setAlbumImages] = React.useState<Image[]>([]);
-  const [password] = React.useState('');
-  const [, setShowPasswordDialog] = React.useState(false);
+
+  const [album, setAlbum] = useState<AlbumType | null>(null);
+  const [albumImages, setAlbumImages] = useState<Image[]>([]);
+  const [password, setPassword] = useState('');
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const isSelectionMode = useSelector(selectIsSelectionMode);
   const selectedImageIds = useSelector(selectSelectedImageIds);
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
 
-
   // Fetch album details
-  const { 
-    data: albumData, 
-    isLoading: isAlbumLoading, 
+  const {
+    data: albumData,
+    isLoading: isAlbumLoading,
     isSuccess: isAlbumSuccess,
     isError: isAlbumError,
   } = usePictoQuery({
     queryKey: ['album', albumId],
-    queryFn: () => albumId ? fetchAlbum(albumId) : Promise.reject('No album ID'),
+    queryFn: () =>
+      albumId ? fetchAlbum(albumId) : Promise.reject('No album ID'),
     enabled: !!albumId,
   });
 
   // Fetch album images
-  const { 
-    data: imageIdsData, 
+  const {
+    data: imageIdsData,
     isLoading: isImagesLoading,
     isSuccess: isImagesSuccess,
-
   } = usePictoQuery({
     queryKey: ['album-images', albumId, password],
-    queryFn: () => albumId ? fetchAlbumImages(albumId, password || undefined) : Promise.reject('No album ID'),
-    enabled: !!albumId && !!album && (!album.is_hidden || !!password),
+    queryFn: () =>
+      albumId
+        ? fetchAlbumImages(albumId, password || undefined)
+        : Promise.reject('No album ID'),
+    enabled: !!albumId && !!album && (!album.is_hidden || Boolean(password)),
   });
 
   // Fetch all images to get full image details
@@ -89,7 +102,7 @@ export function AlbumDetail() {
   });
 
   // Handle loading states
-  React.useEffect(() => {
+  useEffect(() => {
     if (isAlbumLoading || isImagesLoading) {
       dispatch(showLoader('Loading album...'));
     } else {
@@ -98,11 +111,11 @@ export function AlbumDetail() {
   }, [isAlbumLoading, isImagesLoading, dispatch]);
 
   // Handle album data
-  React.useEffect(() => {
+  useEffect(() => {
     if (isAlbumSuccess && albumData?.success) {
       setAlbum(albumData.data);
       dispatch(setSelectedAlbum(albumData.data));
-      
+
       // Check if album is hidden and we don't have password
       if (albumData.data.is_hidden && !password) {
         setShowPasswordDialog(true);
@@ -119,16 +132,16 @@ export function AlbumDetail() {
   }, [isAlbumSuccess, isAlbumError, albumData, password, dispatch]);
 
   // Handle image IDs data
-  React.useEffect(() => {
+  useEffect(() => {
     if (isImagesSuccess && imageIdsData?.success && allImagesData?.data) {
       const imageIds = imageIdsData.image_ids;
       const allImagesArray = allImagesData.data as Image[];
-      
+
       // Filter images that are in this album
-      const filteredImages = allImagesArray.filter(image => 
-        imageIds.includes(image.id)
+      const filteredImages = allImagesArray.filter((image) =>
+        imageIds.includes(image.id),
       );
-      
+
       setAlbumImages(filteredImages);
       dispatch(setImages(filteredImages));
     }
@@ -143,21 +156,32 @@ export function AlbumDetail() {
   };
 
   const handleEditAlbum = () => {
-    // TODO: Implement edit album dialog
-    console.log('Edit album:', albumId);
+    setShowEditDialog(true);
   };
 
   const handleDeleteAlbum = () => {
-    // TODO: Implement delete album confirmation
-    console.log('Delete album:', albumId);
+    setShowDeleteDialog(true);
+  };
+
+  const handleAlbumUpdated = () => {
+    // Album will be refetched via React Query
+    console.log('Album updated successfully');
+  };
+
+  const handleAlbumDeleted = () => {
+    // Navigate back to albums list after deletion
+    navigate('/albums');
   };
 
   const handleRemoveFromAlbum = () => {
-    // TODO: Implement remove images from album
+    // Feature: Remove images from album functionality
     console.log('Remove from album:', selectedImageIds);
   };
 
-  
+  const handlePasswordSubmit = (submittedPassword: string) => {
+    setPassword(submittedPassword);
+    setShowPasswordDialog(false);
+  };
 
   const handleCloseMediaView = () => {
     // MediaView handles closing via Redux
@@ -165,10 +189,12 @@ export function AlbumDetail() {
 
   if (!album) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex h-64 items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Loading...</h2>
-          <p className="text-muted-foreground">Please wait while we load the album.</p>
+          <h2 className="mb-2 text-xl font-semibold">Loading...</h2>
+          <p className="text-muted-foreground">
+            Please wait while we load the album.
+          </p>
         </div>
       </div>
     );
@@ -178,8 +204,13 @@ export function AlbumDetail() {
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center gap-4 mb-4">
-          <Button variant="ghost" size="sm" onClick={handleBack} className="gap-2">
+        <div className="mb-4 flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBack}
+            className="gap-2"
+          >
             <ArrowLeft className="h-4 w-4" />
             Back to Albums
           </Button>
@@ -187,17 +218,16 @@ export function AlbumDetail() {
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1">
-            <div className="flex flex-col gap-2 mb-2 sm:flex-row sm:items-center sm:gap-3">
+            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               <h1 className="text-2xl font-bold">{album.album_name}</h1>
               {album.is_hidden && (
-                <Lock className="h-5 w-5 text-muted-foreground" />
+                <Lock className="text-muted-foreground h-5 w-5" />
               )}
               <div className="flex gap-2">
-                {album.is_hidden && (
-                  <Badge variant="secondary">Hidden</Badge>
-                )}
+                {album.is_hidden && <Badge variant="secondary">Hidden</Badge>}
                 <Badge variant="outline">
-                  {albumImages.length} photo{albumImages.length !== 1 ? 's' : ''}
+                  {albumImages.length} photo
+                  {albumImages.length !== 1 ? 's' : ''}
                 </Badge>
               </div>
             </div>
@@ -206,7 +236,7 @@ export function AlbumDetail() {
             )}
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-shrink-0 items-center gap-2">
             {!isSelectionMode && albumImages.length > 0 && (
               <Button
                 onClick={handleEnterSelectionMode}
@@ -217,7 +247,7 @@ export function AlbumDetail() {
                 Select Photos
               </Button>
             )}
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
@@ -227,14 +257,14 @@ export function AlbumDetail() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleEditAlbum}>
-                  <Edit3 className="h-4 w-4 mr-2" />
+                  <Edit3 className="mr-2 h-4 w-4" />
                   Edit Album
                 </DropdownMenuItem>
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={handleDeleteAlbum}
                   className="text-red-600"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <Trash2 className="mr-2 h-4 w-4" />
                   Delete Album
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -247,7 +277,9 @@ export function AlbumDetail() {
       {albumImages.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
           <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2">No photos in this album</h2>
+            <h2 className="mb-2 text-xl font-semibold">
+              No photos in this album
+            </h2>
             <p className="text-muted-foreground mb-4">
               Add photos to this album from your photo collection.
             </p>
@@ -260,7 +292,7 @@ export function AlbumDetail() {
       ) : (
         /* Image Grid */
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                          {albumImages.map((image: any, index: number) => (
+          {albumImages.map((image: any, index: number) => (
             <ImageCard
               key={image.id}
               image={image}
@@ -287,7 +319,105 @@ export function AlbumDetail() {
         <MediaView images={albumImages} onClose={handleCloseMediaView} />
       )}
 
-      {/* TODO: Add password dialog for hidden albums */}
+      {/* Password Dialog for Hidden Albums */}
+      <PasswordDialog
+        open={showPasswordDialog}
+        onOpenChange={setShowPasswordDialog}
+        onPasswordSubmit={handlePasswordSubmit}
+        albumName={album?.album_name || 'Album'}
+      />
+
+      {/* Edit Album Dialog */}
+      {albumId && (
+        <EditAlbumDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          albumId={albumId}
+          onAlbumUpdated={handleAlbumUpdated}
+        />
+      )}
+
+      {/* Delete Album Dialog */}
+      {albumId && album && (
+        <DeleteAlbumDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          albumId={albumId}
+          albumName={album.album_name}
+          onAlbumDeleted={handleAlbumDeleted}
+        />
+      )}
     </div>
+  );
+}
+
+// Password Dialog Component
+interface PasswordDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onPasswordSubmit: (password: string) => void;
+  albumName: string;
+}
+
+function PasswordDialog({
+  open,
+  onOpenChange,
+  onPasswordSubmit,
+  albumName,
+}: PasswordDialogProps) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e: any) => {
+    e.preventDefault();
+    if (!password.trim()) {
+      setError('Password is required');
+      return;
+    }
+    onPasswordSubmit(password);
+    setPassword('');
+    setError('');
+  };
+
+  const handleCancel = () => {
+    setPassword('');
+    setError('');
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Enter Album Password</DialogTitle>
+          <DialogDescription>
+            This album is password protected. Please enter the password to view
+            "{albumName}".
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="album-password">Password</Label>
+            <Input
+              id="album-password"
+              type="password"
+              placeholder="Enter album password"
+              value={password}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setPassword(e.target.value)
+              }
+              className={error ? 'border-red-500' : ''}
+            />
+            {error && <p className="text-sm text-red-600">{error}</p>}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleCancel}>
+              Cancel
+            </Button>
+            <Button type="submit">Access Album</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

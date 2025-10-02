@@ -1,6 +1,6 @@
+import { APIResponse } from '@/types/API';
 import { albumsEndpoints } from '../apiEndpoints';
 import { apiClient } from '../axiosConfig';
-import { APIResponse } from '@/types/API';
 
 export interface Album {
   album_id: string;
@@ -49,7 +49,9 @@ export interface GetAlbumImagesResponse extends APIResponse {
 }
 
 // Get all albums
-export const fetchAllAlbums = async (showHidden = false): Promise<GetAlbumsResponse> => {
+export const fetchAllAlbums = async (
+  showHidden = false,
+): Promise<GetAlbumsResponse> => {
   const response = await apiClient.get<GetAlbumsResponse>(
     `${albumsEndpoints.getAllAlbums}?show_hidden=${showHidden}`,
   );
@@ -57,7 +59,9 @@ export const fetchAllAlbums = async (showHidden = false): Promise<GetAlbumsRespo
 };
 
 // Create a new album
-export const createAlbum = async (albumData: CreateAlbumRequest): Promise<CreateAlbumResponse> => {
+export const createAlbum = async (
+  albumData: CreateAlbumRequest,
+): Promise<CreateAlbumResponse> => {
   const response = await apiClient.post<CreateAlbumResponse>(
     albumsEndpoints.createAlbum,
     albumData,
@@ -66,7 +70,9 @@ export const createAlbum = async (albumData: CreateAlbumRequest): Promise<Create
 };
 
 // Get specific album details
-export const fetchAlbum = async (albumId: string): Promise<GetAlbumResponse> => {
+export const fetchAlbum = async (
+  albumId: string,
+): Promise<GetAlbumResponse> => {
   const response = await apiClient.get<GetAlbumResponse>(
     albumsEndpoints.getAlbum(albumId),
   );
