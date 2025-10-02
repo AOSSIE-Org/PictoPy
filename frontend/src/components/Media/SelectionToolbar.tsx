@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Image } from '@/types/Media';
 import {
   selectSelectedImageCount,
   selectSelectedImageIds,
@@ -57,7 +58,7 @@ export function SelectionToolbar({
   };
 
   const handleSelectAll = () => {
-    const allImageIds = allImages.map((image: any) => image.id);
+    const allImageIds = allImages.map((image: Image) => image.id);
     dispatch(selectAllImages(allImageIds));
   };
 

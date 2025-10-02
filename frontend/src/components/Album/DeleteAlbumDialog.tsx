@@ -79,6 +79,7 @@ export function DeleteAlbumDialog({
   useMutationFeedback(deleteAlbumMutation, {
     loadingMessage: 'Deleting album...',
     showSuccess: false, // We handle success manually above
+    showError: false, // We handle errors manually above
     errorTitle: 'Failed to Delete Album',
   });
 
@@ -98,7 +99,7 @@ export function DeleteAlbumDialog({
     }
 
     setError('');
-    deleteAlbumMutation.mutate();
+    deleteAlbumMutation.mutate(undefined);
   };
 
   const isDeleteDisabled =

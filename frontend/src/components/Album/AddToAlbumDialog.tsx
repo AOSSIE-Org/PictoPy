@@ -13,14 +13,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { selectAlbums } from '@/features/albumSelectors';
-import { setAlbums } from '@/features/albumSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtension';
 import { Eye, EyeOff, Lock, Search } from 'lucide-react';
 import { ChangeEvent, useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 
 interface AddToAlbumDialogProps {
   open: boolean;
@@ -36,7 +34,7 @@ export function AddToAlbumDialog({
   onImagesAdded,
 }: AddToAlbumDialogProps) {
   const dispatch = useDispatch();
-  const albums = useSelector(selectAlbums);
+  const [localAlbums, setLocalAlbums] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
@@ -63,15 +61,18 @@ export function AddToAlbumDialog({
     }) => addImagesToAlbum(albumId, imageIds),
     onSuccess: (data: any) => {
       if (data.success) {
-        const selectedAlbum = albums.find(
+        // Resolve album name before any state mutations
+        const selectedAlbum = localAlbums.find(
           (album: any) => album.album_id === selectedAlbumId,
         );
+        const albumName = selectedAlbum?.album_name ?? 'selected album';
+
         dispatch(
           showInfoDialog({
             title: 'Success',
             message: `Added ${selectedImageIds.length} photo${
               selectedImageIds.length > 1 ? 's' : ''
-            } to "${selectedAlbum?.album_name}"`,
+            } to "${albumName}"`,
             variant: 'info',
           }),
         );
@@ -95,18 +96,19 @@ export function AddToAlbumDialog({
   useMutationFeedback(addToAlbumMutation, {
     loadingMessage: 'Adding photos to album...',
     showSuccess: false, // We handle success manually
+    showError: false, // We handle errors manually
     errorTitle: 'Failed to Add Photos',
   });
 
-  // Update Redux store when albums are fetched
+  // Update local state when albums are fetched
   useEffect(() => {
     if (isSuccess && albumsData?.success) {
-      dispatch(setAlbums(albumsData.albums));
+      setLocalAlbums(albumsData.albums);
     }
-  }, [isSuccess, albumsData, dispatch]);
+  }, [isSuccess, albumsData]);
 
   // Filter albums based on search term
-  const filteredAlbums = albums.filter(
+  const filteredAlbums = localAlbums.filter(
     (album: any) =>
       album.album_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       album.description.toLowerCase().includes(searchTerm.toLowerCase()),

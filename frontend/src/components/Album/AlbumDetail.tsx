@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { usePictoQuery } from '@/hooks/useQueryExtension';
+import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtension';
 import { ChangeEvent, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -30,17 +30,23 @@ import {
   Album as AlbumType,
   fetchAlbum,
   fetchAlbumImages,
+  removeImagesFromAlbum,
 } from '@/api/api-functions/albums';
 import { fetchAllImages } from '@/api/api-functions/images';
 import {
   selectIsSelectionMode,
   selectSelectedImageIds,
 } from '@/features/albumSelectors';
-import { enableSelectionMode, setSelectedAlbum } from '@/features/albumSlice';
+import {
+  clearSelectedImages,
+  enableSelectionMode,
+  setSelectedAlbum,
+} from '@/features/albumSlice';
 import { selectIsImageViewOpen } from '@/features/imageSelectors';
 import { setImages } from '@/features/imageSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { hideLoader, showLoader } from '@/features/loaderSlice';
+import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { Image } from '@/types/Media';
 import {
   ArrowLeft,
@@ -68,6 +74,56 @@ export function AlbumDetail() {
   const selectedImageIds = useSelector(selectSelectedImageIds);
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
 
+  // Mutation for removing images from album
+  const removeImagesMutation = usePictoMutation({
+    mutationFn: ({
+      albumId,
+      imageIds,
+    }: {
+      albumId: string;
+      imageIds: string[];
+    }) => removeImagesFromAlbum(albumId, imageIds),
+    onSuccess: (data: any) => {
+      if (data.success) {
+        dispatch(
+          showInfoDialog({
+            title: 'Success',
+            message: `Removed ${selectedImageIds.length} photo${
+              selectedImageIds.length > 1 ? 's' : ''
+            } from album`,
+            variant: 'info',
+          }),
+        );
+
+        // Update local state by filtering out removed images
+        const updatedImages = albumImages.filter(
+          (img) => !selectedImageIds.includes(img.id),
+        );
+        setAlbumImages(updatedImages);
+        dispatch(setImages(updatedImages));
+
+        // Clear selection
+        dispatch(clearSelectedImages());
+      }
+    },
+    onError: () => {
+      dispatch(
+        showInfoDialog({
+          title: 'Error',
+          message: 'Failed to remove photos from album. Please try again.',
+          variant: 'error',
+        }),
+      );
+    },
+  });
+
+  // Use mutation feedback for loading states
+  useMutationFeedback(removeImagesMutation, {
+    loadingMessage: 'Removing photos from album...',
+    showSuccess: false, // We handle success manually
+    errorTitle: 'Failed to Remove Photos',
+  });
+
   // Fetch album details
   const {
     data: albumData,
@@ -86,6 +142,7 @@ export function AlbumDetail() {
     data: imageIdsData,
     isLoading: isImagesLoading,
     isSuccess: isImagesSuccess,
+    isError: isImagesError,
   } = usePictoQuery({
     queryKey: ['album-images', albumId, password],
     queryFn: () =>
@@ -147,6 +204,37 @@ export function AlbumDetail() {
     }
   }, [isImagesSuccess, imageIdsData, allImagesData, dispatch]);
 
+  // Handle failed password attempts for hidden albums
+  useEffect(() => {
+    // Check if query failed or returned unsuccessful response
+    if (
+      isImagesError ||
+      (isImagesSuccess && imageIdsData && !imageIdsData.success)
+    ) {
+      // Only handle this for hidden albums with a password attempt
+      if (album?.is_hidden && password) {
+        // Clear the incorrect password
+        setPassword('');
+
+        // Clear any existing images from UI
+        setAlbumImages([]);
+        dispatch(setImages([]));
+
+        // Show password dialog again for retry
+        setShowPasswordDialog(true);
+
+        // Show error notification
+        dispatch(
+          showInfoDialog({
+            title: 'Invalid Password',
+            message: 'The password you entered is incorrect. Please try again.',
+            variant: 'error',
+          }),
+        );
+      }
+    }
+  }, [isImagesError, isImagesSuccess, imageIdsData, album, password, dispatch]);
+
   const handleBack = () => {
     navigate('/albums');
   };
@@ -174,8 +262,12 @@ export function AlbumDetail() {
   };
 
   const handleRemoveFromAlbum = () => {
-    // Feature: Remove images from album functionality
-    console.log('Remove from album:', selectedImageIds);
+    if (!albumId || selectedImageIds.length === 0) return;
+
+    removeImagesMutation.mutate({
+      albumId,
+      imageIds: selectedImageIds,
+    });
   };
 
   const handlePasswordSubmit = (submittedPassword: string) => {

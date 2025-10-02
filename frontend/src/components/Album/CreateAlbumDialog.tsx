@@ -16,7 +16,7 @@ import { addAlbum } from '@/features/albumSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
-import * as React from 'react';
+import React from 'react';
 import { useDispatch } from 'react-redux';
 
 interface CreateAlbumDialogProps {
@@ -85,6 +85,7 @@ export function CreateAlbumDialog({
   useMutationFeedback(createAlbumMutation, {
     loadingMessage: 'Creating album...',
     showSuccess: false, // We handle success manually above
+    showError: false, // We handle errors manually above
     errorTitle: 'Failed to Create Album',
   });
 
@@ -111,7 +112,7 @@ export function CreateAlbumDialog({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: any) => {
     e.preventDefault();
 
     if (!validateForm()) {

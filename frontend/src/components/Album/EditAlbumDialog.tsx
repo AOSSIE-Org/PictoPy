@@ -20,7 +20,7 @@ import { updateAlbum as updateAlbumInStore } from '@/features/albumSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtension';
-import * as React from 'react';
+import React from 'react';
 import { useDispatch } from 'react-redux';
 
 interface EditAlbumDialogProps {
@@ -118,6 +118,7 @@ export function EditAlbumDialog({
   useMutationFeedback(updateAlbumMutation, {
     loadingMessage: 'Updating album...',
     showSuccess: false, // We handle success manually above
+    showError: false, // We handle errors manually above
     errorTitle: 'Failed to Update Album',
   });
 
@@ -143,7 +144,7 @@ export function EditAlbumDialog({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: any) => {
     e.preventDefault();
 
     if (!validateForm()) {
