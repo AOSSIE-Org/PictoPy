@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from typing import List, Optional
+from typing import Dict, Any, List, Optional
 from app.database.images import db_get_all_images
 from app.schemas.images import ErrorResponse
 from pydantic import BaseModel
@@ -13,7 +13,7 @@ class ImageData(BaseModel):
     path: str
     folder_id: str
     thumbnailPath: str
-    metadata: str
+    metadata: Dict[str, Any]
     isTagged: bool
     tags: Optional[List[str]] = None
 

@@ -1,6 +1,10 @@
 # Standard library imports
 import sqlite3
-from typing import List, Tuple, TypedDict
+import json
+import os
+import datetime
+from PIL import Image, ExifTags
+from typing import Any, List, Mapping, Tuple, TypedDict, Union
 
 # App-specific imports
 from app.config.settings import (
@@ -21,15 +25,130 @@ class ImageRecord(TypedDict):
     path: ImagePath
     folder_id: FolderId
     thumbnailPath: str
-    metadata: str
+    metadata: Union[Mapping[str, Any], str]
     isTagged: bool
+
+
+class UntaggedImageRecord(TypedDict):
+    """Represents an image record returned for tagging."""
+
+    id: ImageId
+    path: ImagePath
+    folder_id: FolderId
+    thumbnailPath: str
+    metadata: Mapping[str, Any]
 
 
 ImageClassPair = Tuple[ImageId, ClassId]
 
 
-def db_create_images_table() -> None:
+def _connect() -> sqlite3.Connection:
     conn = sqlite3.connect(DATABASE_PATH)
+    # Ensure ON DELETE CASCADE and other FKs are enforced
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+
+def extract_image_metadata(image_path: str) -> dict:
+    """Extract metadata for a given image file with detailed debug logging."""
+    # print(f"[DEBUG] extract_image_metadata called for: {image_path}")
+
+    if not os.path.exists(image_path):
+        return {
+            "name": os.path.basename(image_path),
+            "date_created": None,
+            "width": 0,
+            "height": 0,
+            "file_location": image_path,
+            "file_size": 0,
+            "item_type": "unknown",
+        }
+
+    try:
+        stats = os.stat(image_path)
+        # print(f"[DEBUG] File exists. Size = {stats.st_size} bytes")
+
+        try:
+            with Image.open(image_path) as img:
+                width, height = img.size
+                mime_type = Image.MIME.get(img.format, "unknown")
+                # print(f"[DEBUG] Pillow opened image: {width}x{height}, type={mime_type}")
+
+                # Robust EXIF extraction with safe fallback
+                try:
+                    exif_data = (
+                        img.getexif()
+                        if hasattr(img, "getexif")
+                        else getattr(img, "_getexif", lambda: None)()
+                    )
+                except Exception:
+                    exif_data = None
+
+                exif = dict(exif_data) if exif_data else {}
+                dt_original = None
+                for k, v in exif.items():
+                    if ExifTags.TAGS.get(k) == "DateTimeOriginal":
+                        dt_original = (
+                            v.decode("utf-8", "ignore")
+                            if isinstance(v, (bytes, bytearray))
+                            else str(v)
+                        )
+                        break
+
+                # Safe parse; fall back to mtime without losing width/height
+                if dt_original:
+                    try:
+                        date_created = datetime.datetime.strptime(
+                            dt_original.strip().split("\x00", 1)[0],
+                            "%Y:%m:%d %H:%M:%S",
+                        ).isoformat()
+                    except ValueError:
+                        date_created = datetime.datetime.fromtimestamp(
+                            stats.st_mtime
+                        ).isoformat()
+                else:
+                    date_created = datetime.datetime.fromtimestamp(
+                        stats.st_mtime
+                    ).isoformat()
+
+            return {
+                "name": os.path.basename(image_path),
+                "date_created": date_created,
+                "width": width,
+                "height": height,
+                "file_location": image_path,
+                "file_size": stats.st_size,
+                "item_type": mime_type,
+            }
+
+        except Exception:
+            # print(f"[ERROR] Pillow could not open image {image_path} -> {e}")
+            return {
+                "name": os.path.basename(image_path),
+                "date_created": datetime.datetime.fromtimestamp(
+                    stats.st_mtime
+                ).isoformat(),
+                "file_location": image_path,
+                "file_size": stats.st_size,
+                "width": 0,
+                "height": 0,
+                "item_type": "unknown",
+            }
+
+    except Exception:
+        return {
+            "name": os.path.basename(image_path),
+            "date_created": None,
+            "width": 0,
+            "height": 0,
+            "file_location": image_path,
+            "file_size": 0,
+            "item_type": "unknown",
+        }
+
+
+def db_create_images_table() -> None:
+    conn = _connect()
     cursor = conn.cursor()
 
     # Create new images table with merged fields
@@ -69,16 +188,49 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
     if not image_records:
         return True
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
+        # Ensure metadata is properly filled and JSON stringified
+        prepared_records = []
+        for record in image_records:
+            metadata = record.get("metadata")
+
+            # Normalize: if metadata is a string, try to parse it
+            if isinstance(metadata, str):
+                try:
+                    metadata = json.loads(metadata)
+                except Exception:
+                    metadata = {}
+
+            # print(f"[DEBUG] Incoming metadata for {record['path']}: {metadata} (type={type(metadata)})")
+
+            # If no metadata provided or it's empty, extract it
+            if not metadata or metadata == {}:
+                metadata = extract_image_metadata(record["path"])
+
+            # Make sure it's stored as a JSON string in DB
+            record["metadata"] = json.dumps(metadata)
+
+            prepared_records.append(record)
+
+        # print("Prepared metadata:", prepared_records[0]["metadata"])
+
         cursor.executemany(
             """
-            INSERT OR IGNORE INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)
+            INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)
             VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged)
-        """,
-            image_records,
+            ON CONFLICT(path) DO UPDATE SET
+                folder_id=excluded.folder_id,
+                thumbnailPath=excluded.thumbnailPath,
+                metadata=excluded.metadata,
+                isTagged=CASE
+                    WHEN excluded.isTagged THEN 1
+                    ELSE images.isTagged
+                END
+            """,
+            prepared_records,
         )
         conn.commit()
         return True
@@ -97,7 +249,7 @@ def db_get_all_images() -> List[dict]:
     Returns:
         List of dictionaries containing all image data including tags
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -132,18 +284,31 @@ def db_get_all_images() -> List[dict]:
             tag_name,
         ) in results:
             if image_id not in images_dict:
+                # Safely parse metadata JSON -> dict
+                metadata_dict = {}
+                if metadata:
+                    try:
+                        parsed = (
+                            json.loads(metadata)
+                            if isinstance(metadata, str)
+                            else metadata
+                        )
+                        metadata_dict = parsed if isinstance(parsed, dict) else {}
+                    except (json.JSONDecodeError, TypeError, ValueError):
+                        metadata_dict = {}
+
                 images_dict[image_id] = {
                     "id": image_id,
                     "path": path,
-                    "folder_id": folder_id,
+                    "folder_id": str(folder_id),
                     "thumbnailPath": thumbnail_path,
-                    "metadata": metadata,
+                    "metadata": metadata_dict,
                     "isTagged": bool(is_tagged),
                     "tags": [],
                 }
 
-            # Add tag if it exists
-            if tag_name:
+            # Add tag if it exists (avoid duplicates)
+            if tag_name and tag_name not in images_dict[image_id]["tags"]:
                 images_dict[image_id]["tags"].append(tag_name)
 
         # Convert to list and set tags to None if empty
@@ -165,7 +330,7 @@ def db_get_all_images() -> List[dict]:
         conn.close()
 
 
-def db_get_untagged_images() -> List[ImageRecord]:
+def db_get_untagged_images() -> List[UntaggedImageRecord]:
     """
     Find all images that need AI tagging.
     Returns images where:
@@ -175,7 +340,7 @@ def db_get_untagged_images() -> List[ImageRecord]:
     Returns:
         List of dictionaries containing image data: id, path, folder_id, thumbnailPath, metadata
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -193,13 +358,23 @@ def db_get_untagged_images() -> List[ImageRecord]:
 
         untagged_images = []
         for image_id, path, folder_id, thumbnail_path, metadata in results:
+            md: dict = {}
+            if metadata:
+                try:
+                    md = (
+                        json.loads(metadata)
+                        if isinstance(metadata, str)
+                        else (metadata or {})
+                    )
+                except Exception:
+                    md = {}
             untagged_images.append(
                 {
                     "id": image_id,
                     "path": path,
                     "folder_id": folder_id,
                     "thumbnailPath": thumbnail_path,
-                    "metadata": metadata,
+                    "metadata": md,
                 }
             )
 
@@ -220,7 +395,7 @@ def db_update_image_tagged_status(image_id: ImageId, is_tagged: bool = True) -> 
     Returns:
         True if update was successful, False otherwise
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -251,7 +426,7 @@ def db_insert_image_classes_batch(image_class_pairs: List[ImageClassPair]) -> bo
     if not image_class_pairs:
         return True
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -287,7 +462,7 @@ def db_get_images_by_folder_ids(
     if not folder_ids:
         return []
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -323,7 +498,7 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
     if not image_ids:
         return True
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
