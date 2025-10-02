@@ -1931,7 +1931,7 @@
             "title": "Thumbnailpath"
           },
           "metadata": {
-            "type": "string",
+            "type": "object",
             "title": "Metadata"
           },
           "isTagged": {
