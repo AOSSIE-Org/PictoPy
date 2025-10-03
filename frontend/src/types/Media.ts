@@ -1,12 +1,14 @@
 export interface ImageMetadata {
   name: string;
-  date_created: string;
+  date_created: string | null;
   width: number;
   height: number;
   file_location: string;
   file_size: number;
   item_type: string;
   location?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface Image {
