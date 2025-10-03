@@ -60,7 +60,7 @@ export function Navbar() {
 
           <FaceSearchDialog />
 
-          <button className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 rounded-sm p-2">
+          <button className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2">
             <Search className="h-4 w-4" />
           </button>
         </div>
