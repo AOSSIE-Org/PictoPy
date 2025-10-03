@@ -1100,7 +1100,7 @@
           "Face Clusters"
         ],
         "summary": "Trigger Global Reclustering",
-        "description": "Manually trigger global face reclustering.\nThis bypasses the normal 24-hour check and reclusters all faces from scratch.",
+        "description": "Manually trigger global face reclustering.\nThis forces full reclustering regardless of the 24-hour rule.",
         "operationId": "trigger_global_reclustering_face_clusters_global_recluster_post",
         "responses": {
           "200": {
