@@ -1,0 +1,11 @@
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "css.lint.validProperties": [
+    "--sidebar-width",
+    "--sidebar-width-icon"
+  ],
+  "css.validate": false,
+  "webhint.enable": false,
+  "edge-devtools-network.enable": false
+}

@@ -1,5 +1,5 @@
 {
-  "name": "PictoPy",
+  "name": "pictopy-frontend",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -14,7 +14,8 @@
     "lint:check": "eslint --max-warnings 0 --config .eslintrc.json .",
     "lint:fix": "eslint --max-warnings 0 --config .eslintrc.json . --fix",
     "format:fix": "prettier --write \"**/*.{ts,tsx,json}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,json}\""
+    "format:check": "prettier --check \"**/*.{ts,tsx,json}\"",
+    "type-check": "tsc --noEmit"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
