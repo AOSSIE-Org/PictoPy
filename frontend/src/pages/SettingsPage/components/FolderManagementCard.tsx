@@ -51,6 +51,7 @@ const FolderManagementCard: React.FC = () => {
                       AI Tagging
                     </span>
                     <Switch
+                      className="cursor-pointer"
                       checked={folder.AI_Tagging}
                       onCheckedChange={() => toggleAITagging(folder)}
                       disabled={
