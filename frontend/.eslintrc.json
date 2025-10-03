@@ -16,6 +16,8 @@
     "no-warning-comments": [
       "error",
       { "terms": ["todo", "fixme"], "location": "anywhere" }
-    ]
+    ],
+    // Disable inline styles warning (needed for CSS variables)
+    "react/forbid-dom-props": "off"
   }
 }

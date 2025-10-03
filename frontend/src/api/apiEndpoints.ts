@@ -31,7 +31,8 @@ export const albumsEndpoints = {
   deleteAlbum: (albumId: string) => `/albums/${albumId}`,
   getAlbumImages: (albumId: string) => `/albums/${albumId}/images/get`,
   addImagesToAlbum: (albumId: string) => `/albums/${albumId}/images`,
-  removeImageFromAlbum: (albumId: string, imageId: string) => `/albums/${albumId}/images/${imageId}`,
+  removeImageFromAlbum: (albumId: string, imageId: string) =>
+    `/albums/${albumId}/images/${imageId}`,
   removeImagesFromAlbum: (albumId: string) => `/albums/${albumId}/images`,
 };
 

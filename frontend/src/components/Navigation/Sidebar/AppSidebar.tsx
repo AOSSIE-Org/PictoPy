@@ -8,14 +8,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import {
-  Bolt,
-  Home,
-  Sparkles,
-  Video,
-  BookImage,
-  ClockFading,
-} from 'lucide-react';
+import { Bolt, Home, Sparkles, Video, BookImage, Clock } from 'lucide-react';
 import { useLocation, Link } from 'react-router';
 import { ROUTES } from '@/constants/routes';
 
@@ -40,7 +33,7 @@ export function AppSidebar() {
     { name: 'AI Tagging', path: `/${ROUTES.AI}`, icon: Sparkles },
     { name: 'Videos', path: `/${ROUTES.VIDEOS}`, icon: Video },
     { name: 'Albums', path: `/${ROUTES.ALBUMS}`, icon: BookImage },
-    { name: 'Memories', path: `/${ROUTES.MEMORIES}`, icon: ClockFading },
+    { name: 'Memories', path: `/${ROUTES.MEMORIES}`, icon: Clock },
     { name: 'Settings', path: `/${ROUTES.SETTINGS}`, icon: Bolt },
   ];
 

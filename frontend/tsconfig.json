@@ -27,10 +27,9 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    },
-
+    }
   },
   "include": ["src", "jest.setup.ts", "src/types/**/*"],
-  "exclude": ["src/types/react.d.ts", "src/types/global.d.ts"],
+  "exclude": ["src/types/react.d.ts", "src/types/global.d.ts", "node_modules"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -7,10 +7,16 @@ import Settings from '../SettingsPage/Settings';
 import Videos from '../VideosPage/Videos';
 import { ROUTES } from '@/constants/routes';
 import QueryClientProviders from '@/config/QueryClientProvider';
-import { BrowserRouter } from 'react-router';
+import { MemoryRouter } from 'react-router';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Provider } from 'react-redux';
 import { store } from '@/app/store';
+import { ReactNode } from 'react';
+
+// Wrapper to fix React 19 type compatibility with react-router
+const RouterWrapper = ({ children }: { children: ReactNode }) =>
+  MemoryRouter({ children }) as React.JSX.Element;
+
 beforeAll(() => {
   window.matchMedia =
     window.matchMedia ||
@@ -39,9 +45,9 @@ describe('Page rendering tests', () => {
         <Provider store={store}>
           <ThemeProvider>
             <QueryClientProviders>
-              <BrowserRouter>
+              <RouterWrapper>
                 <Component />
-              </BrowserRouter>
+              </RouterWrapper>
             </QueryClientProviders>
           </ThemeProvider>
         </Provider>,

@@ -13,10 +13,10 @@ import {
 } from '@/features/albumSlice';
 import { selectImages } from '@/features/imageSelectors';
 import {
+  CheckSquare,
   Download,
   FolderPlus,
   RotateCcw,
-  SelectAll,
   Share2,
   Trash2,
   X,
@@ -86,7 +86,7 @@ export function SelectionToolbar({
           </>
         ) : (
           <>
-            <SelectAll className="h-4 w-4" />
+            <CheckSquare className="h-4 w-4" />
             Select All
           </>
         )}
