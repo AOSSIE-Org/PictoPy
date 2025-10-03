@@ -11,7 +11,7 @@ import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 
-export const Home = () => {
+export const MyFav = () => {
   const dispatch = useDispatch();
 
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
@@ -54,18 +54,65 @@ export const Home = () => {
   };
 
   const displayImages = isSearchActive ? searchResults : images;
+  // Sirf favourite wali images ke liye
+  const favouriteImages = displayImages.filter(
+    (image) => image.isFavourite === true,
+  );
   const title =
     isSearchActive && searchResults.length > 0
       ? `Face Search Results (${searchResults.length} found)`
-      : 'Image Gallery';
+      : 'Favourite Image Gallery';
+
+  if (favouriteImages.length === 0) {
+    return (
+      <div className="p-6">
+        <h1 className="mb-6 text-2xl font-bold">{title}</h1>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          {/* Heart Icon/Sticker */}
+          <div className="mb-6 flex h-32 w-32 items-center justify-center rounded-full bg-muted/50">
+            <svg 
+              className="h-16 w-16 text-muted-foreground/60" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={1.5} 
+                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
+              />
+            </svg>
+          </div>
+          
+          {/* Text Content */}
+          <h2 className="mb-3 text-xl font-semibold text-foreground">
+            No Favourite Images Yet
+          </h2>
+          <p className="mb-6 max-w-md text-muted-foreground">
+            Start building your collection by marking images as favourites. 
+            Click the heart icon on any image to add it here.
+          </p>
+          
+          {/* Optional: Browse Images Button */}
+          <button
+            onClick={() => window.history.back()}
+            className="rounded-lg bg-primary px-6 py-2 cursor-pointer text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Browse Images
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
       <h1 className="mb-6 text-2xl font-bold">{title}</h1>
-
+      
       {/* Image Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {displayImages.map((image, index) => (
+        {favouriteImages.map((image, index) => (
           <ImageCard
             key={image.id}
             image={image}
@@ -77,7 +124,7 @@ export const Home = () => {
 
       {/* Media Viewer Modal */}
       {isImageViewOpen && (
-        <MediaView images={displayImages} onClose={handleCloseMediaView} />
+        <MediaView images={favouriteImages} onClose={handleCloseMediaView} />
       )}
     </div>
   );

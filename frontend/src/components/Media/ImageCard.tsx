@@ -1,8 +1,8 @@
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Check, Heart, Share2 } from 'lucide-react';
-import { useState, useCallback } from 'react';
+import { Check, Heart,  Share2 } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { Image } from '@/types/Media';
 import { ImageTags } from './ImageTags';
@@ -25,12 +25,15 @@ export function ImageCard({
   showTags = true,
 }: ImageCardProps) {
   const dispatch = useDispatch();
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(image.isFavourite);
   const [isImageHovered, setIsImageHovered] = useState(false);
 
   // Default to empty array if no tags are provided
   const tags = image.tags || [];
 
+  const handle_favourite_toggle = () => {
+    setIsFavorite(!isFavorite);
+  };
   const handleImageClick = useCallback(() => {
     dispatch(setCurrentViewIndex(imageIndex));
   }, [dispatch, imageIndex]);
@@ -73,20 +76,26 @@ export function ImageCard({
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-full bg-white/20 text-white hover:!bg-white/40 hover:!text-white"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsFavorite(!isFavorite);
-              }}
+              className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${
+                image.isFavourite
+                  ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
+                  : 'bg-white/10 hover:bg-white/20 hover:shadow-lg'
+              }`}
+              onClick={handle_favourite_toggle}
             >
-              <Heart
-                className={cn(
-                  'h-5 w-5',
-                  isFavorite ? 'fill-brand-orange text-brand-orange' : '',
-                )}
-              />
+              {image.isFavourite ? (
+                // Filled Heart (when favourite)
+                <Heart
+                  className="h-5 w-5"
+                  fill="currentColor"
+                >
+                </Heart>
+              ) : (
+                <Heart className="h-5 w-5" />
+              )}
               <span className="sr-only">Favorite</span>
             </Button>
+
             <Button
               variant="ghost"
               size="icon"
