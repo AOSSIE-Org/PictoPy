@@ -230,7 +230,7 @@ def db_get_untagged_images() -> List[UntaggedImageRecord]:
                 {
                     "id": image_id,
                     "path": path,
-                    "folder_id": folder_id,
+                    "folder_id": str(folder_id) if folder_id is not None else None,
                     "thumbnailPath": thumbnail_path,
                     "metadata": md,
                 }
