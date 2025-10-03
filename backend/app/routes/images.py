@@ -2,18 +2,32 @@ from fastapi import APIRouter, HTTPException, status
 from typing import List, Optional
 from app.database.images import db_get_all_images
 from app.schemas.images import ErrorResponse
+from app.utils.images import image_util_parse_metadata
 from pydantic import BaseModel
 
 router = APIRouter()
 
 
 # Response Models
+class MetadataModel(BaseModel):
+    name: str
+    date_created: Optional[str]
+    width: int
+    height: int
+    file_location: str
+    file_size: int
+    item_type: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    location: Optional[str] = None
+
+
 class ImageData(BaseModel):
     id: str
     path: str
     folder_id: str
     thumbnailPath: str
-    metadata: str
+    metadata: MetadataModel
     isTagged: bool
     tags: Optional[List[str]] = None
 
@@ -42,7 +56,7 @@ def get_all_images():
                 path=image["path"],
                 folder_id=image["folder_id"],
                 thumbnailPath=image["thumbnailPath"],
-                metadata=image["metadata"],
+                metadata=image_util_parse_metadata(image["metadata"]),
                 isTagged=image["isTagged"],
                 tags=image["tags"],
             )

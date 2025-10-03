@@ -275,6 +275,8 @@ def db_get_images_by_cluster_id(
     rows = cursor.fetchall()
     conn.close()
 
+    from app.utils.images import image_util_parse_metadata
+
     images = []
     for row in rows:
         (
@@ -299,7 +301,7 @@ def db_get_images_by_cluster_id(
                 "image_id": image_id,
                 "image_path": image_path,
                 "thumbnail_path": thumbnail_path,
-                "metadata": metadata,
+                "metadata": image_util_parse_metadata(metadata),
                 "face_id": face_id,
                 "confidence": confidence,
                 "bbox": bbox,
