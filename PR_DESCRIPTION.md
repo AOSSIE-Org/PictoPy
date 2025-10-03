@@ -2,13 +2,7 @@ Fixes #546
 
 ## 📋 Description
 
-This PR implements a comprehensive album management system for PictoPy with full CRUD (Create, Read, Up- ✅ Uses existing API endpoints
-
----
-
-## ℹ️ Additional Information
-
-This implementation provides a **production-ready** album management system with:elete) operations and TypeScript support. The implementation includes enhanced features such as password protection for hidden albums, bulk image operations, and a polished user experience with proper form validation and error handling.
+This PR implements a comprehensive album management system for PictoPy with full CRUD (Create, Read, Update, Delete) operations and TypeScript support. The implementation includes enhanced features such as password protection for hidden albums, bulk image operations, and a polished user experience with proper form validation and error handling.
 
 ---
 
@@ -142,7 +136,7 @@ Core components, API functions, type definitions, and Redux store updates
 
 ---
 
-## � Additional Information
+## ℹ️ Additional Information
 
 This implementation provides a **production-ready** album management system with:
 - Complete CRUD operations for albums
