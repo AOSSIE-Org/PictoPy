@@ -6,6 +6,7 @@
     "module": "ESNext",
     "skipLibCheck": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -20,6 +21,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
 
     /* Type checking */
     "baseUrl": ".",
@@ -27,6 +29,7 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "jest.setup.ts"],
+  "include": ["src", "jest.setup.ts", "src/types/**/*"],
+  "exclude": ["src/types/react.d.ts", "src/types/global.d.ts", "node_modules"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

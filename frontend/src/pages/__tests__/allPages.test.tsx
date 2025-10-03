@@ -7,10 +7,17 @@ import Settings from '../SettingsPage/Settings';
 import Videos from '../VideosPage/Videos';
 import { ROUTES } from '@/constants/routes';
 import QueryClientProviders from '@/config/QueryClientProvider';
-import { BrowserRouter } from 'react-router';
+import { MemoryRouter } from 'react-router';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Provider } from 'react-redux';
 import { store } from '@/app/store';
+import { ReactNode } from 'react';
+
+// Wrapper component using proper JSX syntax for React 19 + react-router compatibility
+const RouterWrapper = ({ children }: { children: ReactNode }) => {
+  return <MemoryRouter>{children}</MemoryRouter>;
+};
+
 beforeAll(() => {
   window.matchMedia =
     window.matchMedia ||
@@ -39,9 +46,9 @@ describe('Page rendering tests', () => {
         <Provider store={store}>
           <ThemeProvider>
             <QueryClientProviders>
-              <BrowserRouter>
+              <RouterWrapper>
                 <Component />
-              </BrowserRouter>
+              </RouterWrapper>
             </QueryClientProviders>
           </ThemeProvider>
         </Provider>,

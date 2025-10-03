@@ -16,6 +16,18 @@
     "no-warning-comments": [
       "error",
       { "terms": ["todo", "fixme"], "location": "anywhere" }
+    ],
+    // Allow style prop for CSS variables, but keep dangerouslySetInnerHTML forbidden
+    "react/forbid-dom-props": [
+      "error",
+      {
+        "forbid": [
+          {
+            "propName": "dangerouslySetInnerHTML",
+            "message": "Use safe alternatives instead of dangerouslySetInnerHTML"
+          }
+        ]
+      }
     ]
   }
 }
