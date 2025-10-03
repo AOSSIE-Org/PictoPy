@@ -279,9 +279,7 @@ def face_tagging(payload: AddSingleImageRequest):
         else:
             for image in images:
                 max_similarity = 0
-                similarity = FaceNet_util_cosine_similarity(
-                    new_embedding, image["embeddings"]
-                )
+                similarity = FaceNet_util_cosine_similarity(new_embedding, image["embeddings"])
                 max_similarity = max(max_similarity, similarity)
                 if max_similarity >= CONFIDENCE_PERCENT:
                     matches.append(
@@ -330,9 +328,7 @@ def trigger_global_reclustering():
         results = cluster_util_cluster_all_face_embeddings()
 
         if not results:
-            return GlobalReclusterResponse(
-                success=True, message="No faces found to cluster", clusters_created=0
-            )
+            return GlobalReclusterResponse(success=True, message="No faces found to cluster", clusters_created=0)
 
         results_dict = [result.to_dict() for result in results]
 
@@ -363,10 +359,7 @@ def trigger_global_reclustering():
         logger.info(f"Updated cluster assignments for {len(results_dict)} faces")
 
         # Generate face images for each cluster (async in production)
-        from app.utils.face_clusters import (
-            _generate_cluster_face_image,
-            _update_cluster_face_image,
-        )
+        from app.utils.face_clusters import _generate_cluster_face_image, _update_cluster_face_image
 
         for cluster_id in unique_clusters.keys():
             try:
@@ -374,24 +367,16 @@ def trigger_global_reclustering():
                 if face_image_base64:
                     _update_cluster_face_image(cluster_id, face_image_base64)
             except Exception as e:
-                logger.warning(
-                    f"Failed to generate face image for cluster {cluster_id}: {e}"
-                )
+                logger.warning(f"Failed to generate face image for cluster {cluster_id}: {e}")
 
         # Update metadata with new reclustering time
         current_metadata = db_get_metadata() or {}
         current_metadata["reclustering_time"] = datetime.now().timestamp()
         db_update_metadata(current_metadata)
 
-        logger.info(
-            f"Global reclustering completed successfully. Created {len(cluster_list)} clusters"
-        )
+        logger.info(f"Global reclustering completed successfully. Created {len(cluster_list)} clusters")
 
-        return GlobalReclusterResponse(
-            success=True,
-            message=f"Global reclustering completed successfully. Created {len(cluster_list)} clusters from {len(results_dict)} faces.",
-            clusters_created=len(cluster_list),
-        )
+        return GlobalReclusterResponse(success=True, message=f"Global reclustering completed successfully. Created {len(cluster_list)} clusters from {len(results_dict)} faces.", clusters_created=len(cluster_list))
 
     except Exception as e:
         logger.error(f"Global reclustering failed: {str(e)}")
