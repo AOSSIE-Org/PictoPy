@@ -14,7 +14,6 @@ import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { showInfoDialog } from '@/features/infoDialogSlice';
-import { ImageCard } from '@/components/Media/ImageCard';
 
 export const Home = () => {
   const dispatch = useDispatch();
@@ -65,31 +64,6 @@ export const Home = () => {
     isSearchActive && searchResults.length > 0
       ? `Face Search Results (${searchResults.length} found)`
       : 'Image Gallery';
-
-  if (isSearchActive) {
-    return (
-      <div className="p-6">
-        <h1 className="mb-6 text-2xl font-bold">{title}</h1>
-
-        {/* Image Grid */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {displayImages.map((image, index) => (
-            <ImageCard
-              key={image.id}
-              image={image}
-              imageIndex={index}
-              className="w-full"
-            />
-          ))}
-        </div>
-
-        {/* Media Viewer Modal */}
-        {isImageViewOpen && (
-          <MediaView images={displayImages} onClose={handleCloseMediaView} />
-        )}
-      </div>
-    );
-  }
 
   return (
     <div className="relative flex h-full flex-col pr-6">

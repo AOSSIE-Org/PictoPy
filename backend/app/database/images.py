@@ -1,9 +1,5 @@
 # Standard library imports
 import sqlite3
-import json
-import os
-import datetime
-from PIL import Image, ExifTags
 from typing import Any, List, Mapping, Tuple, TypedDict, Union
 
 # App-specific imports
@@ -47,104 +43,6 @@ def _connect() -> sqlite3.Connection:
     # Ensure ON DELETE CASCADE and other FKs are enforced
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
-
-
-def extract_image_metadata(image_path: str) -> dict:
-    """Extract metadata for a given image file with detailed debug logging."""
-    # print(f"[DEBUG] extract_image_metadata called for: {image_path}")
-
-    if not os.path.exists(image_path):
-        return {
-            "name": os.path.basename(image_path),
-            "date_created": None,
-            "width": 0,
-            "height": 0,
-            "file_location": image_path,
-            "file_size": 0,
-            "item_type": "unknown",
-        }
-
-    try:
-        stats = os.stat(image_path)
-        # print(f"[DEBUG] File exists. Size = {stats.st_size} bytes")
-
-        try:
-            with Image.open(image_path) as img:
-                width, height = img.size
-                mime_type = Image.MIME.get(img.format, "unknown")
-                # print(f"[DEBUG] Pillow opened image: {width}x{height}, type={mime_type}")
-
-                # Robust EXIF extraction with safe fallback
-                try:
-                    exif_data = (
-                        img.getexif()
-                        if hasattr(img, "getexif")
-                        else getattr(img, "_getexif", lambda: None)()
-                    )
-                except Exception:
-                    exif_data = None
-
-                exif = dict(exif_data) if exif_data else {}
-                dt_original = None
-                for k, v in exif.items():
-                    if ExifTags.TAGS.get(k) == "DateTimeOriginal":
-                        dt_original = (
-                            v.decode("utf-8", "ignore")
-                            if isinstance(v, (bytes, bytearray))
-                            else str(v)
-                        )
-                        break
-
-                # Safe parse; fall back to mtime without losing width/height
-                if dt_original:
-                    try:
-                        date_created = datetime.datetime.strptime(
-                            dt_original.strip().split("\x00", 1)[0],
-                            "%Y:%m:%d %H:%M:%S",
-                        ).isoformat()
-                    except ValueError:
-                        date_created = datetime.datetime.fromtimestamp(
-                            stats.st_mtime
-                        ).isoformat()
-                else:
-                    date_created = datetime.datetime.fromtimestamp(
-                        stats.st_mtime
-                    ).isoformat()
-
-            return {
-                "name": os.path.basename(image_path),
-                "date_created": date_created,
-                "width": width,
-                "height": height,
-                "file_location": image_path,
-                "file_size": stats.st_size,
-                "item_type": mime_type,
-            }
-
-        except Exception:
-            # print(f"[ERROR] Pillow could not open image {image_path} -> {e}")
-            return {
-                "name": os.path.basename(image_path),
-                "date_created": datetime.datetime.fromtimestamp(
-                    stats.st_mtime
-                ).isoformat(),
-                "file_location": image_path,
-                "file_size": stats.st_size,
-                "width": 0,
-                "height": 0,
-                "item_type": "unknown",
-            }
-
-    except Exception:
-        return {
-            "name": os.path.basename(image_path),
-            "date_created": None,
-            "width": 0,
-            "height": 0,
-            "file_location": image_path,
-            "file_size": 0,
-            "item_type": "unknown",
-        }
 
 
 def db_create_images_table() -> None:
@@ -192,31 +90,6 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
     cursor = conn.cursor()
 
     try:
-        # Ensure metadata is properly filled and JSON stringified
-        prepared_records = []
-        for record in image_records:
-            metadata = record.get("metadata")
-
-            # Normalize: if metadata is a string, try to parse it
-            if isinstance(metadata, str):
-                try:
-                    metadata = json.loads(metadata)
-                except Exception:
-                    metadata = {}
-
-            # print(f"[DEBUG] Incoming metadata for {record['path']}: {metadata} (type={type(metadata)})")
-
-            # If no metadata provided or it's empty, extract it
-            if not metadata or metadata == {}:
-                metadata = extract_image_metadata(record["path"])
-
-            # Make sure it's stored as a JSON string in DB
-            record["metadata"] = json.dumps(metadata)
-
-            prepared_records.append(record)
-
-        # print("Prepared metadata:", prepared_records[0]["metadata"])
-
         cursor.executemany(
             """
             INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)
@@ -230,7 +103,7 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
                     ELSE images.isTagged
                 END
             """,
-            prepared_records,
+            image_records,
         )
         conn.commit()
         return True
@@ -285,17 +158,9 @@ def db_get_all_images() -> List[dict]:
         ) in results:
             if image_id not in images_dict:
                 # Safely parse metadata JSON -> dict
-                metadata_dict = {}
-                if metadata:
-                    try:
-                        parsed = (
-                            json.loads(metadata)
-                            if isinstance(metadata, str)
-                            else metadata
-                        )
-                        metadata_dict = parsed if isinstance(parsed, dict) else {}
-                    except (json.JSONDecodeError, TypeError, ValueError):
-                        metadata_dict = {}
+                from app.utils.images import image_util_parse_metadata
+
+                metadata_dict = image_util_parse_metadata(metadata)
 
                 images_dict[image_id] = {
                     "id": image_id,
@@ -358,16 +223,9 @@ def db_get_untagged_images() -> List[UntaggedImageRecord]:
 
         untagged_images = []
         for image_id, path, folder_id, thumbnail_path, metadata in results:
-            md: dict = {}
-            if metadata:
-                try:
-                    md = (
-                        json.loads(metadata)
-                        if isinstance(metadata, str)
-                        else (metadata or {})
-                    )
-                except Exception:
-                    md = {}
+            from app.utils.images import image_util_parse_metadata
+
+            md = image_util_parse_metadata(metadata)
             untagged_images.append(
                 {
                     "id": image_id,
