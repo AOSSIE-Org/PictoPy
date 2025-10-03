@@ -1,4 +1,30 @@
-# TypeScript Error Fix Script for Windows
+# Type# Save current location
+$rootPath = Get-Location
+
+# Navigate to frontend directory
+Write-Host "📁 Navigating to frontend directory..." -ForegroundColor Yellow
+
+if (-not (Test-Path "frontend")) {
+    Write-Host ""
+    Write-Host "❌ ERROR: Directory 'frontend' not found!" -ForegroundColor Red
+    Write-Host "Please run this script from the project root directory." -ForegroundColor Yellow
+    Write-Host ""
+    exit 1
+}
+
+try {
+    Set-Location -Path "frontend" -ErrorAction Stop
+    Write-Host "✅ Changed to frontend directory" -ForegroundColor Green
+} catch {
+    Write-Host ""
+    Write-Host "❌ ERROR: Failed to change to 'frontend' directory!" -ForegroundColor Red
+    Write-Host $_.Exception.Message -ForegroundColor Yellow
+    Write-Host ""
+    exit 1
+}
+
+# Clear TypeScript cache
+Write-Host "🧹 Clearing TypeScript cache..." -ForegroundColor Yellowror Fix Script for Windows
 # This script will reinstall node_modules and fix the Radix UI error
 
 Write-Host "🔧 Comprehensive TypeScript Error Fix..." -ForegroundColor Cyan
@@ -64,7 +90,21 @@ if (Test-Path $radixPath) {
     Write-Host "✅ @radix-ui/react-dropdown-menu found!" -ForegroundColor Green
 } else {
     Write-Host "⚠️  Package not found, installing specifically..." -ForegroundColor Yellow
+    # Pin to ^2.1.15 for React 19 compatibility (current as of Oct 2025)
+    # Check for updates: https://www.npmjs.com/package/@radix-ui/react-dropdown-menu
+    # Revisit when upgrading to React 20 or if type issues persist
     npm install @radix-ui/react-dropdown-menu@^2.1.15
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host "❌ ERROR: Failed to install @radix-ui/react-dropdown-menu!" -ForegroundColor Red
+        Write-Host "Please check your internet connection and try again." -ForegroundColor Yellow
+        Write-Host ""
+        Set-Location $rootPath
+        exit 1
+    }
+    
+    Write-Host "✅ @radix-ui/react-dropdown-menu installed successfully!" -ForegroundColor Green
 }
 
 Write-Host ""

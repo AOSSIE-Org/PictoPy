@@ -13,9 +13,10 @@ import { Provider } from 'react-redux';
 import { store } from '@/app/store';
 import { ReactNode } from 'react';
 
-// Wrapper to fix React 19 type compatibility with react-router
-const RouterWrapper = ({ children }: { children: ReactNode }) =>
-  MemoryRouter({ children }) as React.JSX.Element;
+// Wrapper component using proper JSX syntax for React 19 + react-router compatibility
+const RouterWrapper = ({ children }: { children: ReactNode }) => {
+  return <MemoryRouter>{children}</MemoryRouter>;
+};
 
 beforeAll(() => {
   window.matchMedia =
