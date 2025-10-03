@@ -48,10 +48,10 @@ def db_check_database_connection() -> bool:
     Returns:
         True if connection is successful and table exists, False otherwise
     """
+    conn = None
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
-
         # Check if folders table exists
         cursor.execute(
             """
@@ -60,12 +60,13 @@ def db_check_database_connection() -> bool:
             """
         )
         result = cursor.fetchone()
-        conn.close()
-
         return result is not None
     except Exception as e:
         print(f"Database connection error: {e}")
         return False
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def db_get_tagging_progress() -> List[FolderTaggingInfo]:

@@ -7,23 +7,27 @@ from app.config.settings import DATABASE_PATH
 
 def db_create_metadata_table() -> None:
     """Create the metadata table if it doesn't exist."""
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    cursor.execute(
+    conn = None
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS metadata (
+                metadata TEXT
+            )
         """
-        CREATE TABLE IF NOT EXISTS metadata (
-            metadata TEXT
         )
-    """
-    )
 
-    # Insert initial row if table is empty
-    cursor.execute("SELECT COUNT(*) FROM metadata")
-    if cursor.fetchone()[0] == 0:
-        cursor.execute("INSERT INTO metadata (metadata) VALUES (?)", ("{}",))
+        # Insert initial row if table is empty
+        cursor.execute("SELECT COUNT(*) FROM metadata")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("INSERT INTO metadata (metadata) VALUES (?)", ("{}",))
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def db_get_metadata() -> Optional[Dict[str, Any]]:
@@ -36,17 +40,19 @@ def db_get_metadata() -> Optional[Dict[str, Any]]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
-    cursor.execute("SELECT metadata FROM metadata LIMIT 1")
+    try:
+        cursor.execute("SELECT metadata FROM metadata LIMIT 1")
 
-    row = cursor.fetchone()
-    conn.close()
+        row = cursor.fetchone()
 
-    if row and row[0]:
-        try:
-            return json.loads(row[0])
-        except json.JSONDecodeError:
-            return None
-    return None
+        if row and row[0]:
+            try:
+                return json.loads(row[0])
+            except json.JSONDecodeError:
+                return None
+        return None
+    finally:
+        conn.close()
 
 
 def db_update_metadata(metadata: Dict[str, Any]) -> bool:
@@ -62,14 +68,15 @@ def db_update_metadata(metadata: Dict[str, Any]) -> bool:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
-    metadata_json = json.dumps(metadata)
+    try:
+        metadata_json = json.dumps(metadata)
 
-    # Delete all existing rows and insert new one
-    cursor.execute("DELETE FROM metadata")
-    cursor.execute("INSERT INTO metadata (metadata) VALUES (?)", (metadata_json,))
+        # Delete all existing rows and insert new one
+        cursor.execute("DELETE FROM metadata")
+        cursor.execute("INSERT INTO metadata (metadata) VALUES (?)", (metadata_json,))
 
-    updated = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-
-    return updated
+        updated = cursor.rowcount > 0
+        conn.commit()
+        return updated
+    finally:
+        conn.close()

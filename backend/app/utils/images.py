@@ -90,7 +90,7 @@ def image_util_process_untagged_images() -> bool:
 
 
 def image_util_classify_and_face_detect_images(
-    untagged_images: List[Dict[str, str]]
+    untagged_images: List[Dict[str, str]],
 ) -> None:
     """Classify untagged images and detect faces if applicable."""
     object_classifier = ObjectClassifier()
@@ -251,7 +251,7 @@ def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
 
 
 def image_util_create_folder_path_mapping(
-    folder_ids: List[Tuple[int, str]]
+    folder_ids: List[Tuple[int, str]],
 ) -> Dict[str, int]:
     """
     Create a dictionary mapping folder paths to their IDs.
