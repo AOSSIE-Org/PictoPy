@@ -1094,6 +1094,38 @@
         }
       }
     },
+    "/face-clusters/global-recluster": {
+      "post": {
+        "tags": [
+          "Face Clusters"
+        ],
+        "summary": "Trigger Global Reclustering",
+        "description": "Manually trigger global face reclustering.\nThis bypasses the normal 24-hour check and reclusters all faces from scratch.",
+        "operationId": "trigger_global_reclustering_face_clusters_global_recluster_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalReclusterResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/user-preferences/": {
       "get": {
         "tags": [
@@ -1898,6 +1930,29 @@
         ],
         "title": "GetUserPreferencesResponse",
         "description": "Response model for getting user preferences"
+      },
+      "GlobalReclusterResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "clusters_created": {
+            "type": "integer",
+            "title": "Clusters Created"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "clusters_created"
+        ],
+        "title": "GlobalReclusterResponse"
       },
       "HTTPValidationError": {
         "properties": {

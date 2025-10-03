@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, RefreshCw, Server } from 'lucide-react';
+import { Settings as SettingsIcon, RefreshCw, Server, Users } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import UpdateDialog from '@/components/Updater/UpdateDialog';
@@ -10,6 +10,7 @@ import { useUpdater } from '@/hooks/useUpdater';
 import { useDispatch } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { triggerGlobalReclustering } from '@/api/api-functions/face_clusters';
 
 /**
  * Component for application controls in settings
@@ -28,6 +29,51 @@ const ApplicationControlsCard: React.FC = () => {
   } = useUpdater();
 
   const [updateDialogOpen, setUpdateDialogOpen] = useState<boolean>(false);
+
+  const onGlobalReclusterClick = async () => {
+    dispatch(showLoader('Starting global face reclustering...'));
+
+    try {
+      const response = await triggerGlobalReclustering();
+      
+      dispatch(hideLoader());
+      
+      if (response.success) {
+        setTimeout(() => {
+          dispatch(
+            showInfoDialog({
+              title: 'Reclustering Completed',
+              message: response.message || 'Global face reclustering completed successfully.',
+              variant: 'info',
+            }),
+          );
+        }, 50);
+      } else {
+        setTimeout(() => {
+          dispatch(
+            showInfoDialog({
+              title: 'Reclustering Failed',
+              message: response.message || 'Failed to complete global face reclustering.',
+              variant: 'error',
+            }),
+          );
+        }, 50);
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      
+      dispatch(hideLoader());
+      setTimeout(() => {
+        dispatch(
+          showInfoDialog({
+            title: 'Reclustering Error',
+            message: `Failed to start global reclustering: ${errorMessage}`,
+            variant: 'error',
+          }),
+        );
+      }, 50);
+    }
+  };
 
   const onCheckUpdatesClick = () => {
     const checkUpdates = async () => {
@@ -86,9 +132,9 @@ const ApplicationControlsCard: React.FC = () => {
       <SettingsCard
         icon={SettingsIcon}
         title="Application Controls"
-        description="Manage updates and server operations"
+        description="Manage updates, server operations, and face clustering"
       >
-        <div className="flex w-50 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Button
             onClick={onCheckUpdatesClick}
             variant="outline"
@@ -108,6 +154,18 @@ const ApplicationControlsCard: React.FC = () => {
             <Server className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             <div className="text-left">
               <div className="font-medium">Restart Server</div>
+            </div>
+          </Button>
+
+          <Button
+            onClick={onGlobalReclusterClick}
+            variant="outline"
+            className="flex h-12 w-full gap-3"
+            title="Rebuild all face clusters from scratch using latest clustering algorithms"
+          >
+            <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+            <div className="text-left">
+              <div className="font-medium">Recluster Faces</div>
             </div>
           </Button>
         </div>
