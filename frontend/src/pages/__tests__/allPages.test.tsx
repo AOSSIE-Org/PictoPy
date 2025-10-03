@@ -1,17 +1,17 @@
-import { render } from '@testing-library/react';
+import { store } from '@/app/store';
+import QueryClientProviders from '@/config/QueryClientProvider';
+import { ROUTES } from '@/constants/routes';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AITagging } from '@/pages/AITagging/AITagging';
-import Album from '../Album/Album';
 import { Home } from '@/pages/Home/Home';
+import { render } from '@testing-library/react';
+import { ReactNode } from 'react';
+import { Provider } from 'react-redux';
+import { MemoryRouter } from 'react-router';
+import Album from '../Album/Album';
 import Memories from '../Memories/Memories';
 import Settings from '../SettingsPage/Settings';
 import Videos from '../VideosPage/Videos';
-import { ROUTES } from '@/constants/routes';
-import QueryClientProviders from '@/config/QueryClientProvider';
-import { MemoryRouter } from 'react-router';
-import { ThemeProvider } from '@/contexts/ThemeContext';
-import { Provider } from 'react-redux';
-import { store } from '@/app/store';
-import { ReactNode } from 'react';
 
 // Wrapper component using proper JSX syntax for React 19 + react-router compatibility
 const RouterWrapper = ({ children }: { children: ReactNode }) => {

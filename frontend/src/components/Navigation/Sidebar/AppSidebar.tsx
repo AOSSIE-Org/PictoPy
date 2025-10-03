@@ -8,9 +8,9 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Bolt, Home, Sparkles, Video, BookImage, Clock } from 'lucide-react';
-import { useLocation, Link } from 'react-router';
 import { ROUTES } from '@/constants/routes';
+import { Bolt, BookImage, Clock, Home, Sparkles, Video } from 'lucide-react';
+import { Link, useLocation } from 'react-router';
 
 export function AppSidebar() {
   const location = useLocation();

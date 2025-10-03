@@ -1,7 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Image } from '@/types/Media';
 import {
   selectSelectedImageCount,
   selectSelectedImageIds,
@@ -12,6 +11,7 @@ import {
   selectAllImages,
 } from '@/features/albumSlice';
 import { selectImages } from '@/features/imageSelectors';
+import { Image } from '@/types/Media';
 import {
   CheckSquare,
   Download,
