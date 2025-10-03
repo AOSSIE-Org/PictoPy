@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, RefreshCw, Server, Users } from 'lucide-react';
+import {
+  Settings as SettingsIcon,
+  RefreshCw,
+  Server,
+  Users,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import UpdateDialog from '@/components/Updater/UpdateDialog';
@@ -35,15 +40,17 @@ const ApplicationControlsCard: React.FC = () => {
 
     try {
       const response = await triggerGlobalReclustering();
-      
+
       dispatch(hideLoader());
-      
+
       if (response.success) {
         setTimeout(() => {
           dispatch(
             showInfoDialog({
               title: 'Reclustering Completed',
-              message: response.message || 'Global face reclustering completed successfully.',
+              message:
+                response.message ||
+                'Global face reclustering completed successfully.',
               variant: 'info',
             }),
           );
@@ -53,7 +60,9 @@ const ApplicationControlsCard: React.FC = () => {
           dispatch(
             showInfoDialog({
               title: 'Reclustering Failed',
-              message: response.message || 'Failed to complete global face reclustering.',
+              message:
+                response.message ||
+                'Failed to complete global face reclustering.',
               variant: 'error',
             }),
           );
@@ -61,7 +70,7 @@ const ApplicationControlsCard: React.FC = () => {
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      
+
       dispatch(hideLoader());
       setTimeout(() => {
         dispatch(
@@ -134,7 +143,7 @@ const ApplicationControlsCard: React.FC = () => {
         title="Application Controls"
         description="Manage updates, server operations, and face clustering"
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Button
             onClick={onCheckUpdatesClick}
             variant="outline"
