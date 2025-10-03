@@ -26,11 +26,17 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
   totalImages,
 }) => {
   const getFormattedDate = () => {
-    return new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    if (currentImage?.metadata?.date_created) {
+      return new Date(currentImage.metadata.date_created).toLocaleDateString(
+        'en-US',
+        {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        },
+      );
+    }
+    return 'Date not available';
   };
 
   const getImageName = () => {
@@ -86,12 +92,11 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs text-white/50">Location</p>
-            <p className="font-medium text-white">
-              {typeof currentImage?.metadata === 'string'
-                ? currentImage.metadata
-                : currentImage?.metadata
-                  ? JSON.stringify(currentImage.metadata)
-                  : 'No location data'}
+            <p
+              className="font-medium text-white"
+              title={currentImage?.metadata?.location || ''}
+            >
+              {currentImage?.metadata?.location || 'Location not available'}
             </p>
           </div>
         </div>
