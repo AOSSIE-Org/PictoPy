@@ -3,6 +3,9 @@ from PIL import Image, UnidentifiedImageError
 from PIL.ExifTags import TAGS
 from datetime import datetime
 from PIL.TiffImagePlugin import IFDRational
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def extract_metadata(image_path):
@@ -43,8 +46,8 @@ def extract_metadata(image_path):
 
                     metadata[str(tag).lower().replace(" ", "_")] = data
             except Exception as exif_error:
-                print(
-                    f"Warning: Failed to extract EXIF data from {image_path}. Error: {exif_error}"
+                logger.warning(
+                    f"Failed to extract EXIF data from {image_path}. Error: {exif_error}"
                 )
 
     except FileNotFoundError:
@@ -60,8 +63,8 @@ def extract_metadata(image_path):
     try:
         metadata["file_size"] = os.path.getsize(image_path)
     except OSError as file_error:
-        print(
-            f"Warning: Could not retrieve file size for {image_path}. Error: {file_error}"
+        logger.warning(
+            f"Could not retrieve file size for {image_path}. Error: {file_error}"
         )
 
     # Image creation date
@@ -71,7 +74,7 @@ def extract_metadata(image_path):
             "%Y-%m-%d %H:%M:%S"
         )
     except OSError as time_error:
-        print(
-            f"Warning: Could not retrieve creation date for {image_path}. Error: {time_error}"
+        logger.warning(
+            f"Could not retrieve creation date for {image_path}. Error: {time_error}"
         )
     return metadata

@@ -3,6 +3,10 @@
 import onnxruntime
 from app.utils.FaceNet import FaceNet_util_normalize_embedding
 from app.utils.ONNX import ONNX_util_get_execution_providers
+from app.logging.setup_logging import get_logger
+
+# Initialize logger
+logger = get_logger(__name__)
 
 
 class FaceNet:
@@ -22,4 +26,4 @@ class FaceNet:
 
     def close(self):
         del self.session
-        print("FaceNet model session closed.")
+        logger.info("FaceNet model session closed.")

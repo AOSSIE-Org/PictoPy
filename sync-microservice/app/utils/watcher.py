@@ -6,6 +6,9 @@ from watchfiles import watch, Change
 import httpx
 from app.database.folders import db_get_all_folders_with_ids
 from app.config.settings import PRIMARY_BACKEND_URL
+from app.logging.setup_logging import get_sync_logger
+
+logger = get_sync_logger(__name__)
 
 FolderIdPath = Tuple[str, str]
 
@@ -47,14 +50,14 @@ def watcher_util_handle_file_changes(changes: set) -> None:
     deleted_folder_ids = []
 
     for change, file_path in changes:
-        print(f"File change detected: {change} - {file_path}")
+        logger.info(f"File change detected: {change} - {file_path}")
 
         # Check if this is a deleted folder that we're watching
         is_deleted_watched_folder = False
         if change == Change.deleted:
             deleted_folder_id = watcher_util_get_folder_id_if_watched(file_path)
             if deleted_folder_id:
-                print(
+                logger.info(
                     f"  Watched folder deleted: {file_path} (ID: {deleted_folder_id})"
                 )
                 deleted_folder_ids.append(deleted_folder_id)
@@ -69,15 +72,15 @@ def watcher_util_handle_file_changes(changes: set) -> None:
 
             if closest_folder:
                 folder_id, folder_path = closest_folder
-                print(f"  Closest parent folder: {folder_path} (ID: {folder_id})")
+                logger.info(f"  Closest parent folder: {folder_path} (ID: {folder_id})")
 
                 watcher_util_call_sync_folder_api(folder_id, folder_path)
             else:
-                print(f"  No watched parent folder found for: {file_path}")
+                logger.info(f"  No watched parent folder found for: {file_path}")
 
     # If any watched folders were deleted, call the delete API
     if deleted_folder_ids:
-        print(f"Calling delete API for {len(deleted_folder_ids)} deleted folders")
+        logger.info(f"Calling delete API for {len(deleted_folder_ids)} deleted folders")
         watcher_util_call_delete_folders_api(deleted_folder_ids)
         watcher_util_restart_folder_watcher()
 
@@ -113,7 +116,7 @@ def watcher_util_find_closest_parent_folder(
                 if len(folder_path) > longest_match_length:
                     longest_match_length = len(folder_path)
                     best_match = (folder_id, folder_path)
-    print("best match: ", best_match)
+    logger.debug(f"best match: {best_match}")
 
     return best_match
 
@@ -134,16 +137,18 @@ def watcher_util_call_sync_folder_api(folder_id: str, folder_path: str) -> None:
             response = client.request("POST", url, json=payload)
 
             if response.status_code == 200:
-                print(f"Successfully synced folder {folder_path} (ID: {folder_id})")
+                logger.info(
+                    f"Successfully synced folder {folder_path} (ID: {folder_id})"
+                )
             else:
-                print(
+                logger.error(
                     f"Failed to sync folder {folder_path}. Status: {response.status_code}, Response: {response.text}"
                 )
 
     except httpx.RequestError as e:
-        print(f"Network error while syncing folder {folder_path}: {e}")
+        logger.error(f"Network error while syncing folder {folder_path}: {e}")
     except Exception as e:
-        print(f"Unexpected error while syncing folder {folder_path}: {e}")
+        logger.error(f"Unexpected error while syncing folder {folder_path}: {e}")
 
 
 def watcher_util_call_delete_folders_api(folder_ids: List[str]) -> None:
@@ -161,16 +166,16 @@ def watcher_util_call_delete_folders_api(folder_ids: List[str]) -> None:
             response = client.request("DELETE", url, json=payload)
 
             if response.status_code == 200:
-                print(f"Successfully deleted folders with IDs: {folder_ids}")
+                logger.info(f"Successfully deleted folders with IDs: {folder_ids}")
             else:
-                print(
+                logger.error(
                     f"Failed to delete folders. Status: {response.status_code}, Response: {response.text}"
                 )
 
     except httpx.RequestError as e:
-        print(f"Network error while deleting folders {folder_ids}: {e}")
+        logger.error(f"Network error while deleting folders {folder_ids}: {e}")
     except Exception as e:
-        print(f"Unexpected error while deleting folders {folder_ids}: {e}")
+        logger.error(f"Unexpected error while deleting folders {folder_ids}: {e}")
 
 
 def watcher_util_watcher_worker(folder_paths: List[str]) -> None:
@@ -181,16 +186,16 @@ def watcher_util_watcher_worker(folder_paths: List[str]) -> None:
         folder_paths: List of folder paths to watch
     """
     try:
-        print(f"Starting watcher for {len(folder_paths)} folders")
+        logger.info(f"Starting watcher for {len(folder_paths)} folders")
         for changes in watch(*folder_paths, stop_event=stop_event, recursive=False):
             if stop_event.is_set():
-                print("Stop event detected in watcher loop")
+                logger.info("Stop event detected in watcher loop")
                 break
             watcher_util_handle_file_changes(changes)
     except Exception as e:
-        print(f"Error in watcher worker: {e}")
+        logger.error(f"Error in watcher worker: {e}")
     finally:
-        print("Watcher stopped")
+        logger.info("Watcher stopped")
 
 
 def watcher_util_get_existing_folders(
@@ -210,7 +215,7 @@ def watcher_util_get_existing_folders(
         if os.path.exists(folder_path) and os.path.isdir(folder_path):
             existing_folders.append((folder_id, folder_path))
         else:
-            print(f"Warning: Folder does not exist: {folder_path}")
+            logger.warning(f"Folder does not exist: {folder_path}")
     return existing_folders
 
 
@@ -229,24 +234,24 @@ def watcher_util_start_folder_watcher() -> bool:
     global watcher_thread, watched_folders, folder_id_map
 
     if watcher_util_is_watcher_running():
-        print("Watcher is already running.")
+        logger.info("Watcher is already running.")
         return False
 
-    print("Initializing folder watcher...")
+    logger.info("Initializing folder watcher...")
 
     try:
         # Simple synchronous database call
         folders = db_get_all_folders_with_ids()
         if not folders:
-            print("No folders found in database")
+            logger.info("No folders found in database")
             return False
 
-        print(f"Found {len(folders)} folders in database")
+        logger.info(f"Found {len(folders)} folders in database")
 
         # Simple synchronous file system checks
         existing_folders = watcher_util_get_existing_folders(folders)
         if not existing_folders:
-            print("No existing folders to watch")
+            logger.info("No existing folders to watch")
             return False
 
         watched_folders = existing_folders
@@ -256,9 +261,9 @@ def watcher_util_start_folder_watcher() -> bool:
 
         folder_paths = [folder_path for _, folder_path in existing_folders]
 
-        print(f"Starting to watch {len(folder_paths)} folders:")
+        logger.info(f"Starting to watch {len(folder_paths)} folders:")
         for folder_id, folder_path in existing_folders:
-            print(f"  - {folder_path} (ID: {folder_id})")
+            logger.info(f"  - {folder_path} (ID: {folder_id})")
 
         # Reset stop event and start background thread
         stop_event.clear()
@@ -269,11 +274,11 @@ def watcher_util_start_folder_watcher() -> bool:
         )
         watcher_thread.start()
 
-        print("Folder watcher started successfully")
+        logger.info("Folder watcher started successfully")
         return True
 
     except Exception as e:
-        print(f"Error starting folder watcher: {e}")
+        logger.error(f"Error starting folder watcher: {e}")
         return False
 
 
@@ -282,11 +287,11 @@ def watcher_util_stop_folder_watcher() -> None:
     global watcher_thread, watched_folders, folder_id_map
 
     if not watcher_util_is_watcher_running():
-        print("Watcher is not running")
+        logger.info("Watcher is not running")
         return
 
     try:
-        print("Stopping folder watcher...")
+        logger.info("Stopping folder watcher...")
 
         # Signal the watcher to stop
         stop_event.set()
@@ -295,12 +300,12 @@ def watcher_util_stop_folder_watcher() -> None:
         watcher_thread.join(timeout=5.0)
 
         if watcher_thread.is_alive():
-            print("Warning: Watcher thread did not stop gracefully")
+            logger.warning("Warning: Watcher thread did not stop gracefully")
         else:
-            print("Watcher stopped successfully")
+            logger.info("Watcher stopped successfully")
 
     except Exception as e:
-        print(f"Error stopping watcher: {e}")
+        logger.error(f"Error stopping watcher: {e}")
     finally:
         watcher_thread = None
         # Clear state
@@ -315,7 +320,7 @@ def watcher_util_restart_folder_watcher() -> bool:
     Returns:
         True if restart was successful, False otherwise
     """
-    print("Restarting folder watcher...")
+    logger.info("Restarting folder watcher...")
     watcher_util_stop_folder_watcher()
     return watcher_util_start_folder_watcher()
 
@@ -342,27 +347,27 @@ def watcher_util_wait_for_watcher() -> None:
         try:
             watcher_thread.join()  # Wait indefinitely
         except KeyboardInterrupt:
-            print("Interrupted by user")
+            logger.info("Interrupted by user")
             watcher_util_stop_folder_watcher()
     else:
-        print("No watcher thread to wait for")
+        logger.info("No watcher thread to wait for")
 
 
 # Simple usage examples
 def main():
     """Simple example of how to use the folder watcher."""
-    print("Starting folder watcher example...")
+    logger.info("Starting folder watcher example...")
 
     success = watcher_util_start_folder_watcher()
     if success:
-        print("Watcher started, will run for 10 seconds...")
+        logger.info("Watcher started, will run for 10 seconds...")
         try:
             time.sleep(10)  # Just sleep - no async complexity!
         except KeyboardInterrupt:
-            print("Interrupted by user")
+            logger.info("Interrupted by user")
         finally:
             watcher_util_stop_folder_watcher()
     else:
-        print("Failed to start watcher")
+        logger.error("Failed to start watcher")
 
-    print("Example finished")
+    logger.info("Example finished")

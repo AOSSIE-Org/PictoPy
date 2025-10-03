@@ -11,6 +11,7 @@ from app.database.folders import (
     db_get_folder_ids_by_path_prefix,
     db_get_all_folder_details,
 )
+from app.logging.setup_logging import get_logger
 from app.schemas.folders import (
     AddFolderRequest,
     AddFolderResponse,
@@ -44,6 +45,8 @@ from app.utils.images import (
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.utils.API import API_util_restart_sync_microservice_watcher
 
+# Initialize logger
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -63,7 +66,7 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
         for folder_id_from_db, folder_path_from_db in folder_ids_and_paths:
             folder_data.append((folder_path_from_db, folder_id_from_db, False))
 
-        print("Add folder: ", folder_data)
+        logger.info(f"Add folder: {folder_data}")
         # Process images in all folders
         image_util_process_folder_images(folder_data)
 
@@ -71,7 +74,9 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
         API_util_restart_sync_microservice_watcher()
 
     except Exception as e:
-        print(f"Error in post processing after folder {folder_path} was added: {e}")
+        logger.error(
+            f"Error in post processing after folder {folder_path} was added: {e}"
+        )
         return False
     return True
 
@@ -86,7 +91,7 @@ def post_AI_tagging_enabled_sequence():
         image_util_process_untagged_images()
         cluster_util_face_clusters_sync()
     except Exception as e:
-        print(f"Error in post processing after AI tagging was enabled: {e}")
+        logger.error(f"Error in post processing after AI tagging was enabled: {e}")
         return False
     return True
 
@@ -108,7 +113,7 @@ def post_sync_folder_sequence(
         for added_folder_id, added_folder_path in added_folders:
             folder_data.append((added_folder_path, added_folder_id, False))
 
-        print("Sync folder: ", folder_data)
+        logger.info(f"Sync folder: {folder_data}")
         # Process images in all folders
         image_util_process_folder_images(folder_data)
         image_util_process_untagged_images()
@@ -117,7 +122,9 @@ def post_sync_folder_sequence(
         # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()
     except Exception as e:
-        print(f"Error in post processing after folder {folder_path} was synced: {e}")
+        logger.error(
+            f"Error in post processing after folder {folder_path} was synced: {e}"
+        )
         return False
     return True
 

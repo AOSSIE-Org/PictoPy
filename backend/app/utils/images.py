@@ -15,6 +15,9 @@ from app.database.images import (
 )
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -> bool:
@@ -55,7 +58,7 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
                 all_image_records.extend(folder_image_records)
 
             except Exception as e:
-                print(f"Error processing folder {folder_path}: {e}")
+                logger.error(f"Error processing folder {folder_path}: {e}")
                 continue  # Continue with other folders even if one fails
 
         # Step 4: Remove obsolete images that no longer exist in filesystem
@@ -68,7 +71,7 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
 
         return True  # No images to process is not an error
     except Exception as e:
-        print(f"Error processing folders: {e}")
+        logger.error(f"Error processing folders: {e}")
         return False
 
 
@@ -85,12 +88,12 @@ def image_util_process_untagged_images() -> bool:
 
         return True
     except Exception as e:
-        print(f"Error processing untagged images: {e}")
+        logger.error(f"Error processing untagged images: {e}")
         return False
 
 
 def image_util_classify_and_face_detect_images(
-    untagged_images: List[Dict[str, str]]
+    untagged_images: List[Dict[str, str]],
 ) -> None:
     """Classify untagged images and detect faces if applicable."""
     object_classifier = ObjectClassifier()
@@ -107,7 +110,7 @@ def image_util_classify_and_face_detect_images(
             if len(classes) > 0:
                 # Create image-class pairs
                 image_class_pairs = [(image_id, class_id) for class_id in classes]
-                print(image_class_pairs)
+                logger.debug(f"Image-class pairs: {image_class_pairs}")
 
                 # Insert the pairs into the database
                 db_insert_image_classes_batch(image_class_pairs)
@@ -195,7 +198,7 @@ def image_util_get_images_from_folder(
                 if os.path.isfile(file_path) and image_util_is_valid_image(file_path):
                     image_files.append(file_path)
         except OSError as e:
-            print(f"Error reading folder {folder_path}: {e}")
+            logger.error(f"Error reading folder {folder_path}: {e}")
 
     return image_files
 
@@ -215,7 +218,7 @@ def image_util_generate_thumbnail(
             img.save(thumbnail_path, "JPEG")  # Always save thumbnails as JPEG
         return True
     except Exception as e:
-        print(f"Error generating thumbnail for {image_path}: {e}")
+        logger.error(f"Error generating thumbnail for {image_path}: {e}")
         return False
 
 
@@ -239,19 +242,19 @@ def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
             if thumbnail_path and os.path.exists(thumbnail_path):
                 try:
                     os.remove(thumbnail_path)
-                    print(f"Removed obsolete thumbnail: {thumbnail_path}")
+                    logger.info(f"Removed obsolete thumbnail: {thumbnail_path}")
                 except OSError as e:
-                    print(f"Error removing thumbnail {thumbnail_path}: {e}")
+                    logger.error(f"Error removing thumbnail {thumbnail_path}: {e}")
 
     if obsolete_images:
         db_delete_images_by_ids(obsolete_images)
-        print(f"Removed {len(obsolete_images)} obsolete image(s) from database")
+        logger.info(f"Removed {len(obsolete_images)} obsolete image(s) from database")
 
     return len(obsolete_images)
 
 
 def image_util_create_folder_path_mapping(
-    folder_ids: List[Tuple[int, str]]
+    folder_ids: List[Tuple[int, str]],
 ) -> Dict[str, int]:
     """
     Create a dictionary mapping folder paths to their IDs.
