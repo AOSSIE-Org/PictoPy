@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Upload, Camera, ScanFace } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,8 +19,16 @@ import { fetchSearchedFaces } from '@/api/api-functions';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useNavigate } from 'react-router';
 import { ROUTES } from '@/constants/routes';
+import Webcam from 'react-webcam';
+
 export function FaceSearchDialog() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDevicePickerOpen, setIsDevicePickerOpen] = useState(false);
+  const [isWebcamOpen, setIsWebcamOpen] = useState(false);
+  const [webcamError, setWebcamError] = useState<string | null>(null);
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>(undefined);
+  const webcamRef = useRef<Webcam>(null);
   const { pickSingleFile } = useFile({ title: 'Select File' });
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -67,61 +75,211 @@ export function FaceSearchDialog() {
       getSearchImages(filePath);
     }
   };
+
+  // selecting device ids (or device for camera) from here. in default camera selection, it always takes the first camera from the list and it was not working properly as the first camera of my device was not from this device, so, I had to implement this method. If not problematic, this can be removed later.
+  useEffect(() => {
+    if (isDevicePickerOpen) {
+      navigator.mediaDevices.enumerateDevices().then((mediaDevices) => {
+        const videoDevices = mediaDevices.filter(({ kind }) => kind === 'videoinput');
+        setDevices(videoDevices);
+      });
+    }
+  }, [isDevicePickerOpen]);
+
+  const handleOpenWebcam = () => {
+    setWebcamError(null);
+    setIsDialogOpen(false);
+    setIsDevicePickerOpen(true);
+  };
+
+  const handleDeviceSelect = (deviceId: string) => {
+    setSelectedDeviceId(deviceId);
+    setIsDevicePickerOpen(false);
+    setIsWebcamOpen(true);
+  };
+
+  const handleCapture = async () => {
+    try {
+      const imageSrc = webcamRef.current?.getScreenshot();
+      if (!imageSrc) {
+        dispatch(
+          showInfoDialog({
+            title: 'Capture Failed',
+            message: 'Could not capture image from webcam.',
+            variant: 'error',
+          }),
+        );
+        return;
+      }
+
+
+      const response = await fetch(imageSrc);
+      const blob = await response.blob();
+      // const file = new File([blob], 'webcam-capture.jpg', { type: 'image/jpeg' });
+
+      // const { save } = await import('@tauri-apps/plugin-dialog');
+      const { writeFile } = await import('@tauri-apps/plugin-fs');
+      const { tempDir } = await import('@tauri-apps/api/path');
+
+      const tempDirPath = await tempDir();
+      const tempFilePath = `${tempDirPath}/webcam-capture-${Date.now()}.jpg`;
+
+      const arrayBuffer = await blob.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+
+      await writeFile(tempFilePath, uint8Array);
+
+      setIsWebcamOpen(false);
+      navigate(`/${ROUTES.HOME}`);
+      dispatch(startSearch(tempFilePath));
+      dispatch(showLoader('Searching faces...'));
+      getSearchImages(tempFilePath);
+    } catch (error) {
+      console.error('Error capturing webcam image:', error);
+      dispatch(
+        showInfoDialog({
+          title: 'Capture Failed',
+          message: 'Failed to save webcam capture. Please try again.',
+          variant: 'error',
+        }),
+      );
+    }
+  };
+
+  const handleWebcamError = (error: string | DOMException) => {
+    console.error('Webcam error:', error);
+    setWebcamError(
+      'Could not access webcam. Please check permissions and ensure no other application is using it.',
+    );
+  };
+
   return (
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogTrigger asChild>
-        <Button
-          onClick={() => setIsDialogOpen(true)}
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 p-1"
-        >
-          <ScanFace className="h-4 w-4" />
-          <span className="sr-only">Face Detection Search</span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Face Detection Search</DialogTitle>
-          <DialogDescription>
-            Search for images containing specific faces by uploading a photo or
-            using your webcam.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid grid-cols-2 gap-4 py-4">
+    <>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
           <Button
-            onClick={handlePickFile}
-            disabled={false}
-            className="flex h-32 flex-col items-center justify-center gap-2 p-0"
-            variant="outline"
+            onClick={() => setIsDialogOpen(true)}
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 p-1"
           >
-            <Upload className="text-muted-foreground mb-1 h-8 w-8" />
-            <span className="text-sm font-medium">Upload Photo</span>
-            <span className="text-muted-foreground text-center text-xs">
-              Browse your computer
-            </span>
+            <ScanFace className="h-4 w-4" />
+            <span className="sr-only">Face Detection Search</span>
           </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Face Detection Search</DialogTitle>
+            <DialogDescription>
+              Search for images containing specific faces by uploading a photo or
+              using your webcam.
+            </DialogDescription>
+          </DialogHeader>
 
-          <Button
-            onClick={() => {}}
-            disabled={false}
-            className="flex h-32 flex-col items-center justify-center gap-2 p-0"
-            variant="outline"
-          >
-            <Camera className="text-muted-foreground mb-1 h-8 w-8" />
-            <span className="text-sm font-medium">Use Webcam</span>
-            <span className="text-muted-foreground text-center text-xs">
-              Capture with camera
-            </span>
-          </Button>
-        </div>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <Button
+              onClick={handlePickFile}
+              disabled={false}
+              className="flex h-32 flex-col items-center justify-center gap-2 p-0"
+              variant="outline"
+            >
+              <Upload className="text-muted-foreground mb-1 h-8 w-8" />
+              <span className="text-sm font-medium">Upload Photo</span>
+              <span className="text-muted-foreground text-center text-xs">
+                Browse your computer
+              </span>
+            </Button>
 
-        <p className="text-muted-foreground mt-2 text-xs">
-          PictoPy will analyze the face and find matching images in your
-          gallery.
-        </p>
-      </DialogContent>
-    </Dialog>
+            <Button
+              onClick={handleOpenWebcam}
+              disabled={false}
+              className="flex h-32 flex-col items-center justify-center gap-2 p-0"
+              variant="outline"
+            >
+              <Camera className="text-muted-foreground mb-1 h-8 w-8" />
+              <span className="text-sm font-medium">Use Webcam</span>
+              <span className="text-muted-foreground text-center text-xs">
+                Capture with camera
+              </span>
+            </Button>
+          </div>
+
+          <p className="text-muted-foreground mt-2 text-xs">
+            PictoPy will analyze the face and find matching images in your
+            gallery.
+          </p>
+        </DialogContent>
+      </Dialog>
+
+      {/* Device Picker Dialog */}
+      <Dialog open={isDevicePickerOpen} onOpenChange={setIsDevicePickerOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Camera Device</DialogTitle>
+            <DialogDescription>
+              Choose which camera you want to use for capturing a photo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            {devices.length === 0 && (
+              <p className="text-muted-foreground text-sm">No camera devices found.</p>
+            )}
+            {devices.map(device => (
+              <Button
+                key={device.deviceId}
+                onClick={() => handleDeviceSelect(device.deviceId)}
+                className="justify-start"
+                variant={selectedDeviceId === device.deviceId ? "default" : "outline"}
+              >
+                {device.label || `Camera ${device.deviceId}`}
+              </Button>
+            ))}
+            <Button variant="outline" onClick={() => setIsDevicePickerOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Webcam Dialog */}
+      <Dialog open={isWebcamOpen} onOpenChange={setIsWebcamOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Capture Photo</DialogTitle>
+            <DialogDescription>
+              Position your face in the camera and click capture.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4">
+            {webcamError ? (
+              <div className="flex h-60 w-full items-center justify-center rounded-lg bg-muted p-4 text-center">
+                <p className="text-sm text-destructive">{webcamError}</p>
+              </div>
+            ) : (
+              <Webcam
+                audio={false}
+                ref={webcamRef}
+                screenshotFormat="image/jpeg"
+                className="rounded-lg"
+                videoConstraints={{
+                  deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
+                  width: 640,
+                  height: 480,
+                }}
+                onUserMediaError={handleWebcamError}
+              />
+            )}
+            <div className="flex gap-2">
+              <Button onClick={handleCapture} disabled={!!webcamError}>
+                Capture
+              </Button>
+              <Button variant="outline" onClick={() => setIsWebcamOpen(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
