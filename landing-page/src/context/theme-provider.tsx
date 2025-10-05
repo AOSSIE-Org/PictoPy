@@ -24,7 +24,7 @@ function validateThemeCode(themeCode: number): boolean {
 }
 
 function getInitialTheme(): ThemeOptions {
-    const storedTheme = localStorage.getItem("Theme");
+    const storedTheme = '';
     
     if (storedTheme) {
         const themeCode = parseInt(storedTheme, 10);
@@ -43,18 +43,6 @@ function getInitialTheme(): ThemeOptions {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setTheme] = useState<ThemeOptions>(getInitialTheme());
-
-    useEffect(() => {
-        const bodyElement = document.body;
-
-        if (theme === ThemeOptions.Light) {
-            localStorage.setItem("Theme", String(ThemeOptions.Light));
-            bodyElement.classList.remove("dark");
-        } else {
-            localStorage.setItem("Theme", String(ThemeOptions.Dark));
-            bodyElement.classList.add("dark");
-        }
-    }, [theme]);
 
     const toggleTheme = () => {
         setTheme(prevTheme => prevTheme === ThemeOptions.Dark ? ThemeOptions.Light : ThemeOptions.Dark);
