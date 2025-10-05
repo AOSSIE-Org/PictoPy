@@ -20,6 +20,7 @@ import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useNavigate } from 'react-router';
 import { ROUTES } from '@/constants/routes';
 import WebcamComponent from '../WebCam/WebCamComponent';
+
 export function FaceSearchDialog() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
@@ -95,8 +96,21 @@ export function FaceSearchDialog() {
     }
   };
   const handleWebCam = async () => {
-    setShowCamera(true);
-    setCapturedImageUrl(null);
+    try {
+      await navigator.mediaDevices.getUserMedia({ video: true });
+
+      setShowCamera(true);
+      setCapturedImageUrl(null);
+    } catch (error) {
+      dispatch(
+        showInfoDialog({
+          title: "Webcam doesn't support",
+          message:
+            'Webcam is not supported or access was denied on this device.',
+          variant: 'error',
+        }),
+      );
+    }
   };
 
   const handlePickFile = async () => {
