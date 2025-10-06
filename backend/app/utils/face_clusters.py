@@ -9,7 +9,6 @@ from sklearn.cluster import DBSCAN
 from collections import defaultdict, Counter
 from typing import List, Dict, Optional, Union
 from numpy.typing import NDArray
-from contextlib import contextmanager
 
 from app.database.faces import (
     db_get_all_faces_with_cluster_names,
@@ -18,33 +17,12 @@ from app.database.faces import (
     db_get_cluster_mean_embeddings,
 )
 from app.database.face_clusters import db_delete_all_clusters, db_insert_clusters_batch
-
 from app.database.metadata import (
     db_get_metadata,
     db_update_metadata,
 )
+from app.database.connection import get_db_connection
 from app.config.settings import DATABASE_PATH
-
-
-@contextmanager
-def database_transaction():
-    """
-    Context manager for database transactions.
-    Provides a shared connection for all database operations within the context.
-    Automatically commits on success or rolls back on failure.
-    """
-    conn = sqlite3.connect(DATABASE_PATH)
-    # Enable foreign key constraints for data integrity
-    conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("BEGIN")
-    try:
-        yield conn
-        conn.commit()
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        conn.close()
 
 
 class ClusterResult:
@@ -132,7 +110,7 @@ def cluster_util_face_clusters_sync():
         cluster_list = list(unique_clusters.values())
 
         # Perform all database operations within a single transaction
-        with database_transaction() as conn:
+        with get_db_connection() as conn:
             # Clear old clusters first
             db_delete_all_clusters(conn)
 
@@ -155,7 +133,7 @@ def cluster_util_face_clusters_sync():
             db_update_metadata(current_metadata, conn)
     else:
         face_cluster_mappings = cluster_util_assign_cluster_to_faces_without_clusterId()
-        with database_transaction() as conn:
+        with get_db_connection() as conn:
             db_update_face_cluster_ids_batch(face_cluster_mappings, conn)
 
 
