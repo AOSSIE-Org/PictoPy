@@ -49,19 +49,25 @@ def db_get_metadata() -> Optional[Dict[str, Any]]:
     return None
 
 
-def db_update_metadata(metadata: Dict[str, Any]) -> bool:
+def db_update_metadata(
+    metadata: Dict[str, Any], conn: Optional[sqlite3.Connection] = None
+) -> bool:
     """
     Update the metadata in the database.
 
     Args:
         metadata: Dictionary containing metadata to store
+        conn: Optional existing database connection. If None, creates a new connection.
 
     Returns:
         True if the metadata was updated, False otherwise
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    # Use provided connection or create a new one
+    own_connection = conn is None
+    if own_connection:
+        conn = sqlite3.connect(DATABASE_PATH)
 
+    cursor = conn.cursor()
     metadata_json = json.dumps(metadata)
 
     # Delete all existing rows and insert new one
@@ -69,7 +75,10 @@ def db_update_metadata(metadata: Dict[str, Any]) -> bool:
     cursor.execute("INSERT INTO metadata (metadata) VALUES (?)", (metadata_json,))
 
     updated = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
+
+    # Only commit and close if we created our own connection
+    if own_connection:
+        conn.commit()
+        conn.close()
 
     return updated
