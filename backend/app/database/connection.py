@@ -27,7 +27,10 @@ def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
     """
     max_retries = 3
     retry_delay = 0.1
+    conn = None
+    last_err = None
 
+    # Retry only the connection establishment, not the transaction execution
     for attempt in range(max_retries):
         try:
             conn = sqlite3.connect(DATABASE_PATH, timeout=30.0)
@@ -37,20 +40,25 @@ def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
             conn.execute("PRAGMA busy_timeout=30000")
             # Enable foreign keys for data integrity
             conn.execute("PRAGMA foreign_keys=ON")
-
-            try:
-                yield conn
-                conn.commit()
-            except Exception as e:
-                conn.rollback()
-                raise e
-            finally:
-                conn.close()
+            last_err = None
             break
-
         except sqlite3.OperationalError as e:
+            last_err = e
             if "database is locked" in str(e).lower() and attempt < max_retries - 1:
                 time.sleep(retry_delay * (2**attempt))  # Exponential backoff
                 continue
-            else:
-                raise e
+            raise
+
+    if conn is None:
+        # Shouldn't happen, but keep a clear failure path
+        raise last_err or RuntimeError("Failed to establish database connection")
+
+    # Now yield the connection exactly once
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
