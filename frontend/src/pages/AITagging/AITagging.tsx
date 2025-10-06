@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 import { FaceCollections } from '@/components/FaceCollections';
+import { EmptyAITaggingState } from '@/components/EmptyStates/EmptyAITaggingState';
 import { Image } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
@@ -52,16 +53,23 @@ export const AITagging = () => {
       {/* Image Grid */}
       <div className="mb-6">
         <h2 className="mb-4 text-xl font-semibold">All Images</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {taggedImages.map((image, index) => (
-            <ImageCard
-              key={image.id}
-              image={image}
-              imageIndex={index}
-              className="w-full"
-            />
-          ))}
-        </div>
+
+        {/* Empty State Placeholder */}
+        {taggedImages.length === 0 && !imagesLoading && <EmptyAITaggingState />}
+
+        {/* Image Grid */}
+        {taggedImages.length > 0 && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {taggedImages.map((image, index) => (
+              <ImageCard
+                key={image.id}
+                image={image}
+                imageIndex={index}
+                className="w-full"
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Media Viewer Modal */}

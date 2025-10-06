@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
+import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { Image } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
@@ -64,17 +65,22 @@ export const Home = () => {
     <div className="p-6">
       <h1 className="mb-6 text-2xl font-bold">{title}</h1>
 
+      {/* Empty State Placeholder */}
+      {displayImages.length === 0 && !isLoading && <EmptyGalleryState />}
+
       {/* Image Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {displayImages.map((image, index) => (
-          <ImageCard
-            key={image.id}
-            image={image}
-            imageIndex={index}
-            className="w-full"
-          />
-        ))}
-      </div>
+      {displayImages.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {displayImages.map((image, index) => (
+            <ImageCard
+              key={image.id}
+              image={image}
+              imageIndex={index}
+              className="w-full"
+            />
+          ))}
+        </div>
+      )}
 
       {/* Media Viewer Modal */}
       {isImageViewOpen && (
