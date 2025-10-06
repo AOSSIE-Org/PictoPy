@@ -81,7 +81,9 @@ def db_insert_album(
     cursor = conn.cursor()
     password_hash = None
     if password:
-        password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        password_hash = bcrypt.hashpw(
+            password.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
     cursor.execute(
         """
         INSERT INTO albums (album_id, album_name, description, is_hidden, password_hash)
@@ -104,7 +106,9 @@ def db_update_album(
     cursor = conn.cursor()
     password_hash = None
     if password:
-        password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        password_hash = bcrypt.hashpw(
+            password.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
     cursor.execute(
         """
         UPDATE albums
@@ -138,7 +142,9 @@ def db_add_images_to_album(album_id: str, image_ids: list[str]):
     with get_db_connection() as conn:
         cursor = conn.cursor()
 
-        query = f"SELECT id FROM images WHERE id IN ({','.join('?' for _ in image_ids)})"
+        query = (
+            f"SELECT id FROM images WHERE id IN ({','.join('?' for _ in image_ids)})"
+        )
         cursor.execute(query, image_ids)
         valid_images = [row[0] for row in cursor.fetchall()]
 
