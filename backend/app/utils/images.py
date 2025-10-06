@@ -5,8 +5,6 @@ import json
 from typing import List, Tuple, Dict, Any, Mapping
 from PIL import Image, ExifTags
 from pathlib import Path
-from geopy.geocoders import Nominatim
-from geopy.extra.rate_limiter import RateLimiter
 
 from app.config.settings import THUMBNAIL_IMAGES_PATH
 from app.database.images import (
@@ -317,6 +315,72 @@ def image_util_is_valid_image(file_path: str) -> bool:
         return False
 
 
+def _extract_gps_coordinates(exif_data: Any) -> Tuple[float | None, float | None]:
+    """
+    Extracts GPS coordinates from EXIF data.
+    Args:
+        exif_data: The EXIF data from an image (PIL.Image.Exif object).
+    Returns:
+        A tuple containing latitude and longitude, or (None, None) if not found.
+    """
+    latitude = None
+    longitude = None
+    GPS_INFO_TAG = 34853
+
+    if exif_data:
+        gps_data = exif_data.get_ifd(GPS_INFO_TAG)
+        if isinstance(gps_data, dict):
+            try:
+
+                def _convert_to_degrees(value):
+                    if hasattr(value[0], "numerator"):
+                        d = float(value[0].numerator) / float(value[0].denominator)
+                    else:
+                        d = float(value[0])
+                    if hasattr(value[1], "numerator"):
+                        m = float(value[1].numerator) / float(value[1].denominator)
+                    else:
+                        m = float(value[1])
+                    if hasattr(value[2], "numerator"):
+                        s = float(value[2].numerator) / float(value[2].denominator)
+                    else:
+                        s = float(value[2])
+                    return d + (m / 60.0) + (s / 3600.0)
+
+                lat_dms = gps_data.get(2)
+                lat_ref = gps_data.get(1)
+                lon_dms = gps_data.get(4)
+                lon_ref = gps_data.get(3)
+
+                if lat_dms and lat_ref and lon_dms and lon_ref:
+                    if isinstance(lat_ref, bytes):
+                        lat_ref = lat_ref.decode("ascii")
+                    if isinstance(lon_ref, bytes):
+                        lon_ref = lon_ref.decode("ascii")
+
+                    latitude = _convert_to_degrees(lat_dms)
+                    if lat_ref.strip() != "N":
+                        latitude = -latitude
+
+                    longitude = _convert_to_degrees(lon_dms)
+                    if lon_ref.strip() != "E":
+                        longitude = -longitude
+            except (
+                KeyError,
+                IndexError,
+                TypeError,
+                ValueError,
+                AttributeError,
+            ):
+                latitude = None
+                longitude = None
+        else:
+            latitude = None
+            longitude = None
+
+    return latitude, longitude
+
+
 def image_util_extract_metadata(image_path: str) -> dict:
     """Extract metadata for a given image file with detailed debug logging."""
     # print(f"[DEBUG] extract_image_metadata called for: {image_path}")
@@ -354,72 +418,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
 
                 exif = dict(exif_data) if exif_data else {}
                 dt_original = None
-                latitude = None
-                longitude = None
-
-                # GPS Info Extraction
-                gps_info_tag = None
-                for tag, name in ExifTags.TAGS.items():
-                    if name == "GPSInfo":
-                        gps_info_tag = tag
-                        break
-
-                if gps_info_tag and exif_data:
-                    gps_data = exif_data.get_ifd(gps_info_tag)
-                    if isinstance(gps_data, dict):
-                        try:
-
-                            def _convert_to_degrees(value):
-                                if hasattr(value[0], "numerator"):
-                                    d = float(value[0].numerator) / float(
-                                        value[0].denominator
-                                    )
-                                else:
-                                    d = float(value[0])
-                                if hasattr(value[1], "numerator"):
-                                    m = float(value[1].numerator) / float(
-                                        value[1].denominator
-                                    )
-                                else:
-                                    m = float(value[1])
-                                if hasattr(value[2], "numerator"):
-                                    s = float(value[2].numerator) / float(
-                                        value[2].denominator
-                                    )
-                                else:
-                                    s = float(value[2])
-                                return d + (m / 60.0) + (s / 3600.0)
-
-                            lat_dms = gps_data.get(2)
-                            lat_ref = gps_data.get(1)
-                            lon_dms = gps_data.get(4)
-                            lon_ref = gps_data.get(3)
-
-                            if lat_dms and lat_ref and lon_dms and lon_ref:
-                                if isinstance(lat_ref, bytes):
-                                    lat_ref = lat_ref.decode("ascii")
-                                if isinstance(lon_ref, bytes):
-                                    lon_ref = lon_ref.decode("ascii")
-
-                                latitude = _convert_to_degrees(lat_dms)
-                                if lat_ref.strip() != "N":
-                                    latitude = -latitude
-
-                                longitude = _convert_to_degrees(lon_dms)
-                                if lon_ref.strip() != "E":
-                                    longitude = -longitude
-                        except (
-                            KeyError,
-                            IndexError,
-                            TypeError,
-                            ValueError,
-                            AttributeError,
-                        ):
-                            latitude = None
-                            longitude = None
-                    else:
-                        latitude = None
-                        longitude = None
+                latitude, longitude = _extract_gps_coordinates(exif_data)
 
                 for k, v in exif.items():
                     if ExifTags.TAGS.get(k) == "DateTimeOriginal":
@@ -446,18 +445,6 @@ def image_util_extract_metadata(image_path: str) -> dict:
                         stats.st_mtime
                     ).isoformat()
 
-                location = None
-                if latitude is not None and longitude is not None:
-                    try:
-                        geolocator = Nominatim(user_agent="pictopy_app")
-                        reverse = RateLimiter(geolocator.reverse, min_delay_seconds=1)
-                        location_data = reverse((latitude, longitude), exactly_one=True)
-                        if location_data:
-                            location = location_data.address
-                    except Exception as e:
-                        print(f"[WARN] Geocoding failed: {e}")
-                        location = None
-
             metadata_dict = {
                 "name": os.path.basename(image_path),
                 "date_created": date_created,
@@ -471,8 +458,6 @@ def image_util_extract_metadata(image_path: str) -> dict:
             if latitude is not None and longitude is not None:
                 metadata_dict["latitude"] = latitude
                 metadata_dict["longitude"] = longitude
-            if location:
-                metadata_dict["location"] = location
 
             return metadata_dict
 

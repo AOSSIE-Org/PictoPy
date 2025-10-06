@@ -45,6 +45,18 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
     return currentImage.path?.split(/[/\\]/).pop() || 'Image';
   };
 
+  const handleLocationClick = async () => {
+    if (currentImage?.metadata?.latitude && currentImage?.metadata?.longitude) {
+      const { latitude, longitude } = currentImage.metadata;
+      const url = `https://maps.google.com/?q=${latitude},${longitude}`;
+      try {
+        await open(url);
+      } catch (error) {
+        console.error('Failed to open map URL:', error);
+      }
+    }
+  };
+
   if (!show) return null;
 
   return (
@@ -92,12 +104,18 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs text-white/50">Location</p>
-            <p
-              className="font-medium text-white"
-              title={currentImage?.metadata?.location || ''}
-            >
-              {currentImage?.metadata?.location || 'Location not available'}
-            </p>
+            {currentImage?.metadata?.latitude &&
+            currentImage?.metadata?.longitude ? (
+              <button
+                onClick={handleLocationClick}
+                className="w-full cursor-pointer truncate text-left font-medium text-white hover:underline"
+                title={`Lat: ${currentImage.metadata.latitude}, Lon: ${currentImage.metadata.longitude}`}
+              >
+                {`Lat: ${currentImage.metadata.latitude.toFixed(4)}, Lon: ${currentImage.metadata.longitude.toFixed(4)}`}
+              </button>
+            ) : (
+              <p className="font-medium text-white">Location not available</p>
+            )}
           </div>
         </div>
 
