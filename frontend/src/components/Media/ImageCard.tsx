@@ -32,7 +32,6 @@ export function ImageCard({
   const tags = image.tags || [];
 
   const handleImageClick = useCallback(() => {
-    console.log(imageIndex);
     dispatch(setCurrentViewIndex(imageIndex));
   }, [dispatch, imageIndex]);
 
