@@ -27,7 +27,7 @@ export function FaceCollections() {
       const filteredClusters = clusters.filter((c) => c.face_count > 0);
 
       dispatch(setClusters(filteredClusters));
-      console.log(filteredClusters);
+      // console.log(filteredClusters);
     }
   }, [clustersData, clustersSuccess, dispatch]);
 
