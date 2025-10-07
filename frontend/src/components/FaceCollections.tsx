@@ -23,8 +23,8 @@ export function FaceCollections() {
   useEffect(() => {
   if (clustersSuccess && clustersData?.data?.clusters) {
     const clusters = (clustersData.data.clusters || []) as Cluster[];
-    console.log("cluseters from api:");
-    console.log(clusters);
+    // console.log("cluseters from api:");
+    // console.log(clusters);
     // Filter out clusters with zero faces
     const filteredClusters = clusters.filter(c => c.face_count > 0);
     dispatch(setClusters(filteredClusters));
