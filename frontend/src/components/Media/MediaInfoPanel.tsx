@@ -107,6 +107,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
             {currentImage?.metadata?.latitude &&
             currentImage?.metadata?.longitude ? (
               <button
+                type="button"
                 onClick={handleLocationClick}
                 className="w-full cursor-pointer truncate text-left font-medium text-white hover:underline"
                 title={`Lat: ${currentImage.metadata.latitude}, Lon: ${currentImage.metadata.longitude}`}
