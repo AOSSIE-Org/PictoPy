@@ -19,6 +19,10 @@ from app.database.images import (
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
 
+
+# GPS EXIF tag constant
+GPS_INFO_TAG = 34853
+
 logger = logging.getLogger(__name__)
 
 
@@ -320,18 +324,15 @@ def image_util_is_valid_image(file_path: str) -> bool:
 
 def _convert_to_degrees(value):
     """Converts a GPS coordinate value from DMS to decimal degrees."""
-    if hasattr(value[0], "numerator"):
-        d = float(value[0].numerator) / float(value[0].denominator)
-    else:
-        d = float(value[0])
-    if hasattr(value[1], "numerator"):
-        m = float(value[1].numerator) / float(value[1].denominator)
-    else:
-        m = float(value[1])
-    if hasattr(value[2], "numerator"):
-        s = float(value[2].numerator) / float(value[2].denominator)
-    else:
-        s = float(value[2])
+
+    def to_float(v):
+        return (
+            float(v.numerator) / float(v.denominator)
+            if hasattr(v, "numerator")
+            else float(v)
+        )
+
+    d, m, s = (to_float(v) for v in value[:3])
     return d + (m / 60.0) + (s / 3600.0)
 
 
@@ -345,7 +346,6 @@ def _extract_gps_coordinates(exif_data: Any) -> Tuple[float | None, float | None
     """
     latitude = None
     longitude = None
-    GPS_INFO_TAG = 34853
 
     if exif_data:
         gps_data = exif_data.get_ifd(GPS_INFO_TAG)
@@ -379,15 +379,14 @@ def _extract_gps_coordinates(exif_data: Any) -> Tuple[float | None, float | None
                 latitude = None
                 longitude = None
         else:
-            latitude = None
-            longitude = None
+            pass
 
     return latitude, longitude
 
 
 def image_util_extract_metadata(image_path: str) -> dict:
     """Extract metadata for a given image file with detailed debug logging."""
-    logger.debug(f"extract_image_metadata called for: {image_path}")
+    logger.debug(f"image_util_extract_metadata called for: {image_path}")
 
     if not os.path.exists(image_path):
         return {
