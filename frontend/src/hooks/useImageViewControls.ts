@@ -18,27 +18,29 @@ export const useImageViewControls = () => {
   });
 
   // handlewheel zoom
-  const handleWheelZoom = useCallback(
-    (e: React.WheelEvent, containerRect: DOMRect) => {
-      e.preventDefault();
-
-      setViewState((prev) => {
-        const mouseX = e.clientX - containerRect.left;
-        const mouseY = e.clientY - containerRect.top;
-        const delta = e.deltaY < 0 ? 0.1 : -0.1;
-        const newScale = Math.min(4, Math.max(0.5, prev.scale + delta));
-        const scaleFactor = newScale / prev.scale;
-        const newPosX = mouseX - (mouseX - prev.position.x) * scaleFactor;
-        const newPosY = mouseY - (mouseY - prev.position.y) * scaleFactor;
-        return {
-          ...prev,
-          scale: newScale,
-          position: { x: newPosX, y: newPosY },
-        };
-      });
-    },
-    [],
-  );
+  const handleWheelZoom = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const container = e.currentTarget.parentElement;
+    if (!container) return;
+    const containerRect = container.getBoundingClientRect();
+    const mouseX = e.clientX - containerRect.left;
+    const mouseY = e.clientY - containerRect.top;
+    const deltaY = e.deltaY;
+    setViewState((prev) => {
+      const delta = deltaY > 0 ? -0.1 : 0.1;
+      const newScale = Math.min(4, Math.max(0.5, prev.scale + delta));
+      if (newScale === prev.scale) return prev;
+      const scaleDiff = newScale - prev.scale;
+      const newPosX = prev.position.x - (mouseX - prev.position.x) * (scaleDiff / prev.scale);
+      const newPosY = prev.position.y - (mouseY - prev.position.y) * (scaleDiff / prev.scale);
+      return {
+        ...prev,
+        scale: newScale,
+        position: { x: newPosX, y: newPosY },
+      };
+    });
+  }, []);
 
   const handleZoomIn = useCallback(() => {
     setViewState((prev) => ({

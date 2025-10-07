@@ -13,6 +13,7 @@ interface ImageViewerProps {
   onMouseUp: () => void;
   onMouseLeave: () => void;
   onClick?: (e: React.MouseEvent) => void;
+  onWheel?: (e: React.WheelEvent) => void;
 }
 
 export const ImageViewer: React.FC<ImageViewerProps> = ({
@@ -27,37 +28,42 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   onMouseUp,
   onMouseLeave,
   onClick,
+  onWheel,
 }) => {
   return (
-    <div
-      id="zoomable-image"
-      onClick={onClick}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      onMouseLeave={onMouseLeave}
-      className="relative flex h-full w-full items-center justify-center overflow-hidden"
-    >
-      <img
-        src={convertFileSrc(imagePath) || '/placeholder.svg'}
-        alt={alt}
-        draggable={false}
-        onError={(e) => {
-          const img = e.target as HTMLImageElement;
-          img.onerror = null;
-          img.src = '/placeholder.svg';
-        }}
-        style={{
-          transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
-          transformOrigin: 'top left', // 👈 important
-          transition: isDragging ? 'none' : 'transform 0.2s ease-in-out',
-          cursor: isDragging ? 'grabbing' : 'grab',
-          maxWidth: '100%',
-          maxHeight: '100%',
-          userSelect: 'none',
-          objectFit: 'contain', // still keeps ratio but no force stretching
-        }}
-      />
+    <div className="flex items-center justify-center overflow-hidden relative h-full w-full">
+      <div
+        id="zoomable-image"
+        className="relative"
+        onClick={onClick}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseLeave}
+      >
+        <img
+          src={convertFileSrc(imagePath) || '/placeholder.svg'}
+          alt={alt}
+          draggable={false}
+          onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            img.onerror = null;
+            img.src = '/placeholder.svg';
+          }}
+          onWheel={onWheel}
+          style={{
+            transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
+            transformOrigin: '0 0',
+            transition: isDragging ? 'none' : 'transform 0.2s ease-in-out',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            maxWidth: '100%',
+            maxHeight: '100%',
+            userSelect: 'none',
+            objectFit: 'contain',
+            display: 'block',
+          }}
+        />
+      </div>
     </div>
   );
 };
