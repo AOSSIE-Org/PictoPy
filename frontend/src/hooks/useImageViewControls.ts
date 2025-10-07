@@ -32,8 +32,10 @@ export const useImageViewControls = () => {
       const newScale = Math.min(4, Math.max(0.5, prev.scale + delta));
       if (newScale === prev.scale) return prev;
       const scaleDiff = newScale - prev.scale;
-      const newPosX = prev.position.x - (mouseX - prev.position.x) * (scaleDiff / prev.scale);
-      const newPosY = prev.position.y - (mouseY - prev.position.y) * (scaleDiff / prev.scale);
+      const newPosX =
+        prev.position.x - (mouseX - prev.position.x) * (scaleDiff / prev.scale);
+      const newPosY =
+        prev.position.y - (mouseY - prev.position.y) * (scaleDiff / prev.scale);
       return {
         ...prev,
         scale: newScale,

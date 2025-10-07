@@ -31,7 +31,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   onWheel,
 }) => {
   return (
-    <div className="flex items-center justify-center overflow-hidden relative h-full w-full">
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
       <div
         id="zoomable-image"
         className="relative"
