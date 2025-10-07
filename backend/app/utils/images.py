@@ -2,6 +2,7 @@ import os
 import uuid
 import datetime
 import json
+import logging
 from typing import List, Tuple, Dict, Any, Mapping
 from PIL import Image, ExifTags
 from pathlib import Path
@@ -17,6 +18,8 @@ from app.database.images import (
 )
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
+
+logger = logging.getLogger(__name__)
 
 
 def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -> bool:
@@ -57,7 +60,7 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
                 all_image_records.extend(folder_image_records)
 
             except Exception as e:
-                print(f"Error processing folder {folder_path}: {e}")
+                logger.error(f"Error processing folder {folder_path}: {e}")
                 continue  # Continue with other folders even if one fails
 
         # Step 4: Remove obsolete images that no longer exist in filesystem
@@ -70,7 +73,7 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
 
         return True  # No images to process is not an error
     except Exception as e:
-        print(f"Error processing folders: {e}")
+        logger.error(f"Error processing folders: {e}")
         return False
 
 
@@ -87,7 +90,7 @@ def image_util_process_untagged_images() -> bool:
 
         return True
     except Exception as e:
-        print(f"Error processing untagged images: {e}")
+        logger.error(f"Error processing untagged images: {e}")
         return False
 
 
@@ -109,7 +112,7 @@ def image_util_classify_and_face_detect_images(
             if len(classes) > 0:
                 # Create image-class pairs
                 image_class_pairs = [(image_id, class_id) for class_id in classes]
-                print(image_class_pairs)
+                logger.debug(f"Image class pairs: {image_class_pairs}")
 
                 # Insert the pairs into the database
                 db_insert_image_classes_batch(image_class_pairs)
@@ -155,7 +158,7 @@ def image_util_prepare_image_records(
         # Generate thumbnail
         if image_util_generate_thumbnail(image_path, thumbnail_path):
             metadata = image_util_extract_metadata(image_path)
-            # print(f"Extracted metadata for {image_path}: {metadata}")
+            logger.debug(f"Extracted metadata for {image_path}: {metadata}")
             image_records.append(
                 {
                     "id": image_id,
@@ -199,7 +202,7 @@ def image_util_get_images_from_folder(
                 if os.path.isfile(file_path) and image_util_is_valid_image(file_path):
                     image_files.append(file_path)
         except OSError as e:
-            print(f"Error reading folder {folder_path}: {e}")
+            logger.error(f"Error reading folder {folder_path}: {e}")
 
     return image_files
 
@@ -219,7 +222,7 @@ def image_util_generate_thumbnail(
             img.save(thumbnail_path, "JPEG")  # Always save thumbnails as JPEG
         return True
     except Exception as e:
-        print(f"Error generating thumbnail for {image_path}: {e}")
+        logger.error(f"Error generating thumbnail for {image_path}: {e}")
         return False
 
 
@@ -243,13 +246,13 @@ def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
             if thumbnail_path and os.path.exists(thumbnail_path):
                 try:
                     os.remove(thumbnail_path)
-                    print(f"Removed obsolete thumbnail: {thumbnail_path}")
+                    logger.info(f"Removed obsolete thumbnail: {thumbnail_path}")
                 except OSError as e:
-                    print(f"Error removing thumbnail {thumbnail_path}: {e}")
+                    logger.error(f"Error removing thumbnail {thumbnail_path}: {e}")
 
     if obsolete_images:
         db_delete_images_by_ids(obsolete_images)
-        print(f"Removed {len(obsolete_images)} obsolete image(s) from database")
+        logger.info(f"Removed {len(obsolete_images)} obsolete image(s) from database")
 
     return len(obsolete_images)
 
@@ -315,6 +318,23 @@ def image_util_is_valid_image(file_path: str) -> bool:
         return False
 
 
+def _convert_to_degrees(value):
+    """Converts a GPS coordinate value from DMS to decimal degrees."""
+    if hasattr(value[0], "numerator"):
+        d = float(value[0].numerator) / float(value[0].denominator)
+    else:
+        d = float(value[0])
+    if hasattr(value[1], "numerator"):
+        m = float(value[1].numerator) / float(value[1].denominator)
+    else:
+        m = float(value[1])
+    if hasattr(value[2], "numerator"):
+        s = float(value[2].numerator) / float(value[2].denominator)
+    else:
+        s = float(value[2])
+    return d + (m / 60.0) + (s / 3600.0)
+
+
 def _extract_gps_coordinates(exif_data: Any) -> Tuple[float | None, float | None]:
     """
     Extracts GPS coordinates from EXIF data.
@@ -331,22 +351,6 @@ def _extract_gps_coordinates(exif_data: Any) -> Tuple[float | None, float | None
         gps_data = exif_data.get_ifd(GPS_INFO_TAG)
         if isinstance(gps_data, dict):
             try:
-
-                def _convert_to_degrees(value):
-                    if hasattr(value[0], "numerator"):
-                        d = float(value[0].numerator) / float(value[0].denominator)
-                    else:
-                        d = float(value[0])
-                    if hasattr(value[1], "numerator"):
-                        m = float(value[1].numerator) / float(value[1].denominator)
-                    else:
-                        m = float(value[1])
-                    if hasattr(value[2], "numerator"):
-                        s = float(value[2].numerator) / float(value[2].denominator)
-                    else:
-                        s = float(value[2])
-                    return d + (m / 60.0) + (s / 3600.0)
-
                 lat_dms = gps_data.get(2)
                 lat_ref = gps_data.get(1)
                 lon_dms = gps_data.get(4)
@@ -383,7 +387,7 @@ def _extract_gps_coordinates(exif_data: Any) -> Tuple[float | None, float | None
 
 def image_util_extract_metadata(image_path: str) -> dict:
     """Extract metadata for a given image file with detailed debug logging."""
-    # print(f"[DEBUG] extract_image_metadata called for: {image_path}")
+    logger.debug(f"extract_image_metadata called for: {image_path}")
 
     if not os.path.exists(image_path):
         return {
@@ -398,13 +402,13 @@ def image_util_extract_metadata(image_path: str) -> dict:
 
     try:
         stats = os.stat(image_path)
-        # print(f"[DEBUG] File exists. Size = {stats.st_size} bytes")
+        logger.debug(f"File exists. Size = {stats.st_size} bytes")
 
         try:
             with Image.open(image_path) as img:
                 width, height = img.size
                 mime_type = Image.MIME.get(img.format, "unknown")
-                # print(f"[DEBUG] Pillow opened image: {width}x{height}, type={mime_type}")
+                logger.debug(f"Pillow opened image: {width}x{height}, type={mime_type}")
 
                 # Robust EXIF extraction with safe fallback
                 try:
@@ -462,7 +466,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
             return metadata_dict
 
         except Exception as e:
-            print(f"[ERROR] Pillow could not open image {image_path}: {e}")
+            logger.error(f"Pillow could not open image {image_path}: {e}")
             return {
                 "name": os.path.basename(image_path),
                 "date_created": datetime.datetime.fromtimestamp(
