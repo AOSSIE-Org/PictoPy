@@ -41,6 +41,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
           showInfo ? 'bg-blue-500/70' : 'bg-white/10'
         } p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg`}
         aria-label="Show Info"
+        title='Show Info'
       >
         <Info className="h-5 w-5" />
       </button>
@@ -48,6 +49,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
       <button
         className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
         aria-label="Set as Wallpaper"
+        title='Set as wallpaper'
       >
         <ImageIcon className="h-5 w-5" />
       </button>
@@ -55,6 +57,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
       <button
         className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
         aria-label="Open Folder"
+        title='Open Folder'
       >
         <Folder className="h-5 w-5" />
       </button>
@@ -62,6 +65,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
       <button
         className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
         aria-label="Open With"
+        title='Open With'
       >
         <ExternalLink className="h-5 w-5" />
       </button>
@@ -69,6 +73,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
       <button
         className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
         aria-label="Share"
+        title='Share'
       >
         <Share2 className="h-5 w-5" />
       </button>
@@ -81,6 +86,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
             : 'bg-white/10 hover:bg-white/20 hover:text-white hover:shadow-lg'
         }`}
         aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
       >
         <Heart className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`} />
       </button>
@@ -88,6 +94,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
       <button
         className="rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
         aria-label="Move to Secure Folder"
+        title='Move to Secure Folder'
       >
         <Lock className="h-5 w-5" />
       </button>
@@ -113,6 +120,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
         onClick={onClose}
         className="ml-2 rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
         aria-label="Close"
+        title='Close'
       >
         <X className="h-5 w-5" />
       </button>
