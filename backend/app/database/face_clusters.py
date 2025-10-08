@@ -35,13 +35,16 @@ def db_create_clusters_table() -> None:
     conn.close()
 
 
-def db_insert_clusters_batch(clusters: List[ClusterData]) -> List[ClusterId]:
+def db_insert_clusters_batch(
+    clusters: List[ClusterData], conn: Optional[sqlite3.Connection] = None
+) -> List[ClusterId]:
     """
     Insert multiple clusters into the database in batch.
 
     Args:
         clusters: List of ClusterData objects containing cluster information.
         cluster_id: should be provided as UUID strings.
+        conn: Optional existing database connection. If None, creates a new connection.
 
     Returns:
         List of cluster IDs of the newly created clusters
@@ -49,7 +52,11 @@ def db_insert_clusters_batch(clusters: List[ClusterData]) -> List[ClusterId]:
     if not clusters:
         return []
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    # Use provided connection or create a new one
+    own_connection = conn is None
+    if own_connection:
+        conn = sqlite3.connect(DATABASE_PATH)
+
     cursor = conn.cursor()
 
     cluster_ids = []
@@ -71,8 +78,10 @@ def db_insert_clusters_batch(clusters: List[ClusterData]) -> List[ClusterId]:
         insert_data,
     )
 
-    conn.commit()
-    conn.close()
+    # Only commit and close if we created our own connection
+    if own_connection:
+        conn.commit()
+        conn.close()
 
     return cluster_ids
 
@@ -136,6 +145,7 @@ def db_get_all_clusters() -> List[ClusterData]:
 def db_update_cluster(
     cluster_id: ClusterId,
     cluster_name: Optional[ClusterName] = None,
+    conn: Optional[sqlite3.Connection] = None,
 ) -> bool:
     """
     Update an existing cluster.
@@ -143,11 +153,16 @@ def db_update_cluster(
     Args:
         cluster_id: The ID of the cluster to update
         cluster_name: New cluster name (optional)
+        conn: Optional existing database connection. If None, creates a new connection.
 
     Returns:
         True if the cluster was updated, False if not found
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    # Use provided connection or create a new one
+    own_connection = conn is None
+    if own_connection:
+        conn = sqlite3.connect(DATABASE_PATH)
+
     cursor = conn.cursor()
 
     # Build the update query dynamically based on provided parameters
@@ -159,7 +174,8 @@ def db_update_cluster(
         update_values.append(cluster_name)
 
     if not update_fields:
-        conn.close()
+        if own_connection:
+            conn.close()
         return False
 
     update_values.append(cluster_id)
@@ -170,34 +186,45 @@ def db_update_cluster(
     )
 
     updated = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
+
+    # Only commit and close if we created our own connection
+    if own_connection:
+        conn.commit()
+        conn.close()
 
     return updated
 
 
-def db_delete_all_clusters() -> int:
+def db_delete_all_clusters(conn: Optional[sqlite3.Connection] = None) -> int:
     """
     Delete all entries from the face_clusters table.
+
+    Args:
+        conn: Optional existing database connection. If None, creates a new connection.
 
     Returns:
         Number of clusters deleted
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    # Use provided connection or create a new one
+    own_connection = conn is None
+    if own_connection:
+        conn = sqlite3.connect(DATABASE_PATH)
+
     cursor = conn.cursor()
-
     cursor.execute("DELETE FROM face_clusters")
-
     deleted_count = cursor.rowcount
-    conn.commit()
-    conn.close()
+
+    # Only commit and close if we created our own connection
+    if own_connection:
+        conn.commit()
+        conn.close()
 
     return deleted_count
 
 
-def db_get_all_clusters_with_face_counts() -> List[
-    Dict[str, Union[str, Optional[str], int]]
-]:
+def db_get_all_clusters_with_face_counts() -> (
+    List[Dict[str, Union[str, Optional[str], int]]]
+):
     """
     Retrieve all clusters with their face counts and stored face images.
 
