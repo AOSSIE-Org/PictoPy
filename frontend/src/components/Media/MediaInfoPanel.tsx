@@ -7,6 +7,7 @@ import {
   MapPin,
   Tag,
   Info,
+  SquareArrowOutUpRight,
 } from 'lucide-react';
 import { Image } from '@/types/Media';
 
@@ -109,10 +110,11 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
               <button
                 type="button"
                 onClick={handleLocationClick}
-                className="w-full cursor-pointer truncate text-left font-medium text-white hover:underline"
+                className="flex w-full cursor-pointer items-center truncate text-left font-medium text-white hover:underline"
                 title={`Lat: ${currentImage.metadata.latitude}, Lon: ${currentImage.metadata.longitude}`}
               >
                 {`Lat: ${currentImage.metadata.latitude.toFixed(4)}, Lon: ${currentImage.metadata.longitude.toFixed(4)}`}
+                <SquareArrowOutUpRight className="ml-1 h-[14px] w-[14px]" />
               </button>
             ) : (
               <p className="font-medium text-white">Location not available</p>
