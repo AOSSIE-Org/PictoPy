@@ -68,7 +68,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     },
     [dispatch, handlers],
   );
-
+ 
   // Slideshow functionality
   const { isSlideshowActive, toggleSlideshow } = useSlideshow(
     totalImages,
