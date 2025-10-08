@@ -311,7 +311,7 @@ export default function TimelineScrollbar({
   };
 
   const tooltipBaseClass =
-    'text-primary-foreground bg-primary absolute left-[-75px] rounded-md px-2 py-1 text-xs shadow-md';
+    'text-primary-foreground bg-primary absolute left-[-75px] rounded-md px-2 py-1 text-xs';
 
   return (
     <div
@@ -325,20 +325,12 @@ export default function TimelineScrollbar({
         onMouseDown={handleMouseDown}
         onMouseMove={handleTrackMouseMove}
         onMouseLeave={handleTrackMouseLeave}
-        className="relative w-6 cursor-row-resize rounded-full bg-gray-200 shadow-sm transition-shadow hover:shadow-md"
+        className="relative w-3 cursor-row-resize rounded-full bg-gray-200 shadow-sm transition-shadow hover:shadow-md"
         style={{ height: trackHeight }}
       >
-        {/* Timeline Background Gradient */}
-        <div
-          className="absolute inset-0 rounded-full opacity-20"
-          style={{
-            background: 'linear-gradient(to bottom, #3b82f6, #8b5cf6, #ec4899)',
-          }}
-        />
-
         {/* Progress Fill */}
         <div
-          className="absolute top-0 left-1/2 w-full rounded-full bg-blue-400"
+          className="bg-primary absolute top-0 left-1/2 w-full rounded-full"
           style={{
             height: `${scrollProgress * trackHeight}px`,
             transform: 'translateX(-50%)',
@@ -352,7 +344,7 @@ export default function TimelineScrollbar({
               <Tooltip key={index}>
                 <TooltipTrigger asChild>
                   <div
-                    className="absolute left-1/2 h-0.5 w-full bg-gray-500 shadow-md"
+                    className="absolute left-1/2 h-0.5 w-full bg-gray-400 shadow-md"
                     style={{
                       top: `${marker.markerTop}px`,
                       transform: 'translate(-50%, -50%)',
@@ -363,9 +355,6 @@ export default function TimelineScrollbar({
                     onMouseLeave={() => setIsMarkerHovered(false)}
                   />
                 </TooltipTrigger>
-                <TooltipContent side="left">
-                  <p>{`${marker.month} ${marker.year}`}</p>
-                </TooltipContent>
               </Tooltip>
             );
           })}
