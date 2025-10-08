@@ -1,6 +1,7 @@
 import { foldersEndpoints } from '../apiEndpoints';
-import { apiClient } from '../axiosConfig';
+import { apiClient, syncApiClient } from '../axiosConfig';
 import { APIResponse } from '@/types/API';
+import { FolderTaggingStatusResponse } from '@/types/FolderStatus';
 
 // Request Types
 export interface AddFolderRequest {
@@ -68,4 +69,16 @@ export const deleteFolders = async (
     { data: request },
   );
   return response.data;
+};
+
+export const getFoldersTaggingStatus = async (): Promise<APIResponse> => {
+  const response = await syncApiClient.get<FolderTaggingStatusResponse>(
+    foldersEndpoints.getTaggingStatus,
+  );
+  const res = response.data;
+  return {
+    data: res.data as any,
+    success: res.status === 'success',
+    message: res.message,
+  };
 };
