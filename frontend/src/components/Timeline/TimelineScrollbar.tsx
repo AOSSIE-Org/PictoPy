@@ -7,7 +7,6 @@ import {
 } from '@/utils/timelineUtils';
 import {
   Tooltip,
-  TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
