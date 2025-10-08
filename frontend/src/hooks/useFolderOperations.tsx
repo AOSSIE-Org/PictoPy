@@ -35,6 +35,9 @@ export const useFolderOperations = () => {
     refetchInterval: 1000,
     refetchIntervalInBackground: true,
     enabled: folders.some((f) => f.AI_Tagging),
+    retry: 2, // Retry failed requests up to 2 times before giving up
+    retryOnMount: false, // Don't retry on component mount
+    refetchOnWindowFocus: false, // Don't refetch when window gains focus
   });
 
   // Apply feedback to the folders query
@@ -64,11 +67,23 @@ export const useFolderOperations = () => {
 
   // Update Redux store with tagging status on each poll
   useEffect(() => {
-    const raw = taggingStatusQuery.data?.data as any;
-    if (Array.isArray(raw)) {
-      dispatch(setTaggingStatus(raw));
+    if (taggingStatusQuery.data?.success) {
+      const raw = taggingStatusQuery.data.data as any;
+      if (Array.isArray(raw)) {
+        dispatch(setTaggingStatus(raw));
+      }
     }
   }, [taggingStatusQuery.data, dispatch]);
+
+  useEffect(() => {
+    if (taggingStatusQuery.isError) {
+      console.error('Failed to fetch tagging status:', taggingStatusQuery.error);
+      
+      const errorMessage = taggingStatusQuery.errorMessage || 'Unknown error';
+      console.warn(`Tagging status query failed: ${errorMessage}`);
+      
+    }
+  }, [taggingStatusQuery.isError, taggingStatusQuery.error, taggingStatusQuery.errorMessage]);
 
   // Enable AI tagging mutation
   const enableAITaggingMutation = usePictoMutation({
