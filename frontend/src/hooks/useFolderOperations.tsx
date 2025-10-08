@@ -11,6 +11,8 @@ import { selectAllFolders } from '@/features/folderSelectors';
 import { setFolders } from '@/features/folderSlice';
 import { FolderDetails } from '@/types/Folder';
 import { useMutationFeedback } from './useMutationFeedback';
+import { getFoldersTaggingStatus } from '@/api/api-functions/folders';
+import { setTaggingStatus } from '@/features/taggingStatusSlice';
 
 /**
  * Custom hook for folder operations
@@ -24,6 +26,15 @@ export const useFolderOperations = () => {
   const foldersQuery = usePictoQuery({
     queryKey: ['folders'],
     queryFn: getAllFolders,
+  });
+
+  const taggingStatusQuery = usePictoQuery({
+    queryKey: ['folders', 'tagging-status'],
+    queryFn: getFoldersTaggingStatus,
+    staleTime: 1000,
+    refetchInterval: 1000,
+    refetchIntervalInBackground: true,
+    enabled: folders.some((f) => f.AI_Tagging),
   });
 
   // Apply feedback to the folders query
@@ -50,6 +61,14 @@ export const useFolderOperations = () => {
       dispatch(setFolders(folders));
     }
   }, [foldersQuery.data, dispatch]);
+
+  // Update Redux store with tagging status on each poll
+  useEffect(() => {
+    const raw = taggingStatusQuery.data?.data as any;
+    if (Array.isArray(raw)) {
+      dispatch(setTaggingStatus(raw));
+    }
+  }, [taggingStatusQuery.data, dispatch]);
 
   // Enable AI tagging mutation
   const enableAITaggingMutation = usePictoMutation({
