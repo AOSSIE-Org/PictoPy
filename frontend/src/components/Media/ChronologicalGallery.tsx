@@ -1,12 +1,9 @@
 import { useMemo, useRef, useEffect, useCallback } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { Image } from '@/types/Media';
-import { selectImages } from '@/features/imageSelectors';
-import {
-  groupImagesByYearMonthFromMetadata,
-  createImageIndexMap,
-} from '@/utils/dateUtils';
+import { setViewerContent } from '@/features/imageSlice';
+import { groupImagesByYearMonthFromMetadata } from '@/utils/dateUtils';
 
 export type MonthMarker = {
   offset: number;
@@ -31,7 +28,7 @@ export const ChronologicalGallery = ({
   onMonthOffsetsChange,
   scrollContainerRef,
 }: ChronologicalGalleryProps) => {
-  const allImages = useSelector(selectImages);
+  const dispatch = useDispatch();
   const monthHeaderRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const galleryRef = useRef<HTMLDivElement>(null);
 
@@ -39,12 +36,6 @@ export const ChronologicalGallery = ({
   const grouped = useMemo(
     () => groupImagesByYearMonthFromMetadata(images),
     [images],
-  );
-
-  // Optimized image index lookup
-  const imageIndexMap = useMemo(
-    () => createImageIndexMap(allImages),
-    [allImages],
   );
 
   const sortedGrouped = useMemo(() => {
@@ -57,6 +48,12 @@ export const ChronologicalGallery = ({
         ),
       }));
   }, [grouped]);
+
+  const chronologicallySortedImages = useMemo(() => {
+    return sortedGrouped.flatMap(({ months }) =>
+      months.flatMap(([, imgs]) => imgs),
+    );
+  }, [sortedGrouped]);
 
   const recomputeMarkers = useCallback(() => {
     if (!onMonthOffsetsChange) return;
@@ -103,6 +100,23 @@ export const ChronologicalGallery = ({
     };
   }, [recomputeMarkers, scrollContainerRef]);
 
+  // Check if we have any images to display
+  if (!images.length) {
+    return (
+      <div
+        className={`flex h-64 items-center justify-center text-gray-500 ${className}`}
+      >
+        <div className="text-center">
+          <div className="mb-2 text-2xl">😢</div>
+          <div className="text-lg font-medium">No images found</div>
+          <div className="text-sm">
+            Add some photo library folders to get started
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div ref={galleryRef} className={`space-y-0 ${className}`}>
       {/* Title */}
@@ -148,15 +162,25 @@ export const ChronologicalGallery = ({
                 </div>
 
                 {/* Images Grid */}
-                <div className="grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {imgs.map((img) => {
-                    const reduxIndex = imageIndexMap.get(img.id) ?? -1;
+                    const chronologicalIndex =
+                      chronologicallySortedImages.findIndex(
+                        (sortedImg) => sortedImg.id === img.id,
+                      );
 
                     return (
                       <div key={img.id} className="group relative">
                         <ImageCard
                           image={img}
-                          imageIndex={reduxIndex}
+                          onClick={() =>
+                            dispatch(
+                              setViewerContent({
+                                images: chronologicallySortedImages,
+                                index: chronologicalIndex,
+                              }),
+                            )
+                          }
                           className="w-full transition-transform duration-200 group-hover:scale-105"
                         />
                       </div>

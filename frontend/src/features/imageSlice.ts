@@ -3,6 +3,7 @@ import { Image } from '@/types/Media';
 
 interface ImageState {
   images: Image[];
+  viewerImages: Image[] | null;
   currentViewIndex: number;
   totalImages: number;
   error: string | null;
@@ -10,6 +11,7 @@ interface ImageState {
 
 const initialState: ImageState = {
   images: [],
+  viewerImages: null,
   currentViewIndex: -1,
   totalImages: 0,
   error: null,
@@ -24,22 +26,33 @@ const imageSlice = createSlice({
       state.totalImages = action.payload.length;
       state.error = null;
     },
+    setViewerContent(
+      state,
+      action: PayloadAction<{ images: Image[]; index: number }>,
+    ) {
+      state.viewerImages = action.payload.images;
+      state.currentViewIndex = action.payload.index;
+    },
     addImages(state, action: PayloadAction<Image[]>) {
       state.images.push(...action.payload);
       state.totalImages = state.images.length;
     },
     setCurrentViewIndex(state, action: PayloadAction<number>) {
+      const imageList = state.viewerImages ?? state.images;
       const index = action.payload;
-      if (index >= -1 && index < state.images.length) {
+      if (index >= -1 && index < imageList.length) {
         state.currentViewIndex = index;
       } else {
         console.warn(
-          `Invalid image index: ${index}. Valid range: -1 to ${state.images.length - 1}`,
+          `Invalid image index: ${index}. Valid range: -1 to ${
+            imageList.length - 1
+          }`,
         );
       }
     },
     nextImage(state) {
-      if (state.currentViewIndex < state.images.length - 1) {
+      const imageList = state.viewerImages ?? state.images;
+      if (state.currentViewIndex < imageList.length - 1) {
         state.currentViewIndex += 1;
       }
     },
@@ -50,6 +63,7 @@ const imageSlice = createSlice({
     },
     closeImageView(state) {
       state.currentViewIndex = -1;
+      state.viewerImages = null;
     },
     updateImage(
       state,
@@ -59,6 +73,18 @@ const imageSlice = createSlice({
       const imageIndex = state.images.findIndex((image) => image.id === id);
       if (imageIndex !== -1) {
         state.images[imageIndex] = { ...state.images[imageIndex], ...updates };
+      }
+      if (state.viewerImages) {
+        // Update viewerImages if it exists
+        const viewerImageIndex = state.viewerImages.findIndex(
+          (image) => image.id === id,
+        );
+        if (viewerImageIndex !== -1) {
+          state.viewerImages[viewerImageIndex] = {
+            ...state.viewerImages[viewerImageIndex],
+            ...updates,
+          };
+        }
       }
     },
     removeImage(state, action: PayloadAction<string>) {
@@ -80,6 +106,15 @@ const imageSlice = createSlice({
           state.currentViewIndex = state.images.length - 1;
         }
       }
+      // Also remove from viewerImages if it exists
+      if (state.viewerImages) {
+        const viewerImageIndex = state.viewerImages.findIndex(
+          (image) => image.id === imageId,
+        );
+        if (viewerImageIndex !== -1) {
+          state.viewerImages.splice(viewerImageIndex, 1);
+        }
+      }
     },
     setError(state, action: PayloadAction<string | null>) {
       state.error = action.payload;
@@ -89,12 +124,14 @@ const imageSlice = createSlice({
       state.currentViewIndex = -1;
       state.totalImages = 0;
       state.error = null;
+      state.viewerImages = null;
     },
   },
 });
 
 export const {
   setImages,
+  setViewerContent,
   addImages,
   setCurrentViewIndex,
   nextImage,
