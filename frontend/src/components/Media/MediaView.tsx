@@ -35,7 +35,6 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     }
     return null;
   }, [images, currentViewIndex]);
-  console.log(currentViewIndex);
 
   // Local UI state
   const [showInfo, setShowInfo] = useState(false);
@@ -104,7 +103,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
 
   const currentImagePath = currentImage.path;
   const currentImageAlt = `image-${currentViewIndex}`;
-
+  // const [mouselocation, setMouselocation] = useState({x:0,y:0});
   return (
     <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-gradient-to-b from-black/95 to-black/98 backdrop-blur-lg">
       {/* Controls */}
@@ -121,7 +120,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
 
       {/* Main viewer area */}
       <div
-        className="relative flex h-full w-full items-center justify-center"
+        className="relativ flex h-full w-full"
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();
         }}
@@ -139,13 +138,11 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
             onMouseUp={handlers.handleMouseUp}
             onMouseLeave={handlers.handleMouseUp}
             onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                handleClose();
-              }
+              if (e.target === e.currentTarget) handleClose();
             }}
+            onWheel={handlers.handleWheelZoom}
           />
         )}
-
         {/* Navigation buttons */}
         <NavigationButtons
           onPrevious={handlePreviousImage}
