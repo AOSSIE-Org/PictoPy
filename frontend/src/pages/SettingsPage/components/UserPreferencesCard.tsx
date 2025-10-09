@@ -43,7 +43,10 @@ const UserPreferencesCard: React.FC = () => {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-32 justify-between">
+              <Button
+                variant="outline"
+                className="w-32 cursor-pointer justify-between"
+              >
                 {preferences.YOLO_model_size.charAt(0).toUpperCase() +
                   preferences.YOLO_model_size.slice(1)}
                 <ChevronDown className="h-4 w-4" />
