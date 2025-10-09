@@ -1,7 +1,10 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { MediaViewProps } from '@/types/Media';
-import { selectCurrentViewIndex } from '@/features/imageSelectors';
+import {
+  selectCurrentViewIndex,
+  selectActiveImageList,
+} from '@/features/imageSelectors';
 import {
   setCurrentViewIndex,
   nextImage,
@@ -23,10 +26,11 @@ import { useSlideshow } from '@/hooks/useSlideshow';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 
-export function MediaView({ onClose, type = 'image', images }: MediaViewProps) {
+export function MediaView({ onClose, type = 'image' }: MediaViewProps) {
   const dispatch = useDispatch();
 
   // Redux selectors
+  const images = useSelector(selectActiveImageList);
   const currentViewIndex = useSelector(selectCurrentViewIndex);
   const totalImages = images.length;
   const currentImage = useMemo(() => {

@@ -32,7 +32,6 @@ export interface ImageGridProps {
   openMediaViewer: (index: number) => void;
 }
 export interface MediaViewProps {
-  images: Image[];
   onClose?: () => void;
   type?: string;
 }

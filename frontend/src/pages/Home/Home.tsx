@@ -91,9 +91,7 @@ export const Home = () => {
       )}
 
       {/* Media viewer modal */}
-      {isImageViewOpen && (
-        <MediaView images={displayImages} onClose={handleCloseMediaView} />
-      )}
+      {isImageViewOpen && <MediaView onClose={handleCloseMediaView} />}
     </div>
   );
 };
