@@ -51,6 +51,7 @@ const FolderManagementCard: React.FC = () => {
                       AI Tagging
                     </span>
                     <Switch
+                      className="cursor-pointer"
                       checked={folder.AI_Tagging}
                       onCheckedChange={() => toggleAITagging(folder)}
                       disabled={
@@ -63,7 +64,7 @@ const FolderManagementCard: React.FC = () => {
                     onClick={() => deleteFolder(folder.folder_id)}
                     variant="outline"
                     size="sm"
-                    className="h-8 w-8 text-gray-500 hover:border-red-300 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                    className="h-8 w-8 cursor-pointer text-gray-500 hover:border-red-300 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
                     disabled={deleteFolderPending}
                   >
                     <Trash2 className="h-4 w-4" />

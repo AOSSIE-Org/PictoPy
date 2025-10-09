@@ -121,11 +121,14 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
           <Button
             variant="outline"
             onClick={handleBack}
-            className="px-4 py-1 text-sm"
+            className="cursor-pointer px-4 py-1 text-sm"
           >
             Back
           </Button>
-          <Button onClick={handleNext} className="px-4 py-1 text-sm">
+          <Button
+            onClick={handleNext}
+            className="cursor-pointer px-4 py-1 text-sm"
+          >
             Next
           </Button>
         </CardFooter>

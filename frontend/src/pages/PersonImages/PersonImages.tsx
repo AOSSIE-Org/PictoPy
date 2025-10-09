@@ -66,7 +66,7 @@ export const PersonImages = () => {
         <Button
           variant="outline"
           onClick={() => navigate(`/${ROUTES.AI}`)}
-          className="flex items-center gap-2"
+          className="flex cursor-pointer items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to AI Tagging
@@ -84,7 +84,7 @@ export const PersonImages = () => {
               variant="outline"
               size="icon"
               onClick={handleSaveName}
-              className="h-10 w-10"
+              className="h-10 w-10 cursor-pointer"
             >
               <Check className="h-4 w-4" />
             </Button>
@@ -93,7 +93,7 @@ export const PersonImages = () => {
           <Button
             variant="outline"
             onClick={handleEditName}
-            className="flex items-center gap-2"
+            className="flex cursor-pointer items-center gap-2"
           >
             <Pencil className="h-4 w-4" />
             Edit Name

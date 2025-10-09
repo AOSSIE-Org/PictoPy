@@ -43,7 +43,10 @@ const UserPreferencesCard: React.FC = () => {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-32 justify-between">
+              <Button
+                variant="outline"
+                className="w-32 cursor-pointer justify-between"
+              >
                 {preferences.YOLO_model_size.charAt(0).toUpperCase() +
                   preferences.YOLO_model_size.slice(1)}
                 <ChevronDown className="h-4 w-4" />
@@ -51,6 +54,7 @@ const UserPreferencesCard: React.FC = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-32">
               <DropdownMenuItem
+                className="cursor-pointer"
                 onClick={() =>
                   updatePreference({
                     ...preferences,
@@ -61,6 +65,7 @@ const UserPreferencesCard: React.FC = () => {
                 Nano
               </DropdownMenuItem>
               <DropdownMenuItem
+                className="cursor-pointer"
                 onClick={() =>
                   updatePreference({
                     ...preferences,
@@ -71,6 +76,7 @@ const UserPreferencesCard: React.FC = () => {
                 Small
               </DropdownMenuItem>
               <DropdownMenuItem
+                className="cursor-pointer"
                 onClick={() =>
                   updatePreference({
                     ...preferences,
@@ -101,6 +107,7 @@ const UserPreferencesCard: React.FC = () => {
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-gray-500" />
             <Switch
+              className="cursor-pointer"
               id="gpu-acceleration"
               checked={preferences.GPU_Acceleration}
               onCheckedChange={(checked) =>
