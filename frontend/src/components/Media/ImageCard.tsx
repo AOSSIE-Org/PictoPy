@@ -7,7 +7,7 @@ import { Image } from '@/types/Media';
 import { ImageTags } from './ImageTags';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
-interface ImageCardProps {
+interface ImageCardViewProps {
   image: Image;
   className?: string;
   isSelected?: boolean;
@@ -22,7 +22,7 @@ export function ImageCard({
   isSelected = false,
   showTags = true,
   onClick,
-}: ImageCardProps) {
+}: ImageCardViewProps) {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isImageHovered, setIsImageHovered] = useState(false);
 

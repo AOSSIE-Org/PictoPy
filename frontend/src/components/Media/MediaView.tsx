@@ -39,7 +39,6 @@ export function MediaView({ onClose, type = 'image' }: MediaViewProps) {
     }
     return null;
   }, [images, currentViewIndex]);
-  console.log(currentViewIndex);
 
   // Local UI state
   const [showInfo, setShowInfo] = useState(false);

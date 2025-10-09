@@ -55,6 +55,14 @@ export const ChronologicalGallery = ({
     );
   }, [sortedGrouped]);
 
+  const imageIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    chronologicallySortedImages.forEach((img, idx) => {
+      map.set(img.id, idx);
+    });
+    return map;
+  }, [chronologicallySortedImages]);
+
   const recomputeMarkers = useCallback(() => {
     if (!onMonthOffsetsChange) return;
     if (monthHeaderRefs.current.size === 0) {
@@ -99,23 +107,6 @@ export const ChronologicalGallery = ({
       observer.disconnect();
     };
   }, [recomputeMarkers, scrollContainerRef]);
-
-  // Check if we have any images to display
-  if (!images.length) {
-    return (
-      <div
-        className={`flex h-64 items-center justify-center text-gray-500 ${className}`}
-      >
-        <div className="text-center">
-          <div className="mb-2 text-2xl">😢</div>
-          <div className="text-lg font-medium">No images found</div>
-          <div className="text-sm">
-            Add some photo library folders to get started
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div ref={galleryRef} className={`space-y-0 ${className}`}>
@@ -162,12 +153,9 @@ export const ChronologicalGallery = ({
                 </div>
 
                 {/* Images Grid */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                <div className="grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4">
                   {imgs.map((img) => {
-                    const chronologicalIndex =
-                      chronologicallySortedImages.findIndex(
-                        (sortedImg) => sortedImg.id === img.id,
-                      );
+                    const chronologicalIndex = imageIndexMap.get(img.id) ?? -1;
 
                     return (
                       <div key={img.id} className="group relative">
