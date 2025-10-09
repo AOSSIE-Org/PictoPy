@@ -76,11 +76,18 @@ export const MediaThumbnails: React.FC<MediaThumbnailsProps> = ({
   useEffect(() => {
     if (showThumbnails) {
       const thumbnail = thumbnailRefs.current.get(currentIndex);
-      if (thumbnail) {
-        thumbnail.scrollIntoView({
+      const scrollContainer = scrollContainerRef.current;
+      if (thumbnail && scrollContainer) {
+        const containerWidth = scrollContainer.clientWidth;
+        const thumbnailLeft = thumbnail.offsetLeft;
+        const thumbnailWidth = thumbnail.clientWidth;
+
+        const newScrollLeft =
+          thumbnailLeft - containerWidth / 2 + thumbnailWidth / 2;
+
+        scrollContainer.scrollTo({
+          left: newScrollLeft,
           behavior: 'smooth',
-          inline: 'center',
-          block: 'nearest',
         });
       }
     }
