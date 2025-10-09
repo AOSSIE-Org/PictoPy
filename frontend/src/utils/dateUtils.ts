@@ -53,14 +53,3 @@ export const groupImagesByYearMonthFromMetadata = (images: Image[]) => {
 
   return grouped;
 };
-
-// Build a fast lookup map between an image's id and its index in the global array
-export const createImageIndexMap = (
-  allImages: Image[],
-): Map<string, number> => {
-  const indexMap = new Map<string, number>();
-  allImages.forEach((image, index) => {
-    indexMap.set(image.id, index);
-  });
-  return indexMap;
-};
