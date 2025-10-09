@@ -13,6 +13,7 @@ interface ImageCardProps {
   isSelected?: boolean;
   showTags?: boolean;
   onClick?: () => void;
+  imageIndex?: number;
 }
 
 export function ImageCard({
