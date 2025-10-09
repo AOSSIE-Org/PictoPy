@@ -74,27 +74,15 @@ export const MediaThumbnails: React.FC<MediaThumbnailsProps> = ({
   }, []);
 
   useEffect(() => {
-    const scrollToCenter = (index: number) => {
-      const scrollContainer = scrollContainerRef.current;
-      const thumbnail = thumbnailRefs.current.get(index);
-
-      if (scrollContainer && thumbnail) {
-        const containerWidth = scrollContainer.clientWidth;
-        const thumbnailLeft = thumbnail.offsetLeft;
-        const thumbnailWidth = thumbnail.offsetWidth;
-
-        const newScrollLeft =
-          thumbnailLeft - containerWidth / 2 + thumbnailWidth / 2;
-
-        scrollContainer.scrollTo({
-          left: newScrollLeft,
+    if (showThumbnails) {
+      const thumbnail = thumbnailRefs.current.get(currentIndex);
+      if (thumbnail) {
+        thumbnail.scrollIntoView({
           behavior: 'smooth',
+          inline: 'center',
+          block: 'nearest',
         });
       }
-    };
-
-    if (showThumbnails) {
-      scrollToCenter(currentIndex);
     }
   }, [currentIndex, showThumbnails, images]);
 
