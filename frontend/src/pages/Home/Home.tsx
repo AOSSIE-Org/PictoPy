@@ -52,7 +52,6 @@ export const Home = () => {
         dispatch(hideLoader());
       }
     }
-    console.log(images);
   }, [data, isSuccess, isError, isLoading, dispatch, isSearchActive]);
 
   const handleCloseMediaView = () => {
@@ -60,9 +59,9 @@ export const Home = () => {
   };
 
   const displayImages = isSearchActive ? searchResults : images;
-  useEffect(() => {
-    console.log('Display Images Updated:', displayImages);
-  }, [displayImages]);
+  // useEffect(() => {
+  //   console.log('Display Images Updated:', displayImages);
+  // }, [displayImages]);
 
   const title =
     isSearchActive && searchResults.length > 0

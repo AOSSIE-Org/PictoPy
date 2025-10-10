@@ -79,14 +79,25 @@ export function Navbar() {
     const years = [currentYear, currentYear - 1, currentYear - 2];
     const suggestions: string[] = [];
 
+    // 1. Pehle face names check karo
+    const matchedFaceNames = faceNames.filter((name) =>
+      name.toLowerCase().includes(clean),
+    );
+
+    // 2. Phir months check karo
     const matchedMonths = months.filter((month) => month.startsWith(clean));
 
+    // Face names ko suggestions mein add karo
+    matchedFaceNames.forEach((name) => {
+      suggestions.push(name);
+    });
+
+    // Date suggestions add karo
     matchedMonths.forEach((month) => {
       years.forEach((year) => {
         suggestions.push(`${month} ${year}`);
       });
     });
-
     return suggestions.slice(0, 12);
   };
 
@@ -104,9 +115,18 @@ export function Navbar() {
     setIsFocused(false);
   };
 
-  const dateSuggestions = getDateSuggestions(data);
+  // facename handling
+  const [faceNames, setFaceNames] = useState<string[]>([]);
+  const dateSuggestions = getDateSuggestions(data); // Isme ab face names bhi honge
   const hasPartialMatch = dateSuggestions.length > 0;
 
+  useEffect(() => {
+    if (clusters && clusters.length > 0) {
+      const names = clusters.map((cluster: any) => cluster.cluster_name);
+      setFaceNames(names);
+      console.log('Face Names:', names);
+    }
+  }, [clusters]);
   return (
     <>
       <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur">
@@ -208,18 +228,12 @@ export function Navbar() {
             {/* Header */}
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-neutral-700 dark:text-neutral-200">
-                Recent Searches
+                Search events
               </h3>
-              <button
-                className="text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-                onClick={() => console.log('Clear history')}
-              >
-                Clear
-              </button>
             </div>
             {/* Recent Searches Chips */}
             <div className="mb-6 flex flex-wrap gap-3">
-              {['Beach trip', 'Riya', 'Office', 'Birthday', 'Graduation'].map(
+              {['Beach trip', 'Marriage', 'Office', 'Birthday', 'Graduation'].map(
                 (item) => (
                   <span
                     key={item}
@@ -292,7 +306,7 @@ export function Navbar() {
             className="animate-in fade-in fixed inset-0 z-30 bg-black/40 backdrop-blur-sm duration-200"
             onClick={() => setIsFocused(false)}
           />
-          {/* Floating Search Panel */}
+          {/* Fting Search Panel */}
           <div
             className="animate-in fade-in slide-in-from-top-5 fixed top-16 left-1/2 z-40 max-h-[60vh] w-[90vw] max-w-[700px] -translate-x-1/2 overflow-y-auto rounded-xl bg-white p-6 shadow-2xl transition-all duration-300 dark:bg-neutral-900"
             onClick={(e) => e.stopPropagation()}
@@ -302,7 +316,7 @@ export function Navbar() {
               <>
                 <div>
                   <h3 className="mb-3 text-lg font-semibold text-neutral-700 dark:text-neutral-200">
-                    Search by date
+                    Search by date , name and more...
                   </h3>
                   <div className="space-y-2">
                     {dateSuggestions.map((suggestion) => (

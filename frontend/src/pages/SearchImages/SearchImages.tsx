@@ -1,33 +1,76 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { ImageCard } from '@/components/Media/ImageCard';
-import { MediaView } from '@/components/Media/MediaView';
 import { Image } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
-import { fetchAllImages } from '@/api/api-functions';
+import { fetchAllClusters, fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useNavigate, useParams } from 'react-router';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
-import { ROUTES } from '@/constants/routes';
+import { setClusters } from '@/features/faceClustersSlice';
+import { Cluster } from '@/types/Media';
+import { Button } from '@/components/ui/button'; // Add this import
+import { ArrowLeft } from 'lucide-react'; // Add this import
+import { ROUTES } from '@/constants/routes'; // Add this import
+import { ImageCard } from '@/components/Media/ImageCard';
+import { MediaView } from '@/components/Media/MediaView';
+
 export const SearchImages = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const images = useSelector(selectImages);
-
   const searchState = useSelector((state: RootState) => state.search);
+  const { clusters } = useSelector((state: RootState) => state.faceClusters);
+  const query = useParams().query || '';
+  const [showButton, setShowButton] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowButton(true);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const { data: clustersData, isSuccess: clustersSuccess } = usePictoQuery({
+    queryKey: ['clusters'],
+    queryFn: fetchAllClusters,
+  });
+
+  // Check if query is a face name and redirect
+  useEffect(() => {
+    if (clusters && clusters.length > 0 && query) {
+      // Find cluster with exact name match
+      const matchedCluster = clusters.find(
+        (cluster: Cluster) =>
+          cluster.cluster_name?.toLowerCase().trim() ===
+          query.toLowerCase().trim(),
+      );
+
+      if (matchedCluster) {
+        // Query is a face name, redirect to person page
+        navigate(`/person/${matchedCluster.cluster_id}`);
+        return;
+      }
+    }
+  }, [clusters, query, navigate]);
+
+  useEffect(() => {
+    if (clustersSuccess && clustersData?.data?.clusters) {
+      const clusters = (clustersData.data.clusters || []) as Cluster[];
+      dispatch(setClusters(clusters));
+    }
+  }, [clustersData, clustersSuccess, dispatch]);
+
   const isSearchActive = searchState.active;
   const searchResults = searchState.images;
-  const query = useParams().query || '';
 
   const { data, isLoading, isSuccess, isError } = usePictoQuery({
     queryKey: ['images'],
     queryFn: fetchAllImages,
-    enabled: !isSearchActive,
+    enabled: !isSearchActive, // Fixed typo here
   });
 
   // Handle fetching lifecycle
@@ -60,7 +103,6 @@ export const SearchImages = () => {
     if (!monthYearString) return images;
 
     return images.filter((img) => {
-      console.log(img);
       const dateCreated = new Date(img.metadata.date_created);
       const imgMonthYear = dateCreated.toLocaleDateString('en-US', {
         month: 'long',
@@ -79,7 +121,7 @@ export const SearchImages = () => {
         )
         .join(' ')
     : null;
-  const navigate = useNavigate();
+
   const baseImages = isSearchActive ? searchResults : images;
   const displayImages = filterImagesByMonthYear(baseImages, selectedMonthYear);
 
@@ -91,17 +133,24 @@ export const SearchImages = () => {
 
   return (
     <div className="p-6">
-      <Button
-        variant="outline"
-        onClick={() => {
-          console.log("sfvpoisfvipnfi")
-          navigate(`/${ROUTES.HOME}`);
-        }}
-        className="flex items-center gap-2"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Home
-      </Button>
+      {showButton ? (
+        <>
+          <Button
+            variant="outline"
+            onClick={() => {
+              navigate(`/${ROUTES.HOME}`);
+            }}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Home
+          </Button>
+        </>
+      ) : (
+        <>
+          <b className='text-2xl'> Loading ...</b>
+        </>
+      )}
       <br />
       <h1 className="mb-6 text-2xl font-bold">{title}</h1>
 
