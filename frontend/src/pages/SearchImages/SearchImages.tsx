@@ -148,7 +148,7 @@ export const SearchImages = () => {
         </>
       ) : (
         <>
-          <b className='text-2xl'> Loading ...</b>
+          <b className="text-2xl"> Loading ...</b>
         </>
       )}
       <br />

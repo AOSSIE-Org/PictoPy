@@ -64,10 +64,7 @@ export function AppSidebar() {
                 tooltip={item.name}
                 className="rounded-sm"
               >
-                <Link
-                  to={item.path}
-                  className="flex items-center gap-3"
-                >
+                <Link to={item.path} className="flex items-center gap-3">
                   <item.icon className="h-5 w-5" />
                   <span className="font-medium">{item.name}</span>
                 </Link>

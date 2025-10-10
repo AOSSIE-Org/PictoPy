@@ -233,17 +233,21 @@ export function Navbar() {
             </div>
             {/* Recent Searches Chips */}
             <div className="mb-6 flex flex-wrap gap-3">
-              {['Beach trip', 'Marriage', 'Office', 'Birthday', 'Graduation'].map(
-                (item) => (
-                  <span
-                    key={item}
-                    className="cursor-pointer rounded-full bg-neutral-200 px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-                    onClick={() => handleSuggestionClick(item)}
-                  >
-                    {item}
-                  </span>
-                ),
-              )}
+              {[
+                'Beach trip',
+                'Marriage',
+                'Office',
+                'Birthday',
+                'Graduation',
+              ].map((item) => (
+                <span
+                  key={item}
+                  className="cursor-pointer rounded-full bg-neutral-200 px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                  onClick={() => handleSuggestionClick(item)}
+                >
+                  {item}
+                </span>
+              ))}
             </div>
             {/* Faces Section */}
             <h3 className="mb-3 text-lg font-semibold text-neutral-700 dark:text-neutral-200">
