@@ -103,11 +103,14 @@ export const SearchImages = () => {
     if (!monthYearString) return images;
 
     return images.filter((img) => {
+      if (!img.metadata?.date_created) return false;
+
       const dateCreated = new Date(img.metadata.date_created);
       const imgMonthYear = dateCreated.toLocaleDateString('en-US', {
         month: 'long',
         year: 'numeric',
       });
+
       return imgMonthYear === monthYearString;
     });
   };
