@@ -49,6 +49,7 @@
     "axios": "^1.7.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dayjs": "^1.11.18",
     "framer-motion": "^11.16.3",
     "ldrs": "^1.0.2",
     "lucide-react": "^0.513.0",
