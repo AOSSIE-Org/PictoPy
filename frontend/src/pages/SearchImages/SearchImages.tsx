@@ -11,9 +11,9 @@ import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useNavigate, useParams } from 'react-router';
 import { setClusters } from '@/features/faceClustersSlice';
 import { Cluster } from '@/types/Media';
-import { Button } from '@/components/ui/button'; // Add this import
-import { ArrowLeft } from 'lucide-react'; // Add this import
-import { ROUTES } from '@/constants/routes'; // Add this import
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import { ROUTES } from '@/constants/routes';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 
@@ -73,7 +73,6 @@ export const SearchImages = () => {
     enabled: !isSearchActive, // Fixed typo here
   });
 
-  // Handle fetching lifecycle
   useEffect(() => {
     if (!isSearchActive) {
       if (isLoading) {

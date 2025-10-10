@@ -124,7 +124,7 @@ export function Navbar() {
     if (clusters && clusters.length > 0) {
       const names = clusters.map((cluster: any) => cluster.cluster_name);
       setFaceNames(names);
-      console.log('Face Names:', names);
+      // console.log('Face Names:', names);
     }
   }, [clusters]);
   return (
@@ -215,23 +215,19 @@ export function Navbar() {
       {/* info about the search bar if user not clicks in the face i will show the date suggestion */}
       {isFocused && data === '' && (
         <>
-          {/* Background Blur */}
           <div
             className="animate-in fade-in fixed inset-0 z-30 bg-black/40 backdrop-blur-sm duration-200"
             onClick={() => setIsFocused(false)}
           />
-          {/* Floating Search Panel */}
           <div
             className="animate-in fade-in slide-in-from-top-5 fixed top-16 left-1/2 z-40 max-h-[60vh] w-[90vw] max-w-[700px] -translate-x-1/2 overflow-y-auto rounded-xl bg-white p-6 shadow-2xl transition-all duration-300 dark:bg-neutral-900"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-neutral-700 dark:text-neutral-200">
                 Search events
               </h3>
             </div>
-            {/* Recent Searches Chips */}
             <div className="mb-6 flex flex-wrap gap-3">
               {[
                 'Beach trip',
@@ -249,7 +245,6 @@ export function Navbar() {
                 </span>
               ))}
             </div>
-            {/* Faces Section */}
             <h3 className="mb-3 text-lg font-semibold text-neutral-700 dark:text-neutral-200">
               Faces
             </h3>
@@ -302,20 +297,16 @@ export function Navbar() {
         </>
       )}
 
-      {/* date suggestion */}
       {isFocused && data !== '' && (
         <>
-          {/* Background Blur */}
           <div
             className="animate-in fade-in fixed inset-0 z-30 bg-black/40 backdrop-blur-sm duration-200"
             onClick={() => setIsFocused(false)}
           />
-          {/* Fting Search Panel */}
           <div
             className="animate-in fade-in slide-in-from-top-5 fixed top-16 left-1/2 z-40 max-h-[60vh] w-[90vw] max-w-[700px] -translate-x-1/2 overflow-y-auto rounded-xl bg-white p-6 shadow-2xl transition-all duration-300 dark:bg-neutral-900"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Date Suggestions */}
             {hasPartialMatch ? (
               <>
                 <div>
@@ -348,7 +339,6 @@ export function Navbar() {
                       Try searching for a month name (e.g., "January 2025")
                     </p>
                   </div>
-                  {/* Search Anyway Option */}
                   <div
                     className="cursor-pointer rounded-lg border-2 border-dashed border-neutral-300 p-4 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
                     onClick={handleSearch}
