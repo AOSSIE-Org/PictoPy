@@ -77,7 +77,7 @@ export const SearchImages = () => {
   useEffect(() => {
     if (!isSearchActive) {
       if (isLoading) {
-        dispatch(showLoader('Loading images'));
+        dispatch(showLoader('Loading images'))
       } else if (isError) {
         dispatch(hideLoader());
         dispatch(
