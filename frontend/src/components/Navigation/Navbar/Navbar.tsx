@@ -19,16 +19,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 export function Navbar() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-
+  const [data, setData] = useState('');
   const userName = useSelector(selectName);
   const userAvatar = useSelector(selectAvatar);
   const searchState = useSelector((state: any) => state.search);
   const isSearchActive = searchState.active;
   const queryImage = searchState.queryImage;
-
   const [isFocused, setIsFocused] = useState(false);
-
   const { clusters } = useSelector((state: RootState) => state.faceClusters);
+
   const { data: clustersData, isSuccess: clustersSuccess } = usePictoQuery({
     queryKey: ['clusters'],
     queryFn: fetchAllClusters,
@@ -49,10 +48,64 @@ export function Navbar() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsFocused(false);
+      if (e.key === 'Enter' && isFocused && data.trim()) {
+        handleSearch();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [data, isFocused]);
+
+  const getDateSuggestions = (input: string): string[] => {
+    const clean = input.toLowerCase().trim();
+    if (!clean) return [];
+
+    const months = [
+      'january',
+      'february',
+      'march',
+      'april',
+      'may',
+      'june',
+      'july',
+      'august',
+      'september',
+      'october',
+      'november',
+      'december',
+    ];
+
+    const currentYear = new Date().getFullYear();
+    const years = [currentYear, currentYear - 1, currentYear - 2];
+    const suggestions: string[] = [];
+
+    const matchedMonths = months.filter((month) => month.startsWith(clean));
+
+    matchedMonths.forEach((month) => {
+      years.forEach((year) => {
+        suggestions.push(`${month} ${year}`);
+      });
+    });
+
+    return suggestions.slice(0, 12);
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    if (!suggestion) return;
+    setData(suggestion);
+    navigate(`/search/${encodeURIComponent(suggestion)}`);
+    setIsFocused(false);
+  };
+
+  // Search button handler
+  const handleSearch = () => {
+    if (!data.trim()) return;
+    navigate(`/search/${encodeURIComponent(data)}`);
+    setIsFocused(false);
+  };
+
+  const dateSuggestions = getDateSuggestions(data);
+  const hasPartialMatch = dateSuggestions.length > 0;
 
   return (
     <>
@@ -97,12 +150,20 @@ export function Navbar() {
               placeholder="Search photos, people, or places..."
               className="mr-2 flex-1 border-0 bg-neutral-200 focus-visible:ring-0"
               onFocus={() => setIsFocused(true)}
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSearch();
+              }}
             />
 
             {/* FaceSearch Dialog */}
             <FaceSearchDialog />
 
-            <button className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 rounded-sm p-2">
+            <button
+              className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 rounded-sm p-2"
+              onClick={handleSearch}
+            >
               <Search className="h-4 w-4" />
             </button>
           </div>
@@ -130,19 +191,19 @@ export function Navbar() {
           </div>
         </div>
       </div>
-      {/* info about the search bar  */}
-      {isFocused && (
+
+      {/* info about the search bar if user not clicks in the face i will show the date suggestion */}
+      {isFocused && data === '' && (
         <>
           {/* Background Blur */}
           <div
             className="animate-in fade-in fixed inset-0 z-30 bg-black/40 backdrop-blur-sm duration-200"
             onClick={() => setIsFocused(false)}
           />
-
           {/* Floating Search Panel */}
           <div
             className="animate-in fade-in slide-in-from-top-5 fixed top-16 left-1/2 z-40 max-h-[60vh] w-[90vw] max-w-[700px] -translate-x-1/2 overflow-y-auto rounded-xl bg-white p-6 shadow-2xl transition-all duration-300 dark:bg-neutral-900"
-            onClick={(e) => e.stopPropagation()} // prevents accidental close
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="mb-4 flex items-center justify-between">
@@ -156,7 +217,6 @@ export function Navbar() {
                 Clear
               </button>
             </div>
-
             {/* Recent Searches Chips */}
             <div className="mb-6 flex flex-wrap gap-3">
               {['Beach trip', 'Riya', 'Office', 'Birthday', 'Graduation'].map(
@@ -164,13 +224,13 @@ export function Navbar() {
                   <span
                     key={item}
                     className="cursor-pointer rounded-full bg-neutral-200 px-4 py-2 text-sm text-neutral-800 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                    onClick={() => handleSuggestionClick(item)}
                   >
                     {item}
                   </span>
                 ),
               )}
             </div>
-
             {/* Faces Section */}
             <h3 className="mb-3 text-lg font-semibold text-neutral-700 dark:text-neutral-200">
               Faces
@@ -217,6 +277,76 @@ export function Navbar() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* date suggestion */}
+      {isFocused && data !== '' && (
+        <>
+          {/* Background Blur */}
+          <div
+            className="animate-in fade-in fixed inset-0 z-30 bg-black/40 backdrop-blur-sm duration-200"
+            onClick={() => setIsFocused(false)}
+          />
+          {/* Floating Search Panel */}
+          <div
+            className="animate-in fade-in slide-in-from-top-5 fixed top-16 left-1/2 z-40 max-h-[60vh] w-[90vw] max-w-[700px] -translate-x-1/2 overflow-y-auto rounded-xl bg-white p-6 shadow-2xl transition-all duration-300 dark:bg-neutral-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Date Suggestions */}
+            {hasPartialMatch ? (
+              <>
+                <div>
+                  <h3 className="mb-3 text-lg font-semibold text-neutral-700 dark:text-neutral-200">
+                    Search by date
+                  </h3>
+                  <div className="space-y-2">
+                    {dateSuggestions.map((suggestion) => (
+                      <div
+                        key={suggestion}
+                        className="cursor-pointer rounded-lg p-3 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                        onClick={() => handleSuggestionClick(suggestion)}
+                      >
+                        <p className="text-neutral-700 dark:text-neutral-200">
+                          {suggestion}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <p className="text-xl font-medium text-neutral-700 dark:text-neutral-200">
+                      No matching dates found
+                    </p>
+                    <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+                      Try searching for a month name (e.g., "January 2025")
+                    </p>
+                  </div>
+                  {/* Search Anyway Option */}
+                  <div
+                    className="cursor-pointer rounded-lg border-2 border-dashed border-neutral-300 p-4 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                    onClick={handleSearch}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-neutral-700 dark:text-neutral-200">
+                          Search for "{data}"
+                        </p>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                          Search in all photos
+                        </p>
+                      </div>
+                      <Search className="h-5 w-5 text-neutral-500" />
+                    </div>
+                  </div>
                 </div>
               </>
             )}

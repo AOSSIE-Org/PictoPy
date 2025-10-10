@@ -64,7 +64,18 @@ export function AppSidebar() {
                 tooltip={item.name}
                 className="rounded-sm"
               >
-                <Link to={item.path} className="flex items-center gap-3">
+                <Link
+                  to={item.path}
+                  className="flex items-center gap-3"
+                  onClick={() => {
+                    console.log(
+                      'Sidebar Button Clicked:',
+                      item.name,
+                      'Path:',
+                      item.path,
+                    );
+                  }}
+                >
                   <item.icon className="h-5 w-5" />
                   <span className="font-medium">{item.name}</span>
                 </Link>
