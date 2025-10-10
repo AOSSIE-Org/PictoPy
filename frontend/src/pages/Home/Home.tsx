@@ -59,6 +59,9 @@ export const Home = () => {
   };
 
   const displayImages = isSearchActive ? searchResults : images;
+  // useEffect(() => {
+  //   console.log('Display Images Updated:', displayImages);
+  // }, [displayImages]);
 
   const title =
     isSearchActive && searchResults.length > 0

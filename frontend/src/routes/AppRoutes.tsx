@@ -8,6 +8,7 @@ import { Home } from '@/pages/Home/Home';
 import { AITagging } from '@/pages/AITagging/AITagging';
 import { PersonImages } from '@/pages/PersonImages/PersonImages';
 import { ComingSoon } from '@/pages/ComingSoon/ComingSoon';
+import { SearchImages } from '@/pages/SearchImages/SearchImages';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -21,6 +22,7 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.ALBUMS} element={<ComingSoon />} />
         <Route path={ROUTES.MEMORIES} element={<ComingSoon />} />
         <Route path={ROUTES.PERSON} element={<PersonImages />} />
+        <Route path={ROUTES.SEARCH} element={<SearchImages />} />
       </Route>
     </Routes>
   );
