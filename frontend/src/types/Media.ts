@@ -1,11 +1,27 @@
+export interface ImageMetadata {
+  name: string;
+  date_created: string | null;
+  width: number;
+  height: number;
+  file_location: string;
+  file_size: number;
+  item_type: string;
+  latitude?: number;
+  longitude?: number;
+}
+
 export interface Image {
   id: string;
   path: string;
   thumbnailPath: string;
   folder_id: string;
   isTagged: boolean;
+<<<<<<< HEAD
   metadata?: string;
   isFavourite?: boolean;
+=======
+  metadata?: ImageMetadata;
+>>>>>>> 589d71f3ac56247ffd133813c163893bd7762069
   tags?: string[];
   bboxes?: { x: number; y: number; width: number; height: number }[];
 }

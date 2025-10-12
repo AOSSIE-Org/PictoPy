@@ -2012,8 +2012,7 @@
             "title": "Thumbnailpath"
           },
           "metadata": {
-            "type": "string",
-            "title": "Metadata"
+            "$ref": "#/components/schemas/MetadataModel"
           },
           "isTagged": {
             "type": "boolean",
@@ -2090,7 +2089,7 @@
           "metadata": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "object"
               },
               {
                 "type": "null"
@@ -2144,6 +2143,7 @@
         "title": "ImageInCluster",
         "description": "Represents an image that contains faces from a specific cluster."
       },
+<<<<<<< HEAD
       "ImageInfoResponse": {
         "properties": {
           "id": {
@@ -2181,16 +2181,86 @@
                   "type": "string"
                 },
                 "type": "array"
+=======
+      "MetadataModel": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "date_created": {
+            "anyOf": [
+              {
+                "type": "string"
+>>>>>>> 589d71f3ac56247ffd133813c163893bd7762069
               },
               {
                 "type": "null"
               }
             ],
+<<<<<<< HEAD
             "title": "Tags"
+=======
+            "title": "Date Created"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "file_location": {
+            "type": "string",
+            "title": "File Location"
+          },
+          "file_size": {
+            "type": "integer",
+            "title": "File Size"
+          },
+          "item_type": {
+            "type": "string",
+            "title": "Item Type"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+>>>>>>> 589d71f3ac56247ffd133813c163893bd7762069
           }
         },
         "type": "object",
         "required": [
+<<<<<<< HEAD
           "id",
           "path",
           "folder_id",
@@ -2200,6 +2270,17 @@
           "isFavourite"
         ],
         "title": "ImageInfoResponse"
+=======
+          "name",
+          "date_created",
+          "width",
+          "height",
+          "file_location",
+          "file_size",
+          "item_type"
+        ],
+        "title": "MetadataModel"
+>>>>>>> 589d71f3ac56247ffd133813c163893bd7762069
       },
       "RenameClusterData": {
         "properties": {

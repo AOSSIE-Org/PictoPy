@@ -2,18 +2,32 @@ from fastapi import APIRouter, HTTPException, status
 from typing import List, Optional
 from app.database.images import db_get_all_images
 from app.schemas.images import ErrorResponse
+from app.utils.images import image_util_parse_metadata
 from pydantic import BaseModel
 from app.database.images import db_toggle_image_favourite_status
 router = APIRouter()
 
 
 # Response Models
+class MetadataModel(BaseModel):
+    name: str
+    date_created: Optional[str]
+    width: int
+    height: int
+    file_location: str
+    file_size: int
+    item_type: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    location: Optional[str] = None
+
+
 class ImageData(BaseModel):
     id: str
     path: str
     folder_id: str
     thumbnailPath: str
-    metadata: str
+    metadata: MetadataModel
     isTagged: bool
     isFavourite: bool
     tags: Optional[List[str]] = None
@@ -43,10 +57,16 @@ def get_all_images():
                 path=image["path"],
                 folder_id=image["folder_id"],
                 thumbnailPath=image["thumbnailPath"],
+<<<<<<< HEAD
                 metadata=image["metadata"],
                     isTagged=image["isTagged"],
                     isFavourite=image.get("isFavourite", False),
                     tags=image["tags"],
+=======
+                metadata=image_util_parse_metadata(image["metadata"]),
+                isTagged=image["isTagged"],
+                tags=image["tags"],
+>>>>>>> 589d71f3ac56247ffd133813c163893bd7762069
             )
             for image in images
         ]
