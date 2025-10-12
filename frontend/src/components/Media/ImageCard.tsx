@@ -1,8 +1,8 @@
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Check, Heart,  Share2 } from 'lucide-react';
-import { useState, useCallback, useEffect } from 'react';
+import { Check, Heart, Share2 } from 'lucide-react';
+import { useState, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { Image } from '@/types/Media';
 import { ImageTags } from './ImageTags';
@@ -85,11 +85,7 @@ export function ImageCard({
             >
               {image.isFavourite ? (
                 // Filled Heart (when favourite)
-                <Heart
-                  className="h-5 w-5"
-                  fill="currentColor"
-                >
-                </Heart>
+                <Heart className="h-5 w-5" fill="currentColor"></Heart>
               ) : (
                 <Heart className="h-5 w-5" />
               )}

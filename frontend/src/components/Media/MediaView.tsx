@@ -43,7 +43,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
 
   // Custom hooks
   const { viewState, handlers } = useImageViewControls();
-  const { favorites, toggleFavorite, isFavorite } = useFavorites();
+  const { favorites, toggleFavorite } = useFavorites();
   const [isfav, setIsfav] = useState(currentImage?.isFavourite || false);
   // Navigation handlers
   const handleNextImage = useCallback(() => {

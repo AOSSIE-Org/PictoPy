@@ -16,12 +16,8 @@ export interface Image {
   thumbnailPath: string;
   folder_id: string;
   isTagged: boolean;
-<<<<<<< HEAD
-  metadata?: string;
-  isFavourite?: boolean;
-=======
   metadata?: ImageMetadata;
->>>>>>> 589d71f3ac56247ffd133813c163893bd7762069
+  isFavourite?: boolean;
   tags?: string[];
   bboxes?: { x: number; y: number; width: number; height: number }[];
 }
