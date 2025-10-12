@@ -391,9 +391,11 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
             return False
         cursor.execute("PRAGMA table_info(images)")
         columns = [column[1] for column in cursor.fetchall()]
-        if 'isFavourite' not in columns:
+        if "isFavourite" not in columns:
             print("isFavourite column doesn't exist, adding it now...")
-            cursor.execute("ALTER TABLE images ADD COLUMN isFavourite BOOLEAN DEFAULT 0")
+            cursor.execute(
+                "ALTER TABLE images ADD COLUMN isFavourite BOOLEAN DEFAULT 0"
+            )
             conn.commit()
         cursor.execute(
             """

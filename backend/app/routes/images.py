@@ -5,6 +5,7 @@ from app.schemas.images import ErrorResponse
 from app.utils.images import image_util_parse_metadata
 from pydantic import BaseModel
 from app.database.images import db_toggle_image_favourite_status
+
 router = APIRouter()
 
 
@@ -52,15 +53,15 @@ def get_all_images():
 
         # Convert to response format
         image_data = [
-                ImageData(
+            ImageData(
                 id=image["id"],
                 path=image["path"],
                 folder_id=image["folder_id"],
                 thumbnailPath=image["thumbnailPath"],
                 metadata=image_util_parse_metadata(image["metadata"]),
-                    isTagged=image["isTagged"],
-                    isFavourite=image.get("isFavourite", False),
-                    tags=image["tags"],
+                isTagged=image["isTagged"],
+                isFavourite=image.get("isFavourite", False),
+                tags=image["tags"],
             )
             for image in images
         ]
@@ -84,22 +85,34 @@ def get_all_images():
 
 # adding add to favourite and remove from favourite routes
 
+
 class ToggleFavouriteRequest(BaseModel):
     image_id: str
+
+
 @router.post("/toggle-favourite")
 def toggle_favourite(req: ToggleFavouriteRequest):
     image_id = req.image_id
     try:
         success = db_toggle_image_favourite_status(image_id)
         if not success:
-            raise HTTPException(status_code=404, detail="Image not found or failed to toggle")
+            raise HTTPException(
+                status_code=404, detail="Image not found or failed to toggle"
+            )
         # Fetch updated status to return
-        image = next((img for img in db_get_all_images() if img["id"] == image_id), None)
-        return {"success": True, "image_id": image_id, "isFavourite": image.get("isFavourite", False)}
+        image = next(
+            (img for img in db_get_all_images() if img["id"] == image_id), None
+        )
+        return {
+            "success": True,
+            "image_id": image_id,
+            "isFavourite": image.get("isFavourite", False),
+        }
 
     except Exception as e:
         print(f"Toggle favourite error: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+
 
 class ImageInfoResponse(BaseModel):
     id: str
@@ -110,6 +123,7 @@ class ImageInfoResponse(BaseModel):
     isTagged: bool
     isFavourite: bool
     tags: Optional[List[str]] = None
+
 
 @router.get("/info/{image_id}", response_model=ImageInfoResponse)
 def get_image_info(image_id: str):
@@ -128,5 +142,5 @@ def get_image_info(image_id: str):
         metadata=image["metadata"],
         isTagged=image["isTagged"],
         isFavourite=image.get("isFavourite", False),
-        tags=image.get("tags", [])
+        tags=image.get("tags", []),
     )
