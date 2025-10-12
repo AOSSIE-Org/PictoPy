@@ -75,8 +75,8 @@ export function FaceSearchDialog() {
           variant="ghost"
           size="icon"
           className="h-8 w-8 p-1"
-          title='Face Detection Search'
-          aria-label='Face Detection Search'
+          title="Face Detection Search"
+          aria-label="Face Detection Search"
         >
           <ScanFace className="h-4 w-4" />
           <span className="sr-only">Face Detection Search</span>

@@ -42,8 +42,8 @@ export function Navbar() {
                 <button
                   onClick={() => dispatch(clearSearch())}
                   className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white"
-                  title='Close'
-                  aria-label='Close'
+                  title="Close"
+                  aria-label="Close"
                 >
                   ✕
                 </button>
@@ -62,9 +62,10 @@ export function Navbar() {
 
           <FaceSearchDialog />
 
-          <button className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 rounded-sm p-2"
-          title='Search'
-          aria-label='Search'
+          <button
+            className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 rounded-sm p-2"
+            title="Search"
+            aria-label="Search"
           >
             <Search className="h-4 w-4" />
           </button>
@@ -73,7 +74,13 @@ export function Navbar() {
 
       {/* Right Side */}
       <div className="flex items-center space-x-4">
-        <Button variant="ghost" size="icon" className="relative" title='Notifications' aria-label='Notifications'>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          title="Notifications"
+          aria-label="Notifications"
+        >
           <Bell className="h-5 w-5" />
           <span className="bg-brand-orange absolute top-1 right-1 h-2 w-2 rounded-full" />
           <span className="sr-only">Notifications</span>
