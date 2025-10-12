@@ -2089,6 +2089,7 @@
           "metadata": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -2143,7 +2144,6 @@
         "title": "ImageInCluster",
         "description": "Represents an image that contains faces from a specific cluster."
       },
-<<<<<<< HEAD
       "ImageInfoResponse": {
         "properties": {
           "id": {
@@ -2181,7 +2181,26 @@
                   "type": "string"
                 },
                 "type": "array"
-=======
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "folder_id",
+          "thumbnailPath",
+          "metadata",
+          "isTagged",
+          "isFavourite"
+        ],
+        "title": "ImageInfoResponse"
+      },
       "MetadataModel": {
         "properties": {
           "name": {
@@ -2192,15 +2211,11 @@
             "anyOf": [
               {
                 "type": "string"
->>>>>>> 589d71f3ac56247ffd133813c163893bd7762069
               },
               {
                 "type": "null"
               }
             ],
-<<<<<<< HEAD
-            "title": "Tags"
-=======
             "title": "Date Created"
           },
           "width": {
@@ -2255,22 +2270,10 @@
               }
             ],
             "title": "Location"
->>>>>>> 589d71f3ac56247ffd133813c163893bd7762069
           }
         },
         "type": "object",
         "required": [
-<<<<<<< HEAD
-          "id",
-          "path",
-          "folder_id",
-          "thumbnailPath",
-          "metadata",
-          "isTagged",
-          "isFavourite"
-        ],
-        "title": "ImageInfoResponse"
-=======
           "name",
           "date_created",
           "width",
@@ -2280,7 +2283,6 @@
           "item_type"
         ],
         "title": "MetadataModel"
->>>>>>> 589d71f3ac56247ffd133813c163893bd7762069
       },
       "RenameClusterData": {
         "properties": {

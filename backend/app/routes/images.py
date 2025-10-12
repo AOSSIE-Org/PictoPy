@@ -57,16 +57,10 @@ def get_all_images():
                 path=image["path"],
                 folder_id=image["folder_id"],
                 thumbnailPath=image["thumbnailPath"],
-<<<<<<< HEAD
-                metadata=image["metadata"],
+                metadata=image_util_parse_metadata(image["metadata"]),
                     isTagged=image["isTagged"],
                     isFavourite=image.get("isFavourite", False),
                     tags=image["tags"],
-=======
-                metadata=image_util_parse_metadata(image["metadata"]),
-                isTagged=image["isTagged"],
-                tags=image["tags"],
->>>>>>> 589d71f3ac56247ffd133813c163893bd7762069
             )
             for image in images
         ]

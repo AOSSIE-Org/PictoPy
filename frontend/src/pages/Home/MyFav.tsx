@@ -10,13 +10,14 @@ import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { useNavigate } from 'react-router';
 
 export const MyFav = () => {
   const dispatch = useDispatch();
 
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const images = useSelector(selectImages);
-
+  const navigate = useNavigate();
   const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
   const searchResults = searchState.images;
@@ -96,7 +97,7 @@ export const MyFav = () => {
           
           {/* Optional: Browse Images Button */}
           <button
-            onClick={() => window.history.back()}
+            onClick={() => navigate('/')}
             className="rounded-lg bg-primary px-6 py-2 cursor-pointer text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Browse Images
