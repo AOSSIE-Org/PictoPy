@@ -410,7 +410,7 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         # print(f"✅ Favourite toggled for image {image_id}")
         return cursor.rowcount > 0
     except Exception as e:
-        # print(f"❌ Error toggling favourite: {e}")
+        print(f"❌ Error toggling favourite: {e}")
         conn.rollback()
         return False
     finally:
