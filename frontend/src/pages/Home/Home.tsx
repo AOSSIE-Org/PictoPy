@@ -1,6 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { ImageCard } from '@/components/Media/ImageCard';
+import {
+  ChronologicalGallery,
+  MonthMarker,
+} from '@/components/Media/ChronologicalGallery';
+import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 import { MediaView } from '@/components/Media/MediaView';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { Image } from '@/types/Media';
@@ -14,9 +18,10 @@ import { showInfoDialog } from '@/features/infoDialogSlice';
 
 export const Home = () => {
   const dispatch = useDispatch();
-
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const images = useSelector(selectImages);
+  const scrollableRef = useRef<HTMLDivElement>(null);
+  const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
 
   const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
@@ -82,7 +87,16 @@ export const Home = () => {
         </div>
       )}
 
-      {/* Media Viewer Modal */}
+      {/* Timeline Scrollbar */}
+      {monthMarkers.length > 0 && (
+        <TimelineScrollbar
+          scrollableRef={scrollableRef}
+          monthMarkers={monthMarkers}
+          className="absolute top-0 right-0 h-full w-4"
+        />
+      )}
+
+      {/* Media viewer modal */}
       {isImageViewOpen && (
         <MediaView images={displayImages} onClose={handleCloseMediaView} />
       )}
