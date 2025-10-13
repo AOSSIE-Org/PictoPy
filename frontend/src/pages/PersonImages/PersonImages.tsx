@@ -60,6 +60,12 @@ export const PersonImages = () => {
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setClusterName(e.target.value);
   };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSaveName();
+    }
+  };
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
@@ -77,6 +83,7 @@ export const PersonImages = () => {
             <Input
               value={clusterName}
               onChange={handleNameChange}
+              onKeyDown={handleKeyDown}
               className="max-w-xs"
               placeholder="Enter person name"
             />
