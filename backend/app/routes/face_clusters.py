@@ -1,7 +1,7 @@
 import logging
 import uuid
 import os
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 from app.config.settings import CONFIDENCE_PERCENT, DEFAULT_FACENET_MODEL
 from fastapi import APIRouter, HTTPException, status
@@ -42,7 +42,7 @@ class ImageData(BaseModel):
     path: str
     folder_id: str
     thumbnailPath: str
-    metadata: str
+    metadata: Dict[str, Any]
     isTagged: bool
     tags: Optional[List[str]] = None
     bboxes: BoundingBox
