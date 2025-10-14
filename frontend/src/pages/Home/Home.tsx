@@ -15,6 +15,7 @@ import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { ImageCard } from '@/components/Media/ImageCard';
 
 export const Home = () => {
   const dispatch = useDispatch();

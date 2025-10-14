@@ -13,10 +13,10 @@ import {
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import {
-  ChronologicalGallery,
   MonthMarker,
 } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
+import { ImageCard } from '@/components/Media/ImageCard';
 
 export const AITagging = () => {
   const dispatch = useDispatch();
