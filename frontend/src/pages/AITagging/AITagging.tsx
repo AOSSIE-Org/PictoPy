@@ -62,13 +62,17 @@ export const AITagging = () => {
 
         {/* Gallery Section */}
         <div className="flex-1">
-          { taggedImages.length > 0 ? <ChronologicalGallery
-            images={taggedImages}
-            showTitle={true}
-            title="All Images"
-            onMonthOffsetsChange={setMonthMarkers}
-            scrollContainerRef={scrollableRef}
-          /> : <EmptyAITaggingState />}
+          {taggedImages.length > 0 ? (
+            <ChronologicalGallery
+              images={taggedImages}
+              showTitle={true}
+              title="All Images"
+              onMonthOffsetsChange={setMonthMarkers}
+              scrollContainerRef={scrollableRef}
+            />
+          ) : (
+            <EmptyAITaggingState />
+          )}
         </div>
 
         {/* Media Viewer Modal */}

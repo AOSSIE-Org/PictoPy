@@ -73,14 +73,17 @@ export const Home = () => {
         ref={scrollableRef}
         className="hide-scrollbar flex-1 overflow-x-hidden overflow-y-auto"
       >
-
-       { displayImages.length > 0 ?  <ChronologicalGallery
-          images={displayImages}
-          showTitle={true}
-          title={title}
-          onMonthOffsetsChange={setMonthMarkers}
-          scrollContainerRef={scrollableRef}
-        /> : <EmptyGalleryState />}
+        {displayImages.length > 0 ? (
+          <ChronologicalGallery
+            images={displayImages}
+            showTitle={true}
+            title={title}
+            onMonthOffsetsChange={setMonthMarkers}
+            scrollContainerRef={scrollableRef}
+          />
+        ) : (
+          <EmptyGalleryState />
+        )}
       </div>
 
       {/* Timeline Scrollbar */}
