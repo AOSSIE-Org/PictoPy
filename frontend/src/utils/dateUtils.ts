@@ -1,3 +1,5 @@
+import { Image } from '@/types/Media';
+
 export const getTimeAgo = (dateString: string): string => {
   const date = new Date(dateString);
   const now = new Date();
@@ -23,4 +25,42 @@ export const getTimeAgo = (dateString: string): string => {
   }
 
   return 'a long time ago';
+};
+
+// To group Images from same Month & Year.
+export const groupImagesByYearMonthFromMetadata = (images: Image[]) => {
+  const grouped: Record<string, Record<string, Image[]>> = {};
+
+  images.forEach((image) => {
+    const dateStr = image.metadata?.date_created; // extract date from metadata.date_created
+    if (!dateStr) return;
+
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return;
+
+    const year = date.getFullYear().toString();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+
+    if (!grouped[year]) {
+      grouped[year] = {};
+    }
+    if (!grouped[year][month]) {
+      grouped[year][month] = [];
+    }
+
+    grouped[year][month].push(image);
+  });
+
+  return grouped;
+};
+
+// Build a fast lookup map between an image's id and its index in the global array
+export const createImageIndexMap = (
+  allImages: Image[],
+): Map<string, number> => {
+  const indexMap = new Map<string, number>();
+  allImages.forEach((image, index) => {
+    indexMap.set(image.id, index);
+  });
+  return indexMap;
 };

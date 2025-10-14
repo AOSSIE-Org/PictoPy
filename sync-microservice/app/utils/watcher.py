@@ -49,6 +49,8 @@ def watcher_util_handle_file_changes(changes: set) -> None:
     for change, file_path in changes:
         print(f"File change detected: {change} - {file_path}")
 
+        # Check if this is a deleted folder that we're watching
+        is_deleted_watched_folder = False
         if change == Change.deleted:
             deleted_folder_id = watcher_util_get_folder_id_if_watched(file_path)
             if deleted_folder_id:
@@ -56,7 +58,11 @@ def watcher_util_handle_file_changes(changes: set) -> None:
                     f"  Watched folder deleted: {file_path} (ID: {deleted_folder_id})"
                 )
                 deleted_folder_ids.append(deleted_folder_id)
-        else:
+                is_deleted_watched_folder = True
+
+        # Execute for additions, modifications, and also for deleted image files within watched folders
+        # (ensuring image deletions trigger a sync of their parent folders)
+        if not is_deleted_watched_folder:
             closest_folder = watcher_util_find_closest_parent_folder(
                 file_path, watched_folders
             )
