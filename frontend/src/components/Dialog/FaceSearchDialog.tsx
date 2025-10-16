@@ -69,7 +69,7 @@ export function FaceSearchDialog() {
       setIsDialogOpen(false);
       dispatch(
         showInfoDialog({
-          title: "Webcam doesn't support",
+          title: 'Webcam Not Supported',
           message:
             'Webcam is not supported or access was denied on this device.',
           variant: 'error',
