@@ -26,10 +26,7 @@
       "../../sync-microservice/dist/": "resources/sync-microservice"
     },
     "macOS": {
-      "signingIdentity": "-",
-      "infoPlist": {
-        "NSCameraUsageDescription": "PictoPy needs camera access to capture images from your webcam."
-      }
+      "signingIdentity": "-"
     }
   },
   "productName": "PictoPy",

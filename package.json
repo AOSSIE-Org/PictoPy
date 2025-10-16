@@ -16,5 +16,8 @@
   },
   "devDependencies": {
     "husky": "^9.1.7"
+  },
+  "dependencies": {
+    "eslint": "^9.37.0"
   }
 }
