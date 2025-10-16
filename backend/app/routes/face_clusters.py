@@ -1,9 +1,9 @@
 import logging
+import base64
 import uuid
 import os
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
-from app.config.settings import CONFIDENCE_PERCENT, DEFAULT_FACENET_MODEL
 from fastapi import APIRouter, HTTPException, status
 from app.database.face_clusters import (
     db_get_cluster_by_id,
@@ -11,9 +11,6 @@ from app.database.face_clusters import (
     db_get_all_clusters_with_face_counts,
     db_get_images_by_cluster_id,  # Add this import
 )
-from app.database.faces import get_all_face_embeddings
-from app.models.FaceDetector import FaceDetector
-from app.models.FaceNet import FaceNet
 from app.schemas.face_clusters import (
     RenameClusterRequest,
     RenameClusterResponse,
@@ -26,8 +23,8 @@ from app.schemas.face_clusters import (
     GetClusterImagesData,
     ImageInCluster,
 )
-from app.schemas.images import AddSingleImageRequest
-from app.utils.FaceNet import FaceNet_util_cosine_similarity
+from app.schemas.images import AddSingleBase64ImageRequest, AddSingleImageRequest
+from app.utils.faceSearch import perform_face_search
 
 
 class BoundingBox(BaseModel):
@@ -42,7 +39,7 @@ class ImageData(BaseModel):
     path: str
     folder_id: str
     thumbnailPath: str
-    metadata: str
+    metadata: Dict[str, Any]
     isTagged: bool
     tags: Optional[List[str]] = None
     bboxes: BoundingBox
@@ -247,56 +244,36 @@ def face_tagging(payload: AddSingleImageRequest):
                 message="The provided path is not a valid file",
             ).model_dump(),
         )
+    return perform_face_search(image_path)
 
-    fd = FaceDetector()
-    fn = FaceNet(DEFAULT_FACENET_MODEL)
+
+@router.post("/face-search-base64")
+def face_search_base64(payload: AddSingleBase64ImageRequest):
+    base64_data = payload.base64
+
+    if not base64_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="No base64 data",
+                message="Base64 image data is required.",
+            ).model_dump(),
+        )
+
     try:
-        matches = []
-        image_id = str(uuid.uuid4())
-        result = fd.detect_faces(image_id, image_path, forSearch=True)
-        if not result or result["num_faces"] == 0:
-            return GetAllImagesResponse(
-                success=True,
-                message=f"Successfully retrieved {len(matches)} images",
-                data=[],
-            )
+        image_bytes = base64.b64decode(base64_data.split(",")[-1])
+        image_id = str(uuid.uuid4())[:8]
+        temp_dir = "temp_uploads"
+        os.makedirs(temp_dir, exist_ok=True)
+        image_path = os.path.join(temp_dir, f"{image_id}.jpeg")
 
-        process_face = result["processed_faces"][0]
-        new_embedding = fn.get_embedding(process_face)
+        with open(image_path, "wb") as f:
+            f.write(image_bytes)
 
-        images = get_all_face_embeddings()
-        if len(images) == 0:
-            return GetAllImagesResponse(
-                success=True,
-                message=f"Successfully retrieved {len(matches)} images",
-                data=[],
-            )
-        else:
-            for image in images:
-                max_similarity = 0
-                similarity = FaceNet_util_cosine_similarity(
-                    new_embedding, image["embeddings"]
-                )
-                max_similarity = max(max_similarity, similarity)
-                if max_similarity >= CONFIDENCE_PERCENT:
-                    matches.append(
-                        ImageData(
-                            id=image["id"],
-                            path=image["path"],
-                            folder_id=image["folder_id"],
-                            thumbnailPath=image["thumbnailPath"],
-                            metadata=image["metadata"],
-                            isTagged=image["isTagged"],
-                            tags=image["tags"],
-                            bboxes=image["bbox"],
-                        )
-                    )
+        result = perform_face_search(image_path)
+        return result
 
-            return GetAllImagesResponse(
-                success=True,
-                message=f"Successfully retrieved {len(matches)} images",
-                data=matches,
-            )
     finally:
-        fd.close()
-        fn.close()
+        if os.path.exists(image_path):
+            os.remove(image_path)

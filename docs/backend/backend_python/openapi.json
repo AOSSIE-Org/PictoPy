@@ -1094,6 +1094,45 @@
         }
       }
     },
+    "/face-clusters/face-search-base64": {
+      "post": {
+        "tags": [
+          "Face Clusters"
+        ],
+        "summary": "Face Search Base64",
+        "operationId": "face_search_base64_face_clusters_face_search_base64_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddSingleBase64ImageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/user-preferences/": {
       "get": {
         "tags": [
@@ -1287,6 +1326,19 @@
           "success"
         ],
         "title": "AddFolderResponse"
+      },
+      "AddSingleBase64ImageRequest": {
+        "properties": {
+          "base64": {
+            "type": "string",
+            "title": "Base64"
+          }
+        },
+        "type": "object",
+        "required": [
+          "base64"
+        ],
+        "title": "AddSingleBase64ImageRequest"
       },
       "AddSingleImageRequest": {
         "properties": {
@@ -1931,8 +1983,7 @@
             "title": "Thumbnailpath"
           },
           "metadata": {
-            "type": "string",
-            "title": "Metadata"
+            "$ref": "#/components/schemas/MetadataModel"
           },
           "isTagged": {
             "type": "boolean",
@@ -2004,7 +2055,8 @@
           "metadata": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
@@ -2057,6 +2109,89 @@
         ],
         "title": "ImageInCluster",
         "description": "Represents an image that contains faces from a specific cluster."
+      },
+      "MetadataModel": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "date_created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Created"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "file_location": {
+            "type": "string",
+            "title": "File Location"
+          },
+          "file_size": {
+            "type": "integer",
+            "title": "File Size"
+          },
+          "item_type": {
+            "type": "string",
+            "title": "Item Type"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "date_created",
+          "width",
+          "height",
+          "file_location",
+          "file_size",
+          "item_type"
+        ],
+        "title": "MetadataModel"
       },
       "RenameClusterData": {
         "properties": {
