@@ -62,7 +62,7 @@
         "scope": ["**"],
         "enable": true
       },
-      "csp": "default-src 'self'  ipc: http://ipc.localhost; img-src 'self' data: asset: http://asset.localhost; connect-src 'self' http://localhost:8000 ws://localhost:8000 http://localhost:8001 ws://localhost:8001"
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' data: asset: http://asset.localhost; connect-src 'self' http://localhost:8000 ws://localhost:8000 http://localhost:8001 ws://localhost:8001"
     }
   }
 }
