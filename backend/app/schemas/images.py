@@ -7,6 +7,10 @@ class AddSingleImageRequest(BaseModel):
     path: str
 
 
+class AddSingleBase64ImageRequest(BaseModel):
+    base64: str
+
+
 class AddMultipleImagesRequest(BaseModel):
     paths: List[str]
 
