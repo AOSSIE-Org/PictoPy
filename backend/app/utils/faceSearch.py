@@ -100,5 +100,7 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
         )
 
     finally:
-        fd.close()
-        fn.close()
+        if "fd" in locals() and fd is not None:
+            fd.close()
+        if "fn" in locals() and fn is not None:
+            fn.close()
