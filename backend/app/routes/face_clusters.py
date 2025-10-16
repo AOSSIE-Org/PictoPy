@@ -27,30 +27,6 @@ from app.schemas.images import AddSingleBase64ImageRequest, AddSingleImageReques
 from app.utils.faceSearch import perform_face_search
 
 
-class BoundingBox(BaseModel):
-    x: float
-    y: float
-    width: float
-    height: float
-
-
-class ImageData(BaseModel):
-    id: str
-    path: str
-    folder_id: str
-    thumbnailPath: str
-    metadata: Dict[str, Any]
-    isTagged: bool
-    tags: Optional[List[str]] = None
-    bboxes: BoundingBox
-
-
-class GetAllImagesResponse(BaseModel):
-    success: bool
-    message: str
-    data: List[ImageData]
-
-
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -249,7 +225,7 @@ def face_tagging(payload: AddSingleImageRequest):
 
 @router.post("/face-search-base64")
 def face_search_base64(payload: AddSingleBase64ImageRequest):
-    base64_data = payload.base64_data   
+    base64_data = payload.base64_data
     if not base64_data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -260,6 +236,7 @@ def face_search_base64(payload: AddSingleBase64ImageRequest):
             ).model_dump(),
         )
 
+    image_path = None
     try:
         image_bytes = base64.b64decode(base64_data.split(",")[-1])
         image_id = str(uuid.uuid4())[:8]
@@ -274,5 +251,5 @@ def face_search_base64(payload: AddSingleBase64ImageRequest):
         return result
 
     finally:
-        if os.path.exists(image_path):
+        if image_path and os.path.exists(image_path):
             os.remove(image_path)
