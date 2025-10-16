@@ -58,6 +58,7 @@ export const fetchSearchedFaces = async (
 export const fetchSearchedFacesBase64 = async (
   request: FetchSearchedFacesBase64Request,
 ): Promise<APIResponse> => {
+  console.log(request)
   const response = await apiClient.post<APIResponse>(
     faceClustersEndpoints.searchForFacesBase64,
     request,

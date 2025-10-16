@@ -63,7 +63,10 @@ export function FaceSearchDialog() {
     navigate(`/${ROUTES.HOME}`);
     try {
       await navigator.mediaDevices.getUserMedia({ video: true });
+      setIsDialogOpen(false);
+      setShowCamera(true);
     } catch (error) {
+      setIsDialogOpen(false);
       dispatch(
         showInfoDialog({
           title: "Webcam doesn't support",

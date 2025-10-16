@@ -80,6 +80,7 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
 
   const handleSearchCapturedImage = () => {
     if (capturedImageUrl) {
+      handleClose()
       dispatch(startSearch(capturedImageUrl));
       dispatch(showLoader('Searching faces...'));
       getSearchImagesBase64(capturedImageUrl);
