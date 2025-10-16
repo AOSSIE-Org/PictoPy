@@ -249,8 +249,7 @@ def face_tagging(payload: AddSingleImageRequest):
 
 @router.post("/face-search-base64")
 def face_search_base64(payload: AddSingleBase64ImageRequest):
-    base64_data = payload.base64
-
+    base64_data = payload.base64_data   
     if not base64_data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

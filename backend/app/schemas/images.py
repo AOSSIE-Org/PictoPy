@@ -8,7 +8,7 @@ class AddSingleImageRequest(BaseModel):
 
 
 class AddSingleBase64ImageRequest(BaseModel):
-    base64: str
+    base64_data: str
 
 
 class AddMultipleImagesRequest(BaseModel):

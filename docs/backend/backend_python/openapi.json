@@ -1329,14 +1329,14 @@
       },
       "AddSingleBase64ImageRequest": {
         "properties": {
-          "base64": {
+          "base64_data": {
             "type": "string",
-            "title": "Base64"
+            "title": "Base64 Data"
           }
         },
         "type": "object",
         "required": [
-          "base64"
+          "base64_data"
         ],
         "title": "AddSingleBase64ImageRequest"
       },
