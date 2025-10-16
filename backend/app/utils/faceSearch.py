@@ -49,7 +49,14 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
         matches = []
         image_id = str(uuid.uuid4())
 
-        result = fd.detect_faces(image_id, image_path, forSearch=True)
+        try:
+            result = fd.detect_faces(image_id, image_path, forSearch=True)
+        except Exception as e:
+            return GetAllImagesResponse(
+                success=False,
+                message=f"Failed to process image: {str(e)}",
+                data=[],
+            )
         if not result or result["num_faces"] == 0:
             return GetAllImagesResponse(
                 success=True,

@@ -1,9 +1,8 @@
 import logging
+from binascii import Error as Base64Error
 import base64
 import uuid
 import os
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, status
 from app.database.face_clusters import (
     db_get_cluster_by_id,
@@ -238,7 +237,17 @@ def face_search_base64(payload: AddSingleBase64ImageRequest):
 
     image_path = None
     try:
-        image_bytes = base64.b64decode(base64_data.split(",")[-1])
+        try:
+            image_bytes = base64.b64decode(base64_data.split(",")[-1])
+        except (Base64Error, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Invalid base64 data",
+                    message="The provided base64 image data is malformed or invalid.",
+                ).model_dump(),
+            )
         image_id = str(uuid.uuid4())[:8]
         temp_dir = "temp_uploads"
         os.makedirs(temp_dir, exist_ok=True)

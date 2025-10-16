@@ -63,6 +63,9 @@ export function FaceSearchDialog() {
     navigate(`/${ROUTES.HOME}`);
     try {
       await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach((track) => track.stop());
+      navigate(`/${ROUTES.HOME}`);
       setIsDialogOpen(false);
       setShowCamera(true);
     } catch (error) {
@@ -77,7 +80,6 @@ export function FaceSearchDialog() {
       );
     }
   };
-
   const handlePickFile = async () => {
     navigate(`/${ROUTES.HOME}`);
     const filePath = await pickSingleFile();
