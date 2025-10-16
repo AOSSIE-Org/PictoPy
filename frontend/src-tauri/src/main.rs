@@ -4,7 +4,7 @@
 mod services;
 
 use tauri::path::BaseDirectory;
-use tauri::{Manager, WebviewWindowBuilder};
+use tauri::Manager;
 
 fn main() {
     tauri::Builder::default()
