@@ -14,7 +14,7 @@ import { startSearch, setResults, clearSearch } from '@/features/searchSlice';
 import type { Image } from '@/types/Media';
 import { hideLoader, showLoader } from '@/features/loaderSlice';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
-import { fetchSearchedFaces } from '@/api/api-functions';
+import { fetchSearchedFacesBase64 } from '@/api/api-functions';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 
 const videoConstraints = {
@@ -32,8 +32,9 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
   const webcamRef = useRef<Webcam>(null);
   const dispatch = useDispatch();
 
-  const { mutate: getSearchImages } = usePictoMutation({
-    mutationFn: async (path: string) => fetchSearchedFaces({ path }),
+  const { mutate: getSearchImagesBase64 } = usePictoMutation({
+    mutationFn: async (base64_data: string) =>
+      fetchSearchedFacesBase64({ base64_data }),
     onSuccess: (data) => {
       const result = data?.data as Image[];
       dispatch(hideLoader());
@@ -81,7 +82,7 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
     if (capturedImageUrl) {
       dispatch(startSearch(capturedImageUrl));
       dispatch(showLoader('Searching faces...'));
-      getSearchImages(capturedImageUrl);
+      getSearchImagesBase64(capturedImageUrl);
     }
   };
 
