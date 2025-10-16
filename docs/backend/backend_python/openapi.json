@@ -1094,6 +1094,45 @@
         }
       }
     },
+    "/face-clusters/face-search-base64": {
+      "post": {
+        "tags": [
+          "Face Clusters"
+        ],
+        "summary": "Face Search Base64",
+        "operationId": "face_search_base64_face_clusters_face_search_base64_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddSingleBase64ImageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/user-preferences/": {
       "get": {
         "tags": [
@@ -1287,6 +1326,19 @@
           "success"
         ],
         "title": "AddFolderResponse"
+      },
+      "AddSingleBase64ImageRequest": {
+        "properties": {
+          "base64": {
+            "type": "string",
+            "title": "Base64"
+          }
+        },
+        "type": "object",
+        "required": [
+          "base64"
+        ],
+        "title": "AddSingleBase64ImageRequest"
       },
       "AddSingleImageRequest": {
         "properties": {
@@ -2003,6 +2055,7 @@
           "metadata": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
