@@ -5,6 +5,7 @@ export const imagesEndpoints = {
 export const faceClustersEndpoints = {
   getAllClusters: '/face-clusters/',
   searchForFaces: '/face-clusters/face-search',
+  searchForFacesBase64: '/face-clusters/face-search-base64',
   renameCluster: (clusterId: string) => `/face-clusters/${clusterId}`,
   getClusterImages: (clusterId: string) => `/face-clusters/${clusterId}/images`,
 };

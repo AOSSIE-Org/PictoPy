@@ -63,14 +63,15 @@ export function FaceSearchDialog() {
   const handleWebCam = async () => {
     try {
       await navigator.mediaDevices.getUserMedia({ video: true });
-
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoInputs = devices.filter((d) => d.kind === 'videoinput');
-
-      console.log('Video Inputs:', videoInputs);
     } catch (err) {
-      console.error('Camera access denied:', err);
-      alert('Could not access camera: ' + err);
+      dispatch(
+        showInfoDialog({
+          title: 'No Camera Found',
+          message:
+            'No video input devices were detected. Please make sure a camera is connected and recognized by your system.',
+          variant: 'error',
+        }),
+      );
     }
   };
 
