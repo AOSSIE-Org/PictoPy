@@ -16,6 +16,7 @@ import {
   MonthMarker,
 } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
+import { EmptyAITaggingState } from '@/components/EmptyStates/EmptyAITaggingState';
 
 export const AITagging = () => {
   const dispatch = useDispatch();
@@ -61,13 +62,17 @@ export const AITagging = () => {
 
         {/* Gallery Section */}
         <div className="flex-1">
-          <ChronologicalGallery
-            images={taggedImages}
-            showTitle={true}
-            title="All Images"
-            onMonthOffsetsChange={setMonthMarkers}
-            scrollContainerRef={scrollableRef}
-          />
+          {taggedImages.length > 0 ? (
+            <ChronologicalGallery
+              images={taggedImages}
+              showTitle={true}
+              title="All Images"
+              onMonthOffsetsChange={setMonthMarkers}
+              scrollContainerRef={scrollableRef}
+            />
+          ) : (
+            <EmptyAITaggingState />
+          )}
         </div>
 
         {/* Media Viewer Modal */}
