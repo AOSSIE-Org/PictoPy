@@ -166,6 +166,8 @@ def get_all_face_embeddings():
         )
         results = cursor.fetchall()
 
+        from app.utils.images import image_util_parse_metadata
+
         images_dict = {}
         for (
             embeddings,
@@ -191,7 +193,7 @@ def get_all_face_embeddings():
                     "path": path,
                     "folder_id": folder_id,
                     "thumbnailPath": thumbnail_path,
-                    "metadata": metadata,
+                    "metadata": image_util_parse_metadata(metadata),
                     "isTagged": bool(is_tagged),
                     "tags": [],
                 }
