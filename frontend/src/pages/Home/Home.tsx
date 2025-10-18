@@ -15,6 +15,7 @@ import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
+import { EmptySearchState } from '@/components/EmptyStates/EmptySearchState';
 
 export const Home = () => {
   const dispatch = useDispatch();
@@ -81,6 +82,8 @@ export const Home = () => {
             onMonthOffsetsChange={setMonthMarkers}
             scrollContainerRef={scrollableRef}
           />
+        ) : isSearchActive ? (
+          <EmptySearchState />
         ) : (
           <EmptyGalleryState />
         )}
