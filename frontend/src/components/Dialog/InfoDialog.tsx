@@ -64,7 +64,11 @@ export const InfoDialog: React.FC<InfoDialogProps> = ({
         </DialogHeader>
         <DialogFooter>
           {showCloseButton && (
-            <Button variant={buttonVariant} onClick={handleClose}>
+            <Button
+              className="cursor-pointer"
+              variant={buttonVariant}
+              onClick={handleClose}
+            >
               Close
             </Button>
           )}

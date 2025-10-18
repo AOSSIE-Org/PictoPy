@@ -92,7 +92,7 @@ const ApplicationControlsCard: React.FC = () => {
           <Button
             onClick={onCheckUpdatesClick}
             variant="outline"
-            className="flex h-12 w-full gap-3"
+            className="flex h-12 w-full cursor-pointer gap-3"
           >
             <RefreshCw className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             <div className="text-left">
@@ -103,7 +103,7 @@ const ApplicationControlsCard: React.FC = () => {
           <Button
             onClick={() => restartServer()}
             variant="outline"
-            className="flex h-12 w-full gap-3"
+            className="flex h-12 w-full cursor-pointer gap-3"
           >
             <Server className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             <div className="text-left">

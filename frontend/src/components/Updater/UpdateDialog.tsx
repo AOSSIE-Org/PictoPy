@@ -143,7 +143,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
             variant="outline"
             onClick={onLater}
             disabled={isDownloading}
-            className="flex items-center gap-2"
+            className="flex cursor-pointer items-center gap-2"
           >
             <Clock className="h-4 w-4" />
             {error ? 'Close' : 'Later'}
@@ -151,7 +151,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
           <Button
             onClick={onDownload}
             disabled={isDownloading || !!error}
-            className="flex items-center gap-2"
+            className="flex cursor-pointer items-center gap-2"
           >
             {error ? (
               <>
