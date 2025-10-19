@@ -56,26 +56,31 @@ const FolderManagementCard: React.FC = () => {
                         <span>AI Tagging Progress</span>
                         <span
                           className={
-                            (taggingStatus[folder.folder_id]?.tagging_percentage ?? 0) >= 100
-                              ? 'text-green-500 flex items-center gap-1'
+                            (taggingStatus[folder.folder_id]
+                              ?.tagging_percentage ?? 0) >= 100
+                              ? 'flex items-center gap-1 text-green-500'
                               : 'text-muted-foreground'
                           }
                         >
-                          {(taggingStatus[folder.folder_id]?.tagging_percentage ?? 0) >= 100 && (
+                          {(taggingStatus[folder.folder_id]
+                            ?.tagging_percentage ?? 0) >= 100 && (
                             <Check className="h-3 w-3" />
                           )}
                           {Math.round(
-                            taggingStatus[folder.folder_id]?.tagging_percentage ?? 0,
+                            taggingStatus[folder.folder_id]
+                              ?.tagging_percentage ?? 0,
                           )}
                           %
                         </span>
                       </div>
                       <Progress
                         value={
-                          taggingStatus[folder.folder_id]?.tagging_percentage ?? 0
+                          taggingStatus[folder.folder_id]?.tagging_percentage ??
+                          0
                         }
                         indicatorClassName={
-                          (taggingStatus[folder.folder_id]?.tagging_percentage ?? 0) >= 100
+                          (taggingStatus[folder.folder_id]
+                            ?.tagging_percentage ?? 0) >= 100
                             ? 'bg-green-500'
                             : 'bg-blue-500'
                         }

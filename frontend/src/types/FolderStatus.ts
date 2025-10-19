@@ -10,6 +10,3 @@ export interface FolderTaggingStatusResponse {
   total_folders: number;
   message?: string;
 }
-
-
-
