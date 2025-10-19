@@ -18,6 +18,9 @@ from app.database.images import (
 )
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 # GPS EXIF tag constant
@@ -99,7 +102,7 @@ def image_util_process_untagged_images() -> bool:
 
 
 def image_util_classify_and_face_detect_images(
-    untagged_images: List[Dict[str, str]]
+    untagged_images: List[Dict[str, str]],
 ) -> None:
     """Classify untagged images and detect faces if applicable."""
     object_classifier = ObjectClassifier()
@@ -116,7 +119,7 @@ def image_util_classify_and_face_detect_images(
             if len(classes) > 0:
                 # Create image-class pairs
                 image_class_pairs = [(image_id, class_id) for class_id in classes]
-                logger.debug(f"Image class pairs: {image_class_pairs}")
+                logger.debug(f"Image-class pairs: {image_class_pairs}")
 
                 # Insert the pairs into the database
                 db_insert_image_classes_batch(image_class_pairs)
@@ -262,7 +265,7 @@ def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
 
 
 def image_util_create_folder_path_mapping(
-    folder_ids: List[Tuple[int, str]]
+    folder_ids: List[Tuple[int, str]],
 ) -> Dict[str, int]:
     """
     Create a dictionary mapping folder paths to their IDs.
