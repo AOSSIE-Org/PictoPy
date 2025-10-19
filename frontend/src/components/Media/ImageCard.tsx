@@ -73,7 +73,7 @@ export function ImageCard({
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-full bg-white/20 text-white hover:!bg-white/40 hover:!text-white"
+              className="cursor-pointer rounded-full bg-white/20 text-white hover:!bg-white/40 hover:!text-white"
               onClick={(e) => {
                 e.stopPropagation();
                 setIsFavorite(!isFavorite);
@@ -92,7 +92,7 @@ export function ImageCard({
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-full bg-white/20 text-white hover:!bg-white/40 hover:!text-white"
+              className="cursor-pointer rounded-full bg-white/20 text-white hover:!bg-white/40 hover:!text-white"
               onClick={(e) => e.stopPropagation()}
               title="Share"
               aria-label="Share"

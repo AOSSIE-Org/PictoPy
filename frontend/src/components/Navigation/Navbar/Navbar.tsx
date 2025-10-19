@@ -63,7 +63,7 @@ export function Navbar() {
           <FaceSearchDialog />
 
           <button
-            className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 rounded-sm p-2"
+            className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
             title="Search"
             aria-label="Search"
           >
@@ -77,7 +77,7 @@ export function Navbar() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative"
+          className="relative cursor-pointer"
           title="Notifications"
           aria-label="Notifications"
         >

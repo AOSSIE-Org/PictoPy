@@ -74,7 +74,7 @@ export function FaceSearchDialog() {
           onClick={() => setIsDialogOpen(true)}
           variant="ghost"
           size="icon"
-          className="h-8 w-8 p-1"
+          className="h-8 w-8 cursor-pointer p-1"
           title="Face Detection Search"
           aria-label="Face Detection Search"
         >
@@ -95,7 +95,7 @@ export function FaceSearchDialog() {
           <Button
             onClick={handlePickFile}
             disabled={false}
-            className="flex h-32 flex-col items-center justify-center gap-2 p-0"
+            className="flex h-32 cursor-pointer flex-col items-center justify-center gap-2 p-0"
             variant="outline"
           >
             <Upload className="text-muted-foreground mb-1 h-8 w-8" />
@@ -108,7 +108,7 @@ export function FaceSearchDialog() {
           <Button
             onClick={() => {}}
             disabled={false}
-            className="flex h-32 flex-col items-center justify-center gap-2 p-0"
+            className="flex h-32 cursor-pointer flex-col items-center justify-center gap-2 p-0"
             variant="outline"
           >
             <Camera className="text-muted-foreground mb-1 h-8 w-8" />
