@@ -14,10 +14,7 @@ const taggingStatusSlice = createSlice({
   name: 'taggingStatus',
   initialState,
   reducers: {
-    setTaggingStatus(
-      state,
-      action: PayloadAction<FolderTaggingInfo[]>,
-    ) {
+    setTaggingStatus(state, action: PayloadAction<FolderTaggingInfo[]>) {
       const map: Record<string, FolderTaggingInfo> = {};
       for (const info of action.payload) {
         map[info.folder_id] = info;
@@ -32,8 +29,6 @@ const taggingStatusSlice = createSlice({
   },
 });
 
-export const { setTaggingStatus, clearTaggingStatus } = taggingStatusSlice.actions;
+export const { setTaggingStatus, clearTaggingStatus } =
+  taggingStatusSlice.actions;
 export default taggingStatusSlice.reducer;
-
-
-

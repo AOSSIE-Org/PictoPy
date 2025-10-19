@@ -77,13 +77,19 @@ export const useFolderOperations = () => {
 
   useEffect(() => {
     if (taggingStatusQuery.isError) {
-      console.error('Failed to fetch tagging status:', taggingStatusQuery.error);
-      
+      console.error(
+        'Failed to fetch tagging status:',
+        taggingStatusQuery.error,
+      );
+
       const errorMessage = taggingStatusQuery.errorMessage || 'Unknown error';
       console.warn(`Tagging status query failed: ${errorMessage}`);
-      
     }
-  }, [taggingStatusQuery.isError, taggingStatusQuery.error, taggingStatusQuery.errorMessage]);
+  }, [
+    taggingStatusQuery.isError,
+    taggingStatusQuery.error,
+    taggingStatusQuery.errorMessage,
+  ]);
 
   // Enable AI tagging mutation
   const enableAITaggingMutation = usePictoMutation({
