@@ -34,7 +34,10 @@ const DeleteImagesDialog: FC<DeleteImagesDialogProps> = ({
         </DialogHeader>
 
         <DialogFooter>
-          <Button onClick={() => handleDeleteImages(true)}>
+          <Button
+            className="cursor-pointer"
+            onClick={() => handleDeleteImages(true)}
+          >
             {/* {isEditing ? 'Saving...' : 'Yes'} */}
             Yes
           </Button>

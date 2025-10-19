@@ -64,7 +64,7 @@ export function Navbar() {
 
           <FaceSearchDialog />
 
-          <button className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 rounded-sm p-2">
+          <button className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2">
             <Search className="h-4 w-4" />
           </button>
         </div>
@@ -72,7 +72,7 @@ export function Navbar() {
 
       {/* Right Side */}
       <div className="flex items-center space-x-4">
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative cursor-pointer">
           <Bell className="h-5 w-5" />
           <span className="bg-brand-orange absolute top-1 right-1 h-2 w-2 rounded-full" />
           <span className="sr-only">Notifications</span>
