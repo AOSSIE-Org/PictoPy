@@ -85,7 +85,7 @@ def stream_logs(pipe, prefix, color):
             line = line.strip()
             if line:
                 # All output from sync-microservice is now properly formatted by its logger
-                logger.info(line)
+                print(line)
     pipe.close()
 
 
