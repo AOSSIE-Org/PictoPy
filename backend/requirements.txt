@@ -8,6 +8,8 @@ email_validator==2.1.1
 exceptiongroup==1.2.1
 fastapi==0.111.0
 fastapi-cli==0.0.3
+python-jose[cryptography]==3.3.0
+slowapi==0.1.9
 flatbuffers==24.3.25
 h11==0.14.0
 h2==4.1.0
