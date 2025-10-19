@@ -104,7 +104,12 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) handleClose();
+      }}
+    >
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
@@ -122,12 +127,10 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
             <div className="flex flex-col items-center gap-4">
               <Webcam
                 audio={false}
-                height={500}
                 ref={webcamRef}
                 screenshotFormat="image/jpeg"
-                width={500}
                 videoConstraints={videoConstraints}
-                className="rounded-lg border"
+                className="w-full max-w-md rounded-lg border"
               />
               <Button onClick={capture} className="w-40">
                 Capture Photo
