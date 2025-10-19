@@ -1,7 +1,10 @@
 import os
 import uuid
-from typing import List, Tuple, Dict
-from PIL import Image
+import datetime
+import json
+import logging
+from typing import List, Tuple, Dict, Any, Mapping
+from PIL import Image, ExifTags
 from pathlib import Path
 
 from app.config.settings import THUMBNAIL_IMAGES_PATH
@@ -15,6 +18,12 @@ from app.database.images import (
 )
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
+
+
+# GPS EXIF tag constant
+GPS_INFO_TAG = 34853
+
+logger = logging.getLogger(__name__)
 
 
 def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -> bool:
@@ -55,7 +64,7 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
                 all_image_records.extend(folder_image_records)
 
             except Exception as e:
-                print(f"Error processing folder {folder_path}: {e}")
+                logger.error(f"Error processing folder {folder_path}: {e}")
                 continue  # Continue with other folders even if one fails
 
         # Step 4: Remove obsolete images that no longer exist in filesystem
@@ -68,7 +77,7 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
 
         return True  # No images to process is not an error
     except Exception as e:
-        print(f"Error processing folders: {e}")
+        logger.error(f"Error processing folders: {e}")
         return False
 
 
@@ -85,12 +94,12 @@ def image_util_process_untagged_images() -> bool:
 
         return True
     except Exception as e:
-        print(f"Error processing untagged images: {e}")
+        logger.error(f"Error processing untagged images: {e}")
         return False
 
 
 def image_util_classify_and_face_detect_images(
-    untagged_images: List[Dict[str, str]]
+    untagged_images: List[Dict[str, str]],
 ) -> None:
     """Classify untagged images and detect faces if applicable."""
     object_classifier = ObjectClassifier()
@@ -107,7 +116,7 @@ def image_util_classify_and_face_detect_images(
             if len(classes) > 0:
                 # Create image-class pairs
                 image_class_pairs = [(image_id, class_id) for class_id in classes]
-                print(image_class_pairs)
+                logger.debug(f"Image class pairs: {image_class_pairs}")
 
                 # Insert the pairs into the database
                 db_insert_image_classes_batch(image_class_pairs)
@@ -152,13 +161,15 @@ def image_util_prepare_image_records(
 
         # Generate thumbnail
         if image_util_generate_thumbnail(image_path, thumbnail_path):
+            metadata = image_util_extract_metadata(image_path)
+            logger.debug(f"Extracted metadata for {image_path}: {metadata}")
             image_records.append(
                 {
                     "id": image_id,
                     "path": image_path,
                     "folder_id": folder_id,
                     "thumbnailPath": thumbnail_path,
-                    "metadata": "{}",  # Empty JSON object as default
+                    "metadata": json.dumps(metadata),
                     "isTagged": False,
                 }
             )
@@ -195,7 +206,7 @@ def image_util_get_images_from_folder(
                 if os.path.isfile(file_path) and image_util_is_valid_image(file_path):
                     image_files.append(file_path)
         except OSError as e:
-            print(f"Error reading folder {folder_path}: {e}")
+            logger.error(f"Error reading folder {folder_path}: {e}")
 
     return image_files
 
@@ -215,7 +226,7 @@ def image_util_generate_thumbnail(
             img.save(thumbnail_path, "JPEG")  # Always save thumbnails as JPEG
         return True
     except Exception as e:
-        print(f"Error generating thumbnail for {image_path}: {e}")
+        logger.error(f"Error generating thumbnail for {image_path}: {e}")
         return False
 
 
@@ -239,19 +250,19 @@ def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
             if thumbnail_path and os.path.exists(thumbnail_path):
                 try:
                     os.remove(thumbnail_path)
-                    print(f"Removed obsolete thumbnail: {thumbnail_path}")
+                    logger.info(f"Removed obsolete thumbnail: {thumbnail_path}")
                 except OSError as e:
-                    print(f"Error removing thumbnail {thumbnail_path}: {e}")
+                    logger.error(f"Error removing thumbnail {thumbnail_path}: {e}")
 
     if obsolete_images:
         db_delete_images_by_ids(obsolete_images)
-        print(f"Removed {len(obsolete_images)} obsolete image(s) from database")
+        logger.info(f"Removed {len(obsolete_images)} obsolete image(s) from database")
 
     return len(obsolete_images)
 
 
 def image_util_create_folder_path_mapping(
-    folder_ids: List[Tuple[int, str]]
+    folder_ids: List[Tuple[int, str]],
 ) -> Dict[str, int]:
     """
     Create a dictionary mapping folder paths to their IDs.
@@ -309,3 +320,191 @@ def image_util_is_valid_image(file_path: str) -> bool:
         return True
     except Exception:
         return False
+
+
+def _convert_to_degrees(value):
+    """Converts a GPS coordinate value from DMS to decimal degrees."""
+
+    def to_float(v):
+        return (
+            float(v.numerator) / float(v.denominator)
+            if hasattr(v, "numerator")
+            else float(v)
+        )
+
+    d, m, s = (to_float(v) for v in value[:3])
+    return d + (m / 60.0) + (s / 3600.0)
+
+
+def _extract_gps_coordinates(exif_data: Any) -> Tuple[float | None, float | None]:
+    """
+    Extracts GPS coordinates from EXIF data.
+    Args:
+        exif_data: The EXIF data from an image (PIL.Image.Exif object).
+    Returns:
+        A tuple containing latitude and longitude, or (None, None) if not found.
+    """
+    latitude = None
+    longitude = None
+
+    if exif_data:
+        gps_data = exif_data.get_ifd(GPS_INFO_TAG)
+        if isinstance(gps_data, dict):
+            try:
+                lat_dms = gps_data.get(2)
+                lat_ref = gps_data.get(1)
+                lon_dms = gps_data.get(4)
+                lon_ref = gps_data.get(3)
+
+                if lat_dms and lat_ref and lon_dms and lon_ref:
+                    if isinstance(lat_ref, bytes):
+                        lat_ref = lat_ref.decode("ascii")
+                    if isinstance(lon_ref, bytes):
+                        lon_ref = lon_ref.decode("ascii")
+
+                    latitude = _convert_to_degrees(lat_dms)
+                    if lat_ref.strip() != "N":
+                        latitude = -latitude
+
+                    longitude = _convert_to_degrees(lon_dms)
+                    if lon_ref.strip() != "E":
+                        longitude = -longitude
+            except (
+                KeyError,
+                IndexError,
+                TypeError,
+                ValueError,
+                AttributeError,
+            ):
+                latitude = None
+                longitude = None
+        else:
+            pass
+
+    return latitude, longitude
+
+
+def image_util_extract_metadata(image_path: str) -> dict:
+    """Extract metadata for a given image file with detailed debug logging."""
+    logger.debug(f"image_util_extract_metadata called for: {image_path}")
+
+    if not os.path.exists(image_path):
+        return {
+            "name": os.path.basename(image_path),
+            "date_created": None,
+            "width": 0,
+            "height": 0,
+            "file_location": image_path,
+            "file_size": 0,
+            "item_type": "unknown",
+        }
+
+    try:
+        stats = os.stat(image_path)
+        logger.debug(f"File exists. Size = {stats.st_size} bytes")
+
+        try:
+            with Image.open(image_path) as img:
+                width, height = img.size
+                mime_type = Image.MIME.get(img.format, "unknown")
+                logger.debug(f"Pillow opened image: {width}x{height}, type={mime_type}")
+
+                # Robust EXIF extraction with safe fallback
+                try:
+                    exif_data = (
+                        img.getexif()
+                        if hasattr(img, "getexif")
+                        else getattr(img, "_getexif", lambda: None)()
+                    )
+                except Exception:
+                    exif_data = None
+
+                exif = dict(exif_data) if exif_data else {}
+                dt_original = None
+                latitude, longitude = _extract_gps_coordinates(exif_data)
+
+                for k, v in exif.items():
+                    if ExifTags.TAGS.get(k) == "DateTimeOriginal":
+                        dt_original = (
+                            v.decode("utf-8", "ignore")
+                            if isinstance(v, (bytes, bytearray))
+                            else str(v)
+                        )
+                        break
+
+                # Safe parse; fall back to mtime without losing width/height
+                if dt_original:
+                    try:
+                        date_created = datetime.datetime.strptime(
+                            dt_original.strip().split("\x00", 1)[0],
+                            "%Y:%m:%d %H:%M:%S",
+                        ).isoformat()
+                    except ValueError:
+                        date_created = datetime.datetime.fromtimestamp(
+                            stats.st_mtime
+                        ).isoformat()
+                else:
+                    date_created = datetime.datetime.fromtimestamp(
+                        stats.st_mtime
+                    ).isoformat()
+
+            metadata_dict = {
+                "name": os.path.basename(image_path),
+                "date_created": date_created,
+                "width": width,
+                "height": height,
+                "file_location": image_path,
+                "file_size": stats.st_size,
+                "item_type": mime_type,
+            }
+
+            if latitude is not None and longitude is not None:
+                metadata_dict["latitude"] = latitude
+                metadata_dict["longitude"] = longitude
+
+            return metadata_dict
+
+        except Exception as e:
+            logger.error(f"Pillow could not open image {image_path}: {e}")
+            return {
+                "name": os.path.basename(image_path),
+                "date_created": datetime.datetime.fromtimestamp(
+                    stats.st_mtime
+                ).isoformat(),
+                "file_location": image_path,
+                "file_size": stats.st_size,
+                "width": 0,
+                "height": 0,
+                "item_type": "unknown",
+            }
+
+    except Exception:
+        return {
+            "name": os.path.basename(image_path),
+            "date_created": None,
+            "width": 0,
+            "height": 0,
+            "file_location": image_path,
+            "file_size": 0,
+            "item_type": "unknown",
+        }
+
+
+def image_util_parse_metadata(db_metadata: Any) -> Mapping[str, Any]:
+    """
+    Safely parses metadata from the database, which might be a JSON string or already a dict.
+    """
+    if not db_metadata:
+        return {}
+
+    if isinstance(db_metadata, str):
+        try:
+            parsed = json.loads(db_metadata)
+            return parsed if isinstance(parsed, dict) else {}
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    if isinstance(db_metadata, dict):
+        return db_metadata
+
+    return {}
