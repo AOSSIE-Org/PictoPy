@@ -16,7 +16,7 @@ import { MediaThumbnails } from './MediaThumbnails';
 import { MediaInfoPanel } from './MediaInfoPanel';
 import { ImageViewer } from './ImageViewer';
 import { NavigationButtons } from './NavigationButtons';
-import { getBackendUrl } from '@/utils/env';
+
 // Custom hooks
 import { useImageViewControls } from '@/hooks/useImageViewControls';
 import { useSlideshow } from '@/hooks/useSlideshow';
@@ -73,22 +73,17 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   // handling toogle_favvvvv
   const handle_favourite_toggle = async () => {
     // console.log('processing ..');
-    if (!currentImage) return;
-    const backendurl = getBackendUrl();
-    if (backendurl === undefined) {
-      alert('Backend URL is not defined');
-      return;
-    }
+    if(!currentImage) return;
     try {
       const res = await axios.post(
-        `${backendurl}${imagesEndpoints.setfavourite}`,
+        `http://localhost:8000${imagesEndpoints.setfavourite}`,
         {
           image_id: currentImage?.id,
         },
       );
       if (res.data.success) {
         setIsfav(res.data.isFavourite);
-        await queryclient.invalidateQueries({ queryKey: ['images'] });
+       await queryclient.invalidateQueries({ queryKey: ['images'] });
         res?.data?.isFavourite
           ? alert('Add to Favourite')
           : alert('Removed from Favourite');
