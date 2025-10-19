@@ -78,7 +78,7 @@ def db_insert_clusters_batch(
 
     Args:
         clusters: List of ClusterData objects containing cluster information.
-        conn: Optional existing database connection. If None, creates a new connection.
+        cursor: Optional existing database cursor. If None, creates a new connection.
 
     Returns:
         List of cluster IDs of the newly created clusters
