@@ -55,7 +55,9 @@ def db_get_metadata() -> Optional[Dict[str, Any]]:
         conn.close()
 
 
-def db_update_metadata(metadata: Dict[str, Any], cursor: Optional[sqlite3.Cursor] = None) -> bool:
+def db_update_metadata(
+    metadata: Dict[str, Any], cursor: Optional[sqlite3.Cursor] = None
+) -> bool:
     """
     Update the metadata in the database.
 
@@ -71,7 +73,6 @@ def db_update_metadata(metadata: Dict[str, Any], cursor: Optional[sqlite3.Cursor
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
 
-
     try:
         metadata_json = json.dumps(metadata)
 
@@ -86,7 +87,7 @@ def db_update_metadata(metadata: Dict[str, Any], cursor: Optional[sqlite3.Cursor
     except Exception as e:
         if own_connection:
             conn.rollback()  # Always rollback on error, regardless of connection ownership
-        
+
         print(f"Error updating metadata: {e}")
         raise
     finally:
