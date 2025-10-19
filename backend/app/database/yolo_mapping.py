@@ -6,22 +6,29 @@ from app.utils.YOLO import class_names
 def db_create_YOLO_classes_table():
     # print current directory:
 
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute(
-        """
-            CREATE TABLE IF NOT EXISTS mappings (
-            class_id TEXT PRIMARY KEY,
-            name VARCHAR NOT NULL
-    )
-    """
-    )
-    for class_id, name in enumerate(class_names):
+    print(os.getcwd())
+    conn = None
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
         cursor.execute(
-            "INSERT OR REPLACE INTO mappings (class_id, name) VALUES (?, ?)",
-            (str(class_id), name),  # Convert class_id to string since it's now TEXT
+            """
+                CREATE TABLE IF NOT EXISTS mappings (
+                class_id INTEGER PRIMARY KEY,
+                name VARCHAR NOT NULL
         )
+        """
+        )
+        for class_id, name in enumerate(class_names):
+            cursor.execute(
+                "INSERT OR REPLACE INTO mappings (class_id, name) VALUES (?, ?)",
+                (
+                    class_id,
+                    name,
+                ),  # Keep class_id as integer to match image_classes.class_id
+            )
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()
