@@ -34,7 +34,7 @@ export function Navbar() {
           {queryImage && (
             <div className="relative mr-2 ml-2">
               <img
-                src={convertFileSrc(queryImage) || 'photo.jpeg'}
+                src={queryImage?.includes('base64') ? queryImage : convertFileSrc(queryImage)}
                 alt="Query"
                 className="h-7 w-7 rounded object-cover"
               />

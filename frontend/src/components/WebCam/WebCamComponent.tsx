@@ -55,6 +55,7 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
     },
     onError: () => {
       dispatch(hideLoader());
+      handleClose();
       dispatch(
         showInfoDialog({
           title: 'Search Failed',
@@ -79,7 +80,7 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
   };
 
   const handleSearchCapturedImage = () => {
-    handleClose();
+    onClose();
     if (capturedImageUrl) {
       dispatch(startSearch(capturedImageUrl));
       dispatch(showLoader('Searching faces...'));
@@ -92,11 +93,12 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
           variant: 'error',
         }),
       );
+      handleClose();
     }
   };
 
   const handleClose = () => {
-    setShowCamera(false);
+    setShowCamera(true);
     setCapturedImageUrl(null);
     onClose();
   };
