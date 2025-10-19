@@ -30,8 +30,17 @@ const imageSlice = createSlice({
       state,
       action: PayloadAction<{ images: Image[]; index: number }>,
     ) {
-      state.viewerImages = action.payload.images;
-      state.currentViewIndex = action.payload.index;
+      const { images, index } = action.payload;
+      if (index >= 0 && index < images.length) {
+        state.viewerImages = images;
+        state.currentViewIndex = index;
+      } else {
+        console.warn(
+          `Invalid index provided to setViewerContent: ${index}. Valid range: 0 to ${
+            images.length - 1
+          }`,
+        );
+      }
     },
     addImages(state, action: PayloadAction<Image[]>) {
       state.images.push(...action.payload);

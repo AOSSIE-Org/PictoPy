@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 import { Image } from '@/types/Media';
-import { setImages } from '@/features/imageSlice';
+import { setImages, setViewerContent } from '@/features/imageSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
 import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtension';
@@ -108,6 +108,7 @@ export const PersonImages = () => {
             image={image}
             imageIndex={index}
             className="w-full"
+            onClick={() => dispatch(setViewerContent({ images, index }))}
           />
         ))}
       </div>
