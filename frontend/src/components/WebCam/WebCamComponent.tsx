@@ -79,16 +79,24 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
   };
 
   const handleSearchCapturedImage = () => {
+    handleClose();
     if (capturedImageUrl) {
-      handleClose();
       dispatch(startSearch(capturedImageUrl));
       dispatch(showLoader('Searching faces...'));
       getSearchImagesBase64(capturedImageUrl);
+    } else {
+      dispatch(
+        showInfoDialog({
+          title: 'Capture Failed',
+          message: 'An unexpected error occurred during capture.',
+          variant: 'error',
+        }),
+      );
     }
   };
 
   const handleClose = () => {
-    setShowCamera(true);
+    setShowCamera(false);
     setCapturedImageUrl(null);
     onClose();
   };
