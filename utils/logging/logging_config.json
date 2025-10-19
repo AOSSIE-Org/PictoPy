@@ -33,10 +33,10 @@
       "console_logging": true,
       "loggers": {
         "watchfiles": {
-          "level": "WARNING"
+          "level": "INFO"
         },
         "watchfiles.main": {
-          "level": "WARNING"
+          "level": "INFO"
         }
       }
     },
