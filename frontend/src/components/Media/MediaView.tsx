@@ -5,12 +5,7 @@ import {
   selectCurrentViewIndex,
   selectActiveImageList,
 } from '@/features/imageSelectors';
-import {
-  setCurrentViewIndex,
-  nextImage,
-  previousImage,
-  closeImageView,
-} from '@/features/imageSlice';
+import { setCurrentViewIndex, closeImageView } from '@/features/imageSlice';
 
 // Modular components
 import { MediaViewControls } from './MediaViewControls';
@@ -50,14 +45,18 @@ export function MediaView({ onClose, type = 'image' }: MediaViewProps) {
 
   // Navigation handlers
   const handleNextImage = useCallback(() => {
-    dispatch(nextImage());
-    handlers.resetZoom();
-  }, [dispatch, handlers]);
+    if (currentViewIndex < images.length - 1) {
+      dispatch(setCurrentViewIndex(currentViewIndex + 1));
+      handlers.resetZoom();
+    }
+  }, [dispatch, handlers, currentViewIndex, images.length]);
 
   const handlePreviousImage = useCallback(() => {
-    dispatch(previousImage());
-    handlers.resetZoom();
-  }, [dispatch, handlers]);
+    if (currentViewIndex > 0) {
+      dispatch(setCurrentViewIndex(currentViewIndex - 1));
+      handlers.resetZoom();
+    }
+  }, [dispatch, handlers, currentViewIndex]);
 
   const handleClose = useCallback(() => {
     dispatch(closeImageView());

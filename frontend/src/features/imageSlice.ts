@@ -50,71 +50,9 @@ const imageSlice = createSlice({
         );
       }
     },
-    nextImage(state) {
-      const imageList = state.viewerImages ?? state.images;
-      if (state.currentViewIndex < imageList.length - 1) {
-        state.currentViewIndex += 1;
-      }
-    },
-    previousImage(state) {
-      if (state.currentViewIndex > 0) {
-        state.currentViewIndex -= 1;
-      }
-    },
     closeImageView(state) {
       state.currentViewIndex = -1;
       state.viewerImages = null;
-    },
-    updateImage(
-      state,
-      action: PayloadAction<{ id: string; updates: Partial<Image> }>,
-    ) {
-      const { id, updates } = action.payload;
-      const imageIndex = state.images.findIndex((image) => image.id === id);
-      if (imageIndex !== -1) {
-        state.images[imageIndex] = { ...state.images[imageIndex], ...updates };
-      }
-      if (state.viewerImages) {
-        // Update viewerImages if it exists
-        const viewerImageIndex = state.viewerImages.findIndex(
-          (image) => image.id === id,
-        );
-        if (viewerImageIndex !== -1) {
-          state.viewerImages[viewerImageIndex] = {
-            ...state.viewerImages[viewerImageIndex],
-            ...updates,
-          };
-        }
-      }
-    },
-    removeImage(state, action: PayloadAction<string>) {
-      const imageId = action.payload;
-      const imageIndex = state.images.findIndex(
-        (image) => image.id === imageId,
-      );
-      if (imageIndex !== -1) {
-        state.images.splice(imageIndex, 1);
-        state.totalImages = state.images.length;
-
-        // Adjust currentViewIndex if necessary
-        if (
-          state.currentViewIndex >= imageIndex &&
-          state.currentViewIndex > 0
-        ) {
-          state.currentViewIndex -= 1;
-        } else if (state.currentViewIndex >= state.images.length) {
-          state.currentViewIndex = state.images.length - 1;
-        }
-      }
-      // Also remove from viewerImages if it exists
-      if (state.viewerImages) {
-        const viewerImageIndex = state.viewerImages.findIndex(
-          (image) => image.id === imageId,
-        );
-        if (viewerImageIndex !== -1) {
-          state.viewerImages.splice(viewerImageIndex, 1);
-        }
-      }
     },
     setError(state, action: PayloadAction<string | null>) {
       state.error = action.payload;
@@ -134,11 +72,7 @@ export const {
   setViewerContent,
   addImages,
   setCurrentViewIndex,
-  nextImage,
-  previousImage,
   closeImageView,
-  updateImage,
-  removeImage,
   setError,
   clearImages,
 } = imageSlice.actions;
