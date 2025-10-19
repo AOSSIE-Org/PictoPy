@@ -73,7 +73,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   // handling toogle_favvvvv
   const handle_favourite_toggle = async () => {
     // console.log('processing ..');
-    if(!currentImage) return;
+    if (!currentImage) return;
     try {
       const res = await axios.post(
         `http://localhost:8000${imagesEndpoints.setfavourite}`,
@@ -83,7 +83,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
       );
       if (res.data.success) {
         setIsfav(res.data.isFavourite);
-       await queryclient.invalidateQueries({ queryKey: ['images'] });
+        await queryclient.invalidateQueries({ queryKey: ['images'] });
         res?.data?.isFavourite
           ? alert('Add to Favourite')
           : alert('Removed from Favourite');
