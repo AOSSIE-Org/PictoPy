@@ -1,7 +1,6 @@
 import { Input } from '@/components/ui/input';
 import { ThemeSelector } from '@/components/ThemeToggle';
-import { Bell, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Search } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
 import { clearSearch } from '@/features/searchSlice';
@@ -68,7 +67,6 @@ export function Navbar() {
 
       {/* Right Side */}
       <div className="flex items-center space-x-4">
-        
         <ThemeSelector />
         <div className="flex items-center space-x-2">
           <span className="hidden text-sm sm:inline-block">
