@@ -333,7 +333,7 @@ def db_update_face_cluster_ids_batch(
             conn.commit()
     except Exception:
         if own_connection:
-            conn.rollback()  
+            conn.rollback()
         print("Error updating face cluster IDs in batch.")
         raise
     finally:
