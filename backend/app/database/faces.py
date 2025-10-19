@@ -113,32 +113,18 @@ def db_insert_face_embeddings_by_image_id(
     """
 
     # Handle multiple faces in one image
-    if (
-        isinstance(embeddings, list)
-        and len(embeddings) > 0
-        and isinstance(embeddings[0], np.ndarray)
-    ):
+    if isinstance(embeddings, list) and len(embeddings) > 0 and isinstance(embeddings[0], np.ndarray):
         face_ids = []
         for i, emb in enumerate(embeddings):
-            conf = (
-                confidence[i]
-                if isinstance(confidence, list) and i < len(confidence)
-                else confidence
-            )
+            conf = confidence[i] if isinstance(confidence, list) and i < len(confidence) else confidence
             bb = bbox[i] if isinstance(bbox, list) and i < len(bbox) else bbox
-            cid = (
-                cluster_id[i]
-                if isinstance(cluster_id, list) and i < len(cluster_id)
-                else cluster_id
-            )
+            cid = cluster_id[i] if isinstance(cluster_id, list) and i < len(cluster_id) else cluster_id
             face_id = db_insert_face_embeddings(image_id, emb, conf, bb, cid)
             face_ids.append(face_id)
         return face_ids
     else:
         # Single face
-        return db_insert_face_embeddings(
-            image_id, embeddings, confidence, bbox, cluster_id
-        )
+        return db_insert_face_embeddings(image_id, embeddings, confidence, bbox, cluster_id)
 
 
 def get_all_face_embeddings():
@@ -243,9 +229,7 @@ def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbed
         conn.close()
 
 
-def db_get_all_faces_with_cluster_names() -> (
-    List[Dict[str, Union[FaceId, FaceEmbedding, Optional[str]]]]
-):
+def db_get_all_faces_with_cluster_names() -> List[Dict[str, Union[FaceId, FaceEmbedding, Optional[str]]]]:
     """
     Get all faces with their corresponding cluster names.
 
@@ -287,6 +271,7 @@ def db_get_all_faces_with_cluster_names() -> (
 
 def db_update_face_cluster_ids_batch(
     face_cluster_mapping: List[Dict[str, Union[FaceId, ClusterId]]],
+    cursor: Optional[sqlite3.Cursor] = None,
 ) -> None:
     """
     Update cluster IDs for multiple faces in batch.
@@ -306,12 +291,11 @@ def db_update_face_cluster_ids_batch(
     if not face_cluster_mapping:
         return
 
-    # Use provided connection or create a new one
-    own_connection = conn is None
+    own_connection = cursor is None
     if own_connection:
         conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
 
-    cursor = conn.cursor()
 
     try:
         # Prepare update data as tuples (cluster_id, face_id)
@@ -330,9 +314,16 @@ def db_update_face_cluster_ids_batch(
             update_data,
         )
 
-        conn.commit()
+        if own_connection:
+            conn.commit()
+    except Exception:
+        if own_connection:
+            conn.rollback()  # Always rollback on error, regardless of connection ownership
+        print("Error updating face cluster IDs in batch.")
+        raise
     finally:
-        conn.close()
+        if own_connection:
+            conn.close()
 
 
 def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]]]:
@@ -379,9 +370,7 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
             stacked_embeddings = np.stack(embeddings_list)
             mean_embedding = np.mean(stacked_embeddings, axis=0)
 
-            cluster_means.append(
-                {"cluster_id": cluster_id, "mean_embedding": mean_embedding}
-            )
+            cluster_means.append({"cluster_id": cluster_id, "mean_embedding": mean_embedding})
 
         return cluster_means
     finally:
