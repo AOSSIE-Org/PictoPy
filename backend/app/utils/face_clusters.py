@@ -347,7 +347,7 @@ def _update_cluster_face_image(
     Args:
         cluster_id: The UUID of the cluster
         face_image_base64: Base64 encoded face image string
-        conn: Optional existing database connection. If None, creates a new connection.
+        cursor: Optional existing database cursor. If None, creates a new connection.
 
     Returns:
         True if update was successful, False otherwise

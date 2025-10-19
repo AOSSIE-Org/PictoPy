@@ -63,7 +63,7 @@ def db_update_metadata(
 
     Args:
         metadata: Dictionary containing metadata to store
-        conn: Optional existing database connection. If None, creates a new connection.
+        cursor: Optional existing database cursor. If None, creates a new connection.
 
     Returns:
         True if the metadata was updated, False otherwise
@@ -86,7 +86,7 @@ def db_update_metadata(
         return success
     except Exception as e:
         if own_connection:
-            conn.rollback()  # Always rollback on error, regardless of connection ownership
+            conn.rollback()
 
         print(f"Error updating metadata: {e}")
         raise
