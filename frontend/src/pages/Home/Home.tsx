@@ -14,6 +14,7 @@ import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 
 export const Home = () => {
   const dispatch = useDispatch();
@@ -71,13 +72,17 @@ export const Home = () => {
         ref={scrollableRef}
         className="hide-scrollbar flex-1 overflow-x-hidden overflow-y-auto"
       >
-        <ChronologicalGallery
-          images={displayImages}
-          showTitle={true}
-          title={title}
-          onMonthOffsetsChange={setMonthMarkers}
-          scrollContainerRef={scrollableRef}
-        />
+        {displayImages.length > 0 ? (
+          <ChronologicalGallery
+            images={displayImages}
+            showTitle={true}
+            title={title}
+            onMonthOffsetsChange={setMonthMarkers}
+            scrollContainerRef={scrollableRef}
+          />
+        ) : (
+          <EmptyGalleryState />
+        )}
       </div>
 
       {/* Timeline Scrollbar */}
