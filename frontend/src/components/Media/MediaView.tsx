@@ -120,7 +120,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
 
       {/* Main viewer area */}
       <div
-        className="relativ flex h-full w-full"
+        className="relative flex h-full w-full"
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();
         }}
