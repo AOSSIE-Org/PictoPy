@@ -295,7 +295,7 @@ def db_update_face_cluster_ids_batch(
     Args:
         face_cluster_mapping: List of dictionaries containing face_id and cluster_id pairs
                              Each dict should have keys: 'face_id' and 'cluster_id'
-        conn: Optional existing database connection. If None, creates a new connection.
+        cursor: Optional existing database cursor. If None, creates a new connection.
 
     Example:
         face_cluster_mapping = [
@@ -333,7 +333,7 @@ def db_update_face_cluster_ids_batch(
             conn.commit()
     except Exception:
         if own_connection:
-            conn.rollback()  # Always rollback on error, regardless of connection ownership
+            conn.rollback()  
         print("Error updating face cluster IDs in batch.")
         raise
     finally:
