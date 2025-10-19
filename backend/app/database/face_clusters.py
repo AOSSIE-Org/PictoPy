@@ -44,7 +44,7 @@ def db_delete_all_clusters(cursor: Optional[sqlite3.Cursor] = None) -> int:
     Delete all clusters from the database.
 
     Args:
-        conn: Optional existing database connection. If None, creates a new connection.
+        cursor: Optional existing database cursor. If None, creates a new connection.
 
     Returns:
         Number of deleted clusters
