@@ -85,7 +85,7 @@ def stream_logs(pipe, prefix, color):
             line = line.strip()
             if line:
                 # All output from sync-microservice is now properly formatted by its logger
-                print(line)
+                logger.info(line)
     pipe.close()
 
 
@@ -300,7 +300,7 @@ def _start_fastapi_service(python_executable: Path, service_path: Path) -> bool:
         os.chdir(service_path)
 
         # Command to start FastAPI dev server
-        print(python_executable)
+        logger.debug(f"Using Python executable: {python_executable}")
         host = "127.0.0.1"
         port = "8001"
         # On Windows, use a different approach with scripts path
