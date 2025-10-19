@@ -1,6 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { ImageCard } from '@/components/Media/ImageCard';
+import {
+  ChronologicalGallery,
+  MonthMarker,
+} from '@/components/Media/ChronologicalGallery';
+import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 import { MediaView } from '@/components/Media/MediaView';
 import { Image } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
@@ -10,12 +14,14 @@ import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 
 export const Home = () => {
   const dispatch = useDispatch();
-
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const images = useSelector(selectImages);
+  const scrollableRef = useRef<HTMLDivElement>(null);
+  const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
 
   const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
@@ -61,22 +67,35 @@ export const Home = () => {
       : 'Image Gallery';
 
   return (
-    <div className="p-6">
-      <h1 className="mb-6 text-2xl font-bold">{title}</h1>
-
-      {/* Image Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {displayImages.map((image, index) => (
-          <ImageCard
-            key={image.id}
-            image={image}
-            imageIndex={index}
-            className="w-full"
+    <div className="relative flex h-full flex-col pr-6">
+      {/* Gallery Section */}
+      <div
+        ref={scrollableRef}
+        className="hide-scrollbar flex-1 overflow-x-hidden overflow-y-auto"
+      >
+        {displayImages.length > 0 ? (
+          <ChronologicalGallery
+            images={displayImages}
+            showTitle={true}
+            title={title}
+            onMonthOffsetsChange={setMonthMarkers}
+            scrollContainerRef={scrollableRef}
           />
-        ))}
+        ) : (
+          <EmptyGalleryState />
+        )}
       </div>
 
-      {/* Media Viewer Modal */}
+      {/* Timeline Scrollbar */}
+      {monthMarkers.length > 0 && (
+        <TimelineScrollbar
+          scrollableRef={scrollableRef}
+          monthMarkers={monthMarkers}
+          className="absolute top-0 right-0 h-full w-4"
+        />
+      )}
+
+      {/* Media viewer modal */}
       {isImageViewOpen && (
         <MediaView images={displayImages} onClose={handleCloseMediaView} />
       )}

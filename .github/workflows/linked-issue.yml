@@ -1,0 +1,66 @@
+name: Sync Issue Labels to PR
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  sync-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Extract linked issues from PR body
+        id: issues
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          ISSUES=$(echo "$PR_BODY" | grep -oE '#[0-9]+' | tr -d '#' | tr '\n' ' ' || true)
+          echo "issues=$ISSUES" >> $GITHUB_OUTPUT
+
+      - name: Collect labels from linked issues
+        if: ${{ steps.issues.outputs.issues != '' }}
+        id: labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBERS: ${{ steps.issues.outputs.issues }}
+          REPO: ${{ github.repository }}
+        run: |
+          ALL_LABELS=""
+          REAL_ISSUES=""
+          for ISSUE_NUM in $ISSUE_NUMBERS; do
+            IS_PR=$(gh api "repos/$REPO/issues/$ISSUE_NUM" --jq '.pull_request // empty' || echo "")
+            if [ -n "$IS_PR" ]; then
+              echo "#$ISSUE_NUM is a PR, skipping"
+              continue
+            fi
+            REAL_ISSUES="$REAL_ISSUES $ISSUE_NUM"
+            LABELS=$(gh issue view "$ISSUE_NUM" --json labels -q '.labels[].name' || echo "")
+            if [ -n "$LABELS" ]; then
+              ALL_LABELS="$ALL_LABELS"$'\n'"$LABELS"
+            fi
+          done
+          ALL_LABELS=$(echo "$ALL_LABELS" | sed '/^$/d' | sort -u | paste -sd, - || true)
+          echo "real_issues=$REAL_ISSUES" >> $GITHUB_OUTPUT
+          echo "labels=$ALL_LABELS" >> $GITHUB_OUTPUT
+
+      - name: Comment if no valid issues linked
+        if: ${{ steps.labels.outputs.real_issues == '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr comment "$PR_NUM" --body "⚠️ No issue was linked in the PR description.
+          Please make sure to link an issue (e.g., 'Fixes #issue_number')"
+
+      - name: Apply labels to PR
+        if: ${{ steps.labels.outputs.labels != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LABELS_TO_APPLY: ${{ steps.labels.outputs.labels }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "Applying labels: $LABELS_TO_APPLY"
+          gh pr edit "$PR_NUMBER" --add-label "$LABELS_TO_APPLY"

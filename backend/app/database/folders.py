@@ -13,23 +13,27 @@ FolderIdPath = Tuple[FolderId, str]
 
 
 def db_create_folders_table() -> None:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS folders (
-            folder_id TEXT PRIMARY KEY,
-            parent_folder_id TEXT,
-            folder_path TEXT UNIQUE,
-            last_modified_time INTEGER,
-            AI_Tagging BOOLEAN,
-            taggingCompleted BOOLEAN,
-            FOREIGN KEY (parent_folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
+    conn = None
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS folders (
+                folder_id TEXT PRIMARY KEY,
+                parent_folder_id TEXT,
+                folder_path TEXT UNIQUE,
+                last_modified_time INTEGER,
+                AI_Tagging BOOLEAN,
+                taggingCompleted BOOLEAN,
+                FOREIGN KEY (parent_folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
+            )
+            """
         )
-        """
-    )
-    conn.commit()
-    conn.close()
+        conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def db_insert_folders_batch(folders_data: List[FolderData]) -> None:
@@ -64,67 +68,71 @@ def db_insert_folder(
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
-    abs_folder_path = os.path.abspath(folder_path)
-    if not os.path.isdir(abs_folder_path):
-        raise ValueError(f"Error: '{folder_path}' is not a valid directory.")
+    try:
+        abs_folder_path = os.path.abspath(folder_path)
+        if not os.path.isdir(abs_folder_path):
+            raise ValueError(f"Error: '{folder_path}' is not a valid directory.")
 
-    cursor.execute(
-        "SELECT folder_id FROM folders WHERE folder_path = ?",
-        (abs_folder_path,),
-    )
-    existing_folder = cursor.fetchone()
+        cursor.execute(
+            "SELECT folder_id FROM folders WHERE folder_path = ?",
+            (abs_folder_path,),
+        )
+        existing_folder = cursor.fetchone()
 
-    if existing_folder:
-        result = existing_folder[0]
+        if existing_folder:
+            return existing_folder[0]
+
+        # Time is in Unix format
+        last_modified_time = int(os.path.getmtime(abs_folder_path))
+
+        if folder_id is None:
+            folder_id = str(uuid.uuid4())
+
+        cursor.execute(
+            "INSERT INTO folders (folder_id, folder_path, parent_folder_id, last_modified_time, AI_Tagging, taggingCompleted) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                folder_id,
+                abs_folder_path,
+                parent_folder_id,
+                last_modified_time,
+                AI_Tagging,
+                taggingCompleted,
+            ),
+        )
+
+        conn.commit()
+        return folder_id
+    finally:
         conn.close()
-        return result
-
-    # Time is in Unix format
-    last_modified_time = int(os.path.getmtime(abs_folder_path))
-
-    if folder_id is None:
-        folder_id = str(uuid.uuid4())
-
-    cursor.execute(
-        "INSERT INTO folders (folder_id, folder_path, parent_folder_id, last_modified_time, AI_Tagging, taggingCompleted) VALUES (?, ?, ?, ?, ?, ?)",
-        (
-            folder_id,
-            abs_folder_path,
-            parent_folder_id,
-            last_modified_time,
-            AI_Tagging,
-            taggingCompleted,
-        ),
-    )
-
-    conn.commit()
-    conn.close()
-    return folder_id
 
 
 def db_get_folder_id_from_path(folder_path: FolderPath) -> Optional[FolderId]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
-    abs_folder_path = os.path.abspath(folder_path)
-    cursor.execute(
-        "SELECT folder_id FROM folders WHERE folder_path = ?",
-        (abs_folder_path,),
-    )
-    result = cursor.fetchone()
-    conn.close()
-    return result[0] if result else None
+    try:
+        abs_folder_path = os.path.abspath(folder_path)
+        cursor.execute(
+            "SELECT folder_id FROM folders WHERE folder_path = ?",
+            (abs_folder_path,),
+        )
+        result = cursor.fetchone()
+        return result[0] if result else None
+    finally:
+        conn.close()
 
 
 def db_get_folder_path_from_id(folder_id: FolderId) -> Optional[FolderPath]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT folder_path FROM folders WHERE folder_id = ?",
-        (folder_id,),
-    )
-    result = cursor.fetchone()
-    conn.close()
-    return result[0] if result else None
+    try:
+        cursor.execute(
+            "SELECT folder_path FROM folders WHERE folder_id = ?",
+            (folder_id,),
+        )
+        result = cursor.fetchone()
+        return result[0] if result else None
+    finally:
+        conn.close()
 
 
 def db_get_all_folders() -> List[FolderPath]:
@@ -136,9 +144,12 @@ def db_get_all_folders() -> List[FolderPath]:
 def db_get_all_folder_ids() -> List[FolderId]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT folder_id from folders")
-    rows = cursor.fetchall()
-    return [row[0] for row in rows] if rows else []
+    try:
+        cursor.execute("SELECT folder_id from folders")
+        rows = cursor.fetchall()
+        return [row[0] for row in rows] if rows else []
+    finally:
+        conn.close()
 
 
 def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
@@ -179,30 +190,31 @@ def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
 def db_delete_folder(folder_path: FolderPath) -> None:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
-    abs_folder_path = os.path.abspath(folder_path)
-    cursor.execute(
-        "PRAGMA foreign_keys = ON;"
-    )  # Important for deleting rows in image_id_mapping and images table because they reference this folder_id
-    conn.commit()
-    cursor.execute(
-        "SELECT folder_id FROM folders WHERE folder_path = ?",
-        (abs_folder_path,),
-    )
-    existing_folder = cursor.fetchone()
+    try:
+        abs_folder_path = os.path.abspath(folder_path)
+        cursor.execute(
+            "PRAGMA foreign_keys = ON;"
+        )  # Important for deleting rows in image_id_mapping and images table because they reference this folder_id
+        conn.commit()
+        cursor.execute(
+            "SELECT folder_id FROM folders WHERE folder_path = ?",
+            (abs_folder_path,),
+        )
+        existing_folder = cursor.fetchone()
 
-    if not existing_folder:
-        conn.close()
-        raise ValueError(
-            f"Error: Folder '{folder_path}' does not exist in the database."
+        if not existing_folder:
+            raise ValueError(
+                f"Error: Folder '{folder_path}' does not exist in the database."
+            )
+
+        cursor.execute(
+            "DELETE FROM folders WHERE folder_path = ?",
+            (abs_folder_path,),
         )
 
-    cursor.execute(
-        "DELETE FROM folders WHERE folder_path = ?",
-        (abs_folder_path,),
-    )
-
-    conn.commit()
-    conn.close()
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def db_update_parent_ids_for_subtree(
