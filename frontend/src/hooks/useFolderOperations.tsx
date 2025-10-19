@@ -8,11 +8,10 @@ import {
   deleteFolders,
 } from '@/api/api-functions';
 import { selectAllFolders } from '@/features/folderSelectors';
-import { setFolders } from '@/features/folderSlice';
+import { setFolders, setTaggingStatus } from '@/features/folderSlice';
 import { FolderDetails } from '@/types/Folder';
 import { useMutationFeedback } from './useMutationFeedback';
 import { getFoldersTaggingStatus } from '@/api/api-functions/folders';
-import { setTaggingStatus } from '@/features/taggingStatusSlice';
 
 /**
  * Custom hook for folder operations
