@@ -14,7 +14,6 @@ def format_debug_changes(changes: Set[Tuple[Change, str]]) -> str:
     """
     if not changes:
         return ""
-
     debug_changes = []
     try:
         for change, path in sorted(
@@ -26,7 +25,6 @@ def format_debug_changes(changes: Set[Tuple[Change, str]]) -> str:
                 else "modified" if change == Change.modified else "added"
             )
             debug_changes.append(f"  - {change_type}: {path}")
-
         indented = "\n".join("    " + line for line in debug_changes)
         return indented
     except Exception as e:
