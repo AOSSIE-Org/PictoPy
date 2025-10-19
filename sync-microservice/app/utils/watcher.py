@@ -12,6 +12,10 @@ from app.logging.setup_logging import get_sync_logger
 # Configure third-party loggers
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("watchfiles").setLevel(logging.WARNING)  # Silence watchfiles logger
+logging.getLogger("watchfiles.main").setLevel(
+    logging.WARNING
+)  # Silence watchfiles.main logger
 
 logger = get_sync_logger(__name__)
 
@@ -45,24 +49,6 @@ def watcher_util_get_folder_id_if_watched(file_path: str) -> Optional[str]:
     return None
 
 
-def should_log_file_change(file_path: str, change: Change) -> bool:
-    """
-    Determine if a file change should be logged based on file type and change type.
-
-    Args:
-        file_path: Path to the file that changed
-        change: Type of change detected
-
-    Returns:
-        True if the change should be logged, False otherwise
-    """
-    # Don't log thumbnail changes to reduce noise
-    if "thumbnails" in file_path:
-        return False
-
-    return True
-
-
 def watcher_util_handle_file_changes(changes: set) -> None:
     """
     Handle file changes detected by watchfiles.
@@ -70,35 +56,12 @@ def watcher_util_handle_file_changes(changes: set) -> None:
     Args:
         changes: Set of (change_type, file_path) tuples
     """
-    # Log detailed changes at DEBUG level in a more readable format
-    if logger.isEnabledFor(10):  # DEBUG level is 10
-        debug_changes = []
-        for change, path in sorted(changes, key=lambda x: x[1]):
-            change_type = (
-                "deleted"
-                if change == Change.deleted
-                else "modified" if change == Change.modified else "added"
-            )
-            debug_changes.append(f"\n  - {change_type}: {path}")
-        if debug_changes:
-            logger.debug("Detailed changes:" + "".join(debug_changes))
-
     deleted_folder_ids = []
 
-    # Initialize counters
-    total_changes = len(changes)
-    thumbnail_changes = 0
-    other_changes = 0
     affected_folders = {}  # folder_path -> folder_id mapping
 
     # First pass - count changes and identify affected folders
     for change, file_path in changes:
-        # Count by file type
-        if "thumbnails" in file_path:
-            thumbnail_changes += 1
-        else:
-            other_changes += 1
-
         # Process deletions
         if change == Change.deleted:
             deleted_folder_id = watcher_util_get_folder_id_if_watched(file_path)
@@ -227,15 +190,21 @@ def watcher_util_watcher_worker(folder_paths: List[str]) -> None:
     try:
         logger.info(f"Starting watcher for {len(folder_paths)} folders")
 
-        # Configure logging for watchfiles
-        import logging
-
-        logging.getLogger("watchfiles").setLevel(logging.INFO)
-
-        for changes in watch(*folder_paths, stop_event=stop_event, recursive=False):
+        logger.debug(f"Watching folders: {folder_paths}")
+        for changes in watch(
+            *folder_paths, stop_event=stop_event, recursive=True, debug=False
+        ):
             if stop_event.is_set():
                 logger.info("Stop event detected in watcher loop")
                 break
+
+            # Log changes at debug level before processing
+            if logger.isEnabledFor(10):  # DEBUG level is 10
+                from app.utils.watcher_helpers import format_debug_changes
+
+                logger.debug("Detailed changes:\n %s", format_debug_changes(changes))
+
+            # Process changes
             watcher_util_handle_file_changes(changes)
     except Exception as e:
         logger.error(f"Error in watcher worker: {e}")
@@ -283,6 +252,7 @@ def watcher_util_start_folder_watcher() -> bool:
         return False
 
     logger.info("Initializing folder watcher...")
+    logger.debug("Debug logging is enabled")
 
     try:
         # Simple synchronous database call
