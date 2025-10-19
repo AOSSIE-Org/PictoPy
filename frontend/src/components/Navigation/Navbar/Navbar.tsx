@@ -68,11 +68,7 @@ export function Navbar() {
 
       {/* Right Side */}
       <div className="flex items-center space-x-4">
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="bg-brand-orange absolute top-1 right-1 h-2 w-2 rounded-full" />
-          <span className="sr-only">Notifications</span>
-        </Button>
+        
         <ThemeSelector />
         <div className="flex items-center space-x-2">
           <span className="hidden text-sm sm:inline-block">
