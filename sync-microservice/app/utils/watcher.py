@@ -1,12 +1,17 @@
 import os
 import threading
 import time
+import logging
 from typing import List, Tuple, Dict, Optional
 from watchfiles import watch, Change
 import httpx
 from app.database.folders import db_get_all_folders_with_ids
 from app.config.settings import PRIMARY_BACKEND_URL
 from app.logging.setup_logging import get_sync_logger
+
+# Configure third-party loggers
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 logger = get_sync_logger(__name__)
 
@@ -40,6 +45,24 @@ def watcher_util_get_folder_id_if_watched(file_path: str) -> Optional[str]:
     return None
 
 
+def should_log_file_change(file_path: str, change: Change) -> bool:
+    """
+    Determine if a file change should be logged based on file type and change type.
+
+    Args:
+        file_path: Path to the file that changed
+        change: Type of change detected
+
+    Returns:
+        True if the change should be logged, False otherwise
+    """
+    # Don't log thumbnail changes to reduce noise
+    if "thumbnails" in file_path:
+        return False
+
+    return True
+
+
 def watcher_util_handle_file_changes(changes: set) -> None:
     """
     Handle file changes detected by watchfiles.
@@ -47,40 +70,57 @@ def watcher_util_handle_file_changes(changes: set) -> None:
     Args:
         changes: Set of (change_type, file_path) tuples
     """
+    # Log detailed changes at DEBUG level in a more readable format
+    if logger.isEnabledFor(10):  # DEBUG level is 10
+        debug_changes = []
+        for change, path in sorted(changes, key=lambda x: x[1]):
+            change_type = (
+                "deleted"
+                if change == Change.deleted
+                else "modified" if change == Change.modified else "added"
+            )
+            debug_changes.append(f"\n  - {change_type}: {path}")
+        if debug_changes:
+            logger.debug("Detailed changes:" + "".join(debug_changes))
+
     deleted_folder_ids = []
 
-    for change, file_path in changes:
-        logger.info(f"File change detected: {change} - {file_path}")
+    # Initialize counters
+    total_changes = len(changes)
+    thumbnail_changes = 0
+    other_changes = 0
+    affected_folders = {}  # folder_path -> folder_id mapping
 
-        # Check if this is a deleted folder that we're watching
-        is_deleted_watched_folder = False
+    # First pass - count changes and identify affected folders
+    for change, file_path in changes:
+        # Count by file type
+        if "thumbnails" in file_path:
+            thumbnail_changes += 1
+        else:
+            other_changes += 1
+
+        # Process deletions
         if change == Change.deleted:
             deleted_folder_id = watcher_util_get_folder_id_if_watched(file_path)
             if deleted_folder_id:
-                logger.info(
-                    f"  Watched folder deleted: {file_path} (ID: {deleted_folder_id})"
-                )
                 deleted_folder_ids.append(deleted_folder_id)
-                is_deleted_watched_folder = True
+                continue
 
-        # Execute for additions, modifications, and also for deleted image files within watched folders
-        # (ensuring image deletions trigger a sync of their parent folders)
-        if not is_deleted_watched_folder:
-            closest_folder = watcher_util_find_closest_parent_folder(
-                file_path, watched_folders
-            )
+        # Find affected folder
+        closest_folder = watcher_util_find_closest_parent_folder(
+            file_path, watched_folders
+        )
+        if closest_folder:
+            folder_id, folder_path = closest_folder
+            affected_folders[folder_path] = folder_id
 
-            if closest_folder:
-                folder_id, folder_path = closest_folder
-                logger.info(f"  Closest parent folder: {folder_path} (ID: {folder_id})")
+    # Process affected folders
+    for folder_path, folder_id in affected_folders.items():
+        watcher_util_call_sync_folder_api(folder_id, folder_path)
 
-                watcher_util_call_sync_folder_api(folder_id, folder_path)
-            else:
-                logger.info(f"  No watched parent folder found for: {file_path}")
-
-    # If any watched folders were deleted, call the delete API
+    # Handle deleted folders
     if deleted_folder_ids:
-        logger.info(f"Calling delete API for {len(deleted_folder_ids)} deleted folders")
+        logger.info(f"Processing {len(deleted_folder_ids)} deleted folders")
         watcher_util_call_delete_folders_api(deleted_folder_ids)
         watcher_util_restart_folder_watcher()
 
@@ -116,7 +156,6 @@ def watcher_util_find_closest_parent_folder(
                 if len(folder_path) > longest_match_length:
                     longest_match_length = len(folder_path)
                     best_match = (folder_id, folder_path)
-    logger.debug(f"best match: {best_match}")
 
     return best_match
 
@@ -187,6 +226,12 @@ def watcher_util_watcher_worker(folder_paths: List[str]) -> None:
     """
     try:
         logger.info(f"Starting watcher for {len(folder_paths)} folders")
+
+        # Configure logging for watchfiles
+        import logging
+
+        logging.getLogger("watchfiles").setLevel(logging.INFO)
+
         for changes in watch(*folder_paths, stop_event=stop_event, recursive=False):
             if stop_event.is_set():
                 logger.info("Stop event detected in watcher loop")

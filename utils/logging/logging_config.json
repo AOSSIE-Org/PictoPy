@@ -13,6 +13,10 @@
     "sync-microservice": {
       "prefix": "SYNC-MICROSERVICE",
       "color": "magenta"
+    },
+    "watchfiles": {
+      "prefix": "WATCHFILES",
+      "color": "cyan"
     }
   },
   "colors": {
@@ -26,7 +30,15 @@
     "development": {
       "level": "DEBUG",
       "colored_output": true,
-      "console_logging": true
+      "console_logging": true,
+      "loggers": {
+        "watchfiles": {
+          "level": "WARNING"
+        },
+        "watchfiles.main": {
+          "level": "WARNING"
+        }
+      }
     },
     "production": {
       "level": "INFO",

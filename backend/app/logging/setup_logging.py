@@ -171,6 +171,13 @@ def setup_logging(component_name: str, environment: Optional[str] = None) -> Non
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
 
+    # Configure specific loggers if defined in environment settings
+    if "loggers" in env_settings:
+        for logger_name, logger_config in env_settings["loggers"].items():
+            logger = logging.getLogger(logger_name)
+            if "level" in logger_config:
+                logger.setLevel(getattr(logging, logger_config["level"], log_level))
+
     # Set up console handler
     if console_logging:
         console_handler = logging.StreamHandler(sys.stdout)
