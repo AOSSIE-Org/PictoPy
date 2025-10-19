@@ -16,7 +16,7 @@ import { MediaThumbnails } from './MediaThumbnails';
 import { MediaInfoPanel } from './MediaInfoPanel';
 import { ImageViewer } from './ImageViewer';
 import { NavigationButtons } from './NavigationButtons';
-
+import { getBackendUrl } from '@/utils/env';
 // Custom hooks
 import { useImageViewControls } from '@/hooks/useImageViewControls';
 import { useSlideshow } from '@/hooks/useSlideshow';
@@ -74,13 +74,14 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   const handle_favourite_toggle = async () => {
     // console.log('processing ..');
     if (!currentImage) return;
-    if (import.meta.env.VITE_BACKEND_URL === undefined) {
+    const backendurl = getBackendUrl();
+    if (backendurl === undefined) {
       alert('Backend URL is not defined');
       return;
     }
     try {
       const res = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}${imagesEndpoints.setfavourite}`,
+        `${backendurl}${imagesEndpoints.setfavourite}`,
         {
           image_id: currentImage?.id,
         },
