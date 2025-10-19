@@ -25,7 +25,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
       <div className="flex gap-2">
         <button
           onClick={onZoomOut}
-          className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
+          className="cursor-pointer rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
           aria-label="Zoom Out"
         >
           <ZoomOut className="h-5 w-5" />
@@ -33,14 +33,14 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
 
         <button
           onClick={onReset}
-          className="rounded-md bg-white/10 px-3 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
+          className="cursor-pointer rounded-md bg-white/10 px-3 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
         >
           Reset
         </button>
 
         <button
           onClick={onZoomIn}
-          className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
+          className="cursor-pointer rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
           aria-label="Zoom In"
         >
           <ZoomIn className="h-5 w-5" />
@@ -48,7 +48,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
 
         <button
           onClick={onRotate}
-          className="rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
+          className="cursor-pointer rounded-md bg-white/10 p-2 text-white transition-all duration-200 hover:bg-white/20 hover:shadow-md"
           aria-label="Rotate"
         >
           <RotateCw className="h-5 w-5" />
