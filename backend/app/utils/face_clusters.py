@@ -28,6 +28,7 @@ from app.logging.setup_logging import get_logger
 # Initialize logger
 logger = get_logger(__name__)
 
+
 @contextmanager
 def get_db_transaction() -> Tuple[sqlite3.Connection, sqlite3.Cursor]:
     """
@@ -44,8 +45,6 @@ def get_db_transaction() -> Tuple[sqlite3.Connection, sqlite3.Cursor]:
         raise
     finally:
         conn.close()
-
-
 
 
 class ClusterResult:
