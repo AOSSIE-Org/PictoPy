@@ -8,7 +8,7 @@ import {
   previousImage,
   closeImageView,
 } from '@/features/imageSlice';
-
+import { useQueryClient } from '@tanstack/react-query';
 // Modular components
 import { MediaViewControls } from './MediaViewControls';
 import { ZoomControls } from './ZoomControls';
@@ -23,6 +23,7 @@ import { useSlideshow } from '@/hooks/useSlideshow';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import axios from 'axios';
+import { imagesEndpoints } from '@/api/apiEndpoints';
 
 export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   const dispatch = useDispatch();
@@ -40,7 +41,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   // Local UI state
   const [showInfo, setShowInfo] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(false);
-
+  const queryclient = useQueryClient();
   // Custom hooks
   const { viewState, handlers } = useImageViewControls();
   const { favorites, toggleFavorite } = useFavorites();
@@ -72,17 +73,24 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   // handling toogle_favvvvv
   const handle_favourite_toggle = async () => {
     // console.log('processing ..');
+    if (!currentImage) return;
+    if (import.meta.env.VITE_BACKEND_URL === undefined) {
+      alert('Backend URL is not defined');
+      return;
+    }
     try {
       const res = await axios.post(
-        'http://localhost:8000/images/toggle-favourite',
+        `${import.meta.env.VITE_BACKEND_URL}${imagesEndpoints.setfavourite}`,
         {
           image_id: currentImage?.id,
         },
       );
       if (res.data.success) {
+        setIsfav(res.data.isFavourite);
+        await queryclient.invalidateQueries({ queryKey: ['images'] });
         res?.data?.isFavourite
-          ? alert('Add to Favourite \n please refresh')
-          : alert('Removed from Favourite \n please refresh');
+          ? alert('Add to Favourite')
+          : alert('Removed from Favourite');
         console.log('toggled');
         toggleFavorite(currentImage?.path || '');
       }
