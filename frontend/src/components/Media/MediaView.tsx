@@ -120,7 +120,8 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
 
       {/* Main viewer area */}
       <div
-        className="relative flex h-full w-full"
+        className="relative flex h-full w-full items-center justify-center"
+        id="parent-zoomable-image"
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();
         }}

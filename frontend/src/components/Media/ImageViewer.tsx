@@ -31,7 +31,6 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   onWheel,
 }) => {
   return (
-    <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
       <div
         id="zoomable-image"
         className="relative"
@@ -63,7 +62,6 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
             display: 'block',
           }}
         />
-      </div>
     </div>
   );
 };
