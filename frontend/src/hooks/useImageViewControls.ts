@@ -17,7 +17,6 @@ export const useImageViewControls = () => {
     dragStart: { x: 0, y: 0 },
   });
 
-
   const handleZoomIn = useCallback(() => {
     setViewState((prev) => ({
       ...prev,
