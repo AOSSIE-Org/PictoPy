@@ -9,6 +9,9 @@ from app.utils.YOLO import (
 )
 from app.utils.memory_monitor import log_memory_usage
 from app.utils.ONNX import ONNX_util_get_execution_providers
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class YOLO:
@@ -30,7 +33,7 @@ class YOLO:
 
     def close(self):
         del self.session  # Clean up the ONNX session
-        print("YOLO model session closed.")
+        logger.info("YOLO model session closed.")
 
     @log_memory_usage
     def detect_objects(self, image):

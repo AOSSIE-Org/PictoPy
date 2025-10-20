@@ -18,6 +18,9 @@ from app.database.images import (
 )
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 # GPS EXIF tag constant
@@ -116,7 +119,7 @@ def image_util_classify_and_face_detect_images(
             if len(classes) > 0:
                 # Create image-class pairs
                 image_class_pairs = [(image_id, class_id) for class_id in classes]
-                logger.debug(f"Image class pairs: {image_class_pairs}")
+                logger.debug(f"Image-class pairs: {image_class_pairs}")
 
                 # Insert the pairs into the database
                 db_insert_image_classes_batch(image_class_pairs)
