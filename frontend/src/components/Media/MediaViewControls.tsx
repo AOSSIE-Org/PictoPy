@@ -28,7 +28,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
     <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
       <button
         onClick={onToggleInfo}
-        className={`rounded-full ${
+        className={`cursor-pointer rounded-full ${
           showInfo ? 'bg-indigo-500/70' : 'bg-black/50'
         } p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg`}
         aria-label="Show Info"
@@ -39,7 +39,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
 
       <button
         onClick={onOpenFolder}
-        className="rounded-full bg-black/50 p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg"
+        className="cursor-pointer rounded-full bg-black/50 p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg"
         aria-label="Open Folder"
         title="Open Folder"
       >
@@ -47,7 +47,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
       </button>
 
       <button
-        className="rounded-full bg-black/50 p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg"
+        className="cursor-pointer rounded-full bg-black/50 p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg"
         aria-label="Share"
         title="Share"
       >
@@ -56,7 +56,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
 
       <button
         onClick={onToggleFavorite}
-        className={`rounded-full p-2.5 text-white transition-all duration-300 ${
+        className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${
           isFavorite
             ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
             : 'bg-black/50 hover:bg-black/20 hover:text-white hover:shadow-lg'
@@ -70,7 +70,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
       {type === 'image' && (
         <button
           onClick={onToggleSlideshow}
-          className="flex items-center gap-2 rounded-full bg-indigo-500/70 px-4 py-2 text-white transition-all duration-200 hover:bg-indigo-600/80 hover:shadow-lg"
+          className="flex cursor-pointer items-center gap-2 rounded-full bg-indigo-500/70 px-4 py-2 text-white transition-all duration-200 hover:bg-indigo-600/80 hover:shadow-lg"
           aria-label="Toggle Slideshow"
           title="SlideShow"
         >
@@ -87,7 +87,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
 
       <button
         onClick={onClose}
-        className="ml-2 rounded-full bg-black/50 p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg"
+        className="ml-2 cursor-pointer rounded-full bg-black/50 p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg"
         aria-label="Close"
         title="Close"
       >

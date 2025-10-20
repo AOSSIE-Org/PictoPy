@@ -29,6 +29,7 @@ from app.database.albums import (
 
 router = APIRouter()
 
+
 # GET /albums/ - Get all albums
 @router.get("/", response_model=GetAlbumsResponse)
 def get_albums(show_hidden: bool = Query(False)):
