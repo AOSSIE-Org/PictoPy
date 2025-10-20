@@ -1,5 +1,6 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
 import React from 'react';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 interface ImageViewerProps {
   imagePath: string;
@@ -29,31 +30,54 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   onClick,
 }) => {
   return (
-    <div
-      id="zoomable-image"
-      onClick={onClick}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      onMouseLeave={onMouseLeave}
-      className="relative flex h-full w-full items-center justify-center overflow-hidden"
+    <TransformWrapper
+      initialScale={1}
+      minScale={0.1}
+      maxScale={8}
+      centerOnInit={true}
+      limitToBounds={false}
     >
-      <img
-        src={convertFileSrc(imagePath) || '/placeholder.svg'}
-        alt={alt}
-        draggable={false}
-        className="h-full w-full object-contain select-none"
-        onError={(e) => {
-          const img = e.target as HTMLImageElement;
-          img.onerror = null;
-          img.src = '/placeholder.svg';
+      <TransformComponent
+        wrapperStyle={{
+          width: '100%',
+          height: '100%',
+          overflow: 'visible',
         }}
-        style={{
-          transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
-          transition: isDragging ? 'none' : 'transform 0.2s ease-in-out',
-          cursor: isDragging ? 'grabbing' : 'grab',
+        contentStyle={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
-      />
-    </div>
+      >
+        <img
+          onClick={onClick}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseLeave}
+          src={convertFileSrc(imagePath) || '/placeholder.svg'}
+          alt={alt}
+          draggable={false}
+          className="select-none"
+          onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            img.onerror = null;
+            img.src = '/placeholder.svg';
+          }}
+          style={{
+            maxWidth: '100%',
+            maxHeight: '100%',
+            objectFit: 'contain',
+            // transform: `rotate(${rotation}deg)`,
+            zIndex: 50,
+            transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
+            transition: isDragging ? 'none' : 'transform 0.2s ease-in-out',
+            cursor: isDragging ? 'grabbing' : 'grab',
+          }}
+        />
+      </TransformComponent>
+    </TransformWrapper>
   );
 };

@@ -8,7 +8,6 @@ import {
   previousImage,
   closeImageView,
 } from '@/features/imageSlice';
-
 // Modular components
 import { MediaViewControls } from './MediaViewControls';
 import { ZoomControls } from './ZoomControls';
@@ -121,7 +120,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
 
       {/* Main viewer area */}
       <div
-        className="relative flex h-full w-full items-center justify-center"
+        className="relative flex h-full w-full items-center justify-center overflow-visible"
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();
         }}
