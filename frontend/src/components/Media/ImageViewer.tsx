@@ -1,12 +1,10 @@
-import { convertFileSrc } from '@tauri-apps/api/core';
-import React from 'react';
+import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { convertFileSrc } from '@tauri-apps/api/core';
 
 interface ImageViewerProps {
   imagePath: string;
   alt: string;
-  scale: number;
-  position: { x: number; y: number };
   rotation: number;
   isDragging: boolean;
   onMouseDown: (e: React.MouseEvent) => void;
@@ -14,70 +12,95 @@ interface ImageViewerProps {
   onMouseUp: () => void;
   onMouseLeave: () => void;
   onClick?: (e: React.MouseEvent) => void;
+  resetSignal?: number;
 }
 
-export const ImageViewer: React.FC<ImageViewerProps> = ({
-  imagePath,
-  alt,
-  scale,
-  position,
-  rotation,
-  isDragging,
-  onMouseDown,
-  onMouseMove,
-  onMouseUp,
-  onMouseLeave,
-  onClick,
-}) => {
-  return (
-    <TransformWrapper
-      initialScale={1}
-      minScale={0.1}
-      maxScale={8}
-      centerOnInit={true}
-      limitToBounds={false}
-    >
-      <TransformComponent
-        wrapperStyle={{
-          width: '100%',
-          height: '100%',
-          overflow: 'visible',
-        }}
-        contentStyle={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
+export interface ImageViewerRef {
+  zoomIn: () => void;
+  zoomOut: () => void;
+  reset: () => void;
+}
+
+export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
+  (
+    {
+      imagePath,
+      alt,
+      rotation,
+      isDragging,
+      onMouseDown,
+      onMouseMove,
+      onMouseUp,
+      onMouseLeave,
+      onClick,
+      resetSignal,
+    },
+    ref
+  ) => {
+    const transformRef = useRef<any>(null);
+
+    // Expose zoom functions to parent
+    useImperativeHandle(ref, () => ({
+      zoomIn: () => transformRef.current?.zoomIn(),
+      zoomOut: () => transformRef.current?.zoomOut(),
+      reset: () => transformRef.current?.resetTransform(),
+    }));
+
+    // Reset on signal change
+    React.useEffect(() => {
+      transformRef.current?.resetTransform();
+    }, [resetSignal]);
+
+    return (
+      <TransformWrapper
+        ref={transformRef}
+        initialScale={1}
+        minScale={0.1}
+        maxScale={8}
+        centerOnInit
+        limitToBounds={false}
       >
-        <img
-          onClick={onClick}
-          onMouseDown={onMouseDown}
-          onMouseMove={onMouseMove}
-          onMouseUp={onMouseUp}
-          onMouseLeave={onMouseLeave}
-          src={convertFileSrc(imagePath) || '/placeholder.svg'}
-          alt={alt}
-          draggable={false}
-          className="select-none"
-          onError={(e) => {
-            const img = e.target as HTMLImageElement;
-            img.onerror = null;
-            img.src = '/placeholder.svg';
+        <TransformComponent
+          wrapperStyle={{
+            width: '100%',
+            height: '100%',
+            overflow: 'visible',
           }}
-          style={{
-            maxWidth: '100%',
-            maxHeight: '100%',
-            objectFit: 'contain',
-            // transform: `rotate(${rotation}deg)`,
-            zIndex: 50,
-            transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
-            transition: isDragging ? 'none' : 'transform 0.2s ease-in-out',
-            cursor: isDragging ? 'grabbing' : 'grab',
+          contentStyle={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
-        />
-      </TransformComponent>
-    </TransformWrapper>
-  );
-};
+        >
+          <img
+            onClick={onClick}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseLeave}
+            src={convertFileSrc(imagePath) || '/placeholder.svg'}
+            alt={alt}
+            draggable={false}
+            className="select-none"
+            onError={(e) => {
+              const img = e.target as HTMLImageElement;
+              img.onerror = null;
+              img.src = '/placeholder.svg';
+            }}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              zIndex: 50,
+              transform: `rotate(${rotation}deg)`,
+              transition: isDragging ? 'none' : 'transform 0.2s ease-in-out',
+              cursor: isDragging ? 'grabbing' : 'grab',
+            }}
+          />
+        </TransformComponent>
+      </TransformWrapper>
+    );
+  }
+);

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { MediaViewProps } from '@/types/Media';
 import { selectCurrentViewIndex } from '@/features/imageSelectors';
@@ -15,6 +15,7 @@ import { MediaThumbnails } from './MediaThumbnails';
 import { MediaInfoPanel } from './MediaInfoPanel';
 import { ImageViewer } from './ImageViewer';
 import { NavigationButtons } from './NavigationButtons';
+import type { ImageViewerRef } from './ImageViewer';
 
 // Custom hooks
 import { useImageViewControls } from '@/hooks/useImageViewControls';
@@ -35,8 +36,8 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     return null;
   }, [images, currentViewIndex]);
   console.log(currentViewIndex);
+  const imageViewerRef = useRef<ImageViewerRef>(null);
 
-  // Local UI state
   const [showInfo, setShowInfo] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(false);
 
@@ -73,7 +74,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     totalImages,
     handleNextImage,
   );
-
+  const [resetSignal, setResetSignal] = useState(0);
   // Toggle functions
   const toggleInfo = useCallback(() => {
     setShowInfo((prev) => !prev);
@@ -96,14 +97,26 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     onToggleInfo: toggleInfo,
   });
 
+  const currentImagePath = currentImage.path;
+  const currentImageAlt = `image-${currentViewIndex}`;
+  const handleZoomIn = useCallback(() => {
+    imageViewerRef.current?.zoomIn();
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    imageViewerRef.current?.zoomOut();
+  }, []);
+
+  const handleResetZoom = useCallback(() => {
+    imageViewerRef.current?.reset();
+    handlers.resetZoom();
+    setResetSignal((s) => s + 1);
+  }, [handlers]);
+
   // Early return if no images or invalid index
   if (!images.length || currentViewIndex === -1 || !currentImage) {
     return null;
   }
-
-  const currentImagePath = currentImage.path;
-  const currentImageAlt = `image-${currentViewIndex}`;
-
   return (
     <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-gradient-to-b from-black/95 to-black/98 backdrop-blur-lg">
       {/* Controls */}
@@ -127,10 +140,9 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
       >
         {type === 'image' && (
           <ImageViewer
+            ref={imageViewerRef}
             imagePath={currentImagePath}
             alt={currentImageAlt}
-            scale={viewState.scale}
-            position={viewState.position}
             rotation={viewState.rotation}
             isDragging={viewState.isDragging}
             onMouseDown={handlers.handleMouseDown}
@@ -142,6 +154,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
                 handleClose();
               }
             }}
+            resetSignal={resetSignal}
           />
         )}
 
@@ -155,10 +168,10 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
       {/* Zoom controls */}
       {type === 'image' && (
         <ZoomControls
-          onZoomIn={handlers.handleZoomIn}
-          onZoomOut={handlers.handleZoomOut}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
           onRotate={handlers.handleRotate}
-          onReset={handlers.resetZoom}
+          onReset={handleResetZoom}
           showThumbnails={showThumbnails}
         />
       )}
