@@ -29,17 +29,20 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   // Redux selectors
   const currentViewIndex = useSelector(selectCurrentViewIndex);
   const totalImages = images.length;
+
   const currentImage = useMemo(() => {
     if (currentViewIndex >= 0 && currentViewIndex < images.length) {
       return images[currentViewIndex];
     }
     return null;
   }, [images, currentViewIndex]);
-  console.log(currentViewIndex);
+
   const imageViewerRef = useRef<ImageViewerRef>(null);
 
+  // Local UI state
   const [showInfo, setShowInfo] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(false);
+  const [resetSignal, setResetSignal] = useState(0);
 
   // Custom hooks
   const { viewState, handlers } = useImageViewControls();
@@ -69,36 +72,17 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     [dispatch, handlers],
   );
 
-  // Slideshow functionality
-  const { isSlideshowActive, toggleSlideshow } = useSlideshow(
-    totalImages,
-    handleNextImage,
-  );
-  const [resetSignal, setResetSignal] = useState(0);
-  // Toggle functions
   const toggleInfo = useCallback(() => {
     setShowInfo((prev) => !prev);
   }, []);
 
+  // Hooks that depend on currentImage but always declared
   const handleToggleFavorite = useCallback(() => {
     if (currentImage) {
       toggleFavorite(currentImage.path);
     }
   }, [currentImage, toggleFavorite]);
 
-  // Keyboard navigation
-  useKeyboardNavigation({
-    onClose: handleClose,
-    onNext: handleNextImage,
-    onPrevious: handlePreviousImage,
-    onZoomIn: handlers.handleZoomIn,
-    onZoomOut: handlers.handleZoomOut,
-    onRotate: handlers.handleRotate,
-    onToggleInfo: toggleInfo,
-  });
-
-  const currentImagePath = currentImage.path;
-  const currentImageAlt = `image-${currentViewIndex}`;
   const handleZoomIn = useCallback(() => {
     imageViewerRef.current?.zoomIn();
   }, []);
@@ -113,10 +97,32 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     setResetSignal((s) => s + 1);
   }, [handlers]);
 
+  // Keyboard navigation
+  useKeyboardNavigation({
+    onClose: handleClose,
+    onNext: handleNextImage,
+    onPrevious: handlePreviousImage,
+    onZoomIn: handleZoomIn,
+    onZoomOut: handleZoomOut,
+    onRotate: handlers.handleRotate,
+    onToggleInfo: toggleInfo,
+  });
+
+  // Slideshow functionality
+  const { isSlideshowActive, toggleSlideshow } = useSlideshow(
+    totalImages,
+    handleNextImage,
+  );
+
   // Early return if no images or invalid index
   if (!images.length || currentViewIndex === -1 || !currentImage) {
     return null;
   }
+
+  // Safe variables
+  const currentImagePath = currentImage.path;
+  const currentImageAlt = `image-${currentViewIndex}`;
+
   return (
     <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-gradient-to-b from-black/95 to-black/98 backdrop-blur-lg">
       {/* Controls */}
