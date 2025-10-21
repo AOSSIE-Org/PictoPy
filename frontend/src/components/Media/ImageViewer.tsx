@@ -35,7 +35,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
       onClick,
       resetSignal,
     },
-    ref
+    ref,
   ) => {
     const transformRef = useRef<any>(null);
 
@@ -102,5 +102,5 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
         </TransformComponent>
       </TransformWrapper>
     );
-  }
+  },
 );
