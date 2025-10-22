@@ -26,7 +26,8 @@
       "../../sync-microservice/dist/": "resources/sync-microservice"
     },
     "macOS": {
-      "signingIdentity": "-"
+      "signingIdentity": "-",
+      "entitlements": "./Entitlements.plist"
     }
   },
   "productName": "PictoPy",
