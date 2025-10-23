@@ -27,6 +27,17 @@ from app.routes.images import router as images_router
 from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
 from fastapi.openapi.utils import get_openapi
+from app.logging.setup_logging import (
+    configure_uvicorn_logging,
+    setup_logging,
+    get_logger,
+)
+
+# Set up standard logging first
+setup_logging("backend")
+
+# Configure Uvicorn logging to use our custom formatter
+configure_uvicorn_logging("backend")
 
 
 @asynccontextmanager
@@ -66,6 +77,10 @@ app = FastAPI(
 )
 
 
+# Initialize logger for this module
+logger = get_logger(__name__)
+
+
 def generate_openapi_json():
     try:
         openapi_schema = get_openapi(
@@ -87,9 +102,9 @@ def generate_openapi_json():
 
         with open(openapi_path, "w") as f:
             json.dump(openapi_schema, f, indent=2)
-        print(f"OpenAPI JSON generated at {openapi_path}")
+        logger.info(f"OpenAPI JSON generated at {openapi_path}")
     except Exception as e:
-        print(f"Failed to generate openapi.json: {e}")
+        logger.error(f"Failed to generate openapi.json: {e}")
 
 
 # Add CORS middleware
@@ -122,11 +137,16 @@ app.include_router(
 # Entry point for running with: python3 main.py
 if __name__ == "__main__":
     multiprocessing.freeze_support()  # Required for Windows
+    logger = get_logger(__name__)
+    logger.info("Starting PictoPy backend server...")
+
+    # Create a simple config with log_config=None to disable Uvicorn's default logging
     config = Config(
         app=app,
         host="0.0.0.0",
         port=8000,
         log_level="info",
+        log_config=None,  # This is crucial - disable Uvicorn's default logging config
     )
     server = Server(config)
     server.run()

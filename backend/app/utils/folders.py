@@ -1,13 +1,17 @@
 import uuid
 import os
-from app.database.folders import db_insert_folders_batch
 from typing import List, Tuple
+
 from fastapi import HTTPException, status
-from app.schemas.folders import ErrorResponse
 from app.database.folders import (
+    db_insert_folders_batch,
     db_update_parent_ids_for_subtree,
     db_delete_folders_batch,
 )
+from app.schemas.folders import ErrorResponse
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def folder_util_add_folder_tree(
@@ -169,6 +173,6 @@ def folder_util_add_multiple_folder_trees(
 
         except Exception as e:
             # Log the error but continue with other folders
-            print(f"Error adding folder {folder_path}: {e}")
+            logger.error(f"Error adding folder {folder_path}: {e}")
 
     return added_count, added_folders
