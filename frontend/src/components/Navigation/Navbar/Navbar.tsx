@@ -1,7 +1,6 @@
 import { Input } from '@/components/ui/input';
 import { ThemeSelector } from '@/components/ThemeToggle';
-import { Bell, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Search } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
 import { clearSearch } from '@/features/searchSlice';
@@ -74,17 +73,6 @@ export function Navbar() {
 
       {/* Right Side */}
       <div className="flex items-center space-x-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative cursor-pointer"
-          title="Notifications"
-          aria-label="Notifications"
-        >
-          <Bell className="h-5 w-5" />
-          <span className="bg-brand-orange absolute top-1 right-1 h-2 w-2 rounded-full" />
-          <span className="sr-only">Notifications</span>
-        </Button>
         <ThemeSelector />
         <div className="flex items-center space-x-2">
           <span className="hidden text-sm sm:inline-block">
