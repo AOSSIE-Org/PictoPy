@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { MediaViewProps } from '@/types/Media';
 import { selectCurrentViewIndex } from '@/features/imageSelectors';
@@ -8,7 +8,6 @@ import {
   previousImage,
   closeImageView,
 } from '@/features/imageSlice';
-import { useQueryClient } from '@tanstack/react-query';
 // Modular components
 import { MediaViewControls } from './MediaViewControls';
 import { ZoomControls } from './ZoomControls';
@@ -16,6 +15,7 @@ import { MediaThumbnails } from './MediaThumbnails';
 import { MediaInfoPanel } from './MediaInfoPanel';
 import { ImageViewer } from './ImageViewer';
 import { NavigationButtons } from './NavigationButtons';
+import type { ImageViewerRef } from './ImageViewer';
 
 // Custom hooks
 import { useImageViewControls } from '@/hooks/useImageViewControls';
@@ -31,6 +31,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   // Redux selectors
   const currentViewIndex = useSelector(selectCurrentViewIndex);
   const totalImages = images.length;
+
   const currentImage = useMemo(() => {
     if (currentViewIndex >= 0 && currentViewIndex < images.length) {
       return images[currentViewIndex];
@@ -38,10 +39,13 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     return null;
   }, [images, currentViewIndex]);
 
+  const imageViewerRef = useRef<ImageViewerRef>(null);
+
   // Local UI state
   const [showInfo, setShowInfo] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(false);
-  const queryclient = useQueryClient();
+  const [resetSignal, setResetSignal] = useState(0);
+
   // Custom hooks
   const { viewState, handlers } = useImageViewControls();
   const { favorites, toggleFavorite } = useFavorites();
@@ -70,44 +74,11 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     [dispatch, handlers],
   );
 
-  // handling toogle_favvvvv
-  const handle_favourite_toggle = async () => {
-    // console.log('processing ..');
-    if (!currentImage) return;
-    try {
-      const res = await axios.post(
-        `http://localhost:8000${imagesEndpoints.setfavourite}`,
-        {
-          image_id: currentImage?.id,
-        },
-      );
-      if (res.data.success) {
-        setIsfav(res.data.isFavourite);
-        await queryclient.invalidateQueries({ queryKey: ['images'] });
-        res?.data?.isFavourite
-          ? alert('Add to Favourite')
-          : alert('Removed from Favourite');
-        console.log('toggled');
-        toggleFavorite(currentImage?.path || '');
-      }
-      console.log(res);
-    } catch (error) {
-      alert('Error toggling favourite');
-      console.log(error);
-    }
-  };
-
-  // Slideshow functionality
-  const { isSlideshowActive, toggleSlideshow } = useSlideshow(
-    totalImages,
-    handleNextImage,
-  );
-
-  // Toggle functions
   const toggleInfo = useCallback(() => {
     setShowInfo((prev) => !prev);
   }, []);
 
+  // Hooks that depend on currentImage but always declared
   const handleToggleFavorite = useCallback(() => {
     if (currentImage) {
       setIsfav((prev) => !prev);
@@ -115,22 +86,43 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     }
   }, [currentImage, isfav]);
 
+  const handleZoomIn = useCallback(() => {
+    imageViewerRef.current?.zoomIn();
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    imageViewerRef.current?.zoomOut();
+  }, []);
+
+  const handleResetZoom = useCallback(() => {
+    imageViewerRef.current?.reset();
+    handlers.resetZoom();
+    setResetSignal((s) => s + 1);
+  }, [handlers]);
+
   // Keyboard navigation
   useKeyboardNavigation({
     onClose: handleClose,
     onNext: handleNextImage,
     onPrevious: handlePreviousImage,
-    onZoomIn: handlers.handleZoomIn,
-    onZoomOut: handlers.handleZoomOut,
+    onZoomIn: handleZoomIn,
+    onZoomOut: handleZoomOut,
     onRotate: handlers.handleRotate,
     onToggleInfo: toggleInfo,
   });
+
+  // Slideshow functionality
+  const { isSlideshowActive, toggleSlideshow } = useSlideshow(
+    totalImages,
+    handleNextImage,
+  );
 
   // Early return if no images or invalid index
   if (!images.length || currentViewIndex === -1 || !currentImage) {
     return null;
   }
 
+  // Safe variables
   const currentImagePath = currentImage.path;
   // console.log(currentImage);
   const currentImageAlt = `image-${currentViewIndex}`;
@@ -151,28 +143,18 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
 
       {/* Main viewer area */}
       <div
-        className="relative flex h-full w-full items-center justify-center"
+        className="relative flex h-full w-full items-center justify-center overflow-visible"
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();
         }}
       >
         {type === 'image' && (
           <ImageViewer
+            ref={imageViewerRef}
             imagePath={currentImagePath}
             alt={currentImageAlt}
-            scale={viewState.scale}
-            position={viewState.position}
             rotation={viewState.rotation}
-            isDragging={viewState.isDragging}
-            onMouseDown={handlers.handleMouseDown}
-            onMouseMove={handlers.handleMouseMove}
-            onMouseUp={handlers.handleMouseUp}
-            onMouseLeave={handlers.handleMouseUp}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                handleClose();
-              }
-            }}
+            resetSignal={resetSignal}
           />
         )}
 
@@ -186,10 +168,10 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
       {/* Zoom controls */}
       {type === 'image' && (
         <ZoomControls
-          onZoomIn={handlers.handleZoomIn}
-          onZoomOut={handlers.handleZoomOut}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
           onRotate={handlers.handleRotate}
-          onReset={handlers.resetZoom}
+          onReset={handleResetZoom}
           showThumbnails={showThumbnails}
         />
       )}
