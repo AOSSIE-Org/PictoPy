@@ -35,7 +35,7 @@ export function Navbar() {
             <div className="relative mr-2 ml-2">
               <img
                 src={
-                  queryImage?.includes('base64')
+                  queryImage?.startsWith('data:')
                     ? queryImage
                     : convertFileSrc(queryImage)
                 }

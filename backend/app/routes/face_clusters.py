@@ -1,9 +1,10 @@
 import logging
 from binascii import Error as Base64Error
 import base64
+from typing import Annotated
 import uuid
 import os
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from app.database.face_clusters import (
     db_get_cluster_by_id,
     db_update_cluster,
@@ -22,7 +23,7 @@ from app.schemas.face_clusters import (
     GetClusterImagesData,
     ImageInCluster,
 )
-from app.schemas.images import AddSingleBase64ImageRequest, AddSingleImageRequest
+from app.schemas.images import AddSingleBase64ImageRequest, AddSingleImageRequest, InputType
 from app.utils.faceSearch import perform_face_search
 
 
@@ -208,35 +209,32 @@ def get_cluster_images(cluster_id: str):
     "/face-search",
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
-def face_tagging(payload: AddSingleImageRequest):
-    image_path = payload.path
-    if not os.path.isfile(image_path):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ErrorResponse(
-                success=False,
-                error="Invalid file path",
-                message="The provided path is not a valid file",
-            ).model_dump(),
-        )
-    return perform_face_search(image_path)
-
-
-@router.post("/face-search-base64")
-def face_search_base64(payload: AddSingleBase64ImageRequest):
-    base64_data = payload.base64_data
-    if not base64_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ErrorResponse(
-                success=False,
-                error="No base64 data",
-                message="Base64 image data is required.",
-            ).model_dump(),
-        )
-
+def face_tagging(payload: AddSingleImageRequest | AddSingleBase64ImageRequest, input_type: Annotated[InputType, Query(description="Choose input type: 'path' or 'base64'")] = InputType.path):
     image_path = None
-    try:
+
+    if input_type == InputType.path:
+        if not os.path.isfile(payload.path):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Invalid file path",
+                    message="The provided path is not a valid file",
+                ).model_dump(),
+            )
+        image_path = payload.path
+
+    elif input_type == InputType.base64:
+        base64_data = payload.base64_data
+        if not base64_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="No base64 data",
+                    message="Base64 image data is required.",
+                ).model_dump(),
+            )
         try:
             image_bytes = base64.b64decode(base64_data.split(",")[-1])
         except (Base64Error, ValueError):
@@ -251,14 +249,11 @@ def face_search_base64(payload: AddSingleBase64ImageRequest):
         image_id = str(uuid.uuid4())[:8]
         temp_dir = "temp_uploads"
         os.makedirs(temp_dir, exist_ok=True)
-        image_path = os.path.join(temp_dir, f"{image_id}.jpeg")
+        local_image_path = os.path.join(temp_dir, f"{image_id}.jpeg")
 
-        with open(image_path, "wb") as f:
+        with open(local_image_path, "wb") as f:
             f.write(image_bytes)
 
-        result = perform_face_search(image_path)
-        return result
+        image_path = local_image_path
 
-    finally:
-        if image_path and os.path.exists(image_path):
-            os.remove(image_path)
+    return perform_face_search(image_path)

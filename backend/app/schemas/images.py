@@ -1,5 +1,11 @@
+from enum import Enum
 from pydantic import BaseModel
 from typing import Optional, List, Union
+
+
+class InputType(str, Enum):
+    path = "path"
+    base64 = "base64"
 
 
 # Request Model

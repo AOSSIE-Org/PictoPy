@@ -1042,15 +1042,36 @@
         ],
         "summary": "Face Tagging",
         "operationId": "face_tagging_face_clusters_face_search_post",
+        "parameters": [
+          {
+            "name": "input_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/InputType",
+              "description": "Choose input type: 'path' or 'base64'",
+              "default": "path"
+            },
+            "description": "Choose input type: 'path' or 'base64'"
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AddSingleImageRequest"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/AddSingleImageRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AddSingleBase64ImageRequest"
+                  }
+                ],
+                "title": "Payload"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1062,63 +1083,24 @@
             }
           },
           "400": {
-            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Bad Request"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
                 }
               }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/face-clusters/face-search-base64": {
-      "post": {
-        "tags": [
-          "Face Clusters"
-        ],
-        "summary": "Face Search Base64",
-        "operationId": "face_search_base64_face_clusters_face_search_base64_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddSingleBase64ImageRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -2109,6 +2091,14 @@
         ],
         "title": "ImageInCluster",
         "description": "Represents an image that contains faces from a specific cluster."
+      },
+      "InputType": {
+        "type": "string",
+        "enum": [
+          "path",
+          "base64"
+        ],
+        "title": "InputType"
       },
       "MetadataModel": {
         "properties": {
