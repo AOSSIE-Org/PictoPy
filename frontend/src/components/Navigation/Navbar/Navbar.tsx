@@ -33,7 +33,11 @@ export function Navbar() {
           {queryImage && (
             <div className="relative mr-2 ml-2">
               <img
-                src={convertFileSrc(queryImage) || 'photo.png'}
+                src={
+                  queryImage?.startsWith('data:')
+                    ? queryImage
+                    : convertFileSrc(queryImage)
+                }
                 alt="Query"
                 className="h-7 w-7 rounded object-cover"
               />
