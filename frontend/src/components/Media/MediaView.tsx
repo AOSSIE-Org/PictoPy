@@ -150,16 +150,6 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
             imagePath={currentImagePath}
             alt={currentImageAlt}
             rotation={viewState.rotation}
-            isDragging={viewState.isDragging}
-            onMouseDown={handlers.handleMouseDown}
-            onMouseMove={handlers.handleMouseMove}
-            onMouseUp={handlers.handleMouseUp}
-            onMouseLeave={handlers.handleMouseUp}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                handleClose();
-              }
-            }}
             resetSignal={resetSignal}
           />
         )}
