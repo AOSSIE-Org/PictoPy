@@ -6,12 +6,6 @@ interface ImageViewerProps {
   imagePath: string;
   alt: string;
   rotation: number;
-  isDragging: boolean;
-  onMouseDown: (e: React.MouseEvent) => void;
-  onMouseMove: (e: React.MouseEvent) => void;
-  onMouseUp: () => void;
-  onMouseLeave: () => void;
-  onClick?: (e: React.MouseEvent) => void;
   resetSignal?: number;
 }
 
@@ -22,21 +16,7 @@ export interface ImageViewerRef {
 }
 
 export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
-  (
-    {
-      imagePath,
-      alt,
-      rotation,
-      isDragging,
-      onMouseDown,
-      onMouseMove,
-      onMouseUp,
-      onMouseLeave,
-      onClick,
-      resetSignal,
-    },
-    ref,
-  ) => {
+  ({ imagePath, alt, rotation, resetSignal }, ref) => {
     const transformRef = useRef<any>(null);
 
     // Expose zoom functions to parent
@@ -75,11 +55,6 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
           }}
         >
           <img
-            onClick={onClick}
-            onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-            onMouseUp={onMouseUp}
-            onMouseLeave={onMouseLeave}
             src={convertFileSrc(imagePath) || '/placeholder.svg'}
             alt={alt}
             draggable={false}
@@ -95,8 +70,6 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
               objectFit: 'contain',
               zIndex: 50,
               transform: `rotate(${rotation}deg)`,
-              transition: isDragging ? 'none' : 'transform 0.2s ease-in-out',
-              cursor: isDragging ? 'grabbing' : 'grab',
             }}
           />
         </TransformComponent>
