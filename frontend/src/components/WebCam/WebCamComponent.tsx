@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { useMutationFeedback } from '../../hooks/useMutationFeedback.tsx';
 import Webcam from 'react-webcam';
 import { X, RotateCcw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,6 @@ import {
 import { useDispatch } from 'react-redux';
 import { startSearch, setResults, clearSearch } from '@/features/searchSlice';
 import type { Image } from '@/types/Media';
-import { hideLoader, showLoader } from '@/features/loaderSlice';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { fetchSearchedFacesBase64 } from '@/api/api-functions';
 import { showInfoDialog } from '@/features/infoDialogSlice';
@@ -32,37 +32,35 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
   const webcamRef = useRef<Webcam>(null);
   const dispatch = useDispatch();
 
-  const { mutate: getSearchImagesBase64 } = usePictoMutation({
+  const getSearchImagesBase64 = usePictoMutation({
     mutationFn: async (base64_data: string) =>
       fetchSearchedFacesBase64({ base64_data }),
-    onSuccess: (data) => {
-      const result = data?.data as Image[];
-      dispatch(hideLoader());
-      handleClose();
+  });
+
+  useMutationFeedback(getSearchImagesBase64, {
+    showLoading: true,
+    loadingMessage: 'Searching for images...',
+    successTitle: 'Search Complete',
+    successMessage: 'Images matching your search have been found.',
+    errorTitle: 'Search Error',
+    errorMessage: 'Failed to search images. Please try again.',
+    onSuccess: () => {
+      const result = getSearchImagesBase64.data?.data as Image[];
       if (result && result.length > 0) {
         dispatch(setResults(result));
       } else {
-        dispatch(clearSearch());
         dispatch(
           showInfoDialog({
-            title: 'No Matches Found',
+            title: 'No Match Found',
             message:
-              "We couldn't find any matching faces in your gallery for this photo.",
+              'We couldn’t find any matching faces in your gallery for this photo.',
             variant: 'info',
           }),
         );
+        dispatch(setResults([]));
+        dispatch(clearSearch());
       }
-    },
-    onError: () => {
-      dispatch(hideLoader());
-      handleClose();
-      dispatch(
-        showInfoDialog({
-          title: 'Search Failed',
-          message: 'There was an error while searching for faces.',
-          variant: 'error',
-        }),
-      );
+      getSearchImagesBase64.reset();
     },
   });
 
@@ -83,8 +81,7 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
     onClose();
     if (capturedImageUrl) {
       dispatch(startSearch(capturedImageUrl));
-      dispatch(showLoader('Searching faces...'));
-      getSearchImagesBase64(capturedImageUrl);
+      getSearchImagesBase64.mutate(capturedImageUrl);
     } else {
       dispatch(
         showInfoDialog({

@@ -23,7 +23,7 @@ from app.schemas.face_clusters import (
     GetClusterImagesData,
     ImageInCluster,
 )
-from app.schemas.images import AddSingleBase64ImageRequest, AddSingleImageRequest, InputType
+from app.schemas.images import FaceSearchRequest, InputType
 from app.utils.faceSearch import perform_face_search
 
 
@@ -209,11 +209,22 @@ def get_cluster_images(cluster_id: str):
     "/face-search",
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
-def face_tagging(payload: AddSingleImageRequest | AddSingleBase64ImageRequest, input_type: Annotated[InputType, Query(description="Choose input type: 'path' or 'base64'")] = InputType.path):
+def face_tagging(payload: FaceSearchRequest, input_type: Annotated[InputType, Query(description="Choose input type: 'path' or 'base64'")] = InputType.path):
     image_path = None
 
     if input_type == InputType.path:
-        if not os.path.isfile(payload.path):
+        local_file_path = payload.path
+
+        if not local_file_path:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="No Image path provided ",
+                    message="image path is required.",
+                ).model_dump(),
+            )
+        if not os.path.isfile(local_file_path):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ErrorResponse(
@@ -246,14 +257,21 @@ def face_tagging(payload: AddSingleImageRequest | AddSingleBase64ImageRequest, i
                     message="The provided base64 image data is malformed or invalid.",
                 ).model_dump(),
             )
+
+        format_match = base64_data.split(";")[0].split("/")[-1] if ";" in base64_data else "jpeg"
+        extension = format_match if format_match in ["jpeg", "jpg", "png", "gif", "webp"] else "jpeg"
         image_id = str(uuid.uuid4())[:8]
         temp_dir = "temp_uploads"
         os.makedirs(temp_dir, exist_ok=True)
-        local_image_path = os.path.join(temp_dir, f"{image_id}.jpeg")
+        local_image_path = os.path.join(temp_dir, f"{image_id}.{extension}")
 
         with open(local_image_path, "wb") as f:
             f.write(image_bytes)
 
         image_path = local_image_path
 
-    return perform_face_search(image_path)
+    try:
+        return perform_face_search(image_path)
+    finally:
+        if input_type == InputType.base64 and image_path and os.path.exists(image_path):
+            os.remove(image_path)

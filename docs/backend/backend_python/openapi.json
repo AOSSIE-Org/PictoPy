@@ -1060,15 +1060,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/AddSingleImageRequest"
-                  },
-                  {
-                    "$ref": "#/components/schemas/AddSingleBase64ImageRequest"
-                  }
-                ],
-                "title": "Payload"
+                "$ref": "#/components/schemas/FaceSearchRequest"
               }
             }
           }
@@ -1309,32 +1301,6 @@
         ],
         "title": "AddFolderResponse"
       },
-      "AddSingleBase64ImageRequest": {
-        "properties": {
-          "base64_data": {
-            "type": "string",
-            "title": "Base64 Data"
-          }
-        },
-        "type": "object",
-        "required": [
-          "base64_data"
-        ],
-        "title": "AddSingleBase64ImageRequest"
-      },
-      "AddSingleImageRequest": {
-        "properties": {
-          "path": {
-            "type": "string",
-            "title": "Path"
-          }
-        },
-        "type": "object",
-        "required": [
-          "path"
-        ],
-        "title": "AddSingleImageRequest"
-      },
       "Album": {
         "properties": {
           "album_id": {
@@ -1546,6 +1512,34 @@
           "success"
         ],
         "title": "DeleteFoldersResponse"
+      },
+      "FaceSearchRequest": {
+        "properties": {
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "base64_data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base64 Data"
+          }
+        },
+        "type": "object",
+        "title": "FaceSearchRequest"
       },
       "FolderDetails": {
         "properties": {

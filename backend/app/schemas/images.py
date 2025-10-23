@@ -8,13 +8,9 @@ class InputType(str, Enum):
     base64 = "base64"
 
 
-# Request Model
-class AddSingleImageRequest(BaseModel):
-    path: str
-
-
-class AddSingleBase64ImageRequest(BaseModel):
-    base64_data: str
+class FaceSearchRequest(BaseModel):
+    path: Optional[str] = None
+    base64_data: Optional[str] = None
 
 
 class AddMultipleImagesRequest(BaseModel):
