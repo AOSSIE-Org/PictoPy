@@ -44,6 +44,7 @@ export const PersonImages = () => {
       setClusterName(res?.cluster_name || 'random_name');
       dispatch(hideLoader());
     }
+    console.log(images);
   }, [data, isSuccess, isError, isLoading, dispatch]);
 
   const handleEditName = () => {
