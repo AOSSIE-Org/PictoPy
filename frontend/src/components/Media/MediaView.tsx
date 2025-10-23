@@ -8,6 +8,7 @@ import {
   previousImage,
   closeImageView,
 } from '@/features/imageSlice';
+import { useQueryClient } from '@tanstack/react-query';
 // Modular components
 import { MediaViewControls } from './MediaViewControls';
 import { ZoomControls } from './ZoomControls';
@@ -22,6 +23,8 @@ import { useImageViewControls } from '@/hooks/useImageViewControls';
 import { useSlideshow } from '@/hooks/useSlideshow';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
+import axios from 'axios';
+import { imagesEndpoints } from '@/api/apiEndpoints';
 
 export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   const dispatch = useDispatch();
@@ -42,12 +45,13 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   // Local UI state
   const [showInfo, setShowInfo] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(false);
+  const queryclient = useQueryClient();
   const [resetSignal, setResetSignal] = useState(0);
 
   // Custom hooks
   const { viewState, handlers } = useImageViewControls();
-  const { favorites, toggleFavorite, isFavorite } = useFavorites();
-
+  const { favorites, toggleFavorite } = useFavorites();
+  const [isfav, setIsfav] = useState(currentImage?.isFavourite || false);
   // Navigation handlers
   const handleNextImage = useCallback(() => {
     dispatch(nextImage());
@@ -72,6 +76,40 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     [dispatch, handlers],
   );
 
+  // handling toogle_favvvvv
+  const handle_favourite_toggle = async () => {
+    // console.log('processing ..');
+    if (!currentImage) return;
+    try {
+      const res = await axios.post(
+        `http://localhost:8000${imagesEndpoints.setfavourite}`,
+        {
+          image_id: currentImage?.id,
+        },
+      );
+      if (res.data.success) {
+        setIsfav(res.data.isFavourite);
+        await queryclient.invalidateQueries({ queryKey: ['images'] });
+        res?.data?.isFavourite
+          ? alert('Add to Favourite')
+          : alert('Removed from Favourite');
+        console.log('toggled');
+        toggleFavorite(currentImage?.path || '');
+      }
+      console.log(res);
+    } catch (error) {
+      alert('Error toggling favourite');
+      console.log(error);
+    }
+  };
+
+  // Slideshow functionality
+  const { isSlideshowActive, toggleSlideshow } = useSlideshow(
+    totalImages,
+    handleNextImage,
+  );
+
+  // Toggle functions
   const toggleInfo = useCallback(() => {
     setShowInfo((prev) => !prev);
   }, []);
@@ -79,9 +117,10 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   // Hooks that depend on currentImage but always declared
   const handleToggleFavorite = useCallback(() => {
     if (currentImage) {
-      toggleFavorite(currentImage.path);
+      setIsfav((prev) => !prev);
+      handle_favourite_toggle();
     }
-  }, [currentImage, toggleFavorite]);
+  }, [currentImage, isfav]);
 
   const handleZoomIn = useCallback(() => {
     imageViewerRef.current?.zoomIn();
@@ -108,12 +147,6 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     onToggleInfo: toggleInfo,
   });
 
-  // Slideshow functionality
-  const { isSlideshowActive, toggleSlideshow } = useSlideshow(
-    totalImages,
-    handleNextImage,
-  );
-
   // Early return if no images or invalid index
   if (!images.length || currentViewIndex === -1 || !currentImage) {
     return null;
@@ -121,6 +154,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
 
   // Safe variables
   const currentImagePath = currentImage.path;
+  // console.log(currentImage);
   const currentImageAlt = `image-${currentViewIndex}`;
 
   return (
@@ -130,7 +164,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
         showInfo={showInfo}
         onToggleInfo={toggleInfo}
         onToggleFavorite={handleToggleFavorite}
-        isFavorite={isFavorite(currentImage.path)}
+        isFavorite={isfav}
         isSlideshowActive={isSlideshowActive}
         onToggleSlideshow={toggleSlideshow}
         onClose={handleClose}
