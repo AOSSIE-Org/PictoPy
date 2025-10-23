@@ -8,7 +8,6 @@ import {
   Heart,
   Play,
   Pause,
-  // Lock,
   X,
 } from 'lucide-react';
 
