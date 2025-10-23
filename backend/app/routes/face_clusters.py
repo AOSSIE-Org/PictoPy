@@ -209,7 +209,12 @@ def get_cluster_images(cluster_id: str):
     "/face-search",
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
-def face_tagging(payload: FaceSearchRequest, input_type: Annotated[InputType, Query(description="Choose input type: 'path' or 'base64'")] = InputType.path):
+def face_tagging(
+    payload: FaceSearchRequest,
+    input_type: Annotated[
+        InputType, Query(description="Choose input type: 'path' or 'base64'")
+    ] = InputType.path,
+):
     image_path = None
 
     if input_type == InputType.path:
@@ -258,8 +263,14 @@ def face_tagging(payload: FaceSearchRequest, input_type: Annotated[InputType, Qu
                 ).model_dump(),
             )
 
-        format_match = base64_data.split(";")[0].split("/")[-1] if ";" in base64_data else "jpeg"
-        extension = format_match if format_match in ["jpeg", "jpg", "png", "gif", "webp"] else "jpeg"
+        format_match = (
+            base64_data.split(";")[0].split("/")[-1] if ";" in base64_data else "jpeg"
+        )
+        extension = (
+            format_match
+            if format_match in ["jpeg", "jpg", "png", "gif", "webp"]
+            else "jpeg"
+        )
         image_id = str(uuid.uuid4())[:8]
         temp_dir = "temp_uploads"
         os.makedirs(temp_dir, exist_ok=True)
