@@ -8,7 +8,6 @@ import {
   Heart,
   Play,
   Pause,
-  Lock,
   X,
 } from 'lucide-react';
 
@@ -83,13 +82,6 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
         aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
       >
         <Heart className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`} />
-      </button>
-
-      <button
-        className="cursor-pointer rounded-full bg-white/10 p-2.5 text-white/90 transition-all duration-200 hover:bg-white/20 hover:text-white hover:shadow-lg"
-        aria-label="Move to Secure Folder"
-      >
-        <Lock className="h-5 w-5" />
       </button>
 
       {type === 'image' && (

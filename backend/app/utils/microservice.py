@@ -5,9 +5,37 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-import logging
+import threading
+import atexit
+from app.logging.setup_logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
+
+# Global tracking for subprocess log threads
+_log_threads = []
+
+
+def cleanup_log_threads():
+    """Clean up log threads during shutdown to ensure all buffered logs are processed."""
+    if _log_threads:
+        logger.info("Cleaning up log threads...")
+        for thread in _log_threads:
+            if thread.is_alive():
+                thread.join(timeout=2.0)  # Wait up to 2 seconds for each thread
+        _log_threads.clear()
+        logger.info("Log threads cleanup completed")
+
+
+# Register cleanup function to run at exit
+atexit.register(cleanup_log_threads)
+
+
+def microservice_util_stop_sync_service():
+    """
+    Stop the sync microservice and clean up log threads.
+    This function should be called during application shutdown.
+    """
+    cleanup_log_threads()
 
 
 def microservice_util_start_sync_service(
@@ -43,6 +71,24 @@ def microservice_util_start_sync_service(
         return False
 
 
+CYAN = "\033[96m"
+RED = "\033[91m"
+MAGENTA = "\033[95m"
+RESET = "\033[0m"
+
+
+def stream_logs(pipe, prefix, color):
+    """Read a process pipe and print formatted logs from sync-microservice."""
+    for line in iter(pipe.readline, ""):
+        if line:
+            # Trim any trailing newlines
+            line = line.strip()
+            if line:
+                # All output from sync-microservice is now properly formatted by its logger
+                print(line)
+    pipe.close()
+
+
 def _start_frozen_sync_service() -> bool:
     """
     Start the sync microservice when running as a frozen executable.
@@ -76,13 +122,35 @@ def _start_frozen_sync_service() -> bool:
         logger.info(f"Starting sync microservice from: {sync_executable}")
 
         # Start the sync microservice executable
+        cmd = str(sync_executable)  # Correct the command to use the actual path
+        logger.info(f"Starting sync microservice with command: {cmd}")
+
         process = subprocess.Popen(
-            [str(sync_executable)],
+            cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            cwd=str(sync_dir),  # Set working directory to sync service directory
+            bufsize=1,  # Line buffered output
         )
+
+        # Start background threads to forward output to logger
+        # Stream stdout with consistent SYNC-MICROSERVICE prefix
+        t1 = threading.Thread(
+            target=stream_logs,
+            args=(process.stdout, "SYNC-MICROSERVICE", CYAN),
+            daemon=False,
+        )
+
+        # Stream stderr with consistent SYNC-MICROSERVICE-ERR prefix
+        t2 = threading.Thread(
+            target=stream_logs,
+            args=(process.stderr, "SYNC-MICROSERVICE-ERR", RED),
+            daemon=False,
+        )
+
+        t1.start()
+        t2.start()
+        _log_threads.extend([t1, t2])
 
         logger.info(f"Sync microservice started with PID: {process.pid}")
         logger.info("Service should be available at http://localhost:8001")
@@ -231,35 +299,51 @@ def _start_fastapi_service(python_executable: Path, service_path: Path) -> bool:
         original_cwd = os.getcwd()
         os.chdir(service_path)
 
-        # Command to start FastAPI dev server
-        print(python_executable)
-        host = "127.0.0.1"
+        # Command to start FastAPI server
+        logger.debug(f"Using Python executable: {python_executable}")
+        host = "127.0.0.1"  # Local connections only for security
         port = "8001"
-        # On Windows, use a different approach with scripts path
 
-        if platform.system().lower() == "windows":
-            # Use uvicorn directly to run the FastAPI app
-            cmd = [
-                str(python_executable),
-                "-m",
-                "uvicorn",
-                "main:app",
-                "--host",
-                host,
-                "--port",
-                port,
-                "--reload",  # Add reload flag for development convenience
-            ]
-        else:
-            # For non-Windows platforms
-            cmd = [str(python_executable), "-m", "fastapi", "dev", "--port", "8001"]
+        # Basic uvicorn command that works on all platforms
+        cmd = [
+            str(python_executable),
+            "-m",
+            "uvicorn",
+            "main:app",
+            "--host",
+            host,
+            "--port",
+            port,
+            "--reload",  # Enable auto-reload for development
+        ]
 
         logger.info(f"Executing command: {' '.join(cmd)}")
 
         # Start the process (non-blocking)
         process = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,  # Line buffered output
         )
+
+        # Start background threads to forward output to logger
+        t1 = threading.Thread(
+            target=stream_logs,
+            args=(process.stdout, "SYNC-MICROSERVICE", CYAN),
+            daemon=False,
+        )
+
+        t2 = threading.Thread(
+            target=stream_logs,
+            args=(process.stderr, "SYNC-MICROSERVICE-ERR", RED),
+            daemon=False,
+        )
+
+        t1.start()
+        t2.start()
+        _log_threads.extend([t1, t2])
 
         # Restore original working directory
         os.chdir(original_cwd)

@@ -1,8 +1,11 @@
 import React from 'react';
-import { Folder, Trash2 } from 'lucide-react';
+import { Folder, Trash2, Check } from 'lucide-react';
 
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/app/store';
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
 
 import { useFolderOperations } from '@/hooks/useFolderOperations';
@@ -21,6 +24,10 @@ const FolderManagementCard: React.FC = () => {
     disableAITaggingPending,
     deleteFolderPending,
   } = useFolderOperations();
+
+  const taggingStatus = useSelector(
+    (state: RootState) => state.folders.taggingStatus,
+  );
 
   return (
     <SettingsCard
@@ -71,6 +78,41 @@ const FolderManagementCard: React.FC = () => {
                   </Button>
                 </div>
               </div>
+
+              {folder.AI_Tagging && (
+                <div className="mt-3">
+                  <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
+                    <span>AI Tagging Progress</span>
+                    <span
+                      className={
+                        (taggingStatus[folder.folder_id]?.tagging_percentage ??
+                          0) >= 100
+                          ? 'flex items-center gap-1 text-green-500'
+                          : 'text-muted-foreground'
+                      }
+                    >
+                      {(taggingStatus[folder.folder_id]?.tagging_percentage ??
+                        0) >= 100 && <Check className="h-3 w-3" />}
+                      {Math.round(
+                        taggingStatus[folder.folder_id]?.tagging_percentage ??
+                          0,
+                      )}
+                      %
+                    </span>
+                  </div>
+                  <Progress
+                    value={
+                      taggingStatus[folder.folder_id]?.tagging_percentage ?? 0
+                    }
+                    indicatorClassName={
+                      (taggingStatus[folder.folder_id]?.tagging_percentage ??
+                        0) >= 100
+                        ? 'bg-green-500'
+                        : 'bg-blue-500'
+                    }
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>

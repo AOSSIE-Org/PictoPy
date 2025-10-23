@@ -62,6 +62,7 @@
     "react-redux": "^9.2.0",
     "react-router": "^7.6.2",
     "react-webcam": "^7.2.0",
+    "react-zoom-pan-pinch": "^3.7.0",
     "tailwind-merge": "^3.3.0",
     "tailwindcss": "^4.1.8",
     "ts-node": "^10.9.2",
