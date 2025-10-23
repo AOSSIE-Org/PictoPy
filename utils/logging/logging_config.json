@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "formatters": {
+    "default": {
+      "format": "[%(component)s] | %(levelname)s | %(message)s"
+    }
+  },
+  "components": {
+    "backend": {
+      "prefix": "BACKEND",
+      "color": "blue"
+    },
+    "sync-microservice": {
+      "prefix": "SYNC-MICROSERVICE",
+      "color": "magenta"
+    },
+    "watchfiles": {
+      "prefix": "WATCHFILES",
+      "color": "cyan"
+    }
+  },
+  "colors": {
+    "DEBUG": "cyan",
+    "INFO": "green",
+    "WARNING": "yellow",
+    "ERROR": "red",
+    "CRITICAL": "red,bg_white"
+  },
+  "environments": {
+    "development": {
+      "level": "DEBUG",
+      "colored_output": true,
+      "console_logging": true,
+      "loggers": {
+        "watchfiles": {
+          "level": "INFO"
+        },
+        "watchfiles.main": {
+          "level": "INFO"
+        }
+      }
+    },
+    "production": {
+      "level": "INFO",
+      "colored_output": false,
+      "console_logging": true
+    }
+  },
+  "default_environment": "development"
+}

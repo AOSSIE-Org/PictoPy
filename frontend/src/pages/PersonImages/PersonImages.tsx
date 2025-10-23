@@ -61,13 +61,19 @@ export const PersonImages = () => {
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setClusterName(e.target.value);
   };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSaveName();
+    }
+  };
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <Button
           variant="outline"
           onClick={() => navigate(`/${ROUTES.AI}`)}
-          className="flex items-center gap-2"
+          className="flex cursor-pointer items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to AI Tagging
@@ -78,6 +84,7 @@ export const PersonImages = () => {
             <Input
               value={clusterName}
               onChange={handleNameChange}
+              onKeyDown={handleKeyDown}
               className="max-w-xs"
               placeholder="Enter person name"
             />
@@ -85,7 +92,7 @@ export const PersonImages = () => {
               variant="outline"
               size="icon"
               onClick={handleSaveName}
-              className="h-10 w-10"
+              className="h-10 w-10 cursor-pointer"
             >
               <Check className="h-4 w-4" />
             </Button>
@@ -94,7 +101,7 @@ export const PersonImages = () => {
           <Button
             variant="outline"
             onClick={handleEditName}
-            className="flex items-center gap-2"
+            className="flex cursor-pointer items-center gap-2"
           >
             <Pencil className="h-4 w-4" />
             Edit Name
