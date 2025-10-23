@@ -251,6 +251,17 @@ def face_tagging(
                     message="Base64 image data is required.",
                 ).model_dump(),
             )
+
+        MAX_B64_LEN = 14_000_000  # 10MB
+        if len(base64_data) > MAX_B64_LEN:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Payload too large",
+                    message="Base64 image exceeds maximum allowed size.",
+                ).model_dump(),
+            )
         try:
             image_bytes = base64.b64decode(base64_data.split(",")[-1])
         except (Base64Error, ValueError):
