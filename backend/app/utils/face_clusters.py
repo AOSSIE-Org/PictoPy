@@ -3,11 +3,13 @@ import uuid
 import json
 import base64
 import cv2
+import sqlite3
 from datetime import datetime
 from sklearn.cluster import DBSCAN
 from collections import defaultdict, Counter
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Tuple
 from numpy.typing import NDArray
+from contextlib import contextmanager
 
 from app.database.faces import (
     db_get_all_faces_with_cluster_names,
@@ -16,15 +18,33 @@ from app.database.faces import (
     db_get_cluster_mean_embeddings,
 )
 from app.database.face_clusters import db_delete_all_clusters, db_insert_clusters_batch
-
 from app.database.metadata import (
     db_get_metadata,
     db_update_metadata,
 )
+from app.config.settings import DATABASE_PATH
 from app.logging.setup_logging import get_logger
 
 # Initialize logger
 logger = get_logger(__name__)
+
+
+@contextmanager
+def get_db_transaction() -> Tuple[sqlite3.Connection, sqlite3.Cursor]:
+    """
+    Context manager that provides a database connection and cursor with transaction management.
+    Automatically commits on success or rolls back on error.
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        yield conn, cursor
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 class ClusterResult:
@@ -96,9 +116,6 @@ def cluster_util_face_clusters_sync():
 
         results = [result.to_dict() for result in results]
 
-        # Clear old clusters first
-        db_delete_all_clusters()
-
         # Extract unique clusters with their names (without face images yet)
         unique_clusters = {}
         for result in results:
@@ -113,26 +130,39 @@ def cluster_util_face_clusters_sync():
 
         # Convert to list for batch insert
         cluster_list = list(unique_clusters.values())
-        # Insert the new clusters into database first
-        db_insert_clusters_batch(cluster_list)
 
-        # Now update face cluster assignments (foreign keys will be valid)
-        db_update_face_cluster_ids_batch(results)
+        # Perform all database operations within a single transaction
+        with get_db_transaction() as (conn, cursor):
+            # Clear old clusters first
+            db_delete_all_clusters(cursor)
 
-        # Finally, generate and update face images for each cluster
-        for cluster_id in unique_clusters.keys():
-            face_image_base64 = _generate_cluster_face_image(cluster_id)
-            if face_image_base64:
-                # Update the cluster with the generated face image
-                _update_cluster_face_image(cluster_id, face_image_base64)
+            # Insert the new clusters into database first
+            db_insert_clusters_batch(cluster_list, cursor)
 
-        # Update metadata with new reclustering time, preserving other values
-        current_metadata = metadata or {}
-        current_metadata["reclustering_time"] = datetime.now().timestamp()
-        db_update_metadata(current_metadata)
+            # Now update face cluster assignments (foreign keys will be valid)
+            db_update_face_cluster_ids_batch(results, cursor)
+
+            # Finally, generate and update face images for each cluster
+            for cluster_id in unique_clusters.keys():
+                face_image_base64 = _generate_cluster_face_image(cluster_id, cursor)
+                if face_image_base64:
+                    # Update the cluster with the generated face image
+                    success = _update_cluster_face_image(
+                        cluster_id, face_image_base64, cursor
+                    )
+                    if not success:
+                        raise RuntimeError(
+                            f"Failed to update face image for cluster {cluster_id}"
+                        )
+
+            # Update metadata with new reclustering time, preserving other values
+            current_metadata = metadata or {}
+            current_metadata["reclustering_time"] = datetime.now().timestamp()
+            db_update_metadata(current_metadata, cursor)
     else:
         face_cluster_mappings = cluster_util_assign_cluster_to_faces_without_clusterId()
-        db_update_face_cluster_ids_batch(face_cluster_mappings)
+        with get_db_transaction() as (conn, cursor):
+            db_update_face_cluster_ids_batch(face_cluster_mappings, cursor)
 
 
 def cluster_util_cluster_all_face_embeddings(
@@ -312,57 +342,59 @@ def _calculate_cosine_distances(
     return cosine_distances
 
 
-def _update_cluster_face_image(cluster_id: str, face_image_base64: str) -> bool:
+def _update_cluster_face_image(
+    cluster_id: str, face_image_base64: str, cursor: Optional[sqlite3.Cursor] = None
+) -> bool:
     """
     Update the face image for a specific cluster.
 
     Args:
         cluster_id: The UUID of the cluster
         face_image_base64: Base64 encoded face image string
+        cursor: Optional existing database cursor. If None, creates a new connection.
 
     Returns:
         True if update was successful, False otherwise
     """
-    import sqlite3
-    from app.config.settings import DATABASE_PATH
-
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    own_connection = cursor is None
+    if own_connection:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
 
     try:
         cursor.execute(
             "UPDATE face_clusters SET face_image_base64 = ? WHERE cluster_id = ?",
             (face_image_base64, cluster_id),
         )
-
-        updated = cursor.rowcount > 0
-        conn.commit()
-        return updated
-
+        success = cursor.rowcount > 0
+        if own_connection:
+            conn.commit()
+        return success
     except Exception as e:
         logger.error(f"Error updating face image for cluster {cluster_id}: {e}")
-        conn.rollback()
-        return False
+        if own_connection:
+            conn.rollback()
+            return False
+
+        raise
     finally:
-        conn.close()
+        if own_connection:
+            conn.close()
 
 
-def _get_cluster_face_data(cluster_uuid: str) -> Optional[tuple]:
+def _get_cluster_face_data(
+    cluster_uuid: str, cursor: sqlite3.Cursor
+) -> Optional[tuple]:
     """
     Get the image path and bounding box for the first face in a cluster.
 
     Args:
         cluster_uuid: The UUID of the cluster
+        cursor: SQLite cursor from an active transaction
 
     Returns:
         Tuple of (image_path, bbox_dict) or None if not found
     """
-    import sqlite3
-    from app.config.settings import DATABASE_PATH
-
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-
     try:
         cursor.execute(
             """
@@ -393,8 +425,6 @@ def _get_cluster_face_data(cluster_uuid: str) -> Optional[tuple]:
     except Exception as e:
         logger.error(f"Error getting face data for cluster {cluster_uuid}: {e}")
         return None
-    finally:
-        conn.close()
 
 
 def _calculate_square_crop_bounds(
@@ -514,19 +544,22 @@ def _encode_image_to_base64(img: np.ndarray, format: str = ".jpg") -> Optional[s
         return None
 
 
-def _generate_cluster_face_image(cluster_uuid: str) -> Optional[str]:
+def _generate_cluster_face_image(
+    cluster_uuid: str, cursor: sqlite3.Cursor
+) -> Optional[str]:
     """
     Generate a base64 encoded face image for a cluster.
 
     Args:
         cluster_uuid: The UUID of the cluster
+        cursor: SQLite cursor from an active transaction
 
     Returns:
         Base64 encoded face image string, or None if generation fails
     """
     try:
         # Get face data from database
-        face_data = _get_cluster_face_data(cluster_uuid)
+        face_data = _get_cluster_face_data(cluster_uuid, cursor)
         if not face_data:
             return None
 
