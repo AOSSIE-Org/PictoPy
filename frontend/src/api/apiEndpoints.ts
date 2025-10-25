@@ -16,6 +16,7 @@ export const foldersEndpoints = {
   disableAITagging: '/folders/disable-ai-tagging',
   deleteFolders: '/folders/delete-folders',
   syncFolder: '/folders/sync-folder',
+  getTaggingStatus: '/folders/status',
 };
 
 export const userPreferencesEndpoints = {

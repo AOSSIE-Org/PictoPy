@@ -47,7 +47,7 @@ const PictopyLanding: FC = () => {
       </div>
 
       {/* Content */}
-      <div className="container px-4 md:px-6 relative z-10">
+      <div className="px-4 md:px-6 relative z-10 ">
         <div className="flex flex-col items-center text-center">
           {/* Heading with Gradient Text and Logo */}
           <div className="flex items-center justify-center gap-4 mb-4">
