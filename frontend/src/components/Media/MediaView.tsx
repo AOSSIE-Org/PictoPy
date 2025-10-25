@@ -5,12 +5,7 @@ import {
   selectCurrentViewIndex,
   selectActiveImageList,
 } from '@/features/imageSelectors';
-import {
-  setCurrentViewIndex,
-  nextImage,
-  previousImage,
-  closeImageView,
-} from '@/features/imageSlice';
+import { setCurrentViewIndex, closeImageView } from '@/features/imageSlice';
 
 // Modular components
 import { MediaViewControls } from './MediaViewControls';
