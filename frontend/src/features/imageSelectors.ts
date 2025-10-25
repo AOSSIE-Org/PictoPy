@@ -5,14 +5,21 @@ import { createSelector } from '@reduxjs/toolkit';
 export const selectImages = (state: RootState) => {
   return state.images.images;
 };
+export const selectViewerImages = (state: RootState) =>
+  state.images.viewerImages;
 export const selectCurrentViewIndex = (state: RootState) =>
   state.images.currentViewIndex;
 export const selectTotalImages = (state: RootState) => state.images.totalImages;
 export const selectImagesError = (state: RootState) => state.images.error;
 
 // Memoized selectors
+export const selectActiveImageList = createSelector(
+  [selectImages, selectViewerImages],
+  (defaultImages, viewerImages) => viewerImages ?? defaultImages,
+);
+
 export const selectCurrentImage = createSelector(
-  [selectImages, selectCurrentViewIndex],
+  [selectActiveImageList, selectCurrentViewIndex],
   (images, currentIndex) => {
     if (currentIndex >= 0 && currentIndex < images.length) {
       return images[currentIndex];
