@@ -39,19 +39,26 @@ const ApplicationControlsCard: React.FC = () => {
 
   const reclusterMutation = usePictoMutation({
     mutationFn: triggerGlobalReclustering,
+    autoInvalidateTags: ['clusters'],
   });
 
-  useMutationFeedback(reclusterMutation, {
-    loadingMessage: 'Starting global face reclustering...',
-    successTitle: 'Reclustering Completed',
-    successMessage:
-      reclusterMutation.data?.message ||
-      'Global face reclustering completed successfully.',
-    errorTitle: 'Reclustering Failed',
-    errorMessage:
-      reclusterMutation.data?.message ||
-      'Failed to complete global face reclustering.',
-  });
+  const feedbackOptions = React.useMemo(
+    () => ({
+      loadingMessage: 'Starting global face reclustering...',
+      successTitle: 'Reclustering Completed',
+      successMessage:
+        reclusterMutation.successMessage ||
+        'Global face reclustering completed successfully.',
+      errorTitle: 'Reclustering Failed',
+      errorMessage:
+        reclusterMutation.errorMessage ||
+        'Failed to complete global face reclustering.',
+    }),
+    [reclusterMutation.successMessage, reclusterMutation.errorMessage],
+  );
+
+  useMutationFeedback(reclusterMutation, feedbackOptions);
+
 
   const onGlobalReclusterClick = () => {
     reclusterMutation.mutate(undefined);
