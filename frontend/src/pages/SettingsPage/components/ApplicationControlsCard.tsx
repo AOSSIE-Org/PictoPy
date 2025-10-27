@@ -59,7 +59,6 @@ const ApplicationControlsCard: React.FC = () => {
 
   useMutationFeedback(reclusterMutation, feedbackOptions);
 
-
   const onGlobalReclusterClick = () => {
     reclusterMutation.mutate(undefined);
   };
