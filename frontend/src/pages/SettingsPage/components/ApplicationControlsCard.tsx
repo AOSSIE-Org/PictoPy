@@ -54,7 +54,7 @@ const ApplicationControlsCard: React.FC = () => {
   });
 
   const onGlobalReclusterClick = () => {
-    reclusterMutation.mutate();
+    reclusterMutation.mutate(undefined);
   };
 
   const onCheckUpdatesClick = () => {
