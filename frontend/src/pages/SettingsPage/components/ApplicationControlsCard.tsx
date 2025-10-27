@@ -16,6 +16,8 @@ import { useDispatch } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { triggerGlobalReclustering } from '@/api/api-functions/face_clusters';
+import { usePictoMutation } from '@/hooks/useQueryExtension';
+import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 
 /**
  * Component for application controls in settings
@@ -35,53 +37,24 @@ const ApplicationControlsCard: React.FC = () => {
 
   const [updateDialogOpen, setUpdateDialogOpen] = useState<boolean>(false);
 
-  const onGlobalReclusterClick = async () => {
-    dispatch(showLoader('Starting global face reclustering...'));
+  const reclusterMutation = usePictoMutation({
+    mutationFn: triggerGlobalReclustering,
+  });
 
-    try {
-      const response = await triggerGlobalReclustering();
+  useMutationFeedback(reclusterMutation, {
+    loadingMessage: 'Starting global face reclustering...',
+    successTitle: 'Reclustering Completed',
+    successMessage:
+      reclusterMutation.data?.message ||
+      'Global face reclustering completed successfully.',
+    errorTitle: 'Reclustering Failed',
+    errorMessage:
+      reclusterMutation.data?.message ||
+      'Failed to complete global face reclustering.',
+  });
 
-      dispatch(hideLoader());
-
-      if (response.success) {
-        setTimeout(() => {
-          dispatch(
-            showInfoDialog({
-              title: 'Reclustering Completed',
-              message:
-                response.message ||
-                'Global face reclustering completed successfully.',
-              variant: 'info',
-            }),
-          );
-        }, 50);
-      } else {
-        setTimeout(() => {
-          dispatch(
-            showInfoDialog({
-              title: 'Reclustering Failed',
-              message:
-                response.message ||
-                'Failed to complete global face reclustering.',
-              variant: 'error',
-            }),
-          );
-        }, 50);
-      }
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-
-      dispatch(hideLoader());
-      setTimeout(() => {
-        dispatch(
-          showInfoDialog({
-            title: 'Reclustering Error',
-            message: `Failed to start global reclustering: ${errorMessage}`,
-            variant: 'error',
-          }),
-        );
-      }, 50);
-    }
+  const onGlobalReclusterClick = () => {
+    reclusterMutation.mutate();
   };
 
   const onCheckUpdatesClick = () => {
