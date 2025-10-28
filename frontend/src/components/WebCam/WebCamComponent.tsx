@@ -39,9 +39,7 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
 
   useMutationFeedback(getSearchImagesBase64, {
     showLoading: true,
-    loadingMessage: 'Searching for images...',
-    successTitle: 'Search Complete',
-    successMessage: 'Images matching your search have been found.',
+    loadingMessage: 'Searching faces...',
     errorTitle: 'Search Error',
     errorMessage: 'Failed to search images. Please try again.',
     onSuccess: () => {
