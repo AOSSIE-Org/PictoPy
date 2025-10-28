@@ -47,7 +47,7 @@ const FolderManagementCard: React.FC = () => {
             .slice(0, visibleFoldersCount)
             .map((folder: FolderDetails, index: number) => (
               <div
-                key={index}
+                key={folder.folder_id}
                 className="group border-border bg-background/50 relative rounded-lg border p-4 transition-all hover:border-gray-300 hover:shadow-sm dark:hover:border-gray-600"
               >
                 <div className="flex items-center justify-between">
