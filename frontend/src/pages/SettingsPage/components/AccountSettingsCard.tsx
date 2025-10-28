@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react'; // No need for useEffect
 import { useDispatch } from 'react-redux';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -19,12 +19,7 @@ const AccountSettingsCard: React.FC = () => {
   );
   const [nameError, setNameError] = useState(false);
 
-  useEffect(() => {
-    const savedName = localStorage.getItem('name');
-    const savedAvatar = localStorage.getItem('avatar');
-    if (savedName) setLocalName(savedName);
-    if (savedAvatar) setLocalAvatar(savedAvatar);
-  }, []);
+  // The redundant useEffect has been removed.
 
   const handleAvatarSelect = (avatar: string) => {
     setLocalAvatar(avatar);
@@ -37,7 +32,7 @@ const AccountSettingsCard: React.FC = () => {
     }
   };
 
-  const handleNextClick = () => {
+  const handleSave = () => {
     if (!name.trim()) {
       setNameError(true);
       return;
@@ -114,7 +109,7 @@ const AccountSettingsCard: React.FC = () => {
         {/* Save Changes Button */}
         <Button
           className="mt-4 w-auto bg-blue-500 px-6 py-2 text-sm font-medium text-white hover:bg-blue-600"
-          onClick={handleNextClick}
+          onClick={handleSave}
           disabled={!selectedAvatar}
         >
           Save Changes
