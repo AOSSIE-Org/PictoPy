@@ -1042,15 +1042,28 @@
         ],
         "summary": "Face Tagging",
         "operationId": "face_tagging_face_clusters_face_search_post",
+        "parameters": [
+          {
+            "name": "input_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/InputType",
+              "description": "Choose input type: 'path' or 'base64'",
+              "default": "path"
+            },
+            "description": "Choose input type: 'path' or 'base64'"
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AddSingleImageRequest"
+                "$ref": "#/components/schemas/FaceSearchRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1062,24 +1075,24 @@
             }
           },
           "400": {
-            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Bad Request"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1287,19 +1300,6 @@
           "success"
         ],
         "title": "AddFolderResponse"
-      },
-      "AddSingleImageRequest": {
-        "properties": {
-          "path": {
-            "type": "string",
-            "title": "Path"
-          }
-        },
-        "type": "object",
-        "required": [
-          "path"
-        ],
-        "title": "AddSingleImageRequest"
       },
       "Album": {
         "properties": {
@@ -1512,6 +1512,34 @@
           "success"
         ],
         "title": "DeleteFoldersResponse"
+      },
+      "FaceSearchRequest": {
+        "properties": {
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "base64_data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base64 Data"
+          }
+        },
+        "type": "object",
+        "title": "FaceSearchRequest"
       },
       "FolderDetails": {
         "properties": {
@@ -2057,6 +2085,14 @@
         ],
         "title": "ImageInCluster",
         "description": "Represents an image that contains faces from a specific cluster."
+      },
+      "InputType": {
+        "type": "string",
+        "enum": [
+          "path",
+          "base64"
+        ],
+        "title": "InputType"
       },
       "MetadataModel": {
         "properties": {
