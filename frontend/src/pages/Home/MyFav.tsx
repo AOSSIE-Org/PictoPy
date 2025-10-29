@@ -10,14 +10,12 @@ import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { showInfoDialog } from '@/features/infoDialogSlice';
-import { useNavigate } from 'react-router';
-
+import { Heart } from 'lucide-react';
 export const MyFav = () => {
   const dispatch = useDispatch();
 
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const images = useSelector(selectImages);
-  const navigate = useNavigate();
   const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
   const searchResults = searchState.images;
@@ -28,7 +26,6 @@ export const MyFav = () => {
     enabled: !isSearchActive,
   });
 
-  // Handle fetching lifecycle
   useEffect(() => {
     if (!isSearchActive) {
       if (isLoading) {
@@ -50,12 +47,9 @@ export const MyFav = () => {
     }
   }, [data, isSuccess, isError, isLoading, dispatch, isSearchActive]);
 
-  const handleCloseMediaView = () => {
-    // MediaView will handle closing via Redux
-  };
+  const handleCloseMediaView = () => {};
 
   const displayImages = isSearchActive ? searchResults : images;
-  // Sirf favourite wali images ke liye
   const favouriteImages = displayImages.filter(
     (image) => image.isFavourite === true,
   );
@@ -71,19 +65,7 @@ export const MyFav = () => {
         <div className="flex flex-col items-center justify-center py-16 text-center">
           {/* Heart Icon/Sticker */}
           <div className="bg-muted/50 mb-6 flex h-32 w-32 items-center justify-center rounded-full">
-            <svg
-              className="text-muted-foreground/60 h-16 w-16"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-              />
-            </svg>
+            <Heart />
           </div>
 
           {/* Text Content */}
@@ -94,14 +76,6 @@ export const MyFav = () => {
             Start building your collection by marking images as favourites.
             Click the heart icon on any image to add it here.
           </p>
-
-          {/* Optional: Browse Images Button */}
-          <button
-            onClick={() => navigate('/')}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer rounded-lg px-6 py-2 transition-colors"
-          >
-            Browse Images
-          </button>
         </div>
       </div>
     );

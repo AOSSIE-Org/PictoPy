@@ -5,7 +5,9 @@ from app.schemas.images import ErrorResponse
 from app.utils.images import image_util_parse_metadata
 from pydantic import BaseModel
 from app.database.images import db_toggle_image_favourite_status
-
+from app.logging.setup_logging import get_logger
+# Initialize logger
+logger = get_logger(__name__)
 router = APIRouter()
 
 
@@ -110,7 +112,7 @@ def toggle_favourite(req: ToggleFavouriteRequest):
         }
 
     except Exception as e:
-        print(f"Toggle favourite error: {e}")
+        logger.error(f"error in /toggle-favourite route: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
 
@@ -119,28 +121,7 @@ class ImageInfoResponse(BaseModel):
     path: str
     folder_id: str
     thumbnailPath: str
-    metadata: str
+    metadata: MetadataModel
     isTagged: bool
     isFavourite: bool
     tags: Optional[List[str]] = None
-
-
-@router.get("/info/{image_id}", response_model=ImageInfoResponse)
-def get_image_info(image_id: str):
-    # 1. Fetch all images
-    images = db_get_all_images()
-    image = next((img for img in images if img["id"] == image_id), None)
-
-    if not image:
-        raise HTTPException(status_code=404, detail="Image not found")
-
-    return ImageInfoResponse(
-        id=image["id"],
-        path=image["path"],
-        folder_id=image["folder_id"],
-        thumbnailPath=image["thumbnailPath"],
-        metadata=image["metadata"],
-        isTagged=image["isTagged"],
-        isFavourite=image.get("isFavourite", False),
-        tags=image.get("tags", []),
-    )

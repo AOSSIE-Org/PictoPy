@@ -10,7 +10,6 @@ import {
   previousImage,
   closeImageView,
 } from '@/features/imageSlice';
-import { useQueryClient } from '@tanstack/react-query';
 // Modular components
 import { MediaViewControls } from './MediaViewControls';
 import { ZoomControls } from './ZoomControls';
@@ -25,8 +24,7 @@ import { useImageViewControls } from '@/hooks/useImageViewControls';
 import { useSlideshow } from '@/hooks/useSlideshow';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
-import axios from 'axios';
-import { imagesEndpoints } from '@/api/apiEndpoints';
+import { useTogglefavhook } from '@/hooks/usetogglefavhook';
 
 export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   const dispatch = useDispatch();
@@ -47,12 +45,11 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   // Local UI state
   const [showInfo, setShowInfo] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(false);
-  const queryclient = useQueryClient();
   const [resetSignal, setResetSignal] = useState(0);
 
   // Custom hooks
   const { viewState, handlers } = useImageViewControls();
-  const { favorites, toggleFavorite } = useFavorites();
+  const { favorites } = useFavorites();
   const [isfav, setIsfav] = useState(currentImage?.isFavourite || false);
   // Navigation handlers
   const handleNextImage = useCallback(() => {
@@ -77,32 +74,11 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     },
     [dispatch, handlers],
   );
-
+  const { toggleFavourite } = useTogglefavhook();
   // handling toogle_favvvvv
-  const handle_favourite_toggle = async () => {
-    // console.log('processing ..');
-    if (!currentImage) return;
-    try {
-      const res = await axios.post(
-        `http://localhost:8000${imagesEndpoints.setfavourite}`,
-        {
-          image_id: currentImage?.id,
-        },
-      );
-      if (res.data.success) {
-        setIsfav(res.data.isFavourite);
-        await queryclient.invalidateQueries({ queryKey: ['images'] });
-        res?.data?.isFavourite
-          ? alert('Add to Favourite')
-          : alert('Removed from Favourite');
-        console.log('toggled');
-        toggleFavorite(currentImage?.path || '');
-      }
-      console.log(res);
-    } catch (error) {
-      alert('Error toggling favourite');
-      console.log(error);
-    }
+  const handle_favourite_toggle = () => {
+    if (currentImage?.id) return;
+    toggleFavourite(currentImage?.id);
   };
 
   // Slideshow functionality

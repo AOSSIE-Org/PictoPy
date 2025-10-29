@@ -38,8 +38,8 @@ export function AppSidebar() {
 
   const menuItems = [
     { name: 'Home', path: `/${ROUTES.HOME}`, icon: Home },
-    { name: 'Favourites', path: `/${ROUTES.FAVOURITES}`, icon: Heart },
     { name: 'AI Tagging', path: `/${ROUTES.AI}`, icon: Sparkles },
+    { name: 'Favourites', path: `/${ROUTES.FAVOURITES}`, icon: Heart },
     { name: 'Videos', path: `/${ROUTES.VIDEOS}`, icon: Video },
     { name: 'Albums', path: `/${ROUTES.ALBUMS}`, icon: BookImage },
     { name: 'Memories', path: `/${ROUTES.MEMORIES}`, icon: ClockFading },

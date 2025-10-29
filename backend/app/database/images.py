@@ -391,16 +391,7 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
     try:
         cursor.execute("SELECT id FROM images WHERE id = ?", (image_id,))
         if not cursor.fetchone():
-            print(f"Image {image_id} not found")
             return False
-        cursor.execute("PRAGMA table_info(images)")
-        columns = [column[1] for column in cursor.fetchall()]
-        if "isFavourite" not in columns:
-            print("isFavourite column doesn't exist, adding it now...")
-            cursor.execute(
-                "ALTER TABLE images ADD COLUMN isFavourite BOOLEAN DEFAULT 0"
-            )
-            conn.commit()
         cursor.execute(
             """
             UPDATE images
@@ -409,12 +400,10 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
             """,
             (image_id,),
         )
-        # print(f"✅ Favourite toggled for image {conn}")
         conn.commit()
-        # print(f"✅ Favourite toggled for image {image_id}")
         return cursor.rowcount > 0
     except Exception as e:
-        print(f"❌ Error toggling favourite: {e}")
+        logger.error(f"Database error: {e}")
         conn.rollback()
         return False
     finally:

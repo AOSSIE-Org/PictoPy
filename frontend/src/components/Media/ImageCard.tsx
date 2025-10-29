@@ -84,7 +84,6 @@ export function ImageCard({
               onClick={handle_favourite_toggle}
             >
               {image.isFavourite ? (
-                // Filled Heart (when favourite)
                 <Heart className="h-5 w-5" fill="currentColor"></Heart>
               ) : (
                 <Heart className="h-5 w-5" />
