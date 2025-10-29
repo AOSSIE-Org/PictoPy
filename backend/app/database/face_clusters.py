@@ -299,11 +299,12 @@ def db_get_images_by_cluster_id(
                 bbox_json,
             ) = row
 
+            import json
+
+            metadata_dict = json.loads(metadata) if metadata else None
             # Parse bbox JSON if it exists
             bbox = None
             if bbox_json:
-                import json
-
                 bbox = json.loads(bbox_json)
 
             images.append(
@@ -311,7 +312,7 @@ def db_get_images_by_cluster_id(
                     "image_id": image_id,
                     "image_path": image_path,
                     "thumbnail_path": thumbnail_path,
-                    "metadata": metadata,
+                    "metadata": metadata_dict,
                     "face_id": face_id,
                     "confidence": confidence,
                     "bbox": bbox,

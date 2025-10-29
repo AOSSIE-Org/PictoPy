@@ -1,5 +1,7 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { open } from '@tauri-apps/plugin-shell';
+import { dirname } from '@tauri-apps/api/path';
 import { MediaViewProps } from '@/types/Media';
 import {
   selectCurrentViewIndex,
@@ -76,6 +78,18 @@ export function MediaView({ onClose, type = 'image' }: MediaViewProps) {
     [dispatch, handlers],
   );
 
+  // Folder Open functionality
+  const handleOpenFolder = async () => {
+    if (!currentImage?.path) return;
+    try {
+      const folderPath = await dirname(currentImage.path);
+      await open(folderPath);
+    } catch (err) {
+      console.error('Failed to open folder.');
+    }
+  };
+
+  // Toggle functions
   const toggleInfo = useCallback(() => {
     setShowInfo((prev) => !prev);
   }, []);
@@ -134,6 +148,7 @@ export function MediaView({ onClose, type = 'image' }: MediaViewProps) {
         showInfo={showInfo}
         onToggleInfo={toggleInfo}
         onToggleFavorite={handleToggleFavorite}
+        onOpenFolder={handleOpenFolder}
         isFavorite={isFavorite(currentImage.path)}
         isSlideshowActive={isSlideshowActive}
         onToggleSlideshow={toggleSlideshow}

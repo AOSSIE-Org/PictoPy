@@ -153,7 +153,7 @@ export const ChronologicalGallery = ({
                 </div>
 
                 {/* Images Grid */}
-                <div className="grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4">
+                <div className="grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4 p-2">
                   {imgs.map((img) => {
                     const chronologicalIndex = imageIndexMap.get(img.id) ?? -1;
 
