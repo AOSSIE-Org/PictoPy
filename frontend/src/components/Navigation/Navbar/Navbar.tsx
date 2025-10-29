@@ -45,6 +45,8 @@ export function Navbar() {
                 <button
                   onClick={() => dispatch(clearSearch())}
                   className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white"
+                  title="Close"
+                  aria-label="Close"
                 >
                   ✕
                 </button>
@@ -63,7 +65,11 @@ export function Navbar() {
 
           <FaceSearchDialog />
 
-          <button className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2">
+          <button
+            className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
+            title="Search"
+            aria-label="Search"
+          >
             <Search className="h-4 w-4" />
           </button>
         </div>
