@@ -87,7 +87,7 @@ export function FaceSearchDialog() {
       getSearchImages(filePath);
     }
   };
-  return (
+    return (
     <>
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogTrigger asChild>
