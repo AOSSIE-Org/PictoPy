@@ -833,6 +833,26 @@
         "summary": "Get All Images",
         "description": "Get all images from the database.",
         "operationId": "get_all_images_images__get",
+        "parameters": [
+          {
+            "name": "tagged",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter images by tagged status",
+              "title": "Tagged"
+            },
+            "description": "Filter images by tagged status"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -845,11 +865,21 @@
             }
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1048,9 +1078,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/InputType",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/InputType"
+                }
+              ],
               "description": "Choose input type: 'path' or 'base64'",
-              "default": "path"
+              "default": "path",
+              "title": "Input Type"
             },
             "description": "Choose input type: 'path' or 'base64'"
           }
@@ -2031,7 +2066,6 @@
           "metadata": {
             "anyOf": [
               {
-                "additionalProperties": true,
                 "type": "object"
               },
               {

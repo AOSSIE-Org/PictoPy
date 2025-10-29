@@ -1,15 +1,13 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { open } from '@tauri-apps/plugin-shell';
-import { dirname } from '@tauri-apps/api/path';
+import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { MediaViewProps } from '@/types/Media';
-import { selectCurrentViewIndex } from '@/features/imageSelectors';
 import {
-  setCurrentViewIndex,
-  nextImage,
-  previousImage,
-  closeImageView,
-} from '@/features/imageSlice';
+  selectCurrentViewIndex,
+  selectImages,
+} from '@/features/imageSelectors';
+import { setCurrentViewIndex, closeImageView } from '@/features/imageSlice';
+
 // Modular components
 import { MediaViewControls } from './MediaViewControls';
 import { ZoomControls } from './ZoomControls';
@@ -25,10 +23,11 @@ import { useSlideshow } from '@/hooks/useSlideshow';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 
-export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
+export function MediaView({ onClose, type = 'image' }: MediaViewProps) {
   const dispatch = useDispatch();
 
   // Redux selectors
+  const images = useSelector(selectImages);
   const currentViewIndex = useSelector(selectCurrentViewIndex);
   const totalImages = images.length;
 
@@ -52,14 +51,18 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
 
   // Navigation handlers
   const handleNextImage = useCallback(() => {
-    dispatch(nextImage());
-    handlers.resetZoom();
-  }, [dispatch, handlers]);
+    if (currentViewIndex < images.length - 1) {
+      dispatch(setCurrentViewIndex(currentViewIndex + 1));
+      handlers.resetZoom();
+    }
+  }, [dispatch, handlers, currentViewIndex, images.length]);
 
   const handlePreviousImage = useCallback(() => {
-    dispatch(previousImage());
-    handlers.resetZoom();
-  }, [dispatch, handlers]);
+    if (currentViewIndex > 0) {
+      dispatch(setCurrentViewIndex(currentViewIndex - 1));
+      handlers.resetZoom();
+    }
+  }, [dispatch, handlers, currentViewIndex]);
 
   const handleClose = useCallback(() => {
     dispatch(closeImageView());
@@ -78,9 +81,9 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   const handleOpenFolder = async () => {
     if (!currentImage?.path) return;
     try {
-      const folderPath = await dirname(currentImage.path);
-      await open(folderPath);
+      await revealItemInDir(currentImage.path);
     } catch (err) {
+      console.log(err);
       console.error('Failed to open folder.');
     }
   };

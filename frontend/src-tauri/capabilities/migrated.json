@@ -135,6 +135,7 @@
     "shell:default",
     "fs:default",
     "dialog:default",
-    "store:default"
+    "store:default",
+    "opener:allow-reveal-item-in-dir"
   ]
 }
