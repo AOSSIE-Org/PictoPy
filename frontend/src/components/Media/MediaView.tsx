@@ -24,7 +24,7 @@ import { useImageViewControls } from '@/hooks/useImageViewControls';
 import { useSlideshow } from '@/hooks/useSlideshow';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
-import { useTogglefavhook } from '@/hooks/usetogglefavhook';
+import { useToggleFav } from '../../hooks/useToggleFav';
 
 export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   const dispatch = useDispatch();
@@ -74,10 +74,12 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     },
     [dispatch, handlers],
   );
-  const { toggleFavourite } = useTogglefavhook();
+  const { toggleFavourite } = useToggleFav();
   // handling toogle_favvvvv
   const handle_favourite_toggle = () => {
-    if (currentImage?.id) return;
+    console.log(currentImage?.id);
+    if (!currentImage?.id) return;
+    console.log(':SDv');
     toggleFavourite(currentImage?.id);
   };
 
