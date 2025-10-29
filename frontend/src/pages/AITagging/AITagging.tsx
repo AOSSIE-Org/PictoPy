@@ -5,10 +5,7 @@ import { FaceCollections } from '@/components/FaceCollections';
 import { Image } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
-import {
-  selectTaggedImages,
-  selectIsImageViewOpen,
-} from '@/features/imageSelectors';
+import { selectIsImageViewOpen, selectImages } from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import {
@@ -21,18 +18,17 @@ import { EmptyAITaggingState } from '@/components/EmptyStates/EmptyAITaggingStat
 export const AITagging = () => {
   const dispatch = useDispatch();
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
-  const taggedImages = useSelector(selectTaggedImages);
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
-
+  const taggedImages = useSelector(selectImages);
   const {
     data: imagesData,
     isLoading: imagesLoading,
     isSuccess: imagesSuccess,
     isError: imagesError,
   } = usePictoQuery({
-    queryKey: ['images'],
-    queryFn: fetchAllImages,
+    queryKey: ['images', { tagged: true }],
+    queryFn: () => fetchAllImages(true),
   });
 
   useEffect(() => {

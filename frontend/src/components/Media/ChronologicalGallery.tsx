@@ -2,8 +2,8 @@ import { useMemo, useRef, useEffect, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { Image } from '@/types/Media';
-import { setViewerContent } from '@/features/imageSlice';
 import { groupImagesByYearMonthFromMetadata } from '@/utils/dateUtils';
+import { setCurrentViewIndex } from '@/features/imageSlice';
 
 export type MonthMarker = {
   offset: number;
@@ -162,12 +162,7 @@ export const ChronologicalGallery = ({
                         <ImageCard
                           image={img}
                           onClick={() =>
-                            dispatch(
-                              setViewerContent({
-                                images: chronologicallySortedImages,
-                                index: chronologicalIndex,
-                              }),
-                            )
+                            dispatch(setCurrentViewIndex(chronologicalIndex))
                           }
                           className="w-full transition-transform duration-200 group-hover:scale-105"
                         />

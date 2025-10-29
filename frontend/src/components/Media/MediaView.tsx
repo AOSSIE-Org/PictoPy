@@ -1,11 +1,10 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { open } from '@tauri-apps/plugin-shell';
-import { dirname } from '@tauri-apps/api/path';
+import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { MediaViewProps } from '@/types/Media';
 import {
   selectCurrentViewIndex,
-  selectActiveImageList,
+  selectImages,
 } from '@/features/imageSelectors';
 import { setCurrentViewIndex, closeImageView } from '@/features/imageSlice';
 
@@ -28,7 +27,7 @@ export function MediaView({ onClose, type = 'image' }: MediaViewProps) {
   const dispatch = useDispatch();
 
   // Redux selectors
-  const images = useSelector(selectActiveImageList);
+  const images = useSelector(selectImages);
   const currentViewIndex = useSelector(selectCurrentViewIndex);
   const totalImages = images.length;
 
@@ -82,9 +81,9 @@ export function MediaView({ onClose, type = 'image' }: MediaViewProps) {
   const handleOpenFolder = async () => {
     if (!currentImage?.path) return;
     try {
-      const folderPath = await dirname(currentImage.path);
-      await open(folderPath);
+      await revealItemInDir(currentImage.path);
     } catch (err) {
+      console.log(err);
       console.error('Failed to open folder.');
     }
   };

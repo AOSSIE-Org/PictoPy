@@ -11,11 +11,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useDispatch } from 'react-redux';
-import { startSearch, setResults, clearSearch } from '@/features/searchSlice';
+import { startSearch, clearSearch } from '@/features/searchSlice';
 import type { Image } from '@/types/Media';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { fetchSearchedFacesBase64 } from '@/api/api-functions';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { setImages } from '@/features/imageSlice.ts';
 
 const videoConstraints = {
   facingMode: 'user',
@@ -45,7 +46,7 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
     onSuccess: () => {
       const result = getSearchImagesBase64.data?.data as Image[];
       if (result && result.length > 0) {
-        dispatch(setResults(result));
+        dispatch(setImages(result));
       } else {
         dispatch(
           showInfoDialog({
@@ -55,7 +56,7 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
             variant: 'info',
           }),
         );
-        dispatch(setResults([]));
+        dispatch(setImages([]));
         dispatch(clearSearch());
       }
       getSearchImagesBase64.reset();

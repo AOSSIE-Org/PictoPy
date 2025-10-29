@@ -119,9 +119,13 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
         conn.close()
 
 
-def db_get_all_images() -> List[dict]:
+def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
     """
     Get all images from the database with their tags.
+
+    Args:
+        tagged: Optional filter for tagged status. If None, returns all images.
+                If True, returns only tagged images. If False, returns only untagged images.
 
     Returns:
         List of dictionaries containing all image data including tags
@@ -130,8 +134,8 @@ def db_get_all_images() -> List[dict]:
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        # Build the query with optional WHERE clause
+        query = """
             SELECT 
                 i.id, 
                 i.path, 
@@ -143,9 +147,16 @@ def db_get_all_images() -> List[dict]:
             FROM images i
             LEFT JOIN image_classes ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
-            ORDER BY i.path, m.name
-            """
-        )
+        """
+
+        params = []
+        if tagged is not None:
+            query += " WHERE i.isTagged = ?"
+            params.append(tagged)
+
+        query += " ORDER BY i.path, m.name"
+
+        cursor.execute(query, params)
 
         results = cursor.fetchall()
 
