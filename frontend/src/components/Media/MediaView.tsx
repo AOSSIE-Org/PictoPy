@@ -77,9 +77,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
   const { toggleFavourite } = useToggleFav();
   // handling toogle_favvvvv
   const handle_favourite_toggle = () => {
-    console.log(currentImage?.id);
     if (!currentImage?.id) return;
-    console.log(':SDv');
     toggleFavourite(currentImage?.id);
   };
 
