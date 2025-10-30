@@ -8,7 +8,7 @@ import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 import { Image } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
-import { selectImages} from '@/features/imageSelectors';
+import { selectImages } from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
