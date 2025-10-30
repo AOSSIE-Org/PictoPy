@@ -22,7 +22,7 @@ from app.schemas.face_clusters import (
     GetClusterImagesResponse,
     GetClusterImagesData,
     ImageInCluster,
-    GlobalReclusterResponse
+    GlobalReclusterResponse,
 )
 from app.schemas.images import FaceSearchRequest, InputType
 from app.utils.faceSearch import perform_face_search
@@ -298,9 +298,6 @@ def face_tagging(
     finally:
         if input_type == InputType.base64 and image_path and os.path.exists(image_path):
             os.remove(image_path)
-
-            
-
 
 
 @router.post(
