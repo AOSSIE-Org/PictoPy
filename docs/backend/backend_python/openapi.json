@@ -833,6 +833,26 @@
         "summary": "Get All Images",
         "description": "Get all images from the database.",
         "operationId": "get_all_images_images__get",
+        "parameters": [
+          {
+            "name": "tagged",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter images by tagged status",
+              "title": "Tagged"
+            },
+            "description": "Filter images by tagged status"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -845,11 +865,21 @@
             }
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1100,6 +1130,38 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/face-clusters/global-recluster": {
+      "post": {
+        "tags": [
+          "Face Clusters"
+        ],
+        "summary": "Trigger Global Reclustering",
+        "description": "Manually trigger global face reclustering.\nThis forces full reclustering regardless of the 24-hour rule.",
+        "operationId": "trigger_global_reclustering_face_clusters_global_recluster_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalReclusterResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
                 }
               }
             }
@@ -1926,6 +1988,68 @@
         ],
         "title": "GetUserPreferencesResponse",
         "description": "Response model for getting user preferences"
+      },
+      "GlobalReclusterData": {
+        "properties": {
+          "clusters_created": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clusters Created"
+          }
+        },
+        "type": "object",
+        "title": "GlobalReclusterData"
+      },
+      "GlobalReclusterResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GlobalReclusterData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "GlobalReclusterResponse"
       },
       "HTTPValidationError": {
         "properties": {

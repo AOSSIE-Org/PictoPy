@@ -22,14 +22,12 @@ export const Home = () => {
   const images = useSelector(selectImages);
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
-
   const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
-  const searchResults = searchState.images;
 
   const { data, isLoading, isSuccess, isError } = usePictoQuery({
     queryKey: ['images'],
-    queryFn: fetchAllImages,
+    queryFn: () => fetchAllImages(),
     enabled: !isSearchActive,
   });
 
@@ -59,11 +57,9 @@ export const Home = () => {
     // MediaView will handle closing via Redux
   };
 
-  const displayImages = isSearchActive ? searchResults : images;
-
   const title =
-    isSearchActive && searchResults.length > 0
-      ? `Face Search Results (${searchResults.length} found)`
+    isSearchActive && images.length > 0
+      ? `Face Search Results (${images.length} found)`
       : 'Image Gallery';
 
   return (
@@ -73,9 +69,9 @@ export const Home = () => {
         ref={scrollableRef}
         className="hide-scrollbar flex-1 overflow-x-hidden overflow-y-auto"
       >
-        {displayImages.length > 0 ? (
+        {images.length > 0 ? (
           <ChronologicalGallery
-            images={displayImages}
+            images={images}
             showTitle={true}
             title={title}
             onMonthOffsetsChange={setMonthMarkers}
@@ -96,9 +92,7 @@ export const Home = () => {
       )}
 
       {/* Media viewer modal */}
-      {isImageViewOpen && (
-        <MediaView images={displayImages} onClose={handleCloseMediaView} />
-      )}
+      {isImageViewOpen && <MediaView onClose={handleCloseMediaView} />}
     </div>
   );
 };
