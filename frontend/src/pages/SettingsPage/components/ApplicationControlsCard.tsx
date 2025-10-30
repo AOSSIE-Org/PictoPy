@@ -53,8 +53,14 @@ const ApplicationControlsCard: React.FC = () => {
       errorMessage:
         reclusterMutation.errorMessage ||
         'Failed to complete global face reclustering.',
+      // You can use reclusterMutation.successData?.clusters_created to show the number of clusters created if needed
+      // Example: `Clusters created: ${reclusterMutation.successData?.clusters_created}`
     }),
-    [reclusterMutation.successMessage, reclusterMutation.errorMessage],
+    [
+      reclusterMutation.successMessage,
+      reclusterMutation.errorMessage,
+      reclusterMutation.successData,
+    ],
   );
 
   useMutationFeedback(reclusterMutation, feedbackOptions);

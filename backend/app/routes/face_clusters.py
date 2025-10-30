@@ -18,11 +18,12 @@ from app.schemas.face_clusters import (
     ErrorResponse,
     GetClustersResponse,
     GetClustersData,
+    GlobalReclusterResponse,
+    GlobalReclusterData,
     ClusterMetadata,
     GetClusterImagesResponse,
     GetClusterImagesData,
     ImageInCluster,
-    GlobalReclusterResponse,
 )
 from app.schemas.images import FaceSearchRequest, InputType
 from app.utils.faceSearch import perform_face_search
@@ -320,7 +321,9 @@ def trigger_global_reclustering():
 
         if result == 0:
             return GlobalReclusterResponse(
-                success=True, message="No faces found to cluster", clusters_created=0
+                success=True,
+                message="No faces found to cluster",
+                data=GlobalReclusterData(clusters_created=0),
             )
 
         logger.info("Global reclustering completed successfully")
@@ -328,7 +331,7 @@ def trigger_global_reclustering():
         return GlobalReclusterResponse(
             success=True,
             message="Global reclustering completed successfully.",
-            clusters_created=result if result else 0,
+            data=GlobalReclusterData(clusters_created=result),
         )
 
     except Exception as e:

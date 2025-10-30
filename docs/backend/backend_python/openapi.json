@@ -1994,6 +1994,23 @@
         "title": "GetUserPreferencesResponse",
         "description": "Response model for getting user preferences"
       },
+      "GlobalReclusterData": {
+        "properties": {
+          "clusters_created": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clusters Created"
+          }
+        },
+        "type": "object",
+        "title": "GlobalReclusterData"
+      },
       "GlobalReclusterResponse": {
         "properties": {
           "success": {
@@ -2001,19 +2018,41 @@
             "title": "Success"
           },
           "message": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Message"
           },
-          "clusters_created": {
-            "type": "integer",
-            "title": "Clusters Created"
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GlobalReclusterData"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "required": [
-          "success",
-          "message",
-          "clusters_created"
+          "success"
         ],
         "title": "GlobalReclusterResponse"
       },
