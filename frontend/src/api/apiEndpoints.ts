@@ -9,6 +9,7 @@ export const faceClustersEndpoints = {
   searchForFacesBase64: '/face-clusters/face-search?input_type=base64',
   renameCluster: (clusterId: string) => `/face-clusters/${clusterId}`,
   getClusterImages: (clusterId: string) => `/face-clusters/${clusterId}/images`,
+  globalRecluster: '/face-clusters/global-recluster',
 };
 
 export const foldersEndpoints = {

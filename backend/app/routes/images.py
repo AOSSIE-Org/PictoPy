@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from typing import List, Optional
 from app.database.images import db_get_all_images
 from app.schemas.images import ErrorResponse
@@ -48,11 +48,13 @@ class GetAllImagesResponse(BaseModel):
     response_model=GetAllImagesResponse,
     responses={500: {"model": ErrorResponse}},
 )
-def get_all_images():
+def get_all_images(
+    tagged: Optional[bool] = Query(None, description="Filter images by tagged status")
+):
     """Get all images from the database."""
     try:
-        # Get all images with tags from database (single query)
-        images = db_get_all_images()
+        # Get all images with tags from database (single query with optional filter)
+        images = db_get_all_images(tagged=tagged)
 
         # Convert to response format
         image_data = [

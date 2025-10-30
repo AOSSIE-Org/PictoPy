@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { useDispatch } from 'react-redux';
 import { useFile } from '@/hooks/selectFile';
-import { startSearch, setResults, clearSearch } from '@/features/searchSlice';
+import { startSearch, clearSearch } from '@/features/searchSlice';
 import type { Image } from '@/types/Media';
 import { hideLoader, showLoader } from '@/features/loaderSlice';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router';
 import { ROUTES } from '@/constants/routes';
 import WebcamComponent from '../WebCam/WebCamComponent';
 
+import { setImages } from '@/features/imageSlice';
 export function FaceSearchDialog() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
@@ -35,7 +36,7 @@ export function FaceSearchDialog() {
       dispatch(hideLoader());
       setIsDialogOpen(false);
       if (result && result.length > 0) {
-        dispatch(setResults(result));
+        dispatch(setImages(result));
       } else {
         dispatch(clearSearch());
         dispatch(

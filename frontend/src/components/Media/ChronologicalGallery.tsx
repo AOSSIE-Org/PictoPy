@@ -1,12 +1,9 @@
 import { useMemo, useRef, useEffect, useCallback } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { Image } from '@/types/Media';
-import { selectImages } from '@/features/imageSelectors';
-import {
-  groupImagesByYearMonthFromMetadata,
-  createImageIndexMap,
-} from '@/utils/dateUtils';
+import { groupImagesByYearMonthFromMetadata } from '@/utils/dateUtils';
+import { setCurrentViewIndex } from '@/features/imageSlice';
 
 export type MonthMarker = {
   offset: number;
@@ -31,7 +28,7 @@ export const ChronologicalGallery = ({
   onMonthOffsetsChange,
   scrollContainerRef,
 }: ChronologicalGalleryProps) => {
-  const allImages = useSelector(selectImages);
+  const dispatch = useDispatch();
   const monthHeaderRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const galleryRef = useRef<HTMLDivElement>(null);
 
@@ -39,12 +36,6 @@ export const ChronologicalGallery = ({
   const grouped = useMemo(
     () => groupImagesByYearMonthFromMetadata(images),
     [images],
-  );
-
-  // Optimized image index lookup
-  const imageIndexMap = useMemo(
-    () => createImageIndexMap(allImages),
-    [allImages],
   );
 
   const sortedGrouped = useMemo(() => {
@@ -57,6 +48,20 @@ export const ChronologicalGallery = ({
         ),
       }));
   }, [grouped]);
+
+  const chronologicallySortedImages = useMemo(() => {
+    return sortedGrouped.flatMap(({ months }) =>
+      months.flatMap(([, imgs]) => imgs),
+    );
+  }, [sortedGrouped]);
+
+  const imageIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    chronologicallySortedImages.forEach((img, idx) => {
+      map.set(img.id, idx);
+    });
+    return map;
+  }, [chronologicallySortedImages]);
 
   const recomputeMarkers = useCallback(() => {
     if (!onMonthOffsetsChange) return;
@@ -150,13 +155,15 @@ export const ChronologicalGallery = ({
                 {/* Images Grid */}
                 <div className="grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4 p-2">
                   {imgs.map((img) => {
-                    const reduxIndex = imageIndexMap.get(img.id) ?? -1;
+                    const chronologicalIndex = imageIndexMap.get(img.id) ?? -1;
 
                     return (
                       <div key={img.id} className="group relative">
                         <ImageCard
                           image={img}
-                          imageIndex={reduxIndex}
+                          onClick={() =>
+                            dispatch(setCurrentViewIndex(chronologicalIndex))
+                          }
                           className="w-full transition-transform duration-200 group-hover:scale-105"
                         />
                       </div>

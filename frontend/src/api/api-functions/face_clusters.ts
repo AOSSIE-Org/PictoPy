@@ -64,3 +64,10 @@ export const fetchSearchedFacesBase64 = async (
   );
   return response.data;
 };
+
+export const triggerGlobalReclustering = async (): Promise<APIResponse> => {
+  const response = await apiClient.post<APIResponse>(
+    faceClustersEndpoints.globalRecluster,
+  );
+  return response.data;
+};

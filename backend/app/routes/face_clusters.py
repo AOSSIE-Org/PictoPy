@@ -18,6 +18,8 @@ from app.schemas.face_clusters import (
     ErrorResponse,
     GetClustersResponse,
     GetClustersData,
+    GlobalReclusterResponse,
+    GlobalReclusterData,
     ClusterMetadata,
     GetClusterImagesResponse,
     GetClusterImagesData,
@@ -297,3 +299,48 @@ def face_tagging(
     finally:
         if input_type == InputType.base64 and image_path and os.path.exists(image_path):
             os.remove(image_path)
+
+
+@router.post(
+    "/global-recluster",
+    response_model=GlobalReclusterResponse,
+    responses={code: {"model": ErrorResponse} for code in [500]},
+)
+def trigger_global_reclustering():
+    """
+    Manually trigger global face reclustering.
+    This forces full reclustering regardless of the 24-hour rule.
+    """
+    try:
+        logger.info("Starting manual global face reclustering...")
+
+        # Use the smart clustering function with force flag set to True
+        from app.utils.face_clusters import cluster_util_face_clusters_sync
+
+        result = cluster_util_face_clusters_sync(force_full_reclustering=True)
+
+        if result == 0:
+            return GlobalReclusterResponse(
+                success=True,
+                message="No faces found to cluster",
+                data=GlobalReclusterData(clusters_created=0),
+            )
+
+        logger.info("Global reclustering completed successfully")
+
+        return GlobalReclusterResponse(
+            success=True,
+            message="Global reclustering completed successfully.",
+            data=GlobalReclusterData(clusters_created=result),
+        )
+
+    except Exception as e:
+        logger.error(f"Global reclustering failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Global reclustering failed: {str(e)}",
+            ).model_dump(),
+        )

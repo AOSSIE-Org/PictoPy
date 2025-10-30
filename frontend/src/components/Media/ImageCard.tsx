@@ -2,30 +2,28 @@ import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Check, Heart, Share2 } from 'lucide-react';
-import { useState, useCallback } from 'react';
-import { useDispatch } from 'react-redux';
+import { useState } from 'react';
 import { Image } from '@/types/Media';
 import { ImageTags } from './ImageTags';
-import { setCurrentViewIndex } from '@/features/imageSlice';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
-interface ImageCardProps {
+interface ImageCardViewProps {
   image: Image;
-  imageIndex: number;
   className?: string;
   isSelected?: boolean;
   showTags?: boolean;
+  onClick?: () => void;
+  imageIndex?: number;
 }
 
 export function ImageCard({
   image,
-  imageIndex,
   className,
   isSelected = false,
   showTags = true,
-}: ImageCardProps) {
-  const dispatch = useDispatch();
-  const [isFavorite, setIsFavorite] = useState(image.isFavourite);
+  onClick,
+}: ImageCardViewProps) {
+  const [isFavorite, setIsFavorite] = useState(false);
   const [isImageHovered, setIsImageHovered] = useState(false);
 
   // Default to empty array if no tags are provided
@@ -34,10 +32,6 @@ export function ImageCard({
   const handle_favourite_toggle = () => {
     setIsFavorite(!isFavorite);
   };
-  const handleImageClick = useCallback(() => {
-    dispatch(setCurrentViewIndex(imageIndex));
-  }, [dispatch, imageIndex]);
-
   return (
     <div
       className={cn(
@@ -47,7 +41,7 @@ export function ImageCard({
       )}
       onMouseEnter={() => setIsImageHovered(true)}
       onMouseLeave={() => setIsImageHovered(false)}
-      onClick={handleImageClick}
+      onClick={onClick}
     >
       <div className="relative">
         {/* Selection tick mark */}

@@ -5,7 +5,7 @@ interface MediaViewControlsProps {
   showInfo: boolean;
   onToggleInfo: () => void;
   onToggleFavorite: () => void;
-  onOpenFolder: () => void;
+  onOpenFolder: () => Promise<void>;
   isFavorite: boolean;
   isSlideshowActive: boolean;
   onToggleSlideshow: () => void;
