@@ -833,6 +833,26 @@
         "summary": "Get All Images",
         "description": "Get all images from the database.",
         "operationId": "get_all_images_images__get",
+        "parameters": [
+          {
+            "name": "tagged",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter images by tagged status",
+              "title": "Tagged"
+            },
+            "description": "Filter images by tagged status"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -845,11 +865,21 @@
             }
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1042,15 +1072,33 @@
         ],
         "summary": "Face Tagging",
         "operationId": "face_tagging_face_clusters_face_search_post",
+        "parameters": [
+          {
+            "name": "input_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/InputType"
+                }
+              ],
+              "description": "Choose input type: 'path' or 'base64'",
+              "default": "path",
+              "title": "Input Type"
+            },
+            "description": "Choose input type: 'path' or 'base64'"
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AddSingleImageRequest"
+                "$ref": "#/components/schemas/FaceSearchRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1062,24 +1110,24 @@
             }
           },
           "400": {
-            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Bad Request"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1320,19 +1368,6 @@
         ],
         "title": "AddFolderResponse"
       },
-      "AddSingleImageRequest": {
-        "properties": {
-          "path": {
-            "type": "string",
-            "title": "Path"
-          }
-        },
-        "type": "object",
-        "required": [
-          "path"
-        ],
-        "title": "AddSingleImageRequest"
-      },
       "Album": {
         "properties": {
           "album_id": {
@@ -1544,6 +1579,34 @@
           "success"
         ],
         "title": "DeleteFoldersResponse"
+      },
+      "FaceSearchRequest": {
+        "properties": {
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "base64_data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base64 Data"
+          }
+        },
+        "type": "object",
+        "title": "FaceSearchRequest"
       },
       "FolderDetails": {
         "properties": {
@@ -1986,8 +2049,7 @@
             "title": "Thumbnailpath"
           },
           "metadata": {
-            "type": "string",
-            "title": "Metadata"
+            "$ref": "#/components/schemas/MetadataModel"
           },
           "isTagged": {
             "type": "boolean",
@@ -2059,7 +2121,7 @@
           "metadata": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "object"
               },
               {
                 "type": "null"
@@ -2112,6 +2174,97 @@
         ],
         "title": "ImageInCluster",
         "description": "Represents an image that contains faces from a specific cluster."
+      },
+      "InputType": {
+        "type": "string",
+        "enum": [
+          "path",
+          "base64"
+        ],
+        "title": "InputType"
+      },
+      "MetadataModel": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "date_created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Created"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "file_location": {
+            "type": "string",
+            "title": "File Location"
+          },
+          "file_size": {
+            "type": "integer",
+            "title": "File Size"
+          },
+          "item_type": {
+            "type": "string",
+            "title": "Item Type"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "date_created",
+          "width",
+          "height",
+          "file_location",
+          "file_size",
+          "item_type"
+        ],
+        "title": "MetadataModel"
       },
       "RenameClusterData": {
         "properties": {

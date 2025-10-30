@@ -21,6 +21,10 @@ from app.database.metadata import (
     db_get_metadata,
     db_update_metadata,
 )
+from app.logging.setup_logging import get_logger
+
+# Initialize logger
+logger = get_logger(__name__)
 
 
 class ClusterResult:
@@ -170,7 +174,7 @@ def cluster_util_cluster_all_face_embeddings(
         embeddings.append(face["embeddings"])
         existing_cluster_names.append(face["cluster_name"])
 
-    print(f"Total faces to cluster: {len(face_ids)}")
+    logger.info(f"Total faces to cluster: {len(face_ids)}")
 
     # Convert to numpy array for DBSCAN
     embeddings_array = np.array(embeddings)
@@ -184,7 +188,7 @@ def cluster_util_cluster_all_face_embeddings(
     )
 
     cluster_labels = dbscan.fit_predict(embeddings_array)
-    print(f"DBSCAN found {len(set(cluster_labels)) - 1} clusters")
+    logger.info(f"DBSCAN found {len(set(cluster_labels)) - 1} clusters")
 
     # Group faces by cluster labels
     clusters = defaultdict(list)
@@ -346,7 +350,7 @@ def _update_cluster_face_image(cluster_id: str, face_image_base64: str) -> bool:
         return updated
 
     except Exception as e:
-        print(f"Error updating face image for cluster {cluster_id}: {e}")
+        logger.error(f"Error updating face image for cluster {cluster_id}: {e}")
         conn.rollback()
         return False
     finally:
@@ -397,7 +401,7 @@ def _get_cluster_face_data(cluster_uuid: str) -> Optional[tuple]:
             return None
 
     except Exception as e:
-        print(f"Error getting face data for cluster {cluster_uuid}: {e}")
+        logger.error(f"Error getting face data for cluster {cluster_uuid}: {e}")
         return None
     finally:
         conn.close()
@@ -497,7 +501,7 @@ def _crop_and_resize_face(
 
         return face_crop
     except Exception as e:
-        print(f"Error cropping and resizing face: {e}")
+        logger.error(f"Error cropping and resizing face: {e}")
         return None
 
 
@@ -516,7 +520,7 @@ def _encode_image_to_base64(img: np.ndarray, format: str = ".jpg") -> Optional[s
         _, buffer = cv2.imencode(format, img)
         return base64.b64encode(buffer).decode("utf-8")
     except Exception as e:
-        print(f"Error encoding image to base64: {e}")
+        logger.error(f"Error encoding image to base64: {e}")
         return None
 
 
@@ -555,7 +559,7 @@ def _generate_cluster_face_image(cluster_uuid: str) -> Optional[str]:
         return _encode_image_to_base64(face_crop)
 
     except Exception as e:
-        print(f"Error generating face image for cluster {cluster_uuid}: {e}")
+        logger.error(f"Error generating face image for cluster {cluster_uuid}: {e}")
         return None
 
 

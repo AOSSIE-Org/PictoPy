@@ -15,6 +15,10 @@ export interface FetchSearchedFacesRequest {
   path: string;
 }
 
+export interface FetchSearchedFacesBase64Request {
+  base64_data: string;
+}
+
 export const fetchAllClusters = async (): Promise<APIResponse> => {
   const response = await apiClient.get<APIResponse>(
     faceClustersEndpoints.getAllClusters,
@@ -46,6 +50,16 @@ export const fetchSearchedFaces = async (
 ): Promise<APIResponse> => {
   const response = await apiClient.post<APIResponse>(
     faceClustersEndpoints.searchForFaces,
+    request,
+  );
+  return response.data;
+};
+
+export const fetchSearchedFacesBase64 = async (
+  request: FetchSearchedFacesBase64Request,
+): Promise<APIResponse> => {
+  const response = await apiClient.post<APIResponse>(
+    faceClustersEndpoints.searchForFacesBase64,
     request,
   );
   return response.data;

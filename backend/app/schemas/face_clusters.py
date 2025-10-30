@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict, Union, Any
 
 
 # Request Models
@@ -50,7 +50,7 @@ class ImageInCluster(BaseModel):
     id: str
     path: str
     thumbnailPath: Optional[str] = None
-    metadata: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
     face_id: int
     confidence: Optional[float] = None
     bbox: Optional[Dict[str, Union[int, float]]] = None

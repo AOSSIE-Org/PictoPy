@@ -1,6 +1,9 @@
 import sqlite3
 from typing import List, Tuple, NamedTuple
 from app.config.settings import DATABASE_PATH
+from app.logging.setup_logging import get_sync_logger
+
+logger = get_sync_logger(__name__)
 
 # Type definitions
 FolderId = str
@@ -35,7 +38,7 @@ def db_get_all_folders_with_ids() -> List[FolderIdPath]:
         )
         return cursor.fetchall()
     except Exception as e:
-        print(f"Error getting folders from database: {e}")
+        logger.error(f"Error getting folders from database: {e}")
         return []
     finally:
         conn.close()
@@ -48,10 +51,10 @@ def db_check_database_connection() -> bool:
     Returns:
         True if connection is successful and table exists, False otherwise
     """
+    conn = None
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
-
         # Check if folders table exists
         cursor.execute(
             """
@@ -60,12 +63,13 @@ def db_check_database_connection() -> bool:
             """
         )
         result = cursor.fetchone()
-        conn.close()
-
         return result is not None
     except Exception as e:
-        print(f"Database connection error: {e}")
+        logger.error(f"Database connection error: {e}")
         return False
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def db_get_tagging_progress() -> List[FolderTaggingInfo]:
