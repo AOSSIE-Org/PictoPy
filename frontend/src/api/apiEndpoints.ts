@@ -29,3 +29,11 @@ export const userPreferencesEndpoints = {
 export const healthEndpoints = {
   healthCheck: '/health',
 };
+
+export const memoriesEndpoints = {
+  getAllMemories: '/memories/all',
+  onThisDay: '/memories/on-this-day',
+  recent: '/memories/recent',
+  people: '/memories/people',
+  tags: '/memories/tags',
+};
