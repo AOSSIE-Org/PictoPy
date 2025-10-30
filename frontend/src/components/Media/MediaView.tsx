@@ -21,12 +21,19 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import { useToggleFav } from '../../hooks/useToggleFav';
 
-export function MediaView({ onClose, type = 'image', images }: MediaViewProps) {
+export function MediaView({
+  onClose,
+  type = 'image',
+  images = [],
+}: MediaViewProps) {
   const dispatch = useDispatch();
 
   // Redux selectors
   const currentViewIndex = useSelector(selectCurrentViewIndex);
   const totalImages = images.length;
+  // guard: images default to empty array in the signature so `images.length` is safe
+  // keep debug output minimal
+  // console.log(totalImages);
 
   const currentImage = useMemo(() => {
     if (currentViewIndex >= 0 && currentViewIndex < images.length) {
@@ -136,7 +143,7 @@ export function MediaView({ onClose, type = 'image', images }: MediaViewProps) {
   });
 
   // Early return if no images or invalid index
-  if (!images.length || currentViewIndex === -1 || !currentImage) {
+  if (!images?.length || currentViewIndex === -1 || !currentImage) {
     return null;
   }
 
