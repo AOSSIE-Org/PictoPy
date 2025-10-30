@@ -5,11 +5,10 @@ import {
   MonthMarker,
 } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
-import { MediaView } from '@/components/Media/MediaView';
 import { Image } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
-import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
+import { selectImages } from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
@@ -18,7 +17,6 @@ import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 
 export const Home = () => {
   const dispatch = useDispatch();
-  const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const images = useSelector(selectImages);
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
@@ -53,10 +51,6 @@ export const Home = () => {
     }
   }, [data, isSuccess, isError, isLoading, dispatch, isSearchActive]);
 
-  const handleCloseMediaView = () => {
-    // MediaView will handle closing via Redux
-  };
-
   const title =
     isSearchActive && images.length > 0
       ? `Face Search Results (${images.length} found)`
@@ -90,9 +84,6 @@ export const Home = () => {
           className="absolute top-0 right-0 h-full w-4"
         />
       )}
-
-      {/* Media viewer modal */}
-      {isImageViewOpen && <MediaView onClose={handleCloseMediaView} />}
     </div>
   );
 };

@@ -2,10 +2,7 @@ import { useState, useCallback, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 // import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { MediaViewProps } from '@/types/Media';
-import {
-  selectCurrentViewIndex,
-  selectImages,
-} from '@/features/imageSelectors';
+import { selectCurrentViewIndex } from '@/features/imageSelectors';
 import { setCurrentViewIndex, closeImageView } from '@/features/imageSlice';
 
 // Modular components
@@ -24,11 +21,10 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import { useToggleFav } from '../../hooks/useToggleFav';
 
-export function MediaView({ onClose, type = 'image' }: MediaViewProps) {
+export function MediaView({ onClose, type = 'image', images }: MediaViewProps) {
   const dispatch = useDispatch();
 
   // Redux selectors
-  const images = useSelector(selectImages);
   const currentViewIndex = useSelector(selectCurrentViewIndex);
   const totalImages = images.length;
 

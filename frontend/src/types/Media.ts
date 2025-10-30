@@ -35,6 +35,7 @@ export interface ImageGridProps {
 export interface MediaViewProps {
   onClose?: () => void;
   type?: string;
+  images: Image[];
 }
 
 export interface SortingControlsProps {
