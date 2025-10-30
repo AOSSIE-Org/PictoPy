@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { MediaView } from '@/components/Media/MediaView';
 import { FaceCollections } from '@/components/FaceCollections';
 import { Image } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
-import { selectIsImageViewOpen, selectImages } from '@/features/imageSelectors';
+import { selectImages } from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import {
@@ -17,7 +16,6 @@ import { EmptyAITaggingState } from '@/components/EmptyStates/EmptyAITaggingStat
 
 export const AITagging = () => {
   const dispatch = useDispatch();
-  const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
   const taggedImages = useSelector(selectImages);
@@ -70,9 +68,6 @@ export const AITagging = () => {
             <EmptyAITaggingState />
           )}
         </div>
-
-        {/* Media Viewer Modal */}
-        {isImageViewOpen && <MediaView />}
       </div>
       {monthMarkers.length > 0 && (
         <TimelineScrollbar
