@@ -22,6 +22,7 @@ from app.schemas.face_clusters import (
     GetClusterImagesResponse,
     GetClusterImagesData,
     ImageInCluster,
+    GlobalReclusterResponse
 )
 from app.schemas.images import FaceSearchRequest, InputType
 from app.utils.faceSearch import perform_face_search
@@ -299,10 +300,7 @@ def face_tagging(
             os.remove(image_path)
 
             
-class GlobalReclusterResponse(BaseModel):
-    success: bool
-    message: str
-    clusters_created: int
+
 
 
 @router.post(

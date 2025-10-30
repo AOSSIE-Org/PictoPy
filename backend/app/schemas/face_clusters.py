@@ -72,3 +72,9 @@ class GetClusterImagesResponse(BaseModel):
     message: Optional[str] = None
     error: Optional[str] = None
     data: Optional[GetClusterImagesData] = None
+
+
+class GlobalReclusterResponse(BaseModel):
+    success: bool
+    message: str
+    clusters_created: int
