@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, Query, status
-from typing import Optional
 from app.database.memories import (
     db_get_memories_on_this_day,
     db_get_recent_memories,
@@ -31,13 +30,13 @@ def get_on_this_day_memories(
 ):
     """
     Get images from the same day in previous years.
-    
+
     Returns memories from the same month and day across different years,
     creating a nostalgic "On This Day" experience.
     """
     try:
         memories = db_get_memories_on_this_day(years_back=years_back)
-        
+
         return OnThisDayResponse(
             success=True,
             message=f"Successfully retrieved {len(memories)} 'On This Day' memories",
@@ -68,13 +67,13 @@ def get_recent_memories(
 ):
     """
     Get recent collections of images grouped by date.
-    
+
     Returns memories from recent days where you took multiple photos,
     highlighting significant photo-taking events.
     """
     try:
         memories = db_get_recent_memories(days=days, min_images=min_images)
-        
+
         return RecentMemoriesResponse(
             success=True,
             message=f"Successfully retrieved {len(memories)} recent memories",
@@ -98,17 +97,19 @@ def get_recent_memories(
     responses={500: {"model": ErrorResponse}},
 )
 def get_people_memories(
-    limit: int = Query(10, ge=1, le=50, description="Maximum number of people to return")
+    limit: int = Query(
+        10, ge=1, le=50, description="Maximum number of people to return"
+    )
 ):
     """
     Get memories grouped by people (face clusters).
-    
+
     Returns collections of photos featuring the same person,
     creating personalized memory collections.
     """
     try:
         memories = db_get_memories_by_people(limit=limit)
-        
+
         return PeopleMemoriesResponse(
             success=True,
             message=f"Successfully retrieved {len(memories)} people memories",
@@ -136,13 +137,13 @@ def get_tag_memories(
 ):
     """
     Get memories grouped by common tags/objects.
-    
+
     Returns collections of photos featuring the same objects or themes,
     creating thematic memory collections.
     """
     try:
         memories = db_get_memories_by_tags(limit=limit)
-        
+
         return TagMemoriesResponse(
             success=True,
             message=f"Successfully retrieved {len(memories)} tag memories",
@@ -166,15 +167,25 @@ def get_tag_memories(
     responses={500: {"model": ErrorResponse}},
 )
 def get_all_memories(
-    years_back: int = Query(5, ge=1, le=20, description="Years to look back for 'On This Day'"),
-    recent_days: int = Query(30, ge=1, le=365, description="Days to look back for recent memories"),
-    min_images: int = Query(5, ge=1, le=50, description="Minimum images per recent memory"),
-    people_limit: int = Query(10, ge=1, le=50, description="Maximum number of people memories"),
-    tags_limit: int = Query(10, ge=1, le=50, description="Maximum number of tag memories"),
+    years_back: int = Query(
+        5, ge=1, le=20, description="Years to look back for 'On This Day'"
+    ),
+    recent_days: int = Query(
+        30, ge=1, le=365, description="Days to look back for recent memories"
+    ),
+    min_images: int = Query(
+        5, ge=1, le=50, description="Minimum images per recent memory"
+    ),
+    people_limit: int = Query(
+        10, ge=1, le=50, description="Maximum number of people memories"
+    ),
+    tags_limit: int = Query(
+        10, ge=1, le=50, description="Maximum number of tag memories"
+    ),
 ):
     """
     Get all types of memories in a single request.
-    
+
     Returns a comprehensive collection including:
     - On This Day memories
     - Recent memories
@@ -186,9 +197,9 @@ def get_all_memories(
         recent = db_get_recent_memories(days=recent_days, min_images=min_images)
         people = db_get_memories_by_people(limit=people_limit)
         tags = db_get_memories_by_tags(limit=tags_limit)
-        
+
         total_memories = len(on_this_day) + len(recent) + len(people) + len(tags)
-        
+
         return AllMemoriesResponse(
             success=True,
             message=f"Successfully retrieved {total_memories} total memories",
