@@ -21,7 +21,7 @@ const Settings: React.FC = () => {
       <h1 className="mt-6 mb-6 text-2xl font-bold">Settings</h1>
       <div className="mx-auto flex-1 pr-3">
         <div className="mx-auto space-y-8">
-          <div className="bg-card w-50 rounded-lg border p-1">
+          <div className="bg-card w-50 rounded-lg border p-1" role="tablist">
             <button
               role="tab"
               aria-selected={activeTab === 'general'}
