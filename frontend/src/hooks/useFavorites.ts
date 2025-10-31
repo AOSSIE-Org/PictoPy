@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react';
 
 export const useFavorites = () => {
   const [favorites, setFavorites] = useState<string[]>([]);
-
   const toggleFavorite = useCallback((imagePath: string) => {
     setFavorites((prev) => {
       const isFavorite = prev.includes(imagePath);

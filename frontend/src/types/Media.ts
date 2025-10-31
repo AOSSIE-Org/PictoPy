@@ -17,6 +17,7 @@ export interface Image {
   folder_id: string;
   isTagged: boolean;
   metadata?: ImageMetadata;
+  isFavourite?: boolean;
   tags?: string[];
   bboxes?: { x: number; y: number; width: number; height: number }[];
 }

@@ -1,5 +1,6 @@
 export const ROUTES = {
   AI: 'ai-tagging',
+  FAVOURITES: 'favourites',
   HOME: 'home',
   DASHBOARD: 'dashboard',
   PHOTOS: 'photos',
