@@ -174,7 +174,6 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
         return len(face_cluster_mappings)
 
 
-
 def cluster_util_cluster_all_face_embeddings(
     eps: float = 0.3, min_samples: int = 2
 ) -> List[ClusterResult]:
