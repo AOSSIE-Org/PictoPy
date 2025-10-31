@@ -130,7 +130,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
         <CardFooter className="flex justify-end p-3">
           <Button
-            className="px-4 py-1 text-sm"
+            className="cursor-pointer px-4 py-1 text-sm"
             onClick={handleNextClick}
             disabled={!name || !selectedAvatar}
           >

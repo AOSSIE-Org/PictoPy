@@ -4,9 +4,11 @@ export const imagesEndpoints = {
 
 export const faceClustersEndpoints = {
   getAllClusters: '/face-clusters/',
-  searchForFaces: '/face-clusters/face-search',
+  searchForFaces: '/face-clusters/face-search?input_type=path',
+  searchForFacesBase64: '/face-clusters/face-search?input_type=base64',
   renameCluster: (clusterId: string) => `/face-clusters/${clusterId}`,
   getClusterImages: (clusterId: string) => `/face-clusters/${clusterId}/images`,
+  globalRecluster: '/face-clusters/global-recluster',
 };
 
 export const foldersEndpoints = {
@@ -16,6 +18,7 @@ export const foldersEndpoints = {
   disableAITagging: '/folders/disable-ai-tagging',
   deleteFolders: '/folders/delete-folders',
   syncFolder: '/folders/sync-folder',
+  getTaggingStatus: '/folders/status',
 };
 
 export const userPreferencesEndpoints = {

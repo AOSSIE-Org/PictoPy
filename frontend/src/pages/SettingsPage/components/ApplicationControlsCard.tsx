@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, RefreshCw, Server } from 'lucide-react';
+import {
+  Settings as SettingsIcon,
+  RefreshCw,
+  Server,
+  Users,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import UpdateDialog from '@/components/Updater/UpdateDialog';
@@ -10,6 +15,9 @@ import { useUpdater } from '@/hooks/useUpdater';
 import { useDispatch } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { triggerGlobalReclustering } from '@/api/api-functions/face_clusters';
+import { usePictoMutation } from '@/hooks/useQueryExtension';
+import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 
 /**
  * Component for application controls in settings
@@ -28,6 +36,38 @@ const ApplicationControlsCard: React.FC = () => {
   } = useUpdater();
 
   const [updateDialogOpen, setUpdateDialogOpen] = useState<boolean>(false);
+
+  const reclusterMutation = usePictoMutation({
+    mutationFn: triggerGlobalReclustering,
+    autoInvalidateTags: ['clusters'],
+  });
+
+  const feedbackOptions = React.useMemo(
+    () => ({
+      loadingMessage: 'Starting global face reclustering...',
+      successTitle: 'Reclustering Completed',
+      successMessage:
+        reclusterMutation.successMessage ||
+        'Global face reclustering completed successfully.',
+      errorTitle: 'Reclustering Failed',
+      errorMessage:
+        reclusterMutation.errorMessage ||
+        'Failed to complete global face reclustering.',
+      // You can use reclusterMutation.successData?.clusters_created to show the number of clusters created if needed
+      // Example: `Clusters created: ${reclusterMutation.successData?.clusters_created}`
+    }),
+    [
+      reclusterMutation.successMessage,
+      reclusterMutation.errorMessage,
+      reclusterMutation.successData,
+    ],
+  );
+
+  useMutationFeedback(reclusterMutation, feedbackOptions);
+
+  const onGlobalReclusterClick = () => {
+    reclusterMutation.mutate(undefined);
+  };
 
   const onCheckUpdatesClick = () => {
     const checkUpdates = async () => {
@@ -86,13 +126,13 @@ const ApplicationControlsCard: React.FC = () => {
       <SettingsCard
         icon={SettingsIcon}
         title="Application Controls"
-        description="Manage updates and server operations"
+        description="Manage updates, server operations, and face clustering"
       >
-        <div className="flex w-50 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Button
             onClick={onCheckUpdatesClick}
             variant="outline"
-            className="flex h-12 w-full gap-3"
+            className="flex h-12 w-full cursor-pointer gap-3"
           >
             <RefreshCw className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             <div className="text-left">
@@ -103,11 +143,23 @@ const ApplicationControlsCard: React.FC = () => {
           <Button
             onClick={() => restartServer()}
             variant="outline"
-            className="flex h-12 w-full gap-3"
+            className="flex h-12 w-full cursor-pointer gap-3"
           >
             <Server className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             <div className="text-left">
               <div className="font-medium">Restart Server</div>
+            </div>
+          </Button>
+
+          <Button
+            onClick={onGlobalReclusterClick}
+            variant="outline"
+            className="flex h-12 w-full gap-3"
+            title="Rebuild all face clusters from scratch using latest clustering algorithms"
+          >
+            <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+            <div className="text-left">
+              <div className="font-medium">Recluster Faces</div>
             </div>
           </Button>
         </div>

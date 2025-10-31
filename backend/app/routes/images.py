@@ -1,19 +1,33 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from typing import List, Optional
 from app.database.images import db_get_all_images
 from app.schemas.images import ErrorResponse
+from app.utils.images import image_util_parse_metadata
 from pydantic import BaseModel
 
 router = APIRouter()
 
 
 # Response Models
+class MetadataModel(BaseModel):
+    name: str
+    date_created: Optional[str]
+    width: int
+    height: int
+    file_location: str
+    file_size: int
+    item_type: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    location: Optional[str] = None
+
+
 class ImageData(BaseModel):
     id: str
     path: str
     folder_id: str
     thumbnailPath: str
-    metadata: str
+    metadata: MetadataModel
     isTagged: bool
     tags: Optional[List[str]] = None
 
@@ -29,11 +43,13 @@ class GetAllImagesResponse(BaseModel):
     response_model=GetAllImagesResponse,
     responses={500: {"model": ErrorResponse}},
 )
-def get_all_images():
+def get_all_images(
+    tagged: Optional[bool] = Query(None, description="Filter images by tagged status")
+):
     """Get all images from the database."""
     try:
-        # Get all images with tags from database (single query)
-        images = db_get_all_images()
+        # Get all images with tags from database (single query with optional filter)
+        images = db_get_all_images(tagged=tagged)
 
         # Convert to response format
         image_data = [
@@ -42,7 +58,7 @@ def get_all_images():
                 path=image["path"],
                 folder_id=image["folder_id"],
                 thumbnailPath=image["thumbnailPath"],
-                metadata=image["metadata"],
+                metadata=image_util_parse_metadata(image["metadata"]),
                 isTagged=image["isTagged"],
                 tags=image["tags"],
             )
