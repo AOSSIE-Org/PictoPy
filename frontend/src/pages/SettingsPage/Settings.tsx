@@ -23,12 +23,18 @@ const Settings: React.FC = () => {
         <div className="mx-auto space-y-8">
           <div className="bg-card w-50 rounded-lg border p-1">
             <button
+              role="tab"
+              aria-selected={activeTab === 'general'}
+              aria-controls="general-panel"
               onClick={() => setActiveTab('general')}
               className={`${baseTabStyle} ${activeTab === 'general' ? activeTabStyle : inactiveTabStyle}`}
             >
               General
             </button>
             <button
+              role="tab"
+              aria-selected={activeTab === 'account'}
+              aria-controls="account-panel"
               onClick={() => setActiveTab('account')}
               className={`${baseTabStyle} ${activeTab === 'account' ? activeTabStyle : inactiveTabStyle}`}
             >

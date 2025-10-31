@@ -14,9 +14,10 @@ const AccountSettingsCard: React.FC = () => {
   const [name, setLocalName] = useState(
     () => localStorage.getItem('name') || '',
   );
-  const [selectedAvatar, setLocalAvatar] = useState(
-    () => localStorage.getItem('avatar') || '',
-  );
+  const [selectedAvatar, setLocalAvatar] = useState(() => {
+    const stored = localStorage.getItem('avatar') || '';
+    return avatars.includes(stored) ? stored : '';
+  });
   const [nameError, setNameError] = useState(false);
 
   // The redundant useEffect has been removed.
