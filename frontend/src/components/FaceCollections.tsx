@@ -22,12 +22,8 @@ export function FaceCollections() {
 
   useEffect(() => {
     if (clustersSuccess && clustersData?.data?.clusters) {
-      const clusters = (clustersData.data.clusters || []) as Cluster[];
-
-      const filteredClusters = clusters.filter((c) => c.face_count > 0);
-
-      dispatch(setClusters(filteredClusters));
-      // console.log(filteredClusters);
+      const clusters = clustersData.data.clusters as Cluster[];
+      dispatch(setClusters(clusters));
     }
   }, [clustersData, clustersSuccess, dispatch]);
 

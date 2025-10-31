@@ -588,3 +588,37 @@ def _determine_cluster_name(faces_in_cluster: List[Dict]) -> Optional[str]:
     most_common_name, _ = name_counts.most_common(1)[0]
 
     return most_common_name
+
+def cluster_util_delete_empty_clusters() -> int:
+    """
+    Delete all clusters that have no faces associated with them.
+
+    Returns:
+        int: Number of clusters deleted
+    """
+    import sqlite3
+    from app.config.settings import DATABASE_PATH
+
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            DELETE FROM face_clusters
+            WHERE cluster_id NOT IN (
+                SELECT DISTINCT cluster_id FROM faces WHERE cluster_id IS NOT NULL
+            )
+            """
+        )
+
+        deleted_count = cursor.rowcount
+        conn.commit()
+        logger.info(f"Deleted {deleted_count} empty clusters.")
+        return deleted_count
+    except Exception as e:
+        logger.error(f"Error deleting empty clusters: {e}")
+        conn.rollback()
+        return 0
+    finally:
+        conn.close()
