@@ -5,12 +5,14 @@ import { FolderTaggingInfo } from '@/types/FolderStatus';
 interface FolderState {
   folders: FolderDetails[];
   taggingStatus: Record<string, FolderTaggingInfo>;
+  folderStatusTimestamps: Record<string, number>;
   lastUpdatedAt?: number;
 }
 
 const initialState: FolderState = {
   folders: [],
   taggingStatus: {},
+  folderStatusTimestamps: {},
 };
 
 const folderSlice = createSlice({
@@ -74,16 +76,27 @@ const folderSlice = createSlice({
     // Set tagging status for folders
     setTaggingStatus(state, action: PayloadAction<FolderTaggingInfo[]>) {
       const map: Record<string, FolderTaggingInfo> = {};
+      const now = Date.now();
+      
       for (const info of action.payload) {
         map[info.folder_id] = info;
+        
+        const existingStatus = state.taggingStatus[info.folder_id];
+        if (!existingStatus || 
+            existingStatus.total_images !== info.total_images || 
+            existingStatus.tagged_images !== info.tagged_images) {
+          state.folderStatusTimestamps[info.folder_id] = now;
+        }
       }
+      
       state.taggingStatus = map;
-      state.lastUpdatedAt = Date.now();
+      state.lastUpdatedAt = now;
     },
 
     // Clear tagging status
     clearTaggingStatus(state) {
       state.taggingStatus = {};
+      state.folderStatusTimestamps = {};
       state.lastUpdatedAt = undefined;
     },
   },

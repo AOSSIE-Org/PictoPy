@@ -33,6 +33,8 @@ def get_folders_tagging_status():
             FolderTaggingInfo(
                 folder_id=folder.folder_id,
                 folder_path=folder.folder_path,
+                total_images=folder.total_images,
+                tagged_images=folder.tagged_images,
                 tagging_percentage=folder.tagging_percentage,
             )
             for folder in tagging_progress

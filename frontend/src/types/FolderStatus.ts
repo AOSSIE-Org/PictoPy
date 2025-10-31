@@ -1,7 +1,9 @@
 export interface FolderTaggingInfo {
   folder_id: string;
   folder_path: string;
-  tagging_percentage: number; // 0 - 100
+  total_images: number;
+  tagged_images: number;
+  tagging_percentage: number;
 }
 
 export interface FolderTaggingStatusResponse {
