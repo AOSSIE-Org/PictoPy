@@ -45,7 +45,7 @@ const FolderManagementCard: React.FC = () => {
         <div className="space-y-3">
           {folders
             .slice(0, visibleFoldersCount)
-            .map((folder: FolderDetails, index: number) => (
+            .map((folder: FolderDetails) => (
               <div
                 key={folder.folder_id}
                 className="group border-border bg-background/50 relative rounded-lg border p-4 transition-all hover:border-gray-300 hover:shadow-sm dark:hover:border-gray-600"
