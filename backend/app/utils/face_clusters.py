@@ -166,10 +166,13 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
             current_metadata = metadata or {}
             current_metadata["reclustering_time"] = datetime.now().timestamp()
             db_update_metadata(current_metadata, cursor)
+        return len(cluster_list)
     else:
         face_cluster_mappings = cluster_util_assign_cluster_to_faces_without_clusterId()
         with get_db_transaction() as (conn, cursor):
             db_update_face_cluster_ids_batch(face_cluster_mappings, cursor)
+        return len(face_cluster_mappings)
+
 
 
 def cluster_util_cluster_all_face_embeddings(
