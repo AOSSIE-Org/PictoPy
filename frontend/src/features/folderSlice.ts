@@ -77,18 +77,20 @@ const folderSlice = createSlice({
     setTaggingStatus(state, action: PayloadAction<FolderTaggingInfo[]>) {
       const map: Record<string, FolderTaggingInfo> = {};
       const now = Date.now();
-      
+
       for (const info of action.payload) {
         map[info.folder_id] = info;
-        
+
         const existingStatus = state.taggingStatus[info.folder_id];
-        if (!existingStatus || 
-            existingStatus.total_images !== info.total_images || 
-            existingStatus.tagged_images !== info.tagged_images) {
+        if (
+          !existingStatus ||
+          existingStatus.total_images !== info.total_images ||
+          existingStatus.tagged_images !== info.tagged_images
+        ) {
           state.folderStatusTimestamps[info.folder_id] = now;
         }
       }
-      
+
       state.taggingStatus = map;
       state.lastUpdatedAt = now;
     },

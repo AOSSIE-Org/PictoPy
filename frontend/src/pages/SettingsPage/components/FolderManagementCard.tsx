@@ -34,19 +34,19 @@ const FolderManagementCard: React.FC = () => {
 
   const isStatusLoading = (folderId: string, folderHasAITagging: boolean) => {
     if (!folderHasAITagging) return false;
-    
+
     const status = taggingStatus[folderId];
     if (!status) return true;
-    
+
     const timestamp = folderStatusTimestamps[folderId];
     if (!timestamp) return true;
-    
+
     const timeSinceUpdate = Date.now() - timestamp;
-    
+
     if (status.total_images === 0 && timeSinceUpdate < 3000) {
       return true;
     }
-    
+
     return false;
   };
 
@@ -60,7 +60,10 @@ const FolderManagementCard: React.FC = () => {
         <div className="space-y-3">
           {folders.map((folder: FolderDetails, index: number) => {
             const status = taggingStatus[folder.folder_id];
-            const loading = isStatusLoading(folder.folder_id, folder.AI_Tagging);
+            const loading = isStatusLoading(
+              folder.folder_id,
+              folder.AI_Tagging,
+            );
             const hasImages = status && status.total_images > 0;
             const isEmpty = status && status.total_images === 0 && !loading;
             const isComplete = status && status.tagging_percentage >= 100;
