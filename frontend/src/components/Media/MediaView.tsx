@@ -1,13 +1,10 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+// import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { MediaViewProps } from '@/types/Media';
 import { selectCurrentViewIndex } from '@/features/imageSelectors';
-import {
-  setCurrentViewIndex,
-  nextImage,
-  previousImage,
-  closeImageView,
-} from '@/features/imageSlice';
+import { setCurrentViewIndex, closeImageView } from '@/features/imageSlice';
+
 // Modular components
 import { MediaViewControls } from './MediaViewControls';
 import { ZoomControls } from './ZoomControls';
@@ -23,7 +20,7 @@ import { useSlideshow } from '@/hooks/useSlideshow';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 
-export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
+export function MediaView({ onClose, type = 'image', images }: MediaViewProps) {
   const dispatch = useDispatch();
 
   // Redux selectors
@@ -50,14 +47,18 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
 
   // Navigation handlers
   const handleNextImage = useCallback(() => {
-    dispatch(nextImage());
-    handlers.resetZoom();
-  }, [dispatch, handlers]);
+    if (currentViewIndex < images.length - 1) {
+      dispatch(setCurrentViewIndex(currentViewIndex + 1));
+      handlers.resetZoom();
+    }
+  }, [dispatch, handlers, currentViewIndex, images.length]);
 
   const handlePreviousImage = useCallback(() => {
-    dispatch(previousImage());
-    handlers.resetZoom();
-  }, [dispatch, handlers]);
+    if (currentViewIndex > 0) {
+      dispatch(setCurrentViewIndex(currentViewIndex - 1));
+      handlers.resetZoom();
+    }
+  }, [dispatch, handlers, currentViewIndex]);
 
   const handleClose = useCallback(() => {
     dispatch(closeImageView());
@@ -72,6 +73,18 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     [dispatch, handlers],
   );
 
+  // Folder Open functionality
+  const handleOpenFolder = async () => {
+    if (!currentImage?.path) return;
+    try {
+      // await revealItemInDir(currentImage.path);
+    } catch (err) {
+      console.log(err);
+      console.error('Failed to open folder.');
+    }
+  };
+
+  // Toggle functions
   const toggleInfo = useCallback(() => {
     setShowInfo((prev) => !prev);
   }, []);
@@ -130,6 +143,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
         showInfo={showInfo}
         onToggleInfo={toggleInfo}
         onToggleFavorite={handleToggleFavorite}
+        onOpenFolder={handleOpenFolder}
         isFavorite={isFavorite(currentImage.path)}
         isSlideshowActive={isSlideshowActive}
         onToggleSlideshow={toggleSlideshow}

@@ -20,9 +20,6 @@ export interface Image {
   tags?: string[];
   bboxes?: { x: number; y: number; width: number; height: number }[];
 }
-export interface ImageCardProps {
-  item: Image;
-}
 
 export interface ImageGalleryProps {
   mediaItems: Image[];
@@ -36,8 +33,8 @@ export interface ImageGridProps {
 }
 export interface MediaViewProps {
   onClose?: () => void;
-  images: Image[];
   type?: string;
+  images: Image[];
 }
 
 export interface SortingControlsProps {

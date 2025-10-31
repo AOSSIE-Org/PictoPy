@@ -1,19 +1,16 @@
 import logging
+from binascii import Error as Base64Error
+import base64
+from typing import Annotated
 import uuid
 import os
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel
-from app.config.settings import CONFIDENCE_PERCENT, DEFAULT_FACENET_MODEL
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from app.database.face_clusters import (
     db_get_cluster_by_id,
     db_update_cluster,
     db_get_all_clusters_with_face_counts,
     db_get_images_by_cluster_id,  # Add this import
 )
-from app.database.faces import get_all_face_embeddings
-from app.models.FaceDetector import FaceDetector
-from app.models.FaceNet import FaceNet
 from app.schemas.face_clusters import (
     RenameClusterRequest,
     RenameClusterResponse,
@@ -21,37 +18,15 @@ from app.schemas.face_clusters import (
     ErrorResponse,
     GetClustersResponse,
     GetClustersData,
+    GlobalReclusterResponse,
+    GlobalReclusterData,
     ClusterMetadata,
     GetClusterImagesResponse,
     GetClusterImagesData,
     ImageInCluster,
 )
-from app.schemas.images import AddSingleImageRequest
-from app.utils.FaceNet import FaceNet_util_cosine_similarity
-
-
-class BoundingBox(BaseModel):
-    x: float
-    y: float
-    width: float
-    height: float
-
-
-class ImageData(BaseModel):
-    id: str
-    path: str
-    folder_id: str
-    thumbnailPath: str
-    metadata: Dict[str, Any]
-    isTagged: bool
-    tags: Optional[List[str]] = None
-    bboxes: BoundingBox
-
-
-class GetAllImagesResponse(BaseModel):
-    success: bool
-    message: str
-    data: List[ImageData]
+from app.schemas.images import FaceSearchRequest, InputType
+from app.utils.faceSearch import perform_face_search
 
 
 logger = logging.getLogger(__name__)
@@ -236,67 +211,136 @@ def get_cluster_images(cluster_id: str):
     "/face-search",
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
-def face_tagging(payload: AddSingleImageRequest):
-    image_path = payload.path
-    if not os.path.isfile(image_path):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ErrorResponse(
-                success=False,
-                error="Invalid file path",
-                message="The provided path is not a valid file",
-            ).model_dump(),
+def face_tagging(
+    payload: FaceSearchRequest,
+    input_type: Annotated[
+        InputType, Query(description="Choose input type: 'path' or 'base64'")
+    ] = InputType.path,
+):
+    image_path = None
+
+    if input_type == InputType.path:
+        local_file_path = payload.path
+
+        if not local_file_path:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="No Image path provided ",
+                    message="image path is required.",
+                ).model_dump(),
+            )
+        if not os.path.isfile(local_file_path):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Invalid file path",
+                    message="The provided path is not a valid file",
+                ).model_dump(),
+            )
+        image_path = payload.path
+
+    elif input_type == InputType.base64:
+        base64_data = payload.base64_data
+        if not base64_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="No base64 data",
+                    message="Base64 image data is required.",
+                ).model_dump(),
+            )
+
+        MAX_B64_LEN = 14_000_000  # 10MB
+        if len(base64_data) > MAX_B64_LEN:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Payload too large",
+                    message="Base64 image exceeds maximum allowed size.",
+                ).model_dump(),
+            )
+        try:
+            image_bytes = base64.b64decode(base64_data.split(",")[-1])
+        except (Base64Error, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Invalid base64 data",
+                    message="The provided base64 image data is malformed or invalid.",
+                ).model_dump(),
+            )
+
+        format_match = (
+            base64_data.split(";")[0].split("/")[-1] if ";" in base64_data else "jpeg"
+        )
+        extension = (
+            format_match
+            if format_match in ["jpeg", "jpg", "png", "gif", "webp"]
+            else "jpeg"
+        )
+        image_id = str(uuid.uuid4())[:8]
+        temp_dir = "temp_uploads"
+        os.makedirs(temp_dir, exist_ok=True)
+        local_image_path = os.path.join(temp_dir, f"{image_id}.{extension}")
+
+        with open(local_image_path, "wb") as f:
+            f.write(image_bytes)
+
+        image_path = local_image_path
+
+    try:
+        return perform_face_search(image_path)
+    finally:
+        if input_type == InputType.base64 and image_path and os.path.exists(image_path):
+            os.remove(image_path)
+
+
+@router.post(
+    "/global-recluster",
+    response_model=GlobalReclusterResponse,
+    responses={code: {"model": ErrorResponse} for code in [500]},
+)
+def trigger_global_reclustering():
+    """
+    Manually trigger global face reclustering.
+    This forces full reclustering regardless of the 24-hour rule.
+    """
+    try:
+        logger.info("Starting manual global face reclustering...")
+
+        # Use the smart clustering function with force flag set to True
+        from app.utils.face_clusters import cluster_util_face_clusters_sync
+
+        result = cluster_util_face_clusters_sync(force_full_reclustering=True)
+
+        if result == 0:
+            return GlobalReclusterResponse(
+                success=True,
+                message="No faces found to cluster",
+                data=GlobalReclusterData(clusters_created=0),
+            )
+
+        logger.info("Global reclustering completed successfully")
+
+        return GlobalReclusterResponse(
+            success=True,
+            message="Global reclustering completed successfully.",
+            data=GlobalReclusterData(clusters_created=result),
         )
 
-    fd = FaceDetector()
-    fn = FaceNet(DEFAULT_FACENET_MODEL)
-    try:
-        matches = []
-        image_id = str(uuid.uuid4())
-        result = fd.detect_faces(image_id, image_path, forSearch=True)
-        if not result or result["num_faces"] == 0:
-            return GetAllImagesResponse(
-                success=True,
-                message=f"Successfully retrieved {len(matches)} images",
-                data=[],
-            )
-
-        process_face = result["processed_faces"][0]
-        new_embedding = fn.get_embedding(process_face)
-
-        images = get_all_face_embeddings()
-        if len(images) == 0:
-            return GetAllImagesResponse(
-                success=True,
-                message=f"Successfully retrieved {len(matches)} images",
-                data=[],
-            )
-        else:
-            for image in images:
-                max_similarity = 0
-                similarity = FaceNet_util_cosine_similarity(
-                    new_embedding, image["embeddings"]
-                )
-                max_similarity = max(max_similarity, similarity)
-                if max_similarity >= CONFIDENCE_PERCENT:
-                    matches.append(
-                        ImageData(
-                            id=image["id"],
-                            path=image["path"],
-                            folder_id=image["folder_id"],
-                            thumbnailPath=image["thumbnailPath"],
-                            metadata=image["metadata"],
-                            isTagged=image["isTagged"],
-                            tags=image["tags"],
-                            bboxes=image["bbox"],
-                        )
-                    )
-
-            return GetAllImagesResponse(
-                success=True,
-                message=f"Successfully retrieved {len(matches)} images",
-                data=matches,
-            )
-    finally:
-        fd.close()
-        fn.close()
+    except Exception as e:
+        logger.error(f"Global reclustering failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Global reclustering failed: {str(e)}",
+            ).model_dump(),
+        )
