@@ -42,10 +42,14 @@ const AccountSettingsCard: React.FC = () => {
     setNameError(false);
     if (!selectedAvatar) return;
 
-    dispatch(setName(name));
-    dispatch(setAvatar(selectedAvatar));
-    localStorage.setItem('name', name);
-    localStorage.setItem('avatar', selectedAvatar);
+    try {
+      dispatch(setName(name));
+      dispatch(setAvatar(selectedAvatar));
+      localStorage.setItem('name', name);
+      localStorage.setItem('avatar', selectedAvatar);
+    } catch (error) {
+      console.error('Failed to save settings:');
+    }
   };
 
   return (
