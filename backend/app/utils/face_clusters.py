@@ -7,9 +7,9 @@ import sqlite3
 from datetime import datetime
 from sklearn.cluster import DBSCAN
 from collections import defaultdict, Counter
-from typing import List, Dict, Optional, Union, Tuple
+from typing import List, Dict, Optional, Union
 from numpy.typing import NDArray
-from contextlib import contextmanager
+from app.database.connection import get_db_connection
 
 from app.database.faces import (
     db_get_all_faces_with_cluster_names,
@@ -27,24 +27,6 @@ from app.logging.setup_logging import get_logger
 
 # Initialize logger
 logger = get_logger(__name__)
-
-
-@contextmanager
-def get_db_transaction() -> Tuple[sqlite3.Connection, sqlite3.Cursor]:
-    """
-    Context manager that provides a database connection and cursor with transaction management.
-    Automatically commits on success or rolls back on error.
-    """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
-        yield conn, cursor
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
 
 
 class ClusterResult:
@@ -139,7 +121,8 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
         cluster_list = list(unique_clusters.values())
 
         # Perform all database operations within a single transaction
-        with get_db_transaction() as (conn, cursor):
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
             # Clear old clusters first
             db_delete_all_clusters(cursor)
 
@@ -169,7 +152,8 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
         return len(cluster_list)
     else:
         face_cluster_mappings = cluster_util_assign_cluster_to_faces_without_clusterId()
-        with get_db_transaction() as (conn, cursor):
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
             db_update_face_cluster_ids_batch(face_cluster_mappings, cursor)
         return len(face_cluster_mappings)
 
