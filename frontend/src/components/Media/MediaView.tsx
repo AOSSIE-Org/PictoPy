@@ -20,6 +20,7 @@ import { useSlideshow } from '@/hooks/useSlideshow';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import { useToggleFav } from '../../hooks/useToggleFav';
+import { useLocation } from 'react-router';
 
 export function MediaView({
   onClose,
@@ -80,9 +81,13 @@ export function MediaView({
     },
     [dispatch, handlers],
   );
+
+  const location = useLocation();
   const { toggleFavourite } = useToggleFav();
   // handling toogle_favvvvv
   const handle_favourite_toggle = () => {
+    console.log(location.pathname);
+
     if (!currentImage?.id) return;
     toggleFavourite(currentImage?.id);
   };
@@ -114,6 +119,7 @@ export function MediaView({
     if (currentImage) {
       setIsfav((prev) => !prev);
       handle_favourite_toggle();
+      if (location.pathname === '/favourites') handleClose();
     }
   }, [currentImage, isfav]);
 
@@ -151,7 +157,6 @@ export function MediaView({
   const currentImagePath = currentImage.path;
   // console.log(currentImage);
   const currentImageAlt = `image-${currentViewIndex}`;
-
   return (
     <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-gradient-to-b from-black/95 to-black/98 backdrop-blur-lg">
       {/* Controls */}
