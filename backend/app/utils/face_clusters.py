@@ -589,6 +589,7 @@ def _determine_cluster_name(faces_in_cluster: List[Dict]) -> Optional[str]:
 
     return most_common_name
 
+
 def cluster_util_delete_empty_clusters() -> int:
     """
     Delete all clusters that have no faces associated with them.

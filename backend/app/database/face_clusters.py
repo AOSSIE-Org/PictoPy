@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, TypedDict, Union
 from app.config.settings import DATABASE_PATH
 
 from app.logging.setup_logging import get_logger
+
 logger = get_logger(__name__)
 # Type definitions
 ClusterId = str
