@@ -105,9 +105,16 @@ def cluster_util_is_reclustering_needed(metadata) -> bool:
     return False
 
 
-def cluster_util_face_clusters_sync():
+def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
+    """
+    Smart face clustering with transaction safety.
+    Decides between full reclustering or incremental assignment based on 24-hour rule and face count.
+
+    Args:
+        force_full_reclustering: If True, forces full reclustering regardless of 24-hour rule
+    """
     metadata = db_get_metadata()
-    if cluster_util_is_reclustering_needed(metadata):
+    if force_full_reclustering or cluster_util_is_reclustering_needed(metadata):
         # Perform clustering operation
         results = cluster_util_cluster_all_face_embeddings()
 

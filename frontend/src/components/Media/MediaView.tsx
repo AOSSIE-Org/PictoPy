@@ -1,13 +1,9 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { MediaViewProps } from '@/types/Media';
 import { selectCurrentViewIndex } from '@/features/imageSelectors';
-import {
-  setCurrentViewIndex,
-  nextImage,
-  previousImage,
-  closeImageView,
-} from '@/features/imageSlice';
+import { setCurrentViewIndex, closeImageView } from '@/features/imageSlice';
 
 // Modular components
 import { MediaViewControls } from './MediaViewControls';
@@ -16,6 +12,7 @@ import { MediaThumbnails } from './MediaThumbnails';
 import { MediaInfoPanel } from './MediaInfoPanel';
 import { ImageViewer } from './ImageViewer';
 import { NavigationButtons } from './NavigationButtons';
+import type { ImageViewerRef } from './ImageViewer';
 
 // Custom hooks
 import { useImageViewControls } from '@/hooks/useImageViewControls';
@@ -23,23 +20,26 @@ import { useSlideshow } from '@/hooks/useSlideshow';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 
-export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
+export function MediaView({ onClose, type = 'image', images }: MediaViewProps) {
   const dispatch = useDispatch();
 
   // Redux selectors
   const currentViewIndex = useSelector(selectCurrentViewIndex);
   const totalImages = images.length;
+
   const currentImage = useMemo(() => {
     if (currentViewIndex >= 0 && currentViewIndex < images.length) {
       return images[currentViewIndex];
     }
     return null;
   }, [images, currentViewIndex]);
-  console.log(currentViewIndex);
+
+  const imageViewerRef = useRef<ImageViewerRef>(null);
 
   // Local UI state
   const [showInfo, setShowInfo] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(false);
+  const [resetSignal, setResetSignal] = useState(0);
 
   // Custom hooks
   const { viewState, handlers } = useImageViewControls();
@@ -47,14 +47,18 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
 
   // Navigation handlers
   const handleNextImage = useCallback(() => {
-    dispatch(nextImage());
-    handlers.resetZoom();
-  }, [dispatch, handlers]);
+    if (currentViewIndex < images.length - 1) {
+      dispatch(setCurrentViewIndex(currentViewIndex + 1));
+      handlers.resetZoom();
+    }
+  }, [dispatch, handlers, currentViewIndex, images.length]);
 
   const handlePreviousImage = useCallback(() => {
-    dispatch(previousImage());
-    handlers.resetZoom();
-  }, [dispatch, handlers]);
+    if (currentViewIndex > 0) {
+      dispatch(setCurrentViewIndex(currentViewIndex - 1));
+      handlers.resetZoom();
+    }
+  }, [dispatch, handlers, currentViewIndex]);
 
   const handleClose = useCallback(() => {
     dispatch(closeImageView());
@@ -69,39 +73,66 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
     [dispatch, handlers],
   );
 
-  // Slideshow functionality
-  const { isSlideshowActive, toggleSlideshow } = useSlideshow(
-    totalImages,
-    handleNextImage,
-  );
+  // Folder Open functionality
+  const handleOpenFolder = async () => {
+    if (!currentImage?.path) return;
+    try {
+      await revealItemInDir(currentImage.path);
+    } catch (err) {
+      console.log(err);
+      console.error('Failed to open folder.');
+    }
+  };
 
   // Toggle functions
   const toggleInfo = useCallback(() => {
     setShowInfo((prev) => !prev);
   }, []);
 
+  // Hooks that depend on currentImage but always declared
   const handleToggleFavorite = useCallback(() => {
     if (currentImage) {
       toggleFavorite(currentImage.path);
     }
   }, [currentImage, toggleFavorite]);
 
+  const handleZoomIn = useCallback(() => {
+    imageViewerRef.current?.zoomIn();
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    imageViewerRef.current?.zoomOut();
+  }, []);
+
+  const handleResetZoom = useCallback(() => {
+    imageViewerRef.current?.reset();
+    handlers.resetZoom();
+    setResetSignal((s) => s + 1);
+  }, [handlers]);
+
   // Keyboard navigation
   useKeyboardNavigation({
     onClose: handleClose,
     onNext: handleNextImage,
     onPrevious: handlePreviousImage,
-    onZoomIn: handlers.handleZoomIn,
-    onZoomOut: handlers.handleZoomOut,
+    onZoomIn: handleZoomIn,
+    onZoomOut: handleZoomOut,
     onRotate: handlers.handleRotate,
     onToggleInfo: toggleInfo,
   });
+
+  // Slideshow functionality
+  const { isSlideshowActive, toggleSlideshow } = useSlideshow(
+    totalImages,
+    handleNextImage,
+  );
 
   // Early return if no images or invalid index
   if (!images.length || currentViewIndex === -1 || !currentImage) {
     return null;
   }
 
+  // Safe variables
   const currentImagePath = currentImage.path;
   const currentImageAlt = `image-${currentViewIndex}`;
 
@@ -112,6 +143,7 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
         showInfo={showInfo}
         onToggleInfo={toggleInfo}
         onToggleFavorite={handleToggleFavorite}
+        onOpenFolder={handleOpenFolder}
         isFavorite={isFavorite(currentImage.path)}
         isSlideshowActive={isSlideshowActive}
         onToggleSlideshow={toggleSlideshow}
@@ -121,28 +153,18 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
 
       {/* Main viewer area */}
       <div
-        className="relative flex h-full w-full items-center justify-center"
+        className="relative flex h-full w-full items-center justify-center overflow-visible"
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();
         }}
       >
         {type === 'image' && (
           <ImageViewer
+            ref={imageViewerRef}
             imagePath={currentImagePath}
             alt={currentImageAlt}
-            scale={viewState.scale}
-            position={viewState.position}
             rotation={viewState.rotation}
-            isDragging={viewState.isDragging}
-            onMouseDown={handlers.handleMouseDown}
-            onMouseMove={handlers.handleMouseMove}
-            onMouseUp={handlers.handleMouseUp}
-            onMouseLeave={handlers.handleMouseUp}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                handleClose();
-              }
-            }}
+            resetSignal={resetSignal}
           />
         )}
 
@@ -156,10 +178,10 @@ export function MediaView({ onClose, images, type = 'image' }: MediaViewProps) {
       {/* Zoom controls */}
       {type === 'image' && (
         <ZoomControls
-          onZoomIn={handlers.handleZoomIn}
-          onZoomOut={handlers.handleZoomOut}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
           onRotate={handlers.handleRotate}
-          onReset={handlers.resetZoom}
+          onReset={handleResetZoom}
           showThumbnails={showThumbnails}
         />
       )}
