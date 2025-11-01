@@ -80,9 +80,10 @@ export function Navbar() {
     const suggestions: string[] = [];
 
     // 1. Pehle face names check karo
-    const matchedFaceNames = faceNames.filter((name) =>
-      name.toLowerCase().includes(clean),
-    );
+    const matchedFaceNames = faceNames.filter((n) => {
+      if (!n) return false;
+      return n.toLowerCase().includes(clean);
+    });
 
     // 2. Phir months check karo
     const matchedMonths = months.filter((month) => month.startsWith(clean));
@@ -111,6 +112,7 @@ export function Navbar() {
   // Search button handler
   const handleSearch = () => {
     if (!data.trim()) return;
+    console.log(`/search/${encodeURIComponent(data)}`);
     navigate(`/search/${encodeURIComponent(data)}`);
     setIsFocused(false);
   };

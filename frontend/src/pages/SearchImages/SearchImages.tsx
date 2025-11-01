@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Image } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
-import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
+import { selectImages } from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllClusters, fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
@@ -14,25 +14,20 @@ import { Cluster } from '@/types/Media';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
-import { ImageCard } from '@/components/Media/ImageCard';
-import { MediaView } from '@/components/Media/MediaView';
+import {
+  ChronologicalGallery,
+  MonthMarker,
+} from '@/components/Media/ChronologicalGallery';
+import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
+import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 
 export const SearchImages = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const images = useSelector(selectImages);
   const searchState = useSelector((state: RootState) => state.search);
   const { clusters } = useSelector((state: RootState) => state.faceClusters);
   const query = useParams().query || '';
-  const [showButton, setShowButton] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowButton(true);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   const { data: clustersData, isSuccess: clustersSuccess } = usePictoQuery({
     queryKey: ['clusters'],
@@ -67,9 +62,35 @@ export const SearchImages = () => {
   const isSearchActive = searchState.active;
   const searchResults = searchState.images;
 
+  const handleMonthOffsetsChange = useCallback((entries: MonthMarker[]) => {
+    setMonthMarkers((prev) => {
+      if (
+        prev.length === entries.length &&
+        prev.every(
+          (m, i) =>
+            m.offset === entries[i].offset &&
+            m.month === entries[i].month &&
+            m.year === entries[i].year,
+        )
+      ) {
+        return prev;
+      }
+      return entries;
+    });
+  }, []);
+
+  const fetchAllImagesWrapper = async ({
+    queryKey,
+  }: {
+    queryKey: [string, boolean?];
+  }) => {
+    const [, tagged] = queryKey;
+    return fetchAllImages(tagged);
+  };
+  const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
   const { data, isLoading, isSuccess, isError } = usePictoQuery({
     queryKey: ['images'],
-    queryFn: fetchAllImages,
+    queryFn: fetchAllImagesWrapper,
     enabled: !isSearchActive, // Fixed typo here
   });
 
@@ -100,19 +121,17 @@ export const SearchImages = () => {
     monthYearString: string | null,
   ) => {
     if (!monthYearString) return images;
-
     return images.filter((img) => {
       if (!img.metadata?.date_created) return false;
-
       const dateCreated = new Date(img.metadata.date_created);
       const imgMonthYear = dateCreated.toLocaleDateString('en-US', {
         month: 'long',
         year: 'numeric',
       });
-
       return imgMonthYear === monthYearString;
     });
   };
+  const scrollableRef = useRef<HTMLDivElement>(null);
 
   // Format query
   const selectedMonthYear = query
@@ -123,10 +142,7 @@ export const SearchImages = () => {
         )
         .join(' ')
     : null;
-
-  const baseImages = isSearchActive ? searchResults : images;
-  const displayImages = filterImagesByMonthYear(baseImages, selectedMonthYear);
-
+  const displayImages = filterImagesByMonthYear(images, selectedMonthYear);
   const title = selectedMonthYear
     ? `${selectedMonthYear} (${displayImages.length} images)`
     : isSearchActive && searchResults.length > 0
@@ -134,41 +150,43 @@ export const SearchImages = () => {
       : 'All Images';
 
   return (
-    <div className="p-6">
-      {showButton ? (
-        <>
-          <Button
-            variant="outline"
-            onClick={() => {
-              navigate(`/${ROUTES.HOME}`);
-            }}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Home
-          </Button>
-        </>
-      ) : (
-        <>
-          <b className="text-2xl"> Loading ...</b>
-        </>
-      )}
-      <br />
-      <h1 className="mb-6 text-2xl font-bold">{title}</h1>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {displayImages.map((image, index) => (
-          <ImageCard
-            key={image.id}
-            image={image}
-            imageIndex={index}
-            className="w-full"
+    <div className="relative flex h-full flex-col pr-6">
+      {/* Gallery Section */}
+      <div
+        ref={scrollableRef}
+        className="hide-scrollbar flex-1 overflow-x-hidden overflow-y-auto"
+      >
+        <Button
+          variant="outline"
+          onClick={() => {
+            navigate(`/${ROUTES.HOME}`);
+          }}
+          className="flex cursor-pointer items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Button>
+        {displayImages.length > 0 ? (
+          <ChronologicalGallery
+            images={displayImages}
+            showTitle={true}
+            title={title}
+            onMonthOffsetsChange={handleMonthOffsetsChange}
+            scrollContainerRef={scrollableRef}
           />
-        ))}
+        ) : (
+          <EmptyGalleryState />
+        )}
       </div>
 
-      {/* Media viewer modal */}
-      {isImageViewOpen && <MediaView images={displayImages} />}
+      {/* Timeline Scrollbar */}
+      {monthMarkers.length > 0 && (
+        <TimelineScrollbar
+          scrollableRef={scrollableRef}
+          monthMarkers={monthMarkers}
+          className="absolute top-0 right-0 h-full w-4"
+        />
+      )}
     </div>
   );
 };
