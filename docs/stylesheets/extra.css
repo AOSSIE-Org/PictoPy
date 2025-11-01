@@ -3,6 +3,17 @@
   
 }
 
+/* Completely hide social icons on small mobile viewports (<=600px) as requested */
+@media (max-width: 600px) {
+  .md-social,
+  .md-footer .md-social,
+  .md-social *,
+  .md-footer .md-social * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
+
 .md-header__button.md-logo img {
   width: 34px;
   height: auto;
@@ -285,6 +296,32 @@
   /* Center the wrapper itself */
   .api-500-wrapper {
     margin: 0 auto;
+  }
+}
+
+/* Center the outer social container on small mobile viewports only
+   Keep social icons inline (do not stack them). */
+@media (max-width: 600px) {
+  /* Center the social container itself */
+  .md-social,
+  .md-footer .md-social {
+    text-align: center !important;
+    display: block !important;
+  }
+
+  /* Center copyright text */
+  .md-copyright,
+  .md-footer .md-footer__copyright {
+    text-align: center !important;
+    display: block !important;
+  }
+
+  /* Keep social links inline and add small horizontal spacing */
+  .md-social a,
+  .md-footer .md-social a {
+    display: inline-block !important;
+    margin: 0 0.25rem !important;
+    vertical-align: middle !important;
   }
 }
 
