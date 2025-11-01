@@ -372,7 +372,7 @@ def _update_cluster_face_image(
             return success
     except Exception as e:
         logger.error(f"Error updating face image for cluster {cluster_id}: {e}")
-        return False
+        raise
 
 
 def _get_cluster_face_data(
