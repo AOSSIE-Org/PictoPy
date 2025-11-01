@@ -3,17 +3,6 @@
   
 }
 
-/* Completely hide social icons on small mobile viewports (<=600px) as requested */
-@media (max-width: 600px) {
-  .md-social,
-  .md-footer .md-social,
-  .md-social *,
-  .md-footer .md-social * {
-    display: none !important;
-    visibility: hidden !important;
-  }
-}
-
 .md-header__button.md-logo img {
   width: 34px;
   height: auto;
@@ -299,8 +288,6 @@
   }
 }
 
-/* Center the outer social container on small mobile viewports only
-   Keep social icons inline (do not stack them). */
 @media (max-width: 600px) {
   /* Center the social container itself */
   .md-social,
@@ -324,6 +311,42 @@
     vertical-align: middle !important;
   }
 }
+
+\
+.md-footer-meta__inner.md-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.25rem !important;
+  text-align: center !important;
+}
+
+.md-footer-meta__inner.md-grid .md-social {
+  display: block !important;
+}
+
+.md-footer-meta__inner.md-grid .md-social a {
+  display: inline-block !important;
+  margin: 0 0.25rem !important;
+}
+
+/* Center only the copyright line without affecting social icons */
+.md-footer .md-copyright,
+.md-footer-meta__inner.md-grid .md-copyright {
+  display: block !important;
+  width: 100% !important;
+  text-align: center !important;
+  margin: 0.25rem 0 !important;
+}
+
+.md-footer .md-social,
+.md-footer-meta__inner.md-grid .md-social {
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+
 
 
 
