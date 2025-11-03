@@ -125,7 +125,7 @@ export const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
       ...(formData.description.trim() && {
         description: formData.description.trim(),
       }),
-      is_locked: formData.is_locked ? 1 : 0,
+      is_locked: formData.is_locked,
     };
 
     // Add current password if album was originally locked (required by backend)

@@ -101,7 +101,7 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
       ...(formData.description.trim() && {
         description: formData.description.trim(),
       }),
-      is_locked: formData.is_locked ? 1 : 0,
+      is_locked: formData.is_locked,
       ...(formData.is_locked && { password: formData.password }),
     };
 

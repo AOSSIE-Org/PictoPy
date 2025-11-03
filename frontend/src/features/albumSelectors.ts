@@ -3,15 +3,13 @@ import { createSelector } from '@reduxjs/toolkit';
 
 // Basic selectors
 export const selectAlbums = (state: RootState) => state.albums.albums;
-export const selectSelectedAlbum = (state: RootState) => state.albums.selectedAlbum;
+export const selectSelectedAlbum = (state: RootState) =>
+  state.albums.selectedAlbum;
 export const selectAlbumImages = (state: RootState) => state.albums.albumImages;
 
 // Memoized selectors
 export const selectAlbumById = createSelector(
-  [
-    selectAlbums,
-    (_: RootState, albumId: string) => albumId,
-  ],
+  [selectAlbums, (_: RootState, albumId: string) => albumId],
   (albums, albumId) => albums.find((album) => album.id === albumId),
 );
 
