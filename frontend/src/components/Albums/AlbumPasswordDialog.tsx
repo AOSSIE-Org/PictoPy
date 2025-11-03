@@ -30,7 +30,6 @@ export const AlbumPasswordDialog: React.FC<PasswordPromptDialogProps> = ({
       return;
     }
     onSubmit(password);
-    handleClose();
   };
 
   const handleClose = () => {

@@ -104,12 +104,11 @@ def db_create_album_images_table() -> None:
             conn.close()
 
 
-def db_get_all_albums(show_locked: bool = True):
-    """Get all albums. By default, returns all albums including locked ones."""
+def db_get_all_albums():
+    """Get all albums (both locked and unlocked)."""
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
-        # Always show all albums (locked and unlocked)
         cursor.execute(
             "SELECT album_id, album_name, description, is_locked, password_hash, cover_image_path FROM albums"
         )
@@ -307,5 +306,17 @@ def verify_album_password(album_id: str, password: str) -> bool:
         if not row or not row[0]:
             return False
         return bcrypt.checkpw(password.encode("utf-8"), row[0].encode("utf-8"))
+    finally:
+        conn.close()
+
+
+def db_get_image_path(image_id: str) -> str | None:
+    """Get the path of an image by its ID."""
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT path FROM images WHERE id = ?", (image_id,))
+        result = cursor.fetchone()
+        return result[0] if result else None
     finally:
         conn.close()

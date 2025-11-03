@@ -122,8 +122,8 @@ class TestAlbumRoutes:
                     mock_db_album["album_name"],
                     mock_db_album["description"],
                     mock_db_album["is_locked"],
+                    mock_db_album["password_hash"],
                     None,  # cover_image_path
-                    0,  # image_count
                 )
             ]
 
@@ -157,16 +157,16 @@ class TestAlbumRoutes:
                     mock_db_album["album_name"],
                     mock_db_album["description"],
                     mock_db_album["is_locked"],
+                    mock_db_album["password_hash"],
                     None,  # cover_image_path
-                    0,  # image_count
                 ),
                 (
                     mock_db_locked_album["album_id"],
                     mock_db_locked_album["album_name"],
                     mock_db_locked_album["description"],
                     mock_db_locked_album["is_locked"],
+                    mock_db_locked_album["password_hash"],
                     None,  # cover_image_path
-                    0,  # image_count
                 ),
             ]
 
@@ -210,8 +210,8 @@ class TestAlbumRoutes:
                 mock_db_album["album_name"],
                 mock_db_album["description"],
                 mock_db_album["is_locked"],
+                mock_db_album["password_hash"],
                 None,  # cover_image_path
-                0,  # image_count
             )
 
             response = client.get(f"/albums/{mock_db_album['album_id']}")

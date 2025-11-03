@@ -27,6 +27,7 @@ from app.database.albums import (
     db_remove_images_from_album,
     db_update_album_cover_image,
     verify_album_password,
+    db_get_image_path,
 )
 
 router = APIRouter()
@@ -124,8 +125,6 @@ def get_album(album_id: str = Path(...)):
         )
 
 
-# PUT /albums/{album_id} - Update Album
-@router.put("/{album_id}", response_model=SuccessResponse)
 # PUT /albums/{album_id} - Update Album
 @router.put("/{album_id}", response_model=SuccessResponse)
 def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)):
@@ -405,16 +404,9 @@ def set_album_cover_image(
 
     try:
         # Get the image path from the database
-        import sqlite3
-        from app.config.settings import DATABASE_PATH
+        image_path = db_get_image_path(body.image_id)
 
-        conn = sqlite3.connect(DATABASE_PATH)
-        cursor = conn.cursor()
-        cursor.execute("SELECT path FROM images WHERE id = ?", (body.image_id,))
-        result = cursor.fetchone()
-        conn.close()
-
-        if not result:
+        if not image_path:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ErrorResponse(
@@ -424,7 +416,6 @@ def set_album_cover_image(
                 ).model_dump(),
             )
 
-        image_path = result[0]
         db_update_album_cover_image(album_id, image_path)
 
         return SuccessResponse(

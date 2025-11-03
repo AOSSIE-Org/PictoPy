@@ -39,8 +39,13 @@ class UpdateAlbumRequest(BaseModel):
 
     @field_validator("password")
     def check_password(cls, value, info: ValidationInfo):
-        if info.data.get("is_locked") and not value:
-            raise ValueError("Password is required for locked albums")
+        is_locked = info.data.get("is_locked")
+        has_current_password = bool(info.data.get("current_password"))
+
+        if is_locked and not has_current_password and not value:
+            raise ValueError(
+                "Password is required when locking an album without an existing password"
+            )
         return value
 
 

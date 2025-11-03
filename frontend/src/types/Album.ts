@@ -19,14 +19,14 @@ export interface AlbumFormData {
 export interface CreateAlbumRequest {
   name: string;
   description?: string;
-  is_locked?: number;
+  is_locked?: boolean;
   password?: string;
 }
 
 export interface UpdateAlbumRequest {
   name?: string;
   description?: string;
-  is_locked?: number;
+  is_locked?: boolean;
   current_password?: string;
   password?: string;
 }
@@ -75,18 +75,4 @@ export interface AlbumCardProps {
   onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
-}
-
-export interface PasswordPromptDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (password: string) => void;
-  albumName: string;
-}
-
-export interface AddImagesToAlbumDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  albumId: string;
-  albumName: string;
 }

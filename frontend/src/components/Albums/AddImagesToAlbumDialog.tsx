@@ -161,9 +161,15 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
                       onError={(e) => {
                         const img = e.target as HTMLImageElement;
                         img.onerror = null;
-                        img.src = '/placeholder.svg';
+                        const placeholder = window.matchMedia(
+                          '(prefers-color-scheme: dark)',
+                        ).matches
+                          ? '/placeholder-album.svg'
+                          : '/placeholder-album-light.svg';
+                        img.src = placeholder;
                       }}
                     />
+
                     {selectedImages.has(image.id) && (
                       <div className="bg-primary/20 absolute inset-0 flex items-center justify-center">
                         <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
