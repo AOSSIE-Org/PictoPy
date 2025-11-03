@@ -7,7 +7,9 @@ class Album(BaseModel):
     album_id: str
     album_name: str
     description: str
-    is_hidden: bool
+    is_locked: bool
+    cover_image_path: Optional[str] = None
+    image_count: int = 0
 
 
 # ##############################
@@ -18,27 +20,27 @@ class Album(BaseModel):
 class CreateAlbumRequest(BaseModel):
     name: str = Field(..., min_length=1)
     description: Optional[str] = ""
-    is_hidden: bool = False
+    is_locked: bool = False
     password: Optional[str] = None
 
     @field_validator("password")
     def check_password(cls, value, info: ValidationInfo):
-        if info.data.get("is_hidden") and not value:
-            raise ValueError("Password is required for hidden albums")
+        if info.data.get("is_locked") and not value:
+            raise ValueError("Password is required for locked albums")
         return value
 
 
 class UpdateAlbumRequest(BaseModel):
     name: str
     description: Optional[str] = ""
-    is_hidden: bool
+    is_locked: bool
     current_password: Optional[str] = None
     password: Optional[str] = None
 
     @field_validator("password")
     def check_password(cls, value, info: ValidationInfo):
-        if info.data.get("is_hidden") and not value:
-            raise ValueError("Password is required for hidden albums")
+        if info.data.get("is_locked") and not value:
+            raise ValueError("Password is required for locked albums")
         return value
 
 
@@ -48,6 +50,10 @@ class GetAlbumImagesRequest(BaseModel):
 
 class ImageIdsRequest(BaseModel):
     image_ids: List[str]
+
+
+class SetCoverImageRequest(BaseModel):
+    image_id: str = Field(..., min_length=1)
 
 
 # ##############################

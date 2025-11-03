@@ -29,3 +29,18 @@ export const userPreferencesEndpoints = {
 export const healthEndpoints = {
   healthCheck: '/health',
 };
+
+export const albumsEndpoints = {
+  getAllAlbums: '/albums/',
+  getAlbumById: (albumId: string) => `/albums/${albumId}`,
+  createAlbum: '/albums/',
+  updateAlbum: (albumId: string) => `/albums/${albumId}`,
+  deleteAlbum: (albumId: string) => `/albums/${albumId}`,
+  addImagesToAlbum: (albumId: string) => `/albums/${albumId}/images`,
+  getAlbumImages: (albumId: string) => `/albums/${albumId}/images/get`,
+  removeImageFromAlbum: (albumId: string, imageId: string) =>
+    `/albums/${albumId}/images/${imageId}`,
+  removeMultipleImagesFromAlbum: (albumId: string) =>
+    `/albums/${albumId}/images`,
+  setAlbumCoverImage: (albumId: string) => `/albums/${albumId}/cover`,
+};

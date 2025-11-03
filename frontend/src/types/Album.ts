@@ -1,77 +1,59 @@
 export interface Album {
-  album_name: string;
-  image_paths: string[];
-  description?: string;
-  is_hidden?: boolean;
-  password_protected?: boolean;
+  id: string;
+  name: string;
+  description: string;
+  is_locked: boolean;
+  cover_image_path?: string;
+  image_count: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AlbumFormData {
   name: string;
   description?: string;
-  is_hidden?: boolean;
+  is_locked?: boolean;
   password?: string;
 }
 
-export interface AlbumData {
-  album_name: string;
-  photos: string[];
+export interface CreateAlbumRequest {
+  name: string;
   description?: string;
-  folder_path: string;
-  is_hidden?: boolean;
-  password_protected?: boolean;
+  is_locked?: number;
+  password?: string;
 }
 
-export interface CreateAlbumFormProps {
-  isOpen: boolean;
-  closeForm: () => void;
-  onError: (title: string, error: unknown) => void;
+export interface UpdateAlbumRequest {
+  name?: string;
+  description?: string;
+  is_locked?: number;
+  current_password?: string;
+  password?: string;
+}
+
+export interface AddImagesToAlbumRequest {
+  image_ids: string[];
+}
+
+export interface GetAlbumImagesRequest {
+  password?: string;
+}
+
+export interface RemoveImagesFromAlbumRequest {
+  image_ids: string[];
 }
 
 export interface EditAlbumDialogProps {
   album: Album | null;
+  isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
-  onError: (title: string, error: unknown) => void;
-  requiresPassword?: boolean;
+  onSuccess?: () => void;
 }
 
-export interface ErrorDialogProps {
-  content: { title: string; description: string } | null;
+export interface CreateAlbumDialogProps {
+  isOpen: boolean;
   onClose: () => void;
-}
-
-export interface AlbumListData {
-  id: string;
-  title: string;
-  coverImage: string;
-  imageCount: number;
-  isHidden?: boolean;
-  passwordProtected?: boolean;
-}
-
-export interface AlbumListProps {
-  albums: AlbumListData[];
-  albumsPerRow: number;
-  onAlbumClick: (albumId: string) => void;
-  onEditAlbum: (albumId: string) => void;
-  onDeleteAlbum: (albumId: string) => void;
-  showHiddenAlbums?: boolean;
-}
-
-export interface AlbumCardProps {
-  album: AlbumListData;
-  onClick: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onPasswordPrompt?: () => void;
-}
-
-export interface AlbumViewProps {
-  albumName: string;
-  onBack: () => void;
-  onError: (title: string, error: unknown) => void;
-  password?: string;
+  onSuccess?: () => void;
 }
 
 export interface PasswordPromptDialogProps {
@@ -81,34 +63,30 @@ export interface PasswordPromptDialogProps {
   albumName: string;
 }
 
-export interface AddFolderResult {
-  data: any | null;
-  error: string | null;
-  isLoading: boolean;
-}
-
-export interface AlbumActionResult {
-  success: boolean;
-  error?: string;
-  data?: {
-    album_name: string;
-    is_hidden?: boolean;
-    password_protected?: boolean;
-  };
-}
-
-export interface AlbumOperation {
-  type: 'create' | 'edit' | 'delete' | 'view';
+export interface AddImagesToAlbumDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  albumId: string;
   albumName: string;
-  password?: string;
-  data?: Partial<AlbumFormData>;
 }
 
-export interface AlbumCredentials {
+export interface AlbumCardProps {
+  album: Album;
+  onClick: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+export interface PasswordPromptDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (password: string) => void;
   albumName: string;
-  password?: string;
 }
 
-export type WithPassword<T> = T & {
-  password?: string;
-};
+export interface AddImagesToAlbumDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  albumId: string;
+  albumName: string;
+}
