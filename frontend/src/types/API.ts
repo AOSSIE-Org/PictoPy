@@ -5,4 +5,7 @@ export interface APIResponse {
   success: boolean;
   error?: string;
   message?: string;
+  total?: number;
+  limit?: number;
+  offset?: number;
 }

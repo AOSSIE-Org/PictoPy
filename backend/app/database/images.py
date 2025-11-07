@@ -119,93 +119,106 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
         conn.close()
 
 
-def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
+def db_get_all_images(
+    tagged: Union[bool, None] = None,
+    limit: Union[int, None] = None,
+    offset: Union[int, None] = None,
+) -> dict:
     """
-    Get all images from the database with their tags.
+    Retrieve images with tags and optional pagination.
+    
+    Uses a CTE (Common Table Expression) to efficiently paginate before joining,
+    preventing unnecessary data loading and SQL injection risks.
 
     Args:
-        tagged: Optional filter for tagged status. If None, returns all images.
-                If True, returns only tagged images. If False, returns only untagged images.
+        tagged: Filter by tagged status (True/False/None for all)
+        limit: Maximum images to return
+        offset: Number of images to skip
 
     Returns:
-        List of dictionaries containing all image data including tags
+        {"images": list of image dicts, "total": total count}
     """
     conn = _connect()
     cursor = conn.cursor()
 
     try:
-        # Build the query with optional WHERE clause
-        query = """
+        count_query = "SELECT COUNT(*) FROM images"
+        count_params: List[Union[bool, int]] = []
+        
+        if tagged is not None:
+            count_query += " WHERE isTagged = ?"
+            count_params.append(tagged)
+        
+        cursor.execute(count_query, count_params)
+        total_count = cursor.fetchone()[0]
+
+        if total_count == 0:
+            return {"images": [], "total": 0}
+
+        query_parts = ["WITH paginated_images AS ("]
+        query_parts.append("  SELECT id FROM images")
+        query_params: List[Union[bool, int]] = []
+        
+        if tagged is not None:
+            query_parts.append("  WHERE isTagged = ?")
+            query_params.append(tagged)
+        
+        query_parts.append("  ORDER BY path")
+        
+        if limit is not None and limit > 0:
+            query_parts.append("  LIMIT ?")
+            query_params.append(limit)
+            if offset is not None and offset > 0:
+                query_parts.append("  OFFSET ?")
+                query_params.append(offset)
+        
+        query_parts.append(")")
+        query_parts.append("""
             SELECT 
-                i.id, 
-                i.path, 
-                i.folder_id, 
-                i.thumbnailPath, 
-                i.metadata, 
-                i.isTagged,
-                m.name as tag_name
+                i.id, i.path, i.folder_id, i.thumbnailPath, 
+                i.metadata, i.isTagged, m.name as tag_name
             FROM images i
+            INNER JOIN paginated_images pi ON i.id = pi.id
             LEFT JOIN image_classes ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
-        """
-
-        params = []
-        if tagged is not None:
-            query += " WHERE i.isTagged = ?"
-            params.append(tagged)
-
-        query += " ORDER BY i.path, m.name"
-
-        cursor.execute(query, params)
-
+            ORDER BY i.path, m.name
+        """)
+        
+        cursor.execute("\n".join(query_parts), query_params)
         results = cursor.fetchall()
 
-        # Group results by image ID
-        images_dict = {}
-        for (
-            image_id,
-            path,
-            folder_id,
-            thumbnail_path,
-            metadata,
-            is_tagged,
-            tag_name,
-        ) in results:
+        images_dict: dict[str, dict] = {}
+        for row in results:
+            image_id, path, folder_id, thumbnail_path, metadata, is_tagged, tag_name = row
+            
             if image_id not in images_dict:
-                # Safely parse metadata JSON -> dict
                 from app.utils.images import image_util_parse_metadata
-
-                metadata_dict = image_util_parse_metadata(metadata)
 
                 images_dict[image_id] = {
                     "id": image_id,
                     "path": path,
                     "folder_id": str(folder_id),
                     "thumbnailPath": thumbnail_path,
-                    "metadata": metadata_dict,
+                    "metadata": image_util_parse_metadata(metadata),
                     "isTagged": bool(is_tagged),
                     "tags": [],
                 }
 
-            # Add tag if it exists (avoid duplicates)
             if tag_name and tag_name not in images_dict[image_id]["tags"]:
                 images_dict[image_id]["tags"].append(tag_name)
 
-        # Convert to list and set tags to None if empty
         images = []
         for image_data in images_dict.values():
             if not image_data["tags"]:
                 image_data["tags"] = None
             images.append(image_data)
 
-        # Sort by path
         images.sort(key=lambda x: x["path"])
-
-        return images
+        return {"images": images, "total": total_count}
 
     except Exception as e:
-        logger.error(f"Error getting all images: {e}")
-        return []
+        logger.error(f"Error getting images: {e}", exc_info=True)
+        return {"images": [], "total": 0}
     finally:
         conn.close()
 

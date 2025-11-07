@@ -44,14 +44,17 @@ configure_uvicorn_logging("backend")
 async def lifespan(app: FastAPI):
     # Create tables and initialize systems
     generate_openapi_json()
-    db_create_folders_table()
-    db_create_images_table()
-    db_create_YOLO_classes_table()
-    db_create_clusters_table()  # Create clusters table first since faces references it
-    db_create_faces_table()
-    db_create_albums_table()
-    db_create_album_images_table()
-    db_create_metadata_table()
+    
+    # Create tables in the correct order (respecting foreign key dependencies)
+    db_create_YOLO_classes_table()  # No dependencies
+    db_create_clusters_table()  # No dependencies
+    db_create_faces_table()  # Depends on clusters
+    db_create_folders_table()  # No dependencies
+    db_create_albums_table()  # No dependencies
+    db_create_album_images_table()  # Depends on albums
+    db_create_images_table()  # Depends on folders and mappings (YOLO classes)
+    db_create_metadata_table()  # Depends on images
+    
     microservice_util_start_sync_service()
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor(max_workers=1)

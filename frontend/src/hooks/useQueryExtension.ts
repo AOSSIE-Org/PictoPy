@@ -15,6 +15,7 @@ import {
 } from '@tanstack/react-query';
 
 import { getErrorMessage } from '@/lib/utils';
+import { DEFAULT_RETRY_COUNT, DEFAULT_RETRY_DELAY } from '@/config/pagination';
 
 interface BackendRes<T = any> {
   success: boolean;
@@ -42,8 +43,8 @@ export function usePictoMutation<
   const myQueryClient = useQueryClient();
 
   const defaultOptions = {
-    retry: 2,
-    retryDelay: 500,
+    retry: DEFAULT_RETRY_COUNT,
+    retryDelay: DEFAULT_RETRY_DELAY,
   };
 
   const res = useMutation<TData, TError, TVariables, TContext>(
@@ -60,8 +61,9 @@ export function usePictoMutation<
         options.onSettled?.(data, error, variables, context, mutationContext);
 
         if (options.autoInvalidateTags) {
-          myQueryClient.invalidateQueries({
+          myQueryClient.refetchQueries({
             queryKey: options.autoInvalidateTags,
+            type: 'all',
           });
         }
       },
@@ -90,8 +92,8 @@ export function usePictoQuery<
   successMessage: string | undefined;
 } {
   const defaultOptions = {
-    retry: 2,
-    retryDelay: 500,
+    retry: DEFAULT_RETRY_COUNT,
+    retryDelay: DEFAULT_RETRY_DELAY,
   };
 
   const res = useQuery<TQueryFnData, TError, TQueryFnData, TQueryKey>({
