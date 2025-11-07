@@ -83,17 +83,6 @@ export function ImageCard({
               />
               <span className="sr-only">Favorite</span>
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="cursor-pointer rounded-full bg-white/20 text-white hover:!bg-white/40 hover:!text-white"
-              onClick={(e) => e.stopPropagation()}
-              title="Share"
-              aria-label="Share"
-            >
-              <Share2 className="h-5 w-5" />
-              <span className="sr-only">Share</span>
-            </Button>
           </div>
         </AspectRatio>
 

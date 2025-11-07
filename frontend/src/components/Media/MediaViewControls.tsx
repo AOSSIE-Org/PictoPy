@@ -46,13 +46,6 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
         <Folder className="h-5 w-5" />
       </button>
 
-      <button
-        className="cursor-pointer rounded-full bg-black/50 p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg"
-        aria-label="Share"
-        title="Share"
-      >
-        <Share2 className="h-5 w-5" />
-      </button>
 
       <button
         onClick={onToggleFavorite}
