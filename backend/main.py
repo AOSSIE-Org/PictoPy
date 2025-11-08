@@ -48,11 +48,11 @@ async def lifespan(app: FastAPI):
     # Create tables in the correct order (respecting foreign key dependencies)
     db_create_YOLO_classes_table()  # No dependencies
     db_create_clusters_table()  # No dependencies
-    db_create_faces_table()  # Depends on clusters
     db_create_folders_table()  # No dependencies
     db_create_albums_table()  # No dependencies
-    db_create_album_images_table()  # Depends on albums
     db_create_images_table()  # Depends on folders and mappings (YOLO classes)
+    db_create_faces_table()  # Depends on clusters and images
+    db_create_album_images_table()  # Depends on albums and images
     db_create_metadata_table()  # Depends on images
     
     microservice_util_start_sync_service()

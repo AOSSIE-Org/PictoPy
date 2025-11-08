@@ -60,10 +60,12 @@ export function usePictoMutation<
       onSettled: (data, error, variables, context, mutationContext) => {
         options.onSettled?.(data, error, variables, context, mutationContext);
 
-        if (options.autoInvalidateTags) {
-          myQueryClient.refetchQueries({
-            queryKey: options.autoInvalidateTags,
-            type: 'all',
+        if (options.autoInvalidateTags && options.autoInvalidateTags.length > 0) {
+          options.autoInvalidateTags.forEach((tag) => {
+            myQueryClient.refetchQueries({
+              queryKey: [tag],
+              type: 'all',
+            });
           });
         }
       },

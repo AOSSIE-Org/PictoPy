@@ -2,7 +2,6 @@ from fastapi import APIRouter, HTTPException, Query, status
 from typing import List, Optional
 from app.database.images import db_get_all_images
 from app.schemas.images import ErrorResponse
-from app.utils.images import image_util_parse_metadata
 from app.config.pagination import (
     MAX_PAGE_SIZE,
     MAX_OFFSET_VALUE,
@@ -90,7 +89,7 @@ def get_all_images(
                 path=image["path"],
                 folder_id=image["folder_id"],
                 thumbnailPath=image["thumbnailPath"],
-                metadata=image_util_parse_metadata(image["metadata"]),
+                metadata=image["metadata"],
                 isTagged=image["isTagged"],
                 tags=image["tags"],
             )

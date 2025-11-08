@@ -91,10 +91,17 @@ export const useFolderOperations = () => {
       enableAITagging({ folder_ids: [folder_id] }),
     autoInvalidateTags: ['folders', 'images'],
     onMutate: async (folder_id: string) => {
+      const previousFolders = [...folders];
       const updatedFolders = folders.map(f => 
         f.folder_id === folder_id ? { ...f, AI_Tagging: true } : f
       );
       dispatch(setFolders(updatedFolders));
+      return { previousFolders };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousFolders) {
+        dispatch(setFolders(context.previousFolders));
+      }
     },
   });
 
@@ -112,10 +119,17 @@ export const useFolderOperations = () => {
       disableAITagging({ folder_ids: [folder_id] }),
     autoInvalidateTags: ['folders', 'images'],
     onMutate: async (folder_id: string) => {
+      const previousFolders = [...folders];
       const updatedFolders = folders.map(f => 
         f.folder_id === folder_id ? { ...f, AI_Tagging: false } : f
       );
       dispatch(setFolders(updatedFolders));
+      return { previousFolders };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousFolders) {
+        dispatch(setFolders(context.previousFolders));
+      }
     },
   });
 

@@ -7,17 +7,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import tempfile
 import os
+import sqlite3
+import importlib
 
 from app.routes.images import router as images_router
-from app.database.images import (
-    db_create_images_table,
-    db_bulk_insert_images,
-    db_insert_image_classes_batch,
-)
-from app.database.folders import db_create_folders_table
-from app.database.yolo_mapping import db_create_YOLO_classes_table
-from app.config.settings import DATABASE_PATH
-import sqlite3
 
 
 @pytest.fixture(scope="function")
@@ -26,15 +19,45 @@ def test_db():
     db_fd, db_path = tempfile.mkstemp()
 
     import app.config.settings
+    import app.database.images
+    import app.database.folders  
+    import app.database.yolo_mapping
 
     original_db_path = app.config.settings.DATABASE_PATH
     app.config.settings.DATABASE_PATH = db_path
+    
+    # Reload modules to pick up new DATABASE_PATH
+    importlib.reload(app.database.yolo_mapping)
+    importlib.reload(app.database.folders)
+    importlib.reload(app.database.images)
+    
+    from app.database.images import (
+        db_create_images_table,
+        db_bulk_insert_images,
+        db_insert_image_classes_batch,
+    )
+    from app.database.folders import db_create_folders_table
+    from app.database.yolo_mapping import db_create_YOLO_classes_table
 
-    db_create_YOLO_classes_table()
+    # Create tables in correct order (respecting foreign key dependencies)
+    db_create_YOLO_classes_table()  # Creates 'mappings' table
     db_create_folders_table()
-    db_create_images_table()
+    db_create_images_table()  # Depends on folders and mappings
+    
+    # Verify tables were created
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    tables = [row[0] for row in cursor.fetchall()]
+    print(f"Tables created in test DB: {tables}")
+    conn.close()
 
-    yield db_path
+    # Store functions in the fixture return value so tests can use them
+    yield {
+        "path": db_path,
+        "db_bulk_insert_images": db_bulk_insert_images,
+        "db_insert_image_classes_batch": db_insert_image_classes_batch,
+    }
 
     app.config.settings.DATABASE_PATH = original_db_path
     os.close(db_fd)
@@ -58,7 +81,11 @@ def client(app):
 @pytest.fixture
 def sample_images_data(test_db):
     """Create sample images in the test database."""
-    conn = sqlite3.connect(test_db)
+    db_path = test_db["path"]
+    db_bulk_insert_images = test_db["db_bulk_insert_images"]
+    db_insert_image_classes_batch = test_db["db_insert_image_classes_batch"]
+    
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
     folder_id = "test-folder-id"
@@ -325,8 +352,11 @@ class TestGetAllImages:
 
     def test_single_image_dataset(self, client, test_db):
         """Test pagination with only one image."""
+        db_path = test_db["path"]
+        db_bulk_insert_images = test_db["db_bulk_insert_images"]
+        
         # Use test_db path instead of global DATABASE_PATH
-        conn = sqlite3.connect(test_db)
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
         folder_id = "single-test-folder"
