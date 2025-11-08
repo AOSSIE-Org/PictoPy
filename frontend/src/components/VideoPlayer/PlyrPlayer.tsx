@@ -23,8 +23,6 @@ export default function PlyrPlayer({ src, title, poster }: PlyrPlayerProps) {
 
         const Plyr = (PlyrModule as any).default || PlyrModule;
 
-        console.log('Initializing Plyr...', Plyr);
-
         // Destroy previous instance if any
         if (playerRef.current) {
           playerRef.current.destroy();
@@ -70,8 +68,6 @@ export default function PlyrPlayer({ src, title, poster }: PlyrPlayerProps) {
             // Click to play
             clickToPlay: true,
           });
-
-          console.log('Plyr initialized successfully', playerRef.current);
         } catch (error) {
           console.error('Failed to initialize Plyr:', error);
         }

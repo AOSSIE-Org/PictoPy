@@ -9,6 +9,20 @@ from app.database.folders import db_get_all_folder_details
 router = APIRouter()
 
 
+def _map_videos_to_response(videos: List[dict]) -> List[VideoData]:
+    """Helper function to map database video dicts to VideoData objects."""
+    return [
+        VideoData(
+            id=v["id"],
+            path=v["path"],
+            folder_id=v.get("folder_id"),
+            thumbnailPath=v["thumbnailPath"],
+            metadata=image_util_parse_metadata(v.get("metadata")),
+        )
+        for v in videos
+    ]
+
+
 @router.get(
     "/",
     response_model=GetAllVideosResponse,
@@ -17,16 +31,7 @@ router = APIRouter()
 def get_all_videos():
     try:
         videos = db_get_all_videos()
-        data: List[VideoData] = [
-            VideoData(
-                id=v["id"],
-                path=v["path"],
-                folder_id=v.get("folder_id"),
-                thumbnailPath=v["thumbnailPath"],
-                metadata=image_util_parse_metadata(v.get("metadata")),
-            )
-            for v in videos
-        ]
+        data = _map_videos_to_response(videos)
         return GetAllVideosResponse(
             success=True, message=f"Retrieved {len(data)} videos", data=data
         )
@@ -50,16 +55,7 @@ async def scan_videos_from_folders():
         folder_data = [(r[1], r[0], False) for r in rows]
         video_util_process_folder_videos(folder_data)
         videos = db_get_all_videos()
-        data: List[VideoData] = [
-            VideoData(
-                id=v["id"],
-                path=v["path"],
-                folder_id=v.get("folder_id"),
-                thumbnailPath=v["thumbnailPath"],
-                metadata=image_util_parse_metadata(v.get("metadata")),
-            )
-            for v in videos
-        ]
+        data = _map_videos_to_response(videos)
         return GetAllVideosResponse(
             success=True, message=f"Scanned {len(folder_data)} folder(s)", data=data
         )
@@ -81,16 +77,7 @@ async def cleanup_deleted_videos():
     """Clean up database entries for videos that no longer exist on disk."""
     try:
         videos = db_get_all_videos()
-        data: List[VideoData] = [
-            VideoData(
-                id=v["id"],
-                path=v["path"],
-                folder_id=v.get("folder_id"),
-                thumbnailPath=v["thumbnailPath"],
-                metadata=image_util_parse_metadata(v.get("metadata")),
-            )
-            for v in videos
-        ]
+        data = _map_videos_to_response(videos)
         return GetAllVideosResponse(
             success=True,
             message=f"Cleanup complete. {len(data)} video(s) remain.",

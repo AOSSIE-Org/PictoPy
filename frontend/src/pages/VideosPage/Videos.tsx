@@ -33,17 +33,20 @@ const Videos: React.FC = () => {
         const list = data.data as unknown as Video[];
         setVideos(list);
         if (list.length === 0) {
-          const scanned = await scanVideos();
-          if (scanned?.success && Array.isArray(scanned.data)) {
-            setVideos(scanned.data as unknown as Video[]);
+          try {
+            const scanned = await scanVideos();
+            if (scanned?.success && Array.isArray(scanned.data)) {
+              setVideos(scanned.data as unknown as Video[]);
+            }
+          } catch (error) {
+            console.error('Failed to scan videos:', error);
+            // Videos will remain empty, showing "No videos found" message
           }
         }
       }
     };
     run();
   }, [data]);
-
-  console.log('data for videos:', data);
 
   if (isLoading) {
     return (
