@@ -69,7 +69,7 @@ def get_all_images(
     Returns paginated results with total count metadata.
     """
     try:
-        if limit is not None and offset is not None and offset > MAX_OFFSET_VALUE:
+        if offset is not None and offset > MAX_OFFSET_VALUE:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ErrorResponse(
