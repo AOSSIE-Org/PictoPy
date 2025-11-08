@@ -2,6 +2,12 @@ export const imagesEndpoints = {
   getAllImages: '/images/',
 };
 
+export const videosEndpoints = {
+  getAllVideos: '/videos/',
+  upload: '/videos/upload',
+  scan: '/videos/scan',
+};
+
 export const faceClustersEndpoints = {
   getAllClusters: '/face-clusters/',
   searchForFaces: '/face-clusters/face-search?input_type=path',

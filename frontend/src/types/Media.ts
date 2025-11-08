@@ -10,6 +10,17 @@ export interface ImageMetadata {
   longitude?: number;
 }
 
+export interface VideoMetadata {
+  name: string;
+  date_created: string | null;
+  width: number;
+  height: number;
+  duration: number;
+  file_location: string;
+  file_size: number;
+  item_type: string;
+}
+
 export interface Image {
   id: string;
   path: string;
@@ -24,6 +35,16 @@ export interface Image {
 export interface ImageGalleryProps {
   mediaItems: Image[];
   title?: string;
+}
+
+export interface Video {
+  id: string;
+  path: string;
+  thumbnailPath: string;
+  folder_id?: string;
+  metadata?: VideoMetadata;
+  title?: string;
+  tags?: string[];
 }
 
 export interface ImageGridProps {

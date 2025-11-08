@@ -19,11 +19,13 @@ from app.database.albums import db_create_albums_table
 from app.database.albums import db_create_album_images_table
 from app.database.folders import db_create_folders_table
 from app.database.metadata import db_create_metadata_table
+from app.database.videos import db_create_videos_table
 from app.utils.microservice import microservice_util_start_sync_service
 
 from app.routes.folders import router as folders_router
 from app.routes.albums import router as albums_router
 from app.routes.images import router as images_router
+from app.routes.videos import router as videos_router
 from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
 from fastapi.openapi.utils import get_openapi
@@ -53,6 +55,7 @@ async def lifespan(app: FastAPI):
     db_create_album_images_table()
     db_create_metadata_table()
     microservice_util_start_sync_service()
+    db_create_videos_table()
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor(max_workers=1)
 
@@ -126,6 +129,7 @@ async def root():
 app.include_router(folders_router, prefix="/folders", tags=["Folders"])
 app.include_router(albums_router, prefix="/albums", tags=["Albums"])
 app.include_router(images_router, prefix="/images", tags=["Images"])
+app.include_router(videos_router, prefix="/videos", tags=["Videos"])
 app.include_router(
     face_clusters_router, prefix="/face-clusters", tags=["Face Clusters"]
 )
