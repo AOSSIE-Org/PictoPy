@@ -232,7 +232,7 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
                     <Button
                       variant="outline"
                       className="w-full justify-between"
-                      disabled={devices.length <= 1}
+                      disabled={devices.length === 0}
                     >
                       <div className="flex items-center gap-2">
                         <Camera className="h-4 w-4" />
