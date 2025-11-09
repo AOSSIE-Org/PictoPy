@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -7,78 +8,110 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-} from '@/components/ui/sidebar';
+} from "@/components/ui/sidebar";
 import {
-  Bolt,
-  Home,
-  Sparkles,
-  Video,
-  BookImage,
-  ClockFading,
-} from 'lucide-react';
-import { useLocation, Link } from 'react-router';
-import { ROUTES } from '@/constants/routes';
+  FaHome,
+  FaRobot,
+  FaVideo,
+  FaBookOpen,
+  FaClock,
+  FaCog,
+} from "react-icons/fa";
+import { motion } from "framer-motion";
+import { useLocation, Link } from "react-router";
+import { ROUTES } from "@/constants/routes";
+import { Menu } from "lucide-react";
 
 export function AppSidebar() {
   const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
+
+  const toggleSidebar = () => setCollapsed(!collapsed);
 
   const isActive = (path: string) => {
-    // Remove leading slash from both paths for comparison
-    const currentPath = location.pathname.replace(/^\//, '');
-    const menuPath = path.replace(/^\//, '');
+    const currentPath = location.pathname.replace(/^\//, "");
+    const menuPath = path.replace(/^\//, "");
 
-    // Handle home route specially (both '/' and '/home' should be active for home)
-    if (menuPath === ROUTES.HOME || menuPath === '') {
-      return currentPath === ROUTES.HOME || currentPath === '';
+    if (menuPath === ROUTES.HOME || menuPath === "") {
+      return currentPath === ROUTES.HOME || currentPath === "";
     }
-
     return currentPath === menuPath;
   };
 
   const menuItems = [
-    { name: 'Home', path: `/${ROUTES.HOME}`, icon: Home },
-    { name: 'AI Tagging', path: `/${ROUTES.AI}`, icon: Sparkles },
-    { name: 'Videos', path: `/${ROUTES.VIDEOS}`, icon: Video },
-    { name: 'Albums', path: `/${ROUTES.ALBUMS}`, icon: BookImage },
-    { name: 'Memories', path: `/${ROUTES.MEMORIES}`, icon: ClockFading },
-    { name: 'Settings', path: `/${ROUTES.SETTINGS}`, icon: Bolt },
+    { name: "Home", path: `/${ROUTES.HOME}`, icon: FaHome },
+    { name: "AI Tagging", path: `/${ROUTES.AI}`, icon: FaRobot },
+    { name: "Videos", path: `/${ROUTES.VIDEOS}`, icon: FaVideo },
+    { name: "Albums", path: `/${ROUTES.ALBUMS}`, icon: FaBookOpen },
+    { name: "Memories", path: `/${ROUTES.MEMORIES}`, icon: FaClock },
+    { name: "Settings", path: `/${ROUTES.SETTINGS}`, icon: FaCog },
   ];
 
   return (
-    <Sidebar
-      variant="sidebar"
-      collapsible="icon"
-      className="border-border/40 border-r shadow-sm"
+    <motion.div
+      animate={{ width: collapsed ? 80 : 230 }}
+      transition={{ duration: 0.3, ease: "easeInOut" }}
+      className="bg-background border-r border-border/30 shadow-md h-screen flex flex-col"
     >
-      <SidebarHeader className="flex justify-center py-3">
-        <div className="text-lg font-semibold">.</div>
+      {/* Header */}
+      <SidebarHeader className="flex items-center justify-between px-4 py-3 border-b border-border/30">
+        {!collapsed && (
+          <div className="text-lg font-semibold tracking-wide text-foreground">
+            PictoPy
+          </div>
+        )}
+        <button
+          onClick={toggleSidebar}
+          className="text-muted-foreground hover:text-foreground transition"
+          aria-label="Toggle sidebar"
+        >
+          <Menu size={22} />
+        </button>
       </SidebarHeader>
-      <SidebarSeparator className="mx-3 opacity-50" />
-      <SidebarContent className="py-4">
-        <SidebarMenu className="space-y-2 px-3">
-          {menuItems.map((item) => (
-            <SidebarMenuItem key={item.path}>
-              <SidebarMenuButton
-                asChild
-                isActive={isActive(item.path)}
-                tooltip={item.name}
-                className="rounded-sm"
-              >
-                <Link to={item.path} className="flex items-center gap-3">
-                  <item.icon className="h-5 w-5" />
-                  <span className="font-medium">{item.name}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+
+      {/* Menu */}
+      <SidebarContent className="flex-1 py-4 overflow-y-auto">
+        <SidebarMenu className="space-y-1 px-2">
+          {menuItems.map((item) => {
+            const active = isActive(item.path);
+            return (
+              <SidebarMenuItem key={item.path}>
+                <SidebarMenuButton
+                  asChild
+                  tooltip={item.name}
+                  isActive={active}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all duration-200 ${
+                    active
+                      ? "bg-primary/15 text-primary shadow-sm"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  }`}
+                >
+                  <Link to={item.path}>
+                    <div className="flex items-center gap-3">
+                      <item.icon className="h-5 w-5" />
+                      {!collapsed && (
+                        <span className="text-sm font-medium">
+                          {item.name}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="border-border/40 mt-auto border-t py-4">
-        <div className="text-muted-foreground space-y-1 px-4 text-xs">
-          <div className="font-medium">PictoPy v1.0.0</div>
-          <div>© 2025 PictoPy</div>
-        </div>
+
+      {/* Footer */}
+      <SidebarFooter className="border-t border-border/30 py-4">
+        {!collapsed && (
+          <div className="text-muted-foreground space-y-1 px-4 text-xs">
+            <div className="font-medium text-foreground/80">PictoPy v1.0.0</div>
+            <div>© 2025 PictoPy</div>
+          </div>
+        )}
       </SidebarFooter>
-    </Sidebar>
+    </motion.div>
   );
 }
