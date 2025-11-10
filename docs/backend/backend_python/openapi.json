@@ -1265,6 +1265,366 @@
           }
         }
       }
+    },
+    "/memories/on-this-day": {
+      "get": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Get On This Day Memories",
+        "description": "Get images from the same day in previous years.\n\nReturns memories from the same month and day across different years,\ncreating a nostalgic \"On This Day\" experience.",
+        "operationId": "get_on_this_day_memories_memories_on_this_day_get",
+        "parameters": [
+          {
+            "name": "years_back",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "description": "Number of years to look back",
+              "default": 5,
+              "title": "Years Back"
+            },
+            "description": "Number of years to look back"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnThisDayResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/recent": {
+      "get": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Get Recent Memories",
+        "description": "Get recent collections of images grouped by date.\n\nReturns memories from recent days where you took multiple photos,\nhighlighting significant photo-taking events.",
+        "operationId": "get_recent_memories_memories_recent_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 1,
+              "description": "Number of days to look back",
+              "default": 30,
+              "title": "Days"
+            },
+            "description": "Number of days to look back"
+          },
+          {
+            "name": "min_images",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Minimum images per day to create a memory",
+              "default": 5,
+              "title": "Min Images"
+            },
+            "description": "Minimum images per day to create a memory"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentMemoriesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/people": {
+      "get": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Get People Memories",
+        "description": "Get memories grouped by people (face clusters).\n\nReturns collections of photos featuring the same person,\ncreating personalized memory collections.",
+        "operationId": "get_people_memories_memories_people_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Maximum number of people to return",
+              "default": 10,
+              "title": "Limit"
+            },
+            "description": "Maximum number of people to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeopleMemoriesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/tags": {
+      "get": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Get Tag Memories",
+        "description": "Get memories grouped by common tags/objects.\n\nReturns collections of photos featuring the same objects or themes,\ncreating thematic memory collections.",
+        "operationId": "get_tag_memories_memories_tags_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Maximum number of tags to return",
+              "default": 10,
+              "title": "Limit"
+            },
+            "description": "Maximum number of tags to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagMemoriesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/all": {
+      "get": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Get All Memories",
+        "description": "Get all types of memories in a single request.\n\nReturns a comprehensive collection including:\n- On This Day memories\n- Recent memories\n- People-based memories\n- Tag-based memories",
+        "operationId": "get_all_memories_memories_all_get",
+        "parameters": [
+          {
+            "name": "years_back",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "description": "Years to look back for 'On This Day'",
+              "default": 5,
+              "title": "Years Back"
+            },
+            "description": "Years to look back for 'On This Day'"
+          },
+          {
+            "name": "recent_days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 1,
+              "description": "Days to look back for recent memories",
+              "default": 30,
+              "title": "Recent Days"
+            },
+            "description": "Days to look back for recent memories"
+          },
+          {
+            "name": "min_images",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Minimum images per recent memory",
+              "default": 5,
+              "title": "Min Images"
+            },
+            "description": "Minimum images per recent memory"
+          },
+          {
+            "name": "people_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Maximum number of people memories",
+              "default": 10,
+              "title": "People Limit"
+            },
+            "description": "Maximum number of people memories"
+          },
+          {
+            "name": "tags_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Maximum number of tag memories",
+              "default": 10,
+              "title": "Tags Limit"
+            },
+            "description": "Maximum number of tag memories"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllMemoriesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1395,6 +1755,68 @@
           "is_hidden"
         ],
         "title": "Album"
+      },
+      "AllMemoriesData": {
+        "properties": {
+          "on_this_day": {
+            "items": {
+              "$ref": "#/components/schemas/OnThisDayMemory"
+            },
+            "type": "array",
+            "title": "On This Day"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/RecentMemory"
+            },
+            "type": "array",
+            "title": "Recent"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/PersonMemory"
+            },
+            "type": "array",
+            "title": "People"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagMemory"
+            },
+            "type": "array",
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "on_this_day",
+          "recent",
+          "people",
+          "tags"
+        ],
+        "title": "AllMemoriesData"
+      },
+      "AllMemoriesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AllMemoriesData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "AllMemoriesResponse"
       },
       "ClusterMetadata": {
         "properties": {
@@ -2222,6 +2644,134 @@
         ],
         "title": "InputType"
       },
+      "MemoryImage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "thumbnailPath": {
+            "type": "string",
+            "title": "Thumbnailpath"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/MemoryImageMetadata"
+          },
+          "isTagged": {
+            "type": "boolean",
+            "title": "Istagged"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "thumbnailPath",
+          "metadata",
+          "isTagged"
+        ],
+        "title": "MemoryImage"
+      },
+      "MemoryImageMetadata": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "date_created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Created"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "file_location": {
+            "type": "string",
+            "title": "File Location"
+          },
+          "file_size": {
+            "type": "integer",
+            "title": "File Size"
+          },
+          "item_type": {
+            "type": "string",
+            "title": "Item Type"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "width",
+          "height",
+          "file_location",
+          "file_size",
+          "item_type"
+        ],
+        "title": "MemoryImageMetadata"
+      },
       "MetadataModel": {
         "properties": {
           "name": {
@@ -2304,6 +2854,172 @@
           "item_type"
         ],
         "title": "MetadataModel"
+      },
+      "OnThisDayMemory": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "years_ago": {
+            "type": "integer",
+            "title": "Years Ago"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryImage"
+            },
+            "type": "array",
+            "title": "Images"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "years_ago",
+          "date",
+          "images"
+        ],
+        "title": "OnThisDayMemory"
+      },
+      "OnThisDayResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/OnThisDayMemory"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "OnThisDayResponse"
+      },
+      "PeopleMemoriesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/PersonMemory"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "PeopleMemoriesResponse"
+      },
+      "PersonMemory": {
+        "properties": {
+          "cluster_id": {
+            "type": "string",
+            "title": "Cluster Id"
+          },
+          "person_name": {
+            "type": "string",
+            "title": "Person Name"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryImage"
+            },
+            "type": "array",
+            "title": "Images"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cluster_id",
+          "person_name",
+          "image_count",
+          "images"
+        ],
+        "title": "PersonMemory"
+      },
+      "RecentMemoriesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/RecentMemory"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "RecentMemoriesResponse"
+      },
+      "RecentMemory": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "iso_date": {
+            "type": "string",
+            "title": "Iso Date"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryImage"
+            },
+            "type": "array",
+            "title": "Images"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "iso_date",
+          "images"
+        ],
+        "title": "RecentMemory"
       },
       "RenameClusterData": {
         "properties": {
@@ -2505,6 +3221,58 @@
           "success"
         ],
         "title": "SyncFolderResponse"
+      },
+      "TagMemoriesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/TagMemory"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "TagMemoriesResponse"
+      },
+      "TagMemory": {
+        "properties": {
+          "tag_name": {
+            "type": "string",
+            "title": "Tag Name"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryImage"
+            },
+            "type": "array",
+            "title": "Images"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tag_name",
+          "image_count",
+          "images"
+        ],
+        "title": "TagMemory"
       },
       "UpdateAITaggingData": {
         "properties": {
@@ -2838,6 +3606,29 @@
         "required": [
           "message",
           "error"
+        ],
+        "title": "ErrorResponse"
+      },
+      "app__schemas__memories__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "error",
+          "message"
         ],
         "title": "ErrorResponse"
       },
