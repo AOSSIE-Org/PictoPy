@@ -170,18 +170,19 @@ def db_get_album_images(album_id: str):
 
 def db_add_images_to_album(album_id: str, image_ids: list[str]):
     """
-    Safely adds images to an album using only parameterized queries.
+    Safely adds images to an album using parameterized queries.
+    Maintains UUID support and uses efficient single queries.
     """
+    # Validate input type
     if not isinstance(image_ids, list):
         raise ValueError("image_ids must be a list of IDs")
 
-    # Convert and validate IDs
+    # Remove integer conversion - keep IDs as strings for UUID support
     sanitized_ids = []
     for img_id in image_ids:
-        try:
-            sanitized_ids.append(int(img_id))
-        except (ValueError, TypeError):
-            continue
+        # Basic validation - ensure it's a non-empty string
+        if isinstance(img_id, str) and img_id.strip():
+            sanitized_ids.append(img_id.strip())
 
     if not sanitized_ids:
         raise ValueError("No valid image IDs provided")
@@ -189,22 +190,25 @@ def db_add_images_to_album(album_id: str, image_ids: list[str]):
     with get_db_connection() as conn:
         cursor = conn.cursor()
 
-        # Use a temporary table or individual queries to avoid dynamic SQL
-        valid_images = []
-        for img_id in sanitized_ids:
-            cursor.execute("SELECT 1 FROM images WHERE id = ?", (img_id,))
-            if cursor.fetchone():
-                valid_images.append(img_id)
-
-        # Insert valid images
-        if valid_images:
-            cursor.executemany(
-                "INSERT OR IGNORE INTO album_images (album_id, image_id) VALUES (?, ?)",
-                [(album_id, img_id) for img_id in valid_images],
-            )
-            conn.commit()
+        # Efficient single query with parameterized IN clause
+        if sanitized_ids:
+            # Generate placeholders safely based on list length
+            placeholders = ",".join(["?"] * len(sanitized_ids))
+            query = f"SELECT id FROM images WHERE id IN ({placeholders})"
+            cursor.execute(query, sanitized_ids)  # Pass string IDs directly
+            valid_images = [row[0] for row in cursor.fetchall()]
         else:
+            valid_images = []
+
+        if not valid_images:
             raise ValueError("None of the provided image IDs exist in the database.")
+
+        # Insert into album_images using executemany
+        cursor.executemany(
+            "INSERT OR IGNORE INTO album_images (album_id, image_id) VALUES (?, ?)",
+            [(album_id, img_id) for img_id in valid_images],
+        )
+        conn.commit()
 
         
 def db_remove_image_from_album(album_id: str, image_id: str):
