@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { revealItemInDir } from '@tauri-apps/plugin-opener';
+// import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { MediaViewProps } from '@/types/Media';
 import { selectCurrentViewIndex } from '@/features/imageSelectors';
 import { setCurrentViewIndex, closeImageView } from '@/features/imageSlice';
