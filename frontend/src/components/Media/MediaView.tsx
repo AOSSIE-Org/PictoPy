@@ -77,7 +77,7 @@ export function MediaView({ onClose, type = 'image', images }: MediaViewProps) {
   const handleOpenFolder = async () => {
     if (!currentImage?.path) return;
     try {
-      await revealItemInDir(currentImage.path);
+      // await revealItemInDir(currentImage.path);
     } catch (err) {
       console.log(err);
       console.error('Failed to open folder.');

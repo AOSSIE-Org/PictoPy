@@ -46,7 +46,6 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
         <Folder className="h-5 w-5" />
       </button>
 
-
       <button
         onClick={onToggleFavorite}
         className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${
