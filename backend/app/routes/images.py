@@ -2,7 +2,11 @@ from fastapi import APIRouter, HTTPException, Query, status
 from typing import List, Optional
 from app.database.images import db_get_all_images
 from app.schemas.images import ErrorResponse
-from app.utils.images import image_util_parse_metadata
+from app.config.pagination import (
+    MAX_PAGE_SIZE,
+    MAX_OFFSET_VALUE,
+    MIN_PAGE_SIZE,
+)
 from pydantic import BaseModel
 from app.database.images import db_toggle_image_favourite_status
 from app.logging.setup_logging import get_logger
@@ -41,29 +45,56 @@ class GetAllImagesResponse(BaseModel):
     success: bool
     message: str
     data: List[ImageData]
+    total: Optional[int] = None
+    limit: Optional[int] = None
+    offset: Optional[int] = None
 
 
 @router.get(
     "/",
     response_model=GetAllImagesResponse,
-    responses={500: {"model": ErrorResponse}},
+    responses={
+        400: {"model": ErrorResponse},
+        500: {"model": ErrorResponse},
+    },
 )
 def get_all_images(
-    tagged: Optional[bool] = Query(None, description="Filter images by tagged status")
+    tagged: Optional[bool] = Query(None, description="Filter images by tagged status"),
+    limit: Optional[int] = Query(
+        None,
+        description="Number of images per page",
+        ge=MIN_PAGE_SIZE,
+        le=MAX_PAGE_SIZE,
+    ),
+    offset: Optional[int] = Query(None, description="Number of images to skip", ge=0),
 ):
-    """Get all images from the database."""
+    """
+    Retrieve images with optional filtering and pagination.
+    
+    Returns paginated results with total count metadata.
+    """
     try:
-        # Get all images with tags from database (single query with optional filter)
-        images = db_get_all_images(tagged=tagged)
+        if offset is not None and offset > MAX_OFFSET_VALUE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Invalid offset",
+                    message=f"Offset exceeds maximum allowed value ({MAX_OFFSET_VALUE})",
+                ).model_dump(),
+            )
 
-        # Convert to response format
+        result = db_get_all_images(tagged=tagged, limit=limit, offset=offset)
+        images = result["images"]
+        total_count = result["total"]
+
         image_data = [
             ImageData(
                 id=image["id"],
                 path=image["path"],
                 folder_id=image["folder_id"],
                 thumbnailPath=image["thumbnailPath"],
-                metadata=image_util_parse_metadata(image["metadata"]),
+                metadata=image["metadata"],
                 isTagged=image["isTagged"],
                 isFavourite=image.get("isFavourite", False),
                 tags=image["tags"],
@@ -73,10 +104,15 @@ def get_all_images(
 
         return GetAllImagesResponse(
             success=True,
-            message=f"Successfully retrieved {len(image_data)} images",
+            message=f"Successfully retrieved {len(image_data)} of {total_count} images",
             data=image_data,
+            total=total_count,
+            limit=limit,
+            offset=offset,
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

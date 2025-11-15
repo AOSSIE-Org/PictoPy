@@ -1,0 +1,9 @@
+"""Pagination configuration constants for the PictoPy backend."""
+
+MAX_PAGE_SIZE = 1000
+DEFAULT_PAGE_SIZE = 50
+MAX_OFFSET_VALUE = 1_000_000
+MIN_PAGE_SIZE = 1
+
+DEFAULT_RETRY_COUNT = 2
+DEFAULT_RETRY_DELAY_MS = 500
