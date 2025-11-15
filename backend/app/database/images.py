@@ -63,6 +63,7 @@ def db_create_images_table() -> None:
             thumbnailPath TEXT UNIQUE,
             metadata TEXT,
             isTagged BOOLEAN DEFAULT 0,
+            isFavourite BOOLEAN DEFAULT 0,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
     """
@@ -175,8 +176,14 @@ def db_get_all_images(
         query_parts.append(")")
         query_parts.append("""
             SELECT 
-                i.id, i.path, i.folder_id, i.thumbnailPath, 
-                i.metadata, i.isTagged, m.name as tag_name
+                i.id, 
+                i.path, 
+                i.folder_id, 
+                i.thumbnailPath, 
+                i.metadata, 
+                i.isTagged,
+                i.isFavourite,
+                m.name as tag_name
             FROM images i
             INNER JOIN paginated_images pi ON i.id = pi.id
             LEFT JOIN image_classes ic ON i.id = ic.image_id
@@ -189,7 +196,16 @@ def db_get_all_images(
 
         images_dict: dict[str, dict] = {}
         for row in results:
-            image_id, path, folder_id, thumbnail_path, metadata, is_tagged, tag_name = row
+            (
+                image_id,
+                path,
+                folder_id,
+                thumbnail_path,
+                metadata,
+                is_tagged,
+                is_favourite,
+                tag_name,
+            ) = row
             
             if image_id not in images_dict:
                 from app.utils.images import image_util_parse_metadata
@@ -201,6 +217,7 @@ def db_get_all_images(
                     "thumbnailPath": thumbnail_path,
                     "metadata": image_util_parse_metadata(metadata),
                     "isTagged": bool(is_tagged),
+                    "isFavourite": bool(is_favourite),
                     "tags": [],
                 }
 
@@ -399,6 +416,31 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
         return True
     except Exception as e:
         logger.error(f"Error deleting images: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def db_toggle_image_favourite_status(image_id: str) -> bool:
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id FROM images WHERE id = ?", (image_id,))
+        if not cursor.fetchone():
+            return False
+        cursor.execute(
+            """
+            UPDATE images
+            SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
+            WHERE id = ?
+            """,
+            (image_id,),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        logger.error(f"Database error: {e}")
         conn.rollback()
         return False
     finally:

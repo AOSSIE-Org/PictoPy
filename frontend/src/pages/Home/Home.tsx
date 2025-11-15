@@ -8,11 +8,9 @@ import {
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 import { Image } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
-import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { selectImages } from '@/features/imageSelectors';
 import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
-import { showInfoDialog } from '@/features/infoDialogSlice';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import {
   IMAGES_PER_PAGE,
@@ -21,6 +19,7 @@ import {
   DEFAULT_RETRY_DELAY,
   DEFAULT_STALE_TIME,
 } from '@/config/pagination';
+import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 
 export const Home = () => {
   const dispatch = useDispatch();
@@ -35,10 +34,10 @@ export const Home = () => {
     isLoading,
     isSuccess,
     isError,
+    error,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isRefetching,
   } = useInfiniteQuery({
     queryKey: ['images'],
     queryFn: ({ pageParam = 0 }) =>
@@ -93,27 +92,15 @@ export const Home = () => {
     return isSearchActive ? reduxImages : allImages;
   }, [isSearchActive, reduxImages, allImages]);
 
-  useEffect(() => {
-    if (isSearchActive) return;
-
-    const shouldShowLoader = isLoading || (isRefetching && !isFetchingNextPage);
-    
-    if (shouldShowLoader) {
-      dispatch(showLoader('Loading images'));
-    } else {
-      dispatch(hideLoader());
-      
-      if (isError) {
-        dispatch(
-          showInfoDialog({
-            title: 'Error',
-            message: 'Failed to load images. Please try again later.',
-            variant: 'error',
-          }),
-        );
-      }
-    }
-  }, [isLoading, isFetchingNextPage, isRefetching, isError, isSearchActive, dispatch]);
+  useMutationFeedback(
+    { isPending: isLoading && !isSearchActive, isSuccess, isError, error },
+    {
+      loadingMessage: 'Loading images',
+      showSuccess: false,
+      errorTitle: 'Error',
+      errorMessage: 'Failed to load images. Please try again later.',
+    },
+  );
 
   const title = useMemo(() => {
     return isSearchActive && images.length > 0

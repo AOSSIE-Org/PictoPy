@@ -1,5 +1,4 @@
 import React, { useRef, useEffect } from 'react';
-import { Heart } from 'lucide-react';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
 interface MediaThumbnailsProps {
@@ -11,7 +10,6 @@ interface MediaThumbnailsProps {
   currentIndex: number;
   showThumbnails: boolean;
   onThumbnailClick: (index: number) => void;
-  favorites: string[];
   type?: string;
 }
 
@@ -20,14 +18,12 @@ export const MediaThumbnails: React.FC<MediaThumbnailsProps> = ({
   currentIndex,
   showThumbnails,
   onThumbnailClick,
-  favorites,
   type = 'image',
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const thumbnailRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const touchStartRef = useRef(0);
   const initialScrollLeftRef = useRef(0);
-  const isFavorite = (imagePath: string) => favorites.includes(imagePath);
 
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
@@ -120,11 +116,6 @@ export const MediaThumbnails: React.FC<MediaThumbnailsProps> = ({
                 : 'opacity-70 hover:opacity-100'
             } cursor-pointer transition-all duration-200 hover:scale-105`}
           >
-            {isFavorite(image.path) && (
-              <div className="absolute top-1 right-1 z-10 rounded-full bg-black/30 p-0.5">
-                <Heart className="h-3 w-3 fill-current text-rose-500" />
-              </div>
-            )}
             <img
               src={convertFileSrc(image.thumbnailPath) || '/placeholder.svg'}
               alt={`thumbnail-${index}`}
