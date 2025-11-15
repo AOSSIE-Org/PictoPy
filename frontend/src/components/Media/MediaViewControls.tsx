@@ -4,9 +4,9 @@ import { Info, Folder, Heart, Play, Pause, X } from 'lucide-react';
 interface MediaViewControlsProps {
   showInfo: boolean;
   onToggleInfo: () => void;
-  onToggleFavorite: () => void;
+  onToggleFavourite: () => void;
   onOpenFolder: () => Promise<void>;
-  isFavorite: boolean;
+  isFavourite: boolean;
   isSlideshowActive: boolean;
   onToggleSlideshow: () => void;
   onClose: () => void;
@@ -16,9 +16,9 @@ interface MediaViewControlsProps {
 export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
   showInfo,
   onToggleInfo,
-  onToggleFavorite,
+  onToggleFavourite,
   onOpenFolder,
-  isFavorite,
+  isFavourite,
   isSlideshowActive,
   onToggleSlideshow,
   onClose,
@@ -45,18 +45,19 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
       >
         <Folder className="h-5 w-5" />
       </button>
-
       <button
-        onClick={onToggleFavorite}
+        onClick={onToggleFavourite}
         className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${
-          isFavorite
+          isFavourite
             ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
             : 'bg-black/50 hover:bg-black/20 hover:text-white hover:shadow-lg'
         }`}
-        aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-        title="Favorites"
+        aria-label={
+          isFavourite ? 'Remove from favourites' : 'Add to favourites'
+        }
+        title="Favourites"
       >
-        <Heart className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`} />
+        <Heart className={`h-5 w-5 ${isFavourite ? 'fill-current' : ''}`} />
       </button>
 
       {type === 'image' && (
