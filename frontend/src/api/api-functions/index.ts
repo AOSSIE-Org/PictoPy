@@ -4,3 +4,4 @@ export * from './images';
 export * from './folders';
 export * from './user_preferences';
 export * from './health';
+export * from './albums';
