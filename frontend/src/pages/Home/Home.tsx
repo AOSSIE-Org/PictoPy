@@ -6,7 +6,6 @@ import {
   MonthMarker,
 } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
-import { Image } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
 import { selectImages } from '@/features/imageSelectors';
 import { fetchAllImages } from '@/api/api-functions';
@@ -79,7 +78,7 @@ export const Home = () => {
 
   const allImages = useMemo(() => {
     if (!data?.pages) return [];
-    return data.pages.flatMap((page) => (page?.data as Image[]) || []);
+    return data.pages.flatMap((page) => page?.data ?? []);
   }, [data?.pages]);
 
   useEffect(() => {

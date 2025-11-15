@@ -1,6 +1,7 @@
 import { imagesEndpoints } from '../apiEndpoints';
 import { apiClient } from '../axiosConfig';
 import { APIResponse } from '@/types/API';
+import { Image } from '@/types/Media';
 
 export interface FetchAllImagesParams {
   tagged?: boolean;
@@ -10,7 +11,7 @@ export interface FetchAllImagesParams {
 
 export const fetchAllImages = async (
   params?: FetchAllImagesParams,
-): Promise<APIResponse> => {
+): Promise<APIResponse<Image[]>> => {
   const queryParams: Record<string, any> = {};
   
   if (params?.tagged !== undefined) {
@@ -23,7 +24,7 @@ export const fetchAllImages = async (
     queryParams.offset = params.offset;
   }
 
-  const response = await apiClient.get<APIResponse>(
+  const response = await apiClient.get<APIResponse<Image[]>>(
     imagesEndpoints.getAllImages,
     { params: queryParams },
   );
