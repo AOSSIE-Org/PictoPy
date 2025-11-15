@@ -20,6 +20,7 @@ import { useSlideshow } from '@/hooks/useSlideshow';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import { useToggleFav } from '../../hooks/useToggleFav';
 import { useLocation } from 'react-router';
+import { ROUTES } from '@/constants/routes';
 
 export function MediaView({
   onClose,
@@ -108,7 +109,7 @@ export function MediaView({
       if (currentImage?.id) {
         toggleFavourite(currentImage.id);
       }
-      if (location.pathname === '/favourites') handleClose();
+      if (location.pathname === ROUTES.FAVOURITES) handleClose();
     }
   }, [currentImage, toggleFavourite]);
 
