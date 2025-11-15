@@ -887,6 +887,45 @@
         }
       }
     },
+    "/images/toggle-favourite": {
+      "post": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Toggle Favourite",
+        "operationId": "toggle_favourite_images_toggle_favourite_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToggleFavouriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/face-clusters/{cluster_id}": {
       "put": {
         "tags": [
@@ -2094,6 +2133,10 @@
             "type": "boolean",
             "title": "Istagged"
           },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
+          },
           "tags": {
             "anyOf": [
               {
@@ -2116,7 +2159,8 @@
           "folder_id",
           "thumbnailPath",
           "metadata",
-          "isTagged"
+          "isTagged",
+          "isFavourite"
         ],
         "title": "ImageData"
       },
@@ -2505,6 +2549,19 @@
           "success"
         ],
         "title": "SyncFolderResponse"
+      },
+      "ToggleFavouriteRequest": {
+        "properties": {
+          "image_id": {
+            "type": "string",
+            "title": "Image Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_id"
+        ],
+        "title": "ToggleFavouriteRequest"
       },
       "UpdateAITaggingData": {
         "properties": {

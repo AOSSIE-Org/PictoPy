@@ -63,6 +63,7 @@ def db_create_images_table() -> None:
             thumbnailPath TEXT UNIQUE,
             metadata TEXT,
             isTagged BOOLEAN DEFAULT 0,
+            isFavourite BOOLEAN DEFAULT 0,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
     """
@@ -143,6 +144,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                 i.thumbnailPath, 
                 i.metadata, 
                 i.isTagged,
+                i.isFavourite,
                 m.name as tag_name
             FROM images i
             LEFT JOIN image_classes ic ON i.id = ic.image_id
@@ -169,6 +171,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
             thumbnail_path,
             metadata,
             is_tagged,
+            is_favourite,
             tag_name,
         ) in results:
             if image_id not in images_dict:
@@ -184,6 +187,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                     "thumbnailPath": thumbnail_path,
                     "metadata": metadata_dict,
                     "isTagged": bool(is_tagged),
+                    "isFavourite": bool(is_favourite),
                     "tags": [],
                 }
 
@@ -386,6 +390,31 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
         return True
     except Exception as e:
         logger.error(f"Error deleting images: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def db_toggle_image_favourite_status(image_id: str) -> bool:
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id FROM images WHERE id = ?", (image_id,))
+        if not cursor.fetchone():
+            return False
+        cursor.execute(
+            """
+            UPDATE images
+            SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
+            WHERE id = ?
+            """,
+            (image_id,),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        logger.error(f"Database error: {e}")
         conn.rollback()
         return False
     finally:

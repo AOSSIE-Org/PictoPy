@@ -1,42 +1,7 @@
 import sqlite3
 import bcrypt
-import time
-from contextlib import contextmanager
 from app.config.settings import DATABASE_PATH
-
-
-@contextmanager
-def get_db_connection():
-    """Context manager for database connections with proper error handling and retries"""
-    max_retries = 3
-    retry_delay = 0.1
-
-    for attempt in range(max_retries):
-        try:
-            conn = sqlite3.connect(DATABASE_PATH, timeout=30.0)
-            # Enable WAL mode for better concurrency
-            conn.execute("PRAGMA journal_mode=WAL")
-            # Set busy timeout
-            conn.execute("PRAGMA busy_timeout=30000")
-            # Enable foreign keys
-            conn.execute("PRAGMA foreign_keys=ON")
-
-            try:
-                yield conn
-                conn.commit()
-            except Exception as e:
-                conn.rollback()
-                raise e
-            finally:
-                conn.close()
-            break
-
-        except sqlite3.OperationalError as e:
-            if "database is locked" in str(e).lower() and attempt < max_retries - 1:
-                time.sleep(retry_delay * (2**attempt))  # Exponential backoff
-                continue
-            else:
-                raise e
+from app.database.connection import get_db_connection
 
 
 def db_create_albums_table() -> None:
