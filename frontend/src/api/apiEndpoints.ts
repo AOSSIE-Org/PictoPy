@@ -1,6 +1,6 @@
 export const imagesEndpoints = {
   getAllImages: '/images/',
-  setfavourite: '/images/toggle-favourite',
+  setFavourite: '/images/toggle-favourite',
 };
 
 export const faceClustersEndpoints = {

@@ -17,7 +17,6 @@ import type { ImageViewerRef } from './ImageViewer';
 // Custom hooks
 import { useImageViewControls } from '@/hooks/useImageViewControls';
 import { useSlideshow } from '@/hooks/useSlideshow';
-import { useFavorites } from '@/hooks/useFavorites';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import { useToggleFav } from '../../hooks/useToggleFav';
 import { useLocation } from 'react-router';
@@ -33,8 +32,6 @@ export function MediaView({
   const currentViewIndex = useSelector(selectCurrentViewIndex);
   const totalImages = images.length;
   // guard: images default to empty array in the signature so `images.length` is safe
-  // keep debug output minimal
-  // console.log(totalImages);
 
   const currentImage = useMemo(() => {
     if (currentViewIndex >= 0 && currentViewIndex < images.length) {
@@ -52,8 +49,6 @@ export function MediaView({
 
   // Custom hooks
   const { viewState, handlers } = useImageViewControls();
-  const { favorites } = useFavorites();
-  const [isfav, setIsfav] = useState(currentImage?.isFavourite || false);
   // Navigation handlers
   const handleNextImage = useCallback(() => {
     if (currentViewIndex < images.length - 1) {
@@ -84,13 +79,6 @@ export function MediaView({
 
   const location = useLocation();
   const { toggleFavourite } = useToggleFav();
-  // handling toogle_favvvvv
-  const handle_favourite_toggle = () => {
-    console.log(location.pathname);
-
-    if (!currentImage?.id) return;
-    toggleFavourite(currentImage?.id);
-  };
 
   // Slideshow functionality
   const { isSlideshowActive, toggleSlideshow } = useSlideshow(
@@ -115,13 +103,14 @@ export function MediaView({
   }, []);
 
   // Hooks that depend on currentImage but always declared
-  const handleToggleFavorite = useCallback(() => {
+  const handleToggleFavourite = useCallback(() => {
     if (currentImage) {
-      setIsfav((prev) => !prev);
-      handle_favourite_toggle();
+      if (currentImage?.id) {
+        toggleFavourite(currentImage.id);
+      }
       if (location.pathname === '/favourites') handleClose();
     }
-  }, [currentImage, isfav]);
+  }, [currentImage, toggleFavourite]);
 
   const handleZoomIn = useCallback(() => {
     imageViewerRef.current?.zoomIn();
@@ -163,8 +152,8 @@ export function MediaView({
       <MediaViewControls
         showInfo={showInfo}
         onToggleInfo={toggleInfo}
-        onToggleFavorite={handleToggleFavorite}
-        isFavorite={isfav}
+        onToggleFavourite={handleToggleFavourite}
+        isFavourite={currentImage.isFavourite || false}
         onOpenFolder={handleOpenFolder}
         isSlideshowActive={isSlideshowActive}
         onToggleSlideshow={toggleSlideshow}
@@ -217,7 +206,6 @@ export function MediaView({
           currentIndex={currentViewIndex}
           showThumbnails={showThumbnails}
           onThumbnailClick={handleThumbnailClick}
-          favorites={favorites}
           type={type}
         />
       </div>

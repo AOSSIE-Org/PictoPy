@@ -7,14 +7,13 @@ import {
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 import { Image } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
-import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { selectImages } from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
-import { showInfoDialog } from '@/features/infoDialogSlice';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { Heart } from 'lucide-react';
+import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 
 export const MyFav = () => {
   const dispatch = useDispatch();
@@ -24,37 +23,29 @@ export const MyFav = () => {
   const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
 
-  const { data, isLoading, isSuccess, isError } = usePictoQuery({
+  const { data, isLoading, isSuccess, isError, error } = usePictoQuery({
     queryKey: ['images'],
     queryFn: () => fetchAllImages(),
     enabled: !isSearchActive,
   });
 
+  useMutationFeedback(
+    { isPending: isLoading, isSuccess, isError, error },
+    {
+      loadingMessage: 'Loading images',
+      showSuccess: false,
+      errorTitle: 'Error',
+      errorMessage: 'Failed to load images. Please try again later.',
+    },
+  );
+
   // Handle fetching lifecycle
   useEffect(() => {
-    if (!isSearchActive) {
-      if (isLoading) {
-        dispatch(showLoader('Loading images'));
-      } else if (isError) {
-        dispatch(hideLoader());
-        dispatch(
-          showInfoDialog({
-            title: 'Error',
-            message: 'Failed to load images. Please try again later.',
-            variant: 'error',
-          }),
-        );
-      } else if (isSuccess) {
-        const images = data?.data as Image[];
-        dispatch(setImages(images));
-        dispatch(hideLoader());
-      }
+    if (!isSearchActive && isSuccess) {
+      const images = data?.data as Image[];
+      dispatch(setImages(images));
     }
-  }, [data, isSuccess, isError, isLoading, dispatch, isSearchActive]);
-
-  // const handleCloseMediaView = () => {
-  //   // MediaView will handle closing via Redux
-  // };
+  }, [data, isSuccess, dispatch, isSearchActive]);
 
   const favouriteImages = useMemo(
     () => images.filter((image) => image.isFavourite === true),

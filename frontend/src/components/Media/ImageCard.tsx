@@ -25,22 +25,15 @@ export function ImageCard({
   onClick,
 }: ImageCardViewProps) {
   const [isImageHovered, setIsImageHovered] = useState(false);
-  const [isfav, setIsfav] = useState(false);
   // Default to empty array if no tags are provided
   const tags = image.tags || [];
   const { toggleFavourite } = useToggleFav();
 
-  const handle_favourite_toggle = () => {
-    if (!image?.id) return;
-    toggleFavourite(image?.id);
-  };
-
-  const handleToggleFavorite = useCallback(() => {
-    if (image) {
-      setIsfav((prev) => !prev);
-      handle_favourite_toggle();
+  const handleToggleFavourite = useCallback(() => {
+    if (image?.id) {
+      toggleFavourite(image.id);
     }
-  }, [image, isfav]);
+  }, [image, toggleFavourite]);
   return (
     <div
       className={cn(
@@ -87,7 +80,7 @@ export function ImageCard({
               onClick={(e) => {
                 console.log(image);
                 e.stopPropagation();
-                handleToggleFavorite();
+                handleToggleFavourite();
               }}
             >
               {image.isFavourite ? (
@@ -95,7 +88,7 @@ export function ImageCard({
               ) : (
                 <Heart className="h-5 w-5" />
               )}
-              <span className="sr-only">Favorite</span>
+              <span className="sr-only">Favourite</span>
             </Button>
 
             <Button

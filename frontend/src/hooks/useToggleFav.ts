@@ -9,6 +9,7 @@ export const useToggleFav = () => {
   });
   useMutationFeedback(toggleFavouriteMutation, {
     showLoading: false,
+    showSuccess: false,
   });
   return {
     toggleFavourite: (id: any) => toggleFavouriteMutation.mutate(id),
