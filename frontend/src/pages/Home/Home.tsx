@@ -1,3 +1,4 @@
+// src/pages/Home/Home.tsx
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -15,6 +16,9 @@ import { RootState } from '@/app/store';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 
+import { ViewModeToggle } from '@/components/ViewModeToggle';
+import { GalleryView } from '@/components/GalleryView';
+
 export const Home = () => {
   const dispatch = useDispatch();
   const images = useSelector(selectImages);
@@ -29,7 +33,6 @@ export const Home = () => {
     enabled: !isSearchActive,
   });
 
-  // Handle fetching lifecycle
   useEffect(() => {
     if (!isSearchActive) {
       if (isLoading) {
@@ -58,25 +61,24 @@ export const Home = () => {
 
   return (
     <div className="relative flex h-full flex-col pr-6">
-      {/* Gallery Section */}
+      <ViewModeToggle />
+
       <div
         ref={scrollableRef}
         className="hide-scrollbar flex-1 overflow-x-hidden overflow-y-auto"
       >
         {images.length > 0 ? (
-          <ChronologicalGallery
-            images={images}
-            showTitle={true}
+          <GalleryView
+            images={images as any}
             title={title}
+            scrollableRef={scrollableRef}
             onMonthOffsetsChange={setMonthMarkers}
-            scrollContainerRef={scrollableRef}
           />
         ) : (
           <EmptyGalleryState />
         )}
       </div>
 
-      {/* Timeline Scrollbar */}
       {monthMarkers.length > 0 && (
         <TimelineScrollbar
           scrollableRef={scrollableRef}
@@ -87,3 +89,5 @@ export const Home = () => {
     </div>
   );
 };
+
+export default Home;
