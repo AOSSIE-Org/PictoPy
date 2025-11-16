@@ -287,6 +287,7 @@ def db_get_all_faces_with_cluster_names() -> (
 
 def db_update_face_cluster_ids_batch(
     face_cluster_mapping: List[Dict[str, Union[FaceId, ClusterId]]],
+    cursor: Optional[sqlite3.Cursor] = None,
 ) -> None:
     """
     Update cluster IDs for multiple faces in batch.
@@ -294,6 +295,7 @@ def db_update_face_cluster_ids_batch(
     Args:
         face_cluster_mapping: List of dictionaries containing face_id and cluster_id pairs
                              Each dict should have keys: 'face_id' and 'cluster_id'
+        cursor: Optional existing database cursor. If None, creates a new connection.
 
     Example:
         face_cluster_mapping = [
@@ -305,8 +307,10 @@ def db_update_face_cluster_ids_batch(
     if not face_cluster_mapping:
         return
 
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    own_connection = cursor is None
+    if own_connection:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
 
     try:
         # Prepare update data as tuples (cluster_id, face_id)
@@ -325,9 +329,16 @@ def db_update_face_cluster_ids_batch(
             update_data,
         )
 
-        conn.commit()
+        if own_connection:
+            conn.commit()
+    except Exception:
+        if own_connection:
+            conn.rollback()
+        print("Error updating face cluster IDs in batch.")
+        raise
     finally:
-        conn.close()
+        if own_connection:
+            conn.close()
 
 
 def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]]]:
