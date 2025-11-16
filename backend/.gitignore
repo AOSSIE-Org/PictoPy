@@ -5,6 +5,13 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+
+
+.sync-env/
+venv/
+.env/
+
+
 # Distribution / packaging
 .Python
 build/
