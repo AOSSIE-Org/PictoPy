@@ -38,7 +38,7 @@
       "requireLiteralLeadingDot": true
     },
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDEzOTBGRjhEM0E3M0U0OUMKUldTYzVITTZqZitRRXdDVmhhMFVhaXkxa0tVUHluZzB6Y0dnRXg0cHMzZHZkMy85MnFKYmFuRzkK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFCNzJEODdBNTdBMzc1NzMKUldSemRhTlhldGh5R3hRSktWUW5rTGN3b0g0T2tPdjM0bjF4NzlEblNvK0VQM1MzbWVKUFBjSEoK",
       "endpoints": [
         "https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/latest.json"
       ]
