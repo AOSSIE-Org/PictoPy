@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   ChronologicalGallery,
@@ -12,12 +12,10 @@ import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
+import { Heart } from 'lucide-react';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 
-import { ViewModeToggle } from '@/components/ViewModeToggle';
-import { GalleryView } from '@/components/GalleryView';
-
-export const Home = () => {
+export const MyFav = () => {
   const dispatch = useDispatch();
   const images = useSelector(selectImages);
   const scrollableRef = useRef<HTMLDivElement>(null);
@@ -31,7 +29,6 @@ export const Home = () => {
     enabled: !isSearchActive,
   });
 
-  //  Keep main branch improvement
   useMutationFeedback(
     { isPending: isLoading, isSuccess, isError, error },
     {
@@ -39,9 +36,10 @@ export const Home = () => {
       showSuccess: false,
       errorTitle: 'Error',
       errorMessage: 'Failed to load images. Please try again later.',
-    }
+    },
   );
 
+  // Handle fetching lifecycle
   useEffect(() => {
     if (!isSearchActive && isSuccess) {
       const images = data?.data as Image[];
@@ -49,31 +47,60 @@ export const Home = () => {
     }
   }, [data, isSuccess, dispatch, isSearchActive]);
 
+  const favouriteImages = useMemo(
+    () => images.filter((image) => image.isFavourite === true),
+    [images],
+  );
+
   const title =
     isSearchActive && images.length > 0
       ? `Face Search Results (${images.length} found)`
-      : 'Image Gallery';
+      : 'Favourite Image Gallery';
+
+  if (favouriteImages.length === 0) {
+    return (
+      <div className="p-6">
+        <h1 className="mb-6 text-2xl font-bold">{title}</h1>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          {/* Heart Icon/Sticker */}
+          <div className="bg-muted/50 mb-6 flex h-32 w-32 items-center justify-center rounded-full">
+            <Heart />
+          </div>
+
+          {/* Text Content */}
+          <h2 className="text-foreground mb-3 text-xl font-semibold">
+            No Favourite Images Yet
+          </h2>
+          <p className="text-muted-foreground mb-6 max-w-md">
+            Start building your collection by marking images as favourites.
+            Click the heart icon on any image to add it here.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex h-full flex-col pr-6">
-      <ViewModeToggle />
-
+      {/* Gallery Section */}
       <div
         ref={scrollableRef}
         className="hide-scrollbar flex-1 overflow-x-hidden overflow-y-auto"
       >
-        {images.length > 0 ? (
-          <GalleryView
-            images={images as any}
+        {favouriteImages.length > 0 ? (
+          <ChronologicalGallery
+            images={favouriteImages}
+            showTitle={true}
             title={title}
-            scrollableRef={scrollableRef}
             onMonthOffsetsChange={setMonthMarkers}
+            scrollContainerRef={scrollableRef}
           />
         ) : (
           <EmptyGalleryState />
         )}
       </div>
 
+      {/* Timeline Scrollbar */}
       {monthMarkers.length > 0 && (
         <TimelineScrollbar
           scrollableRef={scrollableRef}
@@ -81,8 +108,8 @@ export const Home = () => {
           className="absolute top-0 right-0 h-full w-4"
         />
       )}
+
+      {/* Media viewer modal */}
     </div>
   );
 };
-
-export default Home;
