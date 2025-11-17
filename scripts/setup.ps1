@@ -177,7 +177,7 @@ try {
 
     # Install dev dependencies (idempotent)
     npm install --save-dev  prettier prettier-plugin-tailwindcss --no-audit --no-fund
-    npm install pre-commit --save-dev --no-audit --no-fund
+    pip install pre-commit
     git config --local --unset-all core.hooksPath
     pre-commit clear 
     pre-commit install
