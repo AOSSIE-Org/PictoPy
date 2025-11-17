@@ -179,7 +179,7 @@ try {
     npm install --save-dev  prettier prettier-plugin-tailwindcss --no-audit --no-fund
     pip install pre-commit
     git config --local --unset-all core.hooksPath
-    pre-commit clear 
+    pre-commit clean 
     pre-commit install
 
     Write-Host "Node pre-commit installation finished successfully." -ForegroundColor Green
