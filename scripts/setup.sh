@@ -148,10 +148,10 @@ cd ../../
 
 
 echo "Installing Python pre-commit and hook dependencies..."
-apt-get update
-apt-get install -y python3 python3-pip
+sudo apt-get update
+sudo apt-get install -y python3 python3-pip
 
-pip install pre-commit
+sudo pip install pre-commit
 
 echo "Installing Prettier for frontend..."
 npm install --save-dev prettier prettier-plugin-tailwindcss --no-audit --no-fund
