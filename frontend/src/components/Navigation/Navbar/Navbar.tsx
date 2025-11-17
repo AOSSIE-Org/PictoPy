@@ -6,6 +6,7 @@ import { selectAvatar, selectName } from '@/features/onboardingSelectors';
 import { clearSearch } from '@/features/searchSlice';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
+import { useNavigate } from "react-router";
 
 export function Navbar() {
   const userName = useSelector(selectName);
@@ -14,7 +15,8 @@ export function Navbar() {
   const searchState = useSelector((state: any) => state.search);
   const isSearchActive = searchState.active;
   const queryImage = searchState.queryImage;
-
+   
+    const navigate = useNavigate();
   const dispatch = useDispatch();
   return (
     <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur">
@@ -82,13 +84,13 @@ export function Navbar() {
           <span className="hidden text-sm sm:inline-block">
             Welcome <span className="text-muted-foreground">{userName}</span>
           </span>
-          <a href="/settings" className="p-2">
+           <div className="p-2 cursor-pointer" onClick={() => navigate("/settings")}>
             <img
               src={userAvatar || '/photo1.png'}
-              className="hover:ring-primary/50 h-8 w-8 cursor-pointer rounded-full transition-all hover:ring-2"
+              className="hover:ring-primary/50 h-8 w-8 rounded-full transition-all hover:ring-2"
               alt="User avatar"
             />
-          </a>
+          </div>
         </div>
       </div>
     </div>
