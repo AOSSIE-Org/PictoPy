@@ -156,52 +156,41 @@ try {
 #  - if package.json contains "pre-commit" key, we assume the repo uses Node pre-commit.
 #  - install local dev deps (idempotent), then run npx pre-commit install
 # -------------------------
-function Initialize-NodePreCommit {
-    param(
-        [string]$RepoRoot = $PSScriptRoot
-    )
+# -------------------------
+# NODE-BASED pre-commit installer (global hook in package.json)
+# -------------------------
+try {
+    # Go to repo root (parent of scripts/)
+    Set-Location "$PSScriptRoot\.."
 
-    Write-Host "Checking for Node-based pre-commit in $RepoRoot" -ForegroundColor Yellow
-    Push-Location $RepoRoot
-    try {
-        $pkgJson = Join-Path $RepoRoot "package.json"
-        if (-not (Test-Path $pkgJson)) {
-            Write-Host "No package.json found — skipping Node pre-commit installation." -ForegroundColor Cyan
-            return
-        }
+    $RepoRoot = (Get-Location).Path
+    Write-Host "Installing Node pre-commit in repo root: $RepoRoot" -ForegroundColor Yellow
 
-        $pkgText = Get-Content -Path $pkgJson -Raw
-        if ($pkgText -notmatch '"pre-commit"\s*:') {
-            Write-Host 'package.json does not contain a "pre-commit" entry — skipping Node pre-commit install.' -ForegroundColor Cyan
-            return
-        }
-
-        Write-Host "Detected Node-based pre-commit entry in package.json — installing Node pre-commit and common dev dependencies..." -ForegroundColor Green
-
-        # Install pre-commit itself, and common frontend deps used by hooks (idempotent).
-        # Adjust the dependency list to match your repo's actual devDependencies if needed.
-        npm --prefix $RepoRoot install --save-dev pre-commit prettier prettier-plugin-tailwindcss --no-audit --no-fund
-
-        # Clear any existing node-based pre-commit caches/hooks (safe no-op)
-        try {
-            npx --prefix $RepoRoot --no-install pre-commit clear 2>$null
-        } catch {
-            # ignore
-        }
-
-        # Install node-based git hook(s) (creates .git/hooks/pre-commit)
-        npx --prefix $RepoRoot --no-install pre-commit install
-
-        Write-Host "Node pre-commit installation finished." -ForegroundColor Green
-    } catch {
-        Write-Host "Error during Node pre-commit setup: $_" -ForegroundColor Red
-    } finally {
-        Pop-Location
+    # Check package.json exists
+    if (-not (Test-Path "$RepoRoot\package.json")) {
+        Write-Host "No package.json found in repo root - skipping Node pre-commit install." -ForegroundColor Cyan
+        Set-Location $PSScriptRoot
+        return
     }
+
+    Write-Host "Pre-commit installing deps..." -ForegroundColor Green
+
+    # Install dev dependencies (idempotent)
+    npm install --save-dev  prettier prettier-plugin-tailwindcss --no-audit --no-fund
+    npm install pre-commit --save-dev --no-audit --no-fund
+    git config --local --unset-all core.hooksPath
+    pre-commit clear 
+    pre-commit install
+
+    Write-Host "Node pre-commit installation finished successfully." -ForegroundColor Green
+} catch {
+    Write-Host "Error during Node pre-commit setup: $_" -ForegroundColor Red
+} finally {
+    # Always return to scripts/
+    Set-Location $PSScriptRoot
 }
 
-# Run Node pre-commit setup at repo root
-Initialize-NodePreCommit -RepoRoot $PSScriptRoot
+
 
 Write-Host "Windows setup complete!" -ForegroundColor Green
 Write-Host "Please restart your computer to ensure all changes take effect." -ForegroundColor Yellow
