@@ -9,6 +9,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useDispatch } from 'react-redux';
 import { useFile } from '@/hooks/selectFile';
 import { startSearch, clearSearch } from '@/features/searchSlice';
@@ -43,7 +48,7 @@ export function FaceSearchDialog() {
           showInfoDialog({
             title: 'No Matches Found',
             message:
-              'We couldn’t find any matching faces in your gallery for this photo.',
+               "We couldn't find any matching faces in your gallery for this photo.",
             variant: 'info',
           }),
         );
@@ -91,21 +96,29 @@ export function FaceSearchDialog() {
   return (
     <>
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogTrigger asChild>
-          <Button
-            onClick={() => setIsDialogOpen(true)}
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 cursor-pointer p-1"
-          >
-            <ScanFace className="h-4 w-4" />
-            <span className="sr-only">Face Detection Search</span>
-          </Button>
-        </DialogTrigger>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button
+                onClick={() => setIsDialogOpen(true)}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 cursor-pointer p-1"
+                aria-label="Search by face"
+              >
+                <ScanFace className="h-4 w-4" />
+                <span className="sr-only">Search by face</span>
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Search by face</p>
+          </TooltipContent>
+        </Tooltip>
 
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Face Detection Search</DialogTitle>
+            <DialogTitle>Search by Face</DialogTitle>
             <DialogDescription>
               Search for images containing specific faces by uploading a photo
               or using your webcam.

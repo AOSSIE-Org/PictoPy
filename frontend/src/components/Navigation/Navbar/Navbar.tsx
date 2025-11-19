@@ -73,16 +73,7 @@ export function Navbar() {
           />
 
           {/* FaceSearch Dialog */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <FaceSearchDialog />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Search by face</p>
-            </TooltipContent>
-          </Tooltip>
+          <FaceSearchDialog />
 
           {/* Search Button */}
           <Tooltip>
