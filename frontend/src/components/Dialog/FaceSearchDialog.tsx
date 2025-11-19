@@ -48,7 +48,7 @@ export function FaceSearchDialog() {
           showInfoDialog({
             title: 'No Matches Found',
             message:
-               "We couldn't find any matching faces in your gallery for this photo.",
+              "We couldn't find any matching faces in your gallery for this photo.",
             variant: 'info',
           }),
         );
@@ -100,7 +100,6 @@ export function FaceSearchDialog() {
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
               <Button
-                onClick={() => setIsDialogOpen(true)}
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 cursor-pointer p-1"
