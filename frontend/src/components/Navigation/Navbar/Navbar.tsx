@@ -1,52 +1,201 @@
-import { Input } from '@/components/ui/input';
-import { ThemeSelector } from '@/components/ThemeToggle';
-import { Search } from 'lucide-react';
-import { useDispatch, useSelector } from 'react-redux';
-import { selectAvatar, selectName } from '@/features/onboardingSelectors';
-import { clearSearch } from '@/features/searchSlice';
-import { convertFileSrc } from '@tauri-apps/api/core';
-import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
+import React, { useState, useEffect, useRef } from "react";
+import { Input } from "@/components/ui/input";
+import { ThemeSelector } from "@/components/ThemeToggle";
+import { Search, Mic } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { selectAvatar, selectName } from "@/features/onboardingSelectors";
+import { clearSearch } from "@/features/searchSlice";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { FaceSearchDialog } from "@/components/Dialog/FaceSearchDialog";
 
+/* -------------------------------------------------------
+   ERROR DIALOG
+------------------------------------------------------- */
+const ErrorDialog = ({ message, onClose }: { message: string; onClose: () => void }) => (
+  <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    <div className="relative w-full max-w-sm rounded-2xl border border-white/20 bg-white p-6 text-center shadow-2xl dark:border-neutral-700/50 dark:bg-neutral-900">
+      <h2 className="mb-2 text-xl font-semibold text-red-600">Error</h2>
+      <p className="text-sm text-neutral-700 dark:text-neutral-300">{message}</p>
+      <button
+        onClick={onClose}
+        className="absolute top-3 right-3 font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+      >
+        ✕
+      </button>
+    </div>
+  </div>
+);
+
+/* -------------------------------------------------------
+   NAVBAR
+------------------------------------------------------- */
 export function Navbar() {
   const userName = useSelector(selectName);
   const userAvatar = useSelector(selectAvatar);
-
   const searchState = useSelector((state: any) => state.search);
+  const dispatch = useDispatch();
+
   const isSearchActive = searchState.active;
   const queryImage = searchState.queryImage;
 
-  const dispatch = useDispatch();
+  const recognitionRef = useRef<any>(null);
+
+  /* ROUTES */
+  const routeMap: Record<string, string> = {
+    home: "/",
+    albums: "/albums",
+    videos: "/videos",
+    settings: "/settings",
+    "ai-tagging": "/ai-tagging",
+    memories: "/memories",
+    favourites: "/favourites",
+  };
+
+  const suggestionKeys = Object.keys(routeMap);
+
+  /* STATES */
+  const [query, setQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [voiceText, setVoiceText] = useState("Listening...");
+  const [error, setError] = useState<string | null>(null);
+
+  const filtered =
+    query.length > 0
+      ? suggestionKeys.filter((s) =>
+          s.toLowerCase().includes(query.toLowerCase().replace(/\s+/g, "-"))
+        )
+      : [];
+
+  /* NAVIGATION */
+  const goToPage = (label: string) => {
+    dispatch(clearSearch()); // Prevent face search lock
+    const key = label.trim().toLowerCase().replace(/\s+/g, "-");
+    if (routeMap[key]) {
+      window.location.href = routeMap[key];
+    } else {
+      setError(`The page "${label}" does not exist.`);
+    }
+  };
+
+  /* KEYBOARD SUPPORT */
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!filtered.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev + 1) % filtered.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev <= 0 ? filtered.length - 1 : prev - 1));
+    } else if (e.key === "Enter") {
+      if (activeIndex >= 0) {
+        goToPage(filtered[activeIndex]);
+        setActiveIndex(-1);
+      }
+    }
+  };
+
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [query]);
+
+  /* -------------------------------------------------------
+     VOICE SEARCH
+------------------------------------------------------- */
+  const startListening = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      setError("Speech recognition is not supported in your browser.");
+      return;
+    }
+
+    const recog = new SR();
+    recognitionRef.current = recog;
+
+    recog.lang = "en-US";
+    recog.interimResults = false;
+
+    recog.onstart = () => {
+      setVoiceOpen(true);
+      setVoiceText("Listening...");
+    };
+
+    recog.onresult = (e: any) => {
+      const spoken = e.results[0][0].transcript.toLowerCase().trim();
+      setVoiceText(spoken);
+
+      const synonyms: Record<string, string> = {
+        favourite: "favourites",
+        favorites: "favourites",
+        favorite: "favourites",
+        favourites: "favourites",
+        fav: "favourites",
+        playlist: "favourites",
+        memory: "memories",
+        pics: "albums",
+        photos: "albums",
+        pictures: "albums",
+        photo: "albums",
+      };
+
+      let cleaned = spoken.replace(/\s+/g, "-");
+      Object.keys(synonyms).forEach((k) => {
+        if (cleaned.includes(k)) cleaned = synonyms[k];
+      });
+
+      const found = suggestionKeys.find((k) => cleaned.includes(k));
+
+      if (found) {
+        goToPage(found);
+      } else {
+        setError(`No matching page found for "${spoken}".`);
+      }
+
+      setTimeout(() => setVoiceOpen(false), 1000);
+    };
+
+    recog.onerror = () => {
+      setVoiceText("Try again");
+      setTimeout(() => setVoiceOpen(false), 900);
+    };
+
+    recog.start();
+  };
+
+  /* UI */
   return (
-    <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur">
-      {/* Logo */}
-      <div className="flex w-[256px] items-center justify-center">
-        <a href="/" className="flex items-center space-x-2">
-          <img src="/128x128.png" width={32} height={32} alt="PictoPy Logo" />
-          <span className="text-xl font-bold">PictoPy</span>
-        </a>
+    <div className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b bg-white/70 px-4 backdrop-blur dark:bg-black/40">
+      {/* LEFT */}
+      <div className="flex w-[256px] items-center gap-2">
+        <img src="/128x128.png" width={32} height={32} alt="PictoPy Logo" />
+        <span className="text-xl font-bold">PictoPy</span>
       </div>
 
-      {/* Search Bar */}
-      <div className="mx-auto flex max-w-md flex-1 justify-center px-4">
-        <div className="dark:bg-muted/50 flex w-full items-center gap-1 rounded-md bg-neutral-100 px-1 py-1">
-          {/* Query Image */}
+      {/* CENTER */}
+      <div className="relative mx-auto flex max-w-xl flex-1 justify-center px-4">
+        <div className="relative flex w-full items-center gap-3 rounded-full bg-neutral-100 px-3 py-1 shadow dark:bg-neutral-800">
+          <Search className="h-5 w-5 text-neutral-500" />
+          <Input
+            type="search"
+            placeholder="Search or say something..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="flex-1 border-0 bg-transparent"
+          />
+
+          {/* Query image preview */}
           {queryImage && (
-            <div className="relative mr-2 ml-2">
+            <div className="relative">
               <img
-                src={
-                  queryImage?.startsWith('data:')
-                    ? queryImage
-                    : convertFileSrc(queryImage)
-                }
+                src={queryImage.startsWith("data:") ? queryImage : convertFileSrc(queryImage)}
                 alt="Query"
-                className="h-7 w-7 rounded object-cover"
+                className="h-8 w-8 rounded object-cover"
               />
               {isSearchActive && (
                 <button
                   onClick={() => dispatch(clearSearch())}
-                  className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white"
-                  title="Close"
-                  aria-label="Close"
+                  className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center text-[10px] text-white bg-red-600 rounded-full"
                 >
                   ✕
                 </button>
@@ -54,43 +203,68 @@ export function Navbar() {
             </div>
           )}
 
-          {/* Input */}
-          <Input
-            type="search"
-            placeholder="Add to your search"
-            className="mr-2 flex-1 border-0 bg-neutral-200"
-          />
-
-          {/* FaceSearch Dialog */}
-
           <FaceSearchDialog />
 
+          {/* MIC */}
           <button
-            className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
-            title="Search"
-            aria-label="Search"
+            onClick={startListening}
+            aria-label="Start voice search"
+            className="z-50 flex items-center justify-center rounded-full bg-purple-600 p-3 shadow-md hover:bg-purple-700"
           >
-            <Search className="h-4 w-4" />
+            <Mic className="h-6 w-6 text-white" />
           </button>
+
+          {/* DROPDOWN */}
+          {filtered.length > 0 && (
+            <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-xl border bg-white shadow-lg max-h-64 overflow-y-auto dark:bg-neutral-900 dark:border-neutral-700">
+              {filtered.map((key, idx) => (
+                <div
+                  key={key}
+                  className={`cursor-pointer px-4 py-2 capitalize ${
+                    idx === activeIndex
+                      ? "bg-purple-100 text-purple-700 dark:bg-purple-700 dark:text-white"
+                      : "hover:bg-neutral-100 dark:hover:bg-neutral-700"
+                  }`}
+                  onMouseDown={() => goToPage(key)}
+                >
+                  {key}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Right Side */}
-      <div className="flex items-center space-x-4">
+      {/* RIGHT */}
+      <div className="flex items-center gap-4">
         <ThemeSelector />
-        <div className="flex items-center space-x-2">
-          <span className="hidden text-sm sm:inline-block">
-            Welcome <span className="text-muted-foreground">{userName}</span>
-          </span>
-          <a href="/settings" className="p-2">
-            <img
-              src={userAvatar || '/photo1.png'}
-              className="hover:ring-primary/50 h-8 w-8 cursor-pointer rounded-full transition-all hover:ring-2"
-              alt="User avatar"
-            />
-          </a>
-        </div>
+        <span className="hidden sm:inline text-sm">
+          Welcome <span className="text-muted-foreground">{userName}</span>
+        </span>
+        <a href="/settings">
+          <img
+            src={userAvatar || "/photo1.png"}
+            className="h-9 w-9 rounded-full hover:ring-2 hover:ring-purple-500 transition"
+            alt="User avatar"
+          />
+        </a>
       </div>
+
+      {/* error */}
+      {error && <ErrorDialog message={error} onClose={() => setError(null)} />}
+
+      {/* Voice Modal */}
+      {voiceOpen && (
+        <div className="fixed top-40 left-[256px] right-4 z-[2000] flex justify-center">
+          <div className="w-full max-w-sm p-6 rounded-3xl border bg-white text-center shadow-xl dark:bg-black dark:border-neutral-700/50">
+            <Mic className="h-7 w-7 mx-auto text-purple-600" />
+            <p className="mt-3 text-lg font-medium">{voiceText}</p>
+            <p className="text-sm text-neutral-500">Listening...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+export default Navbar;
