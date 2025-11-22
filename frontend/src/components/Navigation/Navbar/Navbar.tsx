@@ -7,7 +7,7 @@ import { selectAvatar, selectName } from "@/features/onboardingSelectors";
 import { clearSearch } from "@/features/searchSlice";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { FaceSearchDialog } from "@/components/Dialog/FaceSearchDialog";
-
+import { VoiceCommand } from "@/components/Dialog/VoiceCommand";
 /* -------------------------------------------------------
    ERROR DIALOG
 ------------------------------------------------------- */
@@ -67,10 +67,14 @@ export function Navbar() {
         )
       : [];
 
-  /* NAVIGATION */
+  /* -------------------------------------------------------
+     FIXED: ALWAYS CLEAR SEARCH BEFORE NAVIGATION
+------------------------------------------------------- */
   const goToPage = (label: string) => {
-    dispatch(clearSearch()); // Prevent face search lock
+    dispatch(clearSearch()); // ⭐ CRITICAL FIX ⭐
+
     const key = label.trim().toLowerCase().replace(/\s+/g, "-");
+
     if (routeMap[key]) {
       window.location.href = routeMap[key];
     } else {
@@ -78,9 +82,10 @@ export function Navbar() {
     }
   };
 
-  /* KEYBOARD SUPPORT */
+  /* KEYBOARD HANDLING */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!filtered.length) return;
+
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setActiveIndex((prev) => (prev + 1) % filtered.length);
@@ -103,7 +108,10 @@ export function Navbar() {
      VOICE SEARCH
 ------------------------------------------------------- */
   const startListening = () => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SR =
+      (window as any).webkitSpeechRecognition ||
+      (window as any).SpeechRecognition;
+
     if (!SR) {
       setError("Speech recognition is not supported in your browser.");
       return;
@@ -121,29 +129,24 @@ export function Navbar() {
     };
 
     recog.onresult = (e: any) => {
-      const spoken = e.results[0][0].transcript.toLowerCase().trim();
+      const spoken = e.results[0][0].transcript.toLowerCase();
       setVoiceText(spoken);
 
-      const synonyms: Record<string, string> = {
-        favourite: "favourites",
-        favorites: "favourites",
-        favorite: "favourites",
-        favourites: "favourites",
-        fav: "favourites",
-        playlist: "favourites",
-        memory: "memories",
-        pics: "albums",
-        photos: "albums",
-        pictures: "albums",
-        photo: "albums",
-      };
+      // PRIORITY: favourites
+      if (
+        spoken.includes("favourite") ||
+        spoken.includes("favorite") ||
+        spoken.includes("favorites") ||
+        spoken.includes("favourites")
+      ) {
+        goToPage("favourites");
+        setTimeout(() => setVoiceOpen(false), 900);
+        return;
+      }
 
-      let cleaned = spoken.replace(/\s+/g, "-");
-      Object.keys(synonyms).forEach((k) => {
-        if (cleaned.includes(k)) cleaned = synonyms[k];
-      });
-
-      const found = suggestionKeys.find((k) => cleaned.includes(k));
+      const found = suggestionKeys.find((k) =>
+        spoken.replace(/\s+/g, "-").includes(k)
+      );
 
       if (found) {
         goToPage(found);
@@ -151,18 +154,20 @@ export function Navbar() {
         setError(`No matching page found for "${spoken}".`);
       }
 
-      setTimeout(() => setVoiceOpen(false), 1000);
+      setTimeout(() => setVoiceOpen(false), 1200);
     };
 
     recog.onerror = () => {
-      setVoiceText("Try again");
-      setTimeout(() => setVoiceOpen(false), 900);
+      setVoiceText("Couldn't understand. Try again.");
+      setTimeout(() => setVoiceOpen(false), 1200);
     };
 
     recog.start();
   };
 
-  /* UI */
+  /* -------------------------------------------------------
+     UI
+------------------------------------------------------- */
   return (
     <div className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b bg-white/70 px-4 backdrop-blur dark:bg-black/40">
       {/* LEFT */}
@@ -173,8 +178,9 @@ export function Navbar() {
 
       {/* CENTER */}
       <div className="relative mx-auto flex max-w-xl flex-1 justify-center px-4">
-        <div className="relative flex w-full items-center gap-3 rounded-full bg-neutral-100 px-3 py-1 shadow dark:bg-neutral-800">
+        <div className="relative flex w-full items-center gap-2 rounded-full bg-neutral-100 px-2 py-1 shadow dark:bg-neutral-800">
           <Search className="h-5 w-5 text-neutral-500" />
+
           <Input
             type="search"
             placeholder="Search or say something..."
@@ -184,18 +190,22 @@ export function Navbar() {
             className="flex-1 border-0 bg-transparent"
           />
 
-          {/* Query image preview */}
+          {/* Query Image Preview */}
           {queryImage && (
             <div className="relative">
               <img
-                src={queryImage.startsWith("data:") ? queryImage : convertFileSrc(queryImage)}
+                src={
+                  queryImage.startsWith("data:")
+                    ? queryImage
+                    : convertFileSrc(queryImage)
+                }
                 alt="Query"
                 className="h-8 w-8 rounded object-cover"
               />
               {isSearchActive && (
                 <button
                   onClick={() => dispatch(clearSearch())}
-                  className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center text-[10px] text-white bg-red-600 rounded-full"
+                  className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] text-white"
                 >
                   ✕
                 </button>
@@ -216,7 +226,7 @@ export function Navbar() {
 
           {/* DROPDOWN */}
           {filtered.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-xl border bg-white shadow-lg max-h-64 overflow-y-auto dark:bg-neutral-900 dark:border-neutral-700">
+            <div className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-xl border bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900">
               {filtered.map((key, idx) => (
                 <div
                   key={key}
@@ -238,25 +248,25 @@ export function Navbar() {
       {/* RIGHT */}
       <div className="flex items-center gap-4">
         <ThemeSelector />
-        <span className="hidden sm:inline text-sm">
+        <span className="hidden text-sm sm:inline">
           Welcome <span className="text-muted-foreground">{userName}</span>
         </span>
         <a href="/settings">
           <img
             src={userAvatar || "/photo1.png"}
+            alt="User"
             className="h-9 w-9 rounded-full hover:ring-2 hover:ring-purple-500 transition"
-            alt="User avatar"
           />
         </a>
       </div>
 
-      {/* error */}
+      {/* ERROR */}
       {error && <ErrorDialog message={error} onClose={() => setError(null)} />}
 
-      {/* Voice Modal */}
+      {/* VOICE MODAL */}
       {voiceOpen && (
-        <div className="fixed top-40 left-[256px] right-4 z-[2000] flex justify-center">
-          <div className="w-full max-w-sm p-6 rounded-3xl border bg-white text-center shadow-xl dark:bg-black dark:border-neutral-700/50">
+        <div className="fixed top-40 right-4 left-[256px] z-[2000] flex justify-center">
+          <div className="relative w-full max-w-sm rounded-3xl border bg-white p-6 text-center shadow-xl dark:bg-black dark:border-neutral-700/50">
             <Mic className="h-7 w-7 mx-auto text-purple-600" />
             <p className="mt-3 text-lg font-medium">{voiceText}</p>
             <p className="text-sm text-neutral-500">Listening...</p>
