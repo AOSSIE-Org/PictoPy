@@ -12,16 +12,11 @@ import { VoiceCommand } from "@/components/Dialog/VoiceCommand";
    ERROR DIALOG
 ------------------------------------------------------- */
 const ErrorDialog = ({ message, onClose }: { message: string; onClose: () => void }) => (
-  <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-    <div className="relative w-full max-w-sm rounded-2xl border border-white/20 bg-white p-6 text-center shadow-2xl dark:border-neutral-700/50 dark:bg-neutral-900">
+  <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 p-4 backdrop-blur-md">
+    <div className="relative w-full max-w-sm rounded-2xl border bg-white dark:bg-neutral-900 p-6 shadow-xl">
+      <button onClick={onClose} className="absolute top-2 right-3 text-xl font-bold">✕</button>
       <h2 className="mb-2 text-xl font-semibold text-red-600">Error</h2>
       <p className="text-sm text-neutral-700 dark:text-neutral-300">{message}</p>
-      <button
-        onClick={onClose}
-        className="absolute top-3 right-3 font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-      >
-        ✕
-      </button>
     </div>
   </div>
 );
@@ -40,7 +35,6 @@ export function Navbar() {
 
   const recognitionRef = useRef<any>(null);
 
-  /* ROUTES */
   const routeMap: Record<string, string> = {
     home: "/",
     albums: "/albums",
@@ -53,7 +47,6 @@ export function Navbar() {
 
   const suggestionKeys = Object.keys(routeMap);
 
-  /* STATES */
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
   const [voiceOpen, setVoiceOpen] = useState(false);
@@ -67,12 +60,8 @@ export function Navbar() {
         )
       : [];
 
-  /* -------------------------------------------------------
-     FIXED: ALWAYS CLEAR SEARCH BEFORE NAVIGATION
-------------------------------------------------------- */
   const goToPage = (label: string) => {
-    dispatch(clearSearch()); // ⭐ CRITICAL FIX ⭐
-
+    dispatch(clearSearch());
     const key = label.trim().toLowerCase().replace(/\s+/g, "-");
 
     if (routeMap[key]) {
@@ -82,7 +71,6 @@ export function Navbar() {
     }
   };
 
-  /* KEYBOARD HANDLING */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!filtered.length) return;
 
@@ -92,55 +80,46 @@ export function Navbar() {
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveIndex((prev) => (prev <= 0 ? filtered.length - 1 : prev - 1));
-    } else if (e.key === "Enter") {
-      if (activeIndex >= 0) {
-        goToPage(filtered[activeIndex]);
-        setActiveIndex(-1);
-      }
+    } else if (e.key === "Enter" && activeIndex >= 0) {
+      goToPage(filtered[activeIndex]);
+      setActiveIndex(-1);
     }
   };
 
-  useEffect(() => {
-    setActiveIndex(-1);
-  }, [query]);
+  useEffect(() => setActiveIndex(-1), [query]);
 
-  /* -------------------------------------------------------
-     VOICE SEARCH
-------------------------------------------------------- */
   const startListening = () => {
+    setVoiceOpen(true);
+    setQuery("");       // HIDE suggestions
+    setActiveIndex(-1); // RESET dropdown selection
+
     const SR =
       (window as any).webkitSpeechRecognition ||
       (window as any).SpeechRecognition;
 
     if (!SR) {
       setError("Speech recognition is not supported in your browser.");
+      setVoiceOpen(false);
       return;
     }
 
     const recog = new SR();
     recognitionRef.current = recog;
-
     recog.lang = "en-US";
     recog.interimResults = false;
-
-    recog.onstart = () => {
-      setVoiceOpen(true);
-      setVoiceText("Listening...");
-    };
 
     recog.onresult = (e: any) => {
       const spoken = e.results[0][0].transcript.toLowerCase();
       setVoiceText(spoken);
 
-      // PRIORITY: favourites
       if (
-        spoken.includes("favourite") ||
         spoken.includes("favorite") ||
+        spoken.includes("favourite") ||
         spoken.includes("favorites") ||
         spoken.includes("favourites")
       ) {
         goToPage("favourites");
-        setTimeout(() => setVoiceOpen(false), 900);
+        setTimeout(() => setVoiceOpen(false), 800);
         return;
       }
 
@@ -148,128 +127,90 @@ export function Navbar() {
         spoken.replace(/\s+/g, "-").includes(k)
       );
 
-      if (found) {
-        goToPage(found);
-      } else {
-        setError(`No matching page found for "${spoken}".`);
-      }
-
-      setTimeout(() => setVoiceOpen(false), 1200);
+      found ? goToPage(found) : setError(`No matching page found for "${spoken}".`);
+      setTimeout(() => setVoiceOpen(false), 1000);
     };
 
     recog.onerror = () => {
-      setVoiceText("Couldn't understand. Try again.");
-      setTimeout(() => setVoiceOpen(false), 1200);
+      setVoiceText("Try again");
+      setTimeout(() => setVoiceOpen(false), 800);
     };
 
     recog.start();
   };
 
-  /* -------------------------------------------------------
-     UI
-------------------------------------------------------- */
   return (
-    <div className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b bg-white/70 px-4 backdrop-blur dark:bg-black/40">
-      {/* LEFT */}
-      <div className="flex w-[256px] items-center gap-2">
-        <img src="/128x128.png" width={32} height={32} alt="PictoPy Logo" />
+    <div className="sticky top-0 z-50 flex h-14 w-full items-center justify-between border-b bg-white/60 px-4 backdrop-blur-md dark:bg-black/60">
+      <a href="/" className="flex items-center gap-2">
+        <img src="/128x128.png" width={32} height={32} />
         <span className="text-xl font-bold">PictoPy</span>
-      </div>
+      </a>
 
-      {/* CENTER */}
-      <div className="relative mx-auto flex max-w-xl flex-1 justify-center px-4">
-        <div className="relative flex w-full items-center gap-2 rounded-full bg-neutral-100 px-2 py-1 shadow dark:bg-neutral-800">
+      <div className="relative mx-auto w-full max-w-lg flex-1">
+        <div className="flex items-center gap-2 rounded-full bg-neutral-100 px-3 py-1 shadow dark:bg-neutral-800">
           <Search className="h-5 w-5 text-neutral-500" />
 
           <Input
-            type="search"
-            placeholder="Search or say something..."
+            placeholder="Search or speak…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 border-0 bg-transparent"
+            className="flex-1 border-0 bg-transparent focus-visible:ring-0"
           />
-
-          {/* Query Image Preview */}
-          {queryImage && (
-            <div className="relative">
-              <img
-                src={
-                  queryImage.startsWith("data:")
-                    ? queryImage
-                    : convertFileSrc(queryImage)
-                }
-                alt="Query"
-                className="h-8 w-8 rounded object-cover"
-              />
-              {isSearchActive && (
-                <button
-                  onClick={() => dispatch(clearSearch())}
-                  className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] text-white"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          )}
 
           <FaceSearchDialog />
 
-          {/* MIC */}
           <button
             onClick={startListening}
-            aria-label="Start voice search"
-            className="z-50 flex items-center justify-center rounded-full bg-purple-600 p-3 shadow-md hover:bg-purple-700"
+            className="rounded-full bg-purple-600 p-2 hover:bg-purple-700"
           >
-            <Mic className="h-6 w-6 text-white" />
+            <Mic className="h-5 w-5 text-white" />
           </button>
-
-          {/* DROPDOWN */}
-          {filtered.length > 0 && (
-            <div className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-xl border bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900">
-              {filtered.map((key, idx) => (
-                <div
-                  key={key}
-                  className={`cursor-pointer px-4 py-2 capitalize ${
-                    idx === activeIndex
-                      ? "bg-purple-100 text-purple-700 dark:bg-purple-700 dark:text-white"
-                      : "hover:bg-neutral-100 dark:hover:bg-neutral-700"
-                  }`}
-                  onMouseDown={() => goToPage(key)}
-                >
-                  {key}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
+
+        {/* Suggestions appear ONLY if voice dialog is closed */}
+        {!voiceOpen && filtered.length > 0 && (
+          <div className="absolute top-full w-full z-50 mt-1 rounded-xl border bg-white shadow-xl dark:bg-neutral-900">
+            {filtered.map((key, idx) => (
+              <div
+                key={key}
+                onMouseDown={() => goToPage(key)}
+                className={`px-4 py-2 cursor-pointer capitalize ${
+                  idx === activeIndex
+                    ? "bg-purple-200 dark:bg-purple-700"
+                    : "hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                }`}
+              >
+                {key}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* RIGHT */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <ThemeSelector />
-        <span className="hidden text-sm sm:inline">
+        <span className="hidden sm:inline text-sm">
           Welcome <span className="text-muted-foreground">{userName}</span>
         </span>
         <a href="/settings">
           <img
             src={userAvatar || "/photo1.png"}
-            alt="User"
-            className="h-9 w-9 rounded-full hover:ring-2 hover:ring-purple-500 transition"
+            className="h-8 w-8 rounded-full hover:ring-2 hover:ring-purple-500"
           />
         </a>
       </div>
 
-      {/* ERROR */}
       {error && <ErrorDialog message={error} onClose={() => setError(null)} />}
 
-      {/* VOICE MODAL */}
       {voiceOpen && (
-        <div className="fixed top-40 right-4 left-[256px] z-[2000] flex justify-center">
-          <div className="relative w-full max-w-sm rounded-3xl border bg-white p-6 text-center shadow-xl dark:bg-black dark:border-neutral-700/50">
+        <div className="fixed top-28 left-0 right-0 flex justify-center z-[2000]">
+          <div className="relative max-w-sm w-full rounded-3xl p-6 bg-white border shadow-xl dark:bg-neutral-900">
+            <button className="absolute top-3 right-4 text-xl font-bold" onClick={() => setVoiceOpen(false)}>
+              ✕
+            </button>
             <Mic className="h-7 w-7 mx-auto text-purple-600" />
-            <p className="mt-3 text-lg font-medium">{voiceText}</p>
-            <p className="text-sm text-neutral-500">Listening...</p>
+            <p className="mt-3 text-lg font-medium text-center">{voiceText}</p>
           </div>
         </div>
       )}
