@@ -11,7 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-14"
+          - platform: "macos-latest"
             args: "--target aarch64-apple-darwin"
           - platform: "ubuntu-22.04"
             args: ""
@@ -42,16 +42,16 @@ jobs:
           cd frontend
           npm install
 
-      - name: cache cargo registry and build
-        uses: actions/cache@v3
-        with:
-          path: |
-            frontend/src-tauri/target
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('frontend/src-tauri/Cargo.lock', 'frontend/src-tauri/Cargo.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
+      # - name: cache cargo registry and build
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: |
+      #       frontend/src-tauri/target
+      #       ~/.cargo/registry
+      #       ~/.cargo/git
+      #     key: ${{ runner.os }}-cargo-${{ hashFiles('frontend/src-tauri/Cargo.lock') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-cargo-
 
       - uses: tauri-apps/tauri-action@v0
         env:
