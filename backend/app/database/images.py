@@ -351,7 +351,7 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
         logger.error(f"Error deleting images: {e}")
         return False
 
-      
+
 def db_toggle_image_favourite_status(image_id: str) -> bool:
     try:
         with get_db_connection() as conn:
@@ -376,4 +376,3 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
     except Exception as e:
         logger.error(f"Database error: {e}")
         return False
-
