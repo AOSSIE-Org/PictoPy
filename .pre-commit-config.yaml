@@ -1,12 +1,27 @@
 repos:
+  # --- Python: Ruff (lint + fix) ---
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     rev: "v0.0.241"
     hooks:
       - id: ruff
         args: [--fix]
+        files: ^backend/
 
+  # --- Python: Black (formatter) ---
   - repo: https://github.com/psf/black
     rev: "22.3.0"
     hooks:
       - id: black
         language_version: python3
+        files: ^backend/
+
+# --- Frontend Prettier ---
+  - repo: local
+    hooks:
+      - id: prettier-frontend
+        name: Run Prettier (frontend)
+        entry: bash -c 'FILES=$(echo "$@" | sed "s|frontend/||g") && cd frontend && npx prettier --write $FILES' --
+        language: system
+        files: ^frontend/.*\.(ts|tsx|json)$
+        pass_filenames: true
+        always_run: false
