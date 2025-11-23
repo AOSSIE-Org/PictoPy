@@ -350,3 +350,30 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
     except Exception as e:
         logger.error(f"Error deleting images: {e}")
         return False
+
+      
+def db_toggle_image_favourite_status(image_id: str) -> bool:
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT id FROM images WHERE id = ?", (image_id,))
+            if not cursor.fetchone():
+                return False
+
+            cursor.execute(
+                """
+                UPDATE images
+                SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
+                WHERE id = ?
+                """,
+                (image_id,),
+            )
+
+            conn.commit()
+            return cursor.rowcount > 0
+
+    except Exception as e:
+        logger.error(f"Database error: {e}")
+        return False
+
