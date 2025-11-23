@@ -29,12 +29,14 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
 }) => {
   const { setTheme, theme } = useTheme();
   const dispatch = useDispatch<AppDispatch>();
+  const [hasMarkedCompleted, setHasMarkedCompleted] = React.useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem('themeChosen')) {
+    if (!hasMarkedCompleted && localStorage.getItem('themeChosen')) {
+      setHasMarkedCompleted(true);
       dispatch(markCompleted(stepIndex));
     }
-  }, []);
+  }, [hasMarkedCompleted, dispatch, stepIndex]);
   const handleThemeChange = (value: 'light' | 'dark' | 'system') => {
     setTheme(value);
   };

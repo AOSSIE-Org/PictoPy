@@ -65,6 +65,8 @@ export const ServerCheck: React.FC<ServerCheckProps> = ({ stepIndex }) => {
     syncMicroserviceSuccess,
     syncMicroserviceLoading,
     syncMicroserviceError,
+    dispatch,
+    stepIndex,
   ]);
   return null;
 };

@@ -29,12 +29,14 @@ export function FolderSetupStep({
 
   // Local state for folders
   const [folder, setFolder] = useState<string>('');
+  const [hasMarkedCompleted, setHasMarkedCompleted] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem('folderChosen') === 'true') {
+    if (!hasMarkedCompleted && localStorage.getItem('folderChosen') === 'true') {
+      setHasMarkedCompleted(true);
       dispatch(markCompleted(stepIndex));
     }
-  }, []);
+  }, [hasMarkedCompleted, dispatch, stepIndex]);
 
   const { pickSingleFolder, addFolderMutate } = useFolder({
     title: 'Select folder to import photos from',
