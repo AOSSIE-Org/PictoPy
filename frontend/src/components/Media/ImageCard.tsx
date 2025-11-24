@@ -7,6 +7,10 @@ import { Image } from '@/types/Media';
 import { ImageTags } from './ImageTags';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { useToggleFav } from '@/hooks/useToggleFav';
+import { useDispatch, useSelector } from 'react-redux';
+import { toggleImageSelection } from '@/store/slices/selectionSlice';
+import { RootState } from '@/app/store';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface ImageCardViewProps {
   image: Image;
@@ -24,30 +28,62 @@ export function ImageCard({
   showTags = true,
   onClick,
 }: ImageCardViewProps) {
+  const dispatch = useDispatch();
   const [isImageHovered, setIsImageHovered] = useState(false);
   // Default to empty array if no tags are provided
   const tags = image.tags || [];
   const { toggleFavourite } = useToggleFav();
+  
+  const { selectedImageIds, isSelectionMode } = useSelector(
+    (state: RootState) => state.selection
+  );
+  const isImageSelected = selectedImageIds.includes(image.id);
 
   const handleToggleFavourite = useCallback(() => {
     if (image?.id) {
       toggleFavourite(image.id);
     }
   }, [image, toggleFavourite]);
+
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    dispatch(toggleImageSelection(image.id));
+  };
+
+  const handleCardClick = () => {
+    if (isSelectionMode) {
+      dispatch(toggleImageSelection(image.id));
+    } else if (onClick) {
+      onClick();
+    }
+  };
   return (
     <div
       className={cn(
         'group bg-card cursor-pointer overflow-hidden rounded-lg border transition-all hover:shadow-md',
-        isSelected ? 'ring-2 ring-[#4088fa]' : '',
+        isSelected || isImageSelected ? 'ring-2 ring-[#4088fa]' : '',
         className,
       )}
       onMouseEnter={() => setIsImageHovered(true)}
       onMouseLeave={() => setIsImageHovered(false)}
-      onClick={onClick}
+      onClick={handleCardClick}
     >
       <div className="relative">
+        {/* Selection checkbox in selection mode */}
+        {isSelectionMode && (
+          <div
+            className="absolute top-2 left-2 z-10"
+            onClick={handleCheckboxClick}
+          >
+            <Checkbox
+              checked={isImageSelected}
+              className="h-5 w-5 bg-white border-2 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+            />
+          </div>
+        )}
+        
         {/* Selection tick mark */}
-        {isSelected && (
+        {isSelected && !isSelectionMode && (
           <div className="absolute top-2 right-2 z-10 rounded-full bg-[#4088fa] p-1">
             <Check className="h-4 w-4 text-white" />
           </div>
