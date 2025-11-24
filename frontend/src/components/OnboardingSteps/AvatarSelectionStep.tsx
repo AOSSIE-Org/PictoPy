@@ -67,12 +67,12 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
             <span>
               Step {stepIndex + 1} of {totalSteps}
             </span>
-            <span>{Math.round(((stepIndex + 1) / totalSteps) * 100)}%</span>
+            <span>{Math.min(100, Math.round(((stepIndex + 1) / totalSteps) * 100))}%</span>
           </div>
           <div className="bg-muted mb-2 h-1.5 w-full rounded-full">
             <div
               className="bg-primary h-full rounded-full transition-all duration-300"
-              style={{ width: `${((stepIndex + 1) / totalSteps) * 100}%` }}
+              style={{ width: `${Math.min(100, ((stepIndex + 1) / totalSteps) * 100)}%` }}
             />
           </div>
           <CardTitle className="mt-1 text-xl font-semibold">
