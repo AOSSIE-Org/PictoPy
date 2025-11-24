@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  ChronologicalGallery,
+  // ChronologicalGallery,
   MonthMarker,
 } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';

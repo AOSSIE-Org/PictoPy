@@ -1,10 +1,14 @@
 // src/components/GalleryView.tsx
 
-import { useSelector } from 'react-redux';
+import { useCallback } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { RootState } from '@/app/store';
 import { ChronologicalGallery, MonthMarker } from '@/components/Media/ChronologicalGallery';
 import type { Image as MediaImage } from '@/types/Media';
+import { setCurrentViewIndex } from '@/features/imageSlice';
+import { selectIsImageViewOpen } from '@/features/imageSelectors';
+import { MediaView } from '@/components/Media/MediaView';
 
 /**
  * This component is tolerant of different Image shapes:
@@ -67,7 +71,16 @@ export const GalleryView: React.FC<Props> = ({
   scrollableRef,
   onMonthOffsetsChange,
 }) => {
+  const dispatch = useDispatch();
   const mode = useSelector((s: RootState) => s.viewMode.mode);
+  const isImageViewOpen = useSelector(selectIsImageViewOpen);
+
+  const handleImageClick = useCallback(
+    (index: number) => {
+      dispatch(setCurrentViewIndex(index));
+    },
+    [dispatch],
+  );
 
   // Use chronological gallery (if present) for that mode
   if (mode === 'chronological') {
@@ -86,11 +99,21 @@ export const GalleryView: React.FC<Props> = ({
   // GRID
   if (mode === 'grid') {
     return (
+      <>
       <div className="p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-        {images.map((img) => (
+        {images.map((img, index) => (
           <div
             key={String(img.id)}
             className="relative rounded overflow-hidden border dark:border-gray-700 hover:shadow-md transition bg-white dark:bg-gray-900"
+            role="button"
+            tabIndex={0}
+            onClick={() => handleImageClick(index)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleImageClick(index);
+              }
+            }}
           >
             <img
               src={getImageSrc(img)}
@@ -103,17 +126,29 @@ export const GalleryView: React.FC<Props> = ({
           </div>
         ))}
       </div>
+      {isImageViewOpen && <MediaView images={images as MediaImage[]} />}
+      </>
     );
   }
 
   // LIST
   if (mode === 'list') {
     return (
+      <>
       <div className="p-3 space-y-3">
-        {images.map((img) => (
+        {images.map((img, index) => (
           <div
             key={String(img.id)}
             className="flex items-center gap-4 p-2 rounded-md border dark:border-gray-700 bg-white dark:bg-gray-900"
+            role="button"
+            tabIndex={0}
+            onClick={() => handleImageClick(index)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleImageClick(index);
+              }
+            }}
           >
             <div className="w-24 h-24 flex-shrink-0 rounded overflow-hidden bg-gray-100 dark:bg-gray-800">
               <img
@@ -141,17 +176,29 @@ export const GalleryView: React.FC<Props> = ({
           </div>
         ))}
       </div>
+      {isImageViewOpen && <MediaView images={images as MediaImage[]} />}
+      </>
     );
   }
 
  // MASONRY
 if (mode === 'masonry') {
   return (
+    <>
     <div className="p-3 columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4">
-      {images.map((img) => (
+      {images.map((img, index) => (
         <div
           key={String(img.id)}
           className="break-inside-avoid mb-4 overflow-hidden rounded shadow-sm bg-white dark:bg-gray-900 border dark:border-gray-700"
+          role="button"
+          tabIndex={0}
+          onClick={() => handleImageClick(index)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleImageClick(index);
+            }
+          }}
         >
           {/* IMAGE should control the card height fully */}
           <img
@@ -173,6 +220,8 @@ if (mode === 'masonry') {
         </div>
       ))}
     </div>
+    {isImageViewOpen && <MediaView images={images as MediaImage[]} />}
+    </>
   );
 }
 
