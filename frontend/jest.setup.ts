@@ -16,3 +16,15 @@ class ResizeObserver {
 }
 
 (global as any).ResizeObserver = ResizeObserver;
+
+// Mock import.meta for Jest
+Object.defineProperty(global, 'import', {
+  value: {
+    meta: {
+      env: {
+        VITE_BACKEND_URL: 'http://localhost:8000',
+      },
+    },
+  },
+  writable: true,
+});

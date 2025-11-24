@@ -1,11 +1,14 @@
 import { Input } from '@/components/ui/input';
 import { ThemeSelector } from '@/components/ThemeToggle';
-import { Search } from 'lucide-react';
+import { Search, CheckSquare } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
 import { clearSearch } from '@/features/searchSlice';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
+import { Button } from '@/components/ui/button';
+import { setSelectionMode } from '@/store/slices/selectionSlice';
+import { RootState } from '@/app/store';
 
 export function Navbar() {
   const userName = useSelector(selectName);
@@ -14,6 +17,8 @@ export function Navbar() {
   const searchState = useSelector((state: any) => state.search);
   const isSearchActive = searchState.active;
   const queryImage = searchState.queryImage;
+  
+  const { isSelectionMode } = useSelector((state: RootState) => state.selection);
 
   const dispatch = useDispatch();
   return (
@@ -77,6 +82,15 @@ export function Navbar() {
 
       {/* Right Side */}
       <div className="flex items-center space-x-4">
+        <Button
+          variant={isSelectionMode ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => dispatch(setSelectionMode(!isSelectionMode))}
+          className="gap-2"
+        >
+          <CheckSquare className="h-4 w-4" />
+          {isSelectionMode ? 'Cancel' : 'Select'}
+        </Button>
         <ThemeSelector />
         <div className="flex items-center space-x-2">
           <span className="hidden text-sm sm:inline-block">

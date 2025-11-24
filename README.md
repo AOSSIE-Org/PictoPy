@@ -32,13 +32,15 @@ Handles file system operations and provides a secure bridge between the frontend
 
 ## Features
 
-- Smart tagging of photos based on detected objects, faces, and their recognition
-- Traditional gallery features of album management
-- Advanced image analysis with object detection and facial recognition
-- Privacy-focused design with offline functionality
-- Efficient data handling and parallel processing
-- Smart search and retrieval
-- Cross-platform compatibility
+- **Smart Tagging**: Automatic photo tagging based on detected objects, faces, and their recognition
+- **Batch Operations**: Select multiple images and perform bulk actions (delete, tag, move to album, export)
+- **Album Management**: Traditional gallery features for organizing your photos
+- **Advanced Image Analysis**: Object detection and facial recognition powered by AI
+- **Privacy-Focused**: Offline functionality with all processing done locally
+- **Efficient Processing**: Parallel processing for handling large photo collections
+- **Smart Search**: Quick retrieval with advanced search capabilities
+- **Cross-Platform**: Works on Windows, macOS, and Linux
+- **Keyboard Shortcuts**: Ctrl+A to toggle select/deselect all, Escape to deselect (works on all platforms including Mac)
 
 ## Technical Stack
 

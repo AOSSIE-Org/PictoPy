@@ -14,6 +14,8 @@ import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { Heart } from 'lucide-react';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { BatchToolbar } from '@/components/Batch/BatchToolbar';
+import { useBatchKeyboard } from '@/hooks/useBatchKeyboard';
 
 export const MyFav = () => {
   const dispatch = useDispatch();
@@ -56,6 +58,10 @@ export const MyFav = () => {
     isSearchActive && images.length > 0
       ? `Face Search Results (${images.length} found)`
       : 'Favourite Image Gallery';
+
+  // Enable batch keyboard shortcuts
+  const allImageIds = favouriteImages.map((img) => img.id);
+  useBatchKeyboard(allImageIds);
 
   if (favouriteImages.length === 0) {
     return (
@@ -109,7 +115,8 @@ export const MyFav = () => {
         />
       )}
 
-      {/* Media viewer modal */}
+      {/* Batch Operations Toolbar */}
+      <BatchToolbar />
     </div>
   );
 };
