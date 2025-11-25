@@ -12,15 +12,25 @@ import {
   Bolt,
   Home,
   Sparkles,
+  Heart,
   Video,
   BookImage,
   ClockFading,
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router';
 import { ROUTES } from '@/constants/routes';
+import { getVersion } from '@tauri-apps/api/app';
+import { useEffect, useState } from 'react';
 
 export function AppSidebar() {
   const location = useLocation();
+  const [version, setVersion] = useState<string>('1.0.0');
+
+  useEffect(() => {
+    getVersion().then((version) => {
+      setVersion(version);
+    });
+  }, []);
 
   const isActive = (path: string) => {
     // Remove leading slash from both paths for comparison
@@ -38,6 +48,7 @@ export function AppSidebar() {
   const menuItems = [
     { name: 'Home', path: `/${ROUTES.HOME}`, icon: Home },
     { name: 'AI Tagging', path: `/${ROUTES.AI}`, icon: Sparkles },
+    { name: 'Favourites', path: `/${ROUTES.FAVOURITES}`, icon: Heart },
     { name: 'Videos', path: `/${ROUTES.VIDEOS}`, icon: Video },
     { name: 'Albums', path: `/${ROUTES.ALBUMS}`, icon: BookImage },
     { name: 'Memories', path: `/${ROUTES.MEMORIES}`, icon: ClockFading },
@@ -75,7 +86,7 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="border-border/40 mt-auto border-t py-4">
         <div className="text-muted-foreground space-y-1 px-4 text-xs">
-          <div className="font-medium">PictoPy v1.0.0</div>
+          <div className="font-medium">PictoPy v{version}</div>
           <div>© 2025 PictoPy</div>
         </div>
       </SidebarFooter>
