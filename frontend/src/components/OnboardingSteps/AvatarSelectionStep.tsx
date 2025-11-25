@@ -32,12 +32,14 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
   const [name, setLocalName] = useState('');
   const [selectedAvatar, setLocalAvatar] = useState('');
+  const [hasMarkedCompleted, setHasMarkedCompleted] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem('name') && localStorage.getItem('avatar')) {
+    if (!hasMarkedCompleted && localStorage.getItem('name') && localStorage.getItem('avatar')) {
+      setHasMarkedCompleted(true);
       dispatch(markCompleted(stepIndex));
     }
-  }, []);
+  }, [hasMarkedCompleted, dispatch, stepIndex]);
 
   const handleAvatarSelect = (avatar: string) => {
     setLocalAvatar(avatar);
