@@ -2,7 +2,7 @@
 
 ## Frontend
 
-For the frontend of our application, we use Tauri in combination with React. This allows us to create a desktop application with a web-based user interface. React handles the UI components and user interactions, while Tauri provides the bridge between our web-based frontend and Rust-based backend.
+For the frontend of our application, we use Tauri in combination with React. This enables us to create a desktop application with a web-based user interface. React handles the UI components and user interactions, while Tauri provides the bridge between our web-based frontend and Rust-based backend.
 
 Key points:
 

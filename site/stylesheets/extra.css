@@ -1,0 +1,353 @@
+.md-typeset .admonition-title {
+  margin-bottom: 10px;
+  
+}
+
+.md-header__button.md-logo img {
+  width: 34px;
+  height: auto;
+}
+
+.md-header__button.md-logo {
+  display: flex;
+  align-items: center;
+
+  padding-right: 0;     
+  margin-right: 0;      
+}
+ 
+.md-header__title {
+  margin-left: 8px !important;  
+}
+
+/* Responsive tweaks: ensure header, images, tables and code blocks behave well on small screens */
+
+/* Make images scale down to container */
+.md-typeset img,
+.md-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Tables should be scrollable on small screens */
+.md-typeset table {
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+}
+
+/* Code blocks should wrap/scroll gracefully */
+.md-typeset pre {
+  white-space: pre-wrap; /* allow wrapping */
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+/* General container/content spacing adjustments for smaller screens */
+.md-main, .md-content {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Tablet and small laptop */
+@media (max-width: 768px) {
+  .md-header__button.md-logo img {
+    width: 28px;
+    height: auto;
+  }
+
+  .md-header__button.md-logo {
+    padding-right: 6px;
+    margin-right: 6px;
+  }
+
+  .md-header__title {
+    margin-left: 6px !important;
+    font-size: 1rem;
+    white-space: normal;
+  }
+
+  /* Allow header inner area to wrap so items don't overflow */
+  .md-header__inner {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Slightly reduce padding for main content */
+  .md-main {
+    padding: 0.5rem 0.75rem;
+  }
+
+  /* Make navigation easier to tap */
+  .md-nav {
+    margin-top: 8px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .md-header__button.md-logo img {
+    width: 24px;
+  }
+
+  .md-header__title {
+    font-size: 0.95rem;
+  }
+
+  .md-header__title a {
+    font-size: 0.95rem;
+  }
+
+  /* Ensure actions align to the right and don't push content */
+  .md-header__actions {
+    margin-left: auto;
+  }
+
+  .md-nav {
+    font-size: 0.95rem;
+  }
+
+  .md-content {
+    padding: 0.75rem;
+  }
+
+  .md-typeset .admonition-title {
+    font-size: 0.95rem;
+  }
+}
+
+/* Specific fix for the home page's 4-column inline HTML layout in docs/index.md.
+   The page uses inline styles (display:flex and width:25% on children). These rules
+   add wrapping and force child blocks to become full-width on narrow screens.
+*/
+.md-typeset > div[style*="display:flex"] {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  gap: 0.5rem;
+}
+
+.md-typeset > div[style*="display:flex"] > div {
+  width: 25% !important;
+  box-sizing: border-box !important;
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+}
+
+@media (max-width: 900px) {
+  /* On tablets and small laptops, use two columns */
+  .md-typeset > div[style*="display:flex"] > div {
+    width: 50% !important;
+  }
+}
+
+@media (max-width: 540px) {
+  /* On phones, make each section full-width (stack vertically) */
+  .md-typeset > div[style*="display:flex"] > div {
+    width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .md-typeset > div[style*="display:flex"] h2 {
+    text-align: left;
+    margin-left: 0.25rem;
+  }
+}
+
+/* Swagger UI / OpenAPI responsive fixes */
+/* The API page includes a <swagger-ui> web component whose internal layout
+   can overflow on small screens. These rules make summaries wrap and ensure
+   panels and code samples are scrollable instead of overlapping. */
+.swagger-ui,
+.swagger-ui * {
+  box-sizing: border-box;
+}
+
+.swagger-ui .topbar {
+  flex-wrap: wrap;
+}
+
+.swagger-ui .info .title,
+.swagger-ui .info .description {
+  word-break: break-word;
+}
+
+.swagger-ui .opblock-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.swagger-ui .opblock .opblock-summary-method,
+.swagger-ui .opblock .opblock-summary-path {
+  white-space: normal;
+}
+
+/* Make operations and parameters area scroll horizontally instead of overlapping */
+.swagger-ui .opblock-body,
+.swagger-ui .parameters {
+  overflow-x: auto;
+}
+
+/* Ensure code samples are responsive */
+.swagger-ui pre, .swagger-ui code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Smaller devices: stack operation summary elements and increase spacing */
+@media (max-width: 720px) {
+  .swagger-ui .opblock-summary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .swagger-ui .opblock .opblock-summary-path {
+    font-size: 0.95rem;
+  }
+}
+
+/* Redoc-specific fixes in case the component renders Redoc */
+.redoc-wrap, .redoc {
+  max-width: 100%;
+}
+.redoc .menu-content, .redoc .operations-wrapper {
+  overflow-x: auto;
+}
+
+/* Scoped: Force a 500px "fixed" layout only for the Python backend API page.
+   The wrapper `.api-500-wrapper` is added to `docs/backend/backend_python/api.md`.
+   Only this page will use a 500px min-width and allow horizontal scrolling on
+   very small viewports so other pages remain normal.
+*/
+@media (max-width: 500px) {
+  .api-500-wrapper {
+    min-width: 500px !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+  }
+
+  /* Ensure Swagger/Redoc components inside the wrapper respect the min-width */
+  .api-500-wrapper .swagger-ui,
+  .api-500-wrapper .redoc,
+  .api-500-wrapper .redoc-wrap {
+    min-width: 500px !important;
+  }
+
+  /* Keep code blocks and tables inside the API wrapper readable; they will scroll inside the pane */
+  .api-500-wrapper table,
+  .api-500-wrapper pre,
+  .api-500-wrapper code {
+    min-width: 500px;
+    overflow-x: auto;
+  }
+}
+
+/* When API page is active, also constrain header/footer to the same 500px
+   so the entire visible page appears as a 500px layout (header/footer included).
+   This is only applied when the body has the `.api-fixed-500` class which is
+   added by a small inline script on the API page. */
+@media (max-width: 500px) {
+  body.api-fixed-500 {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Constrain header, main and footer to the same 500px pane so they appear
+     consistent when the API page forces a fixed layout on small viewports. */
+  body.api-fixed-500 .md-header,
+  body.api-fixed-500 header,
+  body.api-fixed-500 .md-main,
+  body.api-fixed-500 .md-footer,
+  body.api-fixed-500 footer {
+    width: 500px !important;
+    min-width: 500px !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+  }
+
+  /* Ensure inner containers within header/footer stretch to the 500px width */
+  body.api-fixed-500 .md-header__inner,
+  body.api-fixed-500 .md-footer__inner,
+  body.api-fixed-500 .md-footer-nav,
+  body.api-fixed-500 .md-footer__copyright {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Adjust header inner alignment so actions remain visible within the 500px pane */
+  body.api-fixed-500 .md-header__inner {
+    justify-content: space-between;
+  }
+
+  /* Center the wrapper itself */
+  .api-500-wrapper {
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Center the social container itself */
+  .md-social,
+  .md-footer .md-social {
+    text-align: center !important;
+    display: block !important;
+  }
+
+  /* Center copyright text */
+  .md-copyright,
+  .md-footer .md-footer__copyright {
+    text-align: center !important;
+    display: block !important;
+  }
+
+  /* Keep social links inline and add small horizontal spacing */
+  .md-social a,
+  .md-footer .md-social a {
+    display: inline-block !important;
+    margin: 0 0.25rem !important;
+    vertical-align: middle !important;
+  }
+}
+
+\
+.md-footer-meta__inner.md-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.25rem !important;
+  text-align: center !important;
+}
+
+.md-footer-meta__inner.md-grid .md-social {
+  display: block !important;
+}
+
+.md-footer-meta__inner.md-grid .md-social a {
+  display: inline-block !important;
+  margin: 0 0.25rem !important;
+}
+
+/* Center only the copyright line without affecting social icons */
+.md-footer .md-copyright,
+.md-footer-meta__inner.md-grid .md-copyright {
+  display: block !important;
+  width: 100% !important;
+  text-align: center !important;
+  margin: 0.25rem 0 !important;
+}
+
+.md-footer .md-social,
+.md-footer-meta__inner.md-grid .md-social {
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+
+
+
+
+
