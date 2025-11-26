@@ -1304,6 +1304,48 @@
           }
         }
       }
+    },
+    "/share": {
+      "post": {
+        "tags": [
+          "Share"
+        ],
+        "summary": "Share Image",
+        "description": "Log image share action (frontend handles actual sharing).",
+        "operationId": "share_image_share_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2424,6 +2466,59 @@
           "success"
         ],
         "title": "RenameClusterResponse"
+      },
+      "ShareData": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "ShareData"
+      },
+      "ShareRequest": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "title": "ShareRequest"
+      },
+      "ShareResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ShareData"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "success",
+          "message"
+        ],
+        "title": "ShareResponse"
       },
       "SuccessResponse": {
         "properties": {
