@@ -13,8 +13,8 @@ YOLOv11 takes your image and runs it through its model. It figures out what obje
 The result is a list of objects, their locations, and how confident the model is about each detection. If a `person` class is predicted we pass it on
 to the face detection model which we discuss in the next section.
 
-???+ tip "Fun Fact"
-YOLO stands for "You Only Look Once". We use the model provided by [Ultralytics](https://github.com/ultralytics/ultralytics) by default.
+???+ tip "Tip"
+    YOLO stands for "You Only Look Once". We use the model provided by [Ultralytics](https://github.com/ultralytics/ultralytics) by default.
 
 ## Face Detection and Recognition
 
@@ -24,13 +24,13 @@ We start with a special version of YOLOv11 that's really good at finding faces. 
 (by cropping it to `160x160` - the shape FaceNet expects) and pass it to our FaceNet model.
 FaceNet then creates a unique 'embedding' for each face, the representation of the face in a form of numbers.
 
-???+ tip "Fun Fact"
-We use another YOLOv11 model for this as well by default. This was pretrained on top of the one provided by Ultralytics and is called
-[yolov11-face](https://github.com/akanametov/yolo-face)
+???+ tip "Tip"
+    We use another YOLOv11 model for this as well by default. This was pretrained on top of the one provided by Ultralytics and is called
+    [yolov11-face](https://github.com/akanametov/yolo-face)
 
 ???+ note "What's an embedding?"
-An embedding is a bunch of numbers that represent the face. Similar faces will have similar numbers. FaceNet creates a
-512-dimensional embedding array for each detected face in the image.
+    An embedding is a bunch of numbers that represent the face. Similar faces will have similar numbers. FaceNet creates a
+    512-dimensional embedding array for each detected face in the image.
 
 ## Face Clustering
 
@@ -47,7 +47,7 @@ All this information gets stored in our database so we can find it later.
 
 ## Under the Hood
 
-We're using ONNX runtime to run our AI models quickly. Everything's stored in SQLite databases, making it easy to manage.
+We're using ONNX runtime (Open Neural Network Exchange) to run our AI models quickly. Everything's stored in SQLite databases, making it easy to manage.
 The system updates clusters as you add or remove photos, so it keeps getting smarter over time.
 
 ## PictoPy Model Parameters
@@ -88,3 +88,38 @@ Here are some key parameters for the main models used in PictoPy's image process
 | `metric`      | "cosine" | Distance metric used for clustering                                                        |
 
 Note: Some of these values are default parameters and can be adjusted when initializing the models or during runtime, depending on the specific use case or performance requirements.
+
+### Visual Diagram Representation Of the Flow 
+
+```mermaid
+flowchart TD
+
+    A["Input Image"]
+
+    B["YOLOv11 Object Detection<br/>bounding boxes<br/>scores<br/>class IDs"]
+
+    Z["Store object metadata"]
+
+    C{"Person class detected?"}
+
+    D["YOLOv11 Face Detection"]
+
+    E["Crop face to 160×160"]
+
+    F["FaceNet 512-d embedding"]
+
+    G["DBSCAN (clustering)"]
+
+    H["Store clusters & metadata"]
+
+    A --> B
+    B --> Z
+    B --> C
+    C -->|No| Z
+    C -->|Yes| D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+```
+

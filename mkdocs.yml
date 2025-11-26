@@ -20,6 +20,7 @@ theme:
     - content.code.annotation
     - content.code.copy
     - navigation.footer
+    - content.diagrams
   language: en
   palette:
     - scheme: default
@@ -50,7 +51,12 @@ markdown_extensions:
       generic: true
   - footnotes
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
   - pymdownx.mark
   - attr_list
 
