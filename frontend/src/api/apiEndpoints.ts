@@ -30,3 +30,8 @@ export const userPreferencesEndpoints = {
 export const healthEndpoints = {
   healthCheck: '/health',
 };
+
+// Share Endpoints 
+export const shareEndpoints={
+  shareImage:'/share',
+}
