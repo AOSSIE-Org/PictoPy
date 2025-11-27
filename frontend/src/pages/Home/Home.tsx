@@ -14,39 +14,40 @@ import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 
-// NEW IMPORTS FOR TEXT SEARCH
+// TEXT SEARCH
 import { useImageSearch } from '@/hooks/useImageSearch';
 
 export const Home = () => {
   const dispatch = useDispatch();
   const images = useSelector(selectImages);
+
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
 
-  // SEARCH STATE
+  // GLOBAL SEARCH STATE
   const searchState = useSelector((state: RootState) => state.search);
-  const isTextSearchActive = searchState.active && searchState.type === 'text';
-  const searchQuery = searchState.query || '';
-  const isFaceSearchActive = searchState.active && searchState.type === 'face';
+  const isTextSearchActive = searchState.active && searchState.type === "text";
+  const isFaceSearchActive = searchState.active && searchState.type === "face";
+  const searchQuery = searchState.query || "";
 
-  // FETCH NORMAL IMAGES WHEN NO SEARCH
+  // NORMAL FETCH — disabled during search
   const { data, isLoading, isSuccess, isError, error } = usePictoQuery({
-    queryKey: ['images'],
+    queryKey: ["images"],
     queryFn: () => fetchAllImages(),
-    enabled: !searchState.active, // disable when ANY search is active
+    enabled: !searchState.active,
   });
 
-  // TEXT SEARCH HOOK
+  // TEXT SEARCH FETCH
   const {
     data: searchData,
     isLoading: searchLoading,
     isSuccess: searchSuccess,
   } = useImageSearch(searchQuery, isTextSearchActive);
 
-  // LOADING STATUS
+  // LOADING MERGE
   const finalLoading = isTextSearchActive ? searchLoading : isLoading;
 
-  // FEEDBACK HANDLER
+  // FEEDBACK
   useMutationFeedback(
     {
       isPending: finalLoading,
@@ -54,40 +55,40 @@ export const Home = () => {
       isError,
       error,
     },
-
     {
-      loadingMessage: 'Loading images',
+      loadingMessage: "Loading images",
       showSuccess: false,
-      errorTitle: 'Error',
-      errorMessage: 'Failed to load images. Please try again later.',
-    },
+      errorTitle: "Error",
+      errorMessage: "Failed to load images. Please try again later.",
+    }
   );
 
-  // UPDATE IMAGES ON TEXT SEARCH OR NORMAL FETCH
+  // UPDATE IMAGES BASED ON STATE
   useEffect(() => {
+    // Text search active
     if (isTextSearchActive && searchSuccess) {
-      const images = searchData?.data as Image[];
+      const images = (searchData?.data || []) as Image[];
+      if (!Array.isArray(images)) {
+        console.error("Invalid search data format");
+        return;
+      }
       dispatch(setImages(images));
-    } else if (!searchState.active && isSuccess) {
-      const images = data?.data as Image[];
+      return;
+    }
+
+    // No search → normal image fetch
+    if (!searchState.active && isSuccess) {
+      const images = (data?.data || []) as Image[];
       dispatch(setImages(images));
     }
-  }, [
-    dispatch,
-    isTextSearchActive,
-    searchSuccess,
-    searchData,
-    searchState.active,
-    data,
-    isSuccess,
-  ]);
+  }, [dispatch, searchData, data]);
 
   // TITLE
   const title = isTextSearchActive
     ? `Search Results for "${searchQuery}" (${images.length} found)`
     : isFaceSearchActive && images.length > 0
-      ? `Face Search Results (${images.length} found)`
-      : 'Image Gallery';
+    ? `Face Search Results (${images.length} found)`
+    : "Image Gallery";
 
   return (
     <div className="relative flex h-full flex-col pr-6">
