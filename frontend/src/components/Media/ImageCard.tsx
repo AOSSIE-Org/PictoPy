@@ -115,7 +115,7 @@ export function ImageCard({
                     : 'bg-white/10 hover:bg-white/20 hover:shadow-lg'
                 }`}
                 onClick={(e) => {
-                  console.log(image);
+                  
                   e.stopPropagation();
                   handleToggleFavourite();
                 }}
