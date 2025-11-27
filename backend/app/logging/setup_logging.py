@@ -247,7 +247,7 @@ class InterceptHandler(logging.Handler):
         logger = get_logger(module_name)
 
         # Log the message with our custom formatting
-        logger.log(record.levelno, f"[uvicorn] {msg}")
+        print(f"[uvicorn] {msg}")
 
 
 def configure_uvicorn_logging(component_name: str) -> None:
