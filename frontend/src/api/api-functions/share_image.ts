@@ -2,19 +2,19 @@ import { shareEndpoints } from "../apiEndpoints";
 import { apiClient } from "../axiosConfig";
 import { APIResponse } from "@/types/API";
 
-interface ShareImageRequest{
-    path: string;
+interface ShareImageRequest {
+    image_id: string;  // Changed to string to match backend
 }
 
-interface ShareImageData{
+interface ShareImageData {
     message: string;
     success: boolean;
 }
 
-export const shareImage = async(path: string): Promise<APIResponse> => {
+export const shareImage = async (imageId: string): Promise<ShareImageData> => {
     const response = await apiClient.post<APIResponse>(
         shareEndpoints.shareImage, 
-        {path} as ShareImageRequest
+        { image_id: imageId } as ShareImageRequest
     );
     return response.data.data as ShareImageData;
 }

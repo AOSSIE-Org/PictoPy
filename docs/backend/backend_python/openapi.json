@@ -1311,7 +1311,7 @@
           "Share"
         ],
         "summary": "Share Image",
-        "description": "Log image share action (frontend handles actual sharing).",
+        "description": "Log image share action using image ID (frontend handles actual sharing).\nSecurity: Uses database lookup instead of trusting client-supplied paths.",
         "operationId": "share_image_share_post",
         "requestBody": {
           "content": {
@@ -2487,14 +2487,14 @@
       },
       "ShareRequest": {
         "properties": {
-          "path": {
+          "image_id": {
             "type": "string",
-            "title": "Path"
+            "title": "Image Id"
           }
         },
         "type": "object",
         "required": [
-          "path"
+          "image_id"
         ],
         "title": "ShareRequest"
       },

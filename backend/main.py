@@ -133,7 +133,7 @@ app.include_router(
 app.include_router(
     user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
 )
-app.include_router(image_share_router, prefix="", tags=["Share"])
+app.include_router(image_share_router, prefix="/share", tags=["Share"])
 
 
 # Entry point for running with: python3 main.py

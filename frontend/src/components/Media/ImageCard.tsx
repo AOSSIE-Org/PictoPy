@@ -38,36 +38,37 @@ export function ImageCard({
     }
   }, [image, toggleFavourite]);
 
-  const handleShare = useCallback(
-    async (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation();
+ const handleShare = useCallback(
+  async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
 
-      try {
-        const imagePath = image.path || image.thumbnailPath;
-
-        if (!imagePath) {
-          console.error('No image path available');
-          alert('Error: No image path available');
-          return;
-        }
-
-        // Call backend API for logging
-        try {
-          await shareImage(imagePath);
-          console.log('Backend share API called');
-        } catch (error) {
-          console.warn('Backend API failed, continuing:', error);
-        }
-
-        // Open share modal
-        setIsShareModalOpen(true);
-      } catch (error) {
-        console.error('Share error:', error);
-        alert('Failed to open share dialog');
+    try {
+      // Validate image ID exists
+      if (!image?.id) {
+        console.error('No image ID available');
+        alert('Error: Image ID not available');
+        return;
       }
-    },
-    [image],
-  );
+
+      // Call backend API with image ID (secure approach - validates against database)
+      try {
+        await shareImage(image.id);
+        
+      } catch (error) {
+        console.error('Backend validation failed:', error);
+        alert('Failed to validate image for sharing');
+        return;
+      }
+
+      // Open share modal
+      setIsShareModalOpen(true);
+    } catch (error) {
+      console.error('Share error:', error);
+      alert('Failed to open share dialog');
+    }
+  },
+  [image],
+);
 
   return (
     <>

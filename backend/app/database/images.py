@@ -360,6 +360,50 @@ def db_get_images_by_folder_ids(
     finally:
         conn.close()
 
+def db_get_image_by_id(image_id: str) -> dict | None:
+    """
+    Get a single image by its ID.
+    
+    Args:
+        image_id: ID of the image to retrieve
+
+    Returns:
+        dict: Image data including path, thumbnailPath etc if found, None otherwise
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT id, path, folder_id, thumbnailPath, metadata, isTagged, isFavourite
+            FROM images 
+            WHERE id = ?
+            """, 
+            (image_id,)
+        )
+        row = cursor.fetchone()
+        
+        if row:
+            from app.utils.images import image_util_parse_metadata
+            metadata_dict = image_util_parse_metadata(row[4])
+            
+            return {
+                "id": row[0],
+                "path": row[1],
+                "folder_id": str(row[2]) if row[2] else None,
+                "thumbnailPath": row[3],
+                "metadata": metadata_dict,
+                "isTagged": bool(row[5]),
+                "isFavourite": bool(row[6]),
+            }
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error getting image by ID {image_id}: {e}")
+        return None
+    finally:
+        cursor.close()
+        conn.close()
 
 def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
     """
