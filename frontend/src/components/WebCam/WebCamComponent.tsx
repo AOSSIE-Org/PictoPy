@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useDispatch } from 'react-redux';
-import { startSearch, clearSearch } from '@/features/searchSlice';
+import { startFaceSearch, clearSearch } from '@/features/searchSlice';
 import type { Image } from '@/types/Media';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { fetchSearchedFacesBase64 } from '@/api/api-functions';
@@ -79,7 +79,7 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
   const handleSearchCapturedImage = () => {
     onClose();
     if (capturedImageUrl) {
-      dispatch(startSearch(capturedImageUrl));
+      dispatch(startFaceSearch(capturedImageUrl));
       getSearchImagesBase64.mutate(capturedImageUrl);
     } else {
       dispatch(
