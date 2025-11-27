@@ -6,6 +6,7 @@ from app.utils.images import image_util_parse_metadata
 from pydantic import BaseModel
 from app.database.images import db_toggle_image_favourite_status
 from app.logging.setup_logging import get_logger
+from app.database.images import db_search_images
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -84,6 +85,71 @@ def get_all_images(
                 success=False,
                 error="Internal server error",
                 message=f"Unable to retrieve images: {str(e)}",
+            ).model_dump(),
+        )
+
+
+@router.get(
+    "/search",
+    response_model=GetAllImagesResponse,
+    responses={400: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+)
+def search_images(
+    query: str = Query(..., min_length=1, description="Search query string"),
+    tagged: Optional[bool] = Query(None, description="Filter by tagged status"),
+):
+    """
+    Search images by:
+    - AI tags (YOLO detected classes)
+    - Metadata (location, path, etc.)
+    - Filename (image path)
+
+    Note:
+    Face cluster search is not supported because the current database schema
+    does not include face_clusters.
+    """
+    try:
+        if not query or not query.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Validation Error",
+                    message="Search query cannot be empty",
+                ).model_dump(),
+            )
+
+        images = db_search_images(query.strip(), tagged=tagged)
+
+        image_data = [
+            ImageData(
+                id=image["id"],
+                path=image["path"],
+                folder_id=image["folder_id"],
+                thumbnailPath=image["thumbnailPath"],
+                metadata=image_util_parse_metadata(image["metadata"]),
+                isTagged=image["isTagged"],
+                isFavourite=image.get("isFavourite", False),
+                tags=image["tags"],
+            )
+            for image in images
+        ]
+
+        return GetAllImagesResponse(
+            success=True,
+            message=f"Found {len(image_data)} images matching '{query}'",
+            data=image_data,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Unable to search images: {str(e)}",
             ).model_dump(),
         )
 
