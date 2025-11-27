@@ -14,22 +14,47 @@ import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 
+// NEW IMPORTS FOR TEXT SEARCH
+import { useImageSearch } from '@/hooks/useImageSearch';
+
 export const Home = () => {
   const dispatch = useDispatch();
   const images = useSelector(selectImages);
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
-  const searchState = useSelector((state: RootState) => state.search);
-  const isSearchActive = searchState.active;
 
+  // SEARCH STATE
+  const searchState = useSelector((state: RootState) => state.search);
+  const isTextSearchActive = searchState.active && searchState.type === 'text';
+  const searchQuery = searchState.query || '';
+  const isFaceSearchActive = searchState.active && searchState.type === 'face';
+
+  // FETCH NORMAL IMAGES WHEN NO SEARCH
   const { data, isLoading, isSuccess, isError, error } = usePictoQuery({
     queryKey: ['images'],
     queryFn: () => fetchAllImages(),
-    enabled: !isSearchActive,
+    enabled: !searchState.active, // disable when ANY search is active
   });
 
+  // TEXT SEARCH HOOK
+  const {
+    data: searchData,
+    isLoading: searchLoading,
+    isSuccess: searchSuccess,
+  } = useImageSearch(searchQuery, isTextSearchActive);
+
+  // LOADING STATUS
+  const finalLoading = isTextSearchActive ? searchLoading : isLoading;
+
+  // FEEDBACK HANDLER
   useMutationFeedback(
-    { isPending: isLoading, isSuccess, isError, error },
+    {
+      isPending: finalLoading,
+      isSuccess: isTextSearchActive ? searchSuccess : isSuccess,
+      isError,
+      error,
+    },
+
     {
       loadingMessage: 'Loading images',
       showSuccess: false,
@@ -38,15 +63,29 @@ export const Home = () => {
     },
   );
 
+  // UPDATE IMAGES ON TEXT SEARCH OR NORMAL FETCH
   useEffect(() => {
-    if (!isSearchActive && isSuccess) {
+    if (isTextSearchActive && searchSuccess) {
+      const images = searchData?.data as Image[];
+      dispatch(setImages(images));
+    } else if (!searchState.active && isSuccess) {
       const images = data?.data as Image[];
       dispatch(setImages(images));
     }
-  }, [data, isSuccess, dispatch, isSearchActive]);
+  }, [
+    dispatch,
+    isTextSearchActive,
+    searchSuccess,
+    searchData,
+    searchState.active,
+    data,
+    isSuccess,
+  ]);
 
-  const title =
-    isSearchActive && images.length > 0
+  // TITLE
+  const title = isTextSearchActive
+    ? `Search Results for "${searchQuery}" (${images.length} found)`
+    : isFaceSearchActive && images.length > 0
       ? `Face Search Results (${images.length} found)`
       : 'Image Gallery';
 
