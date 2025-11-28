@@ -3,10 +3,10 @@ from typing import List, Literal
 
 
 class FolderTaggingInfo(BaseModel):
-    """Individual folder tagging information schema."""
-
     folder_id: str = Field(..., description="Unique identifier for the folder")
     folder_path: str = Field(..., description="Path to the folder")
+    total_images: int = Field(..., ge=0, description="Total number of images in folder")  
+    tagged_images: int = Field(..., ge=0, description="Number of tagged images")  
     tagging_percentage: float = Field(
         ...,
         ge=0,
