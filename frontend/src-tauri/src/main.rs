@@ -22,7 +22,11 @@ fn main() {
             println!("Resource path: {:?}", resource_path);
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![services::get_server_path,])
+        .invoke_handler(tauri::generate_handler![
+            services::get_server_path,
+            services::create_zip_from_images,
+            services::open_file_location,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
