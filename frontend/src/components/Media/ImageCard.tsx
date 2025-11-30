@@ -1,12 +1,20 @@
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Check, Heart, Share2 } from 'lucide-react';
+import { Check, Heart, Share2, Copy, FileArchive, FolderOpen } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { Image } from '@/types/Media';
 import { ImageTags } from './ImageTags';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { useToggleFav } from '@/hooks/useToggleFav';
+import { useImageShare } from '@/hooks/useImageShare';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface ImageCardViewProps {
   image: Image;
@@ -28,12 +36,28 @@ export function ImageCard({
   // Default to empty array if no tags are provided
   const tags = image.tags || [];
   const { toggleFavourite } = useToggleFav();
+  const { exportAsZip, copyPathToClipboard, openFileLocation, isSharing } = useImageShare();
 
   const handleToggleFavourite = useCallback(() => {
     if (image?.id) {
       toggleFavourite(image.id);
     }
   }, [image, toggleFavourite]);
+
+  const handleExportAsZip = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await exportAsZip(image);
+  }, [image, exportAsZip]);
+
+  const handleCopyPath = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await copyPathToClipboard(image);
+  }, [image, copyPathToClipboard]);
+
+  const handleOpenLocation = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await openFileLocation(image);
+  }, [image, openFileLocation]);
   return (
     <div
       className={cn(
@@ -91,17 +115,37 @@ export function ImageCard({
               <span className="sr-only">Favourite</span>
             </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="cursor-pointer rounded-full bg-white/20 text-white hover:!bg-white/40 hover:!text-white"
-              onClick={(e) => e.stopPropagation()}
-              title="Share"
-              aria-label="Share"
-            >
-              <Share2 className="h-5 w-5" />
-              <span className="sr-only">Share</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="cursor-pointer rounded-full bg-white/20 text-white hover:!bg-white/40 hover:!text-white focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-white/40"
+                  onClick={(e) => e.stopPropagation()}
+                  title="Share"
+                  aria-label="Share"
+                  disabled={isSharing}
+                >
+                  <Share2 className="h-5 w-5" />
+                  <span className="sr-only">Share</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleExportAsZip} className="cursor-pointer">
+                  <FileArchive className="mr-2 h-4 w-4" />
+                  Export as ZIP
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleOpenLocation} className="cursor-pointer">
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  Open File Location
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCopyPath} className="cursor-pointer">
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy Path
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </AspectRatio>
 
