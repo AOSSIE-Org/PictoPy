@@ -11,7 +11,7 @@ export interface ImageMetadata {
 }
 
 export interface Image {
-  name: any;
+  name?: string;
   id: string;
   path: string;
   thumbnailPath: string;
