@@ -38,7 +38,7 @@ const CollagePreview: React.FC<CollagePreviewProps> = ({
             >
               <img
                 src={img}
-                alt="collage-item"
+                alt={`Collage image ${index + 1}`}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -50,3 +50,4 @@ const CollagePreview: React.FC<CollagePreviewProps> = ({
 };
 
 export default CollagePreview;
+
