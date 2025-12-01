@@ -31,7 +31,7 @@ class FaceDetector:
             logger.error(f"Failed to load image: {image_path}")
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid or unreadable image file: {image_path}"
+                detail="Invalid or unreadable image file"   # <-- sanitized
             )
 
         boxes, scores, class_ids = self.yolo_detector(img)
