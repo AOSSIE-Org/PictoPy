@@ -1,5 +1,3 @@
-# app/detectors/FaceDetector.py
-
 import cv2
 from fastapi import HTTPException   # <-- added
 
