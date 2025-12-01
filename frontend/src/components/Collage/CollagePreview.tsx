@@ -1,4 +1,3 @@
-// CollagePreview.tsx
 import React from "react";
 import { LayoutType, getLayout } from "./layouts";
 
@@ -12,12 +11,14 @@ const CollagePreview: React.FC<CollagePreviewProps> = ({
   layout,
 }) => {
   const config = getLayout(layout);
-  const showImages = images.slice(0, config.maxImages);
+  
+  // FIX: Constrain images to the lesser of maxImages or available placements array length (Addressing placement error)
+  const showImages = images.slice(0, Math.min(config.maxImages, config.placements.length));
 
   return (
-    <div className="w-full h-[420px] rounded-2xl overflow-hidden p-4 bg-white shadow-2xl border border-gray-100">
+    <div className="w-full h-[420px] rounded-xl overflow-hidden p-2 bg-white">
       <div
-        className="grid h-full w-full gap-3"
+        className="grid h-full w-full gap-2"
         style={{
           gridTemplateColumns: `repeat(${config.cols}, 1fr)`,
           gridTemplateRows: `repeat(${config.rows}, 1fr)`,
@@ -33,14 +34,13 @@ const CollagePreview: React.FC<CollagePreviewProps> = ({
                 gridColumn: `${p.colStart} / ${p.colEnd}`,
                 gridRow: `${p.rowStart} / ${p.rowEnd}`,
               }}
-              className="rounded-lg overflow-hidden bg-white shadow-lg transition duration-300 transform hover:scale-[1.02] hover:shadow-2xl relative"
+              className="rounded-xl overflow-hidden bg-gray-100"
             >
               <img
                 src={img}
                 alt="collage-item"
-                className="w-full h-full object-cover transition duration-500 filter hover:brightness-105"
+                className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-black opacity-10 mix-blend-multiply pointer-events-none"></div>
             </div>
           );
         })}
