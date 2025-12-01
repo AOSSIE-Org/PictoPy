@@ -1,6 +1,6 @@
 [package]
 name = "picto_py"
-version = "1.0.0"
+version = "1.1.0"
 description = "An Image sorter that sorts photos based on face encodings in it."
 authors = ["you"]
 edition = "2021"
