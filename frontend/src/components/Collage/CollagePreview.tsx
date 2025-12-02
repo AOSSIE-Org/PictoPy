@@ -6,17 +6,15 @@ interface CollagePreviewProps {
   layout: LayoutType;
 }
 
-const CollagePreview: React.FC<CollagePreviewProps> = ({
-  images,
-  layout,
-}) => {
+const CollagePreview: React.FC<CollagePreviewProps> = ({ images, layout }) => {
   const config = getLayout(layout);
-  
-  // FIX: Constrain images to the lesser of maxImages or available placements array length (Addressing placement error)
   const showImages = images.slice(0, Math.min(config.maxImages, config.placements.length));
 
   return (
-    <div className="w-full h-[420px] rounded-xl overflow-hidden p-2 bg-white">
+    <div className="w-full h-[420px] rounded-xl overflow-hidden p-2 
+      bg-white dark:bg-gray-800 
+      border border-gray-200 dark:border-gray-700">
+
       <div
         className="grid h-full w-full gap-2"
         style={{
@@ -26,7 +24,6 @@ const CollagePreview: React.FC<CollagePreviewProps> = ({
       >
         {showImages.map((img, index) => {
           const p = config.placements[index];
-
           return (
             <div
               key={index}
@@ -34,13 +31,9 @@ const CollagePreview: React.FC<CollagePreviewProps> = ({
                 gridColumn: `${p.colStart} / ${p.colEnd}`,
                 gridRow: `${p.rowStart} / ${p.rowEnd}`,
               }}
-              className="rounded-xl overflow-hidden bg-gray-100"
+              className="rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700"
             >
-              <img
-                src={img}
-                alt={`Collage image ${index + 1}`}
-                className="w-full h-full object-cover"
-              />
+              <img src={img} className="w-full h-full object-cover" />
             </div>
           );
         })}
@@ -50,4 +43,3 @@ const CollagePreview: React.FC<CollagePreviewProps> = ({
 };
 
 export default CollagePreview;
-
