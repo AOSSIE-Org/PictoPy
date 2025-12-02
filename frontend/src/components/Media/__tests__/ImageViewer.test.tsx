@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
@@ -50,7 +49,6 @@ describe('ImageViewer zoom behavior', () => {
 
     // wait for computeMinScale to call setTransform on the mocked wrapper
     await waitFor(() => {
-      const wrapper = (require('react-zoom-pan-pinch') as any).TransformWrapper;
       // The mocked implementation stores setTransform as a jest.fn on the ref; we can't access ref here easily,
       // but at minimum we ensure no errors were thrown and load completed.
       expect(img).toBeInTheDocument();
@@ -73,10 +71,6 @@ describe('ImageViewer zoom behavior', () => {
 
     // trigger load
     fireEvent.load(img);
-
-    // Grab the mocked wrapper ref implementation to assert calls
-    // We rendered the mocked TransformWrapper which created a ref with jest.fn methods. Retrieve the mock via require
-    const mock = (require('react-zoom-pan-pinch') as any).TransformWrapper;
 
     // simulate wheel: create a WheelEvent
     fireEvent.wheel(img, { deltaY: -120, clientX: 200, clientY: 150 });
