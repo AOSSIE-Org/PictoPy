@@ -40,10 +40,10 @@ export function CollageMaker({
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    if (files.length > maxFiles) {
-      alert(`Select up to ${maxFiles} images`);
+     if (files.length > maxFiles) {
+      setError(`Please select up to ${maxFiles} images`);
       return;
-    }
+     }
 
     const blobUrls = files.map((file) => URL.createObjectURL(file));
     setUploadedImages(blobUrls);
@@ -61,11 +61,13 @@ export function CollageMaker({
   const downloadImage = async (format: "image/png" | "image/jpeg") => {
     if (!previewRef.current) return;
 
-    const rect = previewRef.current.getBoundingClientRect();
+   const rect = previewRef.current.getBoundingClientRect();
     const canvas = document.createElement("canvas");
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-
+    // Use standardized dimensions for consistent output
+    const outputWidth = 1200; // or make configurable
+    const outputHeight = 1200;
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
@@ -78,11 +80,15 @@ export function CollageMaker({
             const img = new Image();
             img.crossOrigin = "anonymous";
             img.onload = () => resolve(img);
-            img.onerror = () => reject(`Failed to load image: ${src}`);
+            img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
             img.src = src;
           })
       )
-    );
+    ).catch((err) => {
+      setError(err.message || "Failed to load one or more images for download");
+      throw err;
+    });
+
 
     config.placements.forEach((p, i) => {
       if (!imgs[i]) return;
@@ -139,7 +145,7 @@ export function CollageMaker({
 
         {/* Clickable Download Dropdown */}
         {finalImages.length > 0 && (
-          <div className="relative">
+             <div className="relative" data-dropdown>
             <button
               onClick={() => setShowDropdown((prev) => !prev)}
               className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
