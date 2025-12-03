@@ -12,10 +12,10 @@ FolderIdPath = Tuple[FolderId, str]
 
 
 class FolderTaggingInfo(NamedTuple):
-    """Represents folder tagging information"""
-
     folder_id: FolderId
     folder_path: FolderPath
+    total_images: int 
+    tagged_images: int 
     tagging_percentage: float
 
 
@@ -111,6 +111,8 @@ def db_get_tagging_progress() -> List[FolderTaggingInfo]:
                 FolderTaggingInfo(
                     folder_id=folder_id,
                     folder_path=folder_path,
+                     total_images=total_images, 
+                tagged_images=tagged_images, 
                     tagging_percentage=round(tagging_percentage, 2),
                 )
             )
