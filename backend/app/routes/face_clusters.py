@@ -153,7 +153,7 @@ def get_all_clusters():
 def get_cluster_images(cluster_id: str):
     """Get all images that contain faces belonging to a specific cluster."""
     try:
-        # Step 1: Validate cluster exists
+        # Check if cluster exists
         cluster = db_get_cluster_by_id(cluster_id)
         if not cluster:
             raise HTTPException(
@@ -161,48 +161,48 @@ def get_cluster_images(cluster_id: str):
                 detail=ErrorResponse(
                     success=False,
                     error="Cluster Not Found",
-                    message=f"Cluster with ID '{cluster_id}' does not exist.",
+                    message=f"Cluster with ID '{cluster_id}' does not exist",
                 ).model_dump(),
             )
 
-        # Step 2: Get images for this cluster
-        images_data = db_get_images_by_cluster_id(cluster_id)
+        # Get images for this cluster
+        images = db_get_images_by_cluster_id(cluster_id)
 
-        # Step 3: Convert to response models
-        images = [
-            ImageInCluster(
-                id=img["image_id"],
-                path=img["image_path"],
-                thumbnailPath=img["thumbnail_path"],
-                metadata=img["metadata"],
-                face_id=img["face_id"],
-                confidence=img["confidence"],
-                bbox=img["bbox"],
-            )
-            for img in images_data
-        ]
+        # Transform the data to match the frontend schema
+        formatted_images = []
+        for img in images:
+            formatted_images.append({
+                "id": img["image_id"],
+                "path": img["image_path"],
+                "thumbnailPath": img["thumbnail_path"],
+                "metadata": img["metadata"],
+                "isFavourite": bool(img["isFavourite"]),
+                "face_id": img["face_id"],
+                "confidence": img["confidence"],
+                "bbox": img["bbox"],
+            })
 
         return GetClusterImagesResponse(
             success=True,
-            message=f"Successfully retrieved {len(images)} image(s) for cluster '{cluster_id}'",
+            message=f"Successfully retrieved {len(formatted_images)} images for cluster",
             data=GetClusterImagesData(
                 cluster_id=cluster_id,
-                cluster_name=cluster["cluster_name"],
-                images=images,
-                total_images=len(images),
+                cluster_name=cluster["cluster_name"],  # ✅ CHANGE THIS LINE - Remove .get()
+                images=formatted_images,
+                total_images=len(formatted_images),
             ),
         )
 
     except HTTPException as e:
-        # Re-raise HTTPExceptions to preserve the status code and detail
         raise e
     except Exception as e:
+        logger.error(f"Error getting cluster images: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
                 success=False,
-                error="Internal server error",
-                message=f"Unable to retrieve images for cluster: {str(e)}",
+                error="Internal Server Error",
+                message=f"Failed to retrieve cluster images: {str(e)}",
             ).model_dump(),
         )
 
