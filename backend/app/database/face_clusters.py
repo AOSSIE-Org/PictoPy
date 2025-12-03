@@ -301,6 +301,7 @@ def db_get_images_by_cluster_id(
                 i.path as image_path,
                 i.thumbnailPath as thumbnail_path,
                 i.metadata,
+                i.isFavourite,
                 f.face_id,
                 f.confidence,
                 f.bbox
@@ -321,6 +322,7 @@ def db_get_images_by_cluster_id(
                 image_path,
                 thumbnail_path,
                 metadata,
+                is_favourite,
                 face_id,
                 confidence,
                 bbox_json,
@@ -340,6 +342,7 @@ def db_get_images_by_cluster_id(
                     "image_path": image_path,
                     "thumbnail_path": thumbnail_path,
                     "metadata": metadata_dict,
+                    "isFavourite": is_favourite,
                     "face_id": face_id,
                     "confidence": confidence,
                     "bbox": bbox,
