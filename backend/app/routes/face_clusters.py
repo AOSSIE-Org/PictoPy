@@ -172,11 +172,11 @@ def get_cluster_images(cluster_id: str):
         formatted_images = []
         for img in images:
             formatted_images.append({
-                "id": img["image_id"],  # Changed from image_id to id
-                "path": img["image_path"],  # Changed from image_path to path
-                "thumbnailPath": img["thumbnail_path"],  # Changed from thumbnail_path to thumbnailPath
+                "id": img["image_id"],
+                "path": img["image_path"],
+                "thumbnailPath": img["thumbnail_path"],
                 "metadata": img["metadata"],
-                "isFavourite": bool(img["isFavourite"]),  # Ensure boolean
+                "isFavourite": bool(img["isFavourite"]),
                 "face_id": img["face_id"],
                 "confidence": img["confidence"],
                 "bbox": img["bbox"],
@@ -187,7 +187,7 @@ def get_cluster_images(cluster_id: str):
             message=f"Successfully retrieved {len(formatted_images)} images for cluster",
             data=GetClusterImagesData(
                 cluster_id=cluster_id,
-                cluster_name=cluster.get("cluster_name"),
+                cluster_name=cluster["cluster_name"],  # ✅ CHANGE THIS LINE - Remove .get()
                 images=formatted_images,
                 total_images=len(formatted_images),
             ),
