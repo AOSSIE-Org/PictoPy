@@ -41,6 +41,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
       // Reset OCR when image changes
       setIsOCRActive(false);
       setOcrData(null);
+      setIsOCRLoading(false);
     }, [resetSignal, imagePath]);
 
     // Update scale when image loads or resizes
