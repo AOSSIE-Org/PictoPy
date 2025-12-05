@@ -11,6 +11,8 @@ export const TextOverlay: React.FC<TextOverlayProps> = ({ ocrData, scale = 1 }) 
     const [showCopyFeedback, setShowCopyFeedback] = useState(false);
 
     useEffect(() => {
+        let feedbackTimeout: ReturnType<typeof setTimeout>;
+
         const handleKeyDown = async (e: KeyboardEvent) => {
             if (e.ctrlKey && e.key.toLowerCase() === 'c') {
                 const selection = window.getSelection();
@@ -21,7 +23,7 @@ export const TextOverlay: React.FC<TextOverlayProps> = ({ ocrData, scale = 1 }) 
                     try {
                         await navigator.clipboard.writeText(text);
                         setShowCopyFeedback(true);
-                        setTimeout(() => setShowCopyFeedback(false), 2000);
+                        feedbackTimeout = setTimeout(() => setShowCopyFeedback(false), 2000);
                     } catch (err) {
                         console.error('Failed to copy text:', err);
                     }
@@ -30,7 +32,10 @@ export const TextOverlay: React.FC<TextOverlayProps> = ({ ocrData, scale = 1 }) 
         };
 
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            clearTimeout(feedbackTimeout);
+        };
     }, []);
 
     if (!ocrData) return null;

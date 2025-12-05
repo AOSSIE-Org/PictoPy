@@ -43,11 +43,16 @@ class OCRService {
     }
 
     async terminate() {
-        if (this.worker) {
-            await this.worker.terminate();
-            this.worker = null;
-            this.workerPromise = null;
+        if (this.workerPromise) {
+            try {
+                const worker = await this.workerPromise;
+                await worker.terminate();
+            } catch {
+                // Initialization failed, nothing to terminate
+            }
         }
+        this.worker = null;
+        this.workerPromise = null;
     }
 }
 

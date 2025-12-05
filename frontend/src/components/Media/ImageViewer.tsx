@@ -74,6 +74,11 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
     }, [imagePath]); // Re-run when image path changes
 
     // Handle Ctrl+T to toggle OCR
+    const imagePathRef = useRef(imagePath);
+    useEffect(() => {
+      imagePathRef.current = imagePath;
+    }, [imagePath]);
+
     useEffect(() => {
       const handleKeyDown = async (e: KeyboardEvent) => {
         if (e.ctrlKey && e.key.toLowerCase() === 't') {
@@ -90,12 +95,17 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
               try {
                 const src = convertFileSrc(imagePath);
                 const data = await ocrService.recognize(src);
-                setOcrData(data);
+                // Only set data if image hasn't changed
+                if (imagePath === imagePathRef.current) {
+                  setOcrData(data);
+                }
               } catch (error) {
                 console.error('Failed to perform OCR', error);
                 setIsOCRActive(false); // Revert if failed
               } finally {
-                setIsOCRLoading(false);
+                if (imagePath === imagePathRef.current) {
+                  setIsOCRLoading(false);
+                }
               }
             }
           }
