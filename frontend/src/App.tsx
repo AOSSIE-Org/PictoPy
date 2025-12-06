@@ -1,13 +1,16 @@
 import './App.css';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter } from 'react-router';
 import { AppRoutes } from '@/routes/AppRoutes';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import QueryClientProviders from '@/config/QueryClientProvider';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { GlobalLoader } from './components/Loader/GlobalLoader';
 import { InfoDialog } from './components/Dialog/InfoDialog';
 import { useSelector } from 'react-redux';
 import { RootState } from './app/store';
+import { startWebSocket } from '@/lib/ws';
+
 const App: React.FC = () => {
   const { loading, message } = useSelector((state: RootState) => state.loader);
   const {
@@ -17,9 +20,13 @@ const App: React.FC = () => {
     variant,
     showCloseButton,
   } = useSelector((state: RootState) => state.infoDialog);
+  const [queryClient] = React.useState(() => new QueryClient());
+  useEffect(() => {
+    startWebSocket();
+  }, []);
   return (
     <ThemeProvider>
-      <QueryClientProviders>
+      <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AppRoutes />
         </BrowserRouter>
@@ -31,7 +38,8 @@ const App: React.FC = () => {
           variant={variant}
           showCloseButton={showCloseButton}
         />
-      </QueryClientProviders>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
     </ThemeProvider>
   );
 };
