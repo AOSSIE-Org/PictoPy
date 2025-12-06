@@ -1,5 +1,6 @@
 import React from 'react';
-import { open } from '@tauri-apps/plugin-shell';
+import { invoke } from '@tauri-apps/api/core'; // Correct Tauri v2 import
+
 import {
   X,
   ImageIcon as ImageLucide,
@@ -42,7 +43,6 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
 
   const getImageName = () => {
     if (!currentImage) return 'Image';
-    // Handle both Unix (/) and Windows (\) path separators
     return currentImage.path?.split(/[/\\]/).pop() || 'Image';
   };
 
@@ -51,7 +51,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
       const { latitude, longitude } = currentImage.metadata;
       const url = `https://maps.google.com/?q=${latitude},${longitude}`;
       try {
-        await open(url);
+        await invoke('open_original_file', { path: url });
       } catch (error) {
         console.error('Failed to open map URL:', error);
       }
@@ -74,6 +74,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
       </div>
 
       <div className="space-y-4 text-sm">
+        {/* Name */}
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-white/10 p-2">
             <ImageLucide className="h-5 w-5 text-blue-400" />
@@ -89,6 +90,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           </div>
         </div>
 
+        {/* Date */}
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-white/10 p-2">
             <Calendar className="h-5 w-5 text-emerald-400" />
@@ -99,6 +101,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           </div>
         </div>
 
+        {/* Location */}
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-white/10 p-2">
             <MapPin className="h-5 w-5 text-red-400" />
@@ -122,6 +125,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           </div>
         </div>
 
+        {/* Tags */}
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-white/10 p-2">
             <Tag className="h-5 w-5 text-purple-400" />
@@ -145,6 +149,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           </div>
         </div>
 
+        {/* Position */}
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-white/10 p-2">
             <Info className="h-5 w-5 text-amber-400" />
@@ -157,13 +162,17 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           </div>
         </div>
 
+        {/* OPEN ORIGINAL FILE — FIXED */}
         <div className="mt-4 border-t border-white/10 pt-3">
           <button
             className="w-full cursor-pointer rounded-lg bg-white/10 py-2 text-white transition-colors hover:bg-white/20"
             onClick={async () => {
               if (currentImage?.path) {
                 try {
-                  await open(currentImage.path);
+                  console.log('Sending path to Tauri:', currentImage.path);
+                  await invoke('open_original_file', {
+                    path: currentImage.path,
+                  });
                 } catch (error) {
                   console.error('Failed to open file:', error);
                 }
