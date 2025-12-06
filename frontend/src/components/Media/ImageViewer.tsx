@@ -4,7 +4,7 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import { ocrService } from '../../services/OCRService';
 import { TextOverlay } from './TextOverlay';
 import { Page } from 'tesseract.js';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ScanText } from 'lucide-react';
 
 interface ImageViewerProps {
   imagePath: string;
@@ -119,15 +119,63 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
 
     return (
       <div className="relative w-full h-full">
+        {/* Text Detection Toggle Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isOCRActive) {
+              setIsOCRActive(false);
+            } else {
+              setIsOCRActive(true);
+              if (!ocrData && !isOCRLoading) {
+                // Trigger loading logic same as Ctrl+T
+                // We need to extract the loading logic into a reusable function or trigger it via effect if isOCRActive changes to true?
+                // The effect at line 118 depends on isOCRActive, but the keydown handler (line 84) sets state AND triggers logic.
+                // Let's refactor slightly to share logic or just duplicate the trigger here safely.
+                // Actually, the keydown handler does the heavy lifting.
+                // It's cleaner to just set the state and let an effect handle it, OR duplicate the call.
+                // Given the existing structure, I'll duplicate the trigger logic for now to ensure immediate feedback.
+                setIsOCRLoading(true);
+                (async () => {
+                  try {
+                    const src = convertFileSrc(imagePath);
+                    const data = await ocrService.recognize(src);
+                    if (imagePath === imagePathRef.current) {
+                      setOcrData(data);
+                    }
+                  } catch (error) {
+                    console.error('Failed to perform OCR', error);
+                    setIsOCRActive(false);
+                  } finally {
+                    if (imagePath === imagePathRef.current) {
+                      setIsOCRLoading(false);
+                    }
+                  }
+                })();
+              }
+            }
+          }}
+          className={`absolute top-6 left-6 z-60 flex items-center gap-2 rounded-full border border-white/10 px-4 py-2.5 backdrop-blur-md transition-all duration-300 ${isOCRActive
+            ? 'bg-blue-600/90 text-white shadow-[0_0_20px_rgba(37,99,235,0.5)]'
+            : 'bg-zinc-900/80 text-white/90 hover:bg-zinc-800/90 hover:shadow-lg'
+            }`}
+        >
+          <ScanText className={`h-4 w-4 ${isOCRActive ? 'animate-pulse' : ''}`} />
+          <span className="text-sm font-medium">Text Detection</span>
+          <span className="ml-1 hidden rounded bg-white/20 px-1.5 py-0.5 text-[10px] sm:inline-block">
+            Ctrl + T
+          </span>
+        </button>
+
         {isOCRLoading && (
-          <div className="absolute top-6 right-6 z-[60] bg-zinc-900/80 text-white px-4 py-2 rounded-full flex items-center gap-3 backdrop-blur-md border border-white/10 shadow-xl animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="absolute top-20 left-6 z-60 bg-zinc-900/80 text-white px-4 py-2 rounded-full flex items-center gap-3 backdrop-blur-md border border-white/10 shadow-xl animate-in fade-in slide-in-from-top-2 duration-300">
             <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
             <span className="text-sm font-medium tracking-wide">Processing Text...</span>
           </div>
         )}
 
         {isOCRActive && !isOCRLoading && ocrData && (
-          <div className="absolute top-6 right-6 z-[60] bg-blue-600/90 text-white px-4 py-2 rounded-full flex items-center gap-2 backdrop-blur-md border border-white/10 shadow-xl animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="absolute top-20 left-6 z-60 bg-blue-600/90 text-white px-4 py-2 rounded-full flex items-center gap-2 backdrop-blur-md border border-white/10 shadow-xl animate-in fade-in slide-in-from-top-2 duration-300">
             <span className="relative flex h-2.5 w-2.5 mr-1">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>

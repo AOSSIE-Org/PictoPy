@@ -47,7 +47,7 @@ export const TextOverlay: React.FC<TextOverlayProps> = ({ ocrData, scale = 1 }) 
         <>
             {showCopyFeedback && (
                 <div
-                    className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-[100] bg-zinc-900/90 text-white px-4 py-2.5 rounded-full flex items-center gap-2.5 backdrop-blur-md shadow-xl border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300"
+                    className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-100 bg-zinc-900/90 text-white px-4 py-2.5 rounded-full flex items-center gap-2.5 backdrop-blur-md shadow-xl border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300"
                 >
                     <div className="bg-green-500/20 p-1 rounded-full">
                         <Check className="w-3.5 h-3.5 text-green-400" />
