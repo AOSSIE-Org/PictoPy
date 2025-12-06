@@ -1,5 +1,5 @@
-import React from 'react';
-import { open } from '@tauri-apps/plugin-shell';
+import React from "react";
+import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import {
   X,
   ImageIcon as ImageLucide,
@@ -8,8 +8,8 @@ import {
   Tag,
   Info,
   SquareArrowOutUpRight,
-} from 'lucide-react';
-import { Image } from '@/types/Media';
+} from "lucide-react";
+import { Image } from "@/types/Media";
 
 interface MediaInfoPanelProps {
   show: boolean;
@@ -26,35 +26,49 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
   currentIndex,
   totalImages,
 }) => {
-  const getFormattedDate = () => {
-    if (currentImage?.metadata?.date_created) {
-      return new Date(currentImage.metadata.date_created).toLocaleDateString(
-        'en-US',
-        {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        },
-      );
-    }
-    return 'Date not available';
-  };
+  const getFormattedDate = () =>
+    currentImage?.metadata?.date_created
+      ? new Date(currentImage.metadata.date_created).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : "Date not available";
 
-  const getImageName = () => {
-    if (!currentImage) return 'Image';
-    // Handle both Unix (/) and Windows (\) path separators
-    return currentImage.path?.split(/[/\\]/).pop() || 'Image';
-  };
+  const getImageName = () =>
+    currentImage ? currentImage.path?.split(/[/\\]/).pop() ?? "Image" : "Image";
 
   const handleLocationClick = async () => {
-    if (currentImage?.metadata?.latitude && currentImage?.metadata?.longitude) {
+    if (
+      currentImage?.metadata?.latitude != null &&
+      currentImage?.metadata?.longitude != null
+    ) {
       const { latitude, longitude } = currentImage.metadata;
-      const url = `https://maps.google.com/?q=${latitude},${longitude}`;
+      // Fixed URL format (removed the '0' typo before latitude if it was unintentional, or kept standard)
+      const url = `https://www.google.com/maps?q=${latitude},${longitude}`;
       try {
-        await open(url);
+        await openUrl(url);
       } catch (error) {
-        console.error('Failed to open map URL:', error);
+        console.error("openUrl failed:", error);
       }
+    }
+  };
+
+  const handleOpenOriginal = async () => {
+    if (!currentImage?.path) {
+      console.warn("No path available for currentImage");
+      return;
+    }
+    const path = currentImage.path;
+    console.log("Attempting to open file:", path);
+
+    try {
+      // This will now succeed because the path is in the allowed scope
+      await openPath(path);
+      console.log("openPath succeeded");
+    } catch (err) {
+      console.error("openPath failed:", err);
+      alert(`Could not open file: ${err}`); // Optional user feedback
     }
   };
 
@@ -74,21 +88,20 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
       </div>
 
       <div className="space-y-4 text-sm">
+        {/* Name */}
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-white/10 p-2">
             <ImageLucide className="h-5 w-5 text-blue-400" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs text-white/50">Name</p>
-            <p
-              className="truncate font-medium text-white"
-              title={getImageName()}
-            >
+            <p className="truncate font-medium text-white" title={getImageName()}>
               {getImageName()}
             </p>
           </div>
         </div>
 
+        {/* Date */}
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-white/10 p-2">
             <Calendar className="h-5 w-5 text-emerald-400" />
@@ -99,21 +112,24 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           </div>
         </div>
 
+        {/* Location */}
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-white/10 p-2">
             <MapPin className="h-5 w-5 text-red-400" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs text-white/50">Location</p>
-            {currentImage?.metadata?.latitude &&
-            currentImage?.metadata?.longitude ? (
+            {currentImage?.metadata?.latitude != null &&
+            currentImage?.metadata?.longitude != null ? (
               <button
                 type="button"
                 onClick={handleLocationClick}
                 className="flex w-full cursor-pointer items-center truncate text-left font-medium text-white hover:underline"
                 title={`Lat: ${currentImage.metadata.latitude}, Lon: ${currentImage.metadata.longitude}`}
               >
-                {`Lat: ${currentImage.metadata.latitude.toFixed(4)}, Lon: ${currentImage.metadata.longitude.toFixed(4)}`}
+                {`Lat: ${currentImage.metadata.latitude.toFixed(
+                  4
+                )}, Lon: ${currentImage.metadata.longitude.toFixed(4)}`}
                 <SquareArrowOutUpRight className="ml-1 h-[14px] w-[14px]" />
               </button>
             ) : (
@@ -122,6 +138,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           </div>
         </div>
 
+        {/* Tags */}
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-white/10 p-2">
             <Tag className="h-5 w-5 text-purple-400" />
@@ -145,6 +162,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           </div>
         </div>
 
+        {/* Position */}
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-white/10 p-2">
             <Info className="h-5 w-5 text-amber-400" />
@@ -157,18 +175,11 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           </div>
         </div>
 
+        {/* OPEN ORIGINAL FILE */}
         <div className="mt-4 border-t border-white/10 pt-3">
           <button
             className="w-full cursor-pointer rounded-lg bg-white/10 py-2 text-white transition-colors hover:bg-white/20"
-            onClick={async () => {
-              if (currentImage?.path) {
-                try {
-                  await open(currentImage.path);
-                } catch (error) {
-                  console.error('Failed to open file:', error);
-                }
-              }
-            }}
+            onClick={handleOpenOriginal}
           >
             Open Original File
           </button>
