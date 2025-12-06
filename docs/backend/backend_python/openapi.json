@@ -1304,6 +1304,47 @@
           }
         }
       }
+    },
+    "/edit/magic-eraser": {
+      "post": {
+        "tags": [
+          "Edit"
+        ],
+        "summary": "Magic Eraser",
+        "operationId": "magic_eraser_edit_magic_eraser_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MagicEraserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MagicEraserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2265,6 +2306,53 @@
           "base64"
         ],
         "title": "InputType"
+      },
+      "MagicEraserRequest": {
+        "properties": {
+          "image_path": {
+            "type": "string",
+            "title": "Image Path"
+          },
+          "mask_data": {
+            "type": "string",
+            "title": "Mask Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_path",
+          "mask_data"
+        ],
+        "title": "MagicEraserRequest"
+      },
+      "MagicEraserResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "image_data": {
+            "type": "string",
+            "title": "Image Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "image_data"
+        ],
+        "title": "MagicEraserResponse"
       },
       "MetadataModel": {
         "properties": {

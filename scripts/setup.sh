@@ -135,6 +135,10 @@ python -m venv .env
 source .env/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
+
+# Download required models
+echo -e "${YELLOW}Downloading required models...${NC}"
+python ../scripts/download_models.py
 deactivate
 cd ..
 

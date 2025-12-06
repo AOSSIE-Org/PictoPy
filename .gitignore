@@ -9,6 +9,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 backend/app/models/image-generation/*
+backend/app/models/onnx_models/*
 
 node_modules
 

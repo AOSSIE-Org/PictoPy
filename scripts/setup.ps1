@@ -140,6 +140,11 @@ try {
     .\.env\Scripts\Activate.ps1
     python -m pip install --upgrade pip
     python -m pip install -r requirements.txt
+    
+    # Download Magic Eraser models
+    Write-Host "Downloading required models..." -ForegroundColor Yellow
+    python ..\scripts\download_models.py
+    
     deactivate
     
     Set-Location ..
