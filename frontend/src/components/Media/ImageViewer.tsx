@@ -1,4 +1,4 @@
-import { useRef, useImperativeHandle, forwardRef, useState, useEffect } from 'react';
+import { useRef, useImperativeHandle, forwardRef, useState, useEffect, useCallback } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { ocrService } from '../../services/OCRService';
@@ -80,6 +80,30 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
       imagePathRef.current = imagePath;
     }, [imagePath]);
 
+    const triggerOCR = useCallback(async () => {
+      if (ocrData || isOCRLoading) return;
+
+      setIsOCRLoading(true);
+      const currentPath = imagePathRef.current;
+
+      try {
+        const src = convertFileSrc(currentPath);
+        const data = await ocrService.recognize(src);
+
+        // Only set data if image hasn't changed
+        if (currentPath === imagePathRef.current) {
+          setOcrData(data);
+        }
+      } catch (error) {
+        console.error('Failed to perform OCR', error);
+        setIsOCRActive(false); // Revert if failed
+      } finally {
+        if (currentPath === imagePathRef.current) {
+          setIsOCRLoading(false);
+        }
+      }
+    }, [ocrData, isOCRLoading]);
+
     useEffect(() => {
       const handleKeyDown = async (e: KeyboardEvent) => {
         if (e.ctrlKey && e.key.toLowerCase() === 't') {
@@ -91,31 +115,14 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
           } else {
             // Activate
             setIsOCRActive(true);
-            if (!ocrData && !isOCRLoading) {
-              setIsOCRLoading(true);
-              try {
-                const src = convertFileSrc(imagePath);
-                const data = await ocrService.recognize(src);
-                // Only set data if image hasn't changed
-                if (imagePath === imagePathRef.current) {
-                  setOcrData(data);
-                }
-              } catch (error) {
-                console.error('Failed to perform OCR', error);
-                setIsOCRActive(false); // Revert if failed
-              } finally {
-                if (imagePath === imagePathRef.current) {
-                  setIsOCRLoading(false);
-                }
-              }
-            }
+            triggerOCR();
           }
         }
       };
 
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [imagePath, isOCRActive, ocrData, isOCRLoading]);
+    }, [isOCRActive, triggerOCR]);
 
     return (
       <div className="relative w-full h-full">
@@ -127,32 +134,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
               setIsOCRActive(false);
             } else {
               setIsOCRActive(true);
-              if (!ocrData && !isOCRLoading) {
-                // Trigger loading logic same as Ctrl+T
-                // We need to extract the loading logic into a reusable function or trigger it via effect if isOCRActive changes to true?
-                // The effect at line 118 depends on isOCRActive, but the keydown handler (line 84) sets state AND triggers logic.
-                // Let's refactor slightly to share logic or just duplicate the trigger here safely.
-                // Actually, the keydown handler does the heavy lifting.
-                // It's cleaner to just set the state and let an effect handle it, OR duplicate the call.
-                // Given the existing structure, I'll duplicate the trigger logic for now to ensure immediate feedback.
-                setIsOCRLoading(true);
-                (async () => {
-                  try {
-                    const src = convertFileSrc(imagePath);
-                    const data = await ocrService.recognize(src);
-                    if (imagePath === imagePathRef.current) {
-                      setOcrData(data);
-                    }
-                  } catch (error) {
-                    console.error('Failed to perform OCR', error);
-                    setIsOCRActive(false);
-                  } finally {
-                    if (imagePath === imagePathRef.current) {
-                      setIsOCRLoading(false);
-                    }
-                  }
-                })();
-              }
+              triggerOCR();
             }
           }}
           className={`absolute top-6 left-6 z-60 flex items-center gap-2 rounded-full border border-white/10 px-4 py-2.5 backdrop-blur-md transition-all duration-300 ${isOCRActive
