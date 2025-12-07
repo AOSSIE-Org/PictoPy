@@ -19,14 +19,14 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
   ({ imagePath, alt, rotation, resetSignal }, ref) => {
     const transformRef = useRef<any>(null);
 
-    // Expose zoom functions to parent
+
     useImperativeHandle(ref, () => ({
       zoomIn: () => transformRef.current?.zoomIn(),
       zoomOut: () => transformRef.current?.zoomOut(),
       reset: () => transformRef.current?.resetTransform(),
     }));
 
-    // Reset on signal change
+    // Reset when parent triggers change
     React.useEffect(() => {
       transformRef.current?.resetTransform();
     }, [resetSignal]);
@@ -36,7 +36,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
         ref={transformRef}
         initialScale={1}
         minScale={0.1}
-        maxScale={8}
+        maxScale={6}
         centerOnInit
         limitToBounds={false}
       >
@@ -44,7 +44,8 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
           wrapperStyle={{
             width: '100%',
             height: '100%',
-            overflow: 'visible',
+            overflow: 'hidden',      // FIX: viewer boundaries
+            position: 'relative',
           }}
           contentStyle={{
             width: '100%',
@@ -68,12 +69,14 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
               maxWidth: '100%',
               maxHeight: '100%',
               objectFit: 'contain',
-              zIndex: 50,
               transform: `rotate(${rotation}deg)`,
+
+              minWidth: '70vmin',
+              minHeight: '70vmin',
             }}
           />
         </TransformComponent>
       </TransformWrapper>
     );
-  },
+  }
 );
