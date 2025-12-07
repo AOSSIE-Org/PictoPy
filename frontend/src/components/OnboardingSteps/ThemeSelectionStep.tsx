@@ -51,7 +51,7 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
     return null;
   }
 
-  const progressPercent = Math.round(((stepIndex + 1) / totalSteps) * 100);
+  const progressPercent = Math.min(100, Math.round(((stepIndex + 1) / totalSteps) * 100));
   return (
     <>
       <Card className="flex max-h-full w-1/2 flex-col border p-4">

@@ -64,7 +64,7 @@ export function FolderSetupStep({
   if (localStorage.getItem('folderChosen') === 'true') {
     return null;
   }
-  const progressPercent = Math.round(((stepIndex + 1) / totalSteps) * 100);
+  const progressPercent = Math.min(100, Math.round(((stepIndex + 1) / totalSteps) * 100));
 
   return (
     <>
