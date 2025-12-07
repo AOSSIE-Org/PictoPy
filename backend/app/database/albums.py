@@ -15,12 +15,33 @@ def db_create_albums_table() -> None:
                 album_id TEXT PRIMARY KEY,
                 album_name TEXT UNIQUE,
                 description TEXT,
-                is_hidden BOOLEAN DEFAULT 0,
-                password_hash TEXT
+                is_locked BOOLEAN DEFAULT 0,
+                password_hash TEXT,
+                cover_image_path TEXT
             )
             """
         )
         conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def db_migrate_add_cover_image_column() -> None:
+    """Add cover_image_path column to existing albums table if it doesn't exist"""
+    conn = None
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+
+        # Check if column exists
+        cursor.execute("PRAGMA table_info(albums)")
+        columns = [column[1] for column in cursor.fetchall()]
+
+        if "cover_image_path" not in columns:
+            cursor.execute("ALTER TABLE albums ADD COLUMN cover_image_path TEXT")
+            conn.commit()
+            print("Added cover_image_path column to albums table")
     finally:
         if conn is not None:
             conn.close()
@@ -48,14 +69,14 @@ def db_create_album_images_table() -> None:
             conn.close()
 
 
-def db_get_all_albums(show_hidden: bool = False):
+def db_get_all_albums():
+    """Get all albums (both locked and unlocked)."""
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
-        if show_hidden:
-            cursor.execute("SELECT * FROM albums")
-        else:
-            cursor.execute("SELECT * FROM albums WHERE is_hidden = 0")
+        cursor.execute(
+            "SELECT album_id, album_name, description, is_locked, password_hash, cover_image_path FROM albums"
+        )
         albums = cursor.fetchall()
         return albums
     finally:
@@ -66,7 +87,10 @@ def db_get_album_by_name(name: str):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM albums WHERE album_name = ?", (name,))
+        cursor.execute(
+            "SELECT album_id, album_name, description, is_locked, password_hash, cover_image_path FROM albums WHERE album_name = ?",
+            (name,),
+        )
         album = cursor.fetchone()
         return album if album else None
     finally:
@@ -77,7 +101,10 @@ def db_get_album(album_id: str):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM albums WHERE album_id = ?", (album_id,))
+        cursor.execute(
+            "SELECT album_id, album_name, description, is_locked, password_hash, cover_image_path FROM albums WHERE album_id = ?",
+            (album_id,),
+        )
         album = cursor.fetchone()
         return album if album else None
     finally:
@@ -88,7 +115,7 @@ def db_insert_album(
     album_id: str,
     album_name: str,
     description: str = "",
-    is_hidden: bool = False,
+    is_locked: bool = False,
     password: str = None,
 ):
     conn = sqlite3.connect(DATABASE_PATH)
@@ -101,10 +128,10 @@ def db_insert_album(
             ).decode("utf-8")
         cursor.execute(
             """
-            INSERT INTO albums (album_id, album_name, description, is_hidden, password_hash)
+            INSERT INTO albums (album_id, album_name, description, is_locked, password_hash)
             VALUES (?, ?, ?, ?, ?)
             """,
-            (album_id, album_name, description, int(is_hidden), password_hash),
+            (album_id, album_name, description, int(is_locked), password_hash),
         )
         conn.commit()
     finally:
@@ -115,7 +142,7 @@ def db_update_album(
     album_id: str,
     album_name: str,
     description: str,
-    is_hidden: bool,
+    is_locked: bool,
     password: str = None,
 ):
     conn = sqlite3.connect(DATABASE_PATH)
@@ -129,20 +156,20 @@ def db_update_album(
             cursor.execute(
                 """
                 UPDATE albums
-                SET album_name = ?, description = ?, is_hidden = ?, password_hash = ?
+                SET album_name = ?, description = ?, is_locked = ?, password_hash = ?
                 WHERE album_id = ?
                 """,
-                (album_name, description, int(is_hidden), password_hash, album_id),
+                (album_name, description, int(is_locked), password_hash, album_id),
             )
         else:
             # Update without changing password
             cursor.execute(
                 """
                 UPDATE albums
-                SET album_name = ?, description = ?, is_hidden = ?
+                SET album_name = ?, description = ?, is_locked = ?
                 WHERE album_id = ?
                 """,
-                (album_name, description, int(is_hidden), album_id),
+                (album_name, description, int(is_locked), album_id),
             )
         conn.commit()
     finally:
@@ -153,6 +180,20 @@ def db_delete_album(album_id: str):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM albums WHERE album_id = ?", (album_id,))
+
+
+def db_update_album_cover_image(album_id: str, cover_image_path: str):
+    """Update the cover image path for an album"""
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE albums SET cover_image_path = ? WHERE album_id = ?",
+            (cover_image_path, album_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def db_get_album_images(album_id: str):
@@ -230,5 +271,17 @@ def verify_album_password(album_id: str, password: str) -> bool:
         if not row or not row[0]:
             return False
         return bcrypt.checkpw(password.encode("utf-8"), row[0].encode("utf-8"))
+    finally:
+        conn.close()
+
+
+def db_get_image_path(image_id: str) -> str | None:
+    """Get the path of an image by its ID."""
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT path FROM images WHERE id = ?", (image_id,))
+        result = cursor.fetchone()
+        return result[0] if result else None
     finally:
         conn.close()
