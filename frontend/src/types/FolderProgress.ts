@@ -1,4 +1,3 @@
-
 export type JobId = string;
 
 export interface ApiJob {
@@ -12,7 +11,7 @@ export interface ApiJob {
 }
 
 export interface WsProgressMessage {
-  type: "progress";
+  type: 'progress';
   seq: number;
   ts: number;
   payload: {

@@ -6,7 +6,7 @@ const MAX_BACKOFF = 30_000;
 export type WsListener = (msg: any) => void;
 const listeners = new Set<WsListener>();
 
-const WS_URL = "ws://localhost:8000/ws"; 
+const WS_URL = 'ws://localhost:8000/ws';
 
 function connect() {
   if (ws) return;
@@ -14,16 +14,16 @@ function connect() {
   ws = new WebSocket(WS_URL);
 
   ws.onopen = () => {
-    console.debug("[WS] connected");
+    console.debug('[WS] connected');
     backoff = 1000;
   };
 
-  ws.onmessage = ev => {
+  ws.onmessage = (ev) => {
     try {
       const parsed = JSON.parse(ev.data);
-      listeners.forEach(fn => fn(parsed));
+      listeners.forEach((fn) => fn(parsed));
     } catch (e) {
-      console.error("[WS] parse error", e);
+      console.error('[WS] parse error', e);
     }
   };
 
@@ -32,9 +32,11 @@ function connect() {
     scheduleReconnect();
   };
 
-  ws.onerror = err => {
-    console.error("[WS] error", err);
-    try { ws?.close(); } catch {}
+  ws.onerror = (err) => {
+    console.error('[WS] error', err);
+    try {
+      ws?.close();
+    } catch {}
   };
 }
 

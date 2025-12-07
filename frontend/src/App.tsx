@@ -4,7 +4,6 @@ import { BrowserRouter } from 'react-router';
 import { AppRoutes } from '@/routes/AppRoutes';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { GlobalLoader } from './components/Loader/GlobalLoader';
 import { InfoDialog } from './components/Dialog/InfoDialog';
 import { useSelector } from 'react-redux';
@@ -38,7 +37,6 @@ const App: React.FC = () => {
           variant={variant}
           showCloseButton={showCloseButton}
         />
-        <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </ThemeProvider>
   );

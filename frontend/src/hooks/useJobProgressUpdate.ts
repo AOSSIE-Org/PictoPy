@@ -1,20 +1,19 @@
-// useJobProgressUpdate.ts
-import type { ApiJob, JobId, WsProgressMessage } from "../types/FolderProgress";
-import { Dispatch, SetStateAction } from "react";
+import type { ApiJob, JobId, WsProgressMessage } from '../types/FolderProgress';
+import { Dispatch, SetStateAction } from 'react';
 
 export type MetaStore = Record<JobId, { seq: number | null; ts: number }>;
 
 export function applyIfNewerFromWs(
   msg: WsProgressMessage,
   metaRef: React.MutableRefObject<MetaStore>,
-  setJobs: Dispatch<SetStateAction<Record<JobId, ApiJob>>>
+  setJobs: Dispatch<SetStateAction<Record<JobId, ApiJob>>>,
 ) {
   const payload = msg.payload;
   const jobId = payload.job_id;
   if (!jobId) return;
 
-  const incomingSeq = typeof msg.seq === "number" ? msg.seq : null;
-  const incomingTs = typeof msg.ts === "number" ? msg.ts : Date.now();
+  const incomingSeq = typeof msg.seq === 'number' ? msg.seq : null;
+  const incomingTs = typeof msg.ts === 'number' ? msg.ts : Date.now();
 
   const existing = metaRef.current[jobId] ?? { seq: null, ts: 0 };
 
@@ -33,7 +32,7 @@ export function applyIfNewerFromWs(
   metaRef.current[jobId] = { seq: incomingSeq, ts: incomingTs };
 
   // update UI job map
-  setJobs(prev => {
+  setJobs((prev) => {
     const prevJob = prev[jobId] ?? {
       jobId,
       percent: payload.percent,
@@ -41,7 +40,7 @@ export function applyIfNewerFromWs(
       total: payload.total,
       status: payload.status,
       seq: incomingSeq,
-      ts: incomingTs
+      ts: incomingTs,
     };
 
     const nextJob: ApiJob = {
@@ -51,7 +50,7 @@ export function applyIfNewerFromWs(
       total: payload.total ?? prevJob.total,
       status: payload.status ?? prevJob.status,
       seq: incomingSeq,
-      ts: incomingTs
+      ts: incomingTs,
     };
 
     return { ...prev, [jobId]: nextJob };
