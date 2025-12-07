@@ -31,8 +31,7 @@
     }
   },
   "productName": "PictoPy",
-  "version": "1.0.0",
-  "identifier": "com.yourcompany.pictopy",
+  "identifier": "org.aossie.pictopy",
   "plugins": {
     "fs": {
       "requireLiteralLeadingDot": true
