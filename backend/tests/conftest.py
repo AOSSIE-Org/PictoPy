@@ -22,13 +22,13 @@ def setup_before_all_tests():
     print("Creating database tables...")
     try:
         db_create_YOLO_classes_table()
-        db_create_clusters_table()  # Create clusters table first since faces references it
-        db_create_faces_table()
+        db_create_clusters_table()
         db_create_folders_table()
         db_create_albums_table()
-        db_create_album_images_table()
-        db_create_images_table()
-        db_create_metadata_table()
+        db_create_images_table()  # Must come before faces, album_images, and metadata
+        db_create_faces_table()  # Depends on clusters and images
+        db_create_album_images_table()  # Depends on albums and images
+        db_create_metadata_table()  # Depends on images
         print("All database tables created successfully")
     except Exception as e:
         print(f"Error creating database tables: {e}")

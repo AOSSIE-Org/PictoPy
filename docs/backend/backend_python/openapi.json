@@ -831,7 +831,7 @@
           "Images"
         ],
         "summary": "Get All Images",
-        "description": "Get all images from the database.",
+        "description": "Retrieve images with optional filtering and pagination.\n\nReturns paginated results with total count metadata.",
         "operationId": "get_all_images_images__get",
         "parameters": [
           {
@@ -851,6 +851,45 @@
               "title": "Tagged"
             },
             "description": "Filter images by tagged status"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 1000,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Number of images per page",
+              "title": "Limit"
+            },
+            "description": "Number of images per page"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Number of images to skip",
+              "title": "Offset"
+            },
+            "description": "Number of images to skip"
           }
         ],
         "responses": {
@@ -863,6 +902,16 @@
                 }
               }
             }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
           },
           "500": {
             "content": {
@@ -1850,6 +1899,39 @@
             },
             "type": "array",
             "title": "Data"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offset"
           }
         },
         "type": "object",
