@@ -6,6 +6,11 @@ import { selectAvatar, selectName } from '@/features/onboardingSelectors';
 import { clearSearch } from '@/features/searchSlice';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export function Navbar() {
   const userName = useSelector(selectName);
@@ -42,14 +47,20 @@ export function Navbar() {
                 className="h-7 w-7 rounded object-cover"
               />
               {isSearchActive && (
-                <button
-                  onClick={() => dispatch(clearSearch())}
-                  className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white"
-                  title="Close"
-                  aria-label="Close"
-                >
-                  ✕
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => dispatch(clearSearch())}
+                      className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white"
+                      aria-label="Close"
+                    >
+                      ✕
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Clear search</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
           )}
@@ -62,16 +73,22 @@ export function Navbar() {
           />
 
           {/* FaceSearch Dialog */}
-
           <FaceSearchDialog />
 
-          <button
-            className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
-            title="Search"
-            aria-label="Search"
-          >
-            <Search className="h-4 w-4" />
-          </button>
+          {/* Search Button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
+                aria-label="Search"
+              >
+                <Search className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Search images</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -82,13 +99,20 @@ export function Navbar() {
           <span className="hidden text-sm sm:inline-block">
             Welcome <span className="text-muted-foreground">{userName}</span>
           </span>
-          <a href="/settings" className="p-2">
-            <img
-              src={userAvatar || '/photo1.png'}
-              className="hover:ring-primary/50 h-8 w-8 cursor-pointer rounded-full transition-all hover:ring-2"
-              alt="User avatar"
-            />
-          </a>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <a href="/settings" className="p-2">
+                <img
+                  src={userAvatar || '/photo1.png'}
+                  className="hover:ring-primary/50 h-8 w-8 cursor-pointer rounded-full transition-all hover:ring-2"
+                  alt="User avatar"
+                />
+              </a>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Profile settings</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>
