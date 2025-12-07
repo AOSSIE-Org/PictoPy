@@ -1,15 +1,23 @@
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { ThemeSelector } from '@/components/ThemeToggle';
-import { Search } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
 import { clearSearch } from '@/features/searchSlice';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
+import { AdvancedSearchPanel } from '@/components/Search/AdvancedSearchPanel';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export function Navbar() {
   const userName = useSelector(selectName);
   const userAvatar = useSelector(selectAvatar);
+  const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
 
   const searchState = useSelector((state: any) => state.search);
   const isSearchActive = searchState.active;
@@ -54,17 +62,33 @@ export function Navbar() {
             </div>
           )}
 
-          {/* Input */}
+          {/* Search Input */}
           <Input
             type="search"
             placeholder="Add to your search"
             className="mr-2 flex-1 border-0 bg-neutral-200"
           />
 
-          {/* FaceSearch Dialog */}
-
+          {/* Face Search Dialog */}
           <FaceSearchDialog />
 
+          {/* Advanced Filters Button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setIsAdvancedSearchOpen(true)}
+                className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
+                aria-label="Advanced filters"
+              >
+                <Filter className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Advanced filters</p>
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Search Button */}
           <button
             className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
             title="Search"
@@ -75,7 +99,7 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Right Side */}
+      {/* Right Side - Theme and User */}
       <div className="flex items-center space-x-4">
         <ThemeSelector />
         <div className="flex items-center space-x-2">
@@ -91,6 +115,12 @@ export function Navbar() {
           </a>
         </div>
       </div>
+
+      {/* Advanced Search Panel */}
+      <AdvancedSearchPanel
+        open={isAdvancedSearchOpen}
+        onOpenChange={setIsAdvancedSearchOpen}
+      />
     </div>
   );
 }
