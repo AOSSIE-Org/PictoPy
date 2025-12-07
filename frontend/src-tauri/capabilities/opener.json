@@ -14,7 +14,14 @@
         { "path": "$DESKTOP/**" },
         { "path": "$DOWNLOADS/**" },
         { "path": "$DOCUMENTS/**" },
-        { "path": "$PICTURES/**" }
+        { "path": "$PICTURES/**" },
+        
+        { "path": "/Volumes/**" },
+        { "path": "/media/**" },
+        { "path": "/mnt/**" },
+        { "path": "D:\\**" },
+        { "path": "E:\\**" },
+        { "path": "F:\\**" }
       ]
     }
   ]

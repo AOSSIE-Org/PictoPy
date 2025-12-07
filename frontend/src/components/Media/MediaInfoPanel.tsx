@@ -63,12 +63,11 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
     console.log("Attempting to open file:", path);
 
     try {
-      // This will now succeed because the path is in the allowed scope
       await openPath(path);
       console.log("openPath succeeded");
     } catch (err) {
       console.error("openPath failed:", err);
-      alert(`Could not open file: ${err}`); // Optional user feedback
+      console.error("User-facing error: Could not open file. Ensure the file exists and is accessible.");
     }
   };
 
