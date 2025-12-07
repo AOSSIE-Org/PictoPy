@@ -438,3 +438,35 @@ def db_get_direct_child_folders(parent_folder_id: str) -> List[Tuple[str, str]]:
         return cursor.fetchall()
     finally:
         conn.close()
+
+
+def db_update_folder_tagging_completed(
+    folder_id: FolderId, completed: bool = True
+) -> bool:
+    """
+    Update the taggingCompleted status for a folder.
+
+    Args:
+        folder_id: The folder ID to update
+        completed: The boolean value to set (default: True)
+
+    Returns:
+        bool: True if update was successful, False otherwise
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            "UPDATE folders SET taggingCompleted = ? WHERE folder_id = ?",
+            (completed, folder_id),
+        )
+
+        updated = cursor.rowcount > 0
+        conn.commit()
+        return updated
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()

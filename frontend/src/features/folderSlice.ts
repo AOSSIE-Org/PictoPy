@@ -71,13 +71,17 @@ const folderSlice = createSlice({
       state.folders = [];
     },
 
-    // Set tagging status for folders
+    // Set tagging status for folders (MERGE with existing data)
     setTaggingStatus(state, action: PayloadAction<FolderTaggingInfo[]>) {
-      const map: Record<string, FolderTaggingInfo> = {};
+      // Create a copy of existing status to preserve other folders
+      const updatedMap = { ...state.taggingStatus };
+
+      // Update only the folders in the payload
       for (const info of action.payload) {
-        map[info.folder_id] = info;
+        updatedMap[info.folder_id] = info;
       }
-      state.taggingStatus = map;
+
+      state.taggingStatus = updatedMap;
       state.lastUpdatedAt = Date.now();
     },
 

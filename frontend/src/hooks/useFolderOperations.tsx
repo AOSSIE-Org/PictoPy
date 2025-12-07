@@ -11,7 +11,8 @@ import { selectAllFolders } from '@/features/folderSelectors';
 import { setFolders, setTaggingStatus } from '@/features/folderSlice';
 import { FolderDetails } from '@/types/Folder';
 import { useMutationFeedback } from './useMutationFeedback';
-import { getFoldersTaggingStatus } from '@/api/api-functions/folders';
+import { addWsListener } from '@/lib/ws';
+import { FolderTaggingInfo } from '@/types/FolderStatus';
 
 /**
  * Custom hook for folder operations
@@ -21,22 +22,10 @@ export const useFolderOperations = () => {
   const dispatch = useDispatch();
   const folders = useSelector(selectAllFolders);
 
-  // Query for folders
+  // Query for folders (initial load only, no polling)
   const foldersQuery = usePictoQuery({
     queryKey: ['folders'],
     queryFn: getAllFolders,
-  });
-
-  const taggingStatusQuery = usePictoQuery({
-    queryKey: ['folders', 'tagging-status'],
-    queryFn: getFoldersTaggingStatus,
-    staleTime: 1000,
-    refetchInterval: 1000,
-    refetchIntervalInBackground: true,
-    enabled: folders.some((f) => f.AI_Tagging),
-    retry: 2, // Retry failed requests up to 2 times before giving up
-    retryOnMount: false, // Don't retry on component mount
-    refetchOnWindowFocus: false, // Don't refetch when window gains focus
   });
 
   // Apply feedback to the folders query
@@ -61,34 +50,78 @@ export const useFolderOperations = () => {
     if (foldersQuery.data?.data?.folders) {
       const folders = foldersQuery.data.data.folders as FolderDetails[];
       dispatch(setFolders(folders));
+
+      // Set tagging status to 100% for folders that have taggingCompleted = true
+      const completedFolders = folders
+        .filter((folder) => folder.taggingCompleted === true)
+        .map((folder) => ({
+          folder_id: folder.folder_id,
+          folder_path: folder.folder_path,
+          tagging_percentage: 100,
+        }));
+
+      if (completedFolders.length > 0) {
+        dispatch(setTaggingStatus(completedFolders));
+      }
     }
   }, [foldersQuery.data, dispatch]);
 
-  // Update Redux store with tagging status on each poll
+  /* ------------- WebSocket listener for real-time progress updates ------------- */
   useEffect(() => {
-    if (taggingStatusQuery.data?.success) {
-      const raw = taggingStatusQuery.data.data as any;
-      if (Array.isArray(raw)) {
-        dispatch(setTaggingStatus(raw));
+    const unsubscribe = addWsListener((msg: any) => {
+      // Defensive checks
+      if (!msg || typeof msg !== 'object' || !('type' in msg)) return;
+
+      const type = String(msg.type);
+
+      // Handle progress events from backend
+      // Message format: { type: 'progress', seq, ts, payload: { job_id, processed, total, percent, status } }
+      if (type === 'progress' && msg.payload) {
+        try {
+          const p = msg.payload as any;
+          const jobId = String(p.job_id);
+          const percent = Number(p.percent || 0);
+          const status = String(p.status || 'running');
+
+          // Check if this job_id corresponds to a folder_id
+          // Since backend sends job_id as folder_id for AI tagging operations
+          const folder = folders.find((f) => f.folder_id === jobId);
+
+          if (folder) {
+            // Convert progress event to FolderTaggingInfo format
+            const taggingInfo: FolderTaggingInfo = {
+              folder_id: jobId,
+              folder_path: folder.folder_path,
+              tagging_percentage: Math.round(percent),
+            };
+
+            // Update tagging status in Redux
+            dispatch(setTaggingStatus([taggingInfo]));
+
+            // If status is 'done', mark tagging as completed (100%)
+            if (status === 'done') {
+              console.log(`[WS] AI tagging completed for folder: ${jobId}`);
+              // Ensure it's set to exactly 100%
+              dispatch(
+                setTaggingStatus([{ ...taggingInfo, tagging_percentage: 100 }]),
+              );
+            }
+          }
+        } catch (e) {
+          console.error('[WS] Failed to process progress message', e);
+        }
       }
-    }
-  }, [taggingStatusQuery.data, dispatch]);
+    });
 
-  useEffect(() => {
-    if (taggingStatusQuery.isError) {
-      console.error(
-        'Failed to fetch tagging status:',
-        taggingStatusQuery.error,
-      );
-
-      const errorMessage = taggingStatusQuery.errorMessage || 'Unknown error';
-      console.warn(`Tagging status query failed: ${errorMessage}`);
-    }
-  }, [
-    taggingStatusQuery.isError,
-    taggingStatusQuery.error,
-    taggingStatusQuery.errorMessage,
-  ]);
+    // Cleanup listener on unmount
+    return () => {
+      try {
+        unsubscribe();
+      } catch (e) {
+        console.error('[WS] Error unsubscribing', e);
+      }
+    };
+  }, [dispatch, folders]);
 
   // Enable AI tagging mutation
   const enableAITaggingMutation = usePictoMutation({
