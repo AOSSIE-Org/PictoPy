@@ -307,7 +307,7 @@ export const MagicEraserOverlay: React.FC<MagicEraserOverlayProps> = ({
 
                         <button
                             onClick={handleErase}
-                            disabled={paths.length === 0}
+                            disabled={paths.length === 0 || isProcessing}
                             className="flex items-center gap-2 px-6 py-3 rounded-full bg-purple-600 text-white hover:bg-purple-500 hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all font-medium"
                         >
                             <Eraser className="w-5 h-5" />

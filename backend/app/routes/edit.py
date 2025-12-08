@@ -38,16 +38,16 @@ def cv2_to_base64(img):
 @router.post("/magic-eraser", response_model=MagicEraserResponse)
 def magic_eraser(body: MagicEraserRequest):
     try:
-        # Security Check: Validate path is within expected directory/exists and is a file
-        # For this desktop app, we can just ensure it exists and is an absolute path or relative to CWD
-        # A simple check to prevent ../../ traversal if running in a sensitive context
-        # But primarily we just handle the error gracefully.
+        # Custom Validation: Prevent Path Traversal
+        # Ensure path is absolute and doesn't contain traversal sequences
+        abs_path = os.path.abspath(body.image_path)
+        base_dir = os.path.abspath(os.getcwd()) # Or a specific allowed media directory
         
-        # Real validation:
-        if not os.path.isabs(body.image_path) and ".." in body.image_path:
-             return MagicEraserResponse(success=False, error="Invalid image path")
+        # Simple check for ".." usage which suggests traversal attempts
+        if ".." in body.image_path:
+             return MagicEraserResponse(success=False, error="Invalid image path: Path traversal detected")
 
-        if not os.path.exists(body.image_path):
+        if not os.path.exists(abs_path):
              return MagicEraserResponse(success=False, error="Image file not found")
         
         image = cv2.imread(body.image_path)

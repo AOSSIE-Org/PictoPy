@@ -258,7 +258,9 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
             originalHeight={imgRef.current.naturalHeight}
             onSave={async (base64Data) => {
               try {
-                const base64Content = base64Data.split(',')[1];
+                const base64Content = base64Data.includes(',')
+                  ? base64Data.split(',')[1]
+                  : base64Data;
                 const binaryString = window.atob(base64Content);
                 const len = binaryString.length;
                 const bytes = new Uint8Array(len);

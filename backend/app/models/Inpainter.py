@@ -88,7 +88,12 @@ class Inpainter:
         # Clip to [0, 255], CHW -> HWC
         output_img = output_data[0]
         output_img = np.transpose(output_img, (1, 2, 0)) # (512, 512, 3)
-        # Model outputs [0, 255], so no need to multiply
+        
+        # Auto-detect output range: LaMa can be [0, 1] or [0, 255]
+        # If max value is small (<= 1.0 + epsilon), assume it's [0, 1] and scale up.
+        if output_img.max() <= 1.1:
+            output_img = output_img * 255.0
+            
         output_img = np.clip(output_img, 0, 255).astype(np.uint8)
 
         # Resize back to original

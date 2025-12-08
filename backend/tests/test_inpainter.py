@@ -37,8 +37,13 @@ def test_inpainter():
              return
              
         # Check if the center is not black/unmodified (basic check)
+        # Check if the center is not black (0) which would indicate incorrect scaling [0,1]->uint8
         center_pixel = result[250, 250]
         print(f"Center pixel value: {center_pixel}")
+        
+        if np.all(center_pixel == 0):
+             print(f"FAILED: Center pixel is black (0). Model output likely [0, 1] but treated as [0, 255].")
+             sys.exit(1)
         
         print("SUCCESS: Inpainter verification passed.")
         
