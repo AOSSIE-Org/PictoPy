@@ -94,4 +94,17 @@ class Inpainter:
         # Resize back to original
         result_img = cv2.resize(output_img, (original_w, original_h), interpolation=cv2.INTER_CUBIC)
         
-        return result_img
+        # 4. Blend to preserve original quality
+        # Create a binary mask of the inpainted region
+        if len(mask.shape) == 2:
+            mask = mask[:, :, np.newaxis]
+        
+        # Normalize mask to 0-1
+        mask_normalized = mask.astype(np.float32) / 255.0
+        mask_normalized = (mask_normalized > 0.5).astype(np.float32)
+        
+        # Blend: original * (1 - mask) + result * mask
+        final_img = image.astype(np.float32) * (1 - mask_normalized) + result_img.astype(np.float32) * mask_normalized
+        final_img = np.clip(final_img, 0, 255).astype(np.uint8)
+        
+        return final_img
