@@ -11,7 +11,9 @@ type Props = {
 };
 
 const formatSize = (s?: string | number) => {
-  if (!s) return '';
+  // FIX: Check for null/undefined specifically so '0' is allowed as a valid size
+  if (s === undefined || s === null || s === '') return '';
+  
   const n = typeof s === 'string' ? Number(s) : s;
   if (Number.isNaN(n)) return String(s);
   if (n < 1024) return `${n} B`;
@@ -128,6 +130,7 @@ export const ShareOptionsModal: React.FC<Props> = ({
 
         <button
           onClick={onShare}
+          disabled={!filePath} // FIX: Added disabled prop
           className={`inline-flex items-center gap-2 rounded border border-white/10 px-3 py-2 text-sm font-medium ${filePath ? 'hover:bg-white/5' : 'cursor-not-allowed opacity-50'}`}
           aria-label="Using more options"
         >
