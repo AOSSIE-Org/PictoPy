@@ -1,6 +1,5 @@
 const net = require('net');
-const fs = require('fs');
-const path = require('path');
+const { spawn } = require('child_process');
 
 // Range of ports to check (Vite's default + alternatives)
 const PORT_RANGE_START = 5173;
@@ -14,21 +13,22 @@ const PORT_RANGE_END = 5182;
 function isPortAvailable(port) {
   return new Promise((resolve) => {
     const server = net.createServer();
-    
+
     server.once('error', (err) => {
       if (err.code === 'EADDRINUSE') {
         resolve(false);
       } else {
+        console.warn(`Unexpected error checking port ${port}:`, err.message);
         resolve(false);
       }
     });
-    
+
     server.once('listening', () => {
       server.close();
       resolve(true);
     });
-    
-    server.listen(port);
+
+    server.listen(port, 'localhost');
   });
 }
 
@@ -46,60 +46,58 @@ async function findAvailablePort() {
 }
 
 /**
- * Update tauri.conf.json with the selected port
- * @param {number} port - Port to use
- */
-function updateTauriConfig(port) {
-  const configPath = path.join(__dirname, '..', 'src-tauri', 'tauri.conf.json');
-  
-  try {
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    
-    // Update devUrl and beforeDevCommand
-    config.build.devUrl = `http://localhost:${port}`;
-    config.build.beforeDevCommand = `npm run dev -- --port ${port}`;
-    
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    console.log(`✓ Updated Tauri config to use port ${port}`);
-  } catch (error) {
-    console.error('Error updating Tauri config:', error);
-    process.exit(1);
-  }
-}
-
-/**
  * Main function
  */
 async function main() {
-  console.log('\nDetecting available port for Tauri development...');
-  
+  console.log('\n🔍 Detecting available port for Tauri development...');
+
   const port = await findAvailablePort();
-  
+
   if (!port) {
-    console.error(`\n✗ No available ports found in range ${PORT_RANGE_START}-${PORT_RANGE_END}`);
-    console.error('Please free up a port or manually configure the port in tauri.conf.json');
+    console.error(
+      `\n❌ No available ports found in range ${PORT_RANGE_START}-${PORT_RANGE_END}`,
+    );
+    console.error(
+      'Please free up a port or manually configure the port in tauri.conf.json',
+    );
     process.exit(1);
   }
-  
-  console.log(`Found available port: ${port}`);
-  updateTauriConfig(port);
-  
-  // Set environment variables
-  process.env.VITE_PORT = port.toString();
-  process.env.TAURI_MODE = 'development';
-  
-  console.log('Starting Tauri dev server...\n');
-  
-  // Start Tauri dev
-  const { spawn } = require('child_process');
-  const tauri = spawn('npm', ['run', 'tauri', 'dev'], {
-    stdio: 'inherit',
-    shell: true,
-    env: { ...process.env, VITE_PORT: port.toString() }
+
+  console.log(`✅ Found available port: ${port}`);
+  console.log('🚀 Starting Tauri dev server...\n');
+
+  // Start Tauri dev with CLI flags (no config file modification)
+  const tauri = spawn(
+    'npm',
+    [
+      'run',
+      'tauri',
+      'dev',
+      '--',
+      '--dev-url',
+      `http://localhost:${port}`,
+      '--port',
+      port.toString(),
+    ],
+    {
+      stdio: 'inherit',
+      shell: true,
+      env: {
+        ...process.env,
+        VITE_PORT: port.toString(),
+        TAURI_CLI_PORT: port.toString(),
+        TAURI_DEV_HOST: 'localhost',
+      },
+    },
+  );
+
+  tauri.on('error', (error) => {
+    console.error('Failed to start Tauri dev server:', error);
+    process.exit(1);
   });
-  
+
   tauri.on('exit', (code) => {
-    process.exit(code);
+    process.exit(code || 0);
   });
 }
 
