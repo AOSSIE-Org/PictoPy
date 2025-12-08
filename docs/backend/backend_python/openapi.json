@@ -2332,7 +2332,14 @@
             "title": "Success"
           },
           "image_data": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Image Data"
           },
           "error": {
@@ -2349,8 +2356,7 @@
         },
         "type": "object",
         "required": [
-          "success",
-          "image_data"
+          "success"
         ],
         "title": "MagicEraserResponse"
       },

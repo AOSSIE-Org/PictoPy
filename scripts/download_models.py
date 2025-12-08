@@ -1,6 +1,7 @@
 import os
 import requests
 from tqdm import tqdm
+import sys
 
 # Constants
 MODEL_URL = "https://huggingface.co/Carve/LaMa-ONNX/resolve/main/lama_fp32.onnx"
@@ -47,10 +48,12 @@ def main():
             print("Download failed.")
             if os.path.exists(MODEL_PATH):
                 os.remove(MODEL_PATH)
+            sys.exit(1)
     except Exception as e:
         print(f"An error occurred: {e}")
         if os.path.exists(MODEL_PATH):
              os.remove(MODEL_PATH)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

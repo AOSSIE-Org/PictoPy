@@ -124,10 +124,13 @@ export const MagicEraserOverlay: React.FC<MagicEraserOverlayProps> = ({
         }
     };
 
+    const [error, setError] = useState<string | null>(null);
+
     const handleErase = async () => {
         if (paths.length === 0) return;
 
         setIsProcessing(true);
+        setError(null);
         try {
             // 1. Generate Mask Data URL
             // We need a separate canvas for the actual mask (white on black)
@@ -162,7 +165,8 @@ export const MagicEraserOverlay: React.FC<MagicEraserOverlayProps> = ({
             const maskData = maskCanvas.toDataURL('image/png');
 
             // 2. Call API
-            const response = await fetch('http://localhost:8000/edit/magic-eraser', {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const response = await fetch(`${apiUrl}/edit/magic-eraser`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -178,10 +182,12 @@ export const MagicEraserOverlay: React.FC<MagicEraserOverlayProps> = ({
                 setPreviewImage(data.image_data);
             } else {
                 console.error('Magic Eraser failed:', data.error);
+                setError(data.error || 'Failed to process image');
             }
 
         } catch (error) {
             console.error('Error:', error);
+            setError('Network error. Please try again.');
         } finally {
             setIsProcessing(false);
         }
@@ -248,6 +254,15 @@ export const MagicEraserOverlay: React.FC<MagicEraserOverlayProps> = ({
                         <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center backdrop-blur-sm z-10">
                             <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-3" />
                             <span className="text-white font-medium">Removing Object...</span>
+                        </div>
+                    )}
+
+                    {/* Error Overlay */}
+                    {error && (
+                        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                            <div className="bg-red-500/90 text-white px-6 py-3 rounded-xl shadow-2xl backdrop-blur-md border border-white/20">
+                                <p className="font-medium text-center">{error}</p>
+                            </div>
                         </div>
                     )}
                 </div>

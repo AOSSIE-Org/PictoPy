@@ -22,7 +22,7 @@ class Inpainter:
         )
         
         if not os.path.exists(model_path):
-            logger.error(f"Inpainting model found at {model_path}")
+            logger.error(f"Inpainting model not found at {model_path}")
             self.session = None
             return
 

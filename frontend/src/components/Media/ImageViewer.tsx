@@ -250,7 +250,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
           </TransformComponent>
         </TransformWrapper>
 
-        {isMagicEraserActive && imgRef.current && (
+        {isMagicEraserActive && imgRef.current && imgRef.current.naturalWidth > 0 && imgRef.current.naturalHeight > 0 && (
           <MagicEraserOverlay
             imagePath={imagePath}
             onClose={() => setIsMagicEraserActive(false)}

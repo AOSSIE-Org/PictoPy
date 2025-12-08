@@ -19,7 +19,7 @@ class MagicEraserRequest(BaseModel):
 
 class MagicEraserResponse(BaseModel):
     success: bool
-    image_data: str # Base64 string
+    image_data: str | None = None # Base64 string
     error: str | None = None
 
 def base64_to_cv2(b64str):
@@ -38,18 +38,26 @@ def cv2_to_base64(img):
 @router.post("/magic-eraser", response_model=MagicEraserResponse)
 def magic_eraser(body: MagicEraserRequest):
     try:
-        # 1. Load Image
+        # Security Check: Validate path is within expected directory/exists and is a file
+        # For this desktop app, we can just ensure it exists and is an absolute path or relative to CWD
+        # A simple check to prevent ../../ traversal if running in a sensitive context
+        # But primarily we just handle the error gracefully.
+        
+        # Real validation:
+        if not os.path.isabs(body.image_path) and ".." in body.image_path:
+             return MagicEraserResponse(success=False, error="Invalid image path")
+
         if not os.path.exists(body.image_path):
-             raise HTTPException(status_code=404, detail="Image file not found")
+             return MagicEraserResponse(success=False, error="Image file not found")
         
         image = cv2.imread(body.image_path)
         if image is None:
-             raise HTTPException(status_code=400, detail="Failed to load image file")
+             return MagicEraserResponse(success=False, error="Failed to load image file")
 
         # 2. Load Mask
         mask = base64_to_cv2(body.mask_data)
         if mask is None:
-            raise HTTPException(status_code=400, detail="Failed to decode mask data")
+            return MagicEraserResponse(success=False, error="Failed to decode mask data")
         
         # Ensure mask is single channel
         if len(mask.shape) == 3:
@@ -64,5 +72,5 @@ def magic_eraser(body: MagicEraserRequest):
         return MagicEraserResponse(success=True, image_data=b64_result)
 
     except Exception as e:
-        logger.error(f"Magic Eraser failed: {e}")
-        return MagicEraserResponse(success=False, image_data="", error=str(e))
+        logger.exception("Magic Eraser failed")
+        return MagicEraserResponse(success=False, error="Internal processing error")

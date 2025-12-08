@@ -139,6 +139,10 @@ pip install -r requirements.txt
 # Download required models
 echo -e "${YELLOW}Downloading required models...${NC}"
 python ../scripts/download_models.py
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Model download failed. Setup aborted.${NC}"
+    exit 1
+fi
 deactivate
 cd ..
 
