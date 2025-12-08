@@ -1,0 +1,75 @@
+backend
+cd backend
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+
+
+Frontend
+cd frontend
+npm install
+npm run tauri dev
+
+
+PR 
+STEP 1 — Make sure you're on main branch
+git checkout main
+git pull
+
+STEP 2 — Stash your changes (if any uncommitted work exists)
+git stash
+
+STEP 3 — Create a new branch for your fix
+git checkout -b open-image-issue
+
+STEP 4 — Apply your saved changes
+git stash pop
+
+STEP 5 — Stage your changes
+git add .
+
+
+STEP 6 — Fix pre-commit (one time only)
+Run in project root:
+git config --unset-all core.hooksPath
+
+
+Activate backend venv:
+cd backend
+.\.venv\Scripts\activate
+
+Install pre-commit
+pip install pre-commit
+pre-commit install
+
+
+STEP 7 — Commit the changes
+git commit -m "Fix: Open Original File button not working in Image Details panel #688"
+
+STEP 8 — Push your branch to GitHub
+git push --set-upstream origin open-image-issue
+
+
+STEP 9 — Create GitHub PR
+Create Pull Request for 'open-image-issue'
+Click → Create Pull Request
+
+
+
+git checkout main
+git pull
+git stash
+git checkout -b my-branch
+git stash pop
+git add .
+git config --unset-all core.hooksPath
+cd backend
+.\.venv\Scripts\activate
+pip install pre-commit
+pre-commit install
+cd ..
+git commit -m "Fix: description here"
+git push --set-upstream origin my-branch
+palisaders
+sugarlabs
+oppis
