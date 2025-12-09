@@ -34,8 +34,14 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
   const [selectedAvatar, setLocalAvatar] = useState('');
 
   useEffect(() => {
-    if (localStorage.getItem('name') && localStorage.getItem('avatar')) {
-      dispatch(markCompleted(stepIndex));
+    const savedName = localStorage.getItem('name');
+    const savedAvatar = localStorage.getItem('avatar');
+
+    if (savedName) {
+      setLocalName(savedName);
+    }
+    if (savedAvatar) {
+      setLocalAvatar(savedAvatar);
     }
   }, []);
 
@@ -55,24 +61,20 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
     dispatch(markCompleted(stepIndex));
   };
 
-  if (localStorage.getItem('name') && localStorage.getItem('avatar')) {
-    return null;
-  }
-
   return (
     <>
       <Card className="flex max-h-full w-1/2 flex-col gap-3 border p-4">
         <CardHeader className="p-3">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
-              Step {stepIndex + 1} of {totalSteps}
+              Step {stepIndex} of {totalSteps}
             </span>
-            <span>{Math.round(((stepIndex + 1) / totalSteps) * 100)}%</span>
+            <span>{Math.round((stepIndex / totalSteps) * 100)}%</span>
           </div>
           <div className="bg-muted mb-2 h-1.5 w-full rounded-full">
             <div
               className="bg-primary h-full rounded-full transition-all duration-300"
-              style={{ width: `${((stepIndex + 1) / totalSteps) * 100}%` }}
+              style={{ width: `${(stepIndex / totalSteps) * 100}%` }}
             />
           </div>
           <CardTitle className="mt-1 text-xl font-semibold">

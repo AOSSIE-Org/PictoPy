@@ -31,8 +31,9 @@ export function FolderSetupStep({
   const [folder, setFolder] = useState<string>('');
 
   useEffect(() => {
-    if (localStorage.getItem('folderChosen') === 'true') {
-      dispatch(markCompleted(stepIndex));
+    const savedFolder = localStorage.getItem('savedFolderPath');
+    if (savedFolder) {
+      setFolder(savedFolder);
     }
   }, []);
 
@@ -53,6 +54,7 @@ export function FolderSetupStep({
 
   const handleNext = () => {
     localStorage.setItem('folderChosen', 'true');
+    localStorage.setItem('savedFolderPath', folder);
     addFolderMutate(folder);
     dispatch(markCompleted(stepIndex));
   };
@@ -61,10 +63,7 @@ export function FolderSetupStep({
     dispatch(previousStep());
   };
 
-  if (localStorage.getItem('folderChosen') === 'true') {
-    return null;
-  }
-  const progressPercent = Math.round(((stepIndex + 1) / totalSteps) * 100);
+  const progressPercent = Math.round((stepIndex / totalSteps) * 100);
 
   return (
     <>
@@ -72,7 +71,7 @@ export function FolderSetupStep({
         <CardHeader className="p-3">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
-              Step {stepIndex + 1} of {totalSteps}
+              Step {stepIndex} of {totalSteps}
             </span>
             <span>{progressPercent}%</span>
           </div>
