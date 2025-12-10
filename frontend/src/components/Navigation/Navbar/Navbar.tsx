@@ -12,6 +12,21 @@ import {
   TooltipContent,
 } from '@/components/ui/tooltip';
 
+/**
+ * Renders the top navigation bar for the application.
+ *
+ * Includes:
+ * - Application logo
+ * - Search bar with query preview
+ * - FaceSearchDialog icon wrapped in a tooltip ("Face Scanner")
+ * - User profile avatar wrapped in a tooltip ("Profile")
+ * - Theme selector
+ *
+ * This update introduces hover tooltips for improved accessibility
+ * and clarifies the purpose of the Face Scanner and Profile icons.
+ */
+
+
 export function Navbar() {
   const userName = useSelector(selectName);
   const userAvatar = useSelector(selectAvatar);
