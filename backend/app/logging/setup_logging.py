@@ -235,19 +235,21 @@ class InterceptHandler(logging.Handler):
         Args:
             record: The log record to process
         """
-        # Get the appropriate module name
-        module_name = record.name
-        if "." in module_name:
-            module_name = module_name.split(".")[-1]
+        # Prevent infinite recursion
+        if getattr(record, "_in_intercept_handler", False):
+            return
 
-        # Create a message that includes the original module in the format
-        msg = record.getMessage()
+        record._in_intercept_handler = True
 
-        # Find the appropriate logger
-        logger = get_logger(module_name)
-
-        # Log the message with our custom formatting
-        logger.log(record.levelno, f"[uvicorn] {msg}")
+        try:
+            # Just print directly to avoid recursion issues
+            msg = self.format(record)
+            print(msg, file=sys.stdout)
+        except Exception as e:
+            print(f"Logging error: {e}", file=sys.stderr)
+        finally:
+            if hasattr(record, "_in_intercept_handler"):
+                delattr(record, "_in_intercept_handler")
 
 
 def configure_uvicorn_logging(component_name: str) -> None:
