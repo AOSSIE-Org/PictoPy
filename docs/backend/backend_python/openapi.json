@@ -833,6 +833,26 @@
         "summary": "Get All Images",
         "description": "Get all images from the database.",
         "operationId": "get_all_images_images__get",
+        "parameters": [
+          {
+            "name": "tagged",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter images by tagged status",
+              "title": "Tagged"
+            },
+            "description": "Filter images by tagged status"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -845,11 +865,60 @@
             }
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/toggle-favourite": {
+      "post": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Toggle Favourite",
+        "operationId": "toggle_favourite_images_toggle_favourite_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToggleFavouriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1042,15 +1111,28 @@
         ],
         "summary": "Face Tagging",
         "operationId": "face_tagging_face_clusters_face_search_post",
+        "parameters": [
+          {
+            "name": "input_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/InputType",
+              "description": "Choose input type: 'path' or 'base64'",
+              "default": "path"
+            },
+            "description": "Choose input type: 'path' or 'base64'"
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AddSingleImageRequest"
+                "$ref": "#/components/schemas/FaceSearchRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1062,11 +1144,53 @@
             }
           },
           "400": {
-            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/face-clusters/global-recluster": {
+      "post": {
+        "tags": [
+          "Face Clusters"
+        ],
+        "summary": "Trigger Global Reclustering",
+        "description": "Manually trigger global face reclustering.\nThis forces full reclustering regardless of the 24-hour rule.",
+        "operationId": "trigger_global_reclustering_face_clusters_global_recluster_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalReclusterResponse"
                 }
               }
             }
@@ -1077,16 +1201,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1287,19 +1401,6 @@
           "success"
         ],
         "title": "AddFolderResponse"
-      },
-      "AddSingleImageRequest": {
-        "properties": {
-          "path": {
-            "type": "string",
-            "title": "Path"
-          }
-        },
-        "type": "object",
-        "required": [
-          "path"
-        ],
-        "title": "AddSingleImageRequest"
       },
       "Album": {
         "properties": {
@@ -1512,6 +1613,34 @@
           "success"
         ],
         "title": "DeleteFoldersResponse"
+      },
+      "FaceSearchRequest": {
+        "properties": {
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "base64_data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base64 Data"
+          }
+        },
+        "type": "object",
+        "title": "FaceSearchRequest"
       },
       "FolderDetails": {
         "properties": {
@@ -1899,6 +2028,68 @@
         "title": "GetUserPreferencesResponse",
         "description": "Response model for getting user preferences"
       },
+      "GlobalReclusterData": {
+        "properties": {
+          "clusters_created": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clusters Created"
+          }
+        },
+        "type": "object",
+        "title": "GlobalReclusterData"
+      },
+      "GlobalReclusterResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GlobalReclusterData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "GlobalReclusterResponse"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1937,6 +2128,10 @@
             "type": "boolean",
             "title": "Istagged"
           },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
+          },
           "tags": {
             "anyOf": [
               {
@@ -1959,7 +2154,8 @@
           "folder_id",
           "thumbnailPath",
           "metadata",
-          "isTagged"
+          "isTagged",
+          "isFavourite"
         ],
         "title": "ImageData"
       },
@@ -2057,6 +2253,14 @@
         ],
         "title": "ImageInCluster",
         "description": "Represents an image that contains faces from a specific cluster."
+      },
+      "InputType": {
+        "type": "string",
+        "enum": [
+          "path",
+          "base64"
+        ],
+        "title": "InputType"
       },
       "MetadataModel": {
         "properties": {
@@ -2341,6 +2545,19 @@
           "success"
         ],
         "title": "SyncFolderResponse"
+      },
+      "ToggleFavouriteRequest": {
+        "properties": {
+          "image_id": {
+            "type": "string",
+            "title": "Image Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_id"
+        ],
+        "title": "ToggleFavouriteRequest"
       },
       "UpdateAITaggingData": {
         "properties": {

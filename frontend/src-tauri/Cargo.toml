@@ -1,6 +1,6 @@
 [package]
 name = "picto_py"
-version = "1.0.0"
+version = "1.1.0"
 description = "An Image sorter that sorts photos based on face encodings in it."
 authors = ["you"]
 edition = "2021"
@@ -11,17 +11,12 @@ edition = "2021"
 tauri-build = { version = "2.0.6", features = [] }
 
 [dependencies]
-tauri = { version = "2.3.1", features = ["protocol-asset", "devtools"] }
+tauri = { version = "2.9.1", features = ["protocol-asset", "devtools"] }
 walkdir = "2.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 anyhow = "1.0"
 image = "0.24.6"
-tauri-plugin-fs = "2"
-tauri-plugin-shell = "2"
-tauri-plugin-dialog = "2"
-tauri-plugin-process = "2.0.0"
-tauri-plugin-store = { version = "2" }
 ring = "0.16.20"
 data-encoding = "2.3.2"
 tokio = { version = "1", features = ["macros"] }
@@ -33,10 +28,16 @@ chrono = { version = "0.4.26", features = ["serde"] }
 base64 = "0.21.0"
 rand = "0.8.5"
 winapi = { version = "0.3", features = ["winuser"] }
+tauri-plugin-shell = "2.3.3"
+tauri-plugin-fs = "2.4.4"
+tauri-plugin-dialog = "2.4.2"
+tauri-plugin-process = "2.3.1"
+tauri-plugin-store = "2.4.1"
+tauri-plugin-updater = "2.9.0"
+tauri-plugin-opener = "2.5.2"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-updater = "2"

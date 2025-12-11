@@ -39,13 +39,46 @@ def db_create_clusters_table() -> None:
             conn.close()
 
 
-def db_insert_clusters_batch(clusters: List[ClusterData]) -> List[ClusterId]:
+def db_delete_all_clusters(cursor: Optional[sqlite3.Cursor] = None) -> int:
+    """
+    Delete all clusters from the database.
+
+    Args:
+        cursor: Optional existing database cursor. If None, creates a new connection.
+
+    Returns:
+        Number of deleted clusters
+    """
+    own_connection = cursor is None
+    if own_connection:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+
+    try:
+        cursor.execute("DELETE FROM face_clusters")
+        deleted_count = cursor.rowcount
+        if own_connection:
+            conn.commit()
+        return deleted_count
+    except Exception:
+        if own_connection:
+            conn.rollback()
+        print("Error deleting all clusters.")
+        raise
+    finally:
+        if own_connection:
+            conn.close()
+
+
+def db_insert_clusters_batch(
+    clusters: List[ClusterData], cursor: Optional[sqlite3.Cursor] = None
+) -> List[ClusterId]:
     """
     Insert multiple clusters into the database in batch.
 
     Args:
         clusters: List of ClusterData objects containing cluster information.
-        cluster_id: should be provided as UUID strings.
+        cursor: Optional existing database cursor. If None, creates a new connection.
 
     Returns:
         List of cluster IDs of the newly created clusters
@@ -53,8 +86,10 @@ def db_insert_clusters_batch(clusters: List[ClusterData]) -> List[ClusterId]:
     if not clusters:
         return []
 
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    own_connection = cursor is None
+    if own_connection:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
 
     try:
         cluster_ids = []
@@ -72,14 +107,20 @@ def db_insert_clusters_batch(clusters: List[ClusterData]) -> List[ClusterId]:
             """
             INSERT INTO face_clusters (cluster_id, cluster_name, face_image_base64)
             VALUES (?, ?, ?)
-        """,
+            """,
             insert_data,
         )
 
-        conn.commit()
+        if own_connection:
+            conn.commit()
         return cluster_ids
+    except Exception:
+        if own_connection:
+            conn.rollback()
+        raise
     finally:
-        conn.close()
+        if own_connection:
+            conn.close()
 
 
 def db_get_cluster_by_id(cluster_id: ClusterId) -> Optional[ClusterData]:
@@ -145,6 +186,7 @@ def db_get_all_clusters() -> List[ClusterData]:
 def db_update_cluster(
     cluster_id: ClusterId,
     cluster_name: Optional[ClusterName] = None,
+    conn: Optional[sqlite3.Connection] = None,
 ) -> bool:
     """
     Update an existing cluster.
@@ -152,11 +194,16 @@ def db_update_cluster(
     Args:
         cluster_id: The ID of the cluster to update
         cluster_name: New cluster name (optional)
+        conn: Optional existing database connection. If None, creates a new connection.
 
     Returns:
         True if the cluster was updated, False if not found
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    # Use provided connection or create a new one
+    own_connection = conn is None
+    if own_connection:
+        conn = sqlite3.connect(DATABASE_PATH)
+
     cursor = conn.cursor()
 
     try:
@@ -181,26 +228,6 @@ def db_update_cluster(
         updated = cursor.rowcount > 0
         conn.commit()
         return updated
-    finally:
-        conn.close()
-
-
-def db_delete_all_clusters() -> int:
-    """
-    Delete all entries from the face_clusters table.
-
-    Returns:
-        Number of clusters deleted
-    """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("DELETE FROM face_clusters")
-
-        deleted_count = cursor.rowcount
-        conn.commit()
-        return deleted_count
     finally:
         conn.close()
 
@@ -299,11 +326,12 @@ def db_get_images_by_cluster_id(
                 bbox_json,
             ) = row
 
+            import json
+
+            metadata_dict = json.loads(metadata) if metadata else None
             # Parse bbox JSON if it exists
             bbox = None
             if bbox_json:
-                import json
-
                 bbox = json.loads(bbox_json)
 
             images.append(
@@ -311,7 +339,7 @@ def db_get_images_by_cluster_id(
                     "image_id": image_id,
                     "image_path": image_path,
                     "thumbnail_path": thumbnail_path,
-                    "metadata": metadata,
+                    "metadata": metadata_dict,
                     "face_id": face_id,
                     "confidence": confidence,
                     "bbox": bbox,

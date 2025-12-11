@@ -1,12 +1,11 @@
 import { useMemo, useRef, useEffect, useCallback } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { Image } from '@/types/Media';
-import { selectImages } from '@/features/imageSelectors';
-import {
-  groupImagesByYearMonthFromMetadata,
-  createImageIndexMap,
-} from '@/utils/dateUtils';
+import { groupImagesByYearMonthFromMetadata } from '@/utils/dateUtils';
+import { setCurrentViewIndex } from '@/features/imageSlice';
+import { MediaView } from './MediaView';
+import { selectIsImageViewOpen } from '@/features/imageSelectors';
 
 export type MonthMarker = {
   offset: number;
@@ -31,20 +30,15 @@ export const ChronologicalGallery = ({
   onMonthOffsetsChange,
   scrollContainerRef,
 }: ChronologicalGalleryProps) => {
-  const allImages = useSelector(selectImages);
+  const dispatch = useDispatch();
   const monthHeaderRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const galleryRef = useRef<HTMLDivElement>(null);
+  const isImageViewOpen = useSelector(selectIsImageViewOpen);
 
   // Optimized grouping with proper date handling
   const grouped = useMemo(
     () => groupImagesByYearMonthFromMetadata(images),
     [images],
-  );
-
-  // Optimized image index lookup
-  const imageIndexMap = useMemo(
-    () => createImageIndexMap(allImages),
-    [allImages],
   );
 
   const sortedGrouped = useMemo(() => {
@@ -57,6 +51,20 @@ export const ChronologicalGallery = ({
         ),
       }));
   }, [grouped]);
+
+  const chronologicallySortedImages = useMemo(() => {
+    return sortedGrouped.flatMap(({ months }) =>
+      months.flatMap(([, imgs]) => imgs),
+    );
+  }, [sortedGrouped]);
+
+  const imageIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    chronologicallySortedImages.forEach((img, idx) => {
+      map.set(img.id, idx);
+    });
+    return map;
+  }, [chronologicallySortedImages]);
 
   const recomputeMarkers = useCallback(() => {
     if (!onMonthOffsetsChange) return;
@@ -104,70 +112,76 @@ export const ChronologicalGallery = ({
   }, [recomputeMarkers, scrollContainerRef]);
 
   return (
-    <div ref={galleryRef} className={`space-y-0 ${className}`}>
-      {/* Title */}
-      {showTitle && (
-        <div className="mb-6">
-          <h1 className="mt-6 text-2xl font-bold">{title}</h1>
-        </div>
-      )}
+    <>
+      <div ref={galleryRef} className={`space-y-0 ${className}`}>
+        {/* Title */}
+        {showTitle && (
+          <div className="mb-6">
+            <h1 className="mt-6 text-2xl font-bold">{title}</h1>
+          </div>
+        )}
 
-      {/* Gallery Content */}
-      {sortedGrouped.map(({ year, months }) => (
-        <div key={year} data-year={year}>
-          {months.map(([month, imgs]) => {
-            const monthName = new Date(
-              Number(year),
-              Number(month) - 1,
-            ).toLocaleString('default', { month: 'long' });
+        {/* Gallery Content */}
+        {sortedGrouped.map(({ year, months }) => (
+          <div key={year} data-year={year}>
+            {months.map(([month, imgs]) => {
+              const monthName = new Date(
+                Number(year),
+                Number(month) - 1,
+              ).toLocaleString('default', { month: 'long' });
 
-            return (
-              <div
-                key={`${year}-${month}`}
-                className="mb-8"
-                data-timeline-month={`${year}-${month}`}
-                id={`timeline-section-${year}-${month}`}
-                ref={(el) => {
-                  const key = `${year}-${month}`;
-                  if (el) {
-                    monthHeaderRefs.current.set(key, el);
-                  } else {
-                    monthHeaderRefs.current.delete(key);
-                  }
-                }}
-              >
-                {/* Sticky Month/Year Header */}
-                <div className="bg-background sticky top-0 z-10 py-3 backdrop-blur-sm">
-                  <h3 className="flex items-center text-xl font-semibold text-gray-800 dark:text-gray-200">
-                    <div className="bg-primary mr-2 h-6 w-1"></div>
-                    {monthName} {year}
-                    <div className="mt-1 ml-2 text-sm font-normal text-gray-500">
-                      {imgs.length} {imgs.length === 1 ? 'image' : 'images'}
-                    </div>
-                  </h3>
-                </div>
-
-                {/* Images Grid */}
-                <div className="grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4">
-                  {imgs.map((img) => {
-                    const reduxIndex = imageIndexMap.get(img.id) ?? -1;
-
-                    return (
-                      <div key={img.id} className="group relative">
-                        <ImageCard
-                          image={img}
-                          imageIndex={reduxIndex}
-                          className="w-full transition-transform duration-200 group-hover:scale-105"
-                        />
+              return (
+                <div
+                  key={`${year}-${month}`}
+                  className="mb-8"
+                  data-timeline-month={`${year}-${month}`}
+                  id={`timeline-section-${year}-${month}`}
+                  ref={(el) => {
+                    const key = `${year}-${month}`;
+                    if (el) {
+                      monthHeaderRefs.current.set(key, el);
+                    } else {
+                      monthHeaderRefs.current.delete(key);
+                    }
+                  }}
+                >
+                  {/* Sticky Month/Year Header */}
+                  <div className="bg-background sticky top-0 z-10 py-3 backdrop-blur-sm">
+                    <h3 className="flex items-center text-xl font-semibold text-gray-800 dark:text-gray-200">
+                      <div className="bg-primary mr-2 h-6 w-1"></div>
+                      {monthName} {year}
+                      <div className="mt-1 ml-2 text-sm font-normal text-gray-500">
+                        {imgs.length} {imgs.length === 1 ? 'image' : 'images'}
                       </div>
-                    );
-                  })}
+                    </h3>
+                  </div>
+
+                  {/* Images Grid */}
+                  <div className="grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4 p-2">
+                    {imgs.map((img) => {
+                      const chronologicalIndex =
+                        imageIndexMap.get(img.id) ?? -1;
+
+                      return (
+                        <div key={img.id} className="group relative">
+                          <ImageCard
+                            image={img}
+                            onClick={() =>
+                              dispatch(setCurrentViewIndex(chronologicalIndex))
+                            }
+                            className="w-full transition-transform duration-200 group-hover:scale-105"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      ))}
-    </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      {isImageViewOpen && <MediaView images={chronologicallySortedImages} />}
+    </>
   );
 };
