@@ -79,9 +79,6 @@ export function Navbar() {
                 <FaceSearchDialog />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="bottom" sideOffset={8}>
-              Face Scanner
-            </TooltipContent>
           </Tooltip>
 
           <button
@@ -101,24 +98,26 @@ export function Navbar() {
           <span className="hidden text-sm sm:inline-block">
             Welcome <span className="text-muted-foreground">{userName}</span>
           </span>
-          {/* Profile Avatar with Tooltip */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <a
-                href="/settings"
-                className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 rounded-sm p-1"
-              >
-                <img
-                  src={userAvatar || '/photo1.png'}
-                  className="hover:ring-primary/50 h-8 w-8 cursor-pointer rounded-full transition-all hover:ring-2"
-                  alt="User avatar"
-                />
-              </a>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" sideOffset={8}>
-              Profile
-            </TooltipContent>
-          </Tooltip>
+        {/* Profile Avatar with Tooltip – SAME HOVER STYLE */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => (window.location.href = '/settings')}
+              className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
+              aria-label="Profile"
+            >
+              <img
+                src={userAvatar || '/photo1.png'}
+                className="h-8 w-8 rounded-full transition-all hover:ring-2 hover:ring-primary/50"
+                alt="User avatar"
+              />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={8}>
+            Profile
+          </TooltipContent>
+        </Tooltip>
         </div>
       </div>
     </div>
