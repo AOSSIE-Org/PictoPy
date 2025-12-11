@@ -887,6 +887,90 @@
         }
       }
     },
+    "/images/search": {
+      "get": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Search Images",
+        "description": "Search images by:\n- AI tags (YOLO detected classes)\n- Metadata (location, path, etc.)\n- Filename (image path)\n\nNote:\nFace cluster search is not supported because the current database schema\ndoes not include face_clusters.",
+        "operationId": "search_images_images_search_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Search query string",
+              "title": "Query"
+            },
+            "description": "Search query string"
+          },
+          {
+            "name": "tagged",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by tagged status",
+              "title": "Tagged"
+            },
+            "description": "Filter by tagged status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAllImagesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/images/toggle-favourite": {
       "post": {
         "tags": [
