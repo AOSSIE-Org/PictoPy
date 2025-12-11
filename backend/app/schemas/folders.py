@@ -21,6 +21,8 @@ class SyncFolderRequest(BaseModel):
     folder_path: str  # Path of the folder to sync
     folder_id: str  # UUID of the folder to sync
 
+class CheckFolderRequest(BaseModel):
+    folder_path: str
 
 # Response Data Models (for the 'data' field)
 class FolderDetails(BaseModel):
@@ -60,6 +62,8 @@ class SyncFolderData(BaseModel):
     folder_id: str
     folder_path: str
 
+class CheckFolderEmptyData(BaseModel):
+    is_empty: bool
 
 # Response Models
 class GetAllFoldersResponse(BaseModel):
@@ -82,7 +86,6 @@ class UpdateAITaggingResponse(BaseModel):
     error: Optional[str] = None
     data: Optional[UpdateAITaggingData] = None
 
-
 class DeleteFoldersResponse(BaseModel):
     success: bool
     message: Optional[str] = None
@@ -101,3 +104,9 @@ class ErrorResponse(BaseModel):
     success: bool = False
     message: Optional[str] = None
     error: Optional[str] = None
+
+class CheckFolderEmptyResponse(BaseModel):
+    success: bool
+    message: Optional[str] = None
+    error: Optional[str] = None
+    data: Optional[CheckFolderEmptyData] = None
