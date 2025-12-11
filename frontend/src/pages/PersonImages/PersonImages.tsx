@@ -36,22 +36,20 @@ export const PersonImages = () => {
       dispatch(showLoader('Loading images'));
     } else if (isError) {
       dispatch(hideLoader());
-    } else if (isSuccess) {
-      const res: any = data?.data;
-      const images = (res?.images || []) as Image[];
+    } else if (isSuccess && data?.data) {
+      const res = data.data as { images?: Image[]; cluster_name?: string };
+      const images = res.images || [];
       setPersonImages(images);
-      setClusterName(res?.cluster_name || 'random_name');
+      setClusterName(res.cluster_name || 'random_name');
       dispatch(hideLoader());
     }
   }, [data, isSuccess, isError, isLoading, dispatch]);
 
   const handleEditName = () => {
-    setClusterName(clusterName);
     setIsEditing(true);
   };
 
   const handleSaveName = () => {
-    setClusterName(clusterName);
     renameClusterMutate(clusterName);
     setIsEditing(false);
   };
@@ -113,6 +111,24 @@ export const PersonImages = () => {
           <div className="text-center">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
             <p className="text-muted-foreground mt-4">Loading images...</p>
+          </div>
+        </div>
+      ) : isError ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <p className="text-destructive text-lg font-semibold">
+              Failed to load images
+            </p>
+            <p className="text-muted-foreground mt-2">
+              Please try again later or check your connection.
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => window.location.reload()}
+              className="mt-4"
+            >
+              Retry
+            </Button>
           </div>
         </div>
       ) : personImages.length === 0 ? (
