@@ -1,11 +1,13 @@
 from fastapi import APIRouter, HTTPException, Query, status
+from fastapi.responses import FileResponse
 from typing import List, Optional
-from app.database.images import db_get_all_images
+from app.database.images import db_get_all_images, db_toggle_image_favourite_status
+from app.database.connection import get_db_connection
 from app.schemas.images import ErrorResponse
 from app.utils.images import image_util_parse_metadata
 from pydantic import BaseModel
-from app.database.images import db_toggle_image_favourite_status
 from app.logging.setup_logging import get_logger
+import os
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -118,6 +120,35 @@ def toggle_favourite(req: ToggleFavouriteRequest):
         logger.error(f"error in /toggle-favourite route: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
+@router.get("/{image_id}/thumbnail")
+def get_image_thumbnail(image_id: str):
+    """Get the thumbnail path for a specific image."""
+    try:
+        # Query the database for the image
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT thumbnailPath FROM images WHERE id = ?", (image_id,))
+            result = cursor.fetchone()
+        
+        if not result:
+            raise HTTPException(status_code=404, detail="Image not found")
+        
+        thumbnail_path = result[0]
+
+        if not thumbnail_path or not os.path.exists(thumbnail_path):
+            raise HTTPException(status_code=404, detail=f"Thumbnail not found for image ID: {image_id}")
+        
+        return FileResponse(
+            path=thumbnail_path,
+            media_type="image/jpeg",
+            headers={"Cache-Control": "public, max-age=31536000"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving thumbnail for image ID {image_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+        
 
 class ImageInfoResponse(BaseModel):
     id: str

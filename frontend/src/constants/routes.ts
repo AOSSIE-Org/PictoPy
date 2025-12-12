@@ -6,7 +6,7 @@ export const ROUTES = {
   PHOTOS: 'photos',
   VIDEOS: 'videos',
   SETTINGS: 'settings',
-  ALBUMS: 'albums',
+  ALBUMS: 'smart-albums/albums',
   MEMORIES: 'memories',
   PERSON: 'person/:clusterId',
 };

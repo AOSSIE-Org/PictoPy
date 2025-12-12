@@ -148,7 +148,7 @@ export function MediaView({
   // console.log(currentImage);
   const currentImageAlt = `image-${currentViewIndex}`;
   return (
-    <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-gradient-to-b from-black/95 to-black/98 backdrop-blur-lg">
+    <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-linear-to-b from-black/95 to-black/98 backdrop-blur-lg">
       {/* Controls */}
       <MediaViewControls
         showInfo={showInfo}

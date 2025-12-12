@@ -551,7 +551,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateAlbumRequest"
+                "$ref": "#/components/schemas/app__schemas__album__UpdateAlbumRequest"
               }
             }
           }
@@ -904,6 +904,47 @@
           },
           "required": true
         },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/{image_id}/thumbnail": {
+      "get": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Get Image Thumbnail",
+        "description": "Get the thumbnail path for a specific image.",
+        "operationId": "get_image_thumbnail_images__image_id__thumbnail_get",
+        "parameters": [
+          {
+            "name": "image_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Image Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1304,6 +1345,434 @@
           }
         }
       }
+    },
+    "/smart-albums/create_object_album": {
+      "post": {
+        "tags": [
+          "Smart Albums"
+        ],
+        "summary": "Create Object Album",
+        "description": "Create a smart album based on object detection criteria.",
+        "operationId": "create_object_album_smart_albums_create_object_album_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSmartAlbumRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/smart-albums/create_face_album": {
+      "post": {
+        "tags": [
+          "Smart Albums"
+        ],
+        "summary": "Create Face Album",
+        "description": "Create a smart album based on face recognition criteria.",
+        "operationId": "create_face_album_smart_albums_create_face_album_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFaceAlbumRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/smart-albums/predefine_smart_albums": {
+      "post": {
+        "tags": [
+          "Smart Albums"
+        ],
+        "summary": "Predefine Smart Albums",
+        "description": "Predefine a set of common smart albums based on popular object classes.",
+        "operationId": "predefine_smart_albums_smart_albums_predefine_smart_albums_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/smart-albums/albums": {
+      "get": {
+        "tags": [
+          "Smart Albums"
+        ],
+        "summary": "List Smart Albums",
+        "description": "Get all smart albums with metadata.",
+        "operationId": "list_smart_albums_smart_albums_albums_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlbumListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/smart-albums/{album_id}": {
+      "get": {
+        "tags": [
+          "Smart Albums"
+        ],
+        "summary": "Get Album Details",
+        "description": "Get details of a specific smart album by ID.",
+        "operationId": "get_album_details_smart_albums__album_id__get",
+        "parameters": [
+          {
+            "name": "album_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Album Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Smart Albums"
+        ],
+        "summary": "Update Smart Album",
+        "description": "Update smart album details.",
+        "operationId": "update_smart_album_smart_albums__album_id__patch",
+        "parameters": [
+          {
+            "name": "album_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Album Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__schemas__smart_albums__UpdateAlbumRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Smart Albums"
+        ],
+        "summary": "Delete Smart Album",
+        "description": "Delete a smart album by ID.",
+        "operationId": "delete_smart_album_smart_albums__album_id__delete",
+        "parameters": [
+          {
+            "name": "album_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Album Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/smart-albums/{album_id}/images": {
+      "get": {
+        "tags": [
+          "Smart Albums"
+        ],
+        "summary": "Get Album Images",
+        "description": "Get images belonging to a specific smart album by ID.",
+        "operationId": "get_album_images_smart_albums__album_id__images_get",
+        "parameters": [
+          {
+            "name": "album_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Album Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 1000,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Maximum number of images to return",
+              "title": "Limit"
+            },
+            "description": "Maximum number of images to return"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of images to skip for pagination",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Number of images to skip for pagination"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlbumImagesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/smart-albums/{album_id}/refresh": {
+      "post": {
+        "tags": [
+          "Smart Albums"
+        ],
+        "summary": "Refresh Smart Album",
+        "description": "Refresh a smart album to update its images based on current criteria.",
+        "operationId": "refresh_smart_album_smart_albums__album_id__refresh_post",
+        "parameters": [
+          {
+            "name": "album_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Album Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/smart-albums/refresh_all": {
+      "post": {
+        "tags": [
+          "Smart Albums"
+        ],
+        "summary": "Refresh All Smart Albums",
+        "description": "Refresh all smart albums in the system.",
+        "operationId": "refresh_all_smart_albums_smart_albums_refresh_all_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/smart-albums/classes/available": {
+      "get": {
+        "tags": [
+          "Smart Albums"
+        ],
+        "summary": "Get Available Classes",
+        "description": "Get a list of available object classes for smart albums.",
+        "operationId": "get_available_classes_smart_albums_classes_available_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/smart-albums/stats/overview": {
+      "get": {
+        "tags": [
+          "Smart Albums"
+        ],
+        "summary": "Get Album Statistics",
+        "description": "Get overview statistics about smart albums",
+        "operationId": "get_album_statistics_smart_albums_stats_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1435,6 +1904,80 @@
         ],
         "title": "Album"
       },
+      "AlbumImagesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "album_id": {
+            "type": "string",
+            "title": "Album Id"
+          },
+          "images": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Images"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "album_id",
+          "images",
+          "count",
+          "limit",
+          "offset"
+        ],
+        "title": "AlbumImagesResponse"
+      },
+      "AlbumListResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "albums": {
+            "items": {
+              "$ref": "#/components/schemas/SmartAlbumResponse"
+            },
+            "type": "array",
+            "title": "Albums"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "albums",
+          "count"
+        ],
+        "title": "AlbumListResponse"
+      },
       "ClusterMetadata": {
         "properties": {
           "cluster_id": {
@@ -1536,6 +2079,65 @@
           "album_id"
         ],
         "title": "CreateAlbumResponse"
+      },
+      "CreateFaceAlbumRequest": {
+        "properties": {
+          "album_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Album Name",
+            "description": "Name of the person"
+          },
+          "face_id": {
+            "type": "string",
+            "title": "Face Id",
+            "description": "UUID of the face from face_embeddings table"
+          },
+          "auto_update": {
+            "type": "boolean",
+            "title": "Auto Update",
+            "description": "Auto-add new matching images",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "album_name",
+          "face_id"
+        ],
+        "title": "CreateFaceAlbumRequest"
+      },
+      "CreateSmartAlbumRequest": {
+        "properties": {
+          "album_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Album Name",
+            "description": "Name of the smart album"
+          },
+          "object_classes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Object Classes",
+            "description": "List of object class names for the smart album"
+          },
+          "auto_update": {
+            "type": "boolean",
+            "title": "Auto Update",
+            "description": "Whether the album should auto-update",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "album_name",
+          "object_classes"
+        ],
+        "title": "CreateSmartAlbumRequest"
       },
       "DeleteFoldersData": {
         "properties": {
@@ -2425,6 +3027,65 @@
         ],
         "title": "RenameClusterResponse"
       },
+      "SmartAlbumResponse": {
+        "properties": {
+          "album_id": {
+            "type": "string",
+            "title": "Album Id"
+          },
+          "album_name": {
+            "type": "string",
+            "title": "Album Name"
+          },
+          "album_type": {
+            "type": "string",
+            "title": "Album Type"
+          },
+          "criteria": {
+            "type": "object",
+            "title": "Criteria"
+          },
+          "thumbnail_image_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Image Id"
+          },
+          "created_at": {
+            "type": "integer",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "integer",
+            "title": "Updated At"
+          },
+          "auto_update": {
+            "type": "boolean",
+            "title": "Auto Update"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "album_id",
+          "album_name",
+          "album_type",
+          "criteria",
+          "created_at",
+          "updated_at",
+          "auto_update",
+          "image_count"
+        ],
+        "title": "SmartAlbumResponse"
+      },
       "SuccessResponse": {
         "properties": {
           "success": {
@@ -2645,58 +3306,6 @@
         ],
         "title": "UpdateAITaggingResponse"
       },
-      "UpdateAlbumRequest": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description",
-            "default": ""
-          },
-          "is_hidden": {
-            "type": "boolean",
-            "title": "Is Hidden"
-          },
-          "current_password": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Current Password"
-          },
-          "password": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Password"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "is_hidden"
-        ],
-        "title": "UpdateAlbumRequest"
-      },
       "UpdateUserPreferencesRequest": {
         "properties": {
           "YOLO_model_size": {
@@ -2809,6 +3418,58 @@
         ],
         "title": "ValidationError"
       },
+      "app__schemas__album__UpdateAlbumRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "default": ""
+          },
+          "is_hidden": {
+            "type": "boolean",
+            "title": "Is Hidden"
+          },
+          "current_password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Password"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "is_hidden"
+        ],
+        "title": "UpdateAlbumRequest"
+      },
       "app__schemas__face_clusters__ErrorResponse": {
         "properties": {
           "success": {
@@ -2897,6 +3558,36 @@
           "error"
         ],
         "title": "ErrorResponse"
+      },
+      "app__schemas__smart_albums__UpdateAlbumRequest": {
+        "properties": {
+          "album_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Album Name"
+          },
+          "auto_update": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Update"
+          }
+        },
+        "type": "object",
+        "title": "UpdateAlbumRequest"
       },
       "app__schemas__user_preferences__ErrorResponse": {
         "properties": {

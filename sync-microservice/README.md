@@ -190,3 +190,14 @@ This microservice is designed to work alongside the main PictoPy backend:
 - **Shared Database**: Both services use the same SQLite database
 
 The sync service operates independently but relies on the main backend's database structure.
+
+ **Photo Management**: Browse, view, and organize your photos
+- 👥 **Face Clustering**: AI-powered face recognition and grouping
+- 🏷️ **AI Tagging**: Automatic object detection using YOLO
+- ⭐ **Favorites**: Mark your favorite photos
+- 📁 **Folder Management**: Organize photos in folders with AI tagging
+- 🎯 **Smart Albums**: NEW! Automatically organize photos by detected objects and faces
+  - Object-based albums (animals, vehicles, people, etc.)
+  - Face-based albums for recognized individuals
+  - Predefined album templates
+  - Auto-updating dynamic collections

@@ -110,7 +110,7 @@ export const MediaThumbnails: React.FC<MediaThumbnailsProps> = ({
               }
             }}
             onClick={() => onThumbnailClick(index)}
-            className={`relative h-20 w-28 flex-shrink-0 overflow-hidden rounded-lg ${
+            className={`relative h-20 w-28 shrink-0 overflow-hidden rounded-lg ${
               index === currentIndex
                 ? 'ring-2 ring-blue-500 ring-offset-1 ring-offset-black'
                 : 'opacity-70 hover:opacity-100'
