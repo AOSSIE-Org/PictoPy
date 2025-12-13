@@ -1,7 +1,6 @@
 /* Prevent horizontal overflow globally */
 html,
 body {
-  overflow-x: hidden;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
@@ -475,6 +474,6 @@ body {
   /* Ensure sidebar doesn't cause overflow when open */
   .md-sidebar--primary,
   .md-sidebar--secondary {
-    max-width: 100vw;
+    max-width: 100%;
   }
 }
