@@ -10,7 +10,7 @@ import { ServerCheck } from './ServerCheck';
 
 interface OnboardingStepProps {
   stepIndex: number;
-  stepName: string;
+  stepName: string; // kept as-is (not removed)
 }
 
 const VISIBLE_STEPS = [
@@ -21,15 +21,18 @@ const VISIBLE_STEPS = [
 
 export const OnboardingStep: React.FC<OnboardingStepProps> = ({
   stepIndex,
-  stepName,
+  stepName, // still accepted, but not trusted
 }) => {
   const sharedProps = {
     stepIndex,
     totalSteps: VISIBLE_STEPS.length,
   };
 
+  // ✅ FIX: derive stepName from stepIndex (single source of truth)
+  const currentStepName = VISIBLE_STEPS[stepIndex] ?? VISIBLE_STEPS[0];
+
   const renderStepComponent = () => {
-    switch (stepName) {
+    switch (currentStepName) {
       case STEPS.AVATAR_SELECTION_STEP:
         return <AvatarSelectionStep {...sharedProps} />;
       case STEPS.FOLDER_SETUP_STEP:
@@ -44,7 +47,7 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
         return <div></div>;
     }
   };
-  
+
   return (
     <div className="bg-background text-foreground flex min-h-screen w-full items-center justify-center">
       <div className="flex h-[540px] w-full max-w-4xl gap-3">

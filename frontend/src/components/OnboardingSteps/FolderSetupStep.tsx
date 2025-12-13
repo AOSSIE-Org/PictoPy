@@ -14,7 +14,7 @@ import { AppDispatch } from '@/app/store';
 import { markCompleted, previousStep } from '@/features/onboardingSlice';
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
 import { useFolder } from '@/hooks/useFolder';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 interface FolderSetupStepProps {
   stepIndex: number;
@@ -29,12 +29,6 @@ export function FolderSetupStep({
 
   // Local state for folders
   const [folder, setFolder] = useState<string>('');
-
-  useEffect(() => {
-    if (localStorage.getItem('folderChosen') === 'true') {
-      dispatch(markCompleted(stepIndex));
-    }
-  }, []);
 
   const { pickSingleFolder, addFolderMutate } = useFolder({
     title: 'Select folder to import photos from',
@@ -61,10 +55,7 @@ export function FolderSetupStep({
     dispatch(previousStep());
   };
 
-  if (localStorage.getItem('folderChosen') === 'true') {
-    return null;
-  }
-  const progressPercent = Math.round(((stepIndex) / totalSteps) * 100);
+  const progressPercent = Math.round((stepIndex / totalSteps) * 100);
 
   return (
     <>
@@ -90,6 +81,7 @@ export function FolderSetupStep({
             Choose the folder you want to import your photos from
           </CardDescription>
         </CardHeader>
+
         <CardContent className="flex-1 space-y-6 overflow-y-auto p-1 px-2">
           {!folder && (
             <div

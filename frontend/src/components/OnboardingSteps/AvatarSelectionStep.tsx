@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import {
   setAvatar,
@@ -33,12 +33,6 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
   const [name, setLocalName] = useState('');
   const [selectedAvatar, setLocalAvatar] = useState('');
 
-  useEffect(() => {
-    if (localStorage.getItem('name') && localStorage.getItem('avatar')) {
-      dispatch(markCompleted(stepIndex));
-    }
-  }, []);
-
   const handleAvatarSelect = (avatar: string) => {
     setLocalAvatar(avatar);
   };
@@ -55,10 +49,6 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
     dispatch(markCompleted(stepIndex));
   };
 
-  if (localStorage.getItem('name') && localStorage.getItem('avatar')) {
-    return null;
-  }
-
   return (
     <>
       <Card className="flex max-h-full w-1/2 flex-col gap-3 border p-4">
@@ -67,12 +57,12 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
             <span>
               Step {stepIndex} of {totalSteps}
             </span>
-            <span>{Math.round(((stepIndex) / totalSteps) * 100)}%</span>
+            <span>{Math.round((stepIndex / totalSteps) * 100)}%</span>
           </div>
           <div className="bg-muted mb-2 h-1.5 w-full rounded-full">
             <div
               className="bg-primary h-full rounded-full transition-all duration-300"
-              style={{ width: `${((stepIndex) / totalSteps) * 100}%` }}
+              style={{ width: `${(stepIndex / totalSteps) * 100}%` }}
             />
           </div>
           <CardTitle className="mt-1 text-xl font-semibold">
@@ -97,7 +87,6 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
             />
           </div>
 
-          {/* Avatar Grid */}
           <div className="mb-5">
             <Label className="mb-2 block text-sm">Choose Your Avatar</Label>
             <div className="grid grid-cols-4 gap-3">

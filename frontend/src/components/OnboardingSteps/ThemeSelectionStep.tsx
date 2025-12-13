@@ -1,7 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/app/store';
 import { markCompleted, previousStep } from '@/features/onboardingSlice';
+
+import { useNavigate } from 'react-router';
+import { ROUTES } from '@/constants/routes';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +21,7 @@ import { Sun, Moon, Monitor } from 'lucide-react';
 
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
 import { useTheme } from '@/contexts/ThemeContext';
+
 interface ThemeSelectionStepProps {
   stepIndex: number;
   totalSteps: number;
@@ -29,12 +33,8 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
 }) => {
   const { setTheme, theme } = useTheme();
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (localStorage.getItem('themeChosen')) {
-      dispatch(markCompleted(stepIndex));
-    }
-  }, []);
   const handleThemeChange = (value: 'light' | 'dark' | 'system') => {
     setTheme(value);
   };
@@ -42,23 +42,22 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
   const handleNext = () => {
     localStorage.setItem('themeChosen', 'true');
     dispatch(markCompleted(stepIndex));
+    navigate(ROUTES.HOME); // ✅ THIS WAS MISSING
   };
 
   const handleBack = () => {
     dispatch(previousStep());
   };
-  if (localStorage.getItem('themeChosen')) {
-    return null;
-  }
 
-  const progressPercent = Math.round(((stepIndex ) / totalSteps) * 100);
+  const progressPercent = Math.round((stepIndex / totalSteps) * 100);
+
   return (
     <>
       <Card className="flex max-h-full w-1/2 flex-col border p-4">
         <CardHeader className="p-3">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
-              Step {stepIndex } of {totalSteps}
+              Step {stepIndex} of {totalSteps}
             </span>
             <span>{progressPercent}%</span>
           </div>
@@ -76,6 +75,7 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
             Choose your preferred appearance
           </CardDescription>
         </CardHeader>
+
         <CardContent className="flex-1 space-y-6 overflow-y-auto p-1 px-2">
           <RadioGroup
             value={theme}
@@ -133,6 +133,7 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
           </Button>
         </CardFooter>
       </Card>
+
       <AppFeatures />
     </>
   );
