@@ -1,11 +1,18 @@
 /* ============================================
    UI IMPROVEMENTS: Enhanced Readability & Visual Hierarchy
+   Issue #733: UI Improvements for PictoPy Documentation
    ============================================ */
 
 /* Improved spacing and alignment for better visual hierarchy */
 .md-typeset {
   line-height: 1.7;
   letter-spacing: 0.01em;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+/* Dark mode text color adjustments */
+[data-md-color-scheme="slate"] .md-typeset {
+  color: rgba(255, 255, 255, 0.87);
 }
 
 /* Enhanced readability of text and headings */
@@ -192,24 +199,57 @@
 .md-typeset a {
   text-decoration: underline;
   text-underline-offset: 0.2em;
-  transition: opacity 0.2s ease;
+  transition: all 0.2s ease;
+  color: inherit;
+  font-weight: 500;
 }
 
 .md-typeset a:hover {
   opacity: 0.8;
+  text-decoration-thickness: 2px;
+}
+
+/* Better link colors in dark mode */
+[data-md-color-scheme="slate"] .md-typeset a {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Better spacing for images */
 .md-typeset img {
   margin-top: 1.5em;
   margin-bottom: 1.5em;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.md-typeset img:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Center aligned images */
+.md-typeset img[style*="center"],
+.md-typeset img[style*="margin: 0 auto"] {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* Improved spacing for the main content area */
 .md-content {
   padding-top: 1.5em;
+  padding-bottom: 2em;
+  max-width: 100%;
+}
+
+/* Better container spacing */
+.md-main__inner {
+  margin-top: 1rem;
+}
+
+/* Improved article spacing */
+.md-typeset article {
   padding-bottom: 2em;
 }
 
@@ -220,15 +260,30 @@
 }
 
 .md-typeset > div[style*="display:flex"] > div {
-  padding: 1.5em 1em;
-  border-radius: 8px;
+  padding: 1.5em 1.25em;
+  border-radius: 10px;
   background-color: rgba(0, 0, 0, 0.02);
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .md-typeset > div[style*="display:flex"] > div:hover {
   background-color: rgba(0, 0, 0, 0.04);
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode adjustments for flex containers */
+[data-md-color-scheme="slate"] .md-typeset > div[style*="display:flex"] > div {
+  background-color: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-md-color-scheme="slate"] .md-typeset > div[style*="display:flex"] > div:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .md-typeset > div[style*="display:flex"] > div h2 {
@@ -591,6 +646,140 @@
 .md-footer-meta__inner.md-grid .md-social {
   display: inline-block !important;
   vertical-align: middle !important;
+}
+
+/* ============================================
+   ADDITIONAL UI ENHANCEMENTS FOR ISSUE #733
+   ============================================ */
+
+/* Improved section dividers */
+.md-typeset hr {
+  margin: 3em 0;
+  border: none;
+  border-top: 2px solid rgba(0, 0, 0, 0.12);
+  opacity: 0.6;
+}
+
+[data-md-color-scheme="slate"] .md-typeset hr {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Better spacing for nested content */
+.md-typeset > *:first-child {
+  margin-top: 0;
+}
+
+.md-typeset > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Enhanced code block styling */
+.md-typeset pre code {
+  font-size: 0.875em;
+  line-height: 1.6;
+}
+
+/* Better contrast for inline code */
+.md-typeset code:not(pre code) {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+[data-md-color-scheme="slate"] .md-typeset code:not(pre code) {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Improved list item spacing */
+.md-typeset li + li {
+  margin-top: 0.25em;
+}
+
+/* Better spacing for definition lists */
+.md-typeset dl dt {
+  color: inherit;
+  font-weight: 600;
+}
+
+/* Enhanced table readability */
+.md-typeset table tbody tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+[data-md-color-scheme="slate"] .md-typeset table tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Improved navigation card styling on homepage */
+.md-typeset > div[style*="display:flex"] > div h2 {
+  color: inherit;
+  font-size: 1.25em;
+  font-weight: 600;
+}
+
+.md-typeset > div[style*="display:flex"] > div ul li {
+  margin-bottom: 0.625em;
+}
+
+.md-typeset > div[style*="display:flex"] > div ul li a {
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.md-typeset > div[style*="display:flex"] > div ul li a:hover {
+  opacity: 0.85;
+  padding-left: 0.25em;
+}
+
+/* Better spacing for page title */
+.md-typeset h1:first-child {
+  margin-top: 0;
+  margin-bottom: 0.5em;
+}
+
+/* Improved content flow */
+.md-typeset p + p {
+  margin-top: 1em;
+}
+
+/* Enhanced blockquote styling */
+.md-typeset blockquote {
+  font-style: italic;
+  border-left-width: 4px;
+}
+
+/* Better spacing for nested lists */
+.md-typeset li ul,
+.md-typeset li ol {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+/* Improved spacing for setup sections */
+.md-typeset h2 + p,
+.md-typeset h3 + p,
+.md-typeset h4 + p {
+  margin-top: 0.5em;
+}
+
+/* Enhanced readability for numbered lists */
+.md-typeset ol {
+  counter-reset: list-counter;
+}
+
+.md-typeset ol > li {
+  counter-increment: list-counter;
+  position: relative;
+}
+
+/* Better visual separation for sections */
+.md-typeset h2 {
+  scroll-margin-top: 2rem;
+}
+
+.md-typeset h3 {
+  scroll-margin-top: 1.5rem;
 }
 
 

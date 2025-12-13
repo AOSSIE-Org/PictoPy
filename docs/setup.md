@@ -1,6 +1,6 @@
 # Setup Instructions
 
-**Please refer to the [CONTRIBUTING.md](https://github.com/AOSSIE-Org/PictoPy/blob/main/CONTRIBUTING.md) file for complete setup instructions.**
+Please refer to the [CONTRIBUTING.md](https://github.com/AOSSIE-Org/PictoPy/blob/main/CONTRIBUTING.md) file for complete setup instructions.
 
 ## Available Setup Methods
 
