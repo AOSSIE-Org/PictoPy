@@ -62,4 +62,21 @@ Handles file system operations and provides a secure bridge between the frontend
 
 ---
 
+## Installation
+
+To run the app locally:
+
+1. Install all dependencies (Backend, Docs, and Microservices):
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Serve the documentation:
+   ```bash
+   mkdocs serve
+   ```
+
+3. Open your browser and navigate to `http://127.0.0.1:8000`.
+
 Our Code of Conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+
