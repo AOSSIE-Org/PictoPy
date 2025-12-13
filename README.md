@@ -2,7 +2,7 @@
 
 PictoPy is an advanced desktop gallery application that combines the power of Tauri, React, and Rust for the frontend with a Python backend for sophisticated image analysis and management.
 
-# Want to Contribute? 😄
+# Want to Contribute? 
 
 &nbsp;&nbsp;&nbsp;<a href="https://discord.gg/hjUhu33uAn"><img src="https://github.com/user-attachments/assets/3ed93273-5055-4532-a524-87a337a4fbba" height="40"></a>
 
@@ -79,4 +79,3 @@ To run the app locally:
 3. Open your browser and navigate to `http://127.0.0.1:8000`.
 
 Our Code of Conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
-
