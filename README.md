@@ -61,20 +61,23 @@ Handles file system operations and provides a secure bridge between the frontend
 | Type Checking     | TypeScript           |
 
 ---
-view raw### PictoPy Installation Guide (as of December 13, 2025)
+## Installation Guide
+
+PictoPy installation guide (as of December 13, 2025)
+
 
 PictoPy is a *privacy-first desktop image gallery application* developed by AOSSIE. It features object detection, face clustering, and image sorting using a Python backend for analysis, combined with a frontend built using *Tauri* (Rust + React).
 
 It's cross-platform (Windows, macOS, Linux) but requires building from source, as pre-built releases may not be available yet.
 
-#### Prerequisites
+### Prerequisites
 - *Git* (to clone the repository)
 - *Node.js* and *npm/yarn/pnpm* (for the frontend)
-- *Rust* (via rustup: https://rustup.rs/)
+- *Rust* (via [rustup](https://rustup.rs/))
 - *Python 3.10+* (for the backend)
 - *Tauri dependencies* (platform-specific system libraries)
 
-#### Step-by-Step Installation
+### Step-by-Step Installation
 
 1. *Clone the Repository*
    
@@ -130,17 +133,17 @@ It's cross-platform (Windows, macOS, Linux) but requires building from source, a
 
    - On first run, Tauri may prompt to install additional platform-specific tools (e.g., WebView2 on Windows).
 
-#### Usage After Installation
+### Usage After Installation
 - Run cargo tauri dev to launch the app.
 - Import your photo folders — the app will analyze images for objects, faces, and sort/cluster them privately (all processing is local).
 
-#### Troubleshooting
+### Troubleshooting
 - If you encounter errors with OpenCV (e.g., libGL.so.1 missing), install the system libraries mentioned above.
-- Check the GitHub Issues/Discussions for common problems: https://github.com/AOSSIE-Org/PictoPy/issues
-- Documentation may be limited; refer to Tauri's docs for build issues: https://tauri.app/
+- Check the GitHub Issues/Discussions for common problems: [GitHub Issues/Discussions](https://github.com/AOSSIE-Org/PictoPy/issues)
+- Documentation may be limited; refer to Tauri's docs for build issues: [Tauri docs](https://tauri.app/)
 
-#### Alternative: Documentation Site
-There is a project page at https://aossie-org.github.io/PictoPy/ — check there for updated guides or screenshots.
+### Alternative: Documentation Site
+There is a project page at [project page](https://aossie-org.github.io/PictoPy/) — check there for updated guides or screenshots.
 
 This guide is based on the standard setup for Tauri + Python projects like PictoPy. If the repository structure changes, refer directly to the README.md on GitHub.
 
