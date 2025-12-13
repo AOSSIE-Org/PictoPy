@@ -30,3 +30,8 @@ export const userPreferencesEndpoints = {
 export const healthEndpoints = {
   healthCheck: '/health',
 };
+
+export const memoriesEndpoints = {
+  getAllMemories: '/memories/',
+  getMemoryById: (memoryId: string) => `/memories/${memoryId}`,
+};
