@@ -16,23 +16,6 @@ from app.routes.folders import router as folders_router
 # ##############################
 
 
-@pytest.fixture(scope="function")
-def test_db():
-    """Create a temporary test database for each test."""
-    db_fd, db_path = tempfile.mkstemp()
-
-    import app.config.settings
-
-    original_db_path = app.config.settings.DATABASE_PATH
-    app.config.settings.DATABASE_PATH = db_path
-
-    yield db_path
-
-    app.config.settings.DATABASE_PATH = original_db_path
-    os.close(db_fd)
-    os.unlink(db_path)
-
-
 @pytest.fixture
 def temp_folder_structure():
     """Create a temporary folder structure for testing."""

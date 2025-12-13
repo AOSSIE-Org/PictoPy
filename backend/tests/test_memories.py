@@ -57,25 +57,76 @@ def test_generate_memories_with_data(test_db, sample_images):
         assert isinstance(memory["images"], list)
 
 
-def test_get_memory_images(test_db):
+def test_get_memory_images(test_db, sample_images):
     """Test retrieving images for a specific memory."""
+    import sqlite3
+    from app.config.settings import DATABASE_PATH
+    
     db_create_memories_table()
     
-    # Generate memories first
-    memories = db_generate_memories()
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
     
-    if len(memories) > 0:
-        memory_id = memories[0]["id"]
-        images = db_get_memory_images(memory_id)
+    try:
+        # Insert a test memory
+        test_memory_id = "test_memory_2024_01"
+        cursor.execute(
+            """
+            INSERT INTO memories 
+            (id, title, description, start_date, end_date, location, latitude, longitude, image_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                test_memory_id,
+                "Test Memory",
+                "Test description",
+                "2024-01-15",
+                "2024-01-20",
+                "Test Location",
+                40.7128,
+                -74.0060,
+                3
+            )
+        )
         
-        assert isinstance(images, list)
-        # Images should have required fields
-        if len(images) > 0:
-            image = images[0]
-            assert "id" in image
-            assert "path" in image
-            assert "thumbnail" in image
-            assert "metadata" in image
+        # Insert memory-image associations using sample images
+        for idx in range(min(3, len(sample_images))):
+            image_id = sample_images[idx]["id"]
+            cursor.execute(
+                """
+                INSERT INTO memory_images (memory_id, image_id, is_representative)
+                VALUES (?, ?, ?)
+                """,
+                (test_memory_id, image_id, True)
+            )
+        
+        conn.commit()
+        
+        # Now test db_get_memory_images
+        images = db_get_memory_images(test_memory_id)
+        
+        # Assertions
+        assert isinstance(images, list), "Result should be a list"
+        assert len(images) > 0, "Should return at least one image"
+        assert len(images) <= 3, "Should return at most 3 images"
+        
+        # Verify required fields in each image
+        for image in images:
+            assert "id" in image, "Image should have 'id' field"
+            assert "path" in image, "Image should have 'path' field"
+            assert "thumbnail" in image, "Image should have 'thumbnail' field"
+            assert "metadata" in image, "Image should have 'metadata' field"
+            
+            # Verify the image ID is from our test data
+            assert image["id"] in [sample_images[i]["id"] for i in range(min(3, len(sample_images)))]
+        
+        # Clean up test memory
+        cursor.execute("DELETE FROM memory_images WHERE memory_id = ?", (test_memory_id,))
+        cursor.execute("DELETE FROM memories WHERE id = ?", (test_memory_id,))
+        conn.commit()
+        
+    finally:
+        conn.close()
 
 
 def test_memory_title_generation(test_db, sample_images):

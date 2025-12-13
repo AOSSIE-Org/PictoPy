@@ -1,6 +1,7 @@
 import pytest
 import os
 import json
+import tempfile
 from datetime import datetime, timedelta
 
 # Import database table creation functions
@@ -48,11 +49,21 @@ def setup_before_all_tests():
         del os.environ["TEST_MODE"]
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def test_db():
-    """Fixture to provide a clean database for each test."""
-    yield
-    # Cleanup logic if needed
+    """Create a temporary test database for each test."""
+    db_fd, db_path = tempfile.mkstemp()
+
+    import app.config.settings
+
+    original_db_path = app.config.settings.DATABASE_PATH
+    app.config.settings.DATABASE_PATH = db_path
+
+    yield db_path
+
+    app.config.settings.DATABASE_PATH = original_db_path
+    os.close(db_fd)
+    os.unlink(db_path)
 
 
 @pytest.fixture
