@@ -73,7 +73,10 @@ def db_generate_memories() -> List[Dict[str, Any]]:
             """
             SELECT id, path, thumbnailPath, metadata, folder_id
             FROM images
-            ORDER BY json_extract(metadata, '$.date_created') DESC
+            ORDER BY CASE 
+                WHEN json_valid(metadata) THEN json_extract(metadata, '$.date_created') 
+                ELSE NULL 
+            END DESC
             """
         )
         
@@ -121,7 +124,7 @@ def db_generate_memories() -> List[Dict[str, Any]]:
                 "id": image_id,
                 "path": path,
                 "thumbnail": thumbnail,
-                "date": date_obj,
+                "date": date_obj.isoformat(),
                 "location": location,
                 "latitude": latitude,
                 "longitude": longitude,
@@ -136,11 +139,12 @@ def db_generate_memories() -> List[Dict[str, Any]]:
             if len(images_in_group) < 3:  # Skip groups with too few images
                 continue
                 
-            # Sort images by date
+            # Sort images by date (date is now ISO string)
             images_in_group.sort(key=lambda x: x["date"])
             
-            first_date = images_in_group[0]["date"]
-            last_date = images_in_group[-1]["date"]
+            # Parse first and last dates for memory metadata
+            first_date = datetime.fromisoformat(images_in_group[0]["date"])
+            last_date = datetime.fromisoformat(images_in_group[-1]["date"])
             location = images_in_group[0]["location"]
             
             # Calculate time difference
@@ -185,8 +189,14 @@ def db_generate_memories() -> List[Dict[str, Any]]:
         # Sort memories by most recent first
         memories.sort(key=lambda x: x["start_date"], reverse=True)
         
-        # Persist memories to database
+        # Persist memories to database (atomic refresh)
         try:
+            # Ensure tables exist
+            db_create_memories_table()
+            
+            # Begin atomic transaction
+            cursor.execute("BEGIN IMMEDIATE")
+            
             # Clear old memories
             cursor.execute("DELETE FROM memory_images")
             cursor.execute("DELETE FROM memories")
@@ -228,6 +238,7 @@ def db_generate_memories() -> List[Dict[str, Any]]:
         except Exception as e:
             logger.error(f"Error persisting memories: {e}")
             conn.rollback()
+            raise  # Re-raise to indicate failure to caller
         
         return memories
         
@@ -252,7 +263,10 @@ def db_get_memory_images(memory_id: str) -> List[Dict[str, Any]]:
             FROM images i
             JOIN memory_images mi ON i.id = mi.image_id
             WHERE mi.memory_id = ?
-            ORDER BY json_extract(i.metadata, '$.date_created') ASC
+            ORDER BY CASE 
+                WHEN json_valid(i.metadata) THEN json_extract(i.metadata, '$.date_created') 
+                ELSE NULL 
+            END ASC
             """,
             (memory_id,)
         )
@@ -282,29 +296,117 @@ def db_get_memories_for_current_date() -> List[Dict[str, Any]]:
     """
     Get memories that are relevant for the current date.
     (e.g., "On this day" memories from previous years)
+    Queries the persisted memories table instead of regenerating.
     """
+    conn = _connect()
+    cursor = conn.cursor()
+    
     try:
-        # Get all memories and filter for current date relevance
-        all_memories = db_generate_memories()
-        
         current_date = datetime.now()
         current_month = current_date.month
         current_day = current_date.day
         
+        # Query persisted memories matching current month with +/-7 day window
+        cursor.execute(
+            """
+            SELECT id, title, description, start_date, end_date, location, 
+                   latitude, longitude, image_count
+            FROM memories
+            WHERE CAST(strftime('%m', start_date) AS INTEGER) = ?
+            AND ABS(CAST(strftime('%d', start_date) AS INTEGER) - ?) <= 7
+            AND CAST(strftime('%Y', start_date) AS INTEGER) < ?
+            ORDER BY start_date DESC
+            """,
+            (current_month, current_day, current_date.year)
+        )
+        
+        rows = cursor.fetchall()
+        
+        if not rows:
+            # Fallback: try regenerating if cache is empty
+            logger.info("No memories found in cache, regenerating...")
+            db_generate_memories()
+            # Retry query after regeneration
+            cursor.execute(
+                """
+                SELECT id, title, description, start_date, end_date, location, 
+                       latitude, longitude, image_count
+                FROM memories
+                WHERE CAST(strftime('%m', start_date) AS INTEGER) = ?
+                AND ABS(CAST(strftime('%d', start_date) AS INTEGER) - ?) <= 7
+                AND CAST(strftime('%Y', start_date) AS INTEGER) < ?
+                ORDER BY start_date DESC
+                """,
+                (current_month, current_day, current_date.year)
+            )
+            rows = cursor.fetchall()
+        
         relevant_memories = []
         
-        for memory in all_memories:
-            start_date = datetime.fromisoformat(memory["start_date"])
+        for row in rows:
+            memory_id, title, description, start_date_str, end_date_str, location, latitude, longitude, image_count = row
             
-            # Check if memory is from same month/day but different year
-            if start_date.month == current_month and abs(start_date.day - current_day) <= 7:
-                years_ago = current_date.year - start_date.year
-                if years_ago > 0:
-                    memory["title"] = f"On This Day {years_ago} Year{'s' if years_ago > 1 else ''} Ago"
-                    relevant_memories.append(memory)
+            # Parse start date to calculate years ago
+            start_date = datetime.fromisoformat(start_date_str)
+            years_ago = current_date.year - start_date.year
+            
+            # Get representative images for this memory
+            cursor.execute(
+                """
+                SELECT i.id, i.path, i.thumbnailPath, i.metadata
+                FROM images i
+                JOIN memory_images mi ON i.id = mi.image_id
+                WHERE mi.memory_id = ? AND mi.is_representative = 1
+                ORDER BY CASE 
+                    WHEN json_valid(i.metadata) THEN json_extract(i.metadata, '$.date_created') 
+                    ELSE NULL 
+                END ASC
+                LIMIT 5
+                """,
+                (memory_id,)
+            )
+            
+            images = []
+            from app.utils.images import image_util_parse_metadata
+            
+            for img_row in cursor.fetchall():
+                image_id, path, thumbnail, metadata_str = img_row
+                metadata = image_util_parse_metadata(metadata_str)
+                
+                # Extract date from metadata
+                date_created = metadata.get("date_created", start_date_str)
+                
+                images.append({
+                    "id": image_id,
+                    "path": path,
+                    "thumbnail": thumbnail,
+                    "date": date_created,
+                    "location": metadata.get("location"),
+                    "latitude": metadata.get("latitude"),
+                    "longitude": metadata.get("longitude"),
+                    "metadata": metadata
+                })
+            
+            # Create a shallow copy to avoid mutating cached DB rows
+            memory_copy = {
+                "id": memory_id,
+                "title": f"On This Day {years_ago} Year{'s' if years_ago > 1 else ''} Ago",
+                "description": description,
+                "start_date": start_date_str,
+                "end_date": end_date_str,
+                "location": location,
+                "latitude": latitude,
+                "longitude": longitude,
+                "image_count": image_count,
+                "images": images
+            }
+            
+            relevant_memories.append(memory_copy)
         
         return relevant_memories
         
     except Exception as e:
         logger.error(f"Error getting memories for current date: {e}")
         return []
+    finally:
+        conn.close()

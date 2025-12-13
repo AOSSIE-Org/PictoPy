@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
 import { Calendar, MapPin, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllMemories } from '@/api/api-functions';
@@ -8,7 +7,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { convertFileSrc } from '@tauri-apps/api/core';
-import { cn } from '@/lib/utils';
 
 interface MemoryImage {
   id: string;
@@ -42,7 +40,7 @@ const MemoryCard = ({ memory }: { memory: Memory }) => {
   const displayImages = memory.images.slice(0, 5);
 
   return (
-    <Card className="group overflow-hidden transition-all hover:shadow-lg cursor-pointer">
+    <Card className="group overflow-hidden transition-all hover:shadow-lg">
       <CardContent className="p-0">
         {/* Image Grid */}
         <div className="relative">
@@ -215,7 +213,6 @@ const EmptyMemoriesState = () => (
 );
 
 const Memories = () => {
-  const dispatch = useDispatch();
   const [memories, setMemories] = useState<Memory[]>([]);
 
   const { data, isLoading, isSuccess, isError, error } = usePictoQuery({

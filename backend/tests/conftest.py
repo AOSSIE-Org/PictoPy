@@ -70,7 +70,7 @@ def sample_images():
     
     # Create a test folder
     cursor.execute(
-        "INSERT OR IGNORE INTO folders (folder_id, path, AI_Tagging) VALUES (999, '/test/path', 1)"
+        "INSERT OR IGNORE INTO folders (folder_id, folder_path, AI_Tagging) VALUES (999, '/test/path', 1)"
     )
     
     # Create sample images with different dates
@@ -132,7 +132,7 @@ def sample_images_with_location():
     
     # Create a test folder
     cursor.execute(
-        "INSERT OR IGNORE INTO folders (folder_id, path, AI_Tagging) VALUES (998, '/test/location', 1)"
+        "INSERT OR IGNORE INTO folders (folder_id, folder_path, AI_Tagging) VALUES (998, '/test/location', 1)"
     )
     
     # Create sample images with different locations
