@@ -8,7 +8,7 @@ PictoPy is an advanced desktop gallery application that combines the power of Ta
 
 1. First, join the **[Discord Server](https://discord.gg/hjUhu33uAn) (Go to Projects->PictoPy)** to chat with everyone.
 2. For detailed setup instructions, coding guidelines, and the contribution process, please check out our [CONTRIBUTING.md](./CONTRIBUTING.md) file.
-
+sss
 # Architecture
 
 ### Frontend
