@@ -55,3 +55,24 @@ export interface Cluster {
   face_count: number;
   face_image_base64?: string;
 }
+
+export interface MemoryImage {
+  id: string;
+  path: string;
+  thumbnailPath: string;
+  metadata: ImageMetadata;
+}
+
+export interface Memory {
+  memory_id: string;
+  title: string;
+  memory_type: 'on_this_day' | 'trip' | 'date_range';
+  date_range_start: string;
+  date_range_end: string;
+  location_name?: string;
+  latitude?: number;
+  longitude?: number;
+  image_count: number;
+  representative_image?: MemoryImage;
+  year: number;
+}
