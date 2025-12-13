@@ -76,7 +76,7 @@ def db_generate_memories() -> List[Dict[str, Any]]:
             ORDER BY CASE 
                 WHEN json_valid(metadata) THEN json_extract(metadata, '$.date_created') 
                 ELSE NULL 
-            END DESC
+            END DESC, id DESC
             """
         )
         
@@ -104,6 +104,9 @@ def db_generate_memories() -> List[Dict[str, Any]]:
                     date_obj = datetime.fromisoformat(date_created.replace("Z", "+00:00"))
                 else:
                     date_obj = datetime.strptime(date_created.split()[0], "%Y-%m-%d")
+                
+                # Normalize to date-only to avoid timezone issues
+                date_only = date_obj.date()
             except Exception as e:
                 logger.warning(f"Could not parse date {date_created}: {e}")
                 continue
@@ -113,7 +116,7 @@ def db_generate_memories() -> List[Dict[str, Any]]:
             longitude = metadata.get("longitude")
             
             # Create grouping key (year-month + location)
-            date_key = date_obj.strftime("%Y-%m")
+            date_key = date_only.strftime("%Y-%m")
             
             # Group by similar locations (or "Unknown")
             loc_key = location if location != "Unknown Location" else "no_location"
@@ -124,7 +127,7 @@ def db_generate_memories() -> List[Dict[str, Any]]:
                 "id": image_id,
                 "path": path,
                 "thumbnail": thumbnail,
-                "date": date_obj.isoformat(),
+                "date": date_only.isoformat(),
                 "location": location,
                 "latitude": latitude,
                 "longitude": longitude,
@@ -133,7 +136,7 @@ def db_generate_memories() -> List[Dict[str, Any]]:
         
         # Generate memory objects
         memories = []
-        current_date = datetime.now()
+        current_date = datetime.now().date()  # Normalize to date-only
         
         for group_key, images_in_group in memories_by_group.items():
             if len(images_in_group) < 3:  # Skip groups with too few images
@@ -142,14 +145,13 @@ def db_generate_memories() -> List[Dict[str, Any]]:
             # Sort images by date (date is now ISO string)
             images_in_group.sort(key=lambda x: x["date"])
             
-            # Parse first and last dates for memory metadata
-            first_date = datetime.fromisoformat(images_in_group[0]["date"])
-            last_date = datetime.fromisoformat(images_in_group[-1]["date"])
+            # Parse first and last dates for memory metadata (date-only strings)
+            first_date = datetime.strptime(images_in_group[0]["date"], "%Y-%m-%d").date()
+            last_date = datetime.strptime(images_in_group[-1]["date"], "%Y-%m-%d").date()
             location = images_in_group[0]["location"]
             
-            # Calculate time difference
-            time_diff = current_date - first_date
-            years_ago = time_diff.days // 365
+            # Calculate time difference using date objects
+            years_ago = current_date.year - first_date.year
             
             # Generate title based on time
             if years_ago == 0:
@@ -189,7 +191,7 @@ def db_generate_memories() -> List[Dict[str, Any]]:
         # Sort memories by most recent first
         memories.sort(key=lambda x: x["start_date"], reverse=True)
         
-        # Persist memories to database (atomic refresh)
+        # Persist memories to database (best-effort, atomic refresh)
         try:
             # Ensure tables exist
             db_create_memories_table()
@@ -236,9 +238,9 @@ def db_generate_memories() -> List[Dict[str, Any]]:
             conn.commit()
             logger.info(f"Successfully persisted {len(memories)} memories to database")
         except Exception as e:
-            logger.error(f"Error persisting memories: {e}")
+            logger.error(f"Error persisting memories (continuing with in-memory data): {e}")
             conn.rollback()
-            raise  # Re-raise to indicate failure to caller
+            # Don't re-raise - treat persistence as best-effort
         
         return memories
         
@@ -266,7 +268,7 @@ def db_get_memory_images(memory_id: str) -> List[Dict[str, Any]]:
             ORDER BY CASE 
                 WHEN json_valid(i.metadata) THEN json_extract(i.metadata, '$.date_created') 
                 ELSE NULL 
-            END ASC
+            END ASC, i.id ASC
             """,
             (memory_id,)
         )
@@ -302,7 +304,7 @@ def db_get_memories_for_current_date() -> List[Dict[str, Any]]:
     cursor = conn.cursor()
     
     try:
-        current_date = datetime.now()
+        current_date = datetime.now().date()  # Normalize to date-only
         current_month = current_date.month
         current_day = current_date.day
         
@@ -346,8 +348,8 @@ def db_get_memories_for_current_date() -> List[Dict[str, Any]]:
         for row in rows:
             memory_id, title, description, start_date_str, end_date_str, location, latitude, longitude, image_count = row
             
-            # Parse start date to calculate years ago
-            start_date = datetime.fromisoformat(start_date_str)
+            # Parse start date to calculate years ago (date-only string)
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
             years_ago = current_date.year - start_date.year
             
             # Get representative images for this memory
@@ -360,7 +362,7 @@ def db_get_memories_for_current_date() -> List[Dict[str, Any]]:
                 ORDER BY CASE 
                     WHEN json_valid(i.metadata) THEN json_extract(i.metadata, '$.date_created') 
                     ELSE NULL 
-                END ASC
+                END ASC, i.id ASC
                 LIMIT 5
                 """,
                 (memory_id,)

@@ -11,7 +11,7 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 interface MemoryImage {
   id: string;
   path: string;
-  thumbnail: string;
+  thumbnail?: string;
   date: string;
   location?: string;
 }
