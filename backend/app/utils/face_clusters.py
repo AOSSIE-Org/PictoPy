@@ -200,7 +200,10 @@ def cluster_util_cluster_all_face_embeddings(
         embeddings.append(emb)
         existing_cluster_names.append(face["cluster_name"])
 
-    
+    if not embeddings:
+        logger.warning("No valid embeddings after filtering")
+        return []
+
 
     logger.info(f"Total faces to cluster: {len(face_ids)}")
 
