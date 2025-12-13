@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Calendar, MapPin, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Calendar, MapPin, Image as ImageIcon, Sparkles, ArrowLeft, X } from 'lucide-react';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
-import { fetchAllMemories } from '@/api/api-functions';
+import { fetchAllMemories, fetchMemoryImages } from '@/api/api-functions';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
 interface MemoryImage {
@@ -29,7 +30,7 @@ interface Memory {
   images: MemoryImage[];
 }
 
-const MemoryCard = ({ memory }: { memory: Memory }) => {
+const MemoryCard = ({ memory, onClick }: { memory: Memory; onClick: () => void }) => {
   const [imageLoadError, setImageLoadError] = useState<Set<number>>(new Set());
 
   const handleImageError = (index: number) => {
@@ -40,29 +41,30 @@ const MemoryCard = ({ memory }: { memory: Memory }) => {
   const displayImages = memory.images.slice(0, 5);
 
   return (
-    <Card className="group overflow-hidden transition-all hover:shadow-lg">
+    <Card 
+      className="group overflow-hidden transition-all hover:shadow-lg cursor-pointer"
+      onClick={onClick}
+    >
       <CardContent className="p-0">
-        {/* Image Grid */}
-        <div className="relative">
+        {/* Image Grid - Fixed aspect ratio container for consistency */}
+        <div className="relative aspect-[4/3] overflow-hidden">
           {displayImages.length === 1 && (
-            <div className="aspect-[16/9] w-full overflow-hidden">
-              <img
-                src={
-                  imageLoadError.has(0)
-                    ? '/placeholder.svg'
-                    : convertFileSrc(displayImages[0].thumbnail || displayImages[0].path)
-                }
-                alt={memory.title}
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                onError={() => handleImageError(0)}
-              />
-            </div>
+            <img
+              src={
+                imageLoadError.has(0)
+                  ? '/placeholder.svg'
+                  : convertFileSrc(displayImages[0].thumbnail || displayImages[0].path)
+              }
+              alt={memory.title}
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              onError={() => handleImageError(0)}
+            />
           )}
 
           {displayImages.length === 2 && (
-            <div className="grid grid-cols-2 gap-1">
+            <div className="grid grid-cols-2 gap-1 h-full">
               {displayImages.map((img, idx) => (
-                <div key={img.id} className="aspect-square overflow-hidden">
+                <div key={img.id} className="overflow-hidden">
                   <img
                     src={
                       imageLoadError.has(idx)
@@ -79,7 +81,7 @@ const MemoryCard = ({ memory }: { memory: Memory }) => {
           )}
 
           {displayImages.length === 3 && (
-            <div className="grid grid-cols-2 gap-1">
+            <div className="grid grid-cols-2 gap-1 h-full">
               <div className="row-span-2 overflow-hidden">
                 <img
                   src={
@@ -93,7 +95,7 @@ const MemoryCard = ({ memory }: { memory: Memory }) => {
                 />
               </div>
               {displayImages.slice(1).map((img, idx) => (
-                <div key={img.id} className="aspect-square overflow-hidden">
+                <div key={img.id} className="overflow-hidden">
                   <img
                     src={
                       imageLoadError.has(idx + 1)
@@ -110,7 +112,7 @@ const MemoryCard = ({ memory }: { memory: Memory }) => {
           )}
 
           {displayImages.length >= 4 && (
-            <div className="grid grid-cols-3 gap-1">
+            <div className="grid grid-cols-3 grid-rows-2 gap-1 h-full">
               <div className="col-span-2 row-span-2 overflow-hidden">
                 <img
                   src={
@@ -123,8 +125,8 @@ const MemoryCard = ({ memory }: { memory: Memory }) => {
                   onError={() => handleImageError(0)}
                 />
               </div>
-              {displayImages.slice(1, 5).map((img, idx) => (
-                <div key={img.id} className="aspect-square overflow-hidden">
+              {displayImages.slice(1, 3).map((img, idx) => (
+                <div key={img.id} className="overflow-hidden">
                   <img
                     src={
                       imageLoadError.has(idx + 1)
@@ -212,8 +214,163 @@ const EmptyMemoriesState = () => (
   </div>
 );
 
+const MemoryDetailView = ({ 
+  memory, 
+  onBack 
+}: { 
+  memory: Memory; 
+  onBack: () => void;
+}) => {
+  const [imageLoadError, setImageLoadError] = useState<Set<number>>(new Set());
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+  const [allImages, setAllImages] = useState<MemoryImage[]>(memory.images);
+  const [isLoadingImages, setIsLoadingImages] = useState(true);
+
+  // Fetch all images for this memory
+  useEffect(() => {
+    const loadAllImages = async () => {
+      setIsLoadingImages(true);
+      try {
+        const response = await fetchMemoryImages(memory.id);
+        if (response.success && response.data && Array.isArray(response.data)) {
+          // Map the response to MemoryImage format
+          const images: MemoryImage[] = response.data.map((img: any) => ({
+            id: img.id,
+            path: img.path,
+            thumbnail: img.thumbnail,
+            date: img.metadata?.date_created || '',
+            location: img.metadata?.location,
+          }));
+          setAllImages(images);
+        }
+      } catch (error) {
+        console.error('Failed to load memory images:', error);
+        // Fall back to the preview images
+        setAllImages(memory.images);
+      } finally {
+        setIsLoadingImages(false);
+      }
+    };
+
+    loadAllImages();
+  }, [memory.id, memory.images]);
+
+  const handleImageError = (index: number) => {
+    setImageLoadError((prev) => new Set(prev).add(index));
+  };
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Header */}
+      <div className="mb-6 pr-6">
+        <Button 
+          variant="ghost" 
+          onClick={onBack}
+          className="mb-4 -ml-2"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Memories
+        </Button>
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles className="h-6 w-6 text-primary" />
+          <h1 className="text-3xl font-bold">{memory.title}</h1>
+        </div>
+        <p className="text-muted-foreground">{memory.description}</p>
+        <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <Calendar className="h-4 w-4" />
+            <span>
+              {new Date(memory.start_date).toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+              {memory.start_date !== memory.end_date && (
+                <> - {new Date(memory.end_date).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}</>
+              )}
+            </span>
+          </div>
+          {memory.location && memory.location !== 'Unknown Location' && (
+            <div className="flex items-center gap-1">
+              <MapPin className="h-4 w-4" />
+              <span>{memory.location}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1">
+            <ImageIcon className="h-4 w-4" />
+            <span>{memory.image_count} photos</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Image Grid */}
+      <div className="flex-1 overflow-y-auto hide-scrollbar pr-6">
+        {isLoadingImages ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-6">
+            {[...Array(Math.min(memory.image_count, 12))].map((_, i) => (
+              <Skeleton key={i} className="aspect-square rounded-lg" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-6">
+            {allImages.map((img, idx) => (
+              <div 
+                key={img.id} 
+                className="aspect-square overflow-hidden rounded-lg cursor-pointer group"
+                onClick={() => setSelectedImageIndex(idx)}
+              >
+                <img
+                  src={
+                    imageLoadError.has(idx)
+                      ? '/placeholder.svg'
+                      : convertFileSrc(img.thumbnail || img.path)
+                  }
+                  alt={`Photo ${idx + 1}`}
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  onError={() => handleImageError(idx)}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Full Image Modal */}
+      {selectedImageIndex !== null && allImages[selectedImageIndex] && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={() => setSelectedImageIndex(null)}
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 text-white hover:bg-white/20"
+            onClick={() => setSelectedImageIndex(null)}
+          >
+            <X className="h-6 w-6" />
+          </Button>
+          <img
+            src={convertFileSrc(allImages[selectedImageIndex].path)}
+            alt={`Photo ${selectedImageIndex + 1}`}
+            className="max-h-[90vh] max-w-[90vw] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm">
+            {selectedImageIndex + 1} / {allImages.length}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Memories = () => {
   const [memories, setMemories] = useState<Memory[]>([]);
+  const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
 
   const { data, isLoading, isSuccess, isError, error } = usePictoQuery({
     queryKey: ['memories'],
@@ -252,6 +409,16 @@ const Memories = () => {
     }
   }, [data, isSuccess]);
 
+  // If a memory is selected, show the detail view
+  if (selectedMemory) {
+    return (
+      <MemoryDetailView 
+        memory={selectedMemory} 
+        onBack={() => setSelectedMemory(null)} 
+      />
+    );
+  }
+
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
@@ -276,7 +443,11 @@ const Memories = () => {
         ) : memories.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
             {memories.map((memory) => (
-              <MemoryCard key={memory.id} memory={memory} />
+              <MemoryCard 
+                key={memory.id} 
+                memory={memory} 
+                onClick={() => setSelectedMemory(memory)}
+              />
             ))}
           </div>
         ) : (

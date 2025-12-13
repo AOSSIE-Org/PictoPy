@@ -41,7 +41,7 @@ def get_all_memories():
                     id=img["id"],
                     path=img["path"],
                     thumbnail=img["thumbnail"],
-                    date=img["date"].isoformat(),
+                    date=img["date"].isoformat() if hasattr(img["date"], 'isoformat') else str(img["date"]),
                     location=img.get("location")
                 )
                 for img in memory.get("images", [])
@@ -102,7 +102,7 @@ def get_memories_for_today():
                     id=img["id"],
                     path=img["path"],
                     thumbnail=img["thumbnail"],
-                    date=img["date"].isoformat(),
+                    date=img["date"].isoformat() if hasattr(img["date"], 'isoformat') else str(img["date"]),
                     location=img.get("location")
                 )
                 for img in memory.get("images", [])
