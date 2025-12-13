@@ -30,3 +30,15 @@ export const userPreferencesEndpoints = {
 export const healthEndpoints = {
   healthCheck: '/health',
 };
+
+export const videosEndpoints = {
+  getAllVideos: '/videos/',
+  getVideo: (videoId: string) => `/videos/${videoId}`,
+  toggleFavourite: '/videos/toggle-favourite',
+};
+
+export const memoriesEndpoints = {
+  getAllMemories: '/memories/',
+  getTodayMemories: '/memories/today',
+  getMemoryImages: (memoryId: string) => `/memories/${memoryId}/images`,
+};

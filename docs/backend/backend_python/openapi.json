@@ -1117,9 +1117,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/InputType",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/InputType"
+                }
+              ],
               "description": "Choose input type: 'path' or 'base64'",
-              "default": "path"
+              "default": "path",
+              "title": "Input Type"
             },
             "description": "Choose input type: 'path' or 'base64'"
           }
@@ -1283,6 +1288,163 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__user_preferences__ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/": {
+      "get": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Get All Videos",
+        "description": "Get all videos from the database.\n\nReturns a list of all videos with their metadata.",
+        "operationId": "get_all_videos_videos__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAllVideosResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/{video_id}": {
+      "get": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Get Video",
+        "description": "Get a single video by ID.",
+        "operationId": "get_video_videos__video_id__get",
+        "parameters": [
+          {
+            "name": "video_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Video Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoData"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/toggle-favourite": {
+      "post": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Toggle Video Favourite",
+        "description": "Toggle the favourite status of a video.",
+        "operationId": "toggle_video_favourite_videos_toggle_favourite_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToggleVideoFavouriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToggleVideoFavouriteResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
                 }
               }
             }
@@ -1860,6 +2022,33 @@
         ],
         "title": "GetAllImagesResponse"
       },
+      "GetAllVideosResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/VideoData"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetAllVideosResponse",
+        "description": "Response model for getting all videos."
+      },
       "GetClusterImagesData": {
         "properties": {
           "cluster_id": {
@@ -2199,7 +2388,6 @@
           "metadata": {
             "anyOf": [
               {
-                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -2559,6 +2747,39 @@
         ],
         "title": "ToggleFavouriteRequest"
       },
+      "ToggleVideoFavouriteRequest": {
+        "properties": {
+          "video_id": {
+            "type": "string",
+            "title": "Video Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video_id"
+        ],
+        "title": "ToggleVideoFavouriteRequest",
+        "description": "Request model for toggling video favourite status."
+      },
+      "ToggleVideoFavouriteResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "ToggleVideoFavouriteResponse",
+        "description": "Response model for toggling video favourite status."
+      },
       "UpdateAITaggingData": {
         "properties": {
           "updated_count": {
@@ -2805,6 +3026,162 @@
         ],
         "title": "ValidationError"
       },
+      "VideoData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          },
+          "thumbnailPath": {
+            "type": "string",
+            "title": "Thumbnailpath"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite",
+            "default": false
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VideoMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "folder_id",
+          "thumbnailPath"
+        ],
+        "title": "VideoData",
+        "description": "Video data model for API responses."
+      },
+      "VideoMetadata": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "file_location": {
+            "type": "string",
+            "title": "File Location"
+          },
+          "file_size": {
+            "type": "integer",
+            "title": "File Size"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "codec": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codec"
+          },
+          "date_created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Created"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "file_location",
+          "file_size"
+        ],
+        "title": "VideoMetadata",
+        "description": "Video metadata model."
+      },
       "app__schemas__face_clusters__ErrorResponse": {
         "properties": {
           "success": {
@@ -2917,6 +3294,30 @@
         ],
         "title": "ErrorResponse",
         "description": "Error response model"
+      },
+      "app__schemas__videos__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error",
+          "message"
+        ],
+        "title": "ErrorResponse",
+        "description": "Error response model."
       }
     }
   }
