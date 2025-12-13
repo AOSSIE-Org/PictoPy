@@ -1117,14 +1117,9 @@
             "in": "query",
             "required": false,
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/InputType"
-                }
-              ],
+              "$ref": "#/components/schemas/InputType",
               "description": "Choose input type: 'path' or 'base64'",
-              "default": "path",
-              "title": "Input Type"
+              "default": "path"
             },
             "description": "Choose input type: 'path' or 'base64'"
           }
@@ -1288,6 +1283,214 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__user_preferences__ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/": {
+      "get": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Get All Memories",
+        "description": "Get all memories with their representative images.\nReturns memories sorted by date (most recent first).",
+        "operationId": "get_all_memories_memories__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAllMemoriesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/{memory_id}": {
+      "get": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Get Memory Detail",
+        "description": "Get detailed information about a specific memory including all its images.",
+        "operationId": "get_memory_detail_memories__memory_id__get",
+        "parameters": [
+          {
+            "name": "memory_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Memory Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetMemoryDetailResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Delete Memory",
+        "description": "Delete a specific memory.\nNote: This only deletes the memory entry, not the actual photos.",
+        "operationId": "delete_memory_memories__memory_id__delete",
+        "parameters": [
+          {
+            "name": "memory_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Memory Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteMemoryResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/generate": {
+      "post": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Generate Memories",
+        "description": "Generate memories from existing photos based on date and location.\nThis process analyzes all photos and creates automatic memory collections.\n\n- Set force_regenerate=true to clear existing memories and regenerate all\n- Memory generation happens synchronously and may take time for large galleries",
+        "operationId": "generate_memories_memories_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateMemoriesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateMemoriesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
                 }
               }
             }
@@ -1619,6 +1822,25 @@
         ],
         "title": "DeleteFoldersResponse"
       },
+      "DeleteMemoryResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "DeleteMemoryResponse",
+        "description": "Response for memory deletion."
+      },
       "FaceSearchRequest": {
         "properties": {
           "path": {
@@ -1696,6 +1918,44 @@
           "AI_Tagging"
         ],
         "title": "FolderDetails"
+      },
+      "GenerateMemoriesRequest": {
+        "properties": {
+          "force_regenerate": {
+            "type": "boolean",
+            "title": "Force Regenerate",
+            "description": "If True, clear existing memories and regenerate all",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "GenerateMemoriesRequest",
+        "description": "Request to generate memories from existing photos."
+      },
+      "GenerateMemoriesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "type": "object",
+            "title": "Data",
+            "description": "Contains memories_created count and generation stats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GenerateMemoriesResponse",
+        "description": "Response for memory generation."
       },
       "GetAlbumImagesRequest": {
         "properties": {
@@ -1865,6 +2125,33 @@
         ],
         "title": "GetAllImagesResponse"
       },
+      "GetAllMemoriesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/MemorySummary"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetAllMemoriesResponse",
+        "description": "Response for getting all memories."
+      },
       "GetClusterImagesData": {
         "properties": {
           "cluster_id": {
@@ -2009,6 +2296,29 @@
           "success"
         ],
         "title": "GetClustersResponse"
+      },
+      "GetMemoryDetailResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MemoryDetail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetMemoryDetailResponse",
+        "description": "Response for getting a specific memory."
       },
       "GetUserPreferencesResponse": {
         "properties": {
@@ -2258,6 +2568,40 @@
         "title": "ImageInCluster",
         "description": "Represents an image that contains faces from a specific cluster."
       },
+      "ImageInMemory": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "thumbnailPath": {
+            "type": "string",
+            "title": "Thumbnailpath"
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Metadata"
+          },
+          "is_representative": {
+            "type": "boolean",
+            "title": "Is Representative"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "thumbnailPath",
+          "metadata",
+          "is_representative"
+        ],
+        "title": "ImageInMemory",
+        "description": "Image details within a memory."
+      },
       "InputType": {
         "type": "string",
         "enum": [
@@ -2265,6 +2609,187 @@
           "base64"
         ],
         "title": "InputType"
+      },
+      "MemoryDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "memory_type": {
+            "type": "string",
+            "title": "Memory Type"
+          },
+          "start_date": {
+            "type": "string",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "title": "End Date"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "cover_image_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Id"
+          },
+          "total_photos": {
+            "type": "integer",
+            "title": "Total Photos"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/ImageInMemory"
+            },
+            "type": "array",
+            "title": "Images"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "memory_type",
+          "start_date",
+          "end_date",
+          "total_photos",
+          "created_at",
+          "images"
+        ],
+        "title": "MemoryDetail",
+        "description": "Detailed memory with all images."
+      },
+      "MemorySummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "memory_type": {
+            "type": "string",
+            "title": "Memory Type"
+          },
+          "start_date": {
+            "type": "string",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "title": "End Date"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "total_photos": {
+            "type": "integer",
+            "title": "Total Photos"
+          },
+          "representative_thumbnails": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Representative Thumbnails",
+            "default": []
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "memory_type",
+          "start_date",
+          "end_date",
+          "total_photos",
+          "created_at"
+        ],
+        "title": "MemorySummary",
+        "description": "Summary of a memory for list view."
       },
       "MetadataModel": {
         "properties": {
@@ -2897,6 +3422,30 @@
           "error"
         ],
         "title": "ErrorResponse"
+      },
+      "app__schemas__memories__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "error"
+        ],
+        "title": "ErrorResponse",
+        "description": "Error response."
       },
       "app__schemas__user_preferences__ErrorResponse": {
         "properties": {
