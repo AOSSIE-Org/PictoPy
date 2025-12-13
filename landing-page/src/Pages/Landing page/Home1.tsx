@@ -40,13 +40,18 @@ const ShuffleHero = () => {
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
             className="bg-gradient-to-r from-yellow-500 to-green-500 text-white font-medium py-2 px-6 rounded transition-all shadow-sm hover:shadow-md"
+            onClick={() => {
+              const downloadSection = document.getElementById('download-section');
+              if (downloadSection) {
+                downloadSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            }}
           >
             Download
           </motion.button>
           
-          {/* Update this button to navigate to the GitHub link */}
           <motion.a 
-            href="https://github.com/AOSSIE-Org/PictoPy" 
+            href="https://aossie-org.github.io/PictoPy/"
             target="_blank"
             rel="noopener noreferrer"
             initial={{ scale: 0.9, opacity: 0 }}
