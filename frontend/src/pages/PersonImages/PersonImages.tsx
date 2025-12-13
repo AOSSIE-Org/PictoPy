@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 import { Image } from '@/types/Media';
-import { setCurrentViewIndex, setImages } from '@/features/imageSlice';
+import { setCurrentViewIndex, setClusterImages } from '@/features/imageSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
 import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtension';
@@ -40,7 +40,9 @@ export const PersonImages = () => {
     } else if (isSuccess) {
       const res: any = data?.data;
       const images = (res?.images || []) as Image[];
-      dispatch(setImages(images));
+      // Use setClusterImages to mark source as 'cluster'
+      // This allows Home page to detect stale data and refetch
+      dispatch(setClusterImages(images));
       setClusterName(res?.cluster_name || 'random_name');
       dispatch(hideLoader());
     }
