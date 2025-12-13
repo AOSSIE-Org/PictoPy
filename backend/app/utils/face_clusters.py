@@ -159,14 +159,17 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
 
 
 def cluster_util_cluster_all_face_embeddings(
-    eps: float = 0.3, min_samples: int = 2
+    eps: float = 0.15, min_samples: int = 3
 ) -> List[ClusterResult]:
     """
     Cluster face embeddings using DBSCAN and assign cluster names based on majority voting.
 
     Args:
-        eps: DBSCAN epsilon parameter for maximum distance between samples
-        min_samples: DBSCAN minimum samples parameter for core points
+        eps: DBSCAN epsilon parameter for maximum distance between samples (default: 0.15)
+             Lower values = stricter clustering. With cosine distance, eps=0.15 means
+             only faces with similarity > 0.85 will be grouped together.
+        min_samples: DBSCAN minimum samples parameter for core points (default: 3)
+                    Minimum number of similar faces required to form a cluster.
 
     Returns:
         List of ClusterResult objects containing face_id, embedding, cluster_uuid, and cluster_name
@@ -240,7 +243,7 @@ def cluster_util_cluster_all_face_embeddings(
 
 
 def cluster_util_assign_cluster_to_faces_without_clusterId(
-    similarity_threshold: float = 0.7,
+    similarity_threshold: float = 0.85,
 ) -> List[Dict]:
     """
     Assign cluster IDs to faces that don't have clusters using nearest mean method with similarity threshold.
@@ -255,7 +258,8 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
     Args:
         similarity_threshold:
             Minimum cosine similarity required for assignment (0.0 to 1.0)
-            Higher values = more strict assignment. Default: 0.7
+            Higher values = more strict assignment. Default: 0.85
+            This matches the eps=0.15 DBSCAN parameter (1 - 0.15 = 0.85)
 
     Returns:
         List of face-cluster mappings ready for batch update
