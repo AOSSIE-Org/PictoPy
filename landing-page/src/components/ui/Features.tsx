@@ -53,12 +53,18 @@ const features: Feature[] = [
 ];
 
 // FeatureCard component
+<<<<<<< HEAD
 import { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
 // Assuming Feature type is defined elsewhere or imported
 // interface Feature { ... }
 
+=======
+import { useRef, useState } from "react";
+import { motion } from "framer-motion";
+
+>>>>>>> 2a16307 (Gallery feature cards expand only after an intentional hover on desktop to prevent accidental interactions. Hover effects are disabled on touch devices.)
 const FeatureCard = ({ feature }: { feature: Feature }) => {
   const sizeClasses = {
     large: "md:col-span-2",
@@ -71,6 +77,7 @@ const FeatureCard = ({ feature }: { feature: Feature }) => {
   const hoverTimer = useRef<number | null>(null);
   const [isHovered, setIsHovered] = useState(false);
 
+<<<<<<< HEAD
   // Clean Up: Detect touch capability safely for SSR/Hybrid devices
   // Ideally, rely on the delay logic, but this prevents touch-emulation triggers
   const isTouchDevice = () => {
@@ -85,6 +92,18 @@ const FeatureCard = ({ feature }: { feature: Feature }) => {
     hoverTimer.current = window.setTimeout(() => {
       setIsHovered(true);
     }, 1000); 
+=======
+  const isTouchDevice =
+    typeof window !== "undefined" &&
+    ("ontouchstart" in window || navigator.maxTouchPoints > 0);
+
+  const handleMouseEnter = () => {
+    if (isTouchDevice) return;
+
+    hoverTimer.current = window.setTimeout(() => {
+      setIsHovered(true);
+    }, 1000); // 1s intentional hover
+>>>>>>> 2a16307 (Gallery feature cards expand only after an intentional hover on desktop to prevent accidental interactions. Hover effects are disabled on touch devices.)
   };
 
   const handleMouseLeave = () => {
@@ -100,13 +119,17 @@ const FeatureCard = ({ feature }: { feature: Feature }) => {
       className={`group ${sizeClass} h-full`}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
+<<<<<<< HEAD
       // Scale is controlled by state, ensuring it syncs with the delay
+=======
+>>>>>>> 2a16307 (Gallery feature cards expand only after an intentional hover on desktop to prevent accidental interactions. Hover effects are disabled on touch devices.)
       animate={isHovered ? { scale: 1.02 } : { scale: 1 }}
       transition={{ duration: 0.3 }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       <div
+<<<<<<< HEAD
         // CHANGED: Removed 'hover:border-...' and 'hover:shadow-...'
         // Moved styling to the conditional string below to prevent instant flashing.
         className={`relative h-full rounded-2xl bg-white dark:bg-[#161717] 
@@ -116,6 +139,13 @@ const FeatureCard = ({ feature }: { feature: Feature }) => {
             ? "border-blue-600 shadow-[0_0_15px_rgba(30,64,175,0.9)] dark:shadow-[0_0_22px_rgba(30,64,179,1)]"
             : "border-transparent"
         }`}
+=======
+        className="relative h-full rounded-2xl bg-white dark:bg-[#161717] 
+        border-2 border-transparent p-6 transition-all duration-300
+        hover:border-blue-600 dark:hover:border-blue-600
+        hover:shadow-[0_0_15px_rgba(30,64,175,0.9)] dark:hover:shadow-[0_0_22px_rgba(30,64,179,1)]
+        cursor-pointer"
+>>>>>>> 2a16307 (Gallery feature cards expand only after an intentional hover on desktop to prevent accidental interactions. Hover effects are disabled on touch devices.)
       >
         <div className="mb-4 text-gray-800 dark:text-gray-200">
           {feature.icon}
