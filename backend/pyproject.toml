@@ -1,2 +1,24 @@
-[tool.ruff]
-line-length = 300
+[tool.mypy]
+# Alternative mypy config (pyproject.toml format)
+# Can be used instead of mypy.ini
+
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+namespace_packages = true
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = [
+    "PIL.*",
+    "cv2.*",
+    "facenet_pytorch.*",
+    "sklearn.*",
+    "torch.*",
+    "torchvision.*",
+    "ultralytics.*",
+    "onnxruntime.*",
+    "loguru.*",
+    "watchdog.*",
+]
+ignore_missing_imports = true
