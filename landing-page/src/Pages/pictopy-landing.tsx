@@ -8,6 +8,8 @@ import LinuxLogo from "@/assets/linux-logo.svg";
 const PictopyLanding: FC = () => {
   // State for showing the notification
   const [downloadStarted, setDownloadStarted] = useState<string | null>(null);
+  const [isLoadingReleases, setIsLoadingReleases] = useState(true);
+  const [releaseError, setReleaseError] = useState<string | null>(null);
   const [releaseUrls, setReleaseUrls] = useState<{
     windows?: string;
     mac?: string;
@@ -18,16 +20,32 @@ const PictopyLanding: FC = () => {
     // Fetch the latest release information
     const fetchLatestRelease = async () => {
       try {
+        setIsLoadingReleases(true);
+        setReleaseError(null);
         const response = await fetch(
-          "https://api.github.com/repos/AOSSIE-Org/PictoPy/releases/latest"
+          "https://api.github.com/repos/AOSSIE-Org/PictoPy/releases/latest",
+          {
+            headers: {
+              "X-GitHub-Api-Version": "2022-11-28",
+            },
+          }
         );
 
         if (!response.ok) {
-          throw new Error(`GitHub API returned ${response.status}: ${response.statusText}`);
+          if (response.status === 403) {
+            throw new Error(
+              "GitHub API rate limit exceeded. Please try again later."
+            );
+          }
+          throw new Error(
+            `GitHub API returned ${response.status}: ${response.statusText}`
+          );
         }
 
         const data = await response.json();
         const urls: { windows?: string; mac?: string; linux?: string } = {};
+
+        // Prioritized asset selection
         data.assets.forEach((asset: any) => {
           const name = asset.name.toLowerCase();
 
@@ -36,24 +54,34 @@ const PictopyLanding: FC = () => {
             return;
           }
 
-          // Windows - look for .exe or .msi
-          if (name.endsWith(".exe") || name.endsWith(".msi")) {
+          // Windows - prefer .exe over .msi
+          if (name.endsWith(".exe")) {
+            urls.windows = asset.browser_download_url;
+          } else if (name.endsWith(".msi") && !urls.windows) {
             urls.windows = asset.browser_download_url;
           }
-          // Mac - look for .app.tar.gz or .dmg
-          else if (name.endsWith(".app.tar.gz") || name.endsWith(".dmg")) {
+          // Mac - prefer .dmg over .app.tar.gz
+          else if (name.endsWith(".dmg")) {
+            urls.mac = asset.browser_download_url;
+          } else if (name.endsWith(".app.tar.gz") && !urls.mac) {
             urls.mac = asset.browser_download_url;
           }
-          // Linux - look for .deb or .appimage
-          else if (name.endsWith(".deb") || name.endsWith(".appimage")) {
+          // Linux - prefer .appimage over .deb
+          else if (name.endsWith(".appimage")) {
+            urls.linux = asset.browser_download_url;
+          } else if (name.endsWith(".deb") && !urls.linux) {
             urls.linux = asset.browser_download_url;
           }
         });
 
-        console.log("Found URLs:", urls); // Debug log
         setReleaseUrls(urls);
       } catch (error) {
         console.error("Failed to fetch latest release:", error);
+        setReleaseError(
+          error instanceof Error ? error.message : "Failed to fetch releases"
+        );
+      } finally {
+        setIsLoadingReleases(false);
       }
     };
 
@@ -137,7 +165,7 @@ const PictopyLanding: FC = () => {
                          transform hover:-translate-y-1 hover:shadow-lg"
               size="lg"
               onClick={() => handleDownloadClick("Mac")}
-              disabled={!releaseUrls.mac}
+              disabled={isLoadingReleases || !!releaseError || !releaseUrls.mac}
             >
               <img src={MacLogo} alt="Mac" className="h-7 w-7 mr-2" />
               Download for Mac
@@ -149,7 +177,7 @@ const PictopyLanding: FC = () => {
               size="lg"
               variant="outline"
               onClick={() => handleDownloadClick("Windows")}
-              disabled={!releaseUrls.windows}
+              disabled={isLoadingReleases || !!releaseError || !releaseUrls.windows}
             >
               <img src={WindowsLogo} alt="Windows" className="h-7 w-7 mr-2" />
               Download for Windows
@@ -161,17 +189,31 @@ const PictopyLanding: FC = () => {
               size="lg"
               variant="outline"
               onClick={() => handleDownloadClick("Linux")}
-              disabled={!releaseUrls.linux}
+              disabled={isLoadingReleases || !!releaseError || !releaseUrls.linux}
             >
               <img src={LinuxLogo} alt="Linux" className="h-9 w-9 mr-2" />
               Download for Linux(.deb)
             </Button>
           </div>
 
+          {/* Loading Indicator */}
+          {isLoadingReleases && (
+            <div className="mt-4 text-center text-slate-600 dark:text-slate-400">
+              Loading latest releases...
+            </div>
+          )}
+
           {/* Download Notification (Popup) */}
           {downloadStarted && (
             <div className="fixed top-16 right-4 md:right-8 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl text-lg z-50 opacity-0 animate-slideInRight">
               {downloadStarted}
+            </div>
+          )}
+
+          {/* Error Notification */}
+          {releaseError && (
+            <div className="fixed top-16 right-4 md:right-8 bg-red-500 text-white py-3 px-6 rounded-lg shadow-xl text-lg z-50">
+              {releaseError}
             </div>
           )}
         </div>
