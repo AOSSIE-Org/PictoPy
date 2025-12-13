@@ -1337,6 +1337,38 @@
         }
       }
     },
+    "/videos/favourites": {
+      "get": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Get Favourite Videos",
+        "description": "Get all favourite videos from the database.",
+        "operationId": "get_favourite_videos_videos_favourites_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAllVideosResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/videos/{video_id}": {
       "get": {
         "tags": [

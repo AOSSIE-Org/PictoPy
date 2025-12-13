@@ -6,6 +6,7 @@ from app.database.videos import (
     db_get_all_videos,
     db_get_video_by_id,
     db_toggle_video_favourite_status,
+    db_get_favourite_videos,
 )
 from app.schemas.videos import (
     VideoData,
@@ -80,6 +81,54 @@ def get_all_videos():
                 success=False,
                 error="Internal server error",
                 message=f"Unable to retrieve videos: {str(e)}"
+            ).model_dump()
+        )
+
+
+@router.get(
+    "/favourites",
+    response_model=GetAllVideosResponse,
+    responses={500: {"model": ErrorResponse}},
+)
+def get_favourite_videos():
+    """
+    Get all favourite videos from the database.
+    """
+    try:
+        videos_data = db_get_favourite_videos()
+        
+        videos = []
+        for video in videos_data:
+            metadata = _parse_video_metadata(video.get("metadata"))
+            
+            videos.append(
+                VideoData(
+                    id=video["id"],
+                    path=video["path"],
+                    folder_id=str(video["folder_id"]),
+                    thumbnailPath=video["thumbnailPath"] or "",
+                    duration=video.get("duration"),
+                    width=video.get("width"),
+                    height=video.get("height"),
+                    isFavourite=bool(video.get("isFavourite", False)),
+                    metadata=metadata,
+                )
+            )
+        
+        return GetAllVideosResponse(
+            success=True,
+            message=f"Successfully retrieved {len(videos)} favourite videos",
+            data=videos,
+        )
+        
+    except Exception as e:
+        logger.error(f"Error getting favourite videos: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Unable to retrieve favourite videos: {str(e)}"
             ).model_dump()
         )
 

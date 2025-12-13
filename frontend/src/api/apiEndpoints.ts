@@ -33,6 +33,7 @@ export const healthEndpoints = {
 
 export const videosEndpoints = {
   getAllVideos: '/videos/',
+  getFavouriteVideos: '/videos/favourites',
   getVideo: (videoId: string) => `/videos/${videoId}`,
   toggleFavourite: '/videos/toggle-favourite',
 };

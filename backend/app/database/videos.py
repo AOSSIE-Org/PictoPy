@@ -232,3 +232,28 @@ def db_video_exists(video_path: str) -> bool:
         return False
     finally:
         conn.close()
+
+
+def db_get_favourite_videos() -> List[dict]:
+    """Get all favourite videos from the database."""
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT id, path, folder_id, thumbnailPath, metadata, duration, width, height, isFavourite
+            FROM videos
+            WHERE isFavourite = 1
+            ORDER BY created_at DESC
+            """
+        )
+        
+        columns = ['id', 'path', 'folder_id', 'thumbnailPath', 'metadata', 'duration', 'width', 'height', 'isFavourite']
+        videos = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        return videos
+    except Exception as e:
+        logger.error(f"Error getting favourite videos: {e}")
+        return []
+    finally:
+        conn.close()

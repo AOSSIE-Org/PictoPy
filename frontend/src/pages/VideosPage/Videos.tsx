@@ -31,9 +31,10 @@ interface VideoCardProps {
 const VideoCard = ({ video, onClick, onToggleFavourite }: VideoCardProps) => {
   const [imageError, setImageError] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [videoError, setVideoError] = useState(false);
 
   const videoSrc = convertFileSrc(video.path);
-  const hasThumbnail = video.thumbnailPath && !imageError;
+  const hasThumbnail = video.thumbnailPath && video.thumbnailPath.length > 0 && !imageError;
 
   return (
     <Card 
@@ -52,19 +53,27 @@ const VideoCard = ({ video, onClick, onToggleFavourite }: VideoCardProps) => {
           ) : (
             <>
               {/* Use video element to show first frame as thumbnail */}
-              <video
-                src={videoSrc}
-                className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 ${!videoLoaded ? 'opacity-0' : 'opacity-100'}`}
-                muted
-                preload="metadata"
-                onLoadedData={(e) => {
-                  const videoEl = e.currentTarget;
-                  videoEl.currentTime = 1; // Seek to 1 second for thumbnail
-                }}
-                onSeeked={() => setVideoLoaded(true)}
-                onError={() => setVideoLoaded(true)} // Show fallback on error
-              />
-              {!videoLoaded && (
+              {!videoError ? (
+                <video
+                  src={videoSrc}
+                  className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 ${!videoLoaded ? 'opacity-0' : 'opacity-100'}`}
+                  muted
+                  playsInline
+                  preload="metadata"
+                  onLoadedMetadata={(e) => {
+                    const videoEl = e.currentTarget;
+                    // Seek to 1 second or 10% of duration, whichever is smaller
+                    const seekTime = Math.min(1, videoEl.duration * 0.1);
+                    videoEl.currentTime = seekTime;
+                  }}
+                  onSeeked={() => setVideoLoaded(true)}
+                  onError={() => {
+                    setVideoError(true);
+                    setVideoLoaded(true);
+                  }}
+                />
+              ) : null}
+              {(!videoLoaded || videoError) && (
                 <div className="absolute inset-0 flex h-full w-full items-center justify-center bg-gray-800">
                   <Video className="h-12 w-12 text-gray-500" />
                 </div>

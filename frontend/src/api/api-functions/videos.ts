@@ -34,6 +34,13 @@ export const fetchAllVideos = async (): Promise<GetAllVideosResponse> => {
   return response.data;
 };
 
+export const fetchFavouriteVideos = async (): Promise<GetAllVideosResponse> => {
+  const response = await apiClient.get<GetAllVideosResponse>(
+    videosEndpoints.getFavouriteVideos,
+  );
+  return response.data;
+};
+
 export const fetchVideoById = async (videoId: string): Promise<APIResponse> => {
   const response = await apiClient.get<APIResponse>(
     videosEndpoints.getVideo(videoId),
