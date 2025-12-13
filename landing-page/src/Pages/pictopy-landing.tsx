@@ -1,116 +1,25 @@
-import { FC, useState, useEffect } from "react";
+import { FC, useState } from "react";
 import { Button } from "@/components/ui/button";
-import PictopyLogo from "@/assets/PictoPy_Logo.png";
-import MacLogo from "@/assets/mac-logo.png";
-import WindowsLogo from "@/assets/windows-logo.svg";
-import LinuxLogo from "@/assets/linux-logo.svg";
+import PictopyLogo from "@/assets/PictoPy_Logo.png"; // Adjust this import path as needed
+import MacLogo from "@/assets/mac-logo.png"; // Add your Mac logo
+import WindowsLogo from "@/assets/windows-logo.svg"; // Add your Windows logo
+import LinuxLogo from "@/assets/linux-logo.svg"; // Add your Linux logo
 
 const PictopyLanding: FC = () => {
   // State for showing the notification
   const [downloadStarted, setDownloadStarted] = useState<string | null>(null);
-  const [isLoadingReleases, setIsLoadingReleases] = useState(true);
-  const [releaseError, setReleaseError] = useState<string | null>(null);
-  const [releaseUrls, setReleaseUrls] = useState<{
-    windows?: string;
-    mac?: string;
-    linux?: string;
-  }>({});
-
-  useEffect(() => {
-    // Fetch the latest release information
-    const fetchLatestRelease = async () => {
-      try {
-        setIsLoadingReleases(true);
-        setReleaseError(null);
-        const response = await fetch(
-          "https://api.github.com/repos/AOSSIE-Org/PictoPy/releases/latest",
-          {
-            headers: {
-              "X-GitHub-Api-Version": "2022-11-28",
-            },
-          }
-        );
-
-        if (!response.ok) {
-          if (response.status === 403) {
-            throw new Error(
-              "GitHub API rate limit exceeded. Please try again later."
-            );
-          }
-          throw new Error(
-            `GitHub API returned ${response.status}: ${response.statusText}`
-          );
-        }
-
-        const data = await response.json();
-        const urls: { windows?: string; mac?: string; linux?: string } = {};
-
-        // Prioritized asset selection
-        data.assets.forEach((asset: any) => {
-          const name = asset.name.toLowerCase();
-
-          // Skip signature files
-          if (name.endsWith(".sig")) {
-            return;
-          }
-
-          // Windows - prefer .exe over .msi
-          if (name.endsWith(".exe")) {
-            urls.windows = asset.browser_download_url;
-          } else if (name.endsWith(".msi") && !urls.windows) {
-            urls.windows = asset.browser_download_url;
-          }
-          // Mac - prefer .dmg over .app.tar.gz
-          else if (name.endsWith(".dmg")) {
-            urls.mac = asset.browser_download_url;
-          } else if (name.endsWith(".app.tar.gz") && !urls.mac) {
-            urls.mac = asset.browser_download_url;
-          }
-          // Linux - prefer .appimage over .deb
-          else if (name.endsWith(".appimage")) {
-            urls.linux = asset.browser_download_url;
-          } else if (name.endsWith(".deb") && !urls.linux) {
-            urls.linux = asset.browser_download_url;
-          }
-        });
-
-        setReleaseUrls(urls);
-      } catch (error) {
-        console.error("Failed to fetch latest release:", error);
-        setReleaseError(
-          error instanceof Error ? error.message : "Failed to fetch releases"
-        );
-      } finally {
-        setIsLoadingReleases(false);
-      }
-    };
-
-    fetchLatestRelease();
-  }, []);
 
   // Function to handle button click and show the notification
   const handleDownloadClick = (platform: string) => {
-    const url = releaseUrls[platform.toLowerCase() as keyof typeof releaseUrls];
-    if (url) {
-      const w = window.open(url, "_blank", "noopener,noreferrer");
-      if (w) w.opener = null;
-      setDownloadStarted(`Download for ${platform} started!`);
-      setTimeout(() => {
-        setDownloadStarted(null);
-      }, 3000);
-    } else {
-      setDownloadStarted(`Download link not available for ${platform}`);
-      setTimeout(() => {
-        setDownloadStarted(null);
-      }, 3000);
-    }
+    setDownloadStarted(`Download for ${platform} started!`);
+    // Hide the notification after 3 seconds
+    setTimeout(() => {
+      setDownloadStarted(null);
+    }, 3000);
   };
 
   return (
-    <section
-      id="download-section"
-      className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden"
-    >
+    <section className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden">
       {/* Background Animated SVG */}
       <div className="absolute inset-0 z-0">
         <svg
@@ -154,8 +63,7 @@ const PictopyLanding: FC = () => {
 
           {/* Subheading */}
           <p className="text-xl md:text-2xl text-green-700 dark:text-yellow-300 max-w-3xl mb-8 transition-colors duration-300">
-            Organize your photos effortlessly. Available for Mac, Windows, and
-            Linux.
+            Organize your photos effortlessly. Available for Mac, Windows, and Linux.
           </p>
 
           {/* Download Buttons */}
@@ -166,7 +74,6 @@ const PictopyLanding: FC = () => {
                          transform hover:-translate-y-1 hover:shadow-lg"
               size="lg"
               onClick={() => handleDownloadClick("Mac")}
-              disabled={isLoadingReleases || !!releaseError || !releaseUrls.mac}
             >
               <img src={MacLogo} alt="Mac" className="h-7 w-7 mr-2" />
               Download for Mac
@@ -178,7 +85,6 @@ const PictopyLanding: FC = () => {
               size="lg"
               variant="outline"
               onClick={() => handleDownloadClick("Windows")}
-              disabled={isLoadingReleases || !!releaseError || !releaseUrls.windows}
             >
               <img src={WindowsLogo} alt="Windows" className="h-7 w-7 mr-2" />
               Download for Windows
@@ -190,31 +96,18 @@ const PictopyLanding: FC = () => {
               size="lg"
               variant="outline"
               onClick={() => handleDownloadClick("Linux")}
-              disabled={isLoadingReleases || !!releaseError || !releaseUrls.linux}
             >
-              <img src={LinuxLogo} alt="Linux" className="h-9 w-9 mr-2" />
+              <img src={LinuxLogo} alt="Linux" className="h-9 w-9 mr-2" /> {/* Larger Linux logo */}
               Download for Linux(.deb)
             </Button>
           </div>
 
-          {/* Loading Indicator */}
-          {isLoadingReleases && (
-            <div className="mt-4 text-center text-slate-600 dark:text-slate-400">
-              Loading latest releases...
-            </div>
-          )}
-
           {/* Download Notification (Popup) */}
           {downloadStarted && (
-            <div className="fixed top-16 right-4 md:right-8 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl text-lg z-50 opacity-0 animate-slideInRight">
+            <div
+              className="fixed top-16 right-4 md:right-8 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl text-lg z-50 opacity-0 animate-slideInRight"
+            >
               {downloadStarted}
-            </div>
-          )}
-
-          {/* Error Notification */}
-          {releaseError && (
-            <div className="fixed top-16 right-4 md:right-8 bg-red-500 text-white py-3 px-6 rounded-lg shadow-xl text-lg z-50">
-              {releaseError}
             </div>
           )}
         </div>

@@ -5,7 +5,7 @@ const ShuffleHero = () => {
   return (
     <section className="w-full px-8 py-12 grid grid-cols-1 md:grid-cols-2 items-center gap-8 max-w-6xl mx-auto bg-white dark:bg-black transition-colors duration-300">
       <div className="font-['Inter',_sans-serif]">
-        <motion.span 
+        <motion.span
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
@@ -13,8 +13,8 @@ const ShuffleHero = () => {
         >
           INTELLIGENT GALLERY MANAGEMENT
         </motion.span>
-        
-        <motion.h3 
+
+        <motion.h3
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 0.2 }}
@@ -22,8 +22,8 @@ const ShuffleHero = () => {
         >
           PictoPy
         </motion.h3>
-        
-        <motion.p 
+
+        <motion.p
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
@@ -31,28 +31,22 @@ const ShuffleHero = () => {
         >
           Advanced desktop gallery application powered by Tauri, React, and Rust with a Python backend for intelligent image analysis and seamless management.
         </motion.p>
-        
+
         <div className="flex space-x-4">
-          <motion.button 
+          <motion.button
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.6 }}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
             className="bg-gradient-to-r from-yellow-500 to-green-500 text-white font-medium py-2 px-6 rounded transition-all shadow-sm hover:shadow-md"
-            onClick={() => {
-              const element = document.getElementById('download-section');
-              if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }
-            }}
           >
             Download
           </motion.button>
-          
+
           {/* Update this button to navigate to the GitHub link */}
-          <motion.a 
-            href="https://aossie-org.github.io/PictoPy/" 
+          <motion.a
+            href="https://github.com/AOSSIE-Org/PictoPy"
             target="_blank"
             rel="noopener noreferrer"
             initial={{ scale: 0.9, opacity: 0 }}

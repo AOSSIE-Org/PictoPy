@@ -1,33 +1,145 @@
-import React from 'react';
-import { Folder, Trash2, Check } from 'lucide-react';
-
-import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { Folder } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/store';
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
-
 import { useFolderOperations } from '@/hooks/useFolderOperations';
-import { FolderDetails } from '@/types/Folder';
+import { useBulkFolderSelection } from '@/hooks/useBulkFolderSelection';
 import SettingsCard from './SettingsCard';
+import {
+  FolderProgressSummary,
+  FolderBulkActions,
+  FolderSection,
+} from '@/components/FolderManagement';
+import {
+  mergeFoldersWithStatus,
+  groupFoldersByStatus,
+  calculateFolderStats,
+  loadFolderPreferences,
+  saveFolderPreferences,
+  FolderPreferences,
+  FolderWithStatus,
+} from '@/utils/folderUtils';
 
 /**
  * Component for managing folder operations in settings
+ * Supports bulk AI tagging, progress tracking, and smart sorting
  */
 const FolderManagementCard: React.FC = () => {
   const {
     folders,
     toggleAITagging,
     deleteFolder,
+    bulkEnableAITagging,
+    bulkDisableAITagging,
     enableAITaggingPending,
     disableAITaggingPending,
     deleteFolderPending,
+    bulkEnablePending,
+    bulkDisablePending,
   } = useFolderOperations();
 
   const taggingStatus = useSelector(
     (state: RootState) => state.folders.taggingStatus,
   );
+
+  // Selection state
+  const {
+    selectedIds,
+    toggleSelection,
+    selectAll,
+    deselectAll,
+    selectedCount,
+    isAllSelected,
+    getSelectedFolders,
+  } = useBulkFolderSelection();
+
+  // Collapsed sections state (persisted)
+  const [preferences, setPreferences] = useState<FolderPreferences>(
+    loadFolderPreferences,
+  );
+
+  // Save preferences when they change
+  useEffect(() => {
+    saveFolderPreferences(preferences);
+  }, [preferences]);
+
+  // Merge folders with their tagging status
+  const foldersWithStatus: FolderWithStatus[] = useMemo(
+    () => mergeFoldersWithStatus(folders, taggingStatus),
+    [folders, taggingStatus],
+  );
+
+  // Group folders by status
+  const groupedFolders = useMemo(
+    () => groupFoldersByStatus(foldersWithStatus),
+    [foldersWithStatus],
+  );
+
+  // Calculate statistics
+  const stats = useMemo(
+    () => calculateFolderStats(groupedFolders),
+    [groupedFolders],
+  );
+
+  // Toggle section collapse
+  const toggleSectionCollapse = useCallback(
+    (section: 'completed' | 'inProgress' | 'pending') => {
+      setPreferences((prev) => ({
+        ...prev,
+        collapsedSections: {
+          ...prev.collapsedSections,
+          [section]: !prev.collapsedSections[section],
+        },
+      }));
+    },
+    [],
+  );
+
+  // Bulk action handlers
+  const handleSelectAll = useCallback(() => {
+    selectAll(foldersWithStatus);
+  }, [selectAll, foldersWithStatus]);
+
+  const handleEnableAll = useCallback(() => {
+    const pendingFolderIds = groupedFolders.pending.map((f) => f.folder_id);
+    bulkEnableAITagging(pendingFolderIds);
+  }, [groupedFolders.pending, bulkEnableAITagging]);
+
+  const handleEnableSelected = useCallback(() => {
+    const selectedFolders = getSelectedFolders(foldersWithStatus);
+    const pendingSelectedIds = selectedFolders
+      .filter((f) => !f.AI_Tagging)
+      .map((f) => f.folder_id);
+    if (pendingSelectedIds.length > 0) {
+      bulkEnableAITagging(pendingSelectedIds);
+    } else {
+      // If all selected already have AI tagging, enable anyway (re-trigger)
+      bulkEnableAITagging(selectedFolders.map((f) => f.folder_id));
+    }
+  }, [getSelectedFolders, foldersWithStatus, bulkEnableAITagging]);
+
+  const handleDisableAll = useCallback(() => {
+    const enabledFolderIds = [
+      ...groupedFolders.completed,
+      ...groupedFolders.inProgress,
+    ].map((f) => f.folder_id);
+    bulkDisableAITagging(enabledFolderIds);
+  }, [groupedFolders, bulkDisableAITagging]);
+
+  const handleDisableSelected = useCallback(() => {
+    const selectedFolders = getSelectedFolders(foldersWithStatus);
+    const enabledSelectedIds = selectedFolders
+      .filter((f) => f.AI_Tagging)
+      .map((f) => f.folder_id);
+    bulkDisableAITagging(enabledSelectedIds);
+  }, [getSelectedFolders, foldersWithStatus, bulkDisableAITagging]);
+
+  const isTaggingPending =
+    enableAITaggingPending ||
+    disableAITaggingPending ||
+    bulkEnablePending ||
+    bulkDisablePending;
 
   return (
     <SettingsCard
@@ -36,101 +148,84 @@ const FolderManagementCard: React.FC = () => {
       description="Configure your photo library folders and AI settings"
     >
       {folders.length > 0 ? (
-        <div className="space-y-3">
-          {folders.map((folder: FolderDetails, index: number) => (
-            <div
-              key={index}
-              className="group border-border bg-background/50 relative rounded-lg border p-4 transition-all hover:border-gray-300 hover:shadow-sm dark:hover:border-gray-600"
-            >
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-3">
-                    <Folder className="h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
-                    <span className="text-foreground truncate">
-                      {folder.folder_path}
-                    </span>
-                  </div>
-                </div>
+        <>
+          {/* Progress Summary */}
+          <FolderProgressSummary stats={stats} />
 
-                <div className="ml-4 flex items-center gap-4">
-                  <div className="flex items-center gap-3">
-                    <span className="text-muted-foreground text-sm">
-                      AI Tagging
-                    </span>
-                    <Switch
-                      className="cursor-pointer"
-                      checked={folder.AI_Tagging}
-                      onCheckedChange={() => toggleAITagging(folder)}
-                      disabled={
-                        enableAITaggingPending || disableAITaggingPending
-                      }
-                    />
-                  </div>
+          {/* Bulk Actions */}
+          <FolderBulkActions
+            totalCount={stats.total}
+            selectedCount={selectedCount}
+            pendingCount={stats.pending}
+            enabledCount={stats.completed + stats.inProgress}
+            isAllSelected={isAllSelected(foldersWithStatus)}
+            onSelectAll={handleSelectAll}
+            onDeselectAll={deselectAll}
+            onEnableAll={handleEnableAll}
+            onEnableSelected={handleEnableSelected}
+            onDisableAll={handleDisableAll}
+            onDisableSelected={handleDisableSelected}
+            isEnabling={bulkEnablePending || enableAITaggingPending}
+            isDisabling={bulkDisablePending || disableAITaggingPending}
+          />
 
-                  <Button
-                    onClick={() => deleteFolder(folder.folder_id)}
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-8 cursor-pointer text-gray-500 hover:border-red-300 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-                    disabled={deleteFolderPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+          {/* Folder Sections */}
+          <div className="space-y-2">
+            <FolderSection
+              type="inProgress"
+              folders={groupedFolders.inProgress}
+              isCollapsed={preferences.collapsedSections.inProgress}
+              onToggleCollapse={() => toggleSectionCollapse('inProgress')}
+              selectedIds={selectedIds}
+              onToggleSelection={toggleSelection}
+              onToggleAITagging={toggleAITagging}
+              onDeleteFolder={deleteFolder}
+              isTaggingPending={isTaggingPending}
+              isDeletePending={deleteFolderPending}
+            />
 
-              {folder.AI_Tagging && (
-                <div className="mt-3">
-                  <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
-                    <span>AI Tagging Progress</span>
-                    <span
-                      className={
-                        (taggingStatus[folder.folder_id]?.tagging_percentage ??
-                          0) >= 100
-                          ? 'flex items-center gap-1 text-green-500'
-                          : 'text-muted-foreground'
-                      }
-                    >
-                      {(taggingStatus[folder.folder_id]?.tagging_percentage ??
-                        0) >= 100 && <Check className="h-3 w-3" />}
-                      {Math.round(
-                        taggingStatus[folder.folder_id]?.tagging_percentage ??
-                          0,
-                      )}
-                      %
-                    </span>
-                  </div>
-                  <Progress
-                    value={
-                      taggingStatus[folder.folder_id]?.tagging_percentage ?? 0
-                    }
-                    indicatorClassName={
-                      (taggingStatus[folder.folder_id]?.tagging_percentage ??
-                        0) >= 100
-                        ? 'bg-green-500'
-                        : 'bg-blue-500'
-                    }
-                  />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+            <FolderSection
+              type="pending"
+              folders={groupedFolders.pending}
+              isCollapsed={preferences.collapsedSections.pending}
+              onToggleCollapse={() => toggleSectionCollapse('pending')}
+              selectedIds={selectedIds}
+              onToggleSelection={toggleSelection}
+              onToggleAITagging={toggleAITagging}
+              onDeleteFolder={deleteFolder}
+              isTaggingPending={isTaggingPending}
+              isDeletePending={deleteFolderPending}
+            />
+
+            <FolderSection
+              type="completed"
+              folders={groupedFolders.completed}
+              isCollapsed={preferences.collapsedSections.completed}
+              onToggleCollapse={() => toggleSectionCollapse('completed')}
+              selectedIds={selectedIds}
+              onToggleSelection={toggleSelection}
+              onToggleAITagging={toggleAITagging}
+              onDeleteFolder={deleteFolder}
+              isTaggingPending={isTaggingPending}
+              isDeletePending={deleteFolderPending}
+            />
+          </div>
+        </>
       ) : (
         <div className="py-8 text-center">
           <Folder className="mx-auto mb-3 h-12 w-12 text-gray-400" />
-          <h3 className="text-foreground mb-1 text-lg font-medium">
-            No folders configured
-          </h3>
-          <p className="text-muted-foreground text-sm">
-            Add your first photo library folder to get started
+          <p className="text-muted-foreground mb-4 text-sm">
+            No folders added yet
           </p>
+          <FolderPicker />
         </div>
       )}
 
-      <div className="border-border mt-6 border-t pt-6">
-        <FolderPicker />
-      </div>
+      {folders.length > 0 && (
+        <div className="mt-4 border-t pt-4">
+          <FolderPicker />
+        </div>
+      )}
     </SettingsCard>
   );
 };
