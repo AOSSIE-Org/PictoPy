@@ -19,6 +19,7 @@ from app.database.albums import db_create_albums_table
 from app.database.albums import db_create_album_images_table
 from app.database.folders import db_create_folders_table
 from app.database.metadata import db_create_metadata_table
+from app.database.memories import db_create_memories_table
 from app.utils.microservice import microservice_util_start_sync_service
 
 from app.routes.folders import router as folders_router
@@ -26,6 +27,7 @@ from app.routes.albums import router as albums_router
 from app.routes.images import router as images_router
 from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
+from app.routes.memories import router as memories_router
 from fastapi.openapi.utils import get_openapi
 from app.logging.setup_logging import (
     configure_uvicorn_logging,
@@ -52,6 +54,7 @@ async def lifespan(app: FastAPI):
     db_create_albums_table()
     db_create_album_images_table()
     db_create_metadata_table()
+    db_create_memories_table()
     microservice_util_start_sync_service()
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor(max_workers=1)
@@ -132,6 +135,7 @@ app.include_router(
 app.include_router(
     user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
 )
+app.include_router(memories_router, prefix="/memories", tags=["Memories"])
 
 
 # Entry point for running with: python3 main.py

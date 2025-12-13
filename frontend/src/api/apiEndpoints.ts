@@ -27,6 +27,12 @@ export const userPreferencesEndpoints = {
   updateUserPreferences: '/user-preferences/',
 };
 
+export const memoriesEndpoints = {
+  getAllMemories: '/memories/',
+  getTodayMemories: '/memories/today',
+  getMemoryImages: (memoryId: string) => `/memories/${memoryId}/images`,
+};
+
 export const healthEndpoints = {
   healthCheck: '/health',
 };
