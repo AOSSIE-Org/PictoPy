@@ -118,8 +118,7 @@ class TestRefresh:
         response = client.post(f"/albums/{album_id}/refresh")
         assert response.status_code == 200
         data = response.json()
-        # Should match p1 and p2 which have "cat" and "dog" tags
-        # Only p1 has "cat" tag, so it should be included
+        # Should match p1 which has "cat" tag (p2 has "dog", not "cat")
         assert "p1" in data["photos"]
 
     def test_refresh_face_album(self, client):

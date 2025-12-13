@@ -3,7 +3,12 @@ from models import SmartAlbum, Photo
 
 
 def _match_tag_against_name(tag: str, name: str) -> bool:
-    """Simple matching: lowercase, check substring match to be robust to plurals."""
+    """Simple matching: lowercase, check substring match to be robust to plurals.
+    
+    WARNING: This is a naive stub that will produce false positives
+    (e.g., 'cat' matches 'concatenate'). Replace with word-boundary 
+    matching or ML-based tagging for production use.
+    """
     return name.lower() in tag.lower() or tag.lower() in name.lower()
 
 

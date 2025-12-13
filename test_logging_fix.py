@@ -7,9 +7,9 @@ import logging
 import sys
 from pathlib import Path
 
-# Add the backend directory to the path
-backend_path = Path(__file__).parent / "backend" / "app" / "logging"
-sys.path.insert(0, str(backend_path.parent.parent.parent))
+# Add the project root to the path
+project_root = Path(__file__).parent
+sys.path.insert(0, str(project_root))
 
 from backend.app.logging.setup_logging import ColorFormatter
 

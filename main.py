@@ -1,5 +1,5 @@
-from fastapi import FastAPI, HTTPException
-from typing import List, Dict, Optional
+from fastapi import FastAPI, HTTPException, Request
+from typing import List, Dict, Optional, Literal
 from models import SmartAlbum, Photo
 from pydantic import BaseModel
 from ai_stub import refresh_album_contents
@@ -8,10 +8,10 @@ app = FastAPI(title="PictoPy Albums API")
 
 
 @app.get("/", tags=["Root"])
-def root():
+def root(request: Request):
     return {
         "message": "Welcome to PictoPy Smart Albums API",
-        "docs": "http://127.0.0.1:8000/docs",
+        "docs": f"{request.url.scheme}://{request.url.netloc}/docs",
         "version": "0.1.0",
         "endpoints": {
             "albums": "GET /albums, POST /albums, PATCH /albums/{id}, DELETE /albums/{id}",
@@ -33,14 +33,14 @@ photos: Dict[str, Photo] = {
 
 class AlbumCreate(BaseModel):
     name: str
-    type: str
+    type: Literal["object", "face", "manual"]
     photos: Optional[List[str]] = []
     auto_update: Optional[bool] = False
 
 
 class AlbumUpdate(BaseModel):
     name: Optional[str] = None
-    type: Optional[str] = None
+    type: Optional[Literal["object", "face", "manual"]] = None
     photos: Optional[List[str]] = None
     auto_update: Optional[bool] = None
 
@@ -52,6 +52,11 @@ def list_albums():
 
 @app.post("/albums", response_model=SmartAlbum, status_code=201)
 def create_album(body: AlbumCreate):
+    # Validate photo IDs exist
+    invalid_photos = [pid for pid in (body.photos or []) if pid not in photos]
+    if invalid_photos:
+        raise HTTPException(status_code=400, detail=f"Invalid photo IDs: {invalid_photos}")
+    
     album = SmartAlbum(name=body.name, type=body.type, photos=body.photos or [], auto_update=body.auto_update)
     albums[album.id] = album
     return album
@@ -61,6 +66,13 @@ def create_album(body: AlbumCreate):
 def update_album(album_id: str, body: AlbumUpdate):
     if album_id not in albums:
         raise HTTPException(status_code=404, detail="Album not found")
+    
+    # Validate photo IDs if provided
+    if body.photos is not None:
+        invalid_photos = [pid for pid in body.photos if pid not in photos]
+        if invalid_photos:
+            raise HTTPException(status_code=400, detail=f"Invalid photo IDs: {invalid_photos}")
+    
     album = albums[album_id]
     update_data = body.dict(exclude_unset=True)
     updated_album = album.copy(update=update_data)
