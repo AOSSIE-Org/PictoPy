@@ -94,9 +94,9 @@ def refresh_album(album_id: str):
         raise HTTPException(status_code=404, detail="Album not found")
     album = albums[album_id]
     new_photo_ids = refresh_album_contents(album, photos)
-    album.photos = new_photo_ids
-    albums[album_id] = album
-    return album
+    updated_album = album.copy(update={"photos": new_photo_ids})
+    albums[album_id] = updated_album
+    return updated_album
 
 
 @app.get("/photos", response_model=List[Photo])

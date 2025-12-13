@@ -34,6 +34,7 @@ def test_exc_info_cleared():
     try:
         1 / 0
     except ZeroDivisionError:
+        import traceback
         record = logging.LogRecord(
             name="test",
             level=logging.ERROR,
@@ -42,7 +43,7 @@ def test_exc_info_cleared():
             msg="Division failed!",
             args=(),
             exc_info=sys.exc_info(),
-            stack_info=True
+            stack_info=''.join(traceback.format_stack())
         )
         
         print("\nBefore formatting:")
