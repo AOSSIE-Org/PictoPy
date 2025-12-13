@@ -1,3 +1,10 @@
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+
 import { Input } from '@/components/ui/input';
 import { ThemeSelector } from '@/components/ThemeToggle';
 import { Search } from 'lucide-react';
@@ -63,7 +70,19 @@ export function Navbar() {
 
           {/* FaceSearch Dialog */}
 
-          <FaceSearchDialog />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <FaceSearchDialog />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <span>Face Scanner</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
 
           <button
             className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
@@ -82,13 +101,23 @@ export function Navbar() {
           <span className="hidden text-sm sm:inline-block">
             Welcome <span className="text-muted-foreground">{userName}</span>
           </span>
-          <a href="/settings" className="p-2">
-            <img
-              src={userAvatar || '/photo1.png'}
-              className="hover:ring-primary/50 h-8 w-8 cursor-pointer rounded-full transition-all hover:ring-2"
-              alt="User avatar"
-            />
-          </a>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a href="/settings" className="p-2">
+                  <img
+                    src={userAvatar || '/photo1.png'}
+                    className="hover:ring-primary/50 h-8 w-8 cursor-pointer rounded-full transition-all hover:ring-2"
+                    alt="User avatar"
+                  />
+                </a>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <span>Profile</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
         </div>
       </div>
     </div>

@@ -63,3 +63,6 @@ Handles file system operations and provides a secure bridge between the frontend
 ---
 
 Our Code of Conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+
+Gallery feature cards expand only after an intentional hover on desktop to prevent accidental interactions. Hover effects are disabled on touch devices.
+

@@ -53,35 +53,82 @@ const features: Feature[] = [
 ];
 
 // FeatureCard component
+import { useRef, useState, useEffect } from "react";
+import { motion } from "framer-motion";
+
+// Assuming Feature type is defined elsewhere or imported
+// interface Feature { ... }
+
 const FeatureCard = ({ feature }: { feature: Feature }) => {
-  // Define size classes with a default value for undefined sizes
   const sizeClasses = {
     large: "md:col-span-2",
     medium: "md:col-span-2",
     small: "md:col-span-1",
   };
 
-  // Use the feature's size or default to "small" if undefined
   const sizeClass = sizeClasses[feature.size || "small"];
+
+  const hoverTimer = useRef<number | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Clean Up: Detect touch capability safely for SSR/Hybrid devices
+  // Ideally, rely on the delay logic, but this prevents touch-emulation triggers
+  const isTouchDevice = () => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(hover: none)").matches;
+  };
+
+  const handleMouseEnter = () => {
+    if (isTouchDevice()) return;
+
+    // Logic: Only trigger state after 1 second of "intent"
+    hoverTimer.current = window.setTimeout(() => {
+      setIsHovered(true);
+    }, 1000); 
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimer.current) {
+      clearTimeout(hoverTimer.current);
+      hoverTimer.current = null;
+    }
+    setIsHovered(false);
+  };
 
   return (
     <motion.div
       className={`group ${sizeClass} h-full`}
-      whileHover={{ scale: 1.02 }}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      // Scale is controlled by state, ensuring it syncs with the delay
+      animate={isHovered ? { scale: 1.02 } : { scale: 1 }}
+      transition={{ duration: 0.3 }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <div
-        className="relative h-full rounded-2xl bg-white dark:bg-[#161717] 
-        border-2 border-transparent p-6 transition-all duration-300
-        hover:border-blue-600 dark:hover:border-blue-600
-        hover:shadow-[0_0_15px_rgba(30,64,175,0.9)] dark:hover:shadow-[0_0_22px_rgba(30,64,179,1)]"
+        // CHANGED: Removed 'hover:border-...' and 'hover:shadow-...'
+        // Moved styling to the conditional string below to prevent instant flashing.
+        className={`relative h-full rounded-2xl bg-white dark:bg-[#161717] 
+        border-2 p-6 transition-all duration-300 cursor-pointer
+        ${
+          isHovered
+            ? "border-blue-600 shadow-[0_0_15px_rgba(30,64,175,0.9)] dark:shadow-[0_0_22px_rgba(30,64,179,1)]"
+            : "border-transparent"
+        }`}
       >
-        <div className="mb-4 text-gray-800 dark:text-gray-200">{feature.icon}</div>
-        <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">{feature.title}</h3>
-        <p className="text-gray-600 dark:text-gray-300 mb-4">{feature.description}</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{feature.details}</p>
+        <div className="mb-4 text-gray-800 dark:text-gray-200">
+          {feature.icon}
+        </div>
+        <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">
+          {feature.title}
+        </h3>
+        <p className="text-gray-600 dark:text-gray-300 mb-4">
+          {feature.description}
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {feature.details}
+        </p>
       </div>
     </motion.div>
   );
