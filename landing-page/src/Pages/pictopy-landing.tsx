@@ -1,9 +1,9 @@
 import { FC, useState } from "react";
 import { Button } from "@/components/ui/button";
-import PictopyLogo from "@/assets/PictoPy_Logo.png"; // Adjust this import path as needed
-import MacLogo from "@/assets/mac-logo.png"; // Add your Mac logo
-import WindowsLogo from "@/assets/windows-logo.svg"; // Add your Windows logo
-import LinuxLogo from "@/assets/linux-logo.svg"; // Add your Linux logo
+import PictopyLogo from "@/assets/PictoPy_Logo.png";
+import MacLogo from "@/assets/mac-logo.png";
+import WindowsLogo from "@/assets/windows-logo.svg";
+import LinuxLogo from "@/assets/linux-logo.svg";
 
 const PictopyLanding: FC = () => {
   // State for showing the notification
@@ -12,14 +12,19 @@ const PictopyLanding: FC = () => {
   // Function to handle button click and show the notification
   const handleDownloadClick = (platform: string) => {
     setDownloadStarted(`Download for ${platform} started!`);
-    // Hide the notification after 3 seconds
     setTimeout(() => {
       setDownloadStarted(null);
     }, 3000);
   };
 
+  const GITHUB_LATEST_RELEASE =
+    "https://github.com/AOSSIE-Org/PictoPy/releases/latest/download";
+
   return (
-    <section className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden">
+    <section
+      id="download-id"
+      className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden"
+    >
       {/* Background Animated SVG */}
       <div className="absolute inset-0 z-0">
         <svg
@@ -47,7 +52,7 @@ const PictopyLanding: FC = () => {
       </div>
 
       {/* Content */}
-      <div className="px-4 md:px-6 relative z-10 ">
+      <div className="px-4 md:px-6 relative z-10">
         <div className="flex flex-col items-center text-center">
           {/* Heading with Gradient Text and Logo */}
           <div className="flex items-center justify-center gap-4 mb-4">
@@ -68,45 +73,49 @@ const PictopyLanding: FC = () => {
 
           {/* Download Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 h-12 px-8 transition-all duration-300 
+            {/* macOS (Apple Silicon) */}
+            <a
+              href={`${GITHUB_LATEST_RELEASE}/PictoPy_aarch64.app.tar.gz`}
+              onClick={() => handleDownloadClick("Mac")}
+              className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 
+                         h-12 px-8 flex items-center justify-center rounded-md transition-all duration-300 
                          border-2 border-transparent hover:border-black dark:hover:border-white 
                          transform hover:-translate-y-1 hover:shadow-lg"
-              size="lg"
-              onClick={() => handleDownloadClick("Mac")}
             >
               <img src={MacLogo} alt="Mac" className="h-7 w-7 mr-2" />
               Download for Mac
-            </Button>
-            <Button
-              className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 h-12 px-8 transition-all duration-300 
+            </a>
+
+            {/* Windows */}
+            <a
+              href={`${GITHUB_LATEST_RELEASE}/PictoPy_1.0.0_x64-setup.exe`}
+              onClick={() => handleDownloadClick("Windows")}
+              className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 
+                         h-12 px-8 flex items-center justify-center rounded-md transition-all duration-300 
                          border-2 border-transparent hover:border-black dark:hover:border-white 
                          transform hover:-translate-y-1 hover:shadow-lg"
-              size="lg"
-              variant="outline"
-              onClick={() => handleDownloadClick("Windows")}
             >
               <img src={WindowsLogo} alt="Windows" className="h-7 w-7 mr-2" />
               Download for Windows
-            </Button>
-            <Button
-              className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 h-12 px-8 transition-all duration-300 
+            </a>
+
+            {/* Linux */}
+            <a
+              href={`${GITHUB_LATEST_RELEASE}/PictoPy_1.0.0_amd64.deb`}
+              onClick={() => handleDownloadClick("Linux")}
+              className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 
+                         h-12 px-8 flex items-center justify-center rounded-md transition-all duration-300 
                          border-2 border-transparent hover:border-black dark:hover:border-white 
                          transform hover:-translate-y-1 hover:shadow-lg"
-              size="lg"
-              variant="outline"
-              onClick={() => handleDownloadClick("Linux")}
             >
-              <img src={LinuxLogo} alt="Linux" className="h-9 w-9 mr-2" /> {/* Larger Linux logo */}
-              Download for Linux(.deb)
-            </Button>
+              <img src={LinuxLogo} alt="Linux" className="h-9 w-9 mr-2" />
+              Download for Linux (.deb)
+            </a>
           </div>
 
           {/* Download Notification (Popup) */}
           {downloadStarted && (
-            <div
-              className="fixed top-16 right-4 md:right-8 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl text-lg z-50 opacity-0 animate-slideInRight"
-            >
+            <div className="fixed top-16 right-4 md:right-8 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl text-lg z-50 opacity-0 animate-slideInRight">
               {downloadStarted}
             </div>
           )}
