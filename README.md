@@ -61,5 +61,90 @@ Handles file system operations and provides a secure bridge between the frontend
 | Type Checking     | TypeScript           |
 
 ---
+view raw### PictoPy Installation Guide (as of December 13, 2025)
+
+PictoPy is a *privacy-first desktop image gallery application* developed by AOSSIE. It features object detection, face clustering, and image sorting using a Python backend for analysis, combined with a frontend built using *Tauri* (Rust + React).
+
+It's cross-platform (Windows, macOS, Linux) but requires building from source, as pre-built releases may not be available yet.
+
+#### Prerequisites
+- *Git* (to clone the repository)
+- *Node.js* and *npm/yarn/pnpm* (for the frontend)
+- *Rust* (via rustup: https://rustup.rs/)
+- *Python 3.10+* (for the backend)
+- *Tauri dependencies* (platform-specific system libraries)
+
+#### Step-by-Step Installation
+
+1. *Clone the Repository*
+   
+   git clone https://github.com/AOSSIE-Org/PictoPy.git
+   cd PictoPy
+   
+
+2. *Install Frontend Dependencies*
+   Navigate to the frontend directory (usually src-tauri or root has package.json):
+   
+   npm install   # or yarn install / pnpm install
+   
+
+3. *Install Python Backend Dependencies*
+   The project includes a requirements.txt file listing all needed packages (e.g., OpenCV, face_recognition, torch, etc.).
+   
+   python -m venv venv          # Optional: create a virtual environment
+   source venv/bin/activate     # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   
+
+   *Note on System Dependencies*:
+   Some Python packages (especially OpenCV) require system libraries:
+   - *Ubuntu/Debian*:
+     
+     sudo apt update
+     sudo apt install libgl1-mesa-glx libglib2.0-0 libsm6 libxrender1 libxext6
+     
+   - *Fedora*:
+     
+     sudo dnf install mesa-libGL
+     
+   - *macOS* (using Homebrew):
+     
+     brew install libgl1
+     
+   - *Windows*: Usually handled automatically by pip wheels, but ensure Visual C++ Build Tools are installed.
+
+4. *Install Tauri CLI*
+   
+   cargo install tauri-cli   # Or follow Tauri's setup: https://tauri.app/v1/guides/getting-started/prerequisites
+   
+
+5. *Build and Run the Application*
+   From the project root:
+   
+   cargo tauri dev     # For development mode (hot-reload)
+   
+   Or for a production build:
+   
+   cargo tauri build   # Creates installers in src-tauri/target/release/bundle
+   
+
+   - On first run, Tauri may prompt to install additional platform-specific tools (e.g., WebView2 on Windows).
+
+#### Usage After Installation
+- Run cargo tauri dev to launch the app.
+- Import your photo folders — the app will analyze images for objects, faces, and sort/cluster them privately (all processing is local).
+
+#### Troubleshooting
+- If you encounter errors with OpenCV (e.g., libGL.so.1 missing), install the system libraries mentioned above.
+- Check the GitHub Issues/Discussions for common problems: https://github.com/AOSSIE-Org/PictoPy/issues
+- Documentation may be limited; refer to Tauri's docs for build issues: https://tauri.app/
+
+#### Alternative: Documentation Site
+There is a project page at https://aossie-org.github.io/PictoPy/ — check there for updated guides or screenshots.
+
+This guide is based on the standard setup for Tauri + Python projects like PictoPy. If the repository structure changes, refer directly to the README.md on GitHub.
+
+Enjoy your privacy-focused photo gallery! If you run into specific errors, share them on the repo's Discussions. 🚀
+
 
 Our Code of Conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
