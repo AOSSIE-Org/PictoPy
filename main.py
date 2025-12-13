@@ -6,6 +6,21 @@ from ai_stub import refresh_album_contents
 
 app = FastAPI(title="PictoPy Albums API")
 
+
+@app.get("/", tags=["Root"])
+def root():
+    return {
+        "message": "Welcome to PictoPy Smart Albums API",
+        "docs": "http://127.0.0.1:8000/docs",
+        "version": "0.1.0",
+        "endpoints": {
+            "albums": "GET /albums, POST /albums, PATCH /albums/{id}, DELETE /albums/{id}",
+            "refresh": "POST /albums/{id}/refresh",
+            "photos": "GET /photos, GET /photos/{id}"
+        }
+    }
+
+
 # In-memory stores (replace with DB in production)
 albums: Dict[str, SmartAlbum] = {}
 photos: Dict[str, Photo] = {
@@ -24,10 +39,10 @@ class AlbumCreate(BaseModel):
 
 
 class AlbumUpdate(BaseModel):
-    name: Optional[str]
-    type: Optional[str]
-    photos: Optional[List[str]]
-    auto_update: Optional[bool]
+    name: Optional[str] = None
+    type: Optional[str] = None
+    photos: Optional[List[str]] = None
+    auto_update: Optional[bool] = None
 
 
 @app.get("/albums", response_model=List[SmartAlbum])
@@ -48,10 +63,9 @@ def update_album(album_id: str, body: AlbumUpdate):
         raise HTTPException(status_code=404, detail="Album not found")
     album = albums[album_id]
     update_data = body.dict(exclude_unset=True)
-    for k, v in update_data.items():
-        setattr(album, k, v)
-    albums[album_id] = album
-    return album
+    updated_album = album.copy(update=update_data)
+    albums[album_id] = updated_album
+    return updated_album
 
 
 @app.delete("/albums/{album_id}", status_code=204)
