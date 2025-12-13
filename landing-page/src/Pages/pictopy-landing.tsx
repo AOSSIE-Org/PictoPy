@@ -1,25 +1,87 @@
-import { FC, useState } from "react";
+import { FC, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import PictopyLogo from "@/assets/PictoPy_Logo.png"; // Adjust this import path as needed
-import MacLogo from "@/assets/mac-logo.png"; // Add your Mac logo
-import WindowsLogo from "@/assets/windows-logo.svg"; // Add your Windows logo
-import LinuxLogo from "@/assets/linux-logo.svg"; // Add your Linux logo
+import PictopyLogo from "@/assets/PictoPy_Logo.png";
+import MacLogo from "@/assets/mac-logo.png";
+import WindowsLogo from "@/assets/windows-logo.svg";
+import LinuxLogo from "@/assets/linux-logo.svg";
 
 const PictopyLanding: FC = () => {
   // State for showing the notification
   const [downloadStarted, setDownloadStarted] = useState<string | null>(null);
+  const [releaseUrls, setReleaseUrls] = useState<{
+    windows?: string;
+    mac?: string;
+    linux?: string;
+  }>({});
+
+  useEffect(() => {
+    // Fetch the latest release information
+    const fetchLatestRelease = async () => {
+      try {
+        const response = await fetch(
+          "https://api.github.com/repos/AOSSIE-Org/PictoPy/releases/latest"
+        );
+
+        if (!response.ok) {
+          throw new Error(`GitHub API returned ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const urls: { windows?: string; mac?: string; linux?: string } = {};
+        data.assets.forEach((asset: any) => {
+          const name = asset.name.toLowerCase();
+
+          // Skip signature files
+          if (name.endsWith(".sig")) {
+            return;
+          }
+
+          // Windows - look for .exe or .msi
+          if (name.endsWith(".exe") || name.endsWith(".msi")) {
+            urls.windows = asset.browser_download_url;
+          }
+          // Mac - look for .app.tar.gz or .dmg
+          else if (name.endsWith(".app.tar.gz") || name.endsWith(".dmg")) {
+            urls.mac = asset.browser_download_url;
+          }
+          // Linux - look for .deb or .appimage
+          else if (name.endsWith(".deb") || name.endsWith(".appimage")) {
+            urls.linux = asset.browser_download_url;
+          }
+        });
+
+        console.log("Found URLs:", urls); // Debug log
+        setReleaseUrls(urls);
+      } catch (error) {
+        console.error("Failed to fetch latest release:", error);
+      }
+    };
+
+    fetchLatestRelease();
+  }, []);
 
   // Function to handle button click and show the notification
   const handleDownloadClick = (platform: string) => {
-    setDownloadStarted(`Download for ${platform} started!`);
-    // Hide the notification after 3 seconds
-    setTimeout(() => {
-      setDownloadStarted(null);
-    }, 3000);
+    const url = releaseUrls[platform.toLowerCase() as keyof typeof releaseUrls];
+    if (url) {
+      window.open(url, "_blank");
+      setDownloadStarted(`Download for ${platform} started!`);
+      setTimeout(() => {
+        setDownloadStarted(null);
+      }, 3000);
+    } else {
+      setDownloadStarted(`Download link not available for ${platform}`);
+      setTimeout(() => {
+        setDownloadStarted(null);
+      }, 3000);
+    }
   };
 
   return (
-    <section className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden">
+    <section
+      id="download-section"
+      className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden"
+    >
       {/* Background Animated SVG */}
       <div className="absolute inset-0 z-0">
         <svg
@@ -63,7 +125,8 @@ const PictopyLanding: FC = () => {
 
           {/* Subheading */}
           <p className="text-xl md:text-2xl text-green-700 dark:text-yellow-300 max-w-3xl mb-8 transition-colors duration-300">
-            Organize your photos effortlessly. Available for Mac, Windows, and Linux.
+            Organize your photos effortlessly. Available for Mac, Windows, and
+            Linux.
           </p>
 
           {/* Download Buttons */}
@@ -74,6 +137,7 @@ const PictopyLanding: FC = () => {
                          transform hover:-translate-y-1 hover:shadow-lg"
               size="lg"
               onClick={() => handleDownloadClick("Mac")}
+              disabled={!releaseUrls.mac}
             >
               <img src={MacLogo} alt="Mac" className="h-7 w-7 mr-2" />
               Download for Mac
@@ -85,6 +149,7 @@ const PictopyLanding: FC = () => {
               size="lg"
               variant="outline"
               onClick={() => handleDownloadClick("Windows")}
+              disabled={!releaseUrls.windows}
             >
               <img src={WindowsLogo} alt="Windows" className="h-7 w-7 mr-2" />
               Download for Windows
@@ -96,17 +161,16 @@ const PictopyLanding: FC = () => {
               size="lg"
               variant="outline"
               onClick={() => handleDownloadClick("Linux")}
+              disabled={!releaseUrls.linux}
             >
-              <img src={LinuxLogo} alt="Linux" className="h-9 w-9 mr-2" /> {/* Larger Linux logo */}
+              <img src={LinuxLogo} alt="Linux" className="h-9 w-9 mr-2" />
               Download for Linux(.deb)
             </Button>
           </div>
 
           {/* Download Notification (Popup) */}
           {downloadStarted && (
-            <div
-              className="fixed top-16 right-4 md:right-8 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl text-lg z-50 opacity-0 animate-slideInRight"
-            >
+            <div className="fixed top-16 right-4 md:right-8 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl text-lg z-50 opacity-0 animate-slideInRight">
               {downloadStarted}
             </div>
           )}
