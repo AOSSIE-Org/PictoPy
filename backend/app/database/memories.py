@@ -185,6 +185,50 @@ def db_generate_memories() -> List[Dict[str, Any]]:
         # Sort memories by most recent first
         memories.sort(key=lambda x: x["start_date"], reverse=True)
         
+        # Persist memories to database
+        try:
+            # Clear old memories
+            cursor.execute("DELETE FROM memory_images")
+            cursor.execute("DELETE FROM memories")
+            
+            # Insert new memories
+            for memory in memories:
+                cursor.execute(
+                    """
+                    INSERT INTO memories 
+                    (id, title, description, start_date, end_date, location, latitude, longitude, image_count)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        memory["id"],
+                        memory["title"],
+                        memory["description"],
+                        memory["start_date"],
+                        memory["end_date"],
+                        memory["location"],
+                        memory["latitude"],
+                        memory["longitude"],
+                        memory["image_count"]
+                    )
+                )
+                
+                # Insert memory-image associations
+                for idx, image_id in enumerate(memory["all_image_ids"]):
+                    is_representative = idx < 5  # First 5 are representative
+                    cursor.execute(
+                        """
+                        INSERT INTO memory_images (memory_id, image_id, is_representative)
+                        VALUES (?, ?, ?)
+                        """,
+                        (memory["id"], image_id, is_representative)
+                    )
+            
+            conn.commit()
+            logger.info(f"Successfully persisted {len(memories)} memories to database")
+        except Exception as e:
+            logger.error(f"Error persisting memories: {e}")
+            conn.rollback()
+        
         return memories
         
     except Exception as e:
@@ -239,9 +283,6 @@ def db_get_memories_for_current_date() -> List[Dict[str, Any]]:
     Get memories that are relevant for the current date.
     (e.g., "On this day" memories from previous years)
     """
-    conn = _connect()
-    cursor = conn.cursor()
-    
     try:
         # Get all memories and filter for current date relevance
         all_memories = db_generate_memories()
@@ -267,5 +308,3 @@ def db_get_memories_for_current_date() -> List[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"Error getting memories for current date: {e}")
         return []
-    finally:
-        conn.close()

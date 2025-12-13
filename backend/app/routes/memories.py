@@ -159,17 +159,23 @@ def get_memory_detail(memory_id: str):
     try:
         images_data = db_get_memory_images(memory_id)
         
-        # Convert to response format
-        images = [
-            MemoryImage(
-                id=img["id"],
-                path=img["path"],
-                thumbnail=img["thumbnail"],
-                date=img["metadata"].get("date_created", ""),
-                location=img["metadata"].get("location")
+        # Convert to response format with defensive metadata handling
+        images = []
+        for img in images_data:
+            # Safely extract metadata
+            metadata = img.get("metadata") or {}
+            if not isinstance(metadata, dict):
+                metadata = {}
+            
+            images.append(
+                MemoryImage(
+                    id=img.get("id", ""),
+                    path=img.get("path", ""),
+                    thumbnail=img.get("thumbnail", ""),
+                    date=metadata.get("date_created", ""),
+                    location=metadata.get("location")
+                )
             )
-            for img in images_data
-        ]
         
         return GetMemoryImagesResponse(
             success=True,

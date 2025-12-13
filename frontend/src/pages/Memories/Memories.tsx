@@ -235,7 +235,23 @@ const Memories = () => {
 
   useEffect(() => {
     if (isSuccess && data?.data) {
-      setMemories(data.data as Memory[]);
+      // Validate data structure before setting state
+      const memoriesData = data.data;
+      
+      if (Array.isArray(memoriesData)) {
+        // Filter and validate each memory object
+        const validMemories = memoriesData.filter((item: any) => {
+          return (
+            item &&
+            typeof item === 'object' &&
+            typeof item.id === 'string' &&
+            typeof item.title === 'string' &&
+            Array.isArray(item.images)
+          );
+        }) as Memory[];
+        
+        setMemories(validMemories);
+      }
     }
   }, [data, isSuccess]);
 
