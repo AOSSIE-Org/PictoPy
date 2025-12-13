@@ -15,13 +15,14 @@ from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
 
+
 def scan_existing_folders_for_videos():
     """Scan all existing folders for videos and add them to the database."""
     try:
         folders = db_get_all_folder_details()
         logger.info(f"Found {len(folders)} folders to scan for videos")
         
-        total_videos = 0
+        total_videos_inserted = 0
         
         for folder_id, folder_path, *_ in folders:
             logger.info(f"Scanning folder: {folder_path}")
@@ -39,17 +40,21 @@ def scan_existing_folders_for_videos():
                 video_records = video_util_prepare_video_records(video_files, folder_path_to_id)
                 
                 if video_records:
-                    success = db_bulk_insert_videos(video_records)
-                    if success:
-                        total_videos += len(video_records)
-                        logger.info(f"Successfully added {len(video_records)} videos from {folder_path}")
-                    else:
-                        logger.error(f"Failed to insert videos from {folder_path}")
+                    # db_bulk_insert_videos returns actual inserted count
+                    inserted_count = db_bulk_insert_videos(video_records)
+                    if inserted_count > 0:
+                        total_videos_inserted += inserted_count
+                        logger.info(
+                            f"Successfully inserted {inserted_count} videos from {folder_path} "
+                            f"({len(video_records) - inserted_count} duplicates skipped)"
+                        )
+                    elif inserted_count == 0 and len(video_records) > 0:
+                        logger.info(f"All {len(video_records)} videos from {folder_path} already exist in database")
             else:
                 logger.info(f"No videos found in {folder_path}")
         
-        logger.info(f"Video scan complete. Total videos added: {total_videos}")
-        return total_videos
+        logger.info(f"Video scan complete. Total videos inserted: {total_videos_inserted}")
+        return total_videos_inserted
         
     except Exception as e:
         logger.error(f"Error scanning folders for videos: {e}")
@@ -57,7 +62,8 @@ def scan_existing_folders_for_videos():
         traceback.print_exc()
         return 0
 
+
 if __name__ == "__main__":
     print("Scanning existing folders for videos...")
     count = scan_existing_folders_for_videos()
-    print(f"Scan complete. Added {count} videos to the database.")
+    print(f"Scan complete. Inserted {count} new videos to the database.")

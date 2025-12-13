@@ -11,7 +11,7 @@ import { selectImages } from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
-import { Heart, Video, Play, Clock, X } from 'lucide-react';
+import { Heart, Video, Play, Clock } from 'lucide-react';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import {
   fetchFavouriteVideos,
@@ -20,21 +20,9 @@ import {
 } from '@/api/api-functions/videos';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { convertFileSrc } from '@tauri-apps/api/core';
-import NetflixStylePlayer from '@/components/VideoPlayer/NetflixStylePlayer';
-
-// Format duration from seconds to MM:SS or HH:MM:SS
-const formatDuration = (seconds?: number): string => {
-  if (!seconds) return '00:00';
-  const hrs = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-  if (hrs > 0) {
-    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-};
+import { VideoPlayerModal } from '@/components/Video/VideoPlayerModal';
+import { formatDuration } from '@/utils/formatDuration';
 
 // Video Card Component for Favourites
 const FavouriteVideoCard = ({
@@ -104,7 +92,7 @@ const FavouriteVideoCard = ({
 
           {/* Favourite button */}
           <button
-            className="absolute top-2 right-2 rounded-full bg-black/50 p-1.5 opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100"
+            className="absolute right-2 top-2 rounded-full bg-black/50 p-1.5 opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100"
             onClick={(e) => {
               e.stopPropagation();
               onToggleFavourite();
@@ -114,8 +102,11 @@ const FavouriteVideoCard = ({
           </button>
 
           {/* Video badge */}
-          <div className="absolute top-2 left-2">
-            <Badge variant="secondary" className="bg-black/70 text-xs text-white">
+          <div className="absolute left-2 top-2">
+            <Badge
+              variant="secondary"
+              className="bg-black/70 text-xs text-white"
+            >
               <Video className="mr-1 h-3 w-3" />
               Video
             </Badge>
@@ -140,51 +131,6 @@ const FavouriteVideoCard = ({
   );
 };
 
-
-// Video Player Modal
-const VideoPlayerModal = ({
-  video,
-  onClose,
-}: {
-  video: VideoData;
-  onClose: () => void;
-}) => {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/95"
-      onClick={onClose}
-    >
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-4 right-4 z-10 text-white hover:bg-white/20"
-        onClick={onClose}
-      >
-        <X className="h-6 w-6" />
-      </Button>
-
-      <div className="mx-4 w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
-        <NetflixStylePlayer
-          videoSrc={convertFileSrc(video.path)}
-          title={video.metadata?.name || 'Video'}
-          description=""
-        />
-        <div className="mt-4 text-white">
-          <h2 className="text-xl font-semibold">{video.metadata?.name}</h2>
-          <div className="mt-2 flex items-center gap-4 text-sm text-gray-400">
-            {video.duration && <span>{formatDuration(video.duration)}</span>}
-            {video.width && video.height && (
-              <span>
-                {video.width}x{video.height}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export const MyFav = () => {
   const dispatch = useDispatch();
   const images = useSelector(selectImages);
@@ -203,11 +149,7 @@ export const MyFav = () => {
   });
 
   // Fetch favourite videos
-  const {
-    data: videosData,
-    isLoading: videosLoading,
-    refetch: refetchVideos,
-  } = usePictoQuery({
+  const { data: videosData, isLoading: videosLoading } = usePictoQuery({
     queryKey: ['favouriteVideos'],
     queryFn: () => fetchFavouriteVideos(),
   });
@@ -270,13 +212,13 @@ export const MyFav = () => {
       <div className="p-6">
         <h1 className="mb-6 text-2xl font-bold">Favourites</h1>
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="bg-muted/50 mb-6 flex h-32 w-32 items-center justify-center rounded-full">
+          <div className="mb-6 flex h-32 w-32 items-center justify-center rounded-full bg-muted/50">
             <Heart className="h-16 w-16 text-muted-foreground" />
           </div>
-          <h2 className="text-foreground mb-3 text-xl font-semibold">
+          <h2 className="mb-3 text-xl font-semibold text-foreground">
             No Favourites Yet
           </h2>
-          <p className="text-muted-foreground mb-6 max-w-md">
+          <p className="mb-6 max-w-md text-muted-foreground">
             Start building your collection by marking images and videos as
             favourites. Click the heart icon on any item to add it here.
           </p>
@@ -331,7 +273,7 @@ export const MyFav = () => {
         <TimelineScrollbar
           scrollableRef={scrollableRef}
           monthMarkers={monthMarkers}
-          className="absolute top-0 right-0 h-full w-4"
+          className="absolute right-0 top-0 h-full w-4"
         />
       )}
     </div>

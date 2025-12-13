@@ -186,9 +186,43 @@ def video_util_generate_thumbnail(
         return False
 
 
+def _normalize_path(path: str) -> str:
+    """Normalize a path for safe comparison."""
+    return os.path.normcase(os.path.normpath(os.path.abspath(path)))
+
+
+def _find_matching_folder_id(
+    video_path: str,
+    folder_path_to_id: Dict[str, str]
+) -> Optional[str]:
+    """
+    Find the most specific (deepest) matching folder ID for a video path.
+    
+    Uses normalized path comparison to prevent partial matches.
+    """
+    video_dir = _normalize_path(os.path.dirname(video_path))
+    best_match: Optional[str] = None
+    best_match_length = -1
+    
+    for folder_path, folder_id in folder_path_to_id.items():
+        normalized_folder = _normalize_path(folder_path)
+        
+        # Check for exact match or proper subdirectory match
+        if video_dir == normalized_folder:
+            # Exact match - this is the best possible match
+            return folder_id
+        elif video_dir.startswith(normalized_folder + os.sep):
+            # Proper subdirectory match - track the longest (most specific) match
+            if len(normalized_folder) > best_match_length:
+                best_match = folder_id
+                best_match_length = len(normalized_folder)
+    
+    return best_match
+
+
 def video_util_prepare_video_records(
     video_files: List[str],
-    folder_path_to_id: Dict[str, int]
+    folder_path_to_id: Dict[str, str]
 ) -> List[Dict[str, Any]]:
     """Prepare video records for database insertion."""
     video_records = []
@@ -197,13 +231,8 @@ def video_util_prepare_video_records(
         try:
             video_id = str(uuid.uuid4())
             
-            # Find folder ID
-            folder_id = None
-            video_dir = os.path.dirname(video_path)
-            for folder_path, fid in folder_path_to_id.items():
-                if video_dir.startswith(folder_path):
-                    folder_id = fid
-                    break
+            # Find folder ID using safe path matching
+            folder_id = _find_matching_folder_id(video_path, folder_path_to_id)
             
             if folder_id is None:
                 logger.warning(f"Could not find folder ID for video: {video_path}")
@@ -224,7 +253,7 @@ def video_util_prepare_video_records(
                 "path": video_path,
                 "folder_id": folder_id,
                 "thumbnailPath": thumbnail_path if os.path.exists(thumbnail_path) else "",
-                "metadata": json.dumps(metadata),
+                "metadata": metadata,  # Will be serialized in db_bulk_insert_videos
                 "duration": metadata.get("duration"),
                 "width": metadata.get("width"),
                 "height": metadata.get("height"),

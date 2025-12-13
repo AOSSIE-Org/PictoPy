@@ -1,4 +1,5 @@
 # Standard library imports
+import json
 import sqlite3
 from typing import Any, List, Mapping, TypedDict, Union, Optional
 
@@ -33,6 +34,19 @@ def _connect() -> sqlite3.Connection:
     return conn
 
 
+def _serialize_metadata(metadata: Union[Mapping[str, Any], str, None]) -> str:
+    """Serialize metadata to JSON string for database storage."""
+    if metadata is None:
+        return "{}"
+    if isinstance(metadata, str):
+        return metadata
+    try:
+        return json.dumps(metadata)
+    except (TypeError, ValueError) as e:
+        logger.warning(f"Failed to serialize metadata: {e}")
+        return "{}"
+
+
 def db_create_videos_table() -> None:
     """Create the videos table if it doesn't exist."""
     conn = _connect()
@@ -61,29 +75,50 @@ def db_create_videos_table() -> None:
     logger.info("Videos table created successfully")
 
 
-def db_bulk_insert_videos(video_records: List[VideoRecord]) -> bool:
-    """Insert multiple video records in a single transaction."""
+def db_bulk_insert_videos(video_records: List[VideoRecord]) -> int:
+    """
+    Insert multiple video records in a single transaction.
+    
+    Returns the number of rows actually inserted.
+    """
     if not video_records:
-        return True
+        return 0
 
     conn = _connect()
     cursor = conn.cursor()
 
     try:
+        # Get count before insert
+        cursor.execute("SELECT COUNT(*) FROM videos")
+        count_before = cursor.fetchone()[0]
+        
+        # Serialize metadata for each record
+        serialized_records = []
+        for record in video_records:
+            serialized_record = dict(record)
+            serialized_record['metadata'] = _serialize_metadata(record.get('metadata'))
+            serialized_records.append(serialized_record)
+        
         cursor.executemany(
             """
             INSERT OR IGNORE INTO videos (id, path, folder_id, thumbnailPath, metadata, duration, width, height)
             VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :duration, :width, :height)
             """,
-            video_records
+            serialized_records
         )
         conn.commit()
-        logger.info(f"Inserted {cursor.rowcount} videos")
-        return True
+        
+        # Get count after insert to determine actual inserts
+        cursor.execute("SELECT COUNT(*) FROM videos")
+        count_after = cursor.fetchone()[0]
+        
+        inserted_count = count_after - count_before
+        logger.info(f"Inserted {inserted_count} videos")
+        return inserted_count
     except Exception as e:
         logger.error(f"Error bulk inserting videos: {e}")
         conn.rollback()
-        return False
+        return 0
     finally:
         conn.close()
 
@@ -112,7 +147,7 @@ def db_get_all_videos() -> List[dict]:
         conn.close()
 
 
-def db_get_videos_by_folder_ids(folder_ids: List[int]) -> List[dict]:
+def db_get_videos_by_folder_ids(folder_ids: List[str]) -> List[dict]:
     """Get videos from specific folders."""
     if not folder_ids:
         return []

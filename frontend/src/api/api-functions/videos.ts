@@ -2,6 +2,8 @@ import { videosEndpoints } from '../apiEndpoints';
 import { apiClient } from '../axiosConfig';
 import { APIResponse } from '@/types/API';
 
+// Note: APIResponse is still used by toggleVideoFavourite
+
 export interface VideoData {
   id: string;
   path: string;
@@ -41,8 +43,8 @@ export const fetchFavouriteVideos = async (): Promise<GetAllVideosResponse> => {
   return response.data;
 };
 
-export const fetchVideoById = async (videoId: string): Promise<APIResponse> => {
-  const response = await apiClient.get<APIResponse>(
+export const fetchVideoById = async (videoId: string): Promise<VideoData> => {
+  const response = await apiClient.get<VideoData>(
     videosEndpoints.getVideo(videoId),
   );
   return response.data;
