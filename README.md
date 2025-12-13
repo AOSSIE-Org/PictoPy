@@ -253,7 +253,8 @@ cargo test
 
 ## 📚 Documentation
 
-- 📖 [Full Documentation](https://yourusername.github.io/PictoPy)
+- 📖 [Full Documentation](https://AOSSIE-Org
+PictoPy.github.io/PictoPy)
 - 🔧 [Manual Setup Guide](docs/Manual_Setup_Guide.md)
 - 🚀 [Script Setup Guide](docs/Script_Setup_Guide.md)
 - 🏗️ [Architecture Overview](docs/overview/architecture.md)
