@@ -17,51 +17,48 @@ const PictopyLanding: FC = () => {
     // Fetch the latest release information
     const fetchLatestRelease = async () => {
       try {
-        const response = await fetch('https://api.github.com/repos/AOSSIE-Org/PictoPy/releases/latest');
+        const response = await fetch(
+          "https://api.github.com/repos/AOSSIE-Org/PictoPy/releases/latest"
+        );
         const data = await response.json();
-        
-        console.log('Release data:', data); // Debug log
-        console.log('Assets:', data.assets); // Debug log
-        
-        const urls: any = {};
+
+        const urls: { windows?: string; mac?: string; linux?: string } = {};
         data.assets.forEach((asset: any) => {
           const name = asset.name.toLowerCase();
-          console.log('Checking asset:', asset.name); // Debug log
-          
+
           // Skip signature files
-          if (name.endsWith('.sig')) {
+          if (name.endsWith(".sig")) {
             return;
           }
-          
+
           // Windows - look for .exe or .msi
-          if (name.includes('.exe') || name.includes('.msi')) {
+          if (name.endsWith(".exe") || name.endsWith(".msi")) {
             urls.windows = asset.browser_download_url;
-          } 
+          }
           // Mac - look for .app.tar.gz or .dmg
-          else if (name.includes('.app.tar.gz') || name.includes('.dmg')) {
+          else if (name.endsWith(".app.tar.gz") || name.endsWith(".dmg")) {
             urls.mac = asset.browser_download_url;
-          } 
+          }
           // Linux - look for .deb or .appimage
-          else if (name.includes('.deb') || name.includes('.appimage')) {
+          else if (name.endsWith(".deb") || name.endsWith(".appimage")) {
             urls.linux = asset.browser_download_url;
           }
         });
-        
-        console.log('Found URLs:', urls); // Debug log
+
+        console.log("Found URLs:", urls); // Debug log
         setReleaseUrls(urls);
       } catch (error) {
-        console.error('Failed to fetch latest release:', error);
+        console.error("Failed to fetch latest release:", error);
       }
     };
 
     fetchLatestRelease();
   }, []);
 
-
   const handleDownloadClick = (platform: string) => {
     const url = releaseUrls[platform.toLowerCase() as keyof typeof releaseUrls];
     if (url) {
-      window.open(url, '_blank');
+      window.open(url, "_blank");
       setDownloadStarted(`Download for ${platform} started!`);
       setTimeout(() => {
         setDownloadStarted(null);
@@ -75,7 +72,10 @@ const PictopyLanding: FC = () => {
   };
 
   return (
-    <section id="download-section" className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden">
+    <section
+      id="download-section"
+      className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden"
+    >
       {/* Background Animated SVG */}
       <div className="absolute inset-0 z-0">
         <svg
@@ -119,7 +119,8 @@ const PictopyLanding: FC = () => {
 
           {/* Subheading */}
           <p className="text-xl md:text-2xl text-green-700 dark:text-yellow-300 max-w-3xl mb-8 transition-colors duration-300">
-            Organize your photos effortlessly. Available for Mac, Windows, and Linux.
+            Organize your photos effortlessly. Available for Mac, Windows, and
+            Linux.
           </p>
 
           {/* Download Buttons */}
@@ -163,9 +164,7 @@ const PictopyLanding: FC = () => {
 
           {/* Download Notification (Popup) */}
           {downloadStarted && (
-            <div
-              className="fixed top-16 right-4 md:right-8 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl text-lg z-50 opacity-0 animate-slideInRight"
-            >
+            <div className="fixed top-16 right-4 md:right-8 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl text-lg z-50 opacity-0 animate-slideInRight">
               {downloadStarted}
             </div>
           )}
