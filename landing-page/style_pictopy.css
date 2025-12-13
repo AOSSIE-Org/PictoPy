@@ -1,0 +1,36 @@
+*{
+    /* */
+    font-family: "Montserrat", sans-serif;
+    font-weight: 500;
+}
+h1{ 
+    text-align: center;
+    font-weight: 600;
+    text-decoration: black 1px dotted;
+}
+.btn{
+    border-radius: 300px;
+}
+.btns{
+    text-align: center;
+}
+.container{
+    margin-top: 30px;
+}
+
+.footer{
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2px;
+}
+i{
+    margin-right: 10px;
+}
+
+.btn1{
+    margin-left: 20px;
+}
+
+/* .btn1:hover{
+    background-color: aquamarine;
+} */

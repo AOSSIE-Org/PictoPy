@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pictopy - Smart Photo Gallery</title>
+
+    <!-- Bootstrap -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- Font Awesome (ONLY ONCE) -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
+    />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      * {
+        font-family: "Montserrat", sans-serif;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        color: #2c3e50;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1100px;
+        padding: 50px 20px;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 50px;
+      }
+
+      .logo img {
+        width: 90px;
+        margin-bottom: 20px;
+      }
+
+      .main-title {
+        font-size: 3rem;
+        font-weight: 700;
+      }
+
+      .tagline {
+        font-size: 1.2rem;
+        color: #4a5568;
+      }
+
+      .download-section {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+
+      .download-btn {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 15px 40px;
+        border-radius: 50px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 10px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+
+      .download-btn.mac {
+        background: linear-gradient(135deg, #4facfe, #00f2fe);
+      }
+
+      .download-btn:hover {
+        transform: translateY(-3px);
+      }
+
+      .features-section {
+        background: white;
+        border-radius: 16px;
+        padding: 40px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      }
+
+      .section-title {
+        text-align: center;
+        font-size: 1.8rem;
+        margin-bottom: 30px;
+      }
+
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      }
+
+      .feature-item {
+        background: #f7fafc;
+        padding: 20px;
+        border-left: 4px solid #667eea;
+        border-radius: 10px;
+      }
+
+      .feature-icon {
+        color: #667eea;
+        margin-right: 10px;
+      }
+
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+      }
+
+      .version-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 8px 18px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      /* Tablet */
+      @media (max-width: 1024px) {
+        .features-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Mobile */
+      @media (max-width: 768px) {
+        .download-btn {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="logo">
+          <img src="image.png" alt="Pictopy Logo" />
+        </div>
+        <h1 class="main-title">Pictopy</h1>
+        <p class="tagline">
+          Advanced desktop gallery with smart image analysis
+        </p>
+      </div>
+
+      <div class="download-section">
+        <a href="https://github.com/AOSSIE-Org/PictoPy/releases">
+          <button class="download-btn">
+            <i class="fa-solid fa-download"></i> Download for Windows
+          </button>
+        </a>
+
+        <a href="https://github.com/AOSSIE-Org/PictoPy/releases">
+          <button class="download-btn mac">
+            <i class="fa-solid fa-download"></i> Download for Mac
+          </button>
+        </a>
+      </div>
+
+      <div class="footer" style="margin-bottom: 30px">
+        <span class="version-badge">Version 1.0.0 • Released Feb 2, 2025</span>
+      </div>
+
+      <div class="features-section">
+        <h2 class="section-title">What Makes Pictopy Special</h2>
+
+        <div class="features-grid">
+          <div class="feature-item">
+            <i class="fas fa-tags feature-icon"></i> Smart photo tagging
+          </div>
+          <div class="feature-item">
+            <i class="fas fa-shield-alt feature-icon"></i> Offline &
+            privacy-focused
+          </div>
+          <div class="feature-item">
+            <i class="fas fa-images feature-icon"></i> Modern album management
+          </div>
+          <div class="feature-item">
+            <i class="fas fa-bolt feature-icon"></i> High-performance processing
+          </div>
+          <div class="feature-item">
+            <i class="fas fa-search feature-icon"></i> Intelligent search
+          </div>
+          <div class="feature-item">
+            <i class="fas fa-laptop feature-icon"></i> Cross-platform support
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
