@@ -1,5 +1,6 @@
 # Standard library imports
 import sqlite3
+import threading
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -10,6 +11,10 @@ from app.logging.setup_logging import get_logger
 
 # Initialize logger
 logger = get_logger(__name__)
+
+# Module-level regeneration lock to prevent concurrent regenerations
+_regeneration_lock = threading.Lock()
+_is_regenerating = False
 
 
 def _connect() -> sqlite3.Connection:
@@ -294,54 +299,82 @@ def db_get_memory_images(memory_id: str) -> List[Dict[str, Any]]:
         conn.close()
 
 
+def _regenerate_memories_background():
+    """
+    Background task to regenerate memories cache.
+    Uses global flag to prevent concurrent regenerations.
+    """
+    global _is_regenerating
+    
+    try:
+        logger.warning("Starting background memory cache regeneration (this may take a while)...")
+        db_generate_memories()
+        logger.info("Background memory cache regeneration completed successfully")
+    except Exception as e:
+        logger.error(f"Error in background memory regeneration: {e}")
+    finally:
+        with _regeneration_lock:
+            _is_regenerating = False
+
+
 def db_get_memories_for_current_date() -> List[Dict[str, Any]]:
     """
     Get memories that are relevant for the current date.
     (e.g., "On this day" memories from previous years)
     Queries the persisted memories table instead of regenerating.
     """
+    global _is_regenerating
+    
     conn = _connect()
     cursor = conn.cursor()
     
     try:
         current_date = datetime.now().date()  # Normalize to date-only
-        current_month = current_date.month
-        current_day = current_date.day
+        current_day_of_year = current_date.timetuple().tm_yday
+        current_year = current_date.year
         
-        # Query persisted memories matching current month with +/-7 day window
+        # Query persisted memories using Julian day for cross-month matching
+        # This handles month boundaries correctly (e.g., Dec 30 -> Jan 5)
         cursor.execute(
             """
             SELECT id, title, description, start_date, end_date, location, 
                    latitude, longitude, image_count
             FROM memories
-            WHERE CAST(strftime('%m', start_date) AS INTEGER) = ?
-            AND ABS(CAST(strftime('%d', start_date) AS INTEGER) - ?) <= 7
+            WHERE ABS(
+                (CAST(strftime('%j', start_date) AS INTEGER) - ? + 365) % 365
+            ) <= 7
             AND CAST(strftime('%Y', start_date) AS INTEGER) < ?
             ORDER BY start_date DESC
             """,
-            (current_month, current_day, current_date.year)
+            (current_day_of_year, current_year)
         )
         
         rows = cursor.fetchall()
         
         if not rows:
-            # Fallback: try regenerating if cache is empty
-            logger.info("No memories found in cache, regenerating...")
-            db_generate_memories()
-            # Retry query after regeneration
-            cursor.execute(
-                """
-                SELECT id, title, description, start_date, end_date, location, 
-                       latitude, longitude, image_count
-                FROM memories
-                WHERE CAST(strftime('%m', start_date) AS INTEGER) = ?
-                AND ABS(CAST(strftime('%d', start_date) AS INTEGER) - ?) <= 7
-                AND CAST(strftime('%Y', start_date) AS INTEGER) < ?
-                ORDER BY start_date DESC
-                """,
-                (current_month, current_day, current_date.year)
-            )
-            rows = cursor.fetchall()
+            # Attempt to acquire lock for background regeneration
+            lock_acquired = _regeneration_lock.acquire(blocking=False)
+            
+            if lock_acquired:
+                try:
+                    if not _is_regenerating:
+                        _is_regenerating = True
+                        # Spawn background thread for regeneration
+                        regen_thread = threading.Thread(
+                            target=_regenerate_memories_background,
+                            daemon=True,
+                            name="MemoryCacheRegeneration"
+                        )
+                        regen_thread.start()
+                        logger.info("Spawned background thread for memory cache regeneration")
+                finally:
+                    _regeneration_lock.release()
+            else:
+                logger.info("Memory cache regeneration already in progress, skipping")
+            
+            # Return empty result immediately (don't block request)
+            logger.info("No memories found in cache, background regeneration initiated")
+            return []
         
         relevant_memories = []
         
@@ -412,3 +445,58 @@ def db_get_memories_for_current_date() -> List[Dict[str, Any]]:
         return []
     finally:
         conn.close()
+
+
+def db_check_memories_cache_exists() -> bool:
+    """
+    Check if the memories cache is populated.
+    Returns True if there are memories in the cache, False otherwise.
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("SELECT COUNT(*) FROM memories")
+        count = cursor.fetchone()[0]
+        return count > 0
+    except Exception as e:
+        logger.error(f"Error checking memories cache: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def db_prepopulate_memories_cache() -> None:
+    """
+    Pre-populate the memories cache at startup if it's empty.
+    This prevents cache misses during initial requests.
+    Should be called during application startup.
+    """
+    global _is_regenerating
+    
+    # Check if cache already exists
+    if db_check_memories_cache_exists():
+        logger.info("Memories cache already populated, skipping pre-population")
+        return
+    
+    # Acquire lock to prevent concurrent regenerations
+    lock_acquired = _regeneration_lock.acquire(blocking=False)
+    
+    if lock_acquired:
+        try:
+            if not _is_regenerating:
+                _is_regenerating = True
+                logger.info("Pre-populating memories cache at startup...")
+                
+                # Spawn background thread for regeneration
+                regen_thread = threading.Thread(
+                    target=_regenerate_memories_background,
+                    daemon=True,
+                    name="MemoryCacheStartupPrePopulation"
+                )
+                regen_thread.start()
+                logger.info("Memories cache pre-population started in background thread")
+        finally:
+            _regeneration_lock.release()
+    else:
+        logger.info("Memory cache regeneration already in progress, skipping pre-population")
