@@ -12,35 +12,35 @@ This project was announced by [AOSSIE](https://aossie.org/), an umbrella organiz
 
 ## Documentation Sections
 
-<div style="display:flex; margin: 2em auto; justify-content: center; gap: 1.5em; flex-wrap: wrap;">
-    <div style="width:25%; min-width: 200px;">
-        <h2 style="margin-top: 0;">Overview</h2>
-        <ul style="padding-left: 0; list-style: none;">
-            <li><a href='./overview/features'>Features</a></li>
-            <li><a href='./overview/architecture'>Architecture</a></li>
+<div style="display:flex; margin: 2.5em auto; justify-content: center; gap: 1.75em; flex-wrap: wrap;">
+    <div style="width:25%; min-width: 220px;">
+        <h2 style="margin-top: 0; margin-bottom: 1.25em;">Overview</h2>
+        <ul style="padding-left: 0; list-style: none; margin: 0;">
+            <li style="margin-bottom: 0.75em;"><a href='./overview/features'>Features</a></li>
+            <li style="margin-bottom: 0.75em;"><a href='./overview/architecture'>Architecture</a></li>
         </ul>
     </div>
-    <div style="width:25%; min-width: 200px;">
-        <h2 style="margin-top: 0;">Backend Python</h2>
-        <ul style="padding-left: 0; list-style: none;">
-            <li><a href="./backend/backend_python/database">Database</a></li>
-            <li><a href="./backend/backend_python/directory-structure">Directory Structure</a></li>
-            <li><a href="./backend/backend_python/api">API</a></li>
-            <li><a href="./backend/backend_python/image-processing">Image Processing</a></li>
+    <div style="width:25%; min-width: 220px;">
+        <h2 style="margin-top: 0; margin-bottom: 1.25em;">Backend Python</h2>
+        <ul style="padding-left: 0; list-style: none; margin: 0;">
+            <li style="margin-bottom: 0.75em;"><a href="./backend/backend_python/database">Database</a></li>
+            <li style="margin-bottom: 0.75em;"><a href="./backend/backend_python/directory-structure">Directory Structure</a></li>
+            <li style="margin-bottom: 0.75em;"><a href="./backend/backend_python/api">API</a></li>
+            <li style="margin-bottom: 0.75em;"><a href="./backend/backend_python/image-processing">Image Processing</a></li>
         </ul>
     </div>
-    <div style="width:25%; min-width: 200px;">
-        <h2 style="margin-top: 0;">Backend Rust</h2>
-        <ul style="padding-left: 0; list-style: none;">
-            <li><a href="./backend/backend_rust/api">API</a></li>
+    <div style="width:25%; min-width: 220px;">
+        <h2 style="margin-top: 0; margin-bottom: 1.25em;">Backend Rust</h2>
+        <ul style="padding-left: 0; list-style: none; margin: 0;">
+            <li style="margin-bottom: 0.75em;"><a href="./backend/backend_rust/api">API</a></li>
         </ul>
     </div>
-    <div style="width:25%; min-width: 200px;">
-        <h2 style="margin-top: 0;">Frontend</h2>
-        <ul style="padding-left: 0; list-style: none;">
-            <li><a href="./frontend/ui-components">UI Components</a></li>
-            <li><a href="./frontend/state-management">State Management</a></li>
-            <li><a href="./frontend/gallery-view">Gallery View</a></li>
+    <div style="width:25%; min-width: 220px;">
+        <h2 style="margin-top: 0; margin-bottom: 1.25em;">Frontend</h2>
+        <ul style="padding-left: 0; list-style: none; margin: 0;">
+            <li style="margin-bottom: 0.75em;"><a href="./frontend/ui-components">UI Components</a></li>
+            <li style="margin-bottom: 0.75em;"><a href="./frontend/state-management">State Management</a></li>
+            <li style="margin-bottom: 0.75em;"><a href="./frontend/gallery-view">Gallery View</a></li>
         </ul>
     </div>
 </div>

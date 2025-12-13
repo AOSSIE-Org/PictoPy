@@ -255,81 +255,97 @@
 
 /* Better visual hierarchy for navigation sections */
 .md-typeset > div[style*="display:flex"] {
-  margin-top: 2em;
-  margin-bottom: 2em;
-  gap: 1.5em;
+  margin-top: 2.5em;
+  margin-bottom: 2.5em;
+  gap: 1.75em;
 }
 
 .md-typeset > div[style*="display:flex"] > div {
-  padding: 1.5em 1.25em;
-  border-radius: 8px;
+  padding: 2em 1.75em;
+  border-radius: 10px;
   background-color: rgba(0, 0, 0, 0.02);
   border: 1px solid rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .md-typeset > div[style*="display:flex"] > div:hover {
   background-color: rgba(0, 0, 0, 0.04);
   border-color: rgba(0, 0, 0, 0.12);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 /* Dark mode adjustments for flex containers */
 [data-md-color-scheme="slate"] .md-typeset > div[style*="display:flex"] > div {
   background-color: rgba(255, 255, 255, 0.03);
   border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 [data-md-color-scheme="slate"] .md-typeset > div[style*="display:flex"] > div:hover {
   background-color: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .md-typeset > div[style*="display:flex"] > div h2 {
   margin-top: 0;
-  margin-bottom: 1em;
+  margin-bottom: 1.25em;
   border-bottom: none;
   padding-bottom: 0;
-  font-size: 1.2em;
-  font-weight: 600;
+  font-size: 1.3em;
+  font-weight: 700;
+  color: var(--md-primary-fg-color, #ef4444);
+  letter-spacing: -0.01em;
 }
 
 .md-typeset > div[style*="display:flex"] > div ul {
   margin-bottom: 0;
   padding-left: 0;
   list-style: none;
+  flex-grow: 1;
 }
 
 .md-typeset > div[style*="display:flex"] > div ul li {
-  margin-bottom: 0.5em;
-  padding-left: 1em;
+  margin-bottom: 0.75em;
+  padding-left: 1.25em;
   position: relative;
+  line-height: 1.6;
 }
 
 .md-typeset > div[style*="display:flex"] > div ul li::before {
-  content: '•';
+  content: '→';
   position: absolute;
   left: 0;
-  color: rgba(0, 0, 0, 0.4);
-  font-weight: 600;
+  color: var(--md-primary-fg-color, #ef4444);
+  font-weight: 500;
+  opacity: 0.5;
+  transition: all 0.2s ease;
+  font-size: 0.9em;
 }
 
-[data-md-color-scheme="slate"] .md-typeset > div[style*="display:flex"] > div ul li::before {
-  color: rgba(255, 255, 255, 0.5);
+.md-typeset > div[style*="display:flex"] > div ul li:hover::before {
+  opacity: 1;
+  transform: translateX(2px);
 }
 
 .md-typeset > div[style*="display:flex"] > div ul li a {
-  font-weight: 400;
-  transition: color 0.2s ease;
+  font-weight: 500;
+  transition: all 0.2s ease;
   text-decoration: none;
   color: inherit;
+  display: inline-block;
 }
 
 .md-typeset > div[style*="display:flex"] > div ul li a:hover {
   color: var(--md-primary-fg-color, #ef4444);
   text-decoration: underline;
-  text-underline-offset: 0.2em;
+  text-underline-offset: 0.25em;
+  transform: translateX(2px);
 }
 
 /* ============================================
