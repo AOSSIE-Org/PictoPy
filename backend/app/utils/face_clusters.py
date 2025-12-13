@@ -159,14 +159,17 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
 
 
 def cluster_util_cluster_all_face_embeddings(
-    eps: float = 0.3, min_samples: int = 2
+    eps: float = 0.15, min_samples: int = 3
 ) -> List[ClusterResult]:
     """
     Cluster face embeddings using DBSCAN and assign cluster names based on majority voting.
 
     Args:
-        eps: DBSCAN epsilon parameter for maximum distance between samples
-        min_samples: DBSCAN minimum samples parameter for core points
+        eps: DBSCAN epsilon parameter for maximum distance between samples.
+             Default 0.15 is optimized for cosine distance in face embeddings.
+             Same-person faces typically have distance < 0.15, different people > 0.4.
+        min_samples: DBSCAN minimum samples parameter for core points.
+                    Minimum 3 samples required to form a cluster reduces noise.
 
     Returns:
         List of ClusterResult objects containing face_id, embedding, cluster_uuid, and cluster_name
@@ -192,7 +195,9 @@ def cluster_util_cluster_all_face_embeddings(
     # Convert to numpy array for DBSCAN
     embeddings_array = np.array(embeddings)
 
-    # Perform DBSCAN clustering
+    # Perform DBSCAN clustering with optimized parameters
+    # eps=0.15: Tight clustering for same-person faces (cosine distance < 0.15)
+    # min_samples=3: Requires at least 3 faces to form a cluster (reduces noise)
     dbscan = DBSCAN(
         eps=eps,
         min_samples=min_samples,
