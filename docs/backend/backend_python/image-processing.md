@@ -81,10 +81,10 @@ Here are some key parameters for the main models used in PictoPy's image process
 
 ### Face Clustering (DBSCAN)
 
-| Parameter     | Value    | Description                                                                                |
-| ------------- | -------- | ------------------------------------------------------------------------------------------ |
-| `eps`         | 0.3      | Maximum distance between two samples for them to be considered as in the same neighborhood |
-| `min_samples` | 2        | Number of samples in a neighborhood for a point to be considered as a core point           |
-| `metric`      | "cosine" | Distance metric used for clustering                                                        |
+| Parameter     | Value    | Description                                                                                                                                              |
+| ------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `eps`         | 0.15     | Maximum distance between two samples for them to be considered as in the same neighborhood. With cosine distance, this requires similarity > 0.85      |
+| `min_samples` | 3        | Number of samples in a neighborhood for a point to be considered as a core point. Requires at least 3 similar faces to form a cluster                  |
+| `metric`      | "cosine" | Distance metric used for clustering                                                                                                                      |
 
 Note: Some of these values are default parameters and can be adjusted when initializing the models or during runtime, depending on the specific use case or performance requirements.
