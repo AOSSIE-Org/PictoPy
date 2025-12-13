@@ -3,7 +3,7 @@
 PictoPy is a modern desktop app designed to transform the handling of digital photos. It facilitates efficient gallery management with a robust focus on privacy, offering smart tagging capabilities for photos based on objects, faces, or scenes.
 
 <div style="text-align: center; margin: 2em 0;">
-    <img src="assets/AOSSIE-logo.png" alt="AOSSIE Logo" style="max-width: 200px; height: auto;">
+    <img src="assets/AOSSIE-logo.png" alt="AOSSIE Logo" style="display:flex; margin:0 auto; justify-content: center;">
 </div>
 
 This project was announced by [AOSSIE](https://aossie.org/), an umbrella organization and was to be implemented from scratch. It provides features such as object detection and face similarity, offering smart tagging capabilities for photos based on objects, faces.
