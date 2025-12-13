@@ -1,0 +1,3 @@
+-r backend/requirements.txt
+-r docs/requirements.txt
+-r sync-microservice/requirements.txt
