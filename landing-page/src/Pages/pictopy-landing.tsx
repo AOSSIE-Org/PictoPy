@@ -92,7 +92,8 @@ const PictopyLanding: FC = () => {
   const handleDownloadClick = (platform: string) => {
     const url = releaseUrls[platform.toLowerCase() as keyof typeof releaseUrls];
     if (url) {
-      window.open(url, "_blank");
+      const w = window.open(url, "_blank", "noopener,noreferrer");
+      if (w) w.opener = null;
       setDownloadStarted(`Download for ${platform} started!`);
       setTimeout(() => {
         setDownloadStarted(null);
