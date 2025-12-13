@@ -159,14 +159,15 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
 
 
 def cluster_util_cluster_all_face_embeddings(
-    eps: float = 0.3, min_samples: int = 2
+    eps: float = 0.75, min_samples: int = 2, similarity_threshold: float = 0.85
 ) -> List[ClusterResult]:
     """
-    Cluster face embeddings using DBSCAN and assign cluster names based on majority voting.
+    Cluster face embeddings using DBSCAN with similarity validation.
 
     Args:
-        eps: DBSCAN epsilon parameter for maximum distance between samples
-        min_samples: DBSCAN minimum samples parameter for core points
+        eps: DBSCAN epsilon parameter for maximum distance between samples (default: 0.35 - stricter)
+        min_samples: DBSCAN minimum samples parameter for core points (default: 2)
+        similarity_threshold: Minimum similarity to consider same person (default: 0.65, range: 0.6-0.7)
 
     Returns:
         List of ClusterResult objects containing face_id, embedding, cluster_uuid, and cluster_name
@@ -192,16 +193,40 @@ def cluster_util_cluster_all_face_embeddings(
     # Convert to numpy array for DBSCAN
     embeddings_array = np.array(embeddings)
 
-    # Perform DBSCAN clustering
+    # Filter out low-quality embeddings before clustering
+    valid_indices = []
+    for i, emb in enumerate(embeddings_array):
+        valid_indices.append(i)
+        
+    
+    # Apply filtering
+    original_count = len(face_ids)
+    face_ids = [face_ids[i] for i in valid_indices]
+    embeddings = [embeddings[i] for i in valid_indices]
+    existing_cluster_names = [existing_cluster_names[i] for i in valid_indices]
+    embeddings_array = embeddings_array[valid_indices]
+    
+    logger.info(f"Clustering {len(embeddings_array)} valid embeddings (filtered out {original_count - len(valid_indices)} low-quality)")
+
+    # Calculate pairwise distances with similarity threshold
+    from sklearn.metrics.pairwise import cosine_distances
+    distances = cosine_distances(embeddings_array)
+    
+    # Apply similarity threshold - mark dissimilar faces as completely different
+    max_distance = 1 - similarity_threshold  # Convert similarity to distance
+    distances[distances > max_distance] = 1.0  # Mark as completely different
+    logger.info(f"Applied similarity threshold: {similarity_threshold} (max_distance: {max_distance:.3f})")
+
+    # Perform DBSCAN clustering with precomputed distances
     dbscan = DBSCAN(
         eps=eps,
         min_samples=min_samples,
-        metric="cosine",
+        metric="precomputed",
         n_jobs=-1,  # Use all available CPU cores
     )
 
-    cluster_labels = dbscan.fit_predict(embeddings_array)
-    logger.info(f"DBSCAN found {len(set(cluster_labels)) - 1} clusters")
+    cluster_labels = dbscan.fit_predict(distances)
+    logger.info(f"DBSCAN found {len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)} clusters")
 
     # Group faces by cluster labels
     clusters = defaultdict(list)
@@ -236,11 +261,14 @@ def cluster_util_cluster_all_face_embeddings(
             )
             results.append(result)
 
+    # Post-clustering merge: merge similar clusters based on representative faces
+    results = _merge_similar_clusters(results, merge_threshold=0.7)
+
     return results
 
 
 def cluster_util_assign_cluster_to_faces_without_clusterId(
-    similarity_threshold: float = 0.7,
+    similarity_threshold: float = 0.8,
 ) -> List[Dict]:
     """
     Assign cluster IDs to faces that don't have clusters using nearest mean method with similarity threshold.
@@ -305,6 +333,87 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
             )
 
     return face_cluster_mappings
+
+
+def _merge_similar_clusters(
+    results: List[ClusterResult], merge_threshold: float = 0.85
+) -> List[ClusterResult]:
+    """
+    Merge clusters that are too similar based on their mean embeddings.
+    
+    Args:
+        results: List of ClusterResult objects
+        merge_threshold: Similarity threshold for merging (default: 0.85)
+        
+    Returns:
+        Updated list with merged clusters
+    """
+    if not results:
+        return results
+    
+    # Group faces by cluster
+    cluster_map = defaultdict(list)
+    for result in results:
+        cluster_map[result.cluster_uuid].append(result)
+    
+    if len(cluster_map) <= 1:
+        return results  # Nothing to merge
+    
+    # Calculate mean embedding for each cluster
+    cluster_means = {}
+    for cluster_uuid, cluster_faces in cluster_map.items():
+        embeddings = np.array([face.embedding for face in cluster_faces])
+        mean_embedding = np.mean(embeddings, axis=0)
+        cluster_means[cluster_uuid] = mean_embedding
+    
+    # Find clusters to merge based on similarity
+    cluster_uuids = list(cluster_means.keys())
+    merge_mapping = {}  # Maps old cluster_uuid -> new cluster_uuid
+    
+    for i, uuid1 in enumerate(cluster_uuids):
+        if uuid1 in merge_mapping:
+            continue  # Already merged
+            
+        for j in range(i + 1, len(cluster_uuids)):
+            uuid2 = cluster_uuids[j]
+            if uuid2 in merge_mapping:
+                continue  # Already merged
+            
+            # Calculate similarity between cluster means
+            emb1 = cluster_means[uuid1].reshape(1, -1)
+            emb2 = cluster_means[uuid2].reshape(1, -1)
+            
+            from sklearn.metrics.pairwise import cosine_similarity
+            similarity = cosine_similarity(emb1, emb2)[0][0]
+            
+            # If very similar, merge cluster2 into cluster1
+            if similarity >= merge_threshold:
+                merge_mapping[uuid2] = uuid1
+                logger.info(f"Merging cluster {uuid2} into {uuid1} (similarity: {similarity:.3f})")
+
+            else:
+                logger.info(f"Similary score b/w clusters{similarity:.3f}" )
+    
+    # Apply merges
+    if merge_mapping:
+        merged_results = []
+        for result in results:
+            # Check if this cluster should be merged into another
+            final_cluster = merge_mapping.get(result.cluster_uuid, result.cluster_uuid)
+            
+            # Create new result with updated cluster_uuid
+            merged_result = ClusterResult(
+                face_id=result.face_id,
+                embedding=result.embedding,
+                cluster_uuid=final_cluster,
+                cluster_name=result.cluster_name,
+            )
+            merged_results.append(merged_result)
+        
+        logger.info(f"Merged {len(merge_mapping)} clusters. Final count: {len(set(r.cluster_uuid for r in merged_results))}")
+        return merged_results
+    
+    return results
 
 
 def _calculate_cosine_distances(
