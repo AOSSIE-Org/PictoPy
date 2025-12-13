@@ -45,16 +45,20 @@ def test_generate_memories_with_data(test_db, sample_images):
     
     assert isinstance(memories, list)
     # Memories should group images by date and location
-    if len(memories) > 0:
-        memory = memories[0]
-        assert "id" in memory
-        assert "title" in memory
-        assert "description" in memory
-        assert "start_date" in memory
-        assert "end_date" in memory
-        assert "image_count" in memory
-        assert "images" in memory
-        assert isinstance(memory["images"], list)
+    # Note: sample_images fixture creates 10 images with monthly intervals,
+    # but db_generate_memories requires at least 3 images per group
+    # This assertion ensures the test fails if no memories are generated
+    assert len(memories) > 0, "Expected memories to be generated from sample images, but got empty list"
+    
+    memory = memories[0]
+    assert "id" in memory, "Memory should have 'id' field"
+    assert "title" in memory, "Memory should have 'title' field"
+    assert "description" in memory, "Memory should have 'description' field"
+    assert "start_date" in memory, "Memory should have 'start_date' field"
+    assert "end_date" in memory, "Memory should have 'end_date' field"
+    assert "image_count" in memory, "Memory should have 'image_count' field"
+    assert "images" in memory, "Memory should have 'images' field"
+    assert isinstance(memory["images"], list), "Memory images should be a list"
 
 
 def test_get_memory_images(test_db, sample_images):
@@ -134,17 +138,19 @@ def test_memory_title_generation(test_db, sample_images):
     db_create_memories_table()
     memories = db_generate_memories()
     
-    if len(memories) > 0:
-        for memory in memories:
-            # Title should not be empty
-            assert memory["title"]
-            assert len(memory["title"]) > 0
-            
-            # Title should contain year or time reference
-            assert any(
-                indicator in memory["title"].lower()
-                for indicator in ["year", "ago", "2023", "2024", "2025"]
-            )
+    # Explicitly assert memories were generated
+    assert len(memories) > 0, "Expected memories to be generated from sample images for title validation"
+    
+    for memory in memories:
+        # Title should not be empty
+        assert memory["title"], "Memory title should not be empty"
+        assert len(memory["title"]) > 0, "Memory title should have content"
+        
+        # Title should contain year or time reference
+        assert any(
+            indicator in memory["title"].lower()
+            for indicator in ["year", "ago", "2023", "2024", "2025"]
+        ), f"Memory title '{memory['title']}' should contain a time reference"
 
 
 def test_memory_grouping_by_location(test_db, sample_images_with_location):
