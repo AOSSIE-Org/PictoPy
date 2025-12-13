@@ -1117,9 +1117,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/InputType",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/InputType"
+                }
+              ],
               "description": "Choose input type: 'path' or 'base64'",
-              "default": "path"
+              "default": "path",
+              "title": "Input Type"
             },
             "description": "Choose input type: 'path' or 'base64'"
           }
@@ -1283,6 +1288,242 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__user_preferences__ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/memories/generate": {
+      "post": {
+        "tags": [
+          "memories"
+        ],
+        "summary": "Generate Memories",
+        "description": "Generate memories from all images with location data.\n\nThis endpoint:\n1. Fetches all images that have GPS coordinates\n2. Clusters them by location using DBSCAN\n3. Within each location, clusters by date\n4. Returns memory objects with metadata\n\nArgs:\n    location_radius_km: Maximum distance between photos in same location (default: 5km)\n    date_tolerance_days: Maximum days between photos in same memory (default: 3)\n    min_images: Minimum images required to form a memory (default: 2)\n    \nReturns:\n    GenerateMemoriesResponse with list of generated memories\n    \nRaises:\n    HTTPException: If database query fails or clustering fails",
+        "operationId": "generate_memories_api_memories_generate_post",
+        "parameters": [
+          {
+            "name": "location_radius_km",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 100.0,
+              "minimum": 0.1,
+              "description": "Location clustering radius in km",
+              "default": 5.0,
+              "title": "Location Radius Km"
+            },
+            "description": "Location clustering radius in km"
+          },
+          {
+            "name": "date_tolerance_days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 30,
+              "minimum": 1,
+              "description": "Date tolerance in days",
+              "default": 3,
+              "title": "Date Tolerance Days"
+            },
+            "description": "Date tolerance in days"
+          },
+          {
+            "name": "min_images",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10,
+              "minimum": 1,
+              "description": "Minimum images per memory",
+              "default": 2,
+              "title": "Min Images"
+            },
+            "description": "Minimum images per memory"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateMemoriesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/memories/timeline": {
+      "get": {
+        "tags": [
+          "memories"
+        ],
+        "summary": "Get Timeline",
+        "description": "Get memories from the past N days as a timeline.\n\nThis endpoint:\n1. Calculates date range (today - N days to today)\n2. Fetches images within that date range\n3. Clusters them into memories\n4. Returns timeline of memories\n\nArgs:\n    days: Number of days to look back (default: 365 = 1 year)\n    location_radius_km: Location clustering radius (default: 5km)\n    date_tolerance_days: Date tolerance for temporal clustering (default: 3)\n    \nReturns:\n    TimelineResponse with memories ordered by date\n    \nRaises:\n    HTTPException: If database query fails",
+        "operationId": "get_timeline_api_memories_timeline_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 3650,
+              "minimum": 1,
+              "description": "Number of days to look back",
+              "default": 365,
+              "title": "Days"
+            },
+            "description": "Number of days to look back"
+          },
+          {
+            "name": "location_radius_km",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 100.0,
+              "minimum": 0.1,
+              "description": "Location clustering radius in km",
+              "default": 5.0,
+              "title": "Location Radius Km"
+            },
+            "description": "Location clustering radius in km"
+          },
+          {
+            "name": "date_tolerance_days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 30,
+              "minimum": 1,
+              "description": "Date tolerance in days",
+              "default": 3,
+              "title": "Date Tolerance Days"
+            },
+            "description": "Date tolerance in days"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/memories/on-this-day": {
+      "get": {
+        "tags": [
+          "memories"
+        ],
+        "summary": "Get On This Day",
+        "description": "Get photos taken on this date in previous years.\n\nThis endpoint:\n1. Gets current month and day\n2. Searches for images from this month-day in all previous years\n3. Groups by year\n4. Returns images sorted by year (most recent first)\n\nReturns:\n    OnThisDayResponse with images from this date in previous years\n    \nRaises:\n    HTTPException: If database query fails",
+        "operationId": "get_on_this_day_api_memories_on_this_day_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnThisDayResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/memories/locations": {
+      "get": {
+        "tags": [
+          "memories"
+        ],
+        "summary": "Get Locations",
+        "description": "Get all unique locations where photos were taken.\n\nThis endpoint:\n1. Fetches all images with GPS coordinates\n2. Clusters them by location\n3. Returns location clusters with photo counts\n4. Includes sample images for each location\n\nArgs:\n    location_radius_km: Location clustering radius (default: 5km)\n    max_sample_images: Maximum sample images per location (default: 5)\n    \nReturns:\n    LocationsResponse with list of location clusters\n    \nRaises:\n    HTTPException: If database query fails",
+        "operationId": "get_locations_api_memories_locations_get",
+        "parameters": [
+          {
+            "name": "location_radius_km",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 100.0,
+              "minimum": 0.1,
+              "description": "Location clustering radius in km",
+              "default": 5.0,
+              "title": "Location Radius Km"
+            },
+            "description": "Location clustering radius in km"
+          },
+          {
+            "name": "max_sample_images",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "description": "Max sample images per location",
+              "default": 5,
+              "title": "Max Sample Images"
+            },
+            "description": "Max sample images per location"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocationsResponse"
                 }
               }
             }
@@ -1691,6 +1932,43 @@
           "AI_Tagging"
         ],
         "title": "FolderDetails"
+      },
+      "GenerateMemoriesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "memory_count": {
+            "type": "integer",
+            "title": "Memory Count"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count"
+          },
+          "memories": {
+            "items": {
+              "$ref": "#/components/schemas/Memory"
+            },
+            "type": "array",
+            "title": "Memories"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "memory_count",
+          "image_count",
+          "memories"
+        ],
+        "title": "GenerateMemoriesResponse",
+        "description": "Response for generate memories endpoint."
       },
       "GetAlbumImagesRequest": {
         "properties": {
@@ -2199,7 +2477,6 @@
           "metadata": {
             "anyOf": [
               {
-                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -2261,6 +2538,211 @@
           "base64"
         ],
         "title": "InputType"
+      },
+      "LocationCluster": {
+        "properties": {
+          "location_name": {
+            "type": "string",
+            "title": "Location Name"
+          },
+          "center_lat": {
+            "type": "number",
+            "title": "Center Lat"
+          },
+          "center_lon": {
+            "type": "number",
+            "title": "Center Lon"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count"
+          },
+          "sample_images": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryImage"
+            },
+            "type": "array",
+            "title": "Sample Images"
+          }
+        },
+        "type": "object",
+        "required": [
+          "location_name",
+          "center_lat",
+          "center_lon",
+          "image_count",
+          "sample_images"
+        ],
+        "title": "LocationCluster",
+        "description": "Location cluster with photo count."
+      },
+      "LocationsResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "location_count": {
+            "type": "integer",
+            "title": "Location Count"
+          },
+          "locations": {
+            "items": {
+              "$ref": "#/components/schemas/LocationCluster"
+            },
+            "type": "array",
+            "title": "Locations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "location_count",
+          "locations"
+        ],
+        "title": "LocationsResponse",
+        "description": "Response for locations endpoint."
+      },
+      "Memory": {
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "title": "Memory Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "location_name": {
+            "type": "string",
+            "title": "Location Name"
+          },
+          "date_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Start"
+          },
+          "date_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date End"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryImage"
+            },
+            "type": "array",
+            "title": "Images"
+          },
+          "thumbnail_image_id": {
+            "type": "string",
+            "title": "Thumbnail Image Id"
+          },
+          "center_lat": {
+            "type": "number",
+            "title": "Center Lat"
+          },
+          "center_lon": {
+            "type": "number",
+            "title": "Center Lon"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory_id",
+          "title",
+          "description",
+          "location_name",
+          "date_start",
+          "date_end",
+          "image_count",
+          "images",
+          "thumbnail_image_id",
+          "center_lat",
+          "center_lon"
+        ],
+        "title": "Memory",
+        "description": "Memory object containing grouped images."
+      },
+      "MemoryImage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "thumbnailPath": {
+            "type": "string",
+            "title": "Thumbnailpath"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "thumbnailPath",
+          "latitude",
+          "longitude",
+          "captured_at"
+        ],
+        "title": "MemoryImage",
+        "description": "Image within a memory."
       },
       "MetadataModel": {
         "properties": {
@@ -2344,6 +2826,46 @@
           "item_type"
         ],
         "title": "MetadataModel"
+      },
+      "OnThisDayResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "today": {
+            "type": "string",
+            "title": "Today"
+          },
+          "years": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Years"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryImage"
+            },
+            "type": "array",
+            "title": "Images"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "today",
+          "years",
+          "image_count",
+          "images"
+        ],
+        "title": "OnThisDayResponse",
+        "description": "Response for on-this-day endpoint."
       },
       "RenameClusterData": {
         "properties": {
@@ -2545,6 +3067,41 @@
           "success"
         ],
         "title": "SyncFolderResponse"
+      },
+      "TimelineResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "date_range": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Date Range"
+          },
+          "memory_count": {
+            "type": "integer",
+            "title": "Memory Count"
+          },
+          "memories": {
+            "items": {
+              "$ref": "#/components/schemas/Memory"
+            },
+            "type": "array",
+            "title": "Memories"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "date_range",
+          "memory_count",
+          "memories"
+        ],
+        "title": "TimelineResponse",
+        "description": "Response for timeline endpoint."
       },
       "ToggleFavouriteRequest": {
         "properties": {
