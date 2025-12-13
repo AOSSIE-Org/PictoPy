@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtension';
 import {
@@ -15,7 +15,7 @@ import { getFoldersTaggingStatus } from '@/api/api-functions/folders';
 
 /**
  * Custom hook for folder operations
- * Manages folder queries, AI tagging mutations, and folder deletion
+ * Manages folder queries, AI tagging mutations, folder deletion, and bulk operations
  */
 export const useFolderOperations = () => {
   const dispatch = useDispatch();
@@ -160,19 +160,83 @@ export const useFolderOperations = () => {
     deleteFolderMutation.mutate(folderId);
   };
 
+  // Bulk enable AI tagging mutation
+  const bulkEnableAITaggingMutation = usePictoMutation({
+    mutationFn: async (folder_ids: string[]) =>
+      enableAITagging({ folder_ids }),
+    autoInvalidateTags: ['folders'],
+  });
+
+  // Apply feedback to bulk enable mutation
+  useMutationFeedback(bulkEnableAITaggingMutation, {
+    showLoading: true,
+    loadingMessage: 'Enabling AI tagging for selected folders',
+    successTitle: 'AI Tagging Enabled',
+    successMessage: 'AI tagging has been enabled for the selected folders.',
+    errorTitle: 'AI Tagging Error',
+    errorMessage: 'Failed to enable AI tagging for some folders.',
+  });
+
+  // Bulk disable AI tagging mutation
+  const bulkDisableAITaggingMutation = usePictoMutation({
+    mutationFn: async (folder_ids: string[]) =>
+      disableAITagging({ folder_ids }),
+    autoInvalidateTags: ['folders'],
+  });
+
+  // Apply feedback to bulk disable mutation
+  useMutationFeedback(bulkDisableAITaggingMutation, {
+    showLoading: true,
+    loadingMessage: 'Disabling AI tagging for selected folders',
+    successTitle: 'AI Tagging Disabled',
+    successMessage: 'AI tagging has been disabled for the selected folders.',
+    errorTitle: 'AI Tagging Error',
+    errorMessage: 'Failed to disable AI tagging for some folders.',
+  });
+
+  /**
+   * Enable AI tagging for multiple folders
+   */
+  const bulkEnableAITagging = useCallback(
+    (folderIds: string[]) => {
+      if (folderIds.length > 0) {
+        bulkEnableAITaggingMutation.mutate(folderIds);
+      }
+    },
+    [bulkEnableAITaggingMutation],
+  );
+
+  /**
+   * Disable AI tagging for multiple folders
+   */
+  const bulkDisableAITagging = useCallback(
+    (folderIds: string[]) => {
+      if (folderIds.length > 0) {
+        bulkDisableAITaggingMutation.mutate(folderIds);
+      }
+    },
+    [bulkDisableAITaggingMutation],
+  );
+
   return {
     // Data
     folders,
     isLoading: foldersQuery.isLoading,
 
-    // Operations
+    // Single folder operations
     toggleAITagging,
     deleteFolder,
+
+    // Bulk operations
+    bulkEnableAITagging,
+    bulkDisableAITagging,
 
     // Mutation states (for use in UI, e.g., disabling buttons)
     enableAITaggingPending: enableAITaggingMutation.isPending,
     disableAITaggingPending: disableAITaggingMutation.isPending,
     deleteFolderPending: deleteFolderMutation.isPending,
+    bulkEnablePending: bulkEnableAITaggingMutation.isPending,
+    bulkDisablePending: bulkDisableAITaggingMutation.isPending,
   };
 };
 
