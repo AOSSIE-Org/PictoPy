@@ -33,31 +33,45 @@ const ShuffleHero = () => {
         </motion.p>
         
         <div className="flex space-x-4">
-          <motion.button 
+          <motion.button
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.6 }}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              const downloadSection = document.getElementById("download-id");
+              if (downloadSection) {
+                downloadSection.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+              }
+            }}
             className="bg-gradient-to-r from-yellow-500 to-green-500 text-white font-medium py-2 px-6 rounded transition-all shadow-sm hover:shadow-md"
           >
             Download
           </motion.button>
+
           
           {/* Update this button to navigate to the GitHub link */}
-          <motion.a 
-            href="https://github.com/AOSSIE-Org/PictoPy" 
-            target="_blank"
-            rel="noopener noreferrer"
+          <motion.button
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.7 }}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
-            className="border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-medium py-2 px-6 rounded transition-all hover:border-teal-500 hover:text-teal-500"
+            onClick={() =>
+              window.open("https://aossie-org.github.io/PictoPy/", "_blank")
+            }
+            className="border border-slate-300 dark:border-slate-600 
+                      text-slate-700 dark:text-slate-200 
+                      font-medium py-2 px-6 rounded 
+                      transition-all hover:border-teal-500 hover:text-teal-500"
           >
             View Docs
-          </motion.a>
+        </motion.button>
+
         </div>
       </div>
       <ShuffleGrid />
