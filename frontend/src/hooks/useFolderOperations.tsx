@@ -142,6 +142,17 @@ export const useFolderOperations = () => {
     errorMessage: 'Failed to delete the folder. Please try again.',
   });
 
+  // Bulk enable/disable mutations (accept array of folder_ids)
+  const bulkEnableMutation = usePictoMutation({
+    mutationFn: async (folder_ids: string[]) => enableAITagging({ folder_ids }),
+    autoInvalidateTags: ['folders'],
+  });
+
+  const bulkDisableMutation = usePictoMutation({
+    mutationFn: async (folder_ids: string[]) => disableAITagging({ folder_ids }),
+    autoInvalidateTags: ['folders'],
+  });
+
   /**
    * Toggle AI tagging for a folder
    */
@@ -160,6 +171,34 @@ export const useFolderOperations = () => {
     deleteFolderMutation.mutate(folderId);
   };
 
+  /**
+   * Enable AI tagging for many folders with batching to handle rate limits.
+   */
+  const bulkEnableAITagging = async (
+    folderIds: string[],
+    batchSize: number = 20,
+  ) => {
+    const ids = Array.from(new Set(folderIds));
+    for (let i = 0; i < ids.length; i += batchSize) {
+      const batch = ids.slice(i, i + batchSize);
+      await bulkEnableMutation.mutateAsync(batch);
+    }
+  };
+
+  /**
+   * Disable AI tagging for many folders with batching.
+   */
+  const bulkDisableAITagging = async (
+    folderIds: string[],
+    batchSize: number = 20,
+  ) => {
+    const ids = Array.from(new Set(folderIds));
+    for (let i = 0; i < ids.length; i += batchSize) {
+      const batch = ids.slice(i, i + batchSize);
+      await bulkDisableMutation.mutateAsync(batch);
+    }
+  };
+
   return {
     // Data
     folders,
@@ -168,11 +207,14 @@ export const useFolderOperations = () => {
     // Operations
     toggleAITagging,
     deleteFolder,
+    bulkEnableAITagging,
+    bulkDisableAITagging,
 
     // Mutation states (for use in UI, e.g., disabling buttons)
     enableAITaggingPending: enableAITaggingMutation.isPending,
     disableAITaggingPending: disableAITaggingMutation.isPending,
     deleteFolderPending: deleteFolderMutation.isPending,
+    bulkPending: bulkEnableMutation.isPending || bulkDisableMutation.isPending,
   };
 };
 
