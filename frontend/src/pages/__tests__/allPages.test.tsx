@@ -4,6 +4,7 @@ import Album from '../Album/Album';
 import { Home } from '@/pages/Home/Home';
 import Memories from '../Memories/Memories';
 import Settings from '../SettingsPage/Settings';
+import ProfilePage from '../ProfilePage/ProfilePage';
 import Videos from '../VideosPage/Videos';
 import { ROUTES } from '@/constants/routes';
 import QueryClientProviders from '@/config/QueryClientProvider';
@@ -17,8 +18,8 @@ beforeAll(() => {
     function () {
       return {
         matches: false,
-        addListener: () => {}, // deprecated
-        removeListener: () => {}, // deprecated
+        addListener: () => { }, // deprecated
+        removeListener: () => { }, // deprecated
       };
     };
 });
@@ -27,6 +28,7 @@ const pages = [
   { path: ROUTES.HOME, Component: Home },
   { path: ROUTES.VIDEOS, Component: Videos },
   { path: ROUTES.SETTINGS, Component: Settings },
+  { path: ROUTES.PROFILE, Component: ProfilePage },
   { path: ROUTES.AI, Component: AITagging },
   { path: ROUTES.ALBUMS, Component: Album },
   { path: ROUTES.MEMORIES, Component: Memories },

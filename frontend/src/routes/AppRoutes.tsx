@@ -4,6 +4,7 @@ import { ROUTES } from '@/constants/routes';
 import Layout from '@/layout/layout';
 import { InitialSteps } from '@/pages/InitialSteps/InitialSteps';
 import Settings from '@/pages/SettingsPage/Settings';
+import ProfilePage from '@/pages/ProfilePage/ProfilePage';
 import { Home } from '@/pages/Home/Home';
 import { MyFav } from '@/pages/Home/MyFav';
 import { AITagging } from '@/pages/AITagging/AITagging';
@@ -19,6 +20,7 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.VIDEOS} element={<ComingSoon />} />
         <Route path={ROUTES.FAVOURITES} element={<MyFav />} />
         <Route path={ROUTES.SETTINGS} element={<Settings />} />
+        <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
         <Route path={ROUTES.AI} element={<AITagging />} />
         <Route path={ROUTES.ALBUMS} element={<ComingSoon />} />
         <Route path={ROUTES.MEMORIES} element={<ComingSoon />} />

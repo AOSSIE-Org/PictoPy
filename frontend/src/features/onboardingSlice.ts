@@ -48,10 +48,19 @@ const onboardingSlice = createSlice({
       state.currentStepIndex = state.stepStatus.findIndex((status) => !status);
       state.currentStepName = STEP_NAMES[state.currentStepIndex] || '';
     },
+    resetOnboarding(state) {
+      localStorage.removeItem('avatar');
+      localStorage.removeItem('name');
+      state.currentStepIndex = 0;
+      state.currentStepName = STEP_NAMES[0];
+      state.stepStatus = STEP_NAMES.map(() => false);
+      state.avatar = null;
+      state.name = '';
+    },
   },
 });
 
-export const { setAvatar, setName, markCompleted, previousStep } =
+export const { setAvatar, setName, markCompleted, previousStep, resetOnboarding } =
   onboardingSlice.actions;
 
 export default onboardingSlice.reducer;
