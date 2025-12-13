@@ -2,7 +2,7 @@ import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Check, Heart } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { Image } from '@/types/Media';
 import { ImageTags } from './ImageTags';
 import { convertFileSrc } from '@tauri-apps/api/core';
@@ -25,6 +25,8 @@ export function ImageCard({
   onClick,
 }: ImageCardViewProps) {
   const [isImageHovered, setIsImageHovered] = useState(false);
+  const [showHoverEffects, setShowHoverEffects] = useState(false);
+  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
   // Default to empty array if no tags are provided
   const tags = image.tags || [];
   const { toggleFavourite } = useToggleFav();
@@ -34,6 +36,27 @@ export function ImageCard({
       toggleFavourite(image.id);
     }
   }, [image, toggleFavourite]);
+
+  // Add hover delay for better UX (prevents accidental triggers when scrolling)
+  useEffect(() => {
+    if (isImageHovered) {
+      hoverTimerRef.current = setTimeout(() => {
+        setShowHoverEffects(true);
+      }, 300); // 300ms delay before showing hover effects
+    } else {
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current);
+        hoverTimerRef.current = null;
+      }
+      setShowHoverEffects(false);
+    }
+
+    return () => {
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current);
+      }
+    };
+  }, [isImageHovered]);
   return (
     <div
       className={cn(
@@ -65,18 +88,29 @@ export function ImageCard({
             )}
           />
           {/* Dark overlay on hover */}
-          <div className="absolute inset-0 bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+          <div
+            className={cn(
+              'absolute inset-0 bg-black/30 transition-opacity duration-200',
+              showHoverEffects ? 'opacity-100' : 'opacity-0',
+            )}
+          />
 
           {/* Image actions on hover */}
-          <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+          <div
+            className={cn(
+              'absolute inset-0 flex items-center justify-center gap-2 transition-opacity duration-200',
+              showHoverEffects ? 'opacity-100' : 'opacity-0',
+            )}
+          >
             <Button
               variant="ghost"
               size="icon"
-              className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${
+              className={cn(
+                'rounded-full p-2.5 text-white transition-all duration-300',
                 image.isFavourite
                   ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
-                  : 'bg-white/10 hover:bg-white/20 hover:shadow-lg'
-              }`}
+                  : 'bg-white/10 hover:bg-white/20 hover:shadow-lg',
+              )}
               onClick={(e) => {
                 console.log(image);
                 e.stopPropagation();
