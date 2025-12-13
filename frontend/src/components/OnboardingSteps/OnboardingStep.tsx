@@ -10,7 +10,7 @@ import { ServerCheck } from './ServerCheck';
 
 interface OnboardingStepProps {
   stepIndex: number;
-  stepName: string; // kept as-is (not removed)
+  stepName: string; 
 }
 
 const VISIBLE_STEPS = [
@@ -28,8 +28,10 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
     totalSteps: VISIBLE_STEPS.length,
   };
 
-  // ✅ FIX: derive stepName from stepIndex (single source of truth)
-  const currentStepName = VISIBLE_STEPS[stepIndex] ?? VISIBLE_STEPS[0];
+  // FIX: derive stepName from stepIndex (single source of truth)
+  const safeIndex = Math.min(stepIndex, VISIBLE_STEPS.length - 1);
+  const currentStepName = VISIBLE_STEPS[safeIndex];
+
 
   const renderStepComponent = () => {
     switch (currentStepName) {

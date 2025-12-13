@@ -42,7 +42,7 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
   const handleNext = () => {
     localStorage.setItem('themeChosen', 'true');
     dispatch(markCompleted(stepIndex));
-    navigate(ROUTES.HOME); // ✅ THIS WAS MISSING
+    navigate(ROUTES.HOME); // Easier routing to home page
   };
 
   const handleBack = () => {
