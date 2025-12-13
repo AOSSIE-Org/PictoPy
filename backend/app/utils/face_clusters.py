@@ -159,7 +159,7 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
 
 
 def cluster_util_cluster_all_face_embeddings(
-    eps: float = 0.3, min_samples: int = 2
+    eps: float = 0.35, min_samples: int = 3
 ) -> List[ClusterResult]:
     """
     Cluster face embeddings using DBSCAN and assign cluster names based on majority voting.
@@ -183,14 +183,41 @@ def cluster_util_cluster_all_face_embeddings(
     existing_cluster_names = []
 
     for face in faces_data:
+        emb = face["embeddings"]
+
+        # Skip invalid embeddings
+        if emb is None:
+            continue
+
+        emb = np.array(emb)
+
+        # Skip zero or near-zero embeddings
+        if np.linalg.norm(emb) < 1e-6:
+            logger.warning(f"Skipping zero embedding for face_id {face['face_id']}")
+            continue
+
         face_ids.append(face["face_id"])
-        embeddings.append(face["embeddings"])
+        embeddings.append(emb)
         existing_cluster_names.append(face["cluster_name"])
+
+    
 
     logger.info(f"Total faces to cluster: {len(face_ids)}")
 
     # Convert to numpy array for DBSCAN
     embeddings_array = np.array(embeddings)
+
+    # Normalize embeddings for cosine distance
+    embeddings_array = embeddings_array / np.linalg.norm(
+        embeddings_array, axis=1, keepdims=True
+    )
+    # Detect duplicate embeddings (debug safety)
+    unique_embeddings = len(set(map(tuple, embeddings_array)))
+    if unique_embeddings < len(embeddings_array) * 0.7:
+        logger.warning(
+            f"High duplicate embeddings detected: "
+            f"{unique_embeddings}/{len(embeddings_array)}"
+        )
 
     # Perform DBSCAN clustering
     dbscan = DBSCAN(
@@ -321,7 +348,13 @@ def _calculate_cosine_distances(
         Array of cosine distances to each cluster mean
     """
     # Normalize the face embedding
-    face_norm = face_embedding / np.linalg.norm(face_embedding)
+    # face_norm = face_embedding / np.linalg.norm(face_embedding)
+    norm = np.linalg.norm(face_embedding)
+    if norm < 1e-6:
+        return np.ones(len(cluster_means))  # max distance
+
+    face_norm = face_embedding / norm
+
 
     # Normalize cluster means
     cluster_norms = cluster_means / np.linalg.norm(cluster_means, axis=1, keepdims=True)
