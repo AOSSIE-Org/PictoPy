@@ -1,25 +1,90 @@
-import { FC, useState } from "react";
+import { FC, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import PictopyLogo from "@/assets/PictoPy_Logo.png"; // Adjust this import path as needed
-import MacLogo from "@/assets/mac-logo.png"; // Add your Mac logo
-import WindowsLogo from "@/assets/windows-logo.svg"; // Add your Windows logo
-import LinuxLogo from "@/assets/linux-logo.svg"; // Add your Linux logo
+import PictopyLogo from "@/assets/PictoPy_Logo.png";
+import MacLogo from "@/assets/mac-logo.png";
+import WindowsLogo from "@/assets/windows-logo.svg";
+import LinuxLogo from "@/assets/linux-logo.svg";
+
+interface GitHubAsset {
+  name: string;
+  browser_download_url: string;
+}
+
+interface GitHubRelease {
+  tag_name: string;
+  assets: GitHubAsset[];
+}
 
 const PictopyLanding: FC = () => {
-  // State for showing the notification
   const [downloadStarted, setDownloadStarted] = useState<string | null>(null);
+  const [downloadLinks, setDownloadLinks] = useState<{
+    mac: string | null;
+    windows: string | null;
+    linux: string | null;
+  }>({ mac: null, windows: null, linux: null });
+  const [loading, setLoading] = useState(true);
 
-  // Function to handle button click and show the notification
-  const handleDownloadClick = (platform: string) => {
+  // Fetch latest release from GitHub API
+  useEffect(() => {
+    const fetchLatestRelease = async () => {
+      try {
+        const response = await fetch(
+          'https://api.github.com/repos/AOSSIE-Org/PictoPy/releases/latest'
+        );
+        const data: GitHubRelease = await response.json();
+        
+        // Find download links for each platform
+        const macAsset = data.assets.find((asset) => 
+          asset.name.toLowerCase().includes('dmg') || 
+          asset.name.toLowerCase().includes('macos')
+        );
+        
+        const windowsAsset = data.assets.find((asset) => 
+          asset.name.toLowerCase().includes('exe') || 
+          asset.name.toLowerCase().includes('.msi')
+        );
+        
+        const linuxAsset = data.assets.find((asset) => 
+          asset.name.toLowerCase().includes('.deb')
+        );
+
+        setDownloadLinks({
+          mac: macAsset?.browser_download_url || null,
+          windows: windowsAsset?.browser_download_url || null,
+          linux: linuxAsset?.browser_download_url || null,
+        });
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching latest release:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchLatestRelease();
+  }, []);
+
+  // Function to handle button click and show notification
+  const handleDownloadClick = (platform: string, downloadUrl: string | null) => {
+    if (!downloadUrl) {
+      setDownloadStarted(`${platform} download not available yet`);
+      setTimeout(() => setDownloadStarted(null), 3000);
+      return;
+    }
+
+    // Trigger download
+    window.location.href = downloadUrl;
+    
     setDownloadStarted(`Download for ${platform} started!`);
-    // Hide the notification after 3 seconds
     setTimeout(() => {
       setDownloadStarted(null);
     }, 3000);
   };
 
   return (
-    <section className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden">
+    <section 
+      id="downloads-section" 
+      className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden"
+    >
       {/* Background Animated SVG */}
       <div className="absolute inset-0 z-0">
         <svg
@@ -47,7 +112,7 @@ const PictopyLanding: FC = () => {
       </div>
 
       {/* Content */}
-      <div className="px-4 md:px-6 relative z-10 ">
+      <div className="px-4 md:px-6 relative z-10">
         <div className="flex flex-col items-center text-center">
           {/* Heading with Gradient Text and Logo */}
           <div className="flex items-center justify-center gap-4 mb-4">
@@ -66,14 +131,22 @@ const PictopyLanding: FC = () => {
             Organize your photos effortlessly. Available for Mac, Windows, and Linux.
           </p>
 
+          {/* Loading State */}
+          {loading && (
+            <div className="text-gray-600 dark:text-gray-400 mb-4">
+              Loading latest releases...
+            </div>
+          )}
+
           {/* Download Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
               className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 h-12 px-8 transition-all duration-300 
                          border-2 border-transparent hover:border-black dark:hover:border-white 
-                         transform hover:-translate-y-1 hover:shadow-lg"
+                         transform hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               size="lg"
-              onClick={() => handleDownloadClick("Mac")}
+              onClick={() => handleDownloadClick("Mac", downloadLinks.mac)}
+              disabled={loading || !downloadLinks.mac}
             >
               <img src={MacLogo} alt="Mac" className="h-7 w-7 mr-2" />
               Download for Mac
@@ -81,10 +154,11 @@ const PictopyLanding: FC = () => {
             <Button
               className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 h-12 px-8 transition-all duration-300 
                          border-2 border-transparent hover:border-black dark:hover:border-white 
-                         transform hover:-translate-y-1 hover:shadow-lg"
+                         transform hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               size="lg"
               variant="outline"
-              onClick={() => handleDownloadClick("Windows")}
+              onClick={() => handleDownloadClick("Windows", downloadLinks.windows)}
+              disabled={loading || !downloadLinks.windows}
             >
               <img src={WindowsLogo} alt="Windows" className="h-7 w-7 mr-2" />
               Download for Windows
@@ -92,12 +166,13 @@ const PictopyLanding: FC = () => {
             <Button
               className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 h-12 px-8 transition-all duration-300 
                          border-2 border-transparent hover:border-black dark:hover:border-white 
-                         transform hover:-translate-y-1 hover:shadow-lg"
+                         transform hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               size="lg"
               variant="outline"
-              onClick={() => handleDownloadClick("Linux")}
+              onClick={() => handleDownloadClick("Linux", downloadLinks.linux)}
+              disabled={loading || !downloadLinks.linux}
             >
-              <img src={LinuxLogo} alt="Linux" className="h-9 w-9 mr-2" /> {/* Larger Linux logo */}
+              <img src={LinuxLogo} alt="Linux" className="h-9 w-9 mr-2" />
               Download for Linux(.deb)
             </Button>
           </div>
