@@ -53,8 +53,8 @@ class TestClusteringRegression:
         labels_new = dbscan_new.fit_predict(all_embeddings)
         n_clusters_new = len(set(labels_new)) - (1 if -1 in labels_new else 0)
         
-        # Should create 3 separate clusters (one per person)
-        assert n_clusters_new >= 2, f"Expected at least 2 clusters, got {n_clusters_new}"
+        # Should create exactly 3 separate clusters (one per person)
+        assert n_clusters_new == 3, f"Expected exactly 3 clusters (one per person), got {n_clusters_new}"
         
         # No single cluster should contain all 15 faces (the bug scenario)
         cluster_sizes = {}
@@ -137,11 +137,16 @@ class TestClusteringRegression:
         labels_new = dbscan_new.fit_predict(embeddings)
         n_clusters_new = len(set(labels_new)) - (1 if -1 in labels_new else 0)
         n_noise_new = list(labels_new).count(-1)
+        n_noise_old = list(labels_old).count(-1)
         
         # New parameters should be more restrictive:
-        # Either fewer/equal clusters OR more noise points
-        assert (n_clusters_new <= n_clusters_old or n_noise_new > 0), \
-            "New parameters should be more restrictive than old parameters"
+        # Should have more noise points or significantly fewer clusters
+        is_more_restrictive = (
+            n_noise_new > n_noise_old or  # More noise
+            n_clusters_new < n_clusters_old  # Fewer clusters
+        )
+        assert is_more_restrictive, \
+            f"New parameters should be more restrictive (old: {n_clusters_old} clusters, {n_noise_old} noise; new: {n_clusters_new} clusters, {n_noise_new} noise)"
 
 
 class TestClusteringEdgeCases:
@@ -149,14 +154,13 @@ class TestClusteringEdgeCases:
 
     def test_empty_embeddings(self):
         """Test behavior with no embeddings"""
-        embeddings = np.array([])
+        embeddings = np.array([]).reshape(0, 128)
         
         dbscan = DBSCAN(eps=0.15, min_samples=3, metric="cosine")
         
-        # Should handle empty input gracefully
-        if len(embeddings) > 0:
-            labels = dbscan.fit_predict(embeddings)
-            assert len(labels) == 0
+        # Should return empty labels for empty input
+        labels = dbscan.fit_predict(embeddings)
+        assert len(labels) == 0, f"Expected empty labels for empty input, got {len(labels)}"
 
     def test_single_embedding(self):
         """Test behavior with single embedding"""
@@ -184,3 +188,113 @@ class TestClusteringEdgeCases:
         
         # Should form exactly 1 cluster
         assert n_clusters == 1, f"Expected 1 cluster with 3 faces, got {n_clusters}"
+
+
+class TestClusteringIntegration:
+    """Integration tests for full clustering pipeline"""
+
+    def test_clustering_pipeline_with_new_parameters(self, mocker):
+        """
+        Test full clustering pipeline with new default parameters.
+        
+        This validates the complete flow including database operations,
+        UUID generation, and cluster naming logic.
+        """
+        np.random.seed(42)
+        
+        # Create test data: 3 people with 4 faces each
+        test_data = []
+        for person_id in range(3):
+            base = np.array([person_id * 0.3] * 128)
+            for face_num in range(4):
+                embedding = base + np.random.normal(0, 0.03, 128)
+                test_data.append({
+                    "face_id": person_id * 4 + face_num,
+                    "embeddings": embedding.tolist(),
+                    "cluster_name": None
+                })
+        
+        # Mock the database call
+        mocker.patch(
+            'app.utils.face_clusters.db_get_all_faces_with_cluster_names',
+            return_value=test_data
+        )
+        
+        # Call the actual clustering function
+        results = cluster_util_cluster_all_face_embeddings()
+        
+        # Validate results structure
+        assert len(results) > 0, "Should return clustering results"
+        assert len(results) == 12, f"Expected 12 results (3 people × 4 faces), got {len(results)}"
+        
+        # Validate ClusterResult objects
+        for result in results:
+            assert hasattr(result, 'face_id'), "Result should have face_id"
+            assert hasattr(result, 'embedding'), "Result should have embedding"
+            assert hasattr(result, 'cluster_uuid'), "Result should have cluster_uuid"
+            assert hasattr(result, 'cluster_name'), "Result should have cluster_name"
+        
+        # Validate clustering behavior with new parameters
+        cluster_ids = set(r.cluster_uuid for r in results)
+        assert len(cluster_ids) == 3, f"Expected 3 distinct clusters, got {len(cluster_ids)}"
+        
+        # Validate each cluster has exactly 4 faces
+        cluster_counts = {}
+        for result in results:
+            cluster_counts[result.cluster_uuid] = cluster_counts.get(result.cluster_uuid, 0) + 1
+        
+        for cluster_id, count in cluster_counts.items():
+            assert count == 4, f"Each cluster should have 4 faces, cluster {cluster_id} has {count}"
+        
+        # Validate UUIDs are valid
+        import uuid
+        for result in results:
+            try:
+                uuid.UUID(result.cluster_uuid)
+            except ValueError:
+                pytest.fail(f"Invalid UUID: {result.cluster_uuid}")
+
+    def test_clustering_prevents_large_incorrect_clusters_integration(self, mocker):
+        """
+        Integration test specifically for issue #722 scenario.
+        
+        Validates that the full pipeline prevents the 314-image incorrect cluster.
+        """
+        np.random.seed(42)
+        
+        # Simulate many diverse faces (like the 314-image scenario)
+        test_data = []
+        for i in range(50):  # 50 different people
+            base = np.array([i * 0.05] * 128)
+            # Each person has 2-3 faces
+            num_faces = 2 if i % 2 == 0 else 3
+            for j in range(num_faces):
+                embedding = base + np.random.normal(0, 0.03, 128)
+                test_data.append({
+                    "face_id": len(test_data),
+                    "embeddings": embedding.tolist(),
+                    "cluster_name": None
+                })
+        
+        # Mock the database call
+        mocker.patch(
+            'app.utils.face_clusters.db_get_all_faces_with_cluster_names',
+            return_value=test_data
+        )
+        
+        # Call the actual clustering function
+        results = cluster_util_cluster_all_face_embeddings()
+        
+        # Validate no single cluster contains all faces (the bug scenario)
+        cluster_counts = {}
+        for result in results:
+            cluster_counts[result.cluster_uuid] = cluster_counts.get(result.cluster_uuid, 0) + 1
+        
+        max_cluster_size = max(cluster_counts.values()) if cluster_counts else 0
+        total_faces = len(test_data)
+        
+        # No cluster should contain more than 20% of total faces
+        max_allowed = total_faces * 0.2
+        assert max_cluster_size < max_allowed, \
+            f"Found cluster with {max_cluster_size} faces (max allowed: {max_allowed}). This indicates the bug is not fixed."
+
