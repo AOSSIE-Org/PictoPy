@@ -20,7 +20,10 @@ export const VideoPlayerModal = ({ video, onClose }: VideoPlayerModalProps) => {
         variant="ghost"
         size="icon"
         className="absolute right-4 top-4 z-10 text-white hover:bg-white/20"
-        onClick={onClose}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
       >
         <X className="h-6 w-6" />
       </Button>

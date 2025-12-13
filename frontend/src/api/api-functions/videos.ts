@@ -2,8 +2,6 @@ import { videosEndpoints } from '../apiEndpoints';
 import { apiClient } from '../axiosConfig';
 import { APIResponse } from '@/types/API';
 
-// Note: APIResponse is still used by toggleVideoFavourite
-
 export interface VideoData {
   id: string;
   path: string;
@@ -25,9 +23,8 @@ export interface VideoData {
   };
 }
 
-export interface GetAllVideosResponse extends APIResponse {
-  data: VideoData[];
-}
+// Use generic APIResponse for type-safe responses
+export type GetAllVideosResponse = APIResponse<VideoData[]>;
 
 export const fetchAllVideos = async (): Promise<GetAllVideosResponse> => {
   const response = await apiClient.get<GetAllVideosResponse>(
@@ -50,7 +47,9 @@ export const fetchVideoById = async (videoId: string): Promise<VideoData> => {
   return response.data;
 };
 
-export const toggleVideoFavourite = async (videoId: string): Promise<APIResponse> => {
+export const toggleVideoFavourite = async (
+  videoId: string,
+): Promise<APIResponse> => {
   const response = await apiClient.post<APIResponse>(
     videosEndpoints.toggleFavourite,
     { video_id: videoId },

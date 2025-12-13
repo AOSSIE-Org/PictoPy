@@ -45,8 +45,5 @@ class ToggleVideoFavouriteResponse(BaseModel):
     message: str
 
 
-class ErrorResponse(BaseModel):
-    """Error response model."""
-    success: bool = False
-    error: str
-    message: str
+# Import shared ErrorResponse from common module
+from app.schemas.common import ErrorResponse
