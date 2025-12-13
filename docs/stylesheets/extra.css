@@ -1,6 +1,20 @@
+/* Prevent horizontal overflow globally */
+html,
+body {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 .md-typeset .admonition-title {
   margin-bottom: 10px;
-  
 }
 
 .md-header__button.md-logo img {
@@ -12,12 +26,12 @@
   display: flex;
   align-items: center;
 
-  padding-right: 0;     
-  margin-right: 0;      
+  padding-right: 0;
+  margin-right: 0;
 }
- 
+
 .md-header__title {
-  margin-left: 8px !important;  
+  margin-left: 8px !important;
 }
 
 /* Responsive tweaks: ensure header, images, tables and code blocks behave well on small screens */
@@ -38,13 +52,15 @@
 
 /* Code blocks should wrap/scroll gracefully */
 .md-typeset pre {
-  white-space: pre-wrap; /* allow wrapping */
+  white-space: pre-wrap;
+  /* allow wrapping */
   word-break: break-word;
   overflow-x: auto;
 }
 
 /* General container/content spacing adjustments for smaller screens */
-.md-main, .md-content {
+.md-main,
+.md-content {
   padding-left: 1rem;
   padding-right: 1rem;
 }
@@ -121,14 +137,14 @@
    The page uses inline styles (display:flex and width:25% on children). These rules
    add wrapping and force child blocks to become full-width on narrow screens.
 */
-.md-typeset > div[style*="display:flex"] {
+.md-typeset>div[style*="display:flex"] {
   display: flex !important;
   flex-wrap: wrap !important;
   justify-content: center !important;
   gap: 0.5rem;
 }
 
-.md-typeset > div[style*="display:flex"] > div {
+.md-typeset>div[style*="display:flex"]>div {
   width: 25% !important;
   box-sizing: border-box !important;
   padding-left: 0.5rem !important;
@@ -136,20 +152,23 @@
 }
 
 @media (max-width: 900px) {
+
   /* On tablets and small laptops, use two columns */
-  .md-typeset > div[style*="display:flex"] > div {
+  .md-typeset>div[style*="display:flex"]>div {
     width: 50% !important;
   }
 }
 
 @media (max-width: 540px) {
+
   /* On phones, make each section full-width (stack vertically) */
-  .md-typeset > div[style*="display:flex"] > div {
+  .md-typeset>div[style*="display:flex"]>div {
     width: 100% !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
   }
-  .md-typeset > div[style*="display:flex"] h2 {
+
+  .md-typeset>div[style*="display:flex"] h2 {
     text-align: left;
     margin-left: 0.25rem;
   }
@@ -191,7 +210,8 @@
 }
 
 /* Ensure code samples are responsive */
-.swagger-ui pre, .swagger-ui code {
+.swagger-ui pre,
+.swagger-ui code {
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -202,16 +222,20 @@
     flex-direction: column;
     align-items: stretch;
   }
+
   .swagger-ui .opblock .opblock-summary-path {
     font-size: 0.95rem;
   }
 }
 
 /* Redoc-specific fixes in case the component renders Redoc */
-.redoc-wrap, .redoc {
+.redoc-wrap,
+.redoc {
   max-width: 100%;
 }
-.redoc .menu-content, .redoc .operations-wrapper {
+
+.redoc .menu-content,
+.redoc .operations-wrapper {
   overflow-x: auto;
 }
 
@@ -289,6 +313,7 @@
 }
 
 @media (max-width: 600px) {
+
   /* Center the social container itself */
   .md-social,
   .md-footer .md-social {
@@ -312,7 +337,7 @@
   }
 }
 
-\
+/* Footer responsive fixes */
 .md-footer-meta__inner.md-grid {
   display: flex !important;
   flex-direction: column !important;
@@ -346,8 +371,110 @@
   vertical-align: middle !important;
 }
 
+/* Additional responsive fixes to prevent overflow */
 
+/* Ensure all containers respect viewport width */
+.md-container,
+.md-main__inner,
+.md-content__inner {
+  max-width: 100%;
+  overflow-x: hidden;
+}
 
+/* Fix navigation drawer on mobile */
+@media (max-width: 768px) {
+  .md-nav__title {
+    word-break: break-word;
+  }
 
+  .md-nav__item {
+    word-break: break-word;
+  }
 
+  .md-nav__link {
+    white-space: normal;
+    word-break: break-word;
+  }
+}
 
+/* Ensure headings don't overflow */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-typeset h5,
+.md-typeset h6 {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+/* Fix long URLs and links */
+.md-typeset a {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Ensure inline code doesn't overflow */
+.md-typeset code:not(pre code) {
+  word-break: break-word;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+/* Fix blockquotes */
+.md-typeset blockquote {
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+/* Ensure lists don't overflow */
+.md-typeset ul,
+.md-typeset ol {
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+/* Fix definition lists */
+.md-typeset dl {
+  max-width: 100%;
+}
+
+.md-typeset dt,
+.md-typeset dd {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Ensure tabs don't overflow */
+.md-typeset .tabbed-set {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Fix any remaining container issues */
+.md-grid {
+  max-width: 100%;
+}
+
+/* Ensure search results don't overflow */
+.md-search__form {
+  max-width: 100%;
+}
+
+.md-search__input {
+  max-width: 100%;
+}
+
+/* Fix any Material theme specific overflow issues */
+.md-sidebar {
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  /* Ensure sidebar doesn't cause overflow when open */
+  .md-sidebar--primary,
+  .md-sidebar--secondary {
+    max-width: 100vw;
+  }
+}
