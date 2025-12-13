@@ -22,11 +22,13 @@ import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
 interface AvatarNameSelectionStepProps {
   stepIndex: number;
   totalSteps: number;
+  currentStepDisplayIndex: number;
 }
 
 export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
   stepIndex,
   totalSteps,
+  currentStepDisplayIndex,
 }) => {
   const dispatch = useDispatch();
 
@@ -65,14 +67,18 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
         <CardHeader className="p-3">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
-              Step {stepIndex + 1} of {totalSteps}
+              Step {currentStepDisplayIndex + 1} of {totalSteps}
             </span>
-            <span>{Math.round(((stepIndex + 1) / totalSteps) * 100)}%</span>
+            <span>
+              {Math.round(((currentStepDisplayIndex + 1) / totalSteps) * 100)}%
+            </span>
           </div>
           <div className="bg-muted mb-2 h-1.5 w-full rounded-full">
             <div
               className="bg-primary h-full rounded-full transition-all duration-300"
-              style={{ width: `${((stepIndex + 1) / totalSteps) * 100}%` }}
+              style={{
+                width: `${((currentStepDisplayIndex + 1) / totalSteps) * 100}%`,
+              }}
             />
           </div>
           <CardTitle className="mt-1 text-xl font-semibold">
@@ -108,18 +114,16 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                     type="button"
                     key={avatar}
                     onClick={() => handleAvatarSelect(avatar)}
-                    className={`bg-background relative inline-flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300 ${
-                      isSelected
+                    className={`bg-background relative inline-flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300 ${isSelected
                         ? 'border-primary ring-primary ring-offset-background ring-2 ring-offset-2'
                         : 'border-muted'
-                    }`}
+                      }`}
                   >
                     <img
                       src={avatar}
                       alt="Avatar"
-                      className={`h-20 w-20 rounded-full object-cover transition-all duration-300 ${
-                        isSelected ? 'scale-105' : ''
-                      }`}
+                      className={`h-20 w-20 rounded-full object-cover transition-all duration-300 ${isSelected ? 'scale-105' : ''
+                        }`}
                     />
                   </button>
                 );
