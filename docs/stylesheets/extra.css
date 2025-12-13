@@ -255,68 +255,44 @@
 
 /* Better visual hierarchy for navigation sections */
 .md-typeset > div[style*="display:flex"] {
-  margin-top: 2.5em;
-  margin-bottom: 2.5em;
-  gap: 1.75em;
+  margin-top: 2em;
+  margin-bottom: 2em;
+  gap: 1.5em;
 }
 
 .md-typeset > div[style*="display:flex"] > div {
-  padding: 2em 1.5em;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.01) 100%);
-  border: 1.5px solid rgba(0, 0, 0, 0.08);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  position: relative;
-  overflow: hidden;
-}
-
-.md-typeset > div[style*="display:flex"] > div::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--md-primary-fg-color, #ef4444), var(--md-accent-fg-color, #ef4444));
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.3s ease;
+  padding: 1.5em 1.25em;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .md-typeset > div[style*="display:flex"] > div:hover {
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.02) 100%);
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);
+  background-color: rgba(0, 0, 0, 0.04);
   border-color: rgba(0, 0, 0, 0.12);
-}
-
-.md-typeset > div[style*="display:flex"] > div:hover::before {
-  transform: scaleX(1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 /* Dark mode adjustments for flex containers */
 [data-md-color-scheme="slate"] .md-typeset > div[style*="display:flex"] > div {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.02) 100%);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.15);
+  background-color: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 [data-md-color-scheme="slate"] .md-typeset > div[style*="display:flex"] > div:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2);
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .md-typeset > div[style*="display:flex"] > div h2 {
   margin-top: 0;
-  margin-bottom: 1.25em;
+  margin-bottom: 1em;
   border-bottom: none;
   padding-bottom: 0;
-  font-size: 1.35em;
-  font-weight: 700;
-  color: var(--md-primary-fg-color, #ef4444);
-  letter-spacing: -0.02em;
+  font-size: 1.2em;
+  font-weight: 600;
 }
 
 .md-typeset > div[style*="display:flex"] > div ul {
@@ -326,37 +302,32 @@
 }
 
 .md-typeset > div[style*="display:flex"] > div ul li {
-  margin-bottom: 0.75em;
-  padding-left: 1.25em;
+  margin-bottom: 0.5em;
+  padding-left: 1em;
   position: relative;
 }
 
 .md-typeset > div[style*="display:flex"] > div ul li::before {
-  content: '→';
+  content: '•';
   position: absolute;
   left: 0;
-  color: var(--md-primary-fg-color, #ef4444);
+  color: rgba(0, 0, 0, 0.4);
   font-weight: 600;
-  opacity: 0.6;
-  transition: all 0.2s ease;
 }
 
-.md-typeset > div[style*="display:flex"] > div ul li:hover::before {
-  opacity: 1;
-  transform: translateX(2px);
+[data-md-color-scheme="slate"] .md-typeset > div[style*="display:flex"] > div ul li::before {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .md-typeset > div[style*="display:flex"] > div ul li a {
-  font-weight: 500;
-  transition: all 0.2s ease;
+  font-weight: 400;
+  transition: color 0.2s ease;
   text-decoration: none;
   color: inherit;
-  display: inline-block;
 }
 
 .md-typeset > div[style*="display:flex"] > div ul li a:hover {
   color: var(--md-primary-fg-color, #ef4444);
-  transform: translateX(4px);
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
@@ -366,26 +337,15 @@
    ============================================ */
 
 /* Enhanced sidebar navigation styling */
-.md-nav {
-  font-size: 0.875rem;
-}
-
-/* Improved navigation item styling */
-.md-nav__item {
-  margin-bottom: 0.25em;
-}
-
 .md-nav__link {
   padding: 0.5em 0.75em;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
   margin: 0.125em 0;
 }
 
 .md-nav__link:hover {
   background-color: rgba(0, 0, 0, 0.05);
-  color: var(--md-primary-fg-color, #ef4444);
-  transform: translateX(4px);
 }
 
 [data-md-color-scheme="slate"] .md-nav__link:hover {
@@ -397,97 +357,10 @@
   background-color: rgba(239, 68, 68, 0.1);
   color: var(--md-primary-fg-color, #ef4444);
   font-weight: 600;
-  border-left: 3px solid var(--md-primary-fg-color, #ef4444);
-  padding-left: calc(0.75em - 3px);
 }
 
 [data-md-color-scheme="slate"] .md-nav__link--active {
   background-color: rgba(239, 68, 68, 0.15);
-}
-
-/* Improved navigation section headers */
-.md-nav__title {
-  font-weight: 700;
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.75em 0.75em 0.5em;
-  margin-top: 0.5em;
-  color: rgba(0, 0, 0, 0.7);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-[data-md-color-scheme="slate"] .md-nav__title {
-  color: rgba(255, 255, 255, 0.7);
-  border-bottom-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Better spacing for nested navigation */
-.md-nav__item--nested > .md-nav__link {
-  font-weight: 600;
-}
-
-.md-nav__item--nested .md-nav {
-  margin-left: 0.5em;
-  border-left: 2px solid rgba(0, 0, 0, 0.08);
-  padding-left: 0.75em;
-}
-
-[data-md-color-scheme="slate"] .md-nav__item--nested .md-nav {
-  border-left-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Improved navigation icons */
-.md-nav__icon {
-  margin-right: 0.5em;
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
-}
-
-.md-nav__link:hover .md-nav__icon {
-  opacity: 1;
-}
-
-/* Better table of contents styling */
-.md-nav--secondary {
-  border-left: 2px solid rgba(0, 0, 0, 0.08);
-  padding-left: 1em;
-}
-
-[data-md-color-scheme="slate"] .md-nav--secondary {
-  border-left-color: rgba(255, 255, 255, 0.1);
-}
-
-.md-nav--secondary .md-nav__title {
-  font-size: 0.8rem;
-  margin-top: 0.75em;
-}
-
-/* Smooth scroll behavior for navigation */
-.md-nav__link {
-  scroll-margin-top: 2rem;
-}
-
-/* Enhanced search in sidebar */
-.md-search__form {
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.2s ease;
-}
-
-.md-search__form:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-/* Better mobile navigation */
-@media (max-width: 768px) {
-  .md-nav {
-    padding: 0.5em 0;
-  }
-  
-  .md-nav__link {
-    padding: 0.625em 0.875em;
-  }
 }
 
 /* ============================================
@@ -904,22 +777,11 @@
   background-color: rgba(255, 255, 255, 0.03);
 }
 
-/* Additional enhancements for documentation section cards */
-.md-typeset > div[style*="display:flex"] > div {
-  backdrop-filter: blur(10px);
-}
-
 /* Ensure list items in cards don't have default bullets */
 .md-typeset > div[style*="display:flex"] > div ul[style*="list-style: none"],
 .md-typeset > div[style*="display:flex"] > div ul[style*="padding-left: 0"] {
   list-style: none !important;
   padding-left: 0 !important;
-}
-
-/* Better card title styling */
-.md-typeset > div[style*="display:flex"] > div h2[style*="margin-top: 0"] {
-  margin-top: 0 !important;
-  margin-bottom: 1.25em !important;
 }
 
 /* Better spacing for page title */
