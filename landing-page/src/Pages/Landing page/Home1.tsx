@@ -2,6 +2,17 @@ import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
 const ShuffleHero = () => {
+  // Function to scroll to downloads section
+  const scrollToDownloads = () => {
+    const downloadsSection = document.getElementById('downloads-section');
+    if (downloadsSection) {
+      downloadsSection.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  };
+
   return (
     <section className="w-full px-8 py-12 grid grid-cols-1 md:grid-cols-2 items-center gap-8 max-w-6xl mx-auto bg-white dark:bg-black transition-colors duration-300">
       <div className="font-['Inter',_sans-serif]">
@@ -33,7 +44,9 @@ const ShuffleHero = () => {
         </motion.p>
         
         <div className="flex space-x-4">
+          {/* Download button - scrolls to downloads section */}
           <motion.button 
+            onClick={scrollToDownloads}
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.6 }}
@@ -44,9 +57,9 @@ const ShuffleHero = () => {
             Download
           </motion.button>
           
-          {/* Update this button to navigate to the GitHub link */}
+          {/* View Docs button - links to documentation */}
           <motion.a 
-            href="https://github.com/AOSSIE-Org/PictoPy" 
+            href="https://aossie-org.github.io/PictoPy/" 
             target="_blank"
             rel="noopener noreferrer"
             initial={{ scale: 0.9, opacity: 0 }}
