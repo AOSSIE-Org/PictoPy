@@ -213,20 +213,23 @@ def image_util_get_images_from_folder(
 
     return image_files
 
-
 def image_util_generate_thumbnail(
     image_path: str, thumbnail_path: str, size: Tuple[int, int] = (600, 600)
 ) -> bool:
     """Generate thumbnail for a single image."""
     try:
         with Image.open(image_path) as img:
+            # Extract EXIF data before any operations
+            exif = img.getexif()
+            
             img.thumbnail(size)
 
             # Convert to RGB if the image has an alpha channel or is not RGB
             if img.mode in ("RGBA", "P"):
                 img = img.convert("RGB")
 
-            img.save(thumbnail_path, "JPEG")  # Always save thumbnails as JPEG
+            # Save with EXIF data preserved
+            img.save(thumbnail_path, "JPEG", exif=exif)
         return True
     except Exception as e:
         logger.error(f"Error generating thumbnail for {image_path}: {e}")
