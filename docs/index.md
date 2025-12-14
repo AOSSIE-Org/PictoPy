@@ -46,6 +46,11 @@ This project was announced by [AOSSIE](https://aossie.org/), an umbrella organiz
                     Image Processing
                 </a>
             </li>
+            <li>
+                <a href="./backend/backend_python/MEMORIES_FEATURE">
+                    Memory Generation
+                </a>
+            </li>
         </ul>
     </div>
     <div style="width:25%">
