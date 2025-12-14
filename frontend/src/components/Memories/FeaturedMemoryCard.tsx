@@ -40,7 +40,7 @@ export const FeaturedMemoryCard = React.memo<FeaturedMemoryCardProps>(
 
     // Handle image load error
     const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-      e.currentTarget.src = '/placeholder-image.png';
+      e.currentTarget.src = '/photo.png';
     };
 
     return (

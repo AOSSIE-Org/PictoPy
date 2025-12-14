@@ -467,5 +467,5 @@ export const getThumbnailUrl = (image: MemoryImage): string => {
   }
   
   // Fallback to placeholder
-  return '/placeholder-image.png';
+  return '/photo.png';
 };
