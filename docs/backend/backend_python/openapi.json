@@ -1387,7 +1387,7 @@
           "memories"
         ],
         "summary": "Get Timeline",
-        "description": "Get memories from the past N days as a timeline.\n\nThis endpoint:\n1. Calculates date range (today - N days to today)\n2. Fetches images within that date range\n3. Clusters them into memories\n4. Returns timeline of memories\n\nArgs:\n    days: Number of days to look back (default: 365 = 1 year)\n    location_radius_km: Location clustering radius (default: 5km)\n    date_tolerance_days: Date tolerance for temporal clustering (default: 3)\n    \nReturns:\n    TimelineResponse with memories ordered by date\n    \nRaises:\n    HTTPException: If database query fails",
+        "description": "Get memories from the past N days as a timeline.\n\nThis endpoint:\n1. Calculates date range (today - N days to today)\n2. Fetches images within that date range\n3. Clusters them into memories\n4. Returns timeline of memories\n\nArgs:\n    days: Number of days to look back (default: 365 = 1 year)\n    location_radius_km: Location clustering radius (default: 5km)\n    date_tolerance_days: Date tolerance for temporal clustering (default: 3)\n\nReturns:\n    TimelineResponse with memories ordered by date\n\nRaises:\n    HTTPException: If database query fails",
         "operationId": "get_timeline_api_memories_timeline_get",
         "parameters": [
           {
@@ -1463,7 +1463,7 @@
           "memories"
         ],
         "summary": "Get On This Day",
-        "description": "Get photos taken on this date in previous years.\n\nThis endpoint:\n1. Gets current month and day\n2. Searches for images from this month-day in all previous years\n3. Groups by year\n4. Returns images sorted by year (most recent first)\n\nReturns:\n    OnThisDayResponse with images from this date in previous years\n    \nRaises:\n    HTTPException: If database query fails",
+        "description": "Get photos taken on this date in previous years.\n\nThis endpoint:\n1. Gets current month and day\n2. Searches for images from this month-day in all previous years\n3. Groups by year\n4. Returns images sorted by year (most recent first)\n\nReturns:\n    OnThisDayResponse with images from this date in previous years\n\nRaises:\n    HTTPException: If database query fails",
         "operationId": "get_on_this_day_api_memories_on_this_day_get",
         "responses": {
           "200": {
@@ -1485,7 +1485,7 @@
           "memories"
         ],
         "summary": "Get Locations",
-        "description": "Get all unique locations where photos were taken.\n\nThis endpoint:\n1. Fetches all images with GPS coordinates\n2. Clusters them by location\n3. Returns location clusters with photo counts\n4. Includes sample images for each location\n\nArgs:\n    location_radius_km: Location clustering radius (default: 5km)\n    max_sample_images: Maximum sample images per location (default: 5)\n    \nReturns:\n    LocationsResponse with list of location clusters\n    \nRaises:\n    HTTPException: If database query fails",
+        "description": "Get all unique locations where photos were taken.\n\nThis endpoint:\n1. Fetches all images with GPS coordinates\n2. Clusters them by location\n3. Returns location clusters with photo counts\n4. Includes sample images for each location\n\nArgs:\n    location_radius_km: Location clustering radius (default: 5km)\n    max_sample_images: Maximum sample images per location (default: 5)\n\nReturns:\n    LocationsResponse with list of location clusters\n\nRaises:\n    HTTPException: If database query fails",
         "operationId": "get_locations_api_memories_locations_get",
         "parameters": [
           {

@@ -635,7 +635,9 @@ def db_get_images_near_location(
 
         # Calculate bounding box offsets
         lat_offset = radius_km / 111.0
-        lon_offset = radius_km / (111.0 * abs(math.cos(math.radians(latitude))))
+        cos_lat = abs(math.cos(math.radians(latitude)))
+        # Clamp to avoid division by near-zero at poles
+        lon_offset = radius_km / (111.0 * max(cos_lat, 0.01))
 
         cursor.execute(
             """
@@ -897,7 +899,7 @@ def db_get_all_images_for_memories() -> List[dict]:
         return images
 
     except Exception as e:
-        logger.error(f"Error getting images with location: {e}")
+        logger.error(f"Error getting images from database: {e}")
         return []
     finally:
         conn.close()

@@ -130,9 +130,10 @@ class MemoryClustering:
         self.date_tolerance_days = date_tolerance_days
         self.min_images_per_memory = min_images_per_memory
 
-        # Convert km to degrees for DBSCAN
-        # Approximate: 1 degree latitude ≈ 111 km
-        self.location_eps_degrees = location_radius_km / 111.0
+        # Convert km to radians for DBSCAN with haversine metric
+        # Earth radius in kilometers
+        EARTH_RADIUS_KM = 6371.0
+        self.location_eps_radians = location_radius_km / EARTH_RADIUS_KM
 
         logger.info(
             f"MemoryClustering initialized: radius={location_radius_km}km, "
@@ -256,7 +257,7 @@ class MemoryClustering:
                 if isinstance(captured_at, str):
                     try:
                         dt = datetime.fromisoformat(captured_at.replace("Z", ""))
-                    except:
+                    except (ValueError, AttributeError):
                         continue
                 elif isinstance(captured_at, datetime):
                     dt = captured_at
@@ -661,18 +662,19 @@ class MemoryClustering:
         # Extract coordinates
         coordinates = np.array([[img["latitude"], img["longitude"]] for img in images])
 
+        # Convert to radians for haversine metric
+        coordinates_rad = np.radians(coordinates)
+
         # Apply DBSCAN clustering
-        # eps: maximum distance between two samples (in degrees)
+        # eps: maximum distance between two samples (in radians for haversine)
         # min_samples: minimum number of samples to form a cluster
         clustering = DBSCAN(
-            eps=self.location_eps_degrees,
+            eps=self.location_eps_radians,
             min_samples=1,  # Even single photos can form a cluster
             metric="haversine",  # Use haversine distance for lat/lon
             algorithm="ball_tree",
         )
 
-        # Convert to radians for haversine
-        coordinates_rad = np.radians(coordinates)
         labels = clustering.fit_predict(coordinates_rad)
 
         # Group images by cluster label
