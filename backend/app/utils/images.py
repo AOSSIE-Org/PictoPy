@@ -213,20 +213,23 @@ def image_util_get_images_from_folder(
 
     return image_files
 
-
 def image_util_generate_thumbnail(
     image_path: str, thumbnail_path: str, size: Tuple[int, int] = (600, 600)
 ) -> bool:
     """Generate thumbnail for a single image."""
     try:
         with Image.open(image_path) as img:
+            # Extract EXIF data before any operations
+            exif = img.getexif()
+            
             img.thumbnail(size)
 
             # Convert to RGB if the image has an alpha channel or is not RGB
             if img.mode in ("RGBA", "P"):
                 img = img.convert("RGB")
 
-            img.save(thumbnail_path, "JPEG")  # Always save thumbnails as JPEG
+            # Save with EXIF data preserved
+            img.save(thumbnail_path, "JPEG", exif=exif)
         return True
     except Exception as e:
         logger.error(f"Error generating thumbnail for {image_path}: {e}")
@@ -413,6 +416,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
                 logger.debug(f"Pillow opened image: {width}x{height}, type={mime_type}")
 
                 # Robust EXIF extraction with safe fallback
+                # Robust EXIF extraction with safe fallback
                 try:
                     exif_data = (
                         img.getexif()
@@ -422,19 +426,25 @@ def image_util_extract_metadata(image_path: str) -> dict:
                 except Exception:
                     exif_data = None
 
-                exif = dict(exif_data) if exif_data else {}
                 dt_original = None
                 latitude, longitude = _extract_gps_coordinates(exif_data)
 
-                for k, v in exif.items():
-                    if ExifTags.TAGS.get(k) == "DateTimeOriginal":
+                if exif_data:
+                    # Try DateTimeOriginal (tag 36867) first, then DateTime (tag 306)
+                    dt_original = exif_data.get(36867) or exif_data.get(306)
+                    
+                    # Debug logging
+                    logger.debug(f"EXIF data keys: {list(exif_data.keys())}")
+                    logger.debug(f"DateTimeOriginal (36867): {exif_data.get(36867)}")
+                    logger.debug(f"DateTime (306): {exif_data.get(306)}")
+                    logger.debug(f"Found dt_original: {dt_original}")
+                    
+                    if dt_original:
                         dt_original = (
-                            v.decode("utf-8", "ignore")
-                            if isinstance(v, (bytes, bytearray))
-                            else str(v)
+                            dt_original.decode("utf-8", "ignore")
+                            if isinstance(dt_original, (bytes, bytearray))
+                            else str(dt_original)
                         )
-                        break
-
                 # Safe parse; fall back to mtime without losing width/height
                 if dt_original:
                     try:

@@ -1,3 +1,5 @@
+// src/routes/AppRoutes.tsx - UPDATED VERSION
+
 import React from 'react';
 import { Routes, Route } from 'react-router';
 import { ROUTES } from '@/constants/routes';
@@ -9,6 +11,8 @@ import { MyFav } from '@/pages/Home/MyFav';
 import { AITagging } from '@/pages/AITagging/AITagging';
 import { PersonImages } from '@/pages/PersonImages/PersonImages';
 import { ComingSoon } from '@/pages/ComingSoon/ComingSoon';
+import { Memories } from '@/pages/Memories/Memories';
+import { MemoryDetail } from '@/pages/Memories/MemoryDetail';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -21,7 +25,8 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.SETTINGS} element={<Settings />} />
         <Route path={ROUTES.AI} element={<AITagging />} />
         <Route path={ROUTES.ALBUMS} element={<ComingSoon />} />
-        <Route path={ROUTES.MEMORIES} element={<ComingSoon />} />
+        <Route path={ROUTES.MEMORIES} element={<Memories />} />
+        <Route path={`${ROUTES.MEMORIES}/:memoryId`} element={<MemoryDetail />} />
         <Route path={ROUTES.PERSON} element={<PersonImages />} />
       </Route>
     </Routes>
