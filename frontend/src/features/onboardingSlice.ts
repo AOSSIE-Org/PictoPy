@@ -18,40 +18,54 @@ const initialState: OnboardingState = {
   avatar: localStorage.getItem('avatar'),
   name: localStorage.getItem('name') || '',
 };
+
 const onboardingSlice = createSlice({
   name: 'onboarding',
   initialState,
   reducers: {
     setAvatar(state, action: PayloadAction<string>) {
       state.avatar = action.payload;
+      localStorage.setItem('avatar', action.payload);
     },
+
     setName(state, action: PayloadAction<string>) {
       state.name = action.payload;
+      localStorage.setItem('name', action.payload);
     },
+
+    /** ✅ LOGOUT / RESET */
+    resetOnboarding() {
+      localStorage.removeItem('avatar');
+      localStorage.removeItem('name');
+      return initialState;
+    },
+
     markCompleted(state, action: PayloadAction<number>) {
-      const stepIndex = action.payload;
-      if (stepIndex >= 0 && stepIndex < state.stepStatus.length) {
-        state.stepStatus[stepIndex] = true;
-      } else {
-        console.warn(
-          `Invalid step index: ${stepIndex}. Valid range: 0-${state.stepStatus.length - 1}`,
-        );
+      const index = action.payload;
+      if (index >= 0 && index < state.stepStatus.length) {
+        state.stepStatus[index] = true;
       }
-      state.currentStepIndex = state.stepStatus.findIndex((status) => !status);
+      state.currentStepIndex = state.stepStatus.findIndex((s) => !s);
       state.currentStepName = STEP_NAMES[state.currentStepIndex] || '';
     },
+
     previousStep(state) {
-      const lastCompletedIndex = state.stepStatus.lastIndexOf(true);
-      if (lastCompletedIndex !== -1) {
-        state.stepStatus[lastCompletedIndex] = false;
+      const lastCompleted = state.stepStatus.lastIndexOf(true);
+      if (lastCompleted !== -1) {
+        state.stepStatus[lastCompleted] = false;
       }
-      state.currentStepIndex = state.stepStatus.findIndex((status) => !status);
+      state.currentStepIndex = state.stepStatus.findIndex((s) => !s);
       state.currentStepName = STEP_NAMES[state.currentStepIndex] || '';
     },
   },
 });
 
-export const { setAvatar, setName, markCompleted, previousStep } =
-  onboardingSlice.actions;
+export const {
+  setAvatar,
+  setName,
+  resetOnboarding,
+  markCompleted,
+  previousStep,
+} = onboardingSlice.actions;
 
 export default onboardingSlice.reducer;
