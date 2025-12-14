@@ -1311,7 +1311,7 @@
           "memories"
         ],
         "summary": "Generate Memories",
-        "description": "Generate memories from all images with location data.\n\nThis endpoint:\n1. Fetches all images that have GPS coordinates\n2. Clusters them by location using DBSCAN\n3. Within each location, clusters by date\n4. Returns memory objects with metadata\n\nArgs:\n    location_radius_km: Maximum distance between photos in same location (default: 5km)\n    date_tolerance_days: Maximum days between photos in same memory (default: 3)\n    min_images: Minimum images required to form a memory (default: 2)\n    \nReturns:\n    GenerateMemoriesResponse with list of generated memories\n    \nRaises:\n    HTTPException: If database query fails or clustering fails",
+        "description": "SIMPLIFIED: Generate memories from ALL images.\n- GPS images \u2192 location-based memories\n- Non-GPS images \u2192 monthly date-based memories\n\nReturns simple breakdown: {location_count, date_count, total}",
         "operationId": "generate_memories_api_memories_generate_post",
         "parameters": [
           {

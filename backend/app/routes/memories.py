@@ -116,46 +116,32 @@ async def generate_memories(
     min_images: int = Query(2, ge=1, le=10, description="Minimum images per memory")
 ):
     """
-    Generate memories from all images with location data.
+    SIMPLIFIED: Generate memories from ALL images.
+    - GPS images → location-based memories
+    - Non-GPS images → monthly date-based memories
     
-    This endpoint:
-    1. Fetches all images that have GPS coordinates
-    2. Clusters them by location using DBSCAN
-    3. Within each location, clusters by date
-    4. Returns memory objects with metadata
-    
-    Args:
-        location_radius_km: Maximum distance between photos in same location (default: 5km)
-        date_tolerance_days: Maximum days between photos in same memory (default: 3)
-        min_images: Minimum images required to form a memory (default: 2)
-        
-    Returns:
-        GenerateMemoriesResponse with list of generated memories
-        
-    Raises:
-        HTTPException: If database query fails or clustering fails
+    Returns simple breakdown: {location_count, date_count, total}
     """
     try:
-        logger.info("Generating memories with params: "
-                   f"radius={location_radius_km}km, "
-                   f"date_tolerance={date_tolerance_days}days, "
-                   f"min_images={min_images}")
+        logger.info(f"Generating memories: radius={location_radius_km}km, "
+                   f"date_tolerance={date_tolerance_days}days, min_images={min_images}")
         
-        # Fetch all images with location data
-        images = db_get_images_with_location()
+        # Fetch ALL images
+        from app.database.images import db_get_all_images_for_memories
+        images = db_get_all_images_for_memories()
         
         if not images:
             return GenerateMemoriesResponse(
                 success=True,
-                message="No images with location data found",
+                message="No images found",
                 memory_count=0,
                 image_count=0,
                 memories=[]
             )
         
-        logger.info(f"Found {len(images)} images with location data")
+        logger.info(f"Processing {len(images)} images")
         
-        # Cluster images into memories
+        # Cluster into memories
         clustering = MemoryClustering(
             location_radius_km=location_radius_km,
             date_tolerance_days=date_tolerance_days,
@@ -164,19 +150,24 @@ async def generate_memories(
         
         memories = clustering.cluster_memories(images)
         
-        logger.info(f"Generated {len(memories)} memories")
+        # Calculate breakdown
+        location_count = sum(1 for m in memories if m.get('type') == 'location')
+        date_count = sum(1 for m in memories if m.get('type') == 'date')
+        
+        logger.info(f"Generated {len(memories)} memories "
+                   f"(location: {location_count}, date: {date_count})")
         
         return GenerateMemoriesResponse(
             success=True,
-            message=f"Successfully generated {len(memories)} memories from {len(images)} images",
+            message=f"{len(memories)} memories ({location_count} location, {date_count} date)",
             memory_count=len(memories),
             image_count=len(images),
             memories=memories
         )
     
     except Exception as e:
-        logger.error(f"Error generating memories: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate memories: {str(e)}")
+        logger.error(f"Error generating memories: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/timeline", response_model=TimelineResponse)

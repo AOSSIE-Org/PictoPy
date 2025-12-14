@@ -176,8 +176,8 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
     try:
         cursor.executemany(
             """
-            INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)
-            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged)
+            INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged, latitude, longitude, captured_at)
+            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged, :latitude, :longitude, :captured_at)
             ON CONFLICT(path) DO UPDATE SET
                 folder_id=excluded.folder_id,
                 thumbnailPath=excluded.thumbnailPath,
@@ -185,7 +185,10 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
                 isTagged=CASE
                     WHEN excluded.isTagged THEN 1
                     ELSE images.isTagged
-                END
+                END,
+                latitude=COALESCE(excluded.latitude, images.latitude),
+                longitude=COALESCE(excluded.longitude, images.longitude),
+                captured_at=COALESCE(excluded.captured_at, images.captured_at)
             """,
             image_records,
         )
@@ -799,6 +802,67 @@ def db_get_images_with_location() -> List[dict]:
                 "latitude": row[7],
                 "longitude": row[8],
                 "captured_at": row[9] if row[9] else None , # SQLite returns string,
+                "tags": row[10].split(',') if row[10] else None
+            })
+        
+        return images
+        
+    except Exception as e:
+        logger.error(f"Error fetching images with location: {e}")
+        return []
+    finally:
+        conn.close()
+
+
+def db_get_all_images_for_memories() -> List[dict]:
+    """
+    Get ALL images that can be used for memories (with OR without GPS).
+    Includes images with timestamps for date-based memories.
+    
+    Returns:
+        List of all image dictionaries (both GPS and non-GPS images)
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            SELECT 
+                i.id, 
+                i.path, 
+                i.folder_id,
+                i.thumbnailPath, 
+                i.metadata,
+                i.isTagged,
+                i.isFavourite,
+                i.latitude, 
+                i.longitude, 
+                i.captured_at,
+                GROUP_CONCAT(m.name, ',') as tags
+            FROM images i
+            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN mappings m ON ic.class_id = m.class_id
+            GROUP BY i.id
+            ORDER BY i.captured_at DESC
+        """)
+        
+        results = cursor.fetchall()
+        
+        images = []
+        for row in results:
+            from app.utils.images import image_util_parse_metadata
+            
+            images.append({
+                "id": row[0],
+                "path": row[1],
+                "folder_id": str(row[2]) if row[2] else None,
+                "thumbnailPath": row[3],
+                "metadata": image_util_parse_metadata(row[4]),
+                "isTagged": bool(row[5]),
+                "isFavourite": bool(row[6]),
+                "latitude": row[7] if row[7] else None,  # Can be None
+                "longitude": row[8] if row[8] else None,  # Can be None
+                "captured_at": row[9] if row[9] else None,
                 "tags": row[10].split(',') if row[10] else None
             })
         
