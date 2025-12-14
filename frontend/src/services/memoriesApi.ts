@@ -7,8 +7,9 @@
 
 import axios, { AxiosError } from 'axios';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { BACKEND_URL } from '@/config/Backend';
 
-const API_BASE_URL = 'http://localhost:8000/api/memories';
+const API_BASE_URL = `${BACKEND_URL}/api/memories`;
 
 // ============================================================================
 // TypeScript Interfaces
