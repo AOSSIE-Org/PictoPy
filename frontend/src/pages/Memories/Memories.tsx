@@ -11,6 +11,7 @@ import { MediaView } from '@/components/Media/MediaView';
 import { selectIsImageViewOpen } from '@/features/imageSelectors';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { Calendar, MapPin, ImageIcon, Sparkles } from 'lucide-react';
+import { formatDateRange } from '@/utils/memoryUtils';
 
 const Memories = () => {
   const dispatch = useDispatch();
@@ -38,28 +39,6 @@ const Memories = () => {
     setSelectedMemoryImages(memory.images);
     dispatch(setImages(memory.images));
     dispatch(setCurrentViewIndex(0));
-  };
-
-  const formatDateRange = (start: string, end: string) => {
-    const s = new Date(start);
-    const e = new Date(end);
-
-    if (s.toDateString() === e.toDateString()) {
-      return s.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      });
-    }
-
-    return `${s.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    })} – ${e.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })}`;
   };
 
   const getMemoryIcon = (type: Memory['memory_type']) => {

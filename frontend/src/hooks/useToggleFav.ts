@@ -4,7 +4,7 @@ import { togglefav } from '@/api/api-functions/togglefav';
 
 export const useToggleFav = () => {
   const toggleFavouriteMutation = usePictoMutation({
-    mutationFn: async (image_id: string) => togglefav(image_id),
+    mutationFn: async (image_id: number) => togglefav(image_id),
     autoInvalidateTags: ['images'],
   });
   useMutationFeedback(toggleFavouriteMutation, {
@@ -12,7 +12,7 @@ export const useToggleFav = () => {
     showSuccess: false,
   });
   return {
-    toggleFavourite: (id: any) => toggleFavouriteMutation.mutate(id),
+    toggleFavourite: (id: number) => toggleFavouriteMutation.mutate(id),
     toggleFavouritePending: toggleFavouriteMutation.isPending,
   };
 };

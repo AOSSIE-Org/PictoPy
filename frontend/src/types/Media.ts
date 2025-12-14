@@ -64,6 +64,9 @@ export interface Memory {
   image_count: number;
   representative_image?: MemoryImage;
   images: Image[];
+  latitude?: number;
+  longitude?: number;
+  location_name?: string;
 }
 
 export interface Cluster {
