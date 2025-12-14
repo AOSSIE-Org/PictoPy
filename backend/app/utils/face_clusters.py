@@ -6,6 +6,10 @@ import cv2
 import sqlite3
 from datetime import datetime
 from sklearn.cluster import DBSCAN
+from sklearn.metrics.pairwise import cosine_distances
+from sklearn.metrics.pairwise import cosine_similarity
+
+
 from collections import defaultdict, Counter
 from typing import List, Dict, Optional, Union
 from numpy.typing import NDArray
@@ -165,9 +169,9 @@ def cluster_util_cluster_all_face_embeddings(
     Cluster face embeddings using DBSCAN with similarity validation.
 
     Args:
-        eps: DBSCAN epsilon parameter for maximum distance between samples (default: 0.35 - stricter)
+        eps: DBSCAN epsilon parameter for maximum distance between samples (default: 0.75)
         min_samples: DBSCAN minimum samples parameter for core points (default: 2)
-        similarity_threshold: Minimum similarity to consider same person (default: 0.65, range: 0.6-0.7)
+        similarity_threshold: Minimum similarity to consider same person (default: 0.85, range: 0.75-0.90)
 
     Returns:
         List of ClusterResult objects containing face_id, embedding, cluster_uuid, and cluster_name
@@ -193,23 +197,7 @@ def cluster_util_cluster_all_face_embeddings(
     # Convert to numpy array for DBSCAN
     embeddings_array = np.array(embeddings)
 
-    # Filter out low-quality embeddings before clustering
-    valid_indices = []
-    for i, emb in enumerate(embeddings_array):
-        valid_indices.append(i)
-        
-    
-    # Apply filtering
-    original_count = len(face_ids)
-    face_ids = [face_ids[i] for i in valid_indices]
-    embeddings = [embeddings[i] for i in valid_indices]
-    existing_cluster_names = [existing_cluster_names[i] for i in valid_indices]
-    embeddings_array = embeddings_array[valid_indices]
-    
-    logger.info(f"Clustering {len(embeddings_array)} valid embeddings (filtered out {original_count - len(valid_indices)} low-quality)")
-
     # Calculate pairwise distances with similarity threshold
-    from sklearn.metrics.pairwise import cosine_distances
     distances = cosine_distances(embeddings_array)
     
     # Apply similarity threshold - mark dissimilar faces as completely different
@@ -383,16 +371,12 @@ def _merge_similar_clusters(
             emb1 = cluster_means[uuid1].reshape(1, -1)
             emb2 = cluster_means[uuid2].reshape(1, -1)
             
-            from sklearn.metrics.pairwise import cosine_similarity
             similarity = cosine_similarity(emb1, emb2)[0][0]
             
             # If very similar, merge cluster2 into cluster1
             if similarity >= merge_threshold:
                 merge_mapping[uuid2] = uuid1
                 logger.info(f"Merging cluster {uuid2} into {uuid1} (similarity: {similarity:.3f})")
-
-            else:
-                logger.info(f"Similary score b/w clusters{similarity:.3f}" )
     
     # Apply merges
     if merge_mapping:
