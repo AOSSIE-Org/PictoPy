@@ -62,7 +62,11 @@ class ColorFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         """Format the log record with colors and component prefix."""
-        # Clear exc_info and stack_info before formatting
+        # Save original exc_info and stack_info to restore later (safer for other handlers)
+        original_exc_info = record.exc_info
+        original_stack_info = record.stack_info
+        
+        # Clear exc_info and stack_info before formatting to prevent traceback output
         record.exc_info = None
         record.stack_info = None
         
@@ -72,6 +76,10 @@ class ColorFormatter(logging.Formatter):
 
         # Format the message
         formatted_message = super().format(record)
+        
+        # Restore original values to avoid affecting other handlers
+        record.exc_info = original_exc_info
+        record.stack_info = original_stack_info
 
         if not self.use_colors:
             return formatted_message
