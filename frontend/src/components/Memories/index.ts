@@ -1,6 +1,6 @@
 /**
  * Memories Component Exports
- * 
+ *
  * Barrel file for clean imports across the application.
  * Import components like: import { MemoriesPage, MemoryCard } from '@/components/Memories'
  */
