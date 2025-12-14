@@ -11,7 +11,7 @@ export interface ImageMetadata {
 }
 
 export interface Image {
-  id: string;
+  id: number;
   path: string;
   thumbnailPath: string;
   folder_id: string;
@@ -47,6 +47,23 @@ export interface PaginationControlsProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+}
+export interface MemoryImage {
+  id: number;
+  path: string;
+  thumbnailPath: string;
+  metadata: ImageMetadata;
+}
+
+export interface Memory {
+  id: string;
+  title: string;
+  memory_type: 'on_this_day' | 'trip' | 'date_range';
+  date_range_start: string;
+  date_range_end: string;
+  image_count: number;
+  representative_image?: MemoryImage;
+  images: Image[];
 }
 
 export interface Cluster {

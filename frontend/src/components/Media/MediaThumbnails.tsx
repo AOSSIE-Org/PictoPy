@@ -3,7 +3,7 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 
 interface MediaThumbnailsProps {
   images: Array<{
-    id: string;
+    id: number;
     path: string;
     thumbnailPath: string;
   }>;

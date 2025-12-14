@@ -59,7 +59,7 @@ export const ChronologicalGallery = ({
   }, [sortedGrouped]);
 
   const imageIndexMap = useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<number, number>();
     chronologicallySortedImages.forEach((img, idx) => {
       map.set(img.id, idx);
     });
