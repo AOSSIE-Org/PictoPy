@@ -16,7 +16,10 @@ import {
 export function Navbar() {
   const userName = useSelector(selectName);
   const userAvatar = useSelector(selectAvatar);
-
+  const avatarSrc =
+    userAvatar && !userAvatar.startsWith('/') && !userAvatar.startsWith('http')
+      ? convertFileSrc(userAvatar) // custom local file path
+      : userAvatar || '/photo1.png'; // bundled/default avatar
   const searchState = useSelector((state: any) => state.search);
   const isSearchActive = searchState.active;
   const queryImage = searchState.queryImage;
@@ -98,26 +101,26 @@ export function Navbar() {
           <span className="hidden text-sm sm:inline-block">
             Welcome <span className="text-muted-foreground">{userName}</span>
           </span>
-        {/* Profile Avatar with Tooltip – SAME HOVER STYLE */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={() => (window.location.href = '/settings')}
-              className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
-              aria-label="Profile"
-            >
-              <img
-                src={userAvatar || '/photo1.png'}
-                className="h-8 w-8 rounded-full transition-all hover:ring-2 hover:ring-primary/50"
-                alt="User avatar"
-              />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={8}>
-            Profile
-          </TooltipContent>
-        </Tooltip>
+          {/* Profile Avatar with Tooltip – SAME HOVER STYLE */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => (window.location.href = '/settings')}
+                className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
+                aria-label="Profile"
+              >
+                <img
+                  src={avatarSrc}
+                  className="hover:ring-primary/50 h-8 w-8 rounded-full transition-all hover:ring-2"
+                  alt="User avatar"
+                />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={8}>
+              Profile
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>

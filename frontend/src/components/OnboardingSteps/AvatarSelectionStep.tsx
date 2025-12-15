@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { avatars } from '@/constants/avatars';
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
+import { open } from '@tauri-apps/plugin-dialog';
 
 interface AvatarNameSelectionStepProps {
   stepIndex: number;
@@ -51,6 +52,17 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
   const handleNameChange = (value: string) => {
     setLocalName(value);
+  };
+
+  const handleCustomAvatarSelect = async () => {
+    const result = await open({
+      multiple: false,
+      filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg'] }],
+    });
+
+    if (typeof result === 'string') {
+      setLocalAvatar(result); // store absolute file path
+    }
   };
 
   const handleNextClick = () => {
@@ -99,11 +111,11 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
             />
           </div>
 
-          {/* Avatar Grid */}
           <div className="mb-5">
             <Label className="mb-2 block text-sm">Choose Your Avatar</Label>
             <div className="grid grid-cols-4 gap-3">
-              {avatars.map((avatar) => {
+              {avatars.slice(0, 7).map((avatar) => {
+                // <-- yahan slice(0, 7)
                 const isSelected = selectedAvatar === avatar;
                 return (
                   <button
@@ -126,6 +138,26 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                   </button>
                 );
               })}
+
+              {/* Custom Avatar option */}
+              <button
+                type="button"
+                onClick={handleCustomAvatarSelect}
+                className={`bg-background relative inline-flex h-20 w-20 items-center justify-center rounded-full border transition-all duration-300 ${
+                  selectedAvatar && !avatars.includes(selectedAvatar)
+                    ? 'border-primary ring-primary ring-offset-background ring-2 ring-offset-2'
+                    : 'border-muted'
+                }`}
+              >
+                <div className="flex flex-col items-center justify-center gap-1">
+                  <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-full">
+                    <span className="text-lg leading-none">+</span>
+                  </div>
+                  <span className="text-muted-foreground text-[10px] font-medium">
+                    Custom Avatar
+                  </span>
+                </div>
+              </button>
             </div>
           </div>
         </CardContent>

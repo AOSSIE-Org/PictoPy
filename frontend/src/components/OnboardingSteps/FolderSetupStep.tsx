@@ -29,6 +29,7 @@ export function FolderSetupStep({
 
   // Local state for folders
   const [folder, setFolder] = useState<string>('');
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     const savedFolder = localStorage.getItem('savedFolderPath');
@@ -53,6 +54,12 @@ export function FolderSetupStep({
   };
 
   const handleNext = () => {
+    if (!folder) {
+      setError('Please select at least one folder to continue.');
+      return;
+    }
+
+    setError('');
     localStorage.setItem('folderChosen', 'true');
     localStorage.setItem('savedFolderPath', folder);
     addFolderMutate(folder);
@@ -133,6 +140,8 @@ export function FolderSetupStep({
           )}
         </CardContent>
 
+        {error && <p className="px-3 pb-1 text-sm text-red-500">{error}</p>}
+
         <CardFooter className="flex justify-between p-3">
           <Button
             variant="outline"
@@ -143,7 +152,8 @@ export function FolderSetupStep({
           </Button>
           <Button
             onClick={handleNext}
-            className="cursor-pointer px-4 py-1 text-sm"
+            disabled={!folder}
+            className="cursor-pointer px-4 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-60"
           >
             Next
           </Button>
