@@ -18,6 +18,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { avatars } from '@/constants/avatars';
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
+import { Upload } from 'lucide-react';
+import { open } from '@tauri-apps/plugin-dialog';
+import { convertFileSrc } from '@tauri-apps/api/core';
 
 interface AvatarNameSelectionStepProps {
   stepIndex: number;
@@ -32,6 +35,9 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
   const [name, setLocalName] = useState('');
   const [selectedAvatar, setLocalAvatar] = useState('');
+  const [customAvatarPreview, setCustomAvatarPreview] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (localStorage.getItem('name') && localStorage.getItem('avatar')) {
@@ -41,10 +47,38 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
   const handleAvatarSelect = (avatar: string) => {
     setLocalAvatar(avatar);
+    // Clear custom avatar preview when selecting a predefined avatar
+    setCustomAvatarPreview(null);
   };
 
   const handleNameChange = (value: string) => {
     setLocalName(value);
+  };
+
+  // Handle custom avatar upload with error handling
+  const handleCustomAvatarUpload = async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [
+          {
+            name: 'Images',
+            extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'],
+          },
+        ],
+        title: 'Select Avatar Image',
+      });
+
+      if (selected && typeof selected === 'string') {
+        // Convert file path to Tauri asset URL for preview
+        const assetUrl = convertFileSrc(selected);
+        setCustomAvatarPreview(assetUrl);
+        setLocalAvatar(selected);
+      }
+    } catch (error) {
+      console.error('Error selecting custom avatar:', error);
+      // Optionally show user feedback here
+    }
   };
 
   const handleNextClick = () => {
@@ -124,6 +158,27 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                   </button>
                 );
               })}
+              {/* Custom Avatar Upload Button */}
+              <button
+                type="button"
+                onClick={handleCustomAvatarUpload}
+                className={`border-muted bg-background hover:border-primary relative inline-flex h-20 w-20 items-center justify-center rounded-full border-2 border-dashed transition-all duration-300 ${
+                  customAvatarPreview
+                    ? 'border-primary ring-primary ring-offset-background ring-2 ring-offset-2'
+                    : ''
+                }`}
+                title="Upload custom avatar"
+              >
+                {customAvatarPreview ? (
+                  <img
+                    src={customAvatarPreview}
+                    alt="Custom Avatar"
+                    className="h-20 w-20 rounded-full object-cover"
+                  />
+                ) : (
+                  <Upload className="text-muted-foreground h-6 w-6" />
+                )}
+              </button>
             </div>
           </div>
         </CardContent>
