@@ -19,7 +19,7 @@ const PictopyLanding: FC = () => {
   };
 
   return (
-    <section className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden">
+    <section id="Download" className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden">
       {/* Background Animated SVG */}
       <div className="absolute inset-0 z-0">
         <svg

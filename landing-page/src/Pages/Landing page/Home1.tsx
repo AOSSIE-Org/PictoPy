@@ -1,5 +1,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+
 
 const ShuffleHero = () => {
   return (
@@ -33,20 +35,21 @@ const ShuffleHero = () => {
         </motion.p>
         
         <div className="flex space-x-4">
-          <motion.button 
+          <motion.a 
+            href="#Download"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.6 }}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
-            className="bg-gradient-to-r from-yellow-500 to-green-500 text-white font-medium py-2 px-6 rounded transition-all shadow-sm hover:shadow-md"
+            className="bg-gradient-to-r from-yellow-500 to-green-500 text-white font-medium py-2 px-6 rounded transition-all shadow-sm hover:shadow-md cursor-pointer inline-block"
           >
             Download
-          </motion.button>
+          </motion.a>
           
           {/* Update this button to navigate to the GitHub link */}
           <motion.a 
-            href="https://github.com/AOSSIE-Org/PictoPy" 
+            href="https://aossie-org.github.io/PictoPy/" 
             target="_blank"
             rel="noopener noreferrer"
             initial={{ scale: 0.9, opacity: 0 }}
