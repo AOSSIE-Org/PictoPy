@@ -9,6 +9,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useDispatch } from 'react-redux';
 import { useFile } from '@/hooks/selectFile';
 import { startSearch, clearSearch } from '@/features/searchSlice';
@@ -79,29 +85,49 @@ export function FaceSearchDialog() {
     }
   };
   const handlePickFile = async () => {
-    navigate(`/${ROUTES.HOME}`);
-    const filePath = await pickSingleFile();
-    if (filePath) {
-      setIsDialogOpen(false);
-      dispatch(startSearch(filePath));
-      dispatch(showLoader('Searching faces...'));
-      getSearchImages(filePath);
+    try {
+      navigate(`/${ROUTES.HOME}`);
+      const filePath = await pickSingleFile();
+      if (filePath) {
+        setIsDialogOpen(false);
+        dispatch(startSearch(filePath));
+        dispatch(showLoader('Searching faces...'));
+        getSearchImages(filePath);
+      }
+    } catch (error) {
+      console.error('Error selecting file:', error);
+      dispatch(
+        showInfoDialog({
+          title: 'File Selection Error',
+          message: 'Failed to open file dialog. Please try again.',
+          variant: 'error',
+        }),
+      );
     }
   };
   return (
     <>
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogTrigger asChild>
-          <Button
-            onClick={() => setIsDialogOpen(true)}
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 cursor-pointer p-1"
-          >
-            <ScanFace className="h-4 w-4" />
-            <span className="sr-only">Face Detection Search</span>
-          </Button>
-        </DialogTrigger>
+        <TooltipProvider>
+          <Tooltip>
+            <DialogTrigger asChild>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => setIsDialogOpen(true)}
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 cursor-pointer p-1"
+                >
+                  <ScanFace className="h-4 w-4" />
+                  <span className="sr-only">Face Detection Search</span>
+                </Button>
+              </TooltipTrigger>
+            </DialogTrigger>
+            <TooltipContent>
+              <p>Search for similar faces in your photo library</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

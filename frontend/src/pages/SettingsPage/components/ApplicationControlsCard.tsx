@@ -7,6 +7,12 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import UpdateDialog from '@/components/Updater/UpdateDialog';
 import SettingsCard from './SettingsCard';
 
@@ -128,41 +134,65 @@ const ApplicationControlsCard: React.FC = () => {
         title="Application Controls"
         description="Manage updates, server operations, and face clustering"
       >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Button
-            onClick={onCheckUpdatesClick}
-            variant="outline"
-            className="flex h-12 w-full cursor-pointer gap-3"
-          >
-            <RefreshCw className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-            <div className="text-left">
-              <div className="font-medium">Check for Updates</div>
-            </div>
-          </Button>
+        <TooltipProvider>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={onCheckUpdatesClick}
+                  variant="outline"
+                  className="flex h-12 w-full cursor-pointer gap-3"
+                >
+                  <RefreshCw className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  <div className="text-left">
+                    <div className="font-medium">Check for Updates</div>
+                  </div>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Check for and install available application updates</p>
+              </TooltipContent>
+            </Tooltip>
 
-          <Button
-            onClick={() => restartServer()}
-            variant="outline"
-            className="flex h-12 w-full cursor-pointer gap-3"
-          >
-            <Server className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-            <div className="text-left">
-              <div className="font-medium">Restart Server</div>
-            </div>
-          </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => restartServer()}
+                  variant="outline"
+                  className="flex h-12 w-full cursor-pointer gap-3"
+                >
+                  <Server className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  <div className="text-left">
+                    <div className="font-medium">Restart Server</div>
+                  </div>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Restart the backend server to apply changes or fix issues</p>
+              </TooltipContent>
+            </Tooltip>
 
-          <Button
-            onClick={onGlobalReclusterClick}
-            variant="outline"
-            className="flex h-12 w-full gap-3"
-            title="Rebuild all face clusters from scratch using latest clustering algorithms"
-          >
-            <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-            <div className="text-left">
-              <div className="font-medium">Recluster Faces</div>
-            </div>
-          </Button>
-        </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={onGlobalReclusterClick}
+                  variant="outline"
+                  className="flex h-12 w-full gap-3"
+                >
+                  <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  <div className="text-left">
+                    <div className="font-medium">Recluster Faces</div>
+                  </div>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>
+                  Rebuild all face clusters from scratch using latest algorithms
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </TooltipProvider>
       </SettingsCard>
 
       <UpdateDialog
