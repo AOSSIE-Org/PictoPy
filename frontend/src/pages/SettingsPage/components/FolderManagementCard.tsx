@@ -12,6 +12,20 @@ import { useFolderOperations } from '@/hooks/useFolderOperations';
 import { FolderDetails } from '@/types/Folder';
 import SettingsCard from './SettingsCard';
 
+const getFolderProgress = (
+  folder: FolderDetails,
+  taggingStatus?: { tagging_percentage?: number },
+) => {
+  if (folder.taggingCompleted) return 100;
+  if (typeof taggingStatus?.tagging_percentage === 'number') {
+    return Math.max(
+      0,
+      Math.min(100, Math.round(taggingStatus.tagging_percentage)),
+    );
+  }
+  return 0;
+};
+
 /**
  * Component for managing folder operations in settings
  */
@@ -57,35 +71,47 @@ const FolderManagementCard: React.FC = () => {
     [selected],
   );
 
-  // Sorting into groups: Completed, In Progress, Pending
+  // Sorting into groups with progress: Completed, In Progress, Pending
+  // This enriches each folder with its progress percentage for use by totals
   const groups = useMemo(() => {
-    const completed: FolderDetails[] = [];
-    const inProgress: FolderDetails[] = [];
-    const pending: FolderDetails[] = [];
+    const completed: Array<FolderDetails & { progress: number }> = [];
+    const inProgress: Array<FolderDetails & { progress: number }> = [];
+    const pending: Array<FolderDetails & { progress: number }> = [];
 
     folders.forEach((f) => {
-      const percentage = taggingStatus[f.folder_id]?.tagging_percentage ?? 0;
+      const progress = getFolderProgress(f, taggingStatus[f.folder_id]);
+      const folderWithProgress = { ...f, progress };
+
       if (f.AI_Tagging) {
-        if (percentage >= 100 || (f as any).taggingCompleted) {
-          completed.push(f);
+        if (progress >= 100) {
+          completed.push(folderWithProgress);
         } else {
-          inProgress.push(f);
+          inProgress.push(folderWithProgress);
         }
       } else {
-        pending.push(f);
+        pending.push(folderWithProgress);
       }
     });
 
     return { completed, inProgress, pending };
   }, [folders, taggingStatus]);
 
+  // Calculate totals using only grouped data
+  // No direct access to folders or taggingStatus - all data comes through groups
   const totals = useMemo(() => {
-    const total = folders.length;
     const completedCount = groups.completed.length;
     const inProgressCount = groups.inProgress.length;
     const pendingCount = groups.pending.length;
+    const total = completedCount + inProgressCount + pendingCount;
     const taggedCount = completedCount + inProgressCount; // AI_Tagging enabled
-    const progressPct = total > 0 ? Math.round((taggedCount / total) * 100) : 0;
+
+    // Calculate progress sum from pre-computed progress in groups
+    const progressSum =
+      groups.completed.reduce((acc, folder) => acc + folder.progress, 0) +
+      groups.inProgress.reduce((acc, folder) => acc + folder.progress, 0) +
+      groups.pending.reduce((acc, folder) => acc + folder.progress, 0);
+
+    const progressPct = total > 0 ? Math.round(progressSum / total) : 0;
     return {
       total,
       completedCount,
@@ -94,7 +120,7 @@ const FolderManagementCard: React.FC = () => {
       taggedCount,
       progressPct,
     };
-  }, [folders.length, groups]);
+  }, [groups]);
 
   const [showCompleted, setShowCompleted] = useState(true);
   const [showInProgress, setShowInProgress] = useState(true);
@@ -329,8 +355,8 @@ const FolderRow: React.FC<{
   disableAITaggingPending,
   deleteFolderPending,
 }) => {
-  const percentage = Math.round(taggingStatus?.tagging_percentage ?? 0);
-  const isComplete = (taggingStatus?.tagging_percentage ?? 0) >= 100;
+  const percentage = getFolderProgress(folder, taggingStatus);
+  const isComplete = percentage >= 100;
   return (
     <div className="group border-border bg-background/50 relative rounded-lg border p-4 transition-all hover:border-gray-300 hover:shadow-sm dark:hover:border-gray-600">
       <div className="flex items-center justify-between">
