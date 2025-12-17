@@ -620,13 +620,13 @@
         }
       }
     },
-    "/albums/{album_id}/images/get": {
-      "post": {
+    "/albums/{album_id}/media": {
+      "get": {
         "tags": [
           "Albums"
         ],
-        "summary": "Get Album Images",
-        "operationId": "get_album_images_albums__album_id__images_get_post",
+        "summary": "Get Album Media",
+        "operationId": "get_album_media_albums__album_id__media_get",
         "parameters": [
           {
             "name": "album_id",
@@ -635,78 +635,25 @@
             "schema": {
               "type": "string",
               "title": "Album Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GetAlbumImagesRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetAlbumImagesResponse"
-                }
-              }
             }
           },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/albums/{album_id}/images": {
-      "post": {
-        "tags": [
-          "Albums"
-        ],
-        "summary": "Add Images To Album",
-        "operationId": "add_images_to_album_albums__album_id__images_post",
-        "parameters": [
           {
-            "name": "album_id",
-            "in": "path",
-            "required": true,
+            "name": "password",
+            "in": "query",
+            "required": false,
             "schema": {
               "type": "string",
-              "title": "Album Id"
+              "title": "Password"
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ImageIdsRequest"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
+                  "$ref": "#/components/schemas/GetAlbumMediaResponse"
                 }
               }
             }
@@ -723,12 +670,12 @@
           }
         }
       },
-      "delete": {
+      "post": {
         "tags": [
           "Albums"
         ],
-        "summary": "Remove Images From Album",
-        "operationId": "remove_images_from_album_albums__album_id__images_delete",
+        "summary": "Add Media To Album",
+        "operationId": "add_media_to_album_albums__album_id__media_post",
         "parameters": [
           {
             "name": "album_id",
@@ -745,7 +692,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ImageIdsRequest"
+                "$ref": "#/components/schemas/AddMediaRequest"
               }
             }
           }
@@ -774,13 +721,13 @@
         }
       }
     },
-    "/albums/{album_id}/images/{image_id}": {
+    "/albums/{album_id}/media/{media_id}": {
       "delete": {
         "tags": [
           "Albums"
         ],
-        "summary": "Remove Image From Album",
-        "operationId": "remove_image_from_album_albums__album_id__images__image_id__delete",
+        "summary": "Remove Media From Album",
+        "operationId": "remove_media_from_album_albums__album_id__media__media_id__delete",
         "parameters": [
           {
             "name": "album_id",
@@ -792,12 +739,12 @@
             }
           },
           {
-            "name": "image_id",
+            "name": "media_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Image Id"
+              "title": "Media Id"
             }
           }
         ],
@@ -1117,9 +1064,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/InputType",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/InputType"
+                }
+              ],
               "description": "Choose input type: 'path' or 'base64'",
-              "default": "path"
+              "default": "path",
+              "title": "Input Type"
             },
             "description": "Choose input type: 'path' or 'base64'"
           }
@@ -1402,6 +1354,22 @@
         ],
         "title": "AddFolderResponse"
       },
+      "AddMediaRequest": {
+        "properties": {
+          "media_items": {
+            "items": {
+              "$ref": "#/components/schemas/MediaItem"
+            },
+            "type": "array",
+            "title": "Media Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "media_items"
+        ],
+        "title": "AddMediaRequest"
+      },
       "Album": {
         "properties": {
           "album_id": {
@@ -1416,9 +1384,42 @@
             "type": "string",
             "title": "Description"
           },
+          "cover_image_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Id"
+          },
           "is_hidden": {
             "type": "boolean",
             "title": "Is Hidden"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
           }
         },
         "type": "object",
@@ -1490,6 +1491,17 @@
             ],
             "title": "Description",
             "default": ""
+          },
+          "cover_image_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Id"
           },
           "is_hidden": {
             "type": "boolean",
@@ -1692,43 +1704,26 @@
         ],
         "title": "FolderDetails"
       },
-      "GetAlbumImagesRequest": {
-        "properties": {
-          "password": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Password"
-          }
-        },
-        "type": "object",
-        "title": "GetAlbumImagesRequest"
-      },
-      "GetAlbumImagesResponse": {
+      "GetAlbumMediaResponse": {
         "properties": {
           "success": {
             "type": "boolean",
             "title": "Success"
           },
-          "image_ids": {
+          "media_items": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/MediaItem"
             },
             "type": "array",
-            "title": "Image Ids"
+            "title": "Media Items"
           }
         },
         "type": "object",
         "required": [
           "success",
-          "image_ids"
+          "media_items"
         ],
-        "title": "GetAlbumImagesResponse"
+        "title": "GetAlbumMediaResponse"
       },
       "GetAlbumResponse": {
         "properties": {
@@ -2159,22 +2154,6 @@
         ],
         "title": "ImageData"
       },
-      "ImageIdsRequest": {
-        "properties": {
-          "image_ids": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Image Ids"
-          }
-        },
-        "type": "object",
-        "required": [
-          "image_ids"
-        ],
-        "title": "ImageIdsRequest"
-      },
       "ImageInCluster": {
         "properties": {
           "id": {
@@ -2199,7 +2178,6 @@
           "metadata": {
             "anyOf": [
               {
-                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -2261,6 +2239,24 @@
           "base64"
         ],
         "title": "InputType"
+      },
+      "MediaItem": {
+        "properties": {
+          "media_id": {
+            "type": "string",
+            "title": "Media Id"
+          },
+          "media_type": {
+            "type": "string",
+            "title": "Media Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "media_id",
+          "media_type"
+        ],
+        "title": "MediaItem"
       },
       "MetadataModel": {
         "properties": {
@@ -2658,6 +2654,17 @@
             ],
             "title": "Description",
             "default": ""
+          },
+          "cover_image_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Id"
           },
           "is_hidden": {
             "type": "boolean",

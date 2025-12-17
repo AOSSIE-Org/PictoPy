@@ -1,18 +1,22 @@
 from fastapi import APIRouter, HTTPException, status, Query, Body, Path
 import uuid
+from typing import List
+
+# Updated Schema Imports
 from app.schemas.album import (
     GetAlbumsResponse,
     CreateAlbumRequest,
     CreateAlbumResponse,
     GetAlbumResponse,
-    GetAlbumImagesRequest,
-    GetAlbumImagesResponse,
     UpdateAlbumRequest,
     SuccessResponse,
     ErrorResponse,
-    ImageIdsRequest,
     Album,
+    AddMediaRequest,
+    GetAlbumMediaResponse
 )
+
+# Updated Database Imports
 from app.database.albums import (
     db_get_all_albums,
     db_get_album_by_name,
@@ -20,28 +24,30 @@ from app.database.albums import (
     db_insert_album,
     db_update_album,
     db_delete_album,
-    db_get_album_images,
-    db_add_images_to_album,
-    db_remove_image_from_album,
-    db_remove_images_from_album,
+    db_get_album_media,
+    db_add_media_to_album,
+    db_remove_media_from_album,
     verify_album_password,
 )
 
 router = APIRouter()
 
-
 # GET /albums/ - Get all albums
 @router.get("/", response_model=GetAlbumsResponse)
 def get_albums(show_hidden: bool = Query(False)):
-    albums = db_get_all_albums(show_hidden)
+    albums_data = db_get_all_albums(show_hidden)
     album_list = []
-    for album in albums:
+    
+    for album in albums_data:
         album_list.append(
             Album(
-                album_id=album[0],
-                album_name=album[1],
-                description=album[2] or "",
-                is_hidden=bool(album[3]),
+                album_id=album["album_id"],
+                album_name=album["album_name"],
+                description=album["description"] or "",
+                cover_image_id=album["cover_image_id"], # Fixed: correctly mapping new column
+                is_hidden=bool(album["is_hidden"]),
+                created_at=str(album["created_at"]),
+                updated_at=str(album["updated_at"])
             )
         )
     return GetAlbumsResponse(success=True, albums=album_list)
@@ -63,8 +69,14 @@ def create_album(body: CreateAlbumRequest):
 
     album_id = str(uuid.uuid4())
     try:
+        # FIXED: Passing all 6 arguments correctly
         db_insert_album(
-            album_id, body.name, body.description, body.is_hidden, body.password
+            album_id=album_id, 
+            album_name=body.name, 
+            description=body.description, 
+            cover_image_id=body.cover_image_id, 
+            is_hidden=body.is_hidden, 
+            password=body.password
         )
         return CreateAlbumResponse(success=True, album_id=album_id)
     except Exception as e:
@@ -92,10 +104,13 @@ def get_album(album_id: str = Path(...)):
 
     try:
         album_obj = Album(
-            album_id=album[0],
-            album_name=album[1],
-            description=album[2] or "",
-            is_hidden=bool(album[3]),
+            album_id=album["album_id"],
+            album_name=album["album_name"],
+            description=album["description"] or "",
+            cover_image_id=album["cover_image_id"],
+            is_hidden=bool(album["is_hidden"]),
+            created_at=str(album["created_at"]),
+            updated_at=str(album["updated_at"])
         )
         return GetAlbumResponse(success=True, data=album_obj)
     except Exception as e:
@@ -123,15 +138,13 @@ def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)
             ).model_dump(),
         )
 
-    album_dict = {
-        "album_id": album[0],
-        "album_name": album[1],
-        "description": album[2],
-        "is_hidden": bool(album[3]),
-        "password_hash": album[4],
-    }
+    # Use existing values if not provided in body
+    current_name = body.name if body.name is not None else album["album_name"]
+    current_desc = body.description if body.description is not None else album["description"]
+    current_cover = body.cover_image_id if body.cover_image_id is not None else album["cover_image_id"]
+    current_hidden = body.is_hidden if body.is_hidden is not None else bool(album["is_hidden"])
 
-    if album_dict["password_hash"]:
+    if album["password_hash"]:
         if not body.current_password:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -153,8 +166,14 @@ def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)
             )
 
     try:
+        # FIXED: Passing all arguments correctly
         db_update_album(
-            album_id, body.name, body.description, body.is_hidden, body.password
+            album_id=album_id, 
+            album_name=current_name, 
+            description=current_desc, 
+            cover_image_id=current_cover, 
+            is_hidden=current_hidden, 
+            password=body.password
         )
         return SuccessResponse(success=True, msg="Album updated successfully")
     except Exception as e:
@@ -169,8 +188,7 @@ def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)
 # DELETE /albums/{album_id} - Delete an album
 @router.delete("/{album_id}", response_model=SuccessResponse)
 def delete_album(album_id: str = Path(...)):
-    album = db_get_album(album_id)
-    if not album:
+    if not db_get_album(album_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ErrorResponse(
@@ -192,35 +210,23 @@ def delete_album(album_id: str = Path(...)):
         )
 
 
-# GET /albums/{album_id}/images - Get all images in an album
-@router.post("/{album_id}/images/get", response_model=GetAlbumImagesResponse)
-# GET requests do not accept a body by default.
-# Since we need to send a password securely, switching this to POST -- necessary.
-# Open to suggestions if better approach possible.
-def get_album_images(
-    album_id: str = Path(...), body: GetAlbumImagesRequest = Body(...)
+# GET /albums/{album_id}/media - Get all images/videos
+@router.get("/{album_id}/media", response_model=GetAlbumMediaResponse)
+def get_album_media(
+    album_id: str = Path(...), 
+    password: str = Query(None) # Fixed: Using Query param for GET request
 ):
     album = db_get_album(album_id)
     if not album:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ErrorResponse(
-                success=False,
-                error="Album Not Found",
-                message="No album exists with the provided ID.",
+                success=False, error="Album Not Found", message="Album not found"
             ).model_dump(),
         )
 
-    album_dict = {
-        "album_id": album[0],
-        "album_name": album[1],
-        "description": album[2],
-        "is_hidden": bool(album[3]),
-        "password_hash": album[4],
-    }
-
-    if album_dict["is_hidden"]:
-        if not body.password:
+    if album["is_hidden"]:
+        if not password:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ErrorResponse(
@@ -229,7 +235,7 @@ def get_album_images(
                     message="Password is required to access this hidden album.",
                 ).model_dump(),
             )
-        if not verify_album_password(album_id, body.password):
+        if not verify_album_password(album_id, password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ErrorResponse(
@@ -240,22 +246,21 @@ def get_album_images(
             )
 
     try:
-        image_ids = db_get_album_images(album_id)
-        return GetAlbumImagesResponse(success=True, image_ids=image_ids)
+        media_items = db_get_album_media(album_id)
+        return GetAlbumMediaResponse(success=True, media_items=media_items)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
-                success=False, error="Failed to Retrieve Images", message=str(e)
+                success=False, error="Failed to Retrieve Media", message=str(e)
             ).model_dump(),
         )
 
 
-# POST /albums/{album_id}/images - Add images to an album
-@router.post("/{album_id}/images", response_model=SuccessResponse)
-def add_images_to_album(album_id: str = Path(...), body: ImageIdsRequest = Body(...)):
-    album = db_get_album(album_id)
-    if not album:
+# POST /albums/{album_id}/media - Add images/videos
+@router.post("/{album_id}/media", response_model=SuccessResponse)
+def add_media_to_album(album_id: str = Path(...), body: AddMediaRequest = Body(...)):
+    if not db_get_album(album_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ErrorResponse(
@@ -265,93 +270,52 @@ def add_images_to_album(album_id: str = Path(...), body: ImageIdsRequest = Body(
             ).model_dump(),
         )
 
-    if not body.image_ids:
+    if not body.media_items:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ErrorResponse(
                 success=False,
-                error="No Image IDs",
-                message="You must provide a list of image IDs to add.",
+                error="No Media Items",
+                message="You must provide at least one item to add.",
             ).model_dump(),
         )
 
     try:
-        db_add_images_to_album(album_id, body.image_ids)
+        items_to_add = [(item.media_id, item.media_type) for item in body.media_items]
+        
+        count = db_add_media_to_album(album_id, items_to_add)
         return SuccessResponse(
-            success=True, msg=f"Added {len(body.image_ids)} images to album"
+            success=True, msg=f"Added {count} items to album"
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
-                success=False, error="Failed to Add Images", message=str(e)
+                success=False, error="Failed to Add Media", message=str(e)
             ).model_dump(),
         )
 
 
-# DELETE /albums/{album_id}/images/{image_id} - Remove image from album
-@router.delete("/{album_id}/images/{image_id}", response_model=SuccessResponse)
-def remove_image_from_album(album_id: str = Path(...), image_id: str = Path(...)):
-    album = db_get_album(album_id)
-    if not album:
+# DELETE /albums/{album_id}/media/{media_id} - Remove item
+@router.delete("/{album_id}/media/{media_id}", response_model=SuccessResponse)
+def remove_media_from_album(album_id: str = Path(...), media_id: str = Path(...)):
+    if not db_get_album(album_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ErrorResponse(
-                success=False,
-                error="Album Not Found",
-                message="No album exists with the provided ID.",
+                success=False, error="Album Not Found", message="Album not found"
             ).model_dump(),
         )
 
     try:
-        db_remove_image_from_album(album_id, image_id)
+        db_remove_media_from_album(album_id, media_id)
         return SuccessResponse(
-            success=True, msg="Image removed from album successfully"
+            success=True, msg="Media removed from album successfully"
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
-                success=False, error="Failed to Remove Image", message=str(e)
-            ).model_dump(),
-        )
-
-
-# DELETE /albums/{album_id}/images - Remove multiple images from album
-@router.delete("/{album_id}/images", response_model=SuccessResponse)
-def remove_images_from_album(
-    album_id: str = Path(...), body: ImageIdsRequest = Body(...)
-):
-    album = db_get_album(album_id)
-    if not album:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ErrorResponse(
-                success=False,
-                error="Album Not Found",
-                message="No album exists with the provided ID.",
-            ).model_dump(),
-        )
-
-    if not body.image_ids:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ErrorResponse(
-                success=False,
-                error="No Image IDs Provided",
-                message="You must provide at least one image ID to remove.",
-            ).model_dump(),
-        )
-
-    try:
-        db_remove_images_from_album(album_id, body.image_ids)
-        return SuccessResponse(
-            success=True, msg=f"Removed {len(body.image_ids)} images from album"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False, error="Failed to Remove Images", message=str(e)
+                success=False, error="Failed to Remove Media", message=str(e)
             ).model_dump(),
         )
