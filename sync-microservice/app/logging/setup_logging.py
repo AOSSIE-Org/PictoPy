@@ -248,14 +248,33 @@ class InterceptHandler(logging.Handler):
         if "." in module_name:
             module_name = module_name.split(".")[-1]
 
-        # Create a message that includes the original module in the format
+        # Build a new record so we do not re-enter the logging pipeline
         msg = record.getMessage()
+        new_record = logging.LogRecord(
+            name=module_name,
+            level=record.levelno,
+            pathname=record.pathname,
+            lineno=record.lineno,
+            msg=f"[uvicorn] {msg}",
+            args=(),
+            exc_info=record.exc_info,
+            func=record.funcName,
+            sinfo=record.stack_info,
+        )
 
-        # Find the appropriate logger
-        logger = get_logger(module_name)
+        # Preserve timing metadata
+        new_record.created = record.created
+        new_record.msecs = record.msecs
+        new_record.relativeCreated = record.relativeCreated
 
-        # Log the message with our custom formatting
-        logger.log(record.levelno, f"[uvicorn] {msg}")
+        # Send directly to root handlers, skipping intercepts to avoid recursion
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers:
+            if handler is not self and not isinstance(handler, InterceptHandler):
+                try:
+                    handler.handle(new_record)
+                except Exception:
+                    pass
 
 
 def configure_uvicorn_logging(component_name: str) -> None:
