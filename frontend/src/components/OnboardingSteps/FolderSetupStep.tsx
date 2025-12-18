@@ -34,7 +34,7 @@ export function FolderSetupStep({
     if (localStorage.getItem('folderChosen') === 'true') {
       dispatch(markCompleted(stepIndex));
     }
-  }, []);
+  }, [dispatch, stepIndex]);
 
   const { pickSingleFolder, addFolderMutate } = useFolder({
     title: 'Select folder to import photos from',
