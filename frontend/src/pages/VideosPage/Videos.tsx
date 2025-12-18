@@ -1,11 +1,7 @@
-import { LoadingScreen } from '@/components/ui/LoadingScreen/LoadingScreen';
+import { ComingSoon } from '@/pages/ComingSoon/ComingSoon';
 
 const Videos: React.FC = () => {
-  return (
-    <div className="flex h-full w-full items-center justify-center">
-      <LoadingScreen />
-    </div>
-  );
+  return <ComingSoon />;
 };
 
 export default Videos;

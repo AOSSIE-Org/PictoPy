@@ -1,5 +1,7 @@
+import { ComingSoon } from '@/pages/ComingSoon/ComingSoon';
+
 const Memories = () => {
-  return <></>;
+  return <ComingSoon />;
 };
 
 export default Memories;
