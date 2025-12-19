@@ -13,6 +13,7 @@ import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { GalleryToolbar } from '@/components/Gallery/GalleryToolbar';
 
 export const Home = () => {
   const dispatch = useDispatch();
@@ -52,6 +53,9 @@ export const Home = () => {
 
   return (
     <div className="relative flex h-full flex-col pr-6">
+      {/* Gallery Toolbar */}
+      <GalleryToolbar />
+
       {/* Gallery Section */}
       <div
         ref={scrollableRef}

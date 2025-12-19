@@ -16,6 +16,7 @@ import {
   Video,
   BookImage,
   ClockFading,
+  History,
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router';
 import { ROUTES } from '@/constants/routes';
@@ -49,6 +50,7 @@ export function AppSidebar() {
     { name: 'Home', path: `/${ROUTES.HOME}`, icon: Home },
     { name: 'AI Tagging', path: `/${ROUTES.AI}`, icon: Sparkles },
     { name: 'Favourites', path: `/${ROUTES.FAVOURITES}`, icon: Heart },
+    { name: 'Recently Deleted ', path: `/${ROUTES.HISTORY}`, icon: History },
     { name: 'Videos', path: `/${ROUTES.VIDEOS}`, icon: Video },
     { name: 'Albums', path: `/${ROUTES.ALBUMS}`, icon: BookImage },
     { name: 'Memories', path: `/${ROUTES.MEMORIES}`, icon: ClockFading },
