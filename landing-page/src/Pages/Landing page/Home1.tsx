@@ -33,7 +33,8 @@ const ShuffleHero = () => {
         </motion.p>
         
         <div className="flex space-x-4">
-          <motion.button 
+          <motion.a 
+            href="#pictopy-download"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.6 }}
@@ -42,11 +43,11 @@ const ShuffleHero = () => {
             className="bg-gradient-to-r from-yellow-500 to-green-500 text-white font-medium py-2 px-6 rounded transition-all shadow-sm hover:shadow-md"
           >
             Download
-          </motion.button>
+          </motion.a>
           
           {/* Update this button to navigate to the GitHub link */}
           <motion.a 
-            href="https://github.com/AOSSIE-Org/PictoPy" 
+            href="https://aossie-org.github.io/PictoPy" 
             target="_blank"
             rel="noopener noreferrer"
             initial={{ scale: 0.9, opacity: 0 }}

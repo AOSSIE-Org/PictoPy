@@ -1,4 +1,4 @@
-import { FC, useState } from "react";
+import { FC, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import PictopyLogo from "@/assets/PictoPy_Logo.png"; // Adjust this import path as needed
 import MacLogo from "@/assets/mac-logo.png"; // Add your Mac logo
@@ -9,9 +9,64 @@ const PictopyLanding: FC = () => {
   // State for showing the notification
   const [downloadStarted, setDownloadStarted] = useState<string | null>(null);
 
+  // State for storing GitHub release URLs
+  const [latestUrls, setLatestUrls] = useState<{
+    windows?: string;
+    mac?: string;
+    linux?: string;
+  }>({});
+
+  // Fetch the latest release URLs
+  useEffect(() => {
+    // Fetch the latest release
+    const fetchLatestRelease = async () => {
+      try {
+        const response = await fetch(
+          "https://api.github.com/repos/AOSSIE-Org/PictoPy/releases/latest"
+        );
+        const data = await response.json();
+        console.log("Latest release data:", data); // Debug log
+
+        const urls: { windows?: string; mac?: string; linux?: string } = {};
+        data.assets.forEach((asset: any) => {
+          const name = asset.name.toLowerCase();
+
+          // Skip signature files
+          if (name.endsWith(".sig")) return;
+
+          // Windows 
+          if (name.endsWith(".exe") || name.endsWith(".msi")) {
+            urls.windows = asset.browser_download_url;
+          }
+          // Mac
+          else if (name.endsWith(".app.tar.gz") || name.endsWith(".dmg")) {
+            urls.mac = asset.browser_download_url;
+          }
+          // Linux 
+          else if (name.endsWith(".deb") || name.endsWith(".appimage")) {
+            urls.linux = asset.browser_download_url;
+          }
+        });
+
+        setLatestUrls(urls);
+      } catch (error) {
+        console.error("Failed to fetch latest release:", error);
+      }
+    };
+
+    fetchLatestRelease();
+  }, []);
+
   // Function to handle button click and show the notification
   const handleDownloadClick = (platform: string) => {
-    setDownloadStarted(`Download for ${platform} started!`);
+    // Open the download URL in a new tab
+    const url = latestUrls[platform.toLowerCase() as keyof typeof latestUrls];
+    if (url) {
+      window.open(url, "_blank");
+      setDownloadStarted(`Download for ${platform} started!`);
+    } else {
+      setDownloadStarted(`Download link not available for ${platform}`);
+    }
     // Hide the notification after 3 seconds
     setTimeout(() => {
       setDownloadStarted(null);
@@ -19,7 +74,10 @@ const PictopyLanding: FC = () => {
   };
 
   return (
-    <section className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden">
+    <section
+      id="pictopy-download"
+      className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden"
+    >
       {/* Background Animated SVG */}
       <div className="absolute inset-0 z-0">
         <svg
@@ -47,7 +105,7 @@ const PictopyLanding: FC = () => {
       </div>
 
       {/* Content */}
-      <div className="px-4 md:px-6 relative z-10 ">
+      <div className="px-4 md:px-6 relative z-10">
         <div className="flex flex-col items-center text-center">
           {/* Heading with Gradient Text and Logo */}
           <div className="flex items-center justify-center gap-4 mb-4">
@@ -74,6 +132,7 @@ const PictopyLanding: FC = () => {
                          transform hover:-translate-y-1 hover:shadow-lg"
               size="lg"
               onClick={() => handleDownloadClick("Mac")}
+              disabled={!latestUrls.mac}
             >
               <img src={MacLogo} alt="Mac" className="h-7 w-7 mr-2" />
               Download for Mac
@@ -85,6 +144,7 @@ const PictopyLanding: FC = () => {
               size="lg"
               variant="outline"
               onClick={() => handleDownloadClick("Windows")}
+              disabled={!latestUrls.windows}
             >
               <img src={WindowsLogo} alt="Windows" className="h-7 w-7 mr-2" />
               Download for Windows
@@ -96,6 +156,7 @@ const PictopyLanding: FC = () => {
               size="lg"
               variant="outline"
               onClick={() => handleDownloadClick("Linux")}
+              disabled={!latestUrls.linux}
             >
               <img src={LinuxLogo} alt="Linux" className="h-9 w-9 mr-2" /> {/* Larger Linux logo */}
               Download for Linux(.deb)
