@@ -257,9 +257,9 @@ class InterceptHandler(logging.Handler):
             lineno=record.lineno,
             msg=f"[uvicorn] {msg}",
             args=(),
-            exc_info=record.exc_info,
+            exc_info=None,
             func=record.funcName,
-            sinfo=record.stack_info,
+            sinfo=None,
         )
 
         # Preserve timing metadata
