@@ -64,6 +64,8 @@ nav:
       - Overview: overview/features.md
       - Setup: setup.md
       - Backend:
+          - Overview: backend/index.md
+          - Security: backend/security.md
           - Python Backend API: backend/backend_python/api.md
           - Python Backend Database: backend/backend_python/database.md
           - Python Backend Directory Structure: backend/backend_python/directory-structure.md
