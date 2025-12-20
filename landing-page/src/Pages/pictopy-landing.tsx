@@ -5,36 +5,68 @@ import MacLogo from "@/assets/mac-logo.png"; // Add your Mac logo
 import WindowsLogo from "@/assets/windows-logo.svg"; // Add your Windows logo
 import LinuxLogo from "@/assets/linux-logo.svg"; // Add your Linux logo
 
+interface GitHubAsset {
+  name: string;
+  browser_download_url: string;
+}
+
+interface GitHubRelease {
+  assets: GitHubAsset[];
+}
+
+interface PlatformUrls {
+  windows?: string;
+  mac?: string;
+  linux?: string;
+}
+
 const PictopyLanding: FC = () => {
   // State for showing the notification
   const [downloadStarted, setDownloadStarted] = useState<string | null>(null);
 
   // State for storing GitHub release URLs
-  const [latestUrls, setLatestUrls] = useState<{
-    windows?: string;
-    mac?: string;
-    linux?: string;
-  }>({});
+  const [latestUrls, setLatestUrls] = useState<PlatformUrls>({});
+
+  // Loading & error states (for rate limit / network issues)
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch the latest release URLs
   useEffect(() => {
     // Fetch the latest release
     const fetchLatestRelease = async () => {
       try {
-        const response = await fetch(
-          "https://api.github.com/repos/AOSSIE-Org/PictoPy/releases/latest"
-        );
-        const data = await response.json();
-        console.log("Latest release data:", data); // Debug log
+        setLoading(true);
+        setError(null);
 
-        const urls: { windows?: string; mac?: string; linux?: string } = {};
-        data.assets.forEach((asset: any) => {
+        const response = await fetch(
+          "https://api.github.com/repos/AOSSIE-Org/PictoPy/releases/latest",
+          {
+            headers: {
+              Accept: "application/vnd.github+json",
+            },
+          }
+        );
+
+        // Handle HTTP & rate-limit errors
+        if (!response.ok) {
+          if (response.status === 403) {
+            throw new Error("GitHub API rate limit exceeded. Please try again later.");
+          }
+          throw new Error(`Failed to fetch release (${response.status})`);
+        }
+
+        const data: GitHubRelease = await response.json();
+
+        const urls: PlatformUrls = {};
+
+        data.assets.forEach((asset) => {
           const name = asset.name.toLowerCase();
 
           // Skip signature files
           if (name.endsWith(".sig")) return;
 
-          // Windows 
+          // Windows
           if (name.endsWith(".exe") || name.endsWith(".msi")) {
             urls.windows = asset.browser_download_url;
           }
@@ -42,15 +74,17 @@ const PictopyLanding: FC = () => {
           else if (name.endsWith(".app.tar.gz") || name.endsWith(".dmg")) {
             urls.mac = asset.browser_download_url;
           }
-          // Linux 
+          // Linux
           else if (name.endsWith(".deb") || name.endsWith(".appimage")) {
             urls.linux = asset.browser_download_url;
           }
         });
 
         setLatestUrls(urls);
-      } catch (error) {
-        console.error("Failed to fetch latest release:", error);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unexpected error occurred");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -58,15 +92,17 @@ const PictopyLanding: FC = () => {
   }, []);
 
   // Function to handle button click and show the notification
-  const handleDownloadClick = (platform: string) => {
+  const handleDownloadClick = (platform: "Mac" | "Windows" | "Linux") => {
+    const key = platform.toLowerCase() as keyof PlatformUrls;
+    const url = latestUrls[key];
+
+    // If no link exists, do nothing
+    if (!url) return;
+
     // Open the download URL in a new tab
-    const url = latestUrls[platform.toLowerCase() as keyof typeof latestUrls];
-    if (url) {
-      window.open(url, "_blank");
-      setDownloadStarted(`Download for ${platform} started!`);
-    } else {
-      setDownloadStarted(`Download link not available for ${platform}`);
-    }
+    window.open(url, "_blank");
+    setDownloadStarted(`Download for ${platform} started!`);
+
     // Hide the notification after 3 seconds
     setTimeout(() => {
       setDownloadStarted(null);
@@ -109,11 +145,7 @@ const PictopyLanding: FC = () => {
         <div className="flex flex-col items-center text-center">
           {/* Heading with Gradient Text and Logo */}
           <div className="flex items-center justify-center gap-4 mb-4">
-            <img
-              src={PictopyLogo}
-              alt="Pictopy Logo"
-              className="h-16 w-16 object-contain"
-            />
+            <img src={PictopyLogo} alt="Pictopy Logo" className="h-16 w-16 object-contain" />
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-green-500 transition-all duration-300">
               PictoPy
             </h1>
@@ -124,50 +156,48 @@ const PictopyLanding: FC = () => {
             Organize your photos effortlessly. Available for Mac, Windows, and Linux.
           </p>
 
+          {/* Optional error message (non-intrusive) */}
+          {error && (
+            <p className="mb-4 text-red-600 dark:text-red-400 text-sm">
+              {error}
+            </p>
+          )}
+
           {/* Download Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
-              className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 h-12 px-8 transition-all duration-300 
-                         border-2 border-transparent hover:border-black dark:hover:border-white 
-                         transform hover:-translate-y-1 hover:shadow-lg"
               size="lg"
               onClick={() => handleDownloadClick("Mac")}
-              disabled={!latestUrls.mac}
+              disabled={loading || !latestUrls.mac}
             >
               <img src={MacLogo} alt="Mac" className="h-7 w-7 mr-2" />
               Download for Mac
             </Button>
+
             <Button
-              className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 h-12 px-8 transition-all duration-300 
-                         border-2 border-transparent hover:border-black dark:hover:border-white 
-                         transform hover:-translate-y-1 hover:shadow-lg"
               size="lg"
               variant="outline"
               onClick={() => handleDownloadClick("Windows")}
-              disabled={!latestUrls.windows}
+              disabled={loading || !latestUrls.windows}
             >
               <img src={WindowsLogo} alt="Windows" className="h-7 w-7 mr-2" />
               Download for Windows
             </Button>
+
             <Button
-              className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 h-12 px-8 transition-all duration-300 
-                         border-2 border-transparent hover:border-black dark:hover:border-white 
-                         transform hover:-translate-y-1 hover:shadow-lg"
               size="lg"
               variant="outline"
               onClick={() => handleDownloadClick("Linux")}
-              disabled={!latestUrls.linux}
+              disabled={loading || !latestUrls.linux}
             >
-              <img src={LinuxLogo} alt="Linux" className="h-9 w-9 mr-2" /> {/* Larger Linux logo */}
-              Download for Linux(.deb)
+              <img src={LinuxLogo} alt="Linux" className="h-9 w-9 mr-2" />
+              Download for Linux (.deb)
             </Button>
           </div>
 
           {/* Download Notification (Popup) */}
           {downloadStarted && (
-            <div
-              className="fixed top-16 right-4 md:right-8 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl text-lg z-50 opacity-0 animate-slideInRight"
-            >
+            <div className="fixed top-16 right-4 md:right-8 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl text-lg z-50 opacity-0 animate-slideInRight">
               {downloadStarted}
             </div>
           )}
