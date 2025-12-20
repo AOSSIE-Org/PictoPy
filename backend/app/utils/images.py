@@ -145,7 +145,7 @@ def image_util_classify_and_face_detect_images(
                 db_update_image_tagged_status(image_id, True)
 
                 percentage = (idx / total) * 100
-                bucket = int(percentage // 2) 
+                bucket = int(percentage // 2)
 
                 if bucket != last_bucket or idx == total:
                     publish_progress_from_thread(
@@ -154,7 +154,7 @@ def image_util_classify_and_face_detect_images(
                             "processed": idx,
                             "total": total,
                             "percent": round(percentage, 2),
-                            "status": "running" ,
+                            "status": "running",
                         }
                     )
                     last_bucket = bucket
