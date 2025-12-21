@@ -19,7 +19,7 @@ const PictopyLanding: FC = () => {
   };
 
   return (
-    <section className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden">
+    <section className="w-full py-12 md:py-14 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden">
       {/* Background Animated SVG */}
       <div className="absolute inset-0 z-0">
         <svg
@@ -56,7 +56,7 @@ const PictopyLanding: FC = () => {
               alt="Pictopy Logo"
               className="h-16 w-16 object-contain"
             />
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-green-500 transition-all duration-300">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-green-500 transition-all duration-300 py-2">
               PictoPy
             </h1>
           </div>
