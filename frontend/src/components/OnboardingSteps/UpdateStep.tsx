@@ -23,19 +23,26 @@ export const UpdateStep: React.FC<UpdateStepProps> = ({ stepIndex }) => {
   const dispatch = useDispatch();
 
   useEffect(() => {
+    let isMount = true;
     // Check for updates on mount
     const check = async () => {
+      if (!isMount) {
+        return;
+      }
       dispatch(showLoader('Checking for updates...'));
       const hasUpdate = await checkForUpdates();
       dispatch(hideLoader());
 
       // If no update, mark onboarding step complete
-      if (!hasUpdate) {
+      if (isMount && !hasUpdate) {
         dispatch(markCompleted(stepIndex));
       }
     };
     check();
-  }, []);
+    return () => {
+      isMount = false;
+    }
+  }, [dispatch,stepIndex, checkForUpdates]);
 
   // Show update dialog only if update is available
   if (updateAvailable) {

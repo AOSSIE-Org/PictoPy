@@ -100,6 +100,16 @@ TAURI_SIGNING_PRIVATE_KEY_PASSWORD=pass
 npm run tauri build
 ```
 
+## React Hooks Guidelines
+
+When working on frontend components, especially in onboarding flows:
+
+- Always include all external variables, props, and functions used inside a `useEffect` hook in its dependency array.
+- Avoid using empty dependency arrays (`[]`) when the effect relies on props, Redux dispatch, context values, or functions returned from custom hooks.
+- This helps prevent stale closures, unexpected behavior, and navigation issues during multi-step flows.
+- Follow the React Rules of Hooks and ensure ESLint hook rules pass before submitting a PR.
+
+
 ## Additional Resources
 
 - [Tauri Documentation](https://tauri.app/start/)
