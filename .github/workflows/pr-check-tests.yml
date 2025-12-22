@@ -5,86 +5,133 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
+ # LINTING
   linting:
-    runs-on: ubuntu-latest
     name: Linting
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: 18
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+          
+          # Frontend Dependencies Installation
 
-      - name: Install Dependencies
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run frontend linters
+        working-directory: frontend
         run: |
-          cd frontend
-          npm install
-          cd ..
-          cd backend
-          pip install pre-commit ruff black
-          cd ..
-      - name: Run Linters
-        run: |
-          cd frontend/
           npm run lint:check
           npm run format:check
-          cd ..
-          cd backend/
-          pre-commit run --config ../.pre-commit-config.yaml --all-files || exit 1
-          cd ..
-          cd frontend/src-tauri/
-          cargo fmt -- --check
 
-  # Frontend Test Job
-  frontend:
-    runs-on: ubuntu-latest
-    name: Frontend Tests
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "18"
-
-      - name: Install Dependencies & Run Tests
-        run: |
-          cd frontend
-          npm install
-          npm test
-
-  # Backend Test Job
-  backend:
-    runs-on: ubuntu-latest
-    name: Backend Tests
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
-      - name: Build check(Main backend)
+      - name: Install backend lint tools
         run: |
-          cd backend
+          python -m pip install --upgrade pip
+          pip install pre-commit ruff black
+
+      - name: Run backend linters
+        working-directory: backend
+        run: |
+          pre-commit run --config ../.pre-commit-config.yaml --all-files
+
+       # RUST   
+       
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run cargo fmt
+        working-directory: frontend/src-tauri
+        run: cargo fmt -- --check
+
+  # FRONTEND TESTS
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npm test -- --ci
+
+  # BACKEND TESTS
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
 
-      - name: Build check(Sync Microservice)
+      - name: Build check (Main Backend)
+        working-directory: backend
         run: |
-          cd sync-microservice
+          pyinstaller main.py \
+            --name PictoPy_Server \
+            --onedir \
+            --distpath dist
+
+      - name: Build check (Sync Microservice)
+        working-directory: sync-microservice
+        run: |
           pip install -r requirements.txt
-          pyinstaller main.py --name PictoPy_Sync_Microservice --onedir --distpath dist
+          pyinstaller main.py \
+            --name PictoPy_Sync_Microservice \
+            --onedir \
+            --distpath dist
 
-      - name: Run Tests
-        run: |
-          cd backend
-          pytest
-
+      - name: Run backend tests
+        working-directory: backend
+        run: pytest -v
