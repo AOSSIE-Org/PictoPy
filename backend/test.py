@@ -40,7 +40,9 @@ def main():
     for path in skipped_images:
         print(f"  {path}")
 
-    dbscan = DBSCAN(eps=0.3, min_samples=2, metric="cosine")
+    # Updated parameters to match production improvements
+    # eps=0.2 for tighter clustering, min_samples=1 to include all faces
+    dbscan = DBSCAN(eps=0.2, min_samples=1, metric="cosine")
     cluster_labels = dbscan.fit_predict(embedding_array)
 
     clusters = {}

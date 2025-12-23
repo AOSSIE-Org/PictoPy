@@ -21,6 +21,7 @@ class FaceData(TypedDict):
     embeddings: FaceEmbedding  # Numpy array in application, stored as JSON string in DB
     confidence: Optional[float]
     bbox: Optional[BoundingBox]
+    quality: Optional[float]  # Face quality score (0.0-1.0)
 
 
 FaceClusterMapping = Dict[FaceId, Optional[ClusterId]]
@@ -41,6 +42,7 @@ def db_create_faces_table() -> None:
                 embeddings TEXT,
                 confidence REAL,
                 bbox TEXT,
+                quality REAL DEFAULT 0.5,
                 FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
                 FOREIGN KEY (cluster_id) REFERENCES face_clusters(cluster_id) ON DELETE SET NULL
             )
@@ -58,6 +60,7 @@ def db_insert_face_embeddings(
     confidence: Optional[float] = None,
     bbox: Optional[BoundingBox] = None,
     cluster_id: Optional[ClusterId] = None,
+    quality: Optional[float] = None,
 ) -> FaceId:
     """
     Insert face embeddings with additional metadata.
@@ -69,6 +72,7 @@ def db_insert_face_embeddings(
         confidence: Confidence score for face detection (optional)
         bbox: Bounding box coordinates as dict with keys: x, y, width, height (optional)
         cluster_id: ID of the face cluster this face belongs to (optional)
+        quality: Face quality score 0.0-1.0 (optional)
     """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
@@ -81,10 +85,10 @@ def db_insert_face_embeddings(
 
         cursor.execute(
             """
-            INSERT INTO faces (image_id, cluster_id, embeddings, confidence, bbox)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO faces (image_id, cluster_id, embeddings, confidence, bbox, quality)
+            VALUES (?, ?, ?, ?, ?, ?)
         """,
-            (image_id, cluster_id, embeddings_json, confidence, bbox_json),
+            (image_id, cluster_id, embeddings_json, confidence, bbox_json, quality),
         )
 
         face_id = cursor.lastrowid
@@ -100,6 +104,7 @@ def db_insert_face_embeddings_by_image_id(
     confidence: Optional[Union[float, List[float]]] = None,
     bbox: Optional[Union[BoundingBox, List[BoundingBox]]] = None,
     cluster_id: Optional[Union[ClusterId, List[ClusterId]]] = None,
+    quality: Optional[Union[float, List[float]]] = None,
 ) -> Union[FaceId, List[FaceId]]:
     """
     Insert face embeddings using image path (convenience function).
@@ -110,6 +115,7 @@ def db_insert_face_embeddings_by_image_id(
         confidence: Confidence score(s) for face detection (optional)
         bbox: Bounding box coordinates or list of bounding boxes (optional)
         cluster_id: Cluster ID(s) for the face(s) (optional)
+        quality: Face quality score(s) 0.0-1.0 (optional)
     """
 
     # Handle multiple faces in one image
@@ -131,13 +137,18 @@ def db_insert_face_embeddings_by_image_id(
                 if isinstance(cluster_id, list) and i < len(cluster_id)
                 else cluster_id
             )
-            face_id = db_insert_face_embeddings(image_id, emb, conf, bb, cid)
+            qual = (
+                quality[i]
+                if isinstance(quality, list) and i < len(quality)
+                else quality
+            )
+            face_id = db_insert_face_embeddings(image_id, emb, conf, bb, cid, qual)
             face_ids.append(face_id)
         return face_ids
     else:
         # Single face
         return db_insert_face_embeddings(
-            image_id, embeddings, confidence, bbox, cluster_id
+            image_id, embeddings, confidence, bbox, cluster_id, quality
         )
 
 
@@ -227,16 +238,20 @@ def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbed
     cursor = conn.cursor()
 
     try:
-        cursor.execute("SELECT face_id, embeddings FROM faces WHERE cluster_id IS NULL")
+        cursor.execute(
+            "SELECT face_id, embeddings, COALESCE(quality, 0.5) as quality FROM faces WHERE cluster_id IS NULL"
+        )
 
         rows = cursor.fetchall()
 
         faces = []
         for row in rows:
-            face_id, embeddings_json = row
+            face_id, embeddings_json, quality = row
             # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
-            faces.append({"face_id": face_id, "embeddings": embeddings})
+            faces.append(
+                {"face_id": face_id, "embeddings": embeddings, "quality": quality}
+            )
 
         return faces
     finally:
@@ -258,7 +273,7 @@ def db_get_all_faces_with_cluster_names() -> (
     try:
         cursor.execute(
             """
-            SELECT f.face_id, f.embeddings, fc.cluster_name
+            SELECT f.face_id, f.embeddings, fc.cluster_name, COALESCE(f.quality, 0.5) as quality
             FROM faces f
             LEFT JOIN face_clusters fc ON f.cluster_id = fc.cluster_id
             ORDER BY f.face_id
@@ -269,7 +284,7 @@ def db_get_all_faces_with_cluster_names() -> (
 
         faces = []
         for row in rows:
-            face_id, embeddings_json, cluster_name = row
+            face_id, embeddings_json, cluster_name, quality = row
             # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
             faces.append(
@@ -277,6 +292,7 @@ def db_get_all_faces_with_cluster_names() -> (
                     "face_id": face_id,
                     "embeddings": embeddings,
                     "cluster_name": cluster_name,
+                    "quality": quality,
                 }
             )
 
@@ -344,7 +360,7 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
     try:
         cursor.execute(
             """
-            SELECT f.cluster_id, f.embeddings
+            SELECT f.cluster_id, f.embeddings, COALESCE(f.quality, 0.5) as quality
             FROM faces f
             WHERE f.cluster_id IS NOT NULL
             ORDER BY f.cluster_id
@@ -356,26 +372,33 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
         if not rows:
             return []
 
-        # Group embeddings by cluster_id
+        # Group embeddings and quality by cluster_id
         cluster_embeddings = {}
+        cluster_qualities = {}
         for row in rows:
-            cluster_id, embeddings_json = row
+            cluster_id, embeddings_json, quality = row
             # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
 
             if cluster_id not in cluster_embeddings:
                 cluster_embeddings[cluster_id] = []
+                cluster_qualities[cluster_id] = []
             cluster_embeddings[cluster_id].append(embeddings)
+            cluster_qualities[cluster_id].append(quality)
 
         # Calculate mean embeddings for each cluster
         cluster_means = []
         for cluster_id, embeddings_list in cluster_embeddings.items():
             # Stack all embeddings for this cluster and calculate mean
             stacked_embeddings = np.stack(embeddings_list)
-            mean_embedding = np.mean(stacked_embeddings, axis=0)
+            quality_list = cluster_qualities[cluster_id]
 
             cluster_means.append(
-                {"cluster_id": cluster_id, "mean_embedding": mean_embedding}
+                {
+                    "cluster_id": cluster_id,
+                    "embeddings": stacked_embeddings,
+                    "quality_scores": np.array(quality_list),
+                }
             )
 
         return cluster_means

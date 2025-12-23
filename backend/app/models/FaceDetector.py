@@ -6,6 +6,7 @@ from app.utils.FaceNet import FaceNet_util_preprocess_image, FaceNet_util_get_mo
 from app.utils.YOLO import YOLO_util_get_model_path
 from app.models.YOLO import YOLO
 from app.database.faces import db_insert_face_embeddings_by_image_id
+from app.utils.face_quality import calculate_face_quality
 from app.logging.setup_logging import get_logger
 
 # Initialize logger
@@ -33,7 +34,7 @@ class FaceDetector:
         logger.debug(f"Face detection boxes: {boxes}")
         logger.info(f"Detected {len(boxes)} faces in image {image_id}.")
 
-        processed_faces, embeddings, bboxes, confidences = [], [], [], []
+        processed_faces, embeddings, bboxes, confidences, qualities = [], [], [], [], []
 
         for box, score in zip(boxes, scores):
             if score > self.yolo_detector.conf_threshold:
@@ -49,6 +50,21 @@ class FaceDetector:
                     max(0, y1 - padding) : min(img.shape[0], y2 + padding),
                     max(0, x1 - padding) : min(img.shape[1], x2 + padding),
                 ]
+
+                # Calculate face quality
+                quality_result = calculate_face_quality(face_img)
+                quality_score = quality_result["quality"]
+                qualities.append(quality_score)
+
+                # Log quality metrics for debugging
+                logger.debug(
+                    f"Face quality: {quality_score:.3f} "
+                    f"(sharpness: {quality_result['sharpness']:.3f}, "
+                    f"brightness: {quality_result['brightness']:.3f}, "
+                    f"size: {quality_result['size']:.3f})"
+                )
+
+                # Process face for embedding generation
                 processed_face = FaceNet_util_preprocess_image(face_img)
                 processed_faces.append(processed_face)
 
@@ -56,9 +72,23 @@ class FaceDetector:
                 embeddings.append(embedding)
 
         if not forSearch and embeddings:
+            # Store faces with quality scores
             db_insert_face_embeddings_by_image_id(
-                image_id, embeddings, confidence=confidences, bbox=bboxes
+                image_id,
+                embeddings,
+                confidence=confidences,
+                bbox=bboxes,
+                quality=qualities,
             )
+
+            # Log quality statistics
+            if qualities:
+                avg_quality = sum(qualities) / len(qualities)
+                high_quality_count = sum(1 for q in qualities if q >= 0.7)
+                logger.info(
+                    f"Face quality stats: avg={avg_quality:.3f}, "
+                    f"high_quality={high_quality_count}/{len(qualities)}"
+                )
 
         return {
             "ids": f"{class_ids}",
