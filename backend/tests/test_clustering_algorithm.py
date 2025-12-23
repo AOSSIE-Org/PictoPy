@@ -74,9 +74,7 @@ class TestClusteringAlgorithm:
     @patch("app.utils.face_clusters.db_get_all_faces_with_cluster_names")
     @patch("app.utils.face_clusters.cluster_faces")
     @patch("app.utils.face_clusters.filter_quality_faces")
-    def test_clustering_with_no_faces(
-        self, mock_filter, mock_cluster, mock_get_faces
-    ):
+    def test_clustering_with_no_faces(self, mock_filter, mock_cluster, mock_get_faces):
         """Test clustering when no faces exist in database."""
         mock_get_faces.return_value = []
 
