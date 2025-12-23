@@ -226,7 +226,8 @@ def db_update_cluster(
         )
 
         updated = cursor.rowcount > 0
-        conn.commit()
+        if own_connection:
+            conn.commit()
         return updated
     finally:
         if own_connection:
