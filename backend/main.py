@@ -26,6 +26,7 @@ from app.routes.albums import router as albums_router
 from app.routes.images import router as images_router
 from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
+from app.routes.memory import router as memories_router
 from fastapi.openapi.utils import get_openapi
 from app.logging.setup_logging import (
     configure_uvicorn_logging,
@@ -123,6 +124,7 @@ async def root():
     return {"message": "PictoPy Server is up and running!"}
 
 
+app.include_router(memories_router)
 app.include_router(folders_router, prefix="/folders", tags=["Folders"])
 app.include_router(albums_router, prefix="/albums", tags=["Albums"])
 app.include_router(images_router, prefix="/images", tags=["Images"])

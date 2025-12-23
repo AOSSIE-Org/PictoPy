@@ -63,7 +63,6 @@ export const Home = () => {
             showTitle={true}
             title={title}
             onMonthOffsetsChange={setMonthMarkers}
-            scrollContainerRef={scrollableRef}
           />
         ) : (
           <EmptyGalleryState />

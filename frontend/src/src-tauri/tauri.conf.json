@@ -1,0 +1,66 @@
+{
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420"
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "deb", "app"],
+    "createUpdaterArtifacts": false,
+    "linux": {
+      "deb": {
+        "postInstallScript": "./postinstall.sh"
+      }
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {},
+    "macOS": {
+      "signingIdentity": "NULL",
+      "entitlements": "./Entitlements.plist"
+    }
+  },
+  "productName": "PictoPy",
+  "version": "1.0.0",
+  "identifier": "com.yourcompany.pictopy",
+  "plugins": {
+    "fs": {
+      "requireLiteralLeadingDot": true
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDIwRjlGREM4NzE3RkI0QjgKUldTNHRIOXh5UDM1SUg5cEtna0FkMjJ1bitla1R2VUltaEU4UVpiMUNpZjVYc1JIcVFNVGwwU0QK",
+      "endpoints": [
+        "https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/latest.json"
+      ]
+    }
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "PictoPy",
+        "width": 800,
+        "height": 600,
+        "minWidth": 1280,
+        "minHeight": 720,
+        "resizable": true,
+        "fullscreen": false,
+        "maximized": false,
+        "devtools": true
+      }
+    ],
+    "security": {
+      "assetProtocol": {
+        "scope": ["**"],
+        "enable": true
+      },
+      "csp": "default-src 'self'; img-src 'self' data: asset: http://asset.localhost; media-src 'self' blob: data:; connect-src 'self' ipc: http://ipc.localhost http://localhost:8000 ws://localhost:8000 http://localhost:8001 ws://localhost:8001"
+    }
+  }
+}

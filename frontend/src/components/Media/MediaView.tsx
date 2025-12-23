@@ -1,224 +1,145 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-// import { revealItemInDir } from '@tauri-apps/plugin-opener';
+import { useEffect, useMemo, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+
 import { MediaViewProps } from '@/types/Media';
 import { selectCurrentViewIndex } from '@/features/imageSelectors';
 import { setCurrentViewIndex, closeImageView } from '@/features/imageSlice';
 
-// Modular components
-import { MediaViewControls } from './MediaViewControls';
-import { ZoomControls } from './ZoomControls';
-import { MediaThumbnails } from './MediaThumbnails';
-import { MediaInfoPanel } from './MediaInfoPanel';
 import { ImageViewer } from './ImageViewer';
-import { NavigationButtons } from './NavigationButtons';
-import type { ImageViewerRef } from './ImageViewer';
-
-// Custom hooks
-import { useImageViewControls } from '@/hooks/useImageViewControls';
-import { useSlideshow } from '@/hooks/useSlideshow';
-import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
-import { useToggleFav } from '../../hooks/useToggleFav';
-import { useLocation } from 'react-router';
-import { ROUTES } from '@/constants/routes';
+import { StoryProgressBar } from './StoryProgressBar';
 
 export function MediaView({
-  onClose,
-  type = 'image',
   images = [],
+  title,
+  subtitle,
+  onClose,
 }: MediaViewProps) {
   const dispatch = useDispatch();
+  const currentIndex = useSelector(selectCurrentViewIndex);
 
-  // Redux selectors
-  const currentViewIndex = useSelector(selectCurrentViewIndex);
-  const totalImages = images.length;
-  // guard: images default to empty array in the signature so `images.length` is safe
+  const [paused, setPaused] = useState(false);
+  const [visible, setVisible] = useState(true);
 
-  const currentImage = useMemo(() => {
-    if (currentViewIndex >= 0 && currentViewIndex < images.length) {
-      return images[currentViewIndex];
-    }
-    return null;
-  }, [images, currentViewIndex]);
-
-  const imageViewerRef = useRef<ImageViewerRef>(null);
-
-  // Local UI state
-  const [showInfo, setShowInfo] = useState(false);
-  const [showThumbnails, setShowThumbnails] = useState(false);
-  const [resetSignal, setResetSignal] = useState(0);
-
-  // Custom hooks
-  const { viewState, handlers } = useImageViewControls();
-  // Navigation handlers
-  const handleNextImage = useCallback(() => {
-    if (currentViewIndex < images.length - 1) {
-      dispatch(setCurrentViewIndex(currentViewIndex + 1));
-      handlers.resetZoom();
-    }
-  }, [dispatch, handlers, currentViewIndex, images.length]);
-
-  const handlePreviousImage = useCallback(() => {
-    if (currentViewIndex > 0) {
-      dispatch(setCurrentViewIndex(currentViewIndex - 1));
-      handlers.resetZoom();
-    }
-  }, [dispatch, handlers, currentViewIndex]);
-
-  const handleClose = useCallback(() => {
-    dispatch(closeImageView());
-    onClose && onClose();
-  }, [dispatch, onClose]);
-
-  const handleThumbnailClick = useCallback(
-    (index: number) => {
-      dispatch(setCurrentViewIndex(index));
-      handlers.resetZoom();
-    },
-    [dispatch, handlers],
+  const currentImage = useMemo(
+    () => images[currentIndex] ?? null,
+    [images, currentIndex],
   );
 
-  const location = useLocation();
-  const { toggleFavourite } = useToggleFav();
+  /* --------------------------------
+     AUTO PLAY (with pause)
+  --------------------------------- */
+  useEffect(() => {
+    if (!images.length || paused) return;
 
-  // Slideshow functionality
-  const { isSlideshowActive, toggleSlideshow } = useSlideshow(
-    totalImages,
-    handleNextImage,
-  );
+    const timer = setTimeout(() => {
+      setVisible(false); // fade out
+      setTimeout(() => {
+        if (currentIndex < images.length - 1) {
+          dispatch(setCurrentViewIndex(currentIndex + 1));
+        } else {
+          dispatch(closeImageView());
+          onClose?.();
+        }
+        setVisible(true); // fade in
+      }, 300);
+    }, 4000);
 
-  // Folder Open functionality
-  const handleOpenFolder = async () => {
-    if (!currentImage?.path) return;
-    try {
-      // await revealItemInDir(currentImage.path);
-    } catch (err) {
-      console.log(err);
-      console.error('Failed to open folder.');
-    }
-  };
+    return () => clearTimeout(timer);
+  }, [currentIndex, paused, images.length, dispatch, onClose]);
 
-  // Toggle functions
-  const toggleInfo = useCallback(() => {
-    setShowInfo((prev) => !prev);
-  }, []);
-
-  // Hooks that depend on currentImage but always declared
-  const handleToggleFavourite = useCallback(() => {
-    if (currentImage) {
-      if (currentImage?.id) {
-        toggleFavourite(currentImage.id);
+  /* --------------------------------
+     Keyboard support
+  --------------------------------- */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') {
+        dispatch(
+          setCurrentViewIndex(Math.min(currentIndex + 1, images.length - 1)),
+        );
       }
-      if (location.pathname === ROUTES.FAVOURITES) handleClose();
-    }
-  }, [currentImage, toggleFavourite]);
+      if (e.key === 'ArrowLeft') {
+        dispatch(setCurrentViewIndex(Math.max(currentIndex - 1, 0)));
+      }
+      if (e.key === ' ') {
+        e.preventDefault();
+        setPaused((p) => !p);
+      }
+      if (e.key === 'Escape') {
+        dispatch(closeImageView());
+        onClose?.();
+      }
+    };
 
-  const handleZoomIn = useCallback(() => {
-    imageViewerRef.current?.zoomIn();
-  }, []);
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [currentIndex, images.length, dispatch, onClose]);
 
-  const handleZoomOut = useCallback(() => {
-    imageViewerRef.current?.zoomOut();
-  }, []);
+  if (!currentImage) return null;
 
-  const handleResetZoom = useCallback(() => {
-    imageViewerRef.current?.reset();
-    handlers.resetZoom();
-    setResetSignal((s) => s + 1);
-  }, [handlers]);
-
-  // Keyboard navigation
-  useKeyboardNavigation({
-    onClose: handleClose,
-    onNext: handleNextImage,
-    onPrevious: handlePreviousImage,
-    onZoomIn: handleZoomIn,
-    onZoomOut: handleZoomOut,
-    onRotate: handlers.handleRotate,
-    onToggleInfo: toggleInfo,
-  });
-
-  // Early return if no images or invalid index
-  if (!images?.length || currentViewIndex === -1 || !currentImage) {
-    return null;
-  }
-
-  // Safe variables
-  const currentImagePath = currentImage.path;
-  // console.log(currentImage);
-  const currentImageAlt = `image-${currentViewIndex}`;
   return (
-    <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-gradient-to-b from-black/95 to-black/98 backdrop-blur-lg">
-      {/* Controls */}
-      <MediaViewControls
-        showInfo={showInfo}
-        onToggleInfo={toggleInfo}
-        onToggleFavourite={handleToggleFavourite}
-        isFavourite={currentImage.isFavourite || false}
-        onOpenFolder={handleOpenFolder}
-        isSlideshowActive={isSlideshowActive}
-        onToggleSlideshow={toggleSlideshow}
-        onClose={handleClose}
-        type={type}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md">
+      {/* Progress bar */}
+      <StoryProgressBar
+        total={images.length}
+        current={currentIndex}
+        paused={paused}
       />
 
-      {/* Main viewer area */}
-      <div
-        className="relative flex h-full w-full items-center justify-center overflow-visible"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) handleClose();
+      {/* Close */}
+      <button
+        onClick={() => {
+          dispatch(closeImageView());
+          onClose?.();
         }}
+        className="absolute top-24 left-6 z-50 text-2xl text-white"
       >
-        {type === 'image' && (
-          <ImageViewer
-            ref={imageViewerRef}
-            imagePath={currentImagePath}
-            alt={currentImageAlt}
-            rotation={viewState.rotation}
-            resetSignal={resetSignal}
-          />
-        )}
+        ✕
+      </button>
 
-        {/* Navigation buttons */}
-        <NavigationButtons
-          onPrevious={handlePreviousImage}
-          onNext={handleNextImage}
-        />
+      {/* Pause / Play (CENTERED like Google Photos) */}
+      <button
+        onClick={() => setPaused((p) => !p)}
+        className="absolute top-24 right-6 z-50 -translate-x-1/2 text-xl text-white"
+      >
+        {paused ? '▶' : '❚❚'}
+      </button>
+
+      {/* Title + Date */}
+      <div className="absolute top-6 left-20 z-50 text-white">
+        {subtitle && <p className="text-xs opacity-70">{subtitle}</p>}
+        {title && <h2 className="text-sm font-semibold">{title}</h2>}
       </div>
 
-      {/* Zoom controls */}
-      {type === 'image' && (
-        <ZoomControls
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onRotate={handlers.handleRotate}
-          onReset={handleResetZoom}
-          showThumbnails={showThumbnails}
-        />
-      )}
-
-      {/* Thumbnails */}
+      {/* STORY CONTAINER (LANDSCAPE) */}
       <div
-        onMouseEnter={() => setShowThumbnails(true)}
-        onMouseLeave={() => setShowThumbnails(false)}
+        className="relative h-[60vh] w-[70vw] max-w-[900px] overflow-hidden rounded-2xl bg-black shadow-2xl"
+        onMouseDown={() => setPaused(true)}
+        onMouseUp={() => setPaused(false)}
       >
-        <MediaThumbnails
-          images={images}
-          currentIndex={currentViewIndex}
-          showThumbnails={showThumbnails}
-          onThumbnailClick={handleThumbnailClick}
-          type={type}
+        {/* FADE IMAGE */}
+        <div
+          className={`absolute inset-0 transition-opacity duration-300 ease-in-out ${
+            visible ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <ImageViewer imagePath={currentImage.path} alt="story" rotation={0} />
+        </div>
+
+        {/* Click zones */}
+        <div
+          className="absolute top-0 left-0 h-full w-1/2 cursor-pointer"
+          onClick={() =>
+            currentIndex > 0 && dispatch(setCurrentViewIndex(currentIndex - 1))
+          }
+        />
+        <div
+          className="absolute top-0 right-0 h-full w-1/2 cursor-pointer"
+          onClick={() =>
+            currentIndex < images.length - 1 &&
+            dispatch(setCurrentViewIndex(currentIndex + 1))
+          }
         />
       </div>
-
-      {/* Info panel */}
-      <MediaInfoPanel
-        show={showInfo}
-        onClose={toggleInfo}
-        currentImage={currentImage}
-        currentIndex={currentViewIndex}
-        totalImages={totalImages}
-      />
     </div>
   );
 }

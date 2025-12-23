@@ -1,0 +1,141 @@
+{
+  "identifier": "migrated",
+  "description": "permissions that were migrated from v1",
+  "local": true,
+  "windows": ["main"],
+  "permissions": [
+    "core:path:default",
+    "core:event:default",
+    "core:window:default",
+    "core:app:default",
+    "core:resources:default",
+    "core:menu:default",
+    "core:tray:default",
+    "shell:allow-open",
+    "core:path:default",
+    "core:event:default",
+    "core:window:default",
+    "core:window:allow-destroy",
+    "core:app:default",
+    "core:resources:default",
+    "core:menu:default",
+    "core:tray:default",
+    "core:window:allow-set-title",
+    "dialog:allow-open",
+    "fs:default",
+    "fs:allow-app-write",
+    "fs:allow-app-write-recursive",
+    "fs:allow-appcache-write",
+    "fs:allow-appcache-write-recursive",
+    "fs:allow-appconfig-write",
+    "fs:allow-appconfig-write-recursive",
+    "fs:allow-appdata-write",
+    "fs:allow-appdata-write-recursive",
+    "fs:allow-applocaldata-write",
+    "fs:allow-applocaldata-write-recursive",
+    "fs:allow-applog-write",
+    "fs:allow-applog-write-recursive",
+    "fs:allow-audio-write",
+    "fs:allow-audio-write-recursive",
+    "fs:allow-cache-write",
+    "fs:allow-cache-write-recursive",
+    "fs:allow-config-write",
+    "fs:allow-config-write-recursive",
+    "fs:allow-create",
+    "fs:allow-data-write",
+    "fs:allow-data-write-recursive",
+    "fs:allow-desktop-write",
+    "fs:allow-desktop-write-recursive",
+    "fs:allow-document-write",
+    "fs:allow-document-write-recursive",
+    "fs:allow-download-write",
+    "fs:allow-download-write-recursive",
+    "fs:allow-exe-write",
+    "fs:allow-exe-write-recursive",
+    "fs:allow-font-write",
+    "fs:allow-font-write-recursive",
+    "fs:allow-home-write",
+    "fs:allow-home-write-recursive",
+    "fs:allow-localdata-write",
+    "fs:allow-localdata-write-recursive",
+    "fs:allow-log-write",
+    "fs:allow-log-write-recursive",
+    "fs:allow-picture-write",
+    "fs:allow-picture-write-recursive",
+    "fs:allow-public-write",
+    "fs:allow-public-write-recursive",
+    "fs:allow-resource-write",
+    "fs:allow-resource-write-recursive",
+    "fs:allow-runtime-write",
+    "fs:allow-runtime-write-recursive",
+    "fs:allow-temp-write",
+    "fs:allow-temp-write-recursive",
+    "fs:allow-template-write",
+    "fs:allow-template-write-recursive",
+    "fs:allow-video-write",
+    "fs:allow-video-write-recursive",
+    "fs:write-all",
+    "fs:write-files",
+    "process:default",
+    {
+      "identifier": "fs:scope",
+      "allow": ["**"]
+    },
+    {
+      "identifier": "fs:read-all",
+      "allow": ["**"]
+    },
+    "shell:default",
+    "dialog:default",
+    "dialog:default",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "StartServerUnix",
+          "cmd": "bash",
+          "args": ["-c", "./PictoPy_Server"],
+          "sidecar": false
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "StartServerWindows",
+          "cmd": "powershell",
+          "args": ["./PictoPy_Server"],
+          "sidecar": false
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "killProcessUnix",
+          "cmd": "bash",
+          "args": ["-c", "pkill -f PictoPy_Server"],
+          "sidecar": false
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "killProcessWindows",
+          "cmd": "powershell",
+          "args": ["taskkill /t /f /im PictoPy_Server.exe"],
+          "sidecar": false
+        }
+      ]
+    },
+    "shell:default",
+    "fs:default",
+    "dialog:default",
+    "store:default",
+    "opener:allow-reveal-item-in-dir"
+  ]
+}

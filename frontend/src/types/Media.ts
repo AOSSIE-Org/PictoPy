@@ -36,6 +36,8 @@ export interface MediaViewProps {
   onClose?: () => void;
   type?: string;
   images: Image[];
+  title?: string;
+  subtitle?: string;
 }
 
 export interface SortingControlsProps {
