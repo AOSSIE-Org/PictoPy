@@ -154,11 +154,11 @@ class ConservativeFaceClustering:
         Args:
             eps: Maximum distance for DBSCAN (default: 0.25 - conservative)
             min_samples: Minimum samples for core point (default: 2)
-            max_cluster_diameter: Maximum allowed cluster diameter (default: 0.55)
+            max_cluster_diameter: Maximum allowed cluster diameter (default: 0.60)
             validate_clusters: Whether to validate and split loose clusters
             auto_eps: Auto-select conservative epsilon
             merge_close_clusters: Whether to merge clusters that are clearly same person
-            merge_threshold: Max centroid distance for merging (default: 0.30)
+            merge_threshold: Max centroid distance for merging (default: 0.40)
         """
         self.eps = eps
         self.min_samples = max(min_samples, 2)  # Never allow 1
