@@ -229,7 +229,8 @@ def db_update_cluster(
         conn.commit()
         return updated
     finally:
-        conn.close()
+        if own_connection:
+            conn.close()
 
 
 def db_get_all_clusters_with_face_counts() -> (
