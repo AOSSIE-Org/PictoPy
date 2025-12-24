@@ -4,9 +4,8 @@ import json
 import base64
 import cv2
 from datetime import datetime
-from sklearn.cluster import DBSCAN
 from collections import defaultdict, Counter
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Literal
 from numpy.typing import NDArray
 
 from app.database.faces import (
@@ -23,8 +22,55 @@ from app.database.metadata import (
 )
 from app.logging.setup_logging import get_logger
 
+# Import advanced clustering and quality assessment
+from app.utils.clustering_advanced import (
+    cluster_faces,
+    calculate_cluster_mean,
+)
+from app.utils.face_quality import filter_quality_faces
+
 # Initialize logger
 logger = get_logger(__name__)
+
+# =============================================================================
+# CLUSTERING CONFIGURATION
+# =============================================================================
+
+# Algorithm: "dbscan", "hierarchical", or "conservative"
+# Using dbscan with min_samples=2 - this prevents bridge point chaining
+# which was the root cause of different people being merged
+CLUSTERING_ALGORITHM: Literal["dbscan", "hierarchical", "conservative"] = "dbscan"
+
+# Epsilon (distance threshold) - 0.35 balances between:
+# - Not merging different people (was happening at higher eps)
+# - Not splitting same person with angle/lighting variation (was happening at 0.3)
+CLUSTERING_AUTO_EPSILON = False
+CLUSTERING_FIXED_EPSILON = 0.35
+
+# min_samples >= 2 prevents chaining (bridge points merging distinct clusters)
+# This is the KEY FIX - single faces can't act as bridges between clusters
+CLUSTERING_MIN_SAMPLES = 2
+
+# Quality filtering
+CLUSTERING_QUALITY_FILTER_ENABLED = True
+CLUSTERING_QUALITY_MIN_THRESHOLD = 0.15  # Low to include most faces
+
+# Hierarchical clustering settings
+HIERARCHICAL_LINKAGE = "complete"
+HIERARCHICAL_DISTANCE_THRESHOLD = 0.35
+
+# Conservative clustering settings (only used if algorithm="conservative")
+MAX_CLUSTER_DIAMETER = 0.60
+MERGE_THRESHOLD = 0.40
+VALIDATE_CLUSTERS = False
+
+# Assignment threshold for incremental clustering
+ASSIGNMENT_SIMILARITY_THRESHOLD = 0.70
+
+# Post-cluster merge: merge clusters whose mean embeddings are very close
+# This fixes same-person splits due to angle/pose without reintroducing bridge-point chaining
+POST_MERGE_ENABLED = True
+POST_MERGE_MEAN_DISTANCE_THRESHOLD = 0.28  # Tighter than DBSCAN eps for safety
 
 
 class ClusterResult:
@@ -146,49 +192,84 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
 
 
 def cluster_util_cluster_all_face_embeddings(
-    eps: float = 0.3, min_samples: int = 2
+    eps: float = None, min_samples: int = None
 ) -> List[ClusterResult]:
     """
-    Cluster face embeddings using DBSCAN and assign cluster names based on majority voting.
+    Cluster face embeddings using advanced clustering algorithms with quality filtering.
 
     Args:
-        eps: DBSCAN epsilon parameter for maximum distance between samples
-        min_samples: DBSCAN minimum samples parameter for core points
+        eps: DBSCAN epsilon parameter (uses CLUSTERING_FIXED_EPSILON if None)
+        min_samples: Minimum samples parameter (uses CLUSTERING_MIN_SAMPLES if None)
 
     Returns:
         List of ClusterResult objects containing face_id, embedding, cluster_uuid, and cluster_name
     """
-    # Get all faces with their existing cluster names
+    # Use config values if not provided
+    if eps is None:
+        eps = CLUSTERING_FIXED_EPSILON
+    if min_samples is None:
+        min_samples = CLUSTERING_MIN_SAMPLES
+
+    logger.info(f"Clustering with eps={eps}, min_samples={min_samples}")
+
+    # Get all faces with their existing cluster names and quality scores
     faces_data = db_get_all_faces_with_cluster_names()
 
     if not faces_data:
         return []
 
-    # Extract embeddings and face IDs
+    logger.info(f"Total faces retrieved: {len(faces_data)}")
+
+    # Filter by quality if enabled
+    if CLUSTERING_QUALITY_FILTER_ENABLED:
+        original_count = len(faces_data)
+        faces_data = filter_quality_faces(
+            faces_data, min_quality=CLUSTERING_QUALITY_MIN_THRESHOLD
+        )
+        filtered_count = original_count - len(faces_data)
+        if filtered_count > 0:
+            logger.info(
+                f"Filtered out {filtered_count} low-quality faces (threshold: {CLUSTERING_QUALITY_MIN_THRESHOLD})"
+            )
+
+    if not faces_data:
+        logger.warning("No faces remaining after quality filtering")
+        return []
+
+    # Extract embeddings, face IDs, and quality scores
     embeddings = []
     face_ids = []
     existing_cluster_names = []
+    quality_scores = []
 
     for face in faces_data:
         face_ids.append(face["face_id"])
         embeddings.append(face["embeddings"])
         existing_cluster_names.append(face["cluster_name"])
+        quality_scores.append(face.get("quality", 0.5))
 
     logger.info(f"Total faces to cluster: {len(face_ids)}")
 
-    # Convert to numpy array for DBSCAN
+    # Convert to numpy array
     embeddings_array = np.array(embeddings)
 
-    # Perform DBSCAN clustering
-    dbscan = DBSCAN(
-        eps=eps,
+    # Perform clustering using selected algorithm with conservative parameters
+    cluster_labels = cluster_faces(
+        embeddings_array,
+        algorithm=CLUSTERING_ALGORITHM,
         min_samples=min_samples,
-        metric="cosine",
-        n_jobs=-1,  # Use all available CPU cores
+        auto_eps=CLUSTERING_AUTO_EPSILON,
+        fixed_eps=eps,
+        distance_threshold=HIERARCHICAL_DISTANCE_THRESHOLD,
+        linkage=HIERARCHICAL_LINKAGE,
+        density_refinement=VALIDATE_CLUSTERS,
     )
 
-    cluster_labels = dbscan.fit_predict(embeddings_array)
-    logger.info(f"DBSCAN found {len(set(cluster_labels)) - 1} clusters")
+    num_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
+    num_noise = int(np.sum(cluster_labels == -1))
+    logger.info(
+        f"Clustering complete: {num_clusters} clusters found, {num_noise} noise points"
+    )
 
     # Group faces by cluster labels
     clusters = defaultdict(list)
@@ -200,8 +281,43 @@ def cluster_util_cluster_all_face_embeddings(
                     "face_id": face_ids[i],
                     "embedding": embeddings[i],
                     "existing_cluster_name": existing_cluster_names[i],
+                    "quality": quality_scores[i],
                 }
             )
+
+    # Post-cluster merge: merge clusters whose mean embeddings are very close
+    # This fixes same-person splits due to angle/pose without bridge-point chaining
+    if POST_MERGE_ENABLED and len(clusters) > 1:
+        cluster_items = list(clusters.items())
+        merged = {}
+        used = set()
+
+        for i, (label_i, faces_i) in enumerate(cluster_items):
+            if label_i in used:
+                continue
+
+            mean_i = np.mean([f["embedding"] for f in faces_i], axis=0)
+            merged[label_i] = list(faces_i)  # Copy the list
+
+            for j in range(i + 1, len(cluster_items)):
+                label_j, faces_j = cluster_items[j]
+                if label_j in used:
+                    continue
+
+                mean_j = np.mean([f["embedding"] for f in faces_j], axis=0)
+                dist = _calculate_cosine_distance(mean_i, mean_j)
+
+                if dist < POST_MERGE_MEAN_DISTANCE_THRESHOLD:
+                    merged[label_i].extend(faces_j)
+                    used.add(label_j)
+                    logger.debug(
+                        f"Merged cluster {label_j} into {label_i} (mean dist: {dist:.3f})"
+                    )
+
+            used.add(label_i)
+
+        clusters = merged
+        logger.info(f"After post-merge: {len(clusters)} clusters")
 
     # Generate cluster UUIDs and determine cluster names
     results = []
@@ -227,7 +343,7 @@ def cluster_util_cluster_all_face_embeddings(
 
 
 def cluster_util_assign_cluster_to_faces_without_clusterId(
-    similarity_threshold: float = 0.7,
+    similarity_threshold: float = None,
 ) -> List[Dict]:
     """
     Assign cluster IDs to faces that don't have clusters using nearest mean method with similarity threshold.
@@ -242,31 +358,38 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
     Args:
         similarity_threshold:
             Minimum cosine similarity required for assignment (0.0 to 1.0)
-            Higher values = more strict assignment. Default: 0.7
+            Higher values = more strict assignment. Uses ASSIGNMENT_SIMILARITY_THRESHOLD if None.
 
     Returns:
         List of face-cluster mappings ready for batch update
     """
-    # Get faces without cluster assignments
+    # Use config value if not provided
+    if similarity_threshold is None:
+        similarity_threshold = ASSIGNMENT_SIMILARITY_THRESHOLD
+
+    # Get faces without cluster assignments (includes quality scores)
     unassigned_faces = db_get_faces_unassigned_clusters()
     if not unassigned_faces:
         return []
 
-    # Get cluster mean embeddings
-    cluster_means = db_get_cluster_mean_embeddings()
+    # Get cluster embeddings and quality scores (for medoid calculation)
+    cluster_means_data = db_get_cluster_mean_embeddings()
 
-    if not cluster_means:
+    if not cluster_means_data:
         return []
 
-    # Prepare data for nearest neighbor assignment
+    # Calculate cluster representatives using quality-weighted medoid or mean
     cluster_ids = []
-    mean_embeddings = []
+    cluster_representatives = []
 
-    for cluster_data in cluster_means:
+    for cluster_data in cluster_means_data:
         cluster_ids.append(cluster_data["cluster_id"])
-        mean_embeddings.append(cluster_data["mean_embedding"])
 
-    mean_embeddings_array = np.array(mean_embeddings)
+        # Calculate cluster representative (simple mean)
+        representative = calculate_cluster_mean(cluster_data["embeddings"])
+        cluster_representatives.append(representative)
+
+    cluster_representatives_array = np.array(cluster_representatives)
 
     # Prepare batch update data
     face_cluster_mappings = []
@@ -274,9 +397,22 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
     for face in unassigned_faces:
         face_id = face["face_id"]
         face_embedding = face["embeddings"]
+        face_quality = face.get("quality", 0.5)
 
-        # Calculate cosine distances to all cluster means
-        distances = _calculate_cosine_distances(face_embedding, mean_embeddings_array)
+        # Skip low-quality faces if filtering enabled
+        if (
+            CLUSTERING_QUALITY_FILTER_ENABLED
+            and face_quality < CLUSTERING_QUALITY_MIN_THRESHOLD
+        ):
+            logger.debug(
+                f"Skipping low-quality face {face_id} (quality: {face_quality:.3f})"
+            )
+            continue
+
+        # Calculate cosine distances to all cluster representatives
+        distances = _calculate_cosine_distances(
+            face_embedding, cluster_representatives_array
+        )
 
         # Find the best match
         min_distance = np.min(distances)
@@ -290,8 +426,29 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
             face_cluster_mappings.append(
                 {"face_id": face_id, "cluster_id": nearest_cluster_id}
             )
+        else:
+            logger.debug(
+                f"Face {face_id} not assigned: best similarity {max_similarity:.3f} < threshold {similarity_threshold}"
+            )
 
     return face_cluster_mappings
+
+
+def _calculate_cosine_distance(embedding_a: NDArray, embedding_b: NDArray) -> float:
+    """
+    Calculate cosine distance between two embeddings.
+
+    Args:
+        embedding_a: First embedding vector
+        embedding_b: Second embedding vector
+
+    Returns:
+        Cosine distance (0 = identical, 2 = opposite)
+    """
+    norm_a = embedding_a / np.linalg.norm(embedding_a)
+    norm_b = embedding_b / np.linalg.norm(embedding_b)
+    similarity = np.dot(norm_a, norm_b)
+    return 1 - similarity
 
 
 def _calculate_cosine_distances(
