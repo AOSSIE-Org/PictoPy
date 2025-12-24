@@ -16,7 +16,7 @@ If you are new to this project, follow these steps:
 1. Read this README completely.
 2. Follow the setup instructions in 'CONTRIBUTING.md'.
 3. Try running the project locally.
-4. Look for beginner-friendly issues or documentation improvments.
+4. Look for beginner-friendly issues or documentation improvements.
    
 # Architecture
 
