@@ -1,6 +1,6 @@
 // FAQ.tsx
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown, ChevronUp, Tag, Lock, Globe } from "lucide-react";
 
 const faqs = [

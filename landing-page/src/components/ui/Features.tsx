@@ -1,9 +1,9 @@
 
-import { motion } from "framer-motion";
+import { motion } from "motion/react"
 import { Brain, Lightbulb, Users, TrendingUp, Target, Phone, Shield } from "lucide-react";
 import type { ReactNode } from "react";
 import karnx from "@/assets/karnx.png";
-
+ 
 // Define the Feature type
 type Feature = {
   icon: ReactNode;

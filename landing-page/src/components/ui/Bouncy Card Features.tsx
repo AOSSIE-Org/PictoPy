@@ -1,5 +1,5 @@
 import { ReactNode } from "react"; // Removed unused React import
-import { motion } from "framer-motion";
+import { motion } from "motion/react"
 import { 
   Images, 
   
