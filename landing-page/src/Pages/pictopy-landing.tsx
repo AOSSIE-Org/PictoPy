@@ -29,23 +29,25 @@ const PictopyLanding: FC = () => {
     const fetchLatestRelease = async () => {
       try {
         const response = await fetch(
-          'https://api.github.com/repos/AOSSIE-Org/PictoPy/releases/latest'
+          "https://api.github.com/repos/AOSSIE-Org/PictoPy/releases/latest"
         );
         const data: GitHubRelease = await response.json();
-        
+
         // Find download links for each platform
-        const macAsset = data.assets.find((asset) => 
-          asset.name.toLowerCase().includes('dmg') || 
-          asset.name.toLowerCase().includes('macos')
+        const macAsset = data.assets.find(
+          (asset) =>
+            asset.name.toLowerCase().includes(".dmg") ||
+            asset.name.toLowerCase().includes(".app")
         );
-        
-        const windowsAsset = data.assets.find((asset) => 
-          asset.name.toLowerCase().includes('exe') || 
-          asset.name.toLowerCase().includes('.msi')
+
+        const windowsAsset = data.assets.find(
+          (asset) =>
+            asset.name.toLowerCase().includes(".exe") ||
+            asset.name.toLowerCase().includes(".msi")
         );
-        
-        const linuxAsset = data.assets.find((asset) => 
-          asset.name.toLowerCase().includes('.deb')
+
+        const linuxAsset = data.assets.find((asset) =>
+          asset.name.toLowerCase().includes(".deb")
         );
 
         setDownloadLinks({
@@ -55,7 +57,7 @@ const PictopyLanding: FC = () => {
         });
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching latest release:', error);
+        console.error("Error fetching latest release:", error);
         setLoading(false);
       }
     };
@@ -64,7 +66,10 @@ const PictopyLanding: FC = () => {
   }, []);
 
   // Function to handle button click and show notification
-  const handleDownloadClick = (platform: string, downloadUrl: string | null) => {
+  const handleDownloadClick = (
+    platform: string,
+    downloadUrl: string | null
+  ) => {
     if (!downloadUrl) {
       setDownloadStarted(`${platform} download not available yet`);
       setTimeout(() => setDownloadStarted(null), 3000);
@@ -73,7 +78,7 @@ const PictopyLanding: FC = () => {
 
     // Trigger download
     window.location.href = downloadUrl;
-    
+
     setDownloadStarted(`Download for ${platform} started!`);
     setTimeout(() => {
       setDownloadStarted(null);
@@ -81,8 +86,8 @@ const PictopyLanding: FC = () => {
   };
 
   return (
-    <section 
-      id="downloads-section" 
+    <section
+      id="downloads-section"
       className="w-full py-12 md:py-24 bg-white dark:bg-black transition-colors duration-300 relative overflow-hidden"
     >
       {/* Background Animated SVG */}
@@ -128,7 +133,8 @@ const PictopyLanding: FC = () => {
 
           {/* Subheading */}
           <p className="text-xl md:text-2xl text-green-700 dark:text-yellow-300 max-w-3xl mb-8 transition-colors duration-300">
-            Organize your photos effortlessly. Available for Mac, Windows, and Linux.
+            Organize your photos effortlessly. Available for Mac, Windows, and
+            Linux.
           </p>
 
           {/* Loading State */}
@@ -157,7 +163,9 @@ const PictopyLanding: FC = () => {
                          transform hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               size="lg"
               variant="outline"
-              onClick={() => handleDownloadClick("Windows", downloadLinks.windows)}
+              onClick={() =>
+                handleDownloadClick("Windows", downloadLinks.windows)
+              }
               disabled={loading || !downloadLinks.windows}
             >
               <img src={WindowsLogo} alt="Windows" className="h-7 w-7 mr-2" />
@@ -179,9 +187,7 @@ const PictopyLanding: FC = () => {
 
           {/* Download Notification (Popup) */}
           {downloadStarted && (
-            <div
-              className="fixed top-16 right-4 md:right-8 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl text-lg z-50 opacity-0 animate-slideInRight"
-            >
+            <div className="fixed top-16 right-4 md:right-8 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl text-lg z-50 opacity-0 animate-slideInRight">
               {downloadStarted}
             </div>
           )}
