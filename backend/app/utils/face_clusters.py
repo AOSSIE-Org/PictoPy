@@ -165,28 +165,31 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
 def _validate_embedding(embedding: NDArray, min_norm: float = 1e-6) -> bool:
     """
     Validate that an embedding is usable for distance calculations.
-    
+
     Args:
         embedding: Face embedding vector to validate
         min_norm: Minimum acceptable L2 norm for the embedding
-        
+
     Returns:
         True if embedding is valid, False otherwise
     """
     # Check for NaN or infinite values
     if not np.isfinite(embedding).all():
         return False
-    
+
     # Check if embedding is effectively zero (too small norm)
     norm = np.linalg.norm(embedding)
     if norm < min_norm:
         return False
-    
+
     return True
 
 
 def cluster_util_cluster_all_face_embeddings(
-    eps: float = 0.75, min_samples: int = 2, similarity_threshold: float = 0.85, merge_threshold: float = None
+    eps: float = 0.75,
+    min_samples: int = 2,
+    similarity_threshold: float = 0.85,
+    merge_threshold: float = None,
 ) -> List[ClusterResult]:
     """
     Cluster face embeddings using DBSCAN with similarity validation.
@@ -214,7 +217,7 @@ def cluster_util_cluster_all_face_embeddings(
 
     for face in faces_data:
         embedding = face["embeddings"]
-        
+
         # Validate embedding before adding
         if _validate_embedding(embedding):
             face_ids.append(face["face_id"])
@@ -222,7 +225,9 @@ def cluster_util_cluster_all_face_embeddings(
             existing_cluster_names.append(face["cluster_name"])
         else:
             invalid_count += 1
-            logger.warning(f"Skipping invalid embedding for face_id {face['face_id']} (NaN or zero vector)")
+            logger.warning(
+                f"Skipping invalid embedding for face_id {face['face_id']} (NaN or zero vector)"
+            )
 
     if invalid_count > 0:
         logger.warning(f"Filtered out {invalid_count} invalid embeddings")
@@ -238,17 +243,21 @@ def cluster_util_cluster_all_face_embeddings(
 
     # Calculate pairwise distances with similarity threshold
     distances = cosine_distances(embeddings_array)
-    
+
     # Guard against NaN distances (shouldn't happen after validation, but double-check)
     if not np.isfinite(distances).all():
-        logger.error("NaN or infinite values detected in distance matrix after validation")
+        logger.error(
+            "NaN or infinite values detected in distance matrix after validation"
+        )
         # Replace NaN/inf with max distance (1.0)
         distances = np.nan_to_num(distances, nan=1.0, posinf=1.0, neginf=1.0)
-    
+
     # Apply similarity threshold - mark dissimilar faces as completely different
     max_distance = 1 - similarity_threshold  # Convert similarity to distance
     distances[distances > max_distance] = 1.0  # Mark as completely different
-    logger.info(f"Applied similarity threshold: {similarity_threshold} (max_distance: {max_distance:.3f})")
+    logger.info(
+        f"Applied similarity threshold: {similarity_threshold} (max_distance: {max_distance:.3f})"
+    )
 
     # Perform DBSCAN clustering with precomputed distances
     dbscan = DBSCAN(
@@ -259,7 +268,9 @@ def cluster_util_cluster_all_face_embeddings(
     )
 
     cluster_labels = dbscan.fit_predict(distances)
-    logger.info(f"DBSCAN found {len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)} clusters")
+    logger.info(
+        f"DBSCAN found {len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)} clusters"
+    )
 
     # Group faces by cluster labels
     clusters = defaultdict(list)
@@ -297,7 +308,9 @@ def cluster_util_cluster_all_face_embeddings(
     # Post-clustering merge: merge similar clusters based on representative faces
     # Use similarity_threshold if merge_threshold not explicitly provided
     effective_merge_threshold = merge_threshold if merge_threshold is not None else 0.7
-    results = _merge_similar_clusters(results, merge_threshold=effective_merge_threshold)
+    results = _merge_similar_clusters(
+        results, merge_threshold=effective_merge_threshold
+    )
 
     return results
 
@@ -341,14 +354,16 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
 
     for cluster_data in cluster_means:
         mean_emb = cluster_data["mean_embedding"]
-        
+
         # Validate cluster mean embedding
         if _validate_embedding(mean_emb):
             cluster_ids.append(cluster_data["cluster_id"])
             mean_embeddings.append(mean_emb)
         else:
             invalid_clusters += 1
-            logger.warning(f"Skipping invalid cluster mean for cluster_id {cluster_data['cluster_id']}")
+            logger.warning(
+                f"Skipping invalid cluster mean for cluster_id {cluster_data['cluster_id']}"
+            )
 
     if invalid_clusters > 0:
         logger.warning(f"Filtered out {invalid_clusters} invalid cluster means")
@@ -375,7 +390,7 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
 
         # Calculate cosine distances to all cluster means
         distances = _calculate_cosine_distances(face_embedding, mean_embeddings_array)
-        
+
         # Guard against NaN distances
         if not np.isfinite(distances).all():
             logger.warning(f"NaN distances for face_id {face_id}, skipping")
@@ -396,7 +411,9 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
             )
 
     if skipped_invalid > 0:
-        logger.warning(f"Skipped {skipped_invalid} faces with invalid embeddings during assignment")
+        logger.warning(
+            f"Skipped {skipped_invalid} faces with invalid embeddings during assignment"
+        )
 
     return face_cluster_mappings
 
@@ -406,76 +423,82 @@ def _merge_similar_clusters(
 ) -> List[ClusterResult]:
     """
     Merge clusters that are too similar based on their mean embeddings.
-    
+
     Args:
         results: List of ClusterResult objects
         merge_threshold: Similarity threshold for merging (default: 0.85)
-        
+
     Returns:
         Updated list with merged clusters
     """
     if not results:
         return results
-    
+
     # Group faces by cluster
     cluster_map = defaultdict(list)
     for result in results:
         cluster_map[result.cluster_uuid].append(result)
-    
+
     if len(cluster_map) <= 1:
         return results  # Nothing to merge
-    
+
     # Calculate mean embedding for each cluster with validation
     cluster_means = {}
     invalid_clusters = []
-    
+
     for cluster_uuid, cluster_faces in cluster_map.items():
         embeddings = np.array([face.embedding for face in cluster_faces])
         mean_embedding = np.mean(embeddings, axis=0)
-        
+
         # Validate cluster mean
         if _validate_embedding(mean_embedding):
             cluster_means[cluster_uuid] = mean_embedding
         else:
             invalid_clusters.append(cluster_uuid)
-            logger.warning(f"Cluster {cluster_uuid} has invalid mean embedding, excluding from merge")
-    
+            logger.warning(
+                f"Cluster {cluster_uuid} has invalid mean embedding, excluding from merge"
+            )
+
     # Remove invalid clusters from consideration
     for invalid_uuid in invalid_clusters:
         cluster_map.pop(invalid_uuid, None)
-    
+
     if len(cluster_means) <= 1:
         return results  # Not enough valid clusters to merge
-    
+
     # Find clusters to merge based on similarity
     cluster_uuids = list(cluster_means.keys())
     merge_mapping = {}  # Maps old cluster_uuid -> new cluster_uuid
-    
+
     for i, uuid1 in enumerate(cluster_uuids):
         if uuid1 in merge_mapping:
             continue  # Already merged
-            
+
         for j in range(i + 1, len(cluster_uuids)):
             uuid2 = cluster_uuids[j]
             if uuid2 in merge_mapping:
                 continue  # Already merged
-            
+
             # Calculate similarity between cluster means
             emb1 = cluster_means[uuid1].reshape(1, -1)
             emb2 = cluster_means[uuid2].reshape(1, -1)
-            
+
             similarity = cosine_similarity(emb1, emb2)[0][0]
-            
+
             # Guard against NaN similarity
             if not np.isfinite(similarity):
-                logger.warning(f"NaN similarity between clusters {uuid1} and {uuid2}, skipping merge")
+                logger.warning(
+                    f"NaN similarity between clusters {uuid1} and {uuid2}, skipping merge"
+                )
                 continue
-            
+
             # If very similar, merge cluster2 into cluster1
             if similarity >= merge_threshold:
                 merge_mapping[uuid2] = uuid1
-                logger.info(f"Merging cluster {uuid2} into {uuid1} (similarity: {similarity:.3f})")
-    
+                logger.info(
+                    f"Merging cluster {uuid2} into {uuid1} (similarity: {similarity:.3f})"
+                )
+
     # Apply merges
     if merge_mapping:
         # Resolve transitive merges (follow chain to ultimate target)
@@ -486,12 +509,12 @@ def _merge_similar_clusters(
                 visited.add(current)
                 current = merge_mapping[current]
             return current
-        
+
         # Build merged results with resolved cluster UUIDs
         merged_results = []
         for result in results:
             final_cluster = resolve_final_cluster(result.cluster_uuid)
-            
+
             # Create new result with updated cluster_uuid (name will be updated next)
             merged_result = ClusterResult(
                 face_id=result.face_id,
@@ -500,13 +523,13 @@ def _merge_similar_clusters(
                 cluster_name=result.cluster_name,  # Original name, will be updated
             )
             merged_results.append(merged_result)
-        
+
         # Compute final cluster names by majority vote
         cluster_name_votes = defaultdict(list)
         for result in merged_results:
             if result.cluster_name:  # Only count non-None names
                 cluster_name_votes[result.cluster_uuid].append(result.cluster_name)
-        
+
         # Determine final name for each cluster
         final_cluster_names = {}
         for cluster_uuid, names in cluster_name_votes.items():
@@ -517,14 +540,16 @@ def _merge_similar_clusters(
                 final_cluster_names[cluster_uuid] = final_name
             else:
                 final_cluster_names[cluster_uuid] = None
-        
+
         # Update all results with final cluster names
         for result in merged_results:
             result.cluster_name = final_cluster_names.get(result.cluster_uuid)
-        
-        logger.info(f"Merged {len(merge_mapping)} clusters. Final count: {len(set(r.cluster_uuid for r in merged_results))}")
+
+        logger.info(
+            f"Merged {len(merge_mapping)} clusters. Final count: {len(set(r.cluster_uuid for r in merged_results))}"
+        )
         return merged_results
-    
+
     return results
 
 
@@ -551,7 +576,9 @@ def _calculate_cosine_distances(
 
     # Normalize cluster means with safe division
     cluster_norm_values = np.linalg.norm(cluster_means, axis=1, keepdims=True)
-    cluster_norm_values = np.maximum(cluster_norm_values, 1e-6)  # Prevent division by zero
+    cluster_norm_values = np.maximum(
+        cluster_norm_values, 1e-6
+    )  # Prevent division by zero
     cluster_norms = cluster_means / cluster_norm_values
 
     # Calculate cosine similarities (dot product of normalized vectors)
@@ -559,7 +586,7 @@ def _calculate_cosine_distances(
 
     # Convert to cosine distances (1 - similarity)
     cosine_distances = 1 - cosine_similarities
-    
+
     # Guard against numerical errors producing values outside [0, 2]
     cosine_distances = np.clip(cosine_distances, 0.0, 2.0)
 
