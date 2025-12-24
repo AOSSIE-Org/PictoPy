@@ -2,7 +2,6 @@ import os
 import uuid
 import datetime
 import json
-import logging
 from typing import List, Tuple, Dict, Any, Mapping
 from PIL import Image, ExifTags
 from pathlib import Path
@@ -26,7 +25,6 @@ logger = get_logger(__name__)
 # GPS EXIF tag constant
 GPS_INFO_TAG = 34853
 
-logger = logging.getLogger(__name__)
 
 
 def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -> bool:
