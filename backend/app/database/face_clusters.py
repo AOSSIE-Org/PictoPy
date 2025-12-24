@@ -226,10 +226,13 @@ def db_update_cluster(
         )
 
         updated = cursor.rowcount > 0
-        conn.commit()
+        if own_connection:
+            conn.commit()
+
         return updated
     finally:
-        conn.close()
+        if own_connection:
+            conn.close()
 
 
 def db_get_all_clusters_with_face_counts() -> (
