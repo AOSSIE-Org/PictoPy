@@ -20,6 +20,8 @@ type ChronologicalGalleryProps = {
   className?: string;
   onMonthOffsetsChange?: (markers: MonthMarker[]) => void;
   scrollContainerRef?: React.RefObject<HTMLElement | null>;
+  albumId?: string;
+  onRemoveFromAlbum?: (imageId: string) => void;
 };
 
 export const ChronologicalGallery = ({
@@ -29,6 +31,8 @@ export const ChronologicalGallery = ({
   className = '',
   onMonthOffsetsChange,
   scrollContainerRef,
+  albumId,
+  onRemoveFromAlbum,
 }: ChronologicalGalleryProps) => {
   const dispatch = useDispatch();
   const monthHeaderRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
@@ -170,6 +174,8 @@ export const ChronologicalGallery = ({
                               dispatch(setCurrentViewIndex(chronologicalIndex))
                             }
                             className="w-full transition-transform duration-200 group-hover:scale-105"
+                            albumId={albumId}
+                            onRemoveFromAlbum={onRemoveFromAlbum}
                           />
                         </div>
                       );
