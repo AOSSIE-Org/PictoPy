@@ -91,6 +91,21 @@ colors = rng.uniform(0, 255, size=(len(class_names), 3))
 
 
 def YOLO_util_nms(boxes, scores, iou_threshold):
+    """
+    Perform Non-Maximum Suppression (NMS) on bounding boxes.
+
+    NMS removes overlapping bounding boxes, keeping only the ones with highest
+    confidence scores. Boxes with IoU above the threshold with a higher-scoring
+    box are suppressed.
+
+    Args:
+        boxes: Array of bounding boxes with shape (N, 4) in (x1, y1, x2, y2) format
+        scores: Array of confidence scores with shape (N,)
+        iou_threshold: IoU threshold for suppression (0.0 to 1.0)
+
+    Returns:
+        List of indices of boxes to keep after NMS
+    """
     # Sort by score
     sorted_indices = np.argsort(scores)[::-1]
 
@@ -113,6 +128,21 @@ def YOLO_util_nms(boxes, scores, iou_threshold):
 
 
 def YOLO_util_multiclass_nms(boxes, scores, class_ids, iou_threshold):
+    """
+    Perform Non-Maximum Suppression (NMS) separately for each class.
+
+    This function applies NMS independently for each object class, ensuring
+    that boxes from different classes don't suppress each other.
+
+    Args:
+        boxes: Array of bounding boxes with shape (N, 4) in (x1, y1, x2, y2) format
+        scores: Array of confidence scores with shape (N,)
+        class_ids: Array of class IDs with shape (N,)
+        iou_threshold: IoU threshold for suppression (0.0 to 1.0)
+
+    Returns:
+        List of indices of boxes to keep after multiclass NMS
+    """
     unique_class_ids = np.unique(class_ids)
 
     keep_boxes = []
@@ -128,6 +158,20 @@ def YOLO_util_multiclass_nms(boxes, scores, class_ids, iou_threshold):
 
 
 def YOLO_util_compute_iou(box, boxes):
+    """
+    Compute Intersection over Union (IoU) between one box and multiple boxes.
+
+    IoU is calculated as the area of intersection divided by the area of union
+    between bounding boxes. It measures the overlap between detected and ground
+    truth boxes.
+
+    Args:
+        box: Single bounding box with shape (4,) in (x1, y1, x2, y2) format
+        boxes: Array of bounding boxes with shape (N, 4) in (x1, y1, x2, y2) format
+
+    Returns:
+        Array of IoU values with shape (N,) for each box comparison
+    """
     # Compute xmin, ymin, xmax, ymax for both boxes
     xmin = np.maximum(box[0], boxes[:, 0])
     ymin = np.maximum(box[1], boxes[:, 1])
@@ -149,6 +193,17 @@ def YOLO_util_compute_iou(box, boxes):
 
 
 def YOLO_util_xywh2xyxy(x):
+    """
+    Convert bounding boxes from center format (x, y, w, h) to corner format (x1, y1, x2, y2).
+
+    Args:
+        x: Array of bounding boxes in (center_x, center_y, width, height) format
+
+    Returns:
+        Array of bounding boxes in (x1, y1, x2, y2) corner format where:
+        - x1, y1: top-left corner coordinates
+        - x2, y2: bottom-right corner coordinates
+    """
     # Convert bounding box (x, y, w, h) to bounding box (x1, y1, x2, y2)
     y = np.copy(x)
     y[..., 0] = x[..., 0] - x[..., 2] / 2
@@ -161,6 +216,20 @@ def YOLO_util_xywh2xyxy(x):
 def YOLO_util_draw_detections(
     image, boxes, scores, class_ids, mask_alpha=0.3, confidence_threshold=0.3
 ):
+    """
+    Draw detection results on an image with bounding boxes, labels, and masks.
+
+    Args:
+        image: Input image as numpy array (BGR format)
+        boxes: Array of bounding boxes with shape (N, 4)
+        scores: Array of confidence scores with shape (N,)
+        class_ids: Array of class IDs with shape (N,)
+        mask_alpha: Transparency of the overlay mask (0.0 to 1.0)
+        confidence_threshold: Minimum confidence to draw a detection
+
+    Returns:
+        Image with drawn detections as numpy array
+    """
     det_img = image.copy()
 
     img_height, img_width = image.shape[:2]
@@ -190,6 +259,18 @@ def YOLO_util_draw_box(
     color: tuple[int, int, int] = (0, 0, 255),
     thickness: int = 2,
 ) -> np.ndarray:
+    """
+    Draw a bounding box rectangle on an image.
+
+    Args:
+        image: Input image as numpy array
+        box: Bounding box coordinates as (x1, y1, x2, y2)
+        color: BGR color tuple for the box outline
+        thickness: Line thickness in pixels
+
+    Returns:
+        Image with the drawn bounding box
+    """
     x1, y1, x2, y2 = box.astype(int)
     return cv2.rectangle(image, (x1, y1), (x2, y2), color, thickness)
 
@@ -202,6 +283,20 @@ def YOLO_util_draw_text(
     font_size: float = 0.001,
     text_thickness: int = 2,
 ) -> np.ndarray:
+    """
+    Draw text label above a bounding box with a filled background.
+
+    Args:
+        image: Input image as numpy array
+        text: Text string to display
+        box: Bounding box coordinates as (x1, y1, x2, y2)
+        color: BGR color tuple for the text background
+        font_size: Font scale factor
+        text_thickness: Thickness of the text stroke
+
+    Returns:
+        Image with the drawn text label
+    """
     x1, y1, x2, y2 = box.astype(int)
     (tw, th), _ = cv2.getTextSize(
         text=text,
@@ -228,6 +323,18 @@ def YOLO_util_draw_text(
 def YOLO_util_draw_masks(
     image: np.ndarray, boxes: np.ndarray, classes: np.ndarray, mask_alpha: float = 0.3
 ) -> np.ndarray:
+    """
+    Draw semi-transparent colored masks over detected object regions.
+
+    Args:
+        image: Input image as numpy array
+        boxes: Array of bounding boxes with shape (N, 4)
+        classes: Array of class IDs with shape (N,) for color selection
+        mask_alpha: Transparency of the masks (0.0 = invisible, 1.0 = opaque)
+
+    Returns:
+        Image with blended color masks overlaid on detection regions
+    """
     mask_img = image.copy()
 
     # Draw bounding boxes and labels of detections
