@@ -32,48 +32,53 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
     }, [resetSignal]);
 
     return (
-      <TransformWrapper
-        ref={transformRef}
-        initialScale={1}
-        minScale={0.1}
-        maxScale={8}
-        centerOnInit
-        limitToBounds={false}
-      >
-        <TransformComponent
-          wrapperStyle={{
-            width: '100%',
-            height: '100%',
-            overflow: 'visible',
+      <div style={{ width: '100%', height: '100%' }}>
+        <TransformWrapper
+          ref={transformRef}
+          key={imagePath}
+          initialScale={1}
+          maxScale={10}
+          wheel={{
+            step: 0.15,
           }}
-          contentStyle={{
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          centerOnInit
+          limitToBounds={false}
         >
-          <img
-            src={convertFileSrc(imagePath) || '/placeholder.svg'}
-            alt={alt}
-            draggable={false}
-            className="select-none"
-            onError={(e) => {
-              const img = e.target as HTMLImageElement;
-              img.onerror = null;
-              img.src = '/placeholder.svg';
+          <TransformComponent
+            wrapperStyle={{
+              width: '100%',
+              height: '100%',
+              overflow: 'visible',
             }}
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain',
-              zIndex: 50,
-              transform: `rotate(${rotation}deg)`,
+            contentStyle={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
-          />
-        </TransformComponent>
-      </TransformWrapper>
+          >
+            <img
+              src={convertFileSrc(imagePath) || '/placeholder.svg'}
+              alt={alt}
+              draggable={false}
+              className="select-none"
+              onError={(e) => {
+                const img = e.target as HTMLImageElement;
+                img.onerror = null;
+                img.src = '/placeholder.svg';
+              }}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'cover',
+                zIndex: 50,
+                transform: `rotate(${rotation}deg)`,
+              }}
+            />
+          </TransformComponent>
+        </TransformWrapper>
+      </div>
     );
   },
 );
