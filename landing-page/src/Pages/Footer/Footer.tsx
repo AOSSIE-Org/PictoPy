@@ -1,38 +1,92 @@
-import type React from "react"
-import { FaDiscord } from 'react-icons/fa'  // Import Discord icon from React Icons
+import React from 'react';
+import { FaDiscord, FaGithub, FaTwitter } from 'react-icons/fa';
+import { MdEmail } from 'react-icons/md';
 
-const Footer: React.FC = () => {
+const Footer = () => {
   return (
     <footer className="relative bg-black text-white py-8 overflow-hidden">
       <div className="relative container mx-auto px-6">
-        <div className="flex justify-between items-center">
-          {/* Left-aligned PictoPy text */}
-          <div className="flex items-center space-x-2">
-            <p className="text-xl font-medium text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-green-400 hover:scale-105 transition-all duration-300 ease-in-out">
+        {/* Main Content */}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+          
+          {/* Left Section - Branding */}
+          <div className="flex flex-col items-center md:items-start space-y-2">
+            <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-green-400 hover:scale-105 transition-all duration-300 ease-in-out cursor-default">
               PictoPy
+            </p>
+            <p className="text-sm text-gray-400">
+              Transforming images with Python
             </p>
           </div>
 
-          {/* Right-aligned Discord Icon and "Made with love" text */}
-          <div className="flex items-center space-x-2">
+          {/* Center Section - Quick Links */}
+          <div className="flex flex-col items-center space-y-2">
+            <h3 className="text-sm font-semibold text-gray-300 mb-1">Connect With Us</h3>
+            <div className="flex items-center space-x-4">
+              <a 
+                href="https://discord.com/channels/1022871757289422898/1311271974630330388" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-yellow-400 transition-all duration-300 transform hover:scale-110"
+                aria-label="Join our Discord"
+              >
+                <FaDiscord size={24} />
+              </a>
+              
+              <a 
+                href="https://github.com/AOSSIE-Org" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-green-400 transition-all duration-300 transform hover:scale-110"
+                aria-label="Visit our GitHub"
+              >
+                <FaGithub size={24} />
+              </a>
+              
+              <a 
+                href="https://twitter.com/aossie_org" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-blue-400 transition-all duration-300 transform hover:scale-110"
+                aria-label="Follow us on Twitter"
+              >
+                <FaTwitter size={24} />
+              </a>
+              
+              <a 
+                href="mailto:contact@aossie.org" 
+                className="text-gray-400 hover:text-red-400 transition-all duration-300 transform hover:scale-110"
+                aria-label="Email us"
+              >
+                <MdEmail size={24} />
+              </a>
+            </div>
+          </div>
+
+          {/* Right Section - Credits */}
+          <div className="flex flex-col items-center md:items-end space-y-2">
             <a 
               href="https://discord.com/channels/1022871757289422898/1311271974630330388" 
               target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-sm font-medium text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-green-400 hover:bg-gradient-to-r hover:from-yellow-500 hover:to-green-500 transition duration-300 ease-in-out"
+              rel="noopener noreferrer"
+              className="group flex items-center space-x-2"
             >
-              <FaDiscord className="inline-block mr-2 text-yellow-400 hover:text-green-400 transition duration-300 ease-in-out transform scale-150" /> {/* Scale it to 1.5x */}
-              <span>Made with love by AOSSIE team</span>
+              <span className="text-sm font-medium text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-green-400 group-hover:from-yellow-500 group-hover:to-green-500 transition-all duration-300">
+                Made with ❤️ by AOSSIE team
+              </span>
             </a>
           </div>
         </div>
 
-        <div className="mt-4 text-center border-t border-white pt-2">
-          {/* You can add any content here if needed */}
+        {/* Bottom Section - Copyright */}
+        <div className="mt-8 pt-6 border-t border-gray-800">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
+            <p>© {new Date().getFullYear()} PictoPy. All rights reserved.</p>
+          </div>
         </div>
       </div>
     </footer>
-  )
-}
+  );
+};
 
-export default Footer
+export default Footer;
