@@ -13,7 +13,7 @@ export const InitialSteps: React.FC = () => {
     if (currentStepIndex === -1) {
       navigate(ROUTES.HOME);
     }
-  }, [currentStepIndex]);
+  }, [currentStepIndex, navigate]);
 
   return (
     <OnboardingStep stepIndex={currentStepIndex} stepName={currentStepName} />
