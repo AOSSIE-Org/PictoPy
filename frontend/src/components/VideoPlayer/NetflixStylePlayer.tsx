@@ -134,6 +134,7 @@ export default function NetflixStylePlayer({
           className="h-full w-full"
           onTimeUpdate={handleProgress}
           preload="auto"
+          playsInline
         />
       </div>
 
