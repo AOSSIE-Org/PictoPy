@@ -1,7 +1,8 @@
 import { useMemo, useRef, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { ImageCard } from '@/components/Media/ImageCard';
 import { Image } from '@/types/Media';
+import { ImageCard } from '@/components/Media/ImageCard';
+import { AlbumImageCard } from './AlbumImageCard';
 import { groupImagesByYearMonthFromMetadata } from '@/utils/dateUtils';
 import { setCurrentViewIndex } from '@/features/imageSlice';
 import { MediaView } from './MediaView';
@@ -168,15 +169,28 @@ export const ChronologicalGallery = ({
 
                       return (
                         <div key={img.id} className="group relative">
-                          <ImageCard
-                            image={img}
-                            onClick={() =>
-                              dispatch(setCurrentViewIndex(chronologicalIndex))
-                            }
-                            className="w-full transition-transform duration-200 group-hover:scale-105"
-                            albumId={albumId}
-                            onRemoveFromAlbum={onRemoveFromAlbum}
-                          />
+                          {albumId && onRemoveFromAlbum ? (
+                            <AlbumImageCard
+                              image={img}
+                              onClick={() =>
+                                dispatch(
+                                  setCurrentViewIndex(chronologicalIndex),
+                                )
+                              }
+                              className="w-full transition-transform duration-200 group-hover:scale-105"
+                              onRemoveFromAlbum={onRemoveFromAlbum}
+                            />
+                          ) : (
+                            <ImageCard
+                              image={img}
+                              onClick={() =>
+                                dispatch(
+                                  setCurrentViewIndex(chronologicalIndex),
+                                )
+                              }
+                              className="w-full transition-transform duration-200 group-hover:scale-105"
+                            />
+                          )}
                         </div>
                       );
                     })}

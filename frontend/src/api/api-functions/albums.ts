@@ -87,3 +87,37 @@ export const removeImageFromAlbum = async (
     throw error;
   }
 };
+
+export const deleteAlbum = async (albumId: string) => {
+  try {
+    const response = await apiClient.delete(
+      albumsEndpoints.deleteAlbum(albumId),
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+interface UpdateAlbumRequest {
+  name: string;
+  description?: string;
+  is_hidden: boolean;
+  current_password?: string;
+  password?: string;
+}
+
+export const updateAlbum = async (
+  albumId: string,
+  payload: UpdateAlbumRequest,
+) => {
+  try {
+    const response = await apiClient.put(
+      albumsEndpoints.updateAlbum(albumId),
+      payload,
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

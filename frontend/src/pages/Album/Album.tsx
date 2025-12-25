@@ -6,6 +6,9 @@ import {
   getAlbums,
   getAlbumImages,
   fetchAllImages,
+  updateAlbum,
+  removeImageFromAlbum,
+  deleteAlbum,
   Album as AlbumType,
 } from '@/api/api-functions';
 import {
@@ -14,15 +17,25 @@ import {
 } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 import { Image } from '@/types/Media';
-import { ArrowLeft } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckIcon,
+  PencilIcon,
+  XIcon,
+  TrashIcon,
+} from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useDispatch } from 'react-redux';
 import { setImages } from '@/features/imageSlice';
+import { convertFileSrc } from '@tauri-apps/api/core';
 
 function Album() {
   const [albumName, setAlbumName] = useState('');
   const [albums, setAlbums] = useState<AlbumType[]>([]);
   const [loading, setLoading] = useState(false);
+  const [albumCovers, setAlbumCovers] = useState<Record<string, string | null>>(
+    {},
+  );
 
   // Navigation State
   const [selectedAlbum, setSelectedAlbum] = useState<AlbumType | null>(null);
@@ -54,6 +67,42 @@ function Album() {
   useEffect(() => {
     fetchAlbums();
   }, []);
+
+  // Fetch covers for albums
+  useEffect(() => {
+    const fetchCovers = async () => {
+      if (!allImagesData?.data || albums.length === 0) return;
+
+      const covers: Record<string, string | null> = {};
+      const allImages = allImagesData.data as Image[];
+      const imageMap = new Map(allImages.map((img) => [img.id, img]));
+
+      for (const album of albums) {
+        if (album.is_hidden) continue;
+
+        try {
+          // We only need one image, but the API returns all IDs
+          // This is not efficient for large albums but satisfies "no backend changes"
+          const response = await getAlbumImages(album.album_id);
+          if (response.success && response.image_ids.length > 0) {
+            const firstImageId = response.image_ids[0];
+            const image = imageMap.get(firstImageId);
+            if (image) {
+              covers[album.album_id] = image.thumbnailPath || image.path;
+            }
+          }
+        } catch (error) {
+          console.error(
+            `Failed to fetch cover for album ${album.album_name}`,
+            error,
+          );
+        }
+      }
+      setAlbumCovers((prev) => ({ ...prev, ...covers }));
+    };
+
+    fetchCovers();
+  }, [albums, allImagesData]);
 
   // Fetch album images when an album is selected
   useEffect(() => {
@@ -101,6 +150,69 @@ function Album() {
     }
   };
 
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newAlbumName, setNewAlbumName] = useState('');
+
+  const handleUpdateAlbum = async () => {
+    if (!selectedAlbum || !newAlbumName.trim()) return;
+
+    try {
+      await updateAlbum(selectedAlbum.album_id, {
+        name: newAlbumName,
+        is_hidden: selectedAlbum.is_hidden,
+        description: selectedAlbum.description,
+      });
+
+      // Update local state
+      setSelectedAlbum({ ...selectedAlbum, album_name: newAlbumName });
+      setIsEditingName(false);
+
+      // Refresh list in background
+      fetchAlbums();
+    } catch (error) {
+      console.error('Failed to update album:', error);
+      alert('Failed to update album name');
+    }
+  };
+
+  const startEditing = () => {
+    if (selectedAlbum) {
+      setNewAlbumName(selectedAlbum.album_name);
+      setIsEditingName(true);
+    }
+  };
+
+  const cancelEditing = () => {
+    setIsEditingName(false);
+    setNewAlbumName('');
+  };
+
+  const handleRemoveImage = async (imageId: string) => {
+    if (!selectedAlbum) return;
+    try {
+      await removeImageFromAlbum(selectedAlbum.album_id, imageId);
+      setAlbumImages((prev) => prev.filter((img) => img.id !== imageId));
+
+      // Update covers if needed, but for now we just remove from view
+    } catch (error) {
+      console.error('Failed to remove image from album', error);
+      alert('Failed to remove image from album');
+    }
+  };
+
+  const handleDeleteAlbum = async () => {
+    if (!selectedAlbum) return;
+
+    try {
+      await deleteAlbum(selectedAlbum.album_id);
+      setSelectedAlbum(null);
+      fetchAlbums();
+    } catch (error) {
+      console.error('Failed to delete album', error);
+      alert('Failed to delete album');
+    }
+  };
+
   if (selectedAlbum) {
     return (
       <div className="relative flex h-full flex-col pr-6">
@@ -110,10 +222,60 @@ function Album() {
             <ArrowLeft className="mr-2 h-5 w-5" />
             Back to Albums
           </Button>
-          <h1 className="text-2xl font-bold">{selectedAlbum.album_name}</h1>
-          <span className="text-muted-foreground">
-            {albumImages.length} images
-          </span>
+
+          {isEditingName ? (
+            <div className="flex items-center gap-2">
+              <Input
+                value={newAlbumName}
+                onChange={(e) => setNewAlbumName(e.target.value)}
+                className="h-8 w-48"
+                autoFocus
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-green-600"
+                onClick={handleUpdateAlbum}
+              >
+                <CheckIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-red-600"
+                onClick={cancelEditing}
+              >
+                <XIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="group flex items-center gap-2">
+              <h1 className="text-2xl font-bold">{selectedAlbum.album_name}</h1>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                onClick={startEditing}
+              >
+                <PencilIcon className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+
+          <div className="ml-auto flex items-center gap-4">
+            <span className="text-muted-foreground">
+              {albumImages.length} images
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
+              onClick={handleDeleteAlbum}
+              title="Delete Album"
+            >
+              <TrashIcon className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <div
@@ -126,6 +288,8 @@ function Album() {
               showTitle={false}
               onMonthOffsetsChange={setMonthMarkers}
               scrollContainerRef={scrollableRef}
+              albumId={selectedAlbum.album_id}
+              onRemoveFromAlbum={handleRemoveImage}
             />
           ) : (
             <div className="text-muted-foreground p-10 text-center">
@@ -163,18 +327,41 @@ function Album() {
         {albums.map((album) => (
           <div
             key={album.album_id}
-            className="bg-card text-card-foreground cursor-pointer rounded-lg border p-4 transition-shadow hover:shadow-lg"
+            className="bg-card text-card-foreground cursor-pointer overflow-hidden rounded-lg border transition-shadow hover:shadow-lg"
             onClick={() => setSelectedAlbum(album)}
           >
-            <h3 className="mb-2 text-lg font-semibold">{album.album_name}</h3>
-            <p className="text-muted-foreground text-sm">
-              {album.description || 'No description'}
-            </p>
-            {album.is_hidden && (
-              <span className="bg-secondary text-secondary-foreground mt-2 inline-block rounded px-2 py-1 text-xs">
-                Hidden
-              </span>
-            )}
+            {/* Cover Image */}
+            <div className="bg-muted relative aspect-square w-full">
+              {albumCovers[album.album_id] ? (
+                <img
+                  src={convertFileSrc(albumCovers[album.album_id]!)}
+                  alt={album.album_name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="bg-secondary/30 text-muted-foreground flex h-full w-full items-center justify-center">
+                  <span className="text-4xl text-gray-300 select-none">🖼️</span>
+                </div>
+              )}
+
+              {album.is_hidden && (
+                <div className="absolute top-2 right-2 rounded bg-black/50 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                  Hidden
+                </div>
+              )}
+            </div>
+
+            <div className="p-4">
+              <h3
+                className="truncate text-lg font-semibold"
+                title={album.album_name}
+              >
+                {album.album_name}
+              </h3>
+              <p className="text-muted-foreground line-clamp-2 h-10 text-sm">
+                {album.description || 'No description'}
+              </p>
+            </div>
           </div>
         ))}
         {albums.length === 0 && (
