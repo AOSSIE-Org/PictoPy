@@ -1,5 +1,5 @@
 import { useRef, useImperativeHandle, forwardRef } from 'react';
-import { ZoomableImage } from './ZoomableImage';
+import { ZoomableImage, ZoomableImageRef } from './ZoomableImage';
 
 interface ImageViewerProps {
   imagePath: string;
@@ -16,7 +16,7 @@ export interface ImageViewerRef {
 
 export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
   ({ imagePath, alt, rotation, resetSignal }, ref) => {
-    const zoomableImageRef = useRef<ImageViewerRef>(null);
+    const zoomableImageRef = useRef<ZoomableImageRef>(null);
 
     useImperativeHandle(ref, () => ({
       zoomIn: () => zoomableImageRef.current?.zoomIn(),

@@ -4,6 +4,7 @@ import {
   forwardRef,
   useEffect,
   useState,
+  useCallback,
 } from 'react';
 import {
   TransformWrapper,
@@ -31,72 +32,23 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
     const imageRef = useRef<HTMLImageElement>(null);
     const [isOverflowing, setIsOverflowing] = useState(false);
 
-    const handleReset = () => {
-      if (
-        !transformRef.current?.instance?.wrapperComponent ||
-        !imageRef.current
-      )
-        return;
-
-      const wrapperRect =
-        transformRef.current.instance.wrapperComponent.getBoundingClientRect();
-      const img = imageRef.current;
-
-      const scale = 1;
-      const baseW = img.naturalWidth || img.clientWidth;
-      const baseH = img.naturalHeight || img.clientHeight;
-
-      if (!baseW || !baseH) return;
-
-      const imgAspect = baseW / baseH;
-      const viewAspect = wrapperRect.width / wrapperRect.height;
-
-      let renderedW, renderedH;
-      if (imgAspect > viewAspect) {
-        renderedW = Math.min(baseW, wrapperRect.width);
-        renderedH = renderedW / imgAspect;
-      } else {
-        renderedH = Math.min(baseH, wrapperRect.height);
-        renderedW = renderedH * imgAspect;
-      }
-
-      const centerX = (wrapperRect.width - renderedW) / 2;
-      const centerY = (wrapperRect.height - renderedH) / 2;
-
-      transformRef.current.setTransform(
-        centerX,
-        centerY,
-        scale,
-        200,
-        'easeOut',
-      );
-      setIsOverflowing(false);
-    };
-
-    useImperativeHandle(ref, () => ({
-      zoomIn: () => transformRef.current?.zoomIn(),
-      zoomOut: () => transformRef.current?.zoomOut(),
-      reset: () => handleReset(),
-    }));
-
-    useEffect(() => {
-      handleReset();
-    }, [resetSignal]);
-    useEffect(() => {
-      setIsOverflowing(false);
-
-      const img = imageRef.current;
-      if (!img) return;
-
-      const handleImageLoad = () => {
-        if (!transformRef.current?.instance?.wrapperComponent) return;
+    const handleReset = useCallback(
+      (duration = 200, animationType = 'easeOut') => {
+        if (
+          !transformRef.current?.instance?.wrapperComponent ||
+          !imageRef.current
+        )
+          return;
 
         const wrapperRect =
           transformRef.current.instance.wrapperComponent.getBoundingClientRect();
+        const img = imageRef.current;
 
         const scale = 1;
-        const baseW = img.naturalWidth;
-        const baseH = img.naturalHeight;
+        const baseW = img.naturalWidth || img.clientWidth;
+        const baseH = img.naturalHeight || img.clientHeight;
+
+        if (!baseW || !baseH) return;
 
         const imgAspect = baseW / baseH;
         const viewAspect = wrapperRect.width / wrapperRect.height;
@@ -113,7 +65,36 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
         const centerX = (wrapperRect.width - renderedW) / 2;
         const centerY = (wrapperRect.height - renderedH) / 2;
 
-        transformRef.current.setTransform(centerX, centerY, scale, 0);
+        transformRef.current.setTransform(
+          centerX,
+          centerY,
+          scale,
+          duration,
+          animationType as any,
+        );
+        setIsOverflowing(false);
+      },
+      [],
+    );
+
+    useImperativeHandle(ref, () => ({
+      zoomIn: () => transformRef.current?.zoomIn(),
+      zoomOut: () => transformRef.current?.zoomOut(),
+      reset: () => handleReset(),
+    }));
+
+    useEffect(() => {
+      handleReset();
+    }, [resetSignal, handleReset]);
+
+    useEffect(() => {
+      setIsOverflowing(false);
+
+      const img = imageRef.current;
+      if (!img) return;
+
+      const handleImageLoad = () => {
+        handleReset(0);
       };
 
       if (img.complete && img.naturalWidth > 0) {
@@ -122,7 +103,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
         img.addEventListener('load', handleImageLoad);
         return () => img.removeEventListener('load', handleImageLoad);
       }
-    }, [imagePath]);
+    }, [imagePath, handleReset]);
 
     const getOverflowState = (
       scale: number,
@@ -163,14 +144,14 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
           mouseY >= 0 &&
           mouseY <= imageRect.height;
 
-        const zoomSpeed = 0.1;
-        const delta = e.deltaY > 0 ? -1 : 1;
+        const isLineMode = e.deltaMode === 1;
+        const multiplier = isLineMode ? 33 : 1;
+        const factor = 0.001;
+
+        const zoomChange = -e.deltaY * multiplier * factor;
 
         const currentScale = transformState.scale;
-        const newScale = Math.max(
-          1,
-          Math.min(8, currentScale + delta * zoomSpeed),
-        );
+        const newScale = Math.max(1, Math.min(8, currentScale + zoomChange));
 
         const wrapperRect = wrapperElement.getBoundingClientRect();
         const newOverflow = getOverflowState(
@@ -179,11 +160,11 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
           wrapperRect.height,
         );
 
-        setIsOverflowing(newOverflow.width || newOverflow.height);
-
-        if (delta < 0) {
+        if (zoomChange < 0) {
           e.preventDefault();
           e.stopPropagation();
+
+          setIsOverflowing(newOverflow.width || newOverflow.height);
 
           const renderedW = imageRect.width / currentScale;
           const renderedH = imageRect.height / currentScale;
@@ -211,7 +192,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
           return;
         }
 
-        if (!isOverImage || (!newOverflow.width && !newOverflow.height)) {
+        if (!newOverflow.width && !newOverflow.height) {
           e.preventDefault();
           e.stopPropagation();
 
@@ -227,6 +208,26 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
           const targetY = (wrapperRect.height - nextH) / 2;
 
           transformRef.current.setTransform(targetX, targetY, newScale, 0);
+          return;
+        }
+
+        if (!isOverImage) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const centerX = wrapperRect.width / 2;
+          const centerY = wrapperRect.height / 2;
+
+          if (currentScale > 0) {
+            const ratio = newScale / currentScale;
+
+            const targetX =
+              centerX - (centerX - transformState.positionX) * ratio;
+            const targetY =
+              centerY - (centerY - transformState.positionY) * ratio;
+
+            transformRef.current.setTransform(targetX, targetY, newScale, 0);
+          }
           return;
         }
       };
