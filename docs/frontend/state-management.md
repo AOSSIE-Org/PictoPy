@@ -235,3 +235,12 @@ const folder = useSelector((state: RootState) =>
 ```
 
 This Redux-based architecture provides a scalable and maintainable state management solution that grows with our application's complexity.
+
+## React Hooks Guidelines
+
+When working on frontend components, especially in onboarding flows:
+
+- Always include all external variables, props, and functions used inside a `useEffect` hook in its dependency array.
+- Avoid using empty dependency arrays (`[]`) when the effect relies on props, Redux dispatch, context values, or functions returned from custom hooks.
+- This helps prevent stale closures, unexpected behavior, and navigation issues during multi-step flows.
+- Follow the React Rules of Hooks and ensure ESLint hook rules pass before submitting a PR.

@@ -38,6 +38,7 @@ export const ServerCheck: React.FC<ServerCheckProps> = ({ stepIndex }) => {
   useEffect(() => {
     if (mainBackendLoading || syncMicroserviceLoading) {
       dispatch(showLoader('Waiting for servers to start'));
+      return;
     }
     if (mainBackendError || syncMicroserviceError) {
       dispatch(hideLoader());
@@ -53,12 +54,15 @@ export const ServerCheck: React.FC<ServerCheckProps> = ({ stepIndex }) => {
       setTimeout(() => {
         exit(1);
       }, 2000);
+      return;
     }
     if (mainBackendSuccess && syncMicroserviceSuccess) {
       dispatch(hideLoader());
       dispatch(markCompleted(stepIndex));
     }
   }, [
+    dispatch,
+    stepIndex,
     mainBackendSuccess,
     mainBackendLoading,
     mainBackendError,
