@@ -27,6 +27,7 @@ class ImageRecord(TypedDict):
     thumbnailPath: str
     metadata: Union[Mapping[str, Any], str]
     isTagged: bool
+    media_type: str
 
 
 class UntaggedImageRecord(TypedDict):
@@ -64,6 +65,7 @@ def db_create_images_table() -> None:
             metadata TEXT,
             isTagged BOOLEAN DEFAULT 0,
             isFavourite BOOLEAN DEFAULT 0,
+            media_type TEXT DEFAULT 'image' CHECK(media_type IN ('image', 'video')),
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
     """
@@ -97,12 +99,13 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
     try:
         cursor.executemany(
             """
-            INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)
-            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged)
+            INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged, media_type)
+            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged, :media_type)
             ON CONFLICT(path) DO UPDATE SET
                 folder_id=excluded.folder_id,
                 thumbnailPath=excluded.thumbnailPath,
                 metadata=excluded.metadata,
+                media_type=excluded.media_type,
                 isTagged=CASE
                     WHEN excluded.isTagged THEN 1
                     ELSE images.isTagged
@@ -123,13 +126,6 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
 def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
     """
     Get all images from the database with their tags.
-
-    Args:
-        tagged: Optional filter for tagged status. If None, returns all images.
-                If True, returns only tagged images. If False, returns only untagged images.
-
-    Returns:
-        List of dictionaries containing all image data including tags
     """
     conn = _connect()
     cursor = conn.cursor()
@@ -145,6 +141,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                 i.metadata, 
                 i.isTagged,
                 i.isFavourite,
+                i.media_type,
                 m.name as tag_name
             FROM images i
             LEFT JOIN image_classes ic ON i.id = ic.image_id
@@ -172,6 +169,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
             metadata,
             is_tagged,
             is_favourite,
+            media_type,
             tag_name,
         ) in results:
             if image_id not in images_dict:
@@ -188,6 +186,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                     "metadata": metadata_dict,
                     "isTagged": bool(is_tagged),
                     "isFavourite": bool(is_favourite),
+                    "media_type": media_type,
                     "tags": [],
                 }
 
