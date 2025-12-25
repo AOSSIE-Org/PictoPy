@@ -23,8 +23,11 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
   stepIndex,
   stepName,
 }) => {
+  // Map the current step name to its index within VISIBLE_STEPS
+  const visibleStepIndex = VISIBLE_STEPS.indexOf(stepName);
+
   const sharedProps = {
-    stepIndex,
+    stepIndex: visibleStepIndex >= 0 ? visibleStepIndex : stepIndex,
     totalSteps: VISIBLE_STEPS.length,
   };
 
