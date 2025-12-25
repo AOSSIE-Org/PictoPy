@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useRef } from "react";
+
 
 const steps = [
   {
@@ -33,6 +34,8 @@ const steps = [
 
 export default function GalleryFeatures() {
   const [activeStep, setActiveStep] = useState<number | null>(null);
+  const hoverTimers = useRef<Record<number, number | null>>({});
+
 
   return (
     <section className="py-20 bg-gray-50 dark:bg-black transition-colors duration-300">
@@ -51,17 +54,25 @@ export default function GalleryFeatures() {
               whileHover={{ y: -5 }}
             >
               <div 
-                className={`bg-white dark:bg-[#121212]  /* Off-Black Card */
-                  rounded-xl border border-gray-200 dark:border-gray-800
-                  shadow-md hover:shadow-lg 
-                  p-6 cursor-pointer h-full  /* Change cursor to pointer on hover */
-                  transition-all duration-300 
-                  relative
-                  ${activeStep === index ? 'ring-2 ring-pink-500 dark:ring-pink-400' : ''}`}
-                onClick={() => setActiveStep(activeStep === index ? null : index)}
-                style={{
-                  cursor: `url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"%3E%3Ctext x="10" y="40" font-size="40"%3E${encodeURIComponent(step.icon)}%3C/text%3E%3C/svg%3E'), auto`
+                onMouseEnter={() => {
+                // start a 1s timer to set active only if remains hovered
+                hoverTimers.current[index] = window.setTimeout(() => {
+                setActiveStep(index);
+                hoverTimers.current[index] = null;
+                }, 1000);
                 }}
+                onMouseLeave={() => {
+                // cancel timer if leaving early; if already active, hide immediately
+                const t = hoverTimers.current[index];
+                if (t) {
+                clearTimeout(t);
+                hoverTimers.current[index] = null;
+                }
+               if (activeStep === index) setActiveStep(null);
+              }}
+
+                className={`bg-white dark:bg-[#121212] rounded-xl border border-gray-200 dark:border-gray-800 shadow-md hover:shadow-lg p-6 cursor-pointer h-full transition-all duration-300 relative ${activeStep === index ? 'ring-2 ring-pink-500 dark:ring-pink-400' : ''}`}
+
               >
                 {/* Step Number Badge */}
                 <div className="absolute -top-4 left-4 bg-gradient-to-br from-yellow-500 to-green-600 dark:from-green-400 dark:to-yellow-500 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg">
