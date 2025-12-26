@@ -3,17 +3,19 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "scripts": {
-    "linux-dev": "bash ./scripts/linux-dev.sh",
-    "win-dev": "cd scripts && win-dev.bat",
-    "prepare": "husky",
-    "lint:check": "cd frontend && eslint --max-warnings 0 --config .eslintrc.json .",
-    "lint:fix": "cd frontend && eslint --max-warnings 0 --config .eslintrc.json . --fix",
-    "format:fix": "cd frontend && prettier --write \"**/*.{ts,tsx,json}\"",
-    "format:check": "cd frontend && prettier --check \"**/*.{ts,tsx,json}\"",
-    "cargo:check": "cd backend && cargo check",
-    "setup": "cd scripts && node setup.js"
-  },
+    "scripts": {
+        "frontend": "cd frontend && npm run tauri dev",
+        "backend": "cd backend && python -m uvicorn main:app --reload",
+        "linux-dev": "bash ./scripts/linux-dev.sh",
+        "win-dev": "cd scripts && win-dev.bat",
+        "prepare": "husky",
+        "lint:check": "cd frontend && eslint --max-warnings 0 --config .eslintrc.json .",
+        "lint:fix": "cd frontend && eslint --max-warnings 0 --config .eslintrc.json . --fix",
+        "format:fix": "cd frontend && prettier --write \"**/*.{ts,tsx,json}\"",
+        "format:check": "cd frontend && prettier --check \"**/*.{ts,tsx,json}\"",
+        "cargo:check": "cd backend && cargo check",
+        "setup": "cd scripts && node setup.js"
+    },
   "devDependencies": {
     "husky": "^9.1.7"
   }
