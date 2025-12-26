@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0" stop-color="#06b6d4"/>
+      <stop offset="1" stop-color="#34d399"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="#0f172a" rx="16"/>
+  <rect x="40" y="40" width="520" height="320" rx="8" fill="#ffffff10"/>
+  <rect x="680" y="40" width="480" height="320" rx="8" fill="#ffffff10"/>
+  <rect x="40" y="400" width="360" height="240" rx="8" fill="#ffffff10"/>
+  <rect x="440" y="400" width="360" height="240" rx="8" fill="#ffffff10"/>
+  <rect x="840" y="400" width="320" height="240" rx="8" fill="#ffffff10"/>
+  <g transform="translate(80,90)">
+    <rect width="140" height="90" rx="6" fill="url(#g)"/>
+    <rect x="160" y="0" width="120" height="90" rx="6" fill="#ffffff20"/>
+    <rect x="300" y="0" width="180" height="90" rx="6" fill="#ffffff20"/>
+  </g>
+  <text x="72" y="36" fill="#fff" font-family="Inter, Arial, sans-serif" font-size="20">Gallery screenshot (placeholder)</text>
+</svg>
