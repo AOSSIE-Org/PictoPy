@@ -100,8 +100,8 @@ function FAQItem({ question, answer, isOpen, onClick, index, icon }: FAQItemProp
   bg-white dark:bg-black
   border
   ${isOpen 
-    ? 'border- 6 border-pink-500 dark:border-grey-500' 
-    : 'border- 6 - dark:border-grey-500'}
+    ? 'border-6 border-pink-500 dark:border-gray-500' 
+    : 'border-6 border-gray-300 dark:border-gray-500'}
 `}
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
