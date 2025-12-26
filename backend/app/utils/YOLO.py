@@ -161,6 +161,20 @@ def YOLO_util_xywh2xyxy(x):
 def YOLO_util_draw_detections(
     image, boxes, scores, class_ids, mask_alpha=0.3, confidence_threshold=0.3
 ):
+    """Draw bounding boxes and labels on an image for detected objects.
+
+    Args:
+        image: Input image as a numpy array.
+        boxes: Array of bounding boxes in xyxy format.
+        scores: Array of confidence scores for each detection.
+        class_ids: Array of class IDs for each detection.
+        mask_alpha: Transparency of the mask overlay (default: 0.3).
+        confidence_threshold: Minimum confidence score for labeling detections with
+            their class name; detections below this threshold are labeled "unknown".
+
+    Returns:
+        Image with drawn detections.
+    """
     det_img = image.copy()
 
     img_height, img_width = image.shape[:2]
