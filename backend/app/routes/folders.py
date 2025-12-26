@@ -16,6 +16,9 @@ from app.schemas.folders import (
     AddFolderRequest,
     AddFolderResponse,
     AddFolderData,
+    CheckFolderRequest,
+    CheckFolderEmptyResponse,
+    CheckFolderEmptyData,
     ErrorResponse,
     UpdateAITaggingRequest,
     UpdateAITaggingResponse,
@@ -476,3 +479,26 @@ def get_all_folders():
                 message=f"Unable to retrieve folders: {str(e)}",
             ).model_dump(),
         )
+
+@router.post("/check-empty")
+def check_folder_empty(request: CheckFolderRequest):
+    if not os.path.exists(request.folder_path):
+        raise HTTPException(status_code=404, detail="Folder not found")
+    
+    if not os.path.isdir(request.folder_path):
+        raise HTTPException(status_code=400, detail="Path is not a directory")
+
+    try:
+        # Efficiently check if directory yields any entries (files or subdirs)
+        with os.scandir(request.folder_path) as it:
+            is_empty = not any(it)
+            
+        return CheckFolderEmptyResponse(
+            success=True, 
+            data=CheckFolderEmptyData(is_empty=is_empty),
+            message="Folder emptiness checked successfully"
+        )
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Permission denied accessing folder")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

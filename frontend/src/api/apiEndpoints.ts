@@ -15,6 +15,7 @@ export const faceClustersEndpoints = {
 export const foldersEndpoints = {
   getAllFolders: '/folders/all-folders',
   addFolder: '/folders/add-folder',
+  checkEmpty: '/folders/check-empty',
   enableAITagging: '/folders/enable-ai-tagging',
   disableAITagging: '/folders/disable-ai-tagging',
   deleteFolders: '/folders/delete-folders',
