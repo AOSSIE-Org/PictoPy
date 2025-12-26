@@ -7,10 +7,10 @@ import os
 import json
 
 from uvicorn import Config, Server
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from app.database.faces import db_create_faces_table
 from app.database.images import db_create_images_table
 from app.database.face_clusters import db_create_clusters_table
@@ -20,7 +20,7 @@ from app.database.albums import db_create_album_images_table
 from app.database.folders import db_create_folders_table
 from app.database.metadata import db_create_metadata_table
 from app.utils.microservice import microservice_util_start_sync_service
-
+from app.utils.webSocket import webSocket as manager
 from app.routes.folders import router as folders_router
 from app.routes.albums import router as albums_router
 from app.routes.images import router as images_router
@@ -53,8 +53,9 @@ async def lifespan(app: FastAPI):
     db_create_album_images_table()
     db_create_metadata_table()
     microservice_util_start_sync_service()
-    # Create ProcessPoolExecutor and attach it to app.state
-    app.state.executor = ProcessPoolExecutor(max_workers=1)
+    await manager.start_ws_manager_background_tasks()
+    # Create ThreadPoolExecutor and attach it to app.state
+    app.state.executor = ThreadPoolExecutor(max_workers=4)
 
     try:
         yield
@@ -132,6 +133,18 @@ app.include_router(
 app.include_router(
     user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
 )
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(ws: WebSocket):
+    await manager.register_ws(ws)
+    try:
+        while True:
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        await manager.unregister_ws(ws)
+    except Exception:
+        await manager.unregister_ws(ws)
 
 
 # Entry point for running with: python3 main.py
