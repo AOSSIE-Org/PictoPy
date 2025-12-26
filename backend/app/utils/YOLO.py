@@ -225,7 +225,8 @@ def YOLO_util_draw_detections(
         scores: Array of confidence scores with shape (N,)
         class_ids: Array of class IDs with shape (N,)
         mask_alpha: Transparency of the overlay mask (0.0 to 1.0)
-        confidence_threshold: Minimum confidence to draw a detection
+        confidence_threshold: Minimum confidence score for labeling detections with
+            their class name; detections below this threshold are labeled "unknown"
 
     Returns:
         Image with drawn detections as numpy array
