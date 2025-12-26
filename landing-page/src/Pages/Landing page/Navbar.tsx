@@ -144,7 +144,7 @@ const Navbar: React.FC = () => {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
-              <NavLink to="/">Home</NavLink>
+              <NavLink to="#home" isScrollLink={true}>Home</NavLink>
 
               {/* Dark Mode Toggle Button */}
               <button
