@@ -62,6 +62,10 @@ class ColorFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         """Format the log record with colors and component prefix."""
+        # Clear exc_info and stack_info before formatting
+        record.exc_info = None
+        record.stack_info = None
+        
         # Add component information to the record
         component_prefix = self.component_config.get("prefix", "")
         record.component = component_prefix
