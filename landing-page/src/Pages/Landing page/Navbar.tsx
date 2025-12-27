@@ -27,10 +27,14 @@ const NavLink: React.FC<NavLinkProps> = ({
       const element = document.getElementById(targetId);
 
       if (element) {
-        // Scroll to the element with smooth behavior
-        element.scrollIntoView({
+        // Scroll with offset to account for sticky navbar
+        const offset = 90;
+        const elementTop = element.getBoundingClientRect().top + window.scrollY;
+        const targetScroll = elementTop - offset;
+
+        window.scrollTo({
+          top: targetScroll,
           behavior: "smooth",
-          block: "start",
         });
       }
 
@@ -144,7 +148,7 @@ const Navbar: React.FC = () => {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
-              <NavLink to="/">Home</NavLink>
+              <NavLink to="#home" isScrollLink={true}>Home</NavLink>
 
               {/* Dark Mode Toggle Button */}
               <button
@@ -191,7 +195,7 @@ const Navbar: React.FC = () => {
         >
           <div className="pt-16 pb-6 px-4 space-y-6">
             <div className="space-y-4 flex flex-col items-start">
-              <NavLink to="/" onClick={() => setIsOpen(false)}>
+              <NavLink to="#home" isScrollLink={true} onClick={() => setIsOpen(false)}>
                 Home
               </NavLink>
               <NavLink to="#features" isScrollLink={true} onClick={() => setIsOpen(false)}>
