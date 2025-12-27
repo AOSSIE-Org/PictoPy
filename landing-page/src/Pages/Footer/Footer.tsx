@@ -3,7 +3,7 @@ import { FaDiscord } from 'react-icons/fa'  // Import Discord icon from React Ic
 
 const Footer: React.FC = () => {
   return (
-    <footer className="relative bg-white dark:bg-black text-white py-8 overflow-hidden border-t border-black dark:border-white transition-colors duration-300">
+    <footer className="relative bg-white dark:bg-black text-black dark:text-white py-8 overflow-hidden border-t border-black dark:border-white transition-colors duration-300">
       <div className="relative container mx-auto px-6">
         <div className="flex justify-between items-center">
           {/* Left-aligned PictoPy text */}

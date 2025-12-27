@@ -45,7 +45,7 @@ export default function FAQ() {
   }, [darkMode]);
 
   return (
-    <section className="relative py-20 overflow-hidden min-h-screen transition-colors duration-300 bg-gray-50 text-black dark:bg-black dark:text-white">
+    <section className="relative py-20 overflow-hidden min-h-screen transition-colors duration-300 text-black dark:bg-black dark:text-white">
       <BackgroundAnimation darkMode={darkMode} />
       
       <div className="container relative z-10 mx-auto px-4 md:px-8">
@@ -55,7 +55,7 @@ export default function FAQ() {
           transition={{ duration: 0.8 }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-bold py-2 mb-2 bg-clip-text text-transparent bg-gradient-to-r from-yellow-500 to-green-600 dark:from-yellow-400 dark:to-green-500">
+          <h2 className="text-4xl md:text-5xl font-bold py-2 mb-6 bg-clip-text text-transparent bg-gradient-to-r from-yellow-500 to-green-600 dark:from-yellow-400 dark:to-green-500">
             Frequently Asked Questions
           </h2>
           <p className="max-w-2xl mx-auto text-lg text-gray-600 dark:text-gray-300">
