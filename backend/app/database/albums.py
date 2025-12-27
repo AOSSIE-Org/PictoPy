@@ -30,6 +30,10 @@ def db_create_album_images_table() -> None:
     conn = None
     try:
         conn = sqlite3.connect(DATABASE_PATH)
+
+        # IMPORTANT: Enable foreign key support
+        conn.execute("PRAGMA foreign_keys = ON;")
+
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -107,6 +111,8 @@ def db_insert_album(
             (album_id, album_name, description, int(is_hidden), password_hash),
         )
         conn.commit()
+    except sqlite3.IntegrityError as e:
+        raise ValueError("Album name already exists") from e
     finally:
         conn.close()
 
@@ -172,6 +178,9 @@ def db_add_images_to_album(album_id: str, image_ids: list[str]):
     with get_db_connection() as conn:
         cursor = conn.cursor()
 
+        if not image_ids:
+            return
+
         query = (
             f"SELECT id FROM images WHERE id IN ({','.join('?' for _ in image_ids)})"
         )
@@ -210,6 +219,8 @@ def db_remove_images_from_album(album_id: str, image_ids: list[str]):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
+        if not image_ids:
+            return
         cursor.executemany(
             "DELETE FROM album_images WHERE album_id = ? AND image_id = ?",
             [(album_id, img_id) for img_id in image_ids],
@@ -228,6 +239,10 @@ def verify_album_password(album_id: str, password: str) -> bool:
         )
         row = cursor.fetchone()
         if not row or not row[0]:
+            return False
+
+        # Guard against None / empty password
+        if not password:
             return False
         return bcrypt.checkpw(password.encode("utf-8"), row[0].encode("utf-8"))
     finally:
