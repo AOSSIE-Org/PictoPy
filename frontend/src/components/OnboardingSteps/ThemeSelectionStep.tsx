@@ -34,7 +34,7 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
     if (localStorage.getItem('themeChosen')) {
       dispatch(markCompleted(stepIndex));
     }
-  }, []);
+  }, [dispatch,stepIndex]);
   const handleThemeChange = (value: 'light' | 'dark' | 'system') => {
     setTheme(value);
   };
