@@ -13,7 +13,10 @@ def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
     - Works for both single and multi-step transactions
     - Automatically commits on success or rolls back on failure
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=30)
+
+    # Return rows as sqlite3.Row instead of tuples
+    conn.row_factory = sqlite3.Row
 
     # --- Strict enforcement of all relational and logical rules ---
     conn.execute("PRAGMA foreign_keys = ON;")  # Enforce FK constraints
@@ -21,6 +24,9 @@ def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
     conn.execute("PRAGMA recursive_triggers = ON;")  # Allow nested triggers
     conn.execute("PRAGMA defer_foreign_keys = OFF;")  # Immediate FK checking
     conn.execute("PRAGMA case_sensitive_like = ON;")  # Make LIKE case-sensitive
+
+    # --- Concurrency & performance ---
+    conn.execute("PRAGMA journal_mode = WAL;")
 
     try:
         yield conn
