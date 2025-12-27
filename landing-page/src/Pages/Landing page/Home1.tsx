@@ -29,7 +29,7 @@ const ShuffleHero = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 0.2 }}
-          className="text-4xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-yellow-500 to-green-500 text-transparent bg-clip-text"
+          className="text-4xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-yellow-500 to-green-500 text-transparent bg-clip-text py-2"
         >
           PictoPy
         </motion.h3>
