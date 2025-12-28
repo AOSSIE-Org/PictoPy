@@ -19,13 +19,13 @@ import { useState } from 'react';
 interface FolderSetupStepProps {
   stepIndex: number;
   totalSteps: number;
-  currentStepDisplayIndex: number;
+  currentStepDisplayIndex?: number;
 }
 
 export function FolderSetupStep({
   stepIndex,
   totalSteps,
-  currentStepDisplayIndex,
+  currentStepDisplayIndex: _currentStepDisplayIndex,
 }: FolderSetupStepProps) {
   const dispatch = useDispatch<AppDispatch>();
 

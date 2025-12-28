@@ -10,7 +10,8 @@ import { ServerCheck } from './ServerCheck';
 
 interface OnboardingStepProps {
   stepIndex: number;
-  stepName: string; 
+  stepName: string;
+  currentStepDisplayIndex?: number;
 }
 
 const VISIBLE_STEPS = [
@@ -21,20 +22,18 @@ const VISIBLE_STEPS = [
 
 export const OnboardingStep: React.FC<OnboardingStepProps> = ({
   stepIndex,
-  stepName, // still accepted, but not trusted
+  stepName,
+  currentStepDisplayIndex,
 }) => {
-  const visibleStepIndex = VISIBLE_STEPS.indexOf(stepName);
+  const STEP_NAMES = Object.values(STEPS);
+  const safeIndex = Math.max(0, Math.min(stepIndex, STEP_NAMES.length - 1));
+  const currentStepName = stepName || STEP_NAMES[safeIndex];
 
   const sharedProps = {
-    stepIndex,
+    stepIndex: safeIndex,
     totalSteps: VISIBLE_STEPS.length,
-    currentStepDisplayIndex: visibleStepIndex,
+    currentStepDisplayIndex,
   };
-
-  // FIX: derive stepName from stepIndex (single source of truth)
-  const safeIndex = Math.min(stepIndex, VISIBLE_STEPS.length - 1);
-  const currentStepName = VISIBLE_STEPS[safeIndex];
-
 
   const renderStepComponent = () => {
     switch (currentStepName) {
