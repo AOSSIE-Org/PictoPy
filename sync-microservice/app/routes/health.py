@@ -3,7 +3,7 @@ from app.database.folders import db_check_database_connection
 from app.utils.watcher import watcher_util_is_watcher_running
 from app.schemas.health import HealthCheckResponse
 
-router = APIRouter(tags=["health"])
+router = APIRouter()
 
 
 @router.get("/health", response_model=HealthCheckResponse)

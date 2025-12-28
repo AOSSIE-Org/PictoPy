@@ -143,9 +143,32 @@ try {
     deactivate
     
     Set-Location ..
+    
     Write-Host "Backend setup completed successfully." -ForegroundColor Green
 } catch {
     Write-Host "Error setting up backend: $_" -ForegroundColor Red
+    Set-Location $PSScriptRoot  # Return to original directory
+}
+
+# ---- Set up the sync-microservice using Python 3.12 ----
+Write-Host "Setting up sync-microservice..." -ForegroundColor Yellow
+try {
+    Set-Location .\sync-microservice\
+    
+    # Create virtual environment
+    python -m venv .sync-env
+    
+    # Activate virtual environment and install dependencies
+    .\.sync-env\Scripts\Activate.ps1
+    python -m pip install --upgrade pip
+    python -m pip install -r requirements.txt
+    deactivate
+    
+    Set-Location ..
+    
+    Write-Host "Sync-microservice setup completed successfully." -ForegroundColor Green
+} catch {
+    Write-Host "Error setting up sync-microservice: $_" -ForegroundColor Red
     Set-Location $PSScriptRoot  # Return to original directory
 }
 

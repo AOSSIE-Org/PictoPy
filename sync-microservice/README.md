@@ -41,7 +41,7 @@ A file system synchronization microservice for PictoPy that monitors folder chan
 
 4. **Start the service:**
    ```bash
-   uvicorn main:app --reload --port 8001
+   fastapi dev --port 52124
    ```
 
 ## API Endpoints
@@ -147,7 +147,7 @@ The file watcher currently logs changes but doesn't process them. Future enhance
 Use the health endpoint to monitor service status:
 
 ```bash
-curl http://localhost:8001/health
+curl http://localhost:52124/health
 ```
 
 ## Troubleshooting
@@ -185,8 +185,8 @@ The service provides detailed console output for:
 
 This microservice is designed to work alongside the main PictoPy backend:
 
-- **Port 8000**: Main PictoPy backend
-- **Port 8001**: Sync microservice (this service)
+- **Port 52123**: Main PictoPy backend
+- **Port 52124**: Sync microservice (this service)
 - **Shared Database**: Both services use the same SQLite database
 
 The sync service operates independently but relies on the main backend's database structure.

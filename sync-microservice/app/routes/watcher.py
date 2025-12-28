@@ -11,7 +11,7 @@ from app.schemas.watcher import (
     WatcherControlResponse,
 )
 
-router = APIRouter(prefix="/watcher", tags=["watcher"])
+router = APIRouter()
 
 
 @router.get("/status", response_model=WatcherStatusResponse)

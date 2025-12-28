@@ -101,8 +101,7 @@ export const useFolderOperations = () => {
   useMutationFeedback(enableAITaggingMutation, {
     showLoading: true,
     loadingMessage: 'Enabling AI tagging',
-    successTitle: 'AI Tagging Enabled',
-    successMessage: 'AI tagging has been enabled for the selected folder.',
+    showSuccess: false,
     errorTitle: 'AI Tagging Error',
     errorMessage: 'Failed to enable AI tagging. Please try again.',
   });

@@ -7,7 +7,7 @@ from app.schemas.folders import (
     FolderTaggingInfo,
 )
 
-router = APIRouter(prefix="/folders", tags=["folders"])
+router = APIRouter()
 
 
 @router.get(

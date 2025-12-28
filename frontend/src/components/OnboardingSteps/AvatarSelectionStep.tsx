@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   setAvatar,
   setName,
@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { avatars } from '@/constants/avatars';
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
+import { RootState } from '@/app/store';
 
 interface AvatarNameSelectionStepProps {
   stepIndex: number;
@@ -32,11 +33,20 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 }) => {
   const dispatch = useDispatch();
 
-  const [name, setLocalName] = useState('');
-  const [selectedAvatar, setLocalAvatar] = useState('');
+  const [name, setLocalName] = useState(localStorage.getItem('name') || '');
+  const [selectedAvatar, setLocalAvatar] = useState(
+    localStorage.getItem('avatar') || '',
+  );
+  const isEditing = useSelector(
+    (state: RootState) => state.onboarding.isEditing,
+  );
 
   useEffect(() => {
-    if (localStorage.getItem('name') && localStorage.getItem('avatar')) {
+    if (
+      localStorage.getItem('name') &&
+      localStorage.getItem('avatar') &&
+      !isEditing
+    ) {
       dispatch(markCompleted(stepIndex));
     }
   }, []);
@@ -57,7 +67,11 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
     dispatch(markCompleted(stepIndex));
   };
 
-  if (localStorage.getItem('name') && localStorage.getItem('avatar')) {
+  if (
+    localStorage.getItem('name') &&
+    localStorage.getItem('avatar') &&
+    !isEditing
+  ) {
     return null;
   }
 

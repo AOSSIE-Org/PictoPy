@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+import time
 from app.database.folders import (
     db_check_database_connection,
 )
@@ -27,14 +28,33 @@ async def lifespan(app: FastAPI):
         logger.info("Starting PictoPy Sync Microservice...")
 
         # Check database connection
-        if not db_check_database_connection():
-            logger.error("Failed to connect to PictoPy database")
-            logger.error(
-                "Make sure the main PictoPy backend is set up and the database exists"
-            )
-            raise RuntimeError("Database connection failed")
+        logger.info("Checking database connection...")
+        connection_timeout = 60
+        retry_interval = 5
+        start_time = time.time()
+        attempt = 0
 
-        logger.info("Database connection successful")
+        while True:
+            attempt += 1
+            elapsed_time = time.time() - start_time
+
+            if db_check_database_connection():
+                logger.info(f"Database connection successful on attempt {attempt}")
+                break
+
+            if elapsed_time >= connection_timeout:
+                logger.error(
+                    f"Failed to connect to PictoPy database after {attempt} attempts over {elapsed_time:.1f} seconds"
+                )
+                logger.error(
+                    "Make sure the main PictoPy backend is set up and the database exists"
+                )
+                raise RuntimeError("Database connection failed after multiple attempts")
+
+            logger.warning(
+                f"Database connection attempt {attempt} failed. Retrying in {retry_interval} seconds... ({elapsed_time:.1f}s elapsed)"
+            )
+            time.sleep(retry_interval)
 
         watcher_started = watcher_util_start_folder_watcher()
 

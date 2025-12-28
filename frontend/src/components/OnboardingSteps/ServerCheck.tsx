@@ -22,7 +22,7 @@ export const ServerCheck: React.FC<ServerCheckProps> = ({ stepIndex }) => {
   } = usePictoQuery({
     queryKey: ['clusters'],
     queryFn: getMainBackendHealthStatus,
-    retry: 10,
+    retry: 60,
     retryDelay: 1000,
   });
   const {
@@ -32,7 +32,7 @@ export const ServerCheck: React.FC<ServerCheckProps> = ({ stepIndex }) => {
   } = usePictoQuery({
     queryKey: ['syncMicroservice'],
     queryFn: getSyncMicroserviceHealthStatus,
-    retry: 10,
+    retry: 60,
     retryDelay: 1000,
   });
   useEffect(() => {
