@@ -22,11 +22,13 @@ import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
 interface AvatarNameSelectionStepProps {
   stepIndex: number;
   totalSteps: number;
+  currentStepDisplayIndex: number;
 }
 
 export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
   stepIndex,
   totalSteps,
+  currentStepDisplayIndex,
 }) => {
   const dispatch = useDispatch();
 
@@ -65,14 +67,18 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
         <CardHeader className="p-3">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
-              Step {stepIndex + 1} of {totalSteps}
+              Step {currentStepDisplayIndex + 1} of {totalSteps}
             </span>
-            <span>{Math.round(((stepIndex + 1) / totalSteps) * 100)}%</span>
+            <span>
+              {Math.round(((currentStepDisplayIndex + 1) / totalSteps) * 100)}%
+            </span>
           </div>
           <div className="bg-muted mb-2 h-1.5 w-full rounded-full">
             <div
               className="bg-primary h-full rounded-full transition-all duration-300"
-              style={{ width: `${((stepIndex + 1) / totalSteps) * 100}%` }}
+              style={{
+                width: `${((currentStepDisplayIndex + 1) / totalSteps) * 100}%`,
+              }}
             />
           </div>
           <CardTitle className="mt-1 text-xl font-semibold">
