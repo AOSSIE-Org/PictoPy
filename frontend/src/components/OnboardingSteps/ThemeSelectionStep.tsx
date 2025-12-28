@@ -25,11 +25,13 @@ import { useTheme } from '@/contexts/ThemeContext';
 interface ThemeSelectionStepProps {
   stepIndex: number;
   totalSteps: number;
+  currentStepDisplayIndex: number;
 }
 
 export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
   stepIndex,
   totalSteps,
+  currentStepDisplayIndex,
 }) => {
   const { setTheme, theme } = useTheme();
   const dispatch = useDispatch<AppDispatch>();

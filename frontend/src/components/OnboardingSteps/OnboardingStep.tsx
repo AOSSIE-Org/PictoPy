@@ -23,9 +23,12 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
   stepIndex,
   stepName, // still accepted, but not trusted
 }) => {
+  const visibleStepIndex = VISIBLE_STEPS.indexOf(stepName);
+
   const sharedProps = {
     stepIndex,
     totalSteps: VISIBLE_STEPS.length,
+    currentStepDisplayIndex: visibleStepIndex,
   };
 
   // FIX: derive stepName from stepIndex (single source of truth)

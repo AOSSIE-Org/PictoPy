@@ -22,11 +22,13 @@ import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
 interface AvatarNameSelectionStepProps {
   stepIndex: number;
   totalSteps: number;
+  currentStepDisplayIndex: number;
 }
 
 export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
   stepIndex,
   totalSteps,
+  currentStepDisplayIndex,
 }) => {
   const dispatch = useDispatch();
 
