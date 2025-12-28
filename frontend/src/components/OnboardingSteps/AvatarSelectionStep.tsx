@@ -114,16 +114,18 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                     type="button"
                     key={avatar}
                     onClick={() => handleAvatarSelect(avatar)}
-                    className={`bg-background relative inline-flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300 ${isSelected
+                    className={`bg-background relative inline-flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300 ${
+                      isSelected
                         ? 'border-primary ring-primary ring-offset-background ring-2 ring-offset-2'
                         : 'border-muted'
-                      }`}
+                    }`}
                   >
                     <img
                       src={avatar}
                       alt="Avatar"
-                      className={`h-20 w-20 rounded-full object-cover transition-all duration-300 ${isSelected ? 'scale-105' : ''
-                        }`}
+                      className={`h-20 w-20 rounded-full object-cover transition-all duration-300 ${
+                        isSelected ? 'scale-105' : ''
+                      }`}
                     />
                   </button>
                 );
