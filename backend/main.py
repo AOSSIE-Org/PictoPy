@@ -107,13 +107,20 @@ def generate_openapi_json():
         logger.error(f"Failed to generate openapi.json: {e}")
 
 
+origins = [
+    "http://localhost:1420",  # Tauri development
+    "http://localhost:5173",  # Vite development
+    "tauri://localhost",  # Tauri production (macOS/Linux)
+    "https://tauri.localhost",  # Tauri production (Windows)
+]
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=origins,  # Whitelist only known localhost origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Explicit methods
+    allow_headers=["Content-Type", "Accept", "Authorization"],  # Explicit headers
 )
 
 
