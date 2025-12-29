@@ -21,12 +21,10 @@ from app.models.ObjectClassifier import ObjectClassifier
 from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
-
+# Use project-level logger setup to avoid duplicate handlers
 
 # GPS EXIF tag constant
 GPS_INFO_TAG = 34853
-
-logger = logging.getLogger(__name__)
 
 
 def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -> bool:
