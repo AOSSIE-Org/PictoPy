@@ -244,6 +244,11 @@ class InterceptHandler(logging.Handler):
         msg = record.getMessage()
 
         # Find the appropriate logger
+        # Prevent recursion: if the module name matches the intercepted loggers,
+        # use a different name to avoid triggering the same handler again.
+        if module_name in ["uvicorn", "asyncio"]:
+            module_name = f"{module_name}_redirect"
+
         logger = get_logger(module_name)
 
         # Log the message with our custom formatting

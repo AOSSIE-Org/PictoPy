@@ -8,13 +8,6 @@ from app.routes import health, watcher, folders
 from fastapi.middleware.cors import CORSMiddleware
 from app.logging.setup_logging import get_sync_logger, configure_uvicorn_logging, setup_logging
 from app.utils.logger_writer import redirect_stdout_stderr
-
-# Set up standard logging
-setup_logging()
-
-# Configure Uvicorn logging
-configure_uvicorn_logging()
-
 # Get logger
 logger = get_sync_logger(__name__)
 
@@ -45,18 +38,20 @@ app.include_router(folders.router)
 
 
 if __name__ == "__main__":
-    # Redirect stdout and stderr to logger
-    redirect_stdout_stderr(logger)
-    
-    # Configure and run server
+    # 1. Setup logging before running the server
+    setup_logging("sync-microservice")
+    configure_uvicorn_logging("sync-microservice")
     config = Config(
         app=app,
         host="0.0.0.0",
         port=8001,
-        log_config=None,  # Use our custom logging configuration
+        log_level="info",
+        log_config=None,  
     )
     server = Server(config)
-    
-    logger.info("Starting sync microservice on port 8001")
-    import asyncio
-    asyncio.run(server.serve())
+    with redirect_stdout_stderr(
+        logger, stdout_level=logging.INFO, stderr_level=logging.ERROR
+    ):
+        logger.info("Starting sync microservice on port 8001")
+        import asyncio
+        asyncio.run(server.serve())
