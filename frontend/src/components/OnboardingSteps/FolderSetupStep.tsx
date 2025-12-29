@@ -9,12 +9,16 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FolderOpen, X, Folder } from 'lucide-react';
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from '@/app/store';
-import { markCompleted, previousStep } from '@/features/onboardingSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '@/app/store';
+import {
+  markCompleted,
+  previousStep,
+  setIsEditing,
+} from '@/features/onboardingSlice';
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
 import { useFolder } from '@/hooks/useFolder';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface FolderSetupStepProps {
   stepIndex: number;
@@ -25,12 +29,22 @@ interface FolderSetupStepProps {
 export function FolderSetupStep({
   stepIndex,
   totalSteps,
-  currentStepDisplayIndex: _currentStepDisplayIndex,
+  currentStepDisplayIndex,
 }: FolderSetupStepProps) {
   const dispatch = useDispatch<AppDispatch>();
 
-  // Local state for folders
+  const displayIndex = currentStepDisplayIndex ?? stepIndex;
+
   const [folder, setFolder] = useState<string>('');
+  const isEditing = useSelector(
+    (state: RootState) => state.onboarding.isEditing,
+  );
+
+  useEffect(() => {
+    if (localStorage.getItem('folderChosen') === 'true' && !isEditing) {
+      dispatch(markCompleted(stepIndex));
+    }
+  }, [dispatch, isEditing, stepIndex]);
 
   const { pickSingleFolder, addFolderMutate } = useFolder({
     title: 'Select folder to import photos from',
@@ -54,10 +68,15 @@ export function FolderSetupStep({
   };
 
   const handleBack = () => {
+    dispatch(setIsEditing(true));
     dispatch(previousStep());
   };
 
-  const progressPercent = Math.round((stepIndex / totalSteps) * 100);
+  if (localStorage.getItem('folderChosen') === 'true' && !isEditing) {
+    return null;
+  }
+
+  const progressPercent = Math.round(((displayIndex + 1) / totalSteps) * 100);
 
   return (
     <>
@@ -65,10 +84,11 @@ export function FolderSetupStep({
         <CardHeader className="p-3">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
-              Step {stepIndex} of {totalSteps}
+              Step {displayIndex + 1} of {totalSteps}
             </span>
             <span>{progressPercent}%</span>
           </div>
+
           <div className="bg-muted mb-4 h-2 w-full rounded-full">
             <div
               className="bg-primary h-full rounded-full transition-all duration-300"
@@ -118,7 +138,7 @@ export function FolderSetupStep({
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleRemoveFolder()}
+                  onClick={handleRemoveFolder}
                   className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 ml-2 flex h-7 w-7 items-center justify-center rounded-md opacity-0 transition-colors group-hover:opacity-100"
                 >
                   <X className="h-4 w-4" />

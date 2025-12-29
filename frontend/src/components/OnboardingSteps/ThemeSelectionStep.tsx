@@ -1,10 +1,11 @@
-import React from 'react';
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from '@/app/store';
-import { markCompleted, previousStep } from '@/features/onboardingSlice';
-
-import { useNavigate } from 'react-router';
-import { ROUTES } from '@/constants/routes';
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '@/app/store';
+import {
+  markCompleted,
+  previousStep,
+  setIsEditing,
+} from '@/features/onboardingSlice';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -31,11 +32,22 @@ interface ThemeSelectionStepProps {
 export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
   stepIndex,
   totalSteps,
-  currentStepDisplayIndex: _currentStepDisplayIndex,
+  currentStepDisplayIndex,
 }) => {
   const { setTheme, theme } = useTheme();
   const dispatch = useDispatch<AppDispatch>();
-  const navigate = useNavigate();
+  const isEditing = useSelector(
+    (state: RootState) => state.onboarding.isEditing,
+  );
+
+  // ✅ TS-safe fallback ONLY (no logic change)
+  const displayIndex = currentStepDisplayIndex ?? stepIndex;
+
+  useEffect(() => {
+    if (localStorage.getItem('themeChosen') === 'true' && !isEditing) {
+      dispatch(markCompleted(stepIndex));
+    }
+  }, [dispatch, isEditing, stepIndex]);
 
   const handleThemeChange = (value: 'light' | 'dark' | 'system') => {
     setTheme(value);
@@ -44,14 +56,18 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
   const handleNext = () => {
     localStorage.setItem('themeChosen', 'true');
     dispatch(markCompleted(stepIndex));
-    navigate(ROUTES.HOME); // Easier routing to home page
   };
 
   const handleBack = () => {
+    dispatch(setIsEditing(true));
     dispatch(previousStep());
   };
 
-  const progressPercent = Math.round((stepIndex / totalSteps) * 100);
+  if (localStorage.getItem('themeChosen') === 'true' && !isEditing) {
+    return null;
+  }
+
+  const progressPercent = Math.round(((displayIndex + 1) / totalSteps) * 100);
 
   return (
     <>
@@ -59,10 +75,11 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
         <CardHeader className="p-3">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
-              Step {stepIndex} of {totalSteps}
+              Step {displayIndex + 1} of {totalSteps}
             </span>
             <span>{progressPercent}%</span>
           </div>
+
           <div className="bg-muted mb-4 h-2 w-full rounded-full">
             <div
               className="bg-primary h-full rounded-full transition-all duration-300"

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   setAvatar,
   setName,
@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { avatars } from '@/constants/avatars';
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
+import { RootState } from '@/app/store';
 
 interface AvatarNameSelectionStepProps {
   stepIndex: number;
@@ -28,12 +29,30 @@ interface AvatarNameSelectionStepProps {
 export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
   stepIndex,
   totalSteps,
-  currentStepDisplayIndex: _currentStepDisplayIndex,
+  currentStepDisplayIndex,
 }) => {
   const dispatch = useDispatch();
 
-  const [name, setLocalName] = useState('');
-  const [selectedAvatar, setLocalAvatar] = useState('');
+  const displayIndex = currentStepDisplayIndex ?? stepIndex;
+
+  const [name, setLocalName] = useState(localStorage.getItem('name') || '');
+  const [selectedAvatar, setLocalAvatar] = useState(
+    localStorage.getItem('avatar') || '',
+  );
+
+  const isEditing = useSelector(
+    (state: RootState) => state.onboarding.isEditing,
+  );
+
+  useEffect(() => {
+    if (
+      localStorage.getItem('name') &&
+      localStorage.getItem('avatar') &&
+      !isEditing
+    ) {
+      dispatch(markCompleted(stepIndex));
+    }
+  }, [dispatch, isEditing, stepIndex]);
 
   const handleAvatarSelect = (avatar: string) => {
     setLocalAvatar(avatar);
@@ -51,22 +70,34 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
     dispatch(markCompleted(stepIndex));
   };
 
+  if (
+    localStorage.getItem('name') &&
+    localStorage.getItem('avatar') &&
+    !isEditing
+  ) {
+    return null;
+  }
+
   return (
     <>
       <Card className="flex max-h-full w-1/2 flex-col gap-3 border p-4">
         <CardHeader className="p-3">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
-              Step {stepIndex} of {totalSteps}
+              Step {displayIndex + 1} of {totalSteps}
             </span>
-            <span>{Math.round((stepIndex / totalSteps) * 100)}%</span>
+            <span>{Math.round(((displayIndex + 1) / totalSteps) * 100)}%</span>
           </div>
+
           <div className="bg-muted mb-2 h-1.5 w-full rounded-full">
             <div
               className="bg-primary h-full rounded-full transition-all duration-300"
-              style={{ width: `${(stepIndex / totalSteps) * 100}%` }}
+              style={{
+                width: `${((displayIndex + 1) / totalSteps) * 100}%`,
+              }}
             />
           </div>
+
           <CardTitle className="mt-1 text-xl font-semibold">
             Welcome to PictoPy
           </CardTitle>
