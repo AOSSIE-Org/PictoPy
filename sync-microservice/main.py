@@ -1,38 +1,62 @@
-from flask import Flask
-from flask_cors import CORS
 import logging
-from config import Config
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from fastapi import FastAPI
+from uvicorn import Config, Server
 
-app = Flask(__name__)
+from app.core.lifespan import lifespan
+from app.routes import health, watcher, folders
+from fastapi.middleware.cors import CORSMiddleware
+from app.logging.setup_logging import get_sync_logger, configure_uvicorn_logging, setup_logging
+from app.utils.logger_writer import redirect_stdout_stderr
 
-# Configure CORS with corrected settings
-CORS(app, resources={
-    r"/api/*": {
-        "origins": ["http://localhost:3000", "http://localhost:5000"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True,
-        "max_age": 3600
-    }
-})
+# Set up standard logging
+setup_logging()
 
-# Load configuration
-app.config.from_object(Config)
+# Configure Uvicorn logging
+configure_uvicorn_logging()
 
-# Import blueprints
-from routes import sync_routes
+# Get logger
+logger = get_sync_logger(__name__)
 
-# Register blueprints
-app.register_blueprint(sync_routes.bp)
+# Create FastAPI app
+app = FastAPI(lifespan=lifespan)
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Health check endpoint"""
-    return {'status': 'healthy'}, 200
+# Define allowed origins
+origins = [
+    "http://localhost:1420",
+    "http://localhost:5173",
+    "tauri://localhost",
+    "https://tauri.localhost",
+]
 
-if __name__ == '__main__':
-    app.run(debug=app.config['DEBUG'], host='0.0.0.0', port=5000)
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Accept", "Authorization"],
+)
+
+# Include routers
+app.include_router(health.router)
+app.include_router(watcher.router)
+app.include_router(folders.router)
+
+
+if __name__ == "__main__":
+    # Redirect stdout and stderr to logger
+    redirect_stdout_stderr(logger)
+    
+    # Configure and run server
+    config = Config(
+        app=app,
+        host="0.0.0.0",
+        port=8001,
+        log_config=None,  # Use our custom logging configuration
+    )
+    server = Server(config)
+    
+    logger.info("Starting sync microservice on port 8001")
+    import asyncio
+    asyncio.run(server.serve())
