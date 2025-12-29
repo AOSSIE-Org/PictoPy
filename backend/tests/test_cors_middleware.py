@@ -642,13 +642,9 @@ class TestEdgeCasesAndErrors:
         mock_request.headers = None
         mock_request.method = "GET"
         
-        # Should handle gracefully
-        try:
-            response = cors_middleware_default.process_request(mock_request)
-        except AttributeError:
-            # Expected behavior - headers attribute is required
-            pass
-    
+        # Should raise AttributeError when headers is None
+        with pytest.raises(AttributeError):
+            cors_middleware_default.process_request(mock_request)
     def test_multiple_preflight_requests(self, cors_middleware_default):
         """Test handling multiple preflight requests."""
         for i in range(5):
