@@ -26,6 +26,20 @@ PictoPy is an advanced desktop gallery application that combines the power of Ta
 - **ONNX Runtime**: Runs the models efficiently
 - **DBSCAN**: Performs clustering for face embeddings
 
+## Backend Setup (Python)
+
+The Python dependencies are not defined at the project root.  
+They are located inside the `backend/` directory.
+
+### Steps
+
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python main.py
+
 ### Backend (Rust via Tauri)
 
 Handles file system operations and provides a secure bridge between the frontend and local system.
