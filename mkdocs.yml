@@ -69,6 +69,8 @@ nav:
           - Python Backend Directory Structure: backend/backend_python/directory-structure.md
           - Python Backend Image Processing: backend/backend_python/image-processing.md
           - Rust Backend API: backend/backend_rust/api.md
+          - Security Fix (CORS): CORS_SECURITY_FIX.md
+          - Python Backend API: backend/backend_python/api.md
       - Frontend:
           - State Management: frontend/state-management.md
           - Screenshots: frontend/screenshots.md
