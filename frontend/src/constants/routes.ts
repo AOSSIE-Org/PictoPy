@@ -9,4 +9,6 @@ export const ROUTES = {
   ALBUMS: 'albums',
   MEMORIES: 'memories',
   PERSON: 'person/:clusterId',
+  PROFILE: 'profile',
+  EDIT_PROFILE: 'profile/edit',
 };
