@@ -308,7 +308,7 @@ origin: async function(origin, callback) {
 ## References
 
 - [MDN: CORS (Cross-Origin Resource Sharing)](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
-- [OWASP: Cross-origin Resource Sharing](https://owasp.org/www-community/attacks/xss/)
+- [OWASP: CORS Security](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/11-Client-side_Testing/07-Testing_Cross_Origin_Resource_Sharing)
 - [Express CORS Middleware](https://expressjs.com/en/resources/middleware/cors.html)
 - [Helmet.js Security Middleware](https://helmetjs.github.io/)
 
