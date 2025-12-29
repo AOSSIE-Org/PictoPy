@@ -1,61 +1,62 @@
 import logging
+
 from fastapi import FastAPI
 from uvicorn import Config, Server
+
 from app.core.lifespan import lifespan
 from app.routes import health, watcher, folders
 from fastapi.middleware.cors import CORSMiddleware
-from app.logging.setup_logging import (
-    get_sync_logger,
-    configure_uvicorn_logging,
-    setup_logging,
-)
+from app.logging.setup_logging import get_sync_logger, configure_uvicorn_logging, setup_logging
 from app.utils.logger_writer import redirect_stdout_stderr
 
 # Set up standard logging
-setup_logging("sync-microservice")
+setup_logging()
 
-# Configure Uvicorn logging to use our custom formatter
-configure_uvicorn_logging("sync-microservice")
+# Configure Uvicorn logging
+configure_uvicorn_logging()
 
-# Use the sync-specific logger for this module
+# Get logger
 logger = get_sync_logger(__name__)
 
-logger.info("Starting PictoPy Sync Microservice...")
+# Create FastAPI app
+app = FastAPI(lifespan=lifespan)
 
-# Create FastAPI app with lifespan management
-app = FastAPI(
-    title="PictoPy Sync Microservice",
-    description="File system synchronization service for PictoPy",
-    version="1.0.0",
-    lifespan=lifespan,
-)
+# Define allowed origins
+origins = [
+    "http://localhost:1420",
+    "http://localhost:5173",
+    "tauri://localhost",
+    "https://tauri.localhost",
+]
+
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Accept", "Authorization"],
 )
-# Include route modules
-app.include_router(health.router, prefix="/api/v1")
-app.include_router(watcher.router, prefix="/api/v1")
-app.include_router(folders.router, prefix="/api/v1")
+
+# Include routers
+app.include_router(health.router)
+app.include_router(watcher.router)
+app.include_router(folders.router)
+
 
 if __name__ == "__main__":
-    logger.info("Starting PictoPy Sync Microservice from main...")
-
-    # Create config with log_config=None to disable Uvicorn's default logging
+    # Redirect stdout and stderr to logger
+    redirect_stdout_stderr(logger)
+    
+    # Configure and run server
     config = Config(
         app=app,
         host="0.0.0.0",
         port=8001,
-        log_level="info",
-        log_config=None,  # Disable uvicorn's default logging config
+        log_config=None,  # Use our custom logging configuration
     )
     server = Server(config)
-
-    # Use context manager for safe stdout/stderr redirection
-    with redirect_stdout_stderr(
-        logger, stdout_level=logging.INFO, stderr_level=logging.ERROR
-    ):
-        server.run()
+    
+    logger.info("Starting sync microservice on port 8001")
+    import asyncio
+    asyncio.run(server.serve())
