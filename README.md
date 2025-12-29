@@ -30,6 +30,10 @@ PictoPy is an advanced desktop gallery application that combines the power of Ta
 
 Handles file system operations and provides a secure bridge between the frontend and local system.
 
+## Sync Microservice Setup
+
+See `sync-microservice/README.md` for instructions on setting up and running the synchronization microservice.
+
 ## Features
 
 - Smart tagging of photos based on detected objects, faces, and their recognition

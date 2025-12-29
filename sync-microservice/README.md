@@ -190,3 +190,17 @@ This microservice is designed to work alongside the main PictoPy backend:
 - **Shared Database**: Both services use the same SQLite database
 
 The sync service operates independently but relies on the main backend's database structure.
+
+# Sync Microservice Setup
+
+This service handles synchronization tasks for PictoPy.
+
+## Setup
+
+```bash
+cd sync-microservice
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python main.py
+
