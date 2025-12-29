@@ -1,61 +1,38 @@
+from flask import Flask
+from flask_cors import CORS
 import logging
-from fastapi import FastAPI
-from uvicorn import Config, Server
-from app.core.lifespan import lifespan
-from app.routes import health, watcher, folders
-from fastapi.middleware.cors import CORSMiddleware
-from app.logging.setup_logging import (
-    get_sync_logger,
-    configure_uvicorn_logging,
-    setup_logging,
-)
-from app.utils.logger_writer import redirect_stdout_stderr
+from config import Config
 
-# Set up standard logging
-setup_logging("sync-microservice")
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Configure Uvicorn logging to use our custom formatter
-configure_uvicorn_logging("sync-microservice")
+app = Flask(__name__)
 
-# Use the sync-specific logger for this module
-logger = get_sync_logger(__name__)
+# Configure CORS with corrected settings
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000", "http://localhost:5000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True,
+        "max_age": 3600
+    }
+})
 
-logger.info("Starting PictoPy Sync Microservice...")
+# Load configuration
+app.config.from_object(Config)
 
-# Create FastAPI app with lifespan management
-app = FastAPI(
-    title="PictoPy Sync Microservice",
-    description="File system synchronization service for PictoPy",
-    version="1.0.0",
-    lifespan=lifespan,
-)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-# Include route modules
-app.include_router(health.router, prefix="/api/v1")
-app.include_router(watcher.router, prefix="/api/v1")
-app.include_router(folders.router, prefix="/api/v1")
+# Import blueprints
+from routes import sync_routes
 
-if __name__ == "__main__":
-    logger.info("Starting PictoPy Sync Microservice from main...")
+# Register blueprints
+app.register_blueprint(sync_routes.bp)
 
-    # Create config with log_config=None to disable Uvicorn's default logging
-    config = Config(
-        app=app,
-        host="0.0.0.0",
-        port=8001,
-        log_level="info",
-        log_config=None,  # Disable uvicorn's default logging config
-    )
-    server = Server(config)
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return {'status': 'healthy'}, 200
 
-    # Use context manager for safe stdout/stderr redirection
-    with redirect_stdout_stderr(
-        logger, stdout_level=logging.INFO, stderr_level=logging.ERROR
-    ):
-        server.run()
+if __name__ == '__main__':
+    app.run(debug=app.config['DEBUG'], host='0.0.0.0', port=5000)
