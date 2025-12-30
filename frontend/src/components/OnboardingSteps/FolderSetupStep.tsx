@@ -9,29 +9,34 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FolderOpen, X, Folder } from 'lucide-react';
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from '@/app/store';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '@/app/store';
 import { markCompleted, previousStep } from '@/features/onboardingSlice';
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
 import { useFolder } from '@/hooks/useFolder';
 import { useEffect, useState } from 'react';
-
+import { setIsEditing } from '@/features/onboardingSlice';
 interface FolderSetupStepProps {
   stepIndex: number;
   totalSteps: number;
+  currentStepDisplayIndex: number;
 }
 
 export function FolderSetupStep({
   stepIndex,
   totalSteps,
+  currentStepDisplayIndex,
 }: FolderSetupStepProps) {
   const dispatch = useDispatch<AppDispatch>();
 
   // Local state for folders
   const [folder, setFolder] = useState<string>('');
+  const isEditing = useSelector(
+    (state: RootState) => state.onboarding.isEditing,
+  );
 
   useEffect(() => {
-    if (localStorage.getItem('folderChosen') === 'true') {
+    if (localStorage.getItem('folderChosen') === 'true' && !isEditing) {
       dispatch(markCompleted(stepIndex));
     }
   }, []);
@@ -58,13 +63,16 @@ export function FolderSetupStep({
   };
 
   const handleBack = () => {
+    dispatch(setIsEditing(true));
     dispatch(previousStep());
   };
 
-  if (localStorage.getItem('folderChosen') === 'true') {
+  if (localStorage.getItem('folderChosen') === 'true' && !isEditing) {
     return null;
   }
-  const progressPercent = Math.round(((stepIndex + 1) / totalSteps) * 100);
+  const progressPercent = Math.round(
+    ((currentStepDisplayIndex + 1) / totalSteps) * 100,
+  );
 
   return (
     <>
@@ -72,7 +80,7 @@ export function FolderSetupStep({
         <CardHeader className="p-3">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
-              Step {stepIndex + 1} of {totalSteps}
+              Step {currentStepDisplayIndex + 1} of {totalSteps}
             </span>
             <span>{progressPercent}%</span>
           </div>
