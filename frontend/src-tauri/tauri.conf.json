@@ -41,7 +41,12 @@
       "endpoints": [
         "https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/latest.json"
       ]
-    }
+    },
+
+    "clipboard": {
+  "enable": true
+}
+
   },
   "app": {
     "windows": [

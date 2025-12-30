@@ -1,12 +1,33 @@
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Check, Heart } from 'lucide-react';
+import {
+  Check,
+  Heart,
+  Trash,
+  
+  FolderPlus,
+  Info,
+  Copy,
+
+} from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { Image } from '@/types/Media';
 import { ImageTags } from './ImageTags';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { useToggleFav } from '@/hooks/useToggleFav';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
+import { useDispatch } from 'react-redux';
+
+import { invoke } from '@tauri-apps/api/core';
+
+import { showInfoDialog } from '@/features/infoDialogSlice';
 
 interface ImageCardViewProps {
   image: Image;
@@ -25,6 +46,7 @@ export function ImageCard({
   onClick,
 }: ImageCardViewProps) {
   const [isImageHovered, setIsImageHovered] = useState(false);
+  const dispatch = useDispatch();
   // Default to empty array if no tags are provided
   const tags = image.tags || [];
   const { toggleFavourite } = useToggleFav();
@@ -34,72 +56,174 @@ export function ImageCard({
       toggleFavourite(image.id);
     }
   }, [image, toggleFavourite]);
+
+  const handleAddToAlbum = () => {
+    dispatch(
+      showInfoDialog({
+        title: 'Coming Soon',
+        message: 'Add to Album functionality is currently under development.',
+        variant: 'info',
+      }),
+    );
+  };
+
+
+const handleCopy = async () => {
+  try {
+    await invoke('copy_image_to_clipboard', {
+      path: image.path,
+    });
+
+    dispatch(
+      showInfoDialog({
+        title: 'Success',
+        message: 'Image copied to clipboard',
+        variant: 'success',
+      }),
+    );
+  } catch (err) {
+    console.error(err);
+    dispatch(
+      showInfoDialog({
+        title: 'Error',
+        message: 'Failed to copy image to clipboard',
+        variant: 'error',
+      }),
+    );
+  }
+};
+
+
+  const handleDelete = () => {
+    dispatch(
+      showInfoDialog({
+        title: 'Coming Soon',
+        message: 'Delete Image functionality is currently under development.',
+        variant: 'error',
+      }),
+    );
+  };
+
+
+  const handleViewInfo = () => {
+    // Determine how to view info. 
+    // Since currently info is shown in the side panel when an image is selected/viewed,
+    // we can trigger the onClick to open the image viewer which has the info panel.
+    if (onClick) onClick();
+  };
+
   return (
-    <div
-      className={cn(
-        'group bg-card cursor-pointer overflow-hidden rounded-lg border transition-all hover:shadow-md',
-        isSelected ? 'ring-2 ring-[#4088fa]' : '',
-        className,
-      )}
-      onMouseEnter={() => setIsImageHovered(true)}
-      onMouseLeave={() => setIsImageHovered(false)}
-      onClick={onClick}
-    >
-      <div className="relative">
-        {/* Selection tick mark */}
-        {isSelected && (
-          <div className="absolute top-2 right-2 z-10 rounded-full bg-[#4088fa] p-1">
-            <Check className="h-4 w-4 text-white" />
-          </div>
-        )}
-
-        <AspectRatio ratio={1}>
-          <img
-            src={convertFileSrc(
-              image.thumbnailPath || image.path || '/placeholder.svg',
+    <ContextMenu>
+      <ContextMenuTrigger>
+        <div
+          className={cn(
+            'group bg-card cursor-pointer overflow-hidden rounded-lg border transition-all hover:shadow-md',
+            isSelected ? 'ring-2 ring-[#4088fa]' : '',
+            className,
+          )}
+          onMouseEnter={() => setIsImageHovered(true)}
+          onMouseLeave={() => setIsImageHovered(false)}
+          onClick={onClick}
+        >
+          <div className="relative">
+            {/* Selection tick mark */}
+            {isSelected && (
+              <div className="absolute top-2 right-2 z-10 rounded-full bg-[#4088fa] p-1">
+                <Check className="h-4 w-4 text-white" />
+              </div>
             )}
-            alt={'Sample Title'}
-            className={cn(
-              'h-full w-full object-cover transition-transform group-hover:scale-105',
-              isSelected ? 'opacity-95' : '',
-            )}
-          />
-          {/* Dark overlay on hover */}
-          <div className="absolute inset-0 bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
 
-          {/* Image actions on hover */}
-          <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${
-                image.isFavourite
-                  ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
-                  : 'bg-white/10 hover:bg-white/20 hover:shadow-lg'
-              }`}
-              onClick={(e) => {
-                console.log(image);
-                e.stopPropagation();
-                handleToggleFavourite();
-              }}
-            >
-              {image.isFavourite ? (
-                <Heart className="h-5 w-5" fill="currentColor"></Heart>
-              ) : (
-                <Heart className="h-5 w-5" />
-              )}
-              <span className="sr-only">Favourite</span>
-            </Button>
+            <AspectRatio ratio={1}>
+              <img
+                src={convertFileSrc(
+                  image.thumbnailPath || image.path || '/placeholder.svg',
+                )}
+                alt={'Sample Title'}
+                className={cn(
+                  'h-full w-full object-cover transition-transform group-hover:scale-105',
+                  isSelected ? 'opacity-95' : '',
+                )}
+              />
+              {/* Dark overlay on hover */}
+              <div className="absolute inset-0 bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+
+              {/* Image actions on hover */}
+              <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${image.isFavourite
+                    ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
+                    : 'bg-white/10 hover:bg-white/20 hover:shadow-lg'
+                    }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleFavourite();
+                  }}
+                >
+                  {image.isFavourite ? (
+                    <Heart className="h-5 w-5" fill="currentColor"></Heart>
+                  ) : (
+                    <Heart className="h-5 w-5" />
+                  )}
+                  <span className="sr-only">Favourite</span>
+                </Button>
+              </div>
+            </AspectRatio>
+
+            {/* Tag section */}
+            <ImageTags
+              tags={tags}
+              showTags={showTags}
+              isImageHovered={isImageHovered}
+            />
           </div>
-        </AspectRatio>
+        </div>
+      </ContextMenuTrigger>
 
-        {/* Tag section */}
-        <ImageTags
-          tags={tags}
-          showTags={showTags}
-          isImageHovered={isImageHovered}
-        />
-      </div>
-    </div>
+      <ContextMenuContent className="w-48">
+        <ContextMenuItem onClick={(e) => {
+          e.stopPropagation();
+          handleAddToAlbum();
+        }}>
+          <FolderPlus className="mr-2 h-4 w-4" />
+          Add to Album
+        </ContextMenuItem>
+        <ContextMenuItem onClick={(e) => {
+          e.stopPropagation();
+          handleToggleFavourite();
+        }}>
+          <Heart className={`mr-2 h-4 w-4 ${image.isFavourite ? "fill-current text-rose-500" : ""}`} />
+          {image.isFavourite ? "Unfavourite" : "Favourite"}
+        </ContextMenuItem>
+       
+
+
+
+        <ContextMenuItem onClick={(e) => {
+          e.stopPropagation();
+          handleCopy();
+        }}>
+          <Copy className="mr-2 h-4 w-4" />
+          Copy Image
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={(e) => {
+          e.stopPropagation();
+          handleViewInfo();
+        }}>
+          <Info className="mr-2 h-4 w-4" />
+          View Info
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem className="text-red-500 focus:text-red-500" onClick={(e) => {
+          e.stopPropagation();
+          handleDelete();
+        }}>
+          <Trash className="mr-2 h-4 w-4" />
+          Delete
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }

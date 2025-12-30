@@ -6,8 +6,34 @@ mod services;
 use tauri::path::BaseDirectory;
 use tauri::Manager;
 
+// -------- Clipboard imports --------
+use tauri::command;
+use arboard::{Clipboard, ImageData};
+use std::borrow::Cow;
+
+// -------- Clipboard command --------
+#[command]
+fn copy_image_to_clipboard(path: String) -> Result<(), String> {
+    let img = image::open(&path).map_err(|e| e.to_string())?;
+    let rgba = img.to_rgba8();
+
+    let image_data = ImageData {
+        width: rgba.width() as usize,
+        height: rgba.height() as usize,
+        bytes: Cow::Owned(rgba.into_raw()),
+    };
+
+    let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
+    clipboard
+        .set_image(image_data)
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
+        // -------- Existing plugins (unchanged) --------
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
@@ -15,6 +41,8 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
+
+        // -------- Existing setup (unchanged) --------
         .setup(|app| {
             let resource_path = app
                 .path()
@@ -22,7 +50,13 @@ fn main() {
             println!("Resource path: {:?}", resource_path);
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![services::get_server_path,])
+
+        // -------- Register commands --------
+        .invoke_handler(tauri::generate_handler![
+            services::get_server_path,
+            copy_image_to_clipboard
+        ])
+
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
