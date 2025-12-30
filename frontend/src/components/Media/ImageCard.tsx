@@ -5,7 +5,7 @@ import {
   Check,
   Heart,
   Trash,
-  
+
   FolderPlus,
   Info,
   Copy,
@@ -36,6 +36,7 @@ interface ImageCardViewProps {
   showTags?: boolean;
   onClick?: () => void;
   imageIndex?: number;
+  onViewInfo?: (image: Image, index: number) => void;
 }
 
 export function ImageCard({
@@ -44,6 +45,8 @@ export function ImageCard({
   isSelected = false,
   showTags = true,
   onClick,
+  imageIndex = 0,
+  onViewInfo,
 }: ImageCardViewProps) {
   const [isImageHovered, setIsImageHovered] = useState(false);
   const dispatch = useDispatch();
@@ -68,30 +71,30 @@ export function ImageCard({
   };
 
 
-const handleCopy = async () => {
-  try {
-    await invoke('copy_image_to_clipboard', {
-      path: image.path,
-    });
+  const handleCopy = async () => {
+    try {
+      await invoke('copy_image_to_clipboard', {
+        path: image.path,
+      });
 
-    dispatch(
-      showInfoDialog({
-        title: 'Success',
-        message: 'Image copied to clipboard',
-        variant: 'success',
-      }),
-    );
-  } catch (err) {
-    console.error(err);
-    dispatch(
-      showInfoDialog({
-        title: 'Error',
-        message: 'Failed to copy image to clipboard',
-        variant: 'error',
-      }),
-    );
-  }
-};
+      dispatch(
+        showInfoDialog({
+          title: 'Success',
+          message: 'Image copied to clipboard',
+          variant: 'success',
+        }),
+      );
+    } catch (err) {
+      console.error(err);
+      dispatch(
+        showInfoDialog({
+          title: 'Error',
+          message: 'Failed to copy image to clipboard',
+          variant: 'error',
+        }),
+      );
+    }
+  };
 
 
   const handleDelete = () => {
@@ -106,10 +109,12 @@ const handleCopy = async () => {
 
 
   const handleViewInfo = () => {
-    // Determine how to view info. 
-    // Since currently info is shown in the side panel when an image is selected/viewed,
-    // we can trigger the onClick to open the image viewer which has the info panel.
-    if (onClick) onClick();
+    if (onViewInfo) {
+      onViewInfo(image, imageIndex);
+    } else if (onClick) {
+      // Fallback to old behavior if no handler provided
+      onClick();
+    }
   };
 
   return (
@@ -196,7 +201,7 @@ const handleCopy = async () => {
           <Heart className={`mr-2 h-4 w-4 ${image.isFavourite ? "fill-current text-rose-500" : ""}`} />
           {image.isFavourite ? "Unfavourite" : "Favourite"}
         </ContextMenuItem>
-       
+
 
 
 
