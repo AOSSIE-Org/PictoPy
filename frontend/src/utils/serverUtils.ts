@@ -1,12 +1,16 @@
 import { Command } from '@tauri-apps/plugin-shell';
 import { invoke } from '@tauri-apps/api/core';
+import { platform } from '@tauri-apps/plugin-os';
 import { BACKEND_URL } from '@/config/Backend.ts';
 
 const SHUTDOWN_TIMEOUT_MS = 5000;
 const SHUTDOWN_RECHECK_DELAY_MS = 1000;
 
+// Prevent race conditions between triggerShutdown and stopServer
+let shutdownInProgress = false;
+
 const isWindows = (): boolean => {
-  return navigator.userAgent.toLowerCase().includes('windows');
+  return platform() === 'windows';
 };
 
 const isServerRunning = async (): Promise<boolean> => {
@@ -44,19 +48,49 @@ export const startServer = async () => {
 
 // Fire-and-forget shutdown trigger.
 export const triggerShutdown = (): void => {
+  if (shutdownInProgress) {
+    console.log('Shutdown already in progress, skipping...');
+    return;
+  }
+  shutdownInProgress = true;
   console.log('Initialized backend shutdown...');
 
   fetch(`${BACKEND_URL}/shutdown`, {
     method: 'POST',
     keepalive: true,
   })
-    .then(() => console.log('Shutdown request sent'))
-    .catch((error) => console.error('Shutdown request failed:', error));
+    .then((response) => {
+      if (response.ok) {
+        console.log('Shutdown request sent successfully');
+      } else {
+        console.error(
+          `Shutdown request failed with status: ${response.status}`,
+        );
+        forceKillServer().catch((err) =>
+          console.error('Fallback force kill failed:', err),
+        );
+      }
+      shutdownInProgress = false; // Reset on success or handled failure
+    })
+    .catch((error) => {
+      console.error('Shutdown request failed:', error);
+      forceKillServer().catch((err) =>
+        console.error('Fallback force kill failed:', err),
+      );
+      shutdownInProgress = false; // Reset on error
+    });
 };
 
 export const stopServer = async () => {
+  if (shutdownInProgress) {
+    console.log('Shutdown already in progress, skipping...');
+    return;
+  }
+  shutdownInProgress = true;
+
   try {
     if (!(await isServerRunning())) {
+      shutdownInProgress = false;
       return;
     }
 
@@ -64,17 +98,20 @@ export const stopServer = async () => {
 
     if (shutdownSuccessful) {
       console.log('Server shutdown completed gracefully');
+      shutdownInProgress = false;
       return;
     }
 
     await sleep(SHUTDOWN_RECHECK_DELAY_MS);
 
     if (!(await isServerRunning())) {
+      shutdownInProgress = false;
       return;
     }
 
     console.warn('Graceful shutdown timed out, attempting force kill...');
     await forceKillServer();
+    shutdownInProgress = false;
   } catch (error) {
     console.error('Error stopping server:', error);
     try {
@@ -82,6 +119,7 @@ export const stopServer = async () => {
     } catch (forceKillError) {
       console.error('Force kill also failed:', forceKillError);
     }
+    shutdownInProgress = false;
   }
 };
 

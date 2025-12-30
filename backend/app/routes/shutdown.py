@@ -1,8 +1,10 @@
 import asyncio
 import os
+import platform
 import signal
 import functools
 from fastapi import APIRouter
+from app.utils.microservice import cleanup_log_threads
 from pydantic import BaseModel
 from app.utils.microservice import microservice_util_stop_sync_service
 from app.logging.setup_logging import get_logger
@@ -30,8 +32,14 @@ async def _delayed_shutdown(delay: float = 0.5):
     await asyncio.sleep(delay)
     logger.info("Backend shutdown initiated, exiting process...")
 
-    # Send SIGTERM to self for graceful shutdown
-    os.kill(os.getpid(), signal.SIGTERM)
+    if platform.system() == "Windows":
+        try:
+            cleanup_log_threads()
+        except Exception as e:
+            logger.error(f"Error cleaning up log threads: {e}")
+        os._exit(0)
+    else:
+        os.kill(os.getpid(), signal.SIGTERM)
 
 
 @router.post("/shutdown", response_model=ShutdownResponse)
@@ -76,8 +84,13 @@ async def shutdown():
     shutdown_task = asyncio.create_task(_delayed_shutdown())
     shutdown_task.add_done_callback(_handle_shutdown_exception)
 
+    message = (
+        "PictoPy backend shutdown initiated. "
+        f"Sync microservice {'stopped' if sync_stopped else 'stop attempted'}."
+    )
+
     return ShutdownResponse(
         status="shutting_down",
-        message="PictoPy backend shutdown initiated. Sync service stopped.",
+        message=message,
         sync_stopped=sync_stopped,
     )

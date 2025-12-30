@@ -1,5 +1,6 @@
 import asyncio
 import os
+import platform
 import signal
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -8,7 +9,7 @@ from app.logging.setup_logging import get_sync_logger
 
 logger = get_sync_logger(__name__)
 
-router = APIRouter(tags=["shutdown"])
+router = APIRouter(tags=["Shutdown"])
 
 
 class ShutdownResponse(BaseModel):
@@ -26,10 +27,12 @@ async def _delayed_shutdown(delay: float = 0.1):
         delay: Seconds to wait before signaling shutdown (kept minimal)
     """
     await asyncio.sleep(delay)
-
     logger.info("Exiting sync microservice...")
-    # Send SIGTERM to self for graceful shutdown
-    os.kill(os.getpid(), signal.SIGTERM)
+
+    if platform.system() == "Windows":
+        os._exit(0)
+    else:
+        os.kill(os.getpid(), signal.SIGTERM)
 
 
 @router.post("/shutdown", response_model=ShutdownResponse)
