@@ -2,10 +2,11 @@ import os
 import uuid
 import datetime
 import json
-import logging
 from typing import List, Tuple, Dict, Any, Mapping
 from PIL import Image, ExifTags
 from pathlib import Path
+from collections import defaultdict
+from app.utils.webSocket.webSocket import publish_progress_from_thread
 
 from app.config.settings import THUMBNAIL_IMAGES_PATH
 from app.database.images import (
@@ -25,8 +26,6 @@ logger = get_logger(__name__)
 
 # GPS EXIF tag constant
 GPS_INFO_TAG = 34853
-
-logger = logging.getLogger(__name__)
 
 
 def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -> bool:
@@ -81,6 +80,7 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
         return True  # No images to process is not an error
     except Exception as e:
         logger.error(f"Error processing folders: {e}")
+
         return False
 
 
@@ -104,36 +104,86 @@ def image_util_process_untagged_images() -> bool:
 def image_util_classify_and_face_detect_images(
     untagged_images: List[Dict[str, str]],
 ) -> None:
-    """Classify untagged images and detect faces if applicable."""
+    """Classify untagged images and detect faces if applicable.
+
+    Progress updates are sent via publish_progress_from_thread using folder_id as job_id.
+    """
     object_classifier = ObjectClassifier()
     face_detector = FaceDetector()
+
+    # Group images by folder_id (folder_id is a string)
+    images_by_folder = defaultdict(list)
+    for image in untagged_images:
+        folder_id = image.get("folder_id")
+        if folder_id:  # Skip images without folder_id
+            images_by_folder[folder_id].append(image)
+
     try:
-        for image in untagged_images:
-            image_path = image["path"]
-            image_id = image["id"]
+        for folder_id, folder_images in images_by_folder.items():
+            total = len(folder_images)
+            last_bucket = -1
 
-            # Step 1: Get classes
-            classes = object_classifier.get_classes(image_path)
+            for idx, image in enumerate(folder_images, start=1):
+                image_path = image["path"]
+                image_id = image["id"]
 
-            # Step 2: Insert class-image pairs if classes were detected
-            if len(classes) > 0:
-                # Create image-class pairs
-                image_class_pairs = [(image_id, class_id) for class_id in classes]
-                logger.debug(f"Image-class pairs: {image_class_pairs}")
+                # Step 1: Get classes
+                classes = object_classifier.get_classes(image_path)
 
-                # Insert the pairs into the database
-                db_insert_image_classes_batch(image_class_pairs)
+                # Step 2: Insert class-image pairs if classes were detected
+                if classes:
+                    image_class_pairs = [(image_id, class_id) for class_id in classes]
+                    logger.debug(f"Image-class pairs: {image_class_pairs}")
+                    db_insert_image_classes_batch(image_class_pairs)
 
-            # Step 3: Detect faces if "person" class is present
-            if classes and 0 in classes and 0 < classes.count(0) < 7:
-                face_detector.detect_faces(image_id, image_path)
+                # Step 3: Detect faces if "person" class is present
+                # (assuming class id 0 denotes "person")
+                if classes and 0 in classes and 0 < classes.count(0) < 7:
+                    face_detector.detect_faces(image_id, image_path)
 
-            # Step 4: Update the image status in the database
-            db_update_image_tagged_status(image_id, True)
+                # Step 4: Update the image status in the database
+                db_update_image_tagged_status(image_id, True)
+
+                percentage = (idx / total) * 100
+                bucket = int(percentage // 2)
+
+                if bucket != last_bucket or idx == total:
+                    publish_progress_from_thread(
+                        {
+                            "job_id": str(folder_id),
+                            "processed": idx,
+                            "total": total,
+                            "percent": round(percentage, 2),
+                            "status": "running",
+                        }
+                    )
+                    last_bucket = bucket
+
+            # Step 5: Mark folder tagging as completed after processing all images
+            from app.database.folders import db_update_folder_tagging_completed
+
+            db_update_folder_tagging_completed(folder_id, True)
+            logger.info(f"Folder {folder_id} tagging completed")
+            # Publish final done event after database update
+            publish_progress_from_thread(
+                {
+                    "job_id": str(folder_id),
+                    "processed": total,
+                    "total": total,
+                    "percent": 100.0,
+                    "status": "done",
+                }
+            )
+
     finally:
-        # Ensure resources are cleaned up
-        object_classifier.close()
-        face_detector.close()
+        try:
+            object_classifier.close()
+        except Exception:
+            logger.exception("Error closing object_classifier")
+        try:
+            face_detector.close()
+        except Exception:
+            logger.exception("Error closing face_detector")
 
 
 def image_util_prepare_image_records(
