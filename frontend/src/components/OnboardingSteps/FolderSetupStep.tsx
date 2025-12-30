@@ -15,6 +15,8 @@ import { markCompleted, previousStep } from '@/features/onboardingSlice';
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
 import { useFolder } from '@/hooks/useFolder';
 import { useEffect, useState } from 'react';
+import { Alert, AlertTitle } from '../ui/alert';
+import { checkFolderEmpty } from '@/api/api-functions/folders';
 
 interface FolderSetupStepProps {
   stepIndex: number;
@@ -29,8 +31,17 @@ export function FolderSetupStep({
 }: FolderSetupStepProps) {
   const dispatch = useDispatch<AppDispatch>();
 
-  // Local state for folders
-  const [folder, setFolder] = useState<string>('');
+  const [folder, setFolder] = useState<string>(''); // Local state for folders
+  const [error, setError] = useState<string>('');
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError('');
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   useEffect(() => {
     if (localStorage.getItem('folderChosen') === 'true') {
@@ -45,7 +56,27 @@ export function FolderSetupStep({
   const handleSelectFolders = async () => {
     const selectedFolder = await pickSingleFolder();
     if (selectedFolder) {
-      setFolder(selectedFolder);
+      try {
+        const data = await checkFolderEmpty({ folder_path: selectedFolder });
+        console.log(data);
+        
+        if (!data.success) {
+          setError('Error checking folder contents. Please try again.');
+          return;
+        }
+        
+        if (data.data && data.data.is_empty) {
+          setError('Selected folder is empty. Please select a non-empty folder.');
+          return;
+        }
+        
+        setFolder(selectedFolder);
+        setError('');
+      }
+      catch (err) {
+        console.error(err);
+        setError('Unable to verify folder. Please try again.');
+      }
     }
   };
 
@@ -54,6 +85,10 @@ export function FolderSetupStep({
   };
 
   const handleNext = () => {
+    if (!folder || folder.trim() === '') {
+      setError('Please select a folder to proceed');
+      return
+    }
     localStorage.setItem('folderChosen', 'true');
     addFolderMutate(folder);
     dispatch(markCompleted(stepIndex));
@@ -73,6 +108,14 @@ export function FolderSetupStep({
   return (
     <>
       <Card className="flex max-h-full w-1/2 flex-col border p-4">
+        {error ? (
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <Alert variant={'destructive'}>
+              <AlertTitle>{error}</AlertTitle>
+            </Alert>
+          </div>
+        ) : null}
+
         <CardHeader className="p-3">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>

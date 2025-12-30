@@ -23,6 +23,10 @@ export interface SyncFolderRequest {
   folder_id: string;
 }
 
+export interface CheckFolderEmptyRequest {
+  folder_path: string;
+}
+
 // API Functions
 export const getAllFolders = async (): Promise<APIResponse> => {
   const response = await apiClient.get<APIResponse>(
@@ -36,6 +40,14 @@ export const addFolder = async (
 ): Promise<APIResponse> => {
   const response = await apiClient.post<APIResponse>(
     foldersEndpoints.addFolder,
+    request,
+  );
+  return response.data;
+};
+
+export const checkFolderEmpty = async (request: CheckFolderEmptyRequest): Promise<APIResponse> => {
+  const response = await apiClient.post<APIResponse>(
+    foldersEndpoints.checkEmpty,
     request,
   );
   return response.data;
