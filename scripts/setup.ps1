@@ -149,6 +149,49 @@ try {
     Set-Location $PSScriptRoot  # Return to original directory
 }
 
+
+# -------------------------
+# NODE-BASED pre-commit installer (global hook in package.json)
+# Behavior:
+#  - if package.json contains "pre-commit" key, we assume the repo uses Node pre-commit.
+#  - install local dev deps (idempotent), then run npx pre-commit install
+# -------------------------
+# -------------------------
+# NODE-BASED pre-commit installer (global hook in package.json)
+# -------------------------
+try {
+    # Go to repo root (parent of scripts/)
+    Set-Location "$PSScriptRoot\.."
+
+    $RepoRoot = (Get-Location).Path
+    Write-Host "Installing Node pre-commit in repo root: $RepoRoot" -ForegroundColor Yellow
+
+    # Check package.json exists
+    if (-not (Test-Path "$RepoRoot\package.json")) {
+        Write-Host "No package.json found in repo root - skipping Node pre-commit install." -ForegroundColor Cyan
+        Set-Location $PSScriptRoot
+        return
+    }
+
+    Write-Host "Pre-commit installing deps..." -ForegroundColor Green
+
+    # Install dev dependencies (idempotent)
+    npm install --save-dev  prettier prettier-plugin-tailwindcss --no-audit --no-fund
+    pip install pre-commit
+    git config --local --unset-all core.hooksPath
+    pre-commit clean 
+    pre-commit install
+
+    Write-Host "Node pre-commit installation finished successfully." -ForegroundColor Green
+} catch {
+    Write-Host "Error during Node pre-commit setup: $_" -ForegroundColor Red
+} finally {
+    # Always return to scripts/
+    Set-Location $PSScriptRoot
+}
+
+
+
 Write-Host "Windows setup complete!" -ForegroundColor Green
 Write-Host "Please restart your computer to ensure all changes take effect." -ForegroundColor Yellow
 

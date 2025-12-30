@@ -146,4 +146,25 @@ cd src-tauri || { echo -e "${RED}src-tauri directory not found${NC}"; exit 1; }
 cargo build || { echo -e "${RED}Cargo build failed in src-tauri. Please check your Tauri setup.${NC}"; exit 1; }
 cd ../../
 
+
+echo "Installing Python pre-commit and hook dependencies..."
+sudo apt-get update
+sudo apt-get install -y python3 python3-pip
+
+sudo pip install pre-commit
+
+echo "Installing Prettier for frontend..."
+npm install --save-dev prettier prettier-plugin-tailwindcss --no-audit --no-fund
+
+echo "Resetting Git hooks..."
+git config --local --unset-all core.hooksPath 2>/dev/null
+
+echo "Installing pre-commit hooks..."
+pre-commit clean
+pre-commit install
+
+
+echo "Node pre-commit installation finished successfully."
+
+
 echo -e "${GREEN}Setup complete!${NC}, restart the terminal to apply changes."
