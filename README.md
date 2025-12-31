@@ -13,7 +13,8 @@ PictoPy is an advanced desktop gallery application that combines the power of Ta
 
  Follow these steps to get the Python backend running:
 
-  > ⚠️ **Important:** Python **3.11.x** is required. > Python 3.13 is **not supported** due to dependency compatibility issues (e.g., NumPy). 
+  > ⚠️ **Important:** Python **3.11.x** is required. 
+  > Python 3.13 is **not supported** due to dependency compatibility issues (e.g., NumPy). 
 
 
 ### 1. Create and activate a virtual environment
