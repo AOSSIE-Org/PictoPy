@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from concurrent.futures import ProcessPoolExecutor
 from app.database.faces import db_create_faces_table
-from app.database.images import db_create_images_table
+from app.database.images import db_create_images_table, db_migrate_add_memories_columns
 from app.database.face_clusters import db_create_clusters_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 from app.database.albums import db_create_albums_table
@@ -26,6 +26,7 @@ from app.routes.albums import router as albums_router
 from app.routes.images import router as images_router
 from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
+from app.routes.memories import router as memories_router
 from fastapi.openapi.utils import get_openapi
 from app.logging.setup_logging import (
     configure_uvicorn_logging,
@@ -46,6 +47,7 @@ async def lifespan(app: FastAPI):
     generate_openapi_json()
     db_create_folders_table()
     db_create_images_table()
+    db_migrate_add_memories_columns()  # Add Memories columns to existing database
     db_create_YOLO_classes_table()
     db_create_clusters_table()  # Create clusters table first since faces references it
     db_create_faces_table()
@@ -132,6 +134,10 @@ app.include_router(
 app.include_router(
     user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
 )
+app.include_router(memories_router)  # Memories router (prefix already defined in router)
+
+logger.info("✅ All routes initialized")
+logger.info("✅ Memories feature enabled at /api/memories")
 
 
 # Entry point for running with: python3 main.py
