@@ -34,6 +34,7 @@ Handles file system operations and provides a secure bridge between the frontend
 
 - Smart tagging of photos based on detected objects, faces, and their recognition
 - Traditional gallery features of album management
+- **Memories**: Auto-generated photo memories grouped by time and location (similar to Google Photos "On this day")
 - Advanced image analysis with object detection and facial recognition
 - Privacy-focused design with offline functionality
 - Efficient data handling and parallel processing
