@@ -2212,6 +2212,11 @@
             ],
             "title": "Metadata"
           },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite",
+            "default": false
+          },
           "face_id": {
             "type": "integer",
             "title": "Face Id"
