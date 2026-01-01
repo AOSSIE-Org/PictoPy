@@ -1,12 +1,10 @@
+
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   Check,
   Heart,
-  Trash,
-
-  FolderPlus,
   Info,
   Copy,
 
@@ -60,15 +58,7 @@ export function ImageCard({
     }
   }, [image, toggleFavourite]);
 
-  const handleAddToAlbum = () => {
-    dispatch(
-      showInfoDialog({
-        title: 'Coming Soon',
-        message: 'Add to Album functionality is currently under development.',
-        variant: 'info',
-      }),
-    );
-  };
+
 
 
   const handleCopy = async () => {
@@ -97,15 +87,7 @@ export function ImageCard({
   };
 
 
-  const handleDelete = () => {
-    dispatch(
-      showInfoDialog({
-        title: 'Coming Soon',
-        message: 'Delete Image functionality is currently under development.',
-        variant: 'error',
-      }),
-    );
-  };
+
 
 
   const handleViewInfo = () => {
@@ -187,13 +169,7 @@ export function ImageCard({
       </ContextMenuTrigger>
 
       <ContextMenuContent className="w-48">
-        <ContextMenuItem onClick={(e) => {
-          e.stopPropagation();
-          handleAddToAlbum();
-        }}>
-          <FolderPlus className="mr-2 h-4 w-4" />
-          Add to Album
-        </ContextMenuItem>
+
         <ContextMenuItem onClick={(e) => {
           e.stopPropagation();
           handleToggleFavourite();
@@ -220,14 +196,7 @@ export function ImageCard({
           <Info className="mr-2 h-4 w-4" />
           View Info
         </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem className="text-red-500 focus:text-red-500" onClick={(e) => {
-          e.stopPropagation();
-          handleDelete();
-        }}>
-          <Trash className="mr-2 h-4 w-4" />
-          Delete
-        </ContextMenuItem>
+
       </ContextMenuContent>
     </ContextMenu>
   );
