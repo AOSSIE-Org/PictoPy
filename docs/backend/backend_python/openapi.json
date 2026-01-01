@@ -1117,14 +1117,9 @@
             "in": "query",
             "required": false,
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/InputType"
-                }
-              ],
+              "$ref": "#/components/schemas/InputType",
               "description": "Choose input type: 'path' or 'base64'",
-              "default": "path",
-              "title": "Input Type"
+              "default": "path"
             },
             "description": "Choose input type: 'path' or 'base64'"
           }
@@ -1237,7 +1232,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/app__schemas__user_preferences__ErrorResponse"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1277,7 +1272,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/app__schemas__user_preferences__ErrorResponse"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1287,7 +1282,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/app__schemas__user_preferences__ErrorResponse"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1298,6 +1293,29 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shutdown": {
+      "post": {
+        "tags": [
+          "Shutdown",
+          "Shutdown"
+        ],
+        "summary": "Shutdown",
+        "description": "Gracefully shutdown the PictoPy backend.\n\nThis endpoint schedules backend server termination after response is sent.\nThe frontend is responsible for shutting down the sync service separately.\n\nReturns:\n    ShutdownResponse with status and message",
+        "operationId": "shutdown_shutdown_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShutdownResponse"
                 }
               }
             }
@@ -1618,6 +1636,30 @@
           "success"
         ],
         "title": "DeleteFoldersResponse"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "error",
+          "message"
+        ],
+        "title": "ErrorResponse",
+        "description": "Error response model"
       },
       "FaceSearchRequest": {
         "properties": {
@@ -2204,6 +2246,7 @@
           "metadata": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -2424,6 +2467,25 @@
           "success"
         ],
         "title": "RenameClusterResponse"
+      },
+      "ShutdownResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "message"
+        ],
+        "title": "ShutdownResponse",
+        "description": "Response model for shutdown endpoint."
       },
       "SuccessResponse": {
         "properties": {
@@ -2897,30 +2959,6 @@
           "error"
         ],
         "title": "ErrorResponse"
-      },
-      "app__schemas__user_preferences__ErrorResponse": {
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "title": "Success"
-          },
-          "error": {
-            "type": "string",
-            "title": "Error"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message"
-          }
-        },
-        "type": "object",
-        "required": [
-          "success",
-          "error",
-          "message"
-        ],
-        "title": "ErrorResponse",
-        "description": "Error response model"
       }
     }
   }
