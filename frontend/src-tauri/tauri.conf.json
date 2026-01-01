@@ -7,7 +7,11 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "deb", "app"],
+    "targets": [
+      "nsis",
+      "deb",
+      "app"
+    ],
     "createUpdaterArtifacts": true,
     "linux": {
       "deb": {
@@ -42,11 +46,9 @@
         "https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/latest.json"
       ]
     },
-
     "clipboard": {
-  "enable": true
-}
-
+      "enable": true
+    }
   },
   "app": {
     "windows": [
@@ -64,7 +66,9 @@
     ],
     "security": {
       "assetProtocol": {
-        "scope": ["**"],
+        "scope": [
+          "**"
+        ],
         "enable": true
       },
       "csp": "default-src 'self'; img-src 'self' data: asset: http://asset.localhost; media-src 'self' blob: data:; connect-src 'self' ipc: http://ipc.localhost http://localhost:8000 ws://localhost:8000 http://localhost:8001 ws://localhost:8001"

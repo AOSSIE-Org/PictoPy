@@ -42,7 +42,7 @@ export const InfoDialog: React.FC<InfoDialogProps> = ({
     success: {
       iconColor: 'text-green-500',
       messageColor: '',
-      icon: <CheckCircle className="h-50 w-50" />,
+      icon: <CheckCircle className="h-5 w-5" />,
       buttonVariant: 'default' as const,
     },
   };

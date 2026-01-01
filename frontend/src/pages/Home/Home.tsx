@@ -108,7 +108,7 @@ export const Home = () => {
               currentImage={infoImage}
               currentIndex={infoIndex}
               totalImages={images.length}
-              className="static top-0 left-0 w-[400px] transform-none translate-x-0 !m-0 border-white/20 shadow-2xl"
+              className="static top-0 left-0 w-[400px] m-0! border-white/20 shadow-2xl"
             />
           </div>
         </div>
