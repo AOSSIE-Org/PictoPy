@@ -14,7 +14,8 @@
         "postInstallScript": "./postinstall.sh"
       },
       "appimage": {
-        "bundleMediaFramework": true
+        "bundleMediaFramework": true,
+        "files": {}
       }
     },
     "icon": [
