@@ -7,11 +7,14 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "deb", "app"],
+    "targets": ["nsis", "appimage", "deb", "app"],
     "createUpdaterArtifacts": true,
     "linux": {
       "deb": {
         "postInstallScript": "./postinstall.sh"
+      },
+      "appimage": {
+        "bundleMediaFramework": true
       }
     },
     "icon": [
