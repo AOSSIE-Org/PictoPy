@@ -6,6 +6,7 @@ import { selectAvatar, selectName } from '@/features/onboardingSelectors';
 import { clearSearch } from '@/features/searchSlice';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
+import { Link } from 'react-router-dom'; // Added import (already there)
 
 export function Navbar() {
   const userName = useSelector(selectName);
@@ -16,22 +17,23 @@ export function Navbar() {
   const queryImage = searchState.queryImage;
 
   const dispatch = useDispatch();
+
   return (
-    <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur">
-      {/* Logo */}
+    <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b bg-white/70 pr-4 backdrop-blur-md supports-[backdrop-filter]:bg-white/40 dark:bg-black/70 supports-[backdrop-filter]:dark:bg-black/40">
+      {/* Logo - Changed to Link for smooth navigation */}
       <div className="flex w-[256px] items-center justify-center">
-        <a href="/" className="flex items-center space-x-2">
+        <Link to="/" className="flex items-center space-x-2">
           <img src="/128x128.png" width={32} height={32} alt="PictoPy Logo" />
           <span className="text-xl font-bold">PictoPy</span>
-        </a>
+        </Link>
       </div>
 
       {/* Search Bar */}
       <div className="mx-auto flex max-w-md flex-1 justify-center px-4">
         <div className="dark:bg-muted/50 flex w-full items-center gap-1 rounded-md bg-neutral-100 px-1 py-1">
-          {/* Query Image */}
+          {/* Query Image - Fixed size to prevent any shift */}
           {queryImage && (
-            <div className="relative mr-2 ml-2">
+            <div className="relative mr-2 ml-2 h-8 w-8 flex-shrink-0">
               <img
                 src={
                   queryImage?.startsWith('data:')
@@ -39,7 +41,7 @@ export function Navbar() {
                     : convertFileSrc(queryImage)
                 }
                 alt="Query"
-                className="h-7 w-7 rounded object-cover"
+                className="h-full w-full rounded object-cover"
               />
               {isSearchActive && (
                 <button
@@ -54,19 +56,16 @@ export function Navbar() {
             </div>
           )}
 
-          {/* Input */}
           <Input
             type="search"
             placeholder="Add to your search"
-            className="mr-2 flex-1 border-0 bg-neutral-200"
+            className="mr-2 flex-1 border-0 bg-neutral-200 dark:bg-neutral-800"
           />
-
-          {/* FaceSearch Dialog */}
 
           <FaceSearchDialog />
 
           <button
-            className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
+            className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2 transition-colors"
             title="Search"
             aria-label="Search"
           >
@@ -82,13 +81,13 @@ export function Navbar() {
           <span className="hidden text-sm sm:inline-block">
             Welcome <span className="text-muted-foreground">{userName}</span>
           </span>
-          <a href="/settings" className="p-2">
+          <Link to="/settings" className="p-2">
             <img
               src={userAvatar || '/photo1.png'}
-              className="hover:ring-primary/50 h-8 w-8 cursor-pointer rounded-full transition-all hover:ring-2"
+              className="hover:ring-primary/50 h-8 w-8 cursor-pointer rounded-full object-cover transition-all hover:ring-2"
               alt="User avatar"
             />
-          </a>
+          </Link>
         </div>
       </div>
     </div>
