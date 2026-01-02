@@ -1,6 +1,7 @@
 import sqlite3
 from typing import Optional, List, Dict, TypedDict, Union
 from app.config.settings import DATABASE_PATH
+from app.utils.images import image_util_parse_metadata
 
 # Type definitions
 ClusterId = str
@@ -333,6 +334,9 @@ def db_get_images_by_cluster_id(
             bbox = None
             if bbox_json:
                 bbox = json.loads(bbox_json)
+
+            # Normalize metadata to a dict; downstream schemas expect an object
+            metadata_dict = image_util_parse_metadata(metadata)
 
             images.append(
                 {
