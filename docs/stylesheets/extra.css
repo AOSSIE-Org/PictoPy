@@ -312,7 +312,7 @@
   }
 }
 
-/* fix text padding issue -prevent letters from bring cut off */
+/* fix text padding issue -prevent letters from being cut off */
 button,
 input,
 select,
@@ -321,10 +321,10 @@ textarea,
 .md-typeset li {
   line-height : 1.5;
   padding-top: 0.4rem;
-  padding-bottom :0.4 rem;
+  padding-bottom :0.4rem;
 }
 
-\
+
 .md-footer-meta__inner.md-grid {
   display: flex !important;
   flex-direction: column !important;
