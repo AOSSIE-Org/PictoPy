@@ -23,3 +23,6 @@ TEST_OUTPUT_PATH = "tests/outputs"
 DATABASE_PATH = "app/database/PictoPy.db"
 THUMBNAIL_IMAGES_PATH = "./images/thumbnails"
 IMAGES_PATH = "./images"
+
+# Face Alignment (improves accuracy for angled/profile faces)
+FACE_ALIGNMENT_ENABLED = True  # Set to True to enable face alignment preprocessing
