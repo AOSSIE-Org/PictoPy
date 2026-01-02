@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 const steps = [
   {
@@ -33,6 +33,14 @@ const steps = [
 
 export default function GalleryFeatures() {
   const [activeStep, setActiveStep] = useState<number | null>(null);
+  const hoverTimeoutRef = useRef<number | null>(null);
+  const hoverTriggeredRef = useRef(false);
+
+  const supportsHover = () =>
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    // only consider hover-intent on devices that support hover with a fine pointer (desktop)
+    window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
   return (
     <section className="py-20 bg-gray-50 dark:bg-black transition-colors duration-300">
@@ -50,17 +58,47 @@ export default function GalleryFeatures() {
               viewport={{ once: true }} 
               whileHover={{ y: -5 }}
             >
-              <div 
+              <div
                 className={`bg-white dark:bg-[#121212]  /* Off-Black Card */
                   rounded-xl border border-gray-200 dark:border-gray-800
                   shadow-md hover:shadow-lg 
-                  p-6 cursor-pointer h-full  /* Change cursor to pointer on hover */
+                  p-6 cursor-pointer h-full
                   transition-all duration-300 
                   relative
                   ${activeStep === index ? 'ring-2 ring-pink-500 dark:ring-pink-400' : ''}`}
-                onClick={() => setActiveStep(activeStep === index ? null : index)}
-                style={{
-                  cursor: `url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"%3E%3Ctext x="10" y="40" font-size="40"%3E${encodeURIComponent(step.icon)}%3C/text%3E%3C/svg%3E'), auto`
+                onMouseEnter={() => {
+                  // only start hover-intent on devices that support hover (desktop)
+                  if (!supportsHover()) return;
+                  // clear any existing timeout
+                  if (hoverTimeoutRef.current) {
+                    clearTimeout(hoverTimeoutRef.current);
+                    hoverTimeoutRef.current = null;
+                  }
+                  hoverTimeoutRef.current = window.setTimeout(() => {
+                    setActiveStep(index);
+                    hoverTriggeredRef.current = true;
+                    hoverTimeoutRef.current = null;
+                  }, 1000); // 1 second intentional hover
+                }}
+                onMouseLeave={() => {
+                  if (hoverTimeoutRef.current) {
+                    clearTimeout(hoverTimeoutRef.current);
+                    hoverTimeoutRef.current = null;
+                  }
+                  // if the step was expanded due to hover, collapse it on leave
+                  if (hoverTriggeredRef.current) {
+                    setActiveStep((cur) => (cur === index ? null : cur));
+                    hoverTriggeredRef.current = false;
+                  }
+                }}
+                onClick={() => {
+                  // clicking should always toggle (useful for touch devices)
+                  if (hoverTimeoutRef.current) {
+                    clearTimeout(hoverTimeoutRef.current);
+                    hoverTimeoutRef.current = null;
+                  }
+                  hoverTriggeredRef.current = false;
+                  setActiveStep((cur) => (cur === index ? null : index));
                 }}
               >
                 {/* Step Number Badge */}
