@@ -126,6 +126,98 @@ def YOLO_util_multiclass_nms(boxes, scores, class_ids, iou_threshold):
 
     return keep_boxes
 
+def load_yolo_model(model_path: str):
+    """
+    Loads a YOLO ONNX model from the given file path.
+
+    This function initializes the YOLO object detection model
+    using ONNX Runtime and prepares it for inference.
+
+    Args:
+        model_path (str): Absolute path to the YOLO ONNX model file.
+
+    Returns:
+        onnxruntime.InferenceSession: An initialized ONNX Runtime
+        inference session for the YOLO model.
+
+    Raises:
+        FileNotFoundError: If the model file does not exist.
+        RuntimeError: If the model fails to load.
+    """
+    ...
+def run_yolo_inference(image_tensor, model_session):
+    """
+    Runs YOLO object detection inference on a preprocessed image.
+
+    This function performs forward inference using the provided
+    YOLO ONNX model session and returns raw detection outputs.
+
+    Args:
+        image_tensor (numpy.ndarray): Preprocessed image tensor.
+        model_session (onnxruntime.InferenceSession): Loaded YOLO model session.
+
+    Returns:
+        list: Raw detection outputs from the YOLO model.
+
+    Raises:
+        RuntimeError: If inference execution fails.
+    """
+    ...
+
+def postprocess_detections(outputs, confidence_threshold: float):
+    """
+    Post-processes raw YOLO detection outputs.
+
+    This function filters detections based on confidence threshold,
+    extracts bounding boxes, class labels, and confidence scores.
+
+    Args:
+        outputs (list): Raw outputs returned by the YOLO inference.
+        confidence_threshold (float): Minimum confidence score required
+            for a detection to be considered valid.
+
+    Returns:
+        list: A list of detected objects where each object contains:
+            - label (str): Detected object class name
+            - confidence (float): Confidence score
+            - bounding_box (tuple): (x1, y1, x2, y2) coordinates
+    """
+    ...
+def detect_objects(image_path: str, model_path: str, confidence_threshold: float = 0.5):
+    """
+    Performs end-to-end YOLO object detection on a given image.
+
+    This function loads the YOLO model, preprocesses the image,
+    runs inference, and post-processes the results to return
+    human-readable object detections.
+
+    Args:
+        image_path (str): Path to the input image file.
+        model_path (str): Path to the YOLO ONNX model file.
+        confidence_threshold (float, optional): Minimum confidence
+            score for valid detections. Defaults to 0.5.
+
+    Returns:
+        list: A list of detected objects with labels, confidence
+        scores, and bounding boxes.
+
+    Notes:
+        - This function does not store results in the database.
+        - Intended to be used by higher-level services.
+    """
+    ...
+
+def _validate_image_path(image_path: str):
+    """
+    Validates whether the given image path exists and is accessible.
+
+    Args:
+        image_path (str): Path to the image file.
+
+    Raises:
+        FileNotFoundError: If the image file does not exist.
+    """
+    ...
 
 def YOLO_util_compute_iou(box, boxes):
     # Compute xmin, ymin, xmax, ymax for both boxes
