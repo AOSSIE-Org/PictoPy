@@ -1,32 +1,21 @@
 import sqlite3
-from contextlib import contextmanager
-from typing import Generator
 from app.config.settings import DATABASE_PATH
 
+def get_db_connection():
+    conn = sqlite3.connect(DATABASE_PATH, timeout=20.0)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-@contextmanager
-def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
-    """
-    SQLite connection context manager with all integrity constraints enforced.
-
-    - Enables all major relational integrity PRAGMAs
-    - Works for both single and multi-step transactions
-    - Automatically commits on success or rolls back on failure
-    """
-    conn = sqlite3.connect(DATABASE_PATH)
-
-    # --- Strict enforcement of all relational and logical rules ---
-    conn.execute("PRAGMA foreign_keys = ON;")  # Enforce FK constraints
-    conn.execute("PRAGMA ignore_check_constraints = OFF;")  # Enforce CHECK constraints
-    conn.execute("PRAGMA recursive_triggers = ON;")  # Allow nested triggers
-    conn.execute("PRAGMA defer_foreign_keys = OFF;")  # Immediate FK checking
-    conn.execute("PRAGMA case_sensitive_like = ON;")  # Make LIKE case-sensitive
-
+def enable_wal_mode():
+    """Enable Write-Ahead Logging (WAL) mode for better concurrency."""
+    conn = None
     try:
-        yield conn
+        conn = sqlite3.connect(DATABASE_PATH, timeout=10.0)
+        conn.execute("PRAGMA journal_mode=WAL;")
         conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
+        print("DEBUG: WAL mode enabled.")
+    except Exception as e:
+        print(f"DEBUG: Failed to enable WAL mode: {e}")
     finally:
-        conn.close()
+        if conn:
+            conn.close()

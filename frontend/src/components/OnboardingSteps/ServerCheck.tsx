@@ -8,7 +8,7 @@ import {
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { markCompleted } from '@/features/onboardingSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
-import { exit } from '@tauri-apps/plugin-process';
+
 
 interface ServerCheckProps {
   stepIndex: number;
@@ -43,16 +43,17 @@ export const ServerCheck: React.FC<ServerCheckProps> = ({ stepIndex }) => {
       dispatch(hideLoader());
       dispatch(
         showInfoDialog({
-          title: 'Error',
+          title: 'Connection Error',
           message:
-            'Failed to connect to one or more local services. Exiting...',
+            'Could not connect to the backend server. Please ensure the backend (Python) is running and try again.',
           variant: 'error',
-          showCloseButton: false,
+          showCloseButton: true,
         }),
       );
-      setTimeout(() => {
-        exit(1);
-      }, 2000);
+      // Removed auto-exit to allow debugging
+      // setTimeout(() => {
+      //   exit(1);
+      // }, 2000);
     }
     if (mainBackendSuccess && syncMicroserviceSuccess) {
       dispatch(hideLoader());

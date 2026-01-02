@@ -12,3 +12,7 @@ export const fetchAllImages = async (
   );
   return response.data;
 };
+
+
+
+

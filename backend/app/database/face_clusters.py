@@ -29,10 +29,17 @@ def db_create_clusters_table() -> None:
             CREATE TABLE IF NOT EXISTS face_clusters (
                 cluster_id TEXT PRIMARY KEY,
                 cluster_name TEXT,
-                face_image_base64 TEXT
+                face_image_base64 TEXT,
+                is_ignored BOOLEAN DEFAULT 0
             )
         """
         )
+        # Migration: add is_ignored if it doesn't exist
+        try:
+            cursor.execute("ALTER TABLE face_clusters ADD COLUMN is_ignored BOOLEAN DEFAULT 0")
+        except sqlite3.OperationalError:
+            # Column already exists
+            pass
         conn.commit()
     finally:
         if conn is not None:
@@ -138,16 +145,19 @@ def db_get_cluster_by_id(cluster_id: ClusterId) -> Optional[ClusterData]:
 
     try:
         cursor.execute(
-            "SELECT cluster_id, cluster_name, face_image_base64 FROM face_clusters WHERE cluster_id = ?",
+            "SELECT cluster_id, cluster_name, face_image_base64, is_ignored FROM face_clusters WHERE cluster_id = ?",
             (cluster_id,),
         )
 
         row = cursor.fetchone()
 
         if row:
-            return ClusterData(
-                cluster_id=row[0], cluster_name=row[1], face_image_base64=row[2]
-            )
+            return {
+                "cluster_id": row[0],
+                "cluster_name": row[1],
+                "face_image_base64": row[2],
+                "is_ignored": bool(row[3]),
+            }
         return None
     finally:
         conn.close()
@@ -251,10 +261,11 @@ def db_get_all_clusters_with_face_counts() -> (
                 fc.cluster_id, 
                 fc.cluster_name, 
                 COUNT(f.face_id) as face_count,
-                fc.face_image_base64
+                fc.face_image_base64,
+                fc.is_ignored
             FROM face_clusters fc
             LEFT JOIN faces f ON fc.cluster_id = f.cluster_id
-            GROUP BY fc.cluster_id, fc.cluster_name, fc.face_image_base64
+            GROUP BY fc.cluster_id, fc.cluster_name, fc.face_image_base64, fc.is_ignored
             ORDER BY fc.cluster_id
             """
         )
@@ -263,13 +274,14 @@ def db_get_all_clusters_with_face_counts() -> (
 
         clusters = []
         for row in rows:
-            cluster_id, cluster_name, face_count, face_image_base64 = row
+            cluster_id, cluster_name, face_count, face_image_base64, is_ignored = row
             clusters.append(
                 {
                     "cluster_id": cluster_id,
                     "cluster_name": cluster_name,
                     "face_count": face_count,
                     "face_image_base64": face_image_base64,
+                    "is_ignored": bool(is_ignored),
                 }
             )
 
@@ -347,5 +359,50 @@ def db_get_images_by_cluster_id(
             )
 
         return images
+    finally:
+        conn.close()
+
+
+def db_toggle_cluster_ignore(cluster_id: str, state: bool) -> bool:
+    """Toggle the ignore status of a cluster."""
+    conn = sqlite3.connect(DATABASE_PATH)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE face_clusters SET is_ignored = ? WHERE cluster_id = ?",
+            (1 if state else 0, cluster_id),
+        )
+        updated = cursor.rowcount > 0
+        conn.commit()
+        return updated
+    finally:
+        conn.close()
+
+
+def db_merge_clusters(source_cluster_id: str, target_cluster_id: str) -> bool:
+    """
+    Merge the source cluster into the target cluster.
+    Reassigns all faces and then deletes the source cluster.
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    try:
+        cursor = conn.cursor()
+        # 1. Reassign faces
+        cursor.execute(
+            "UPDATE faces SET cluster_id = ? WHERE cluster_id = ?",
+            (target_cluster_id, source_cluster_id),
+        )
+
+        # 2. Delete source cluster
+        cursor.execute(
+            "DELETE FROM face_clusters WHERE cluster_id = ?", (source_cluster_id,)
+        )
+
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error merging clusters: {e}")
+        return False
     finally:
         conn.close()

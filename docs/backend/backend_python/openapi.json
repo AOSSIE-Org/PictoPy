@@ -1213,6 +1213,151 @@
         }
       }
     },
+    "/face-clusters/merge": {
+      "post": {
+        "tags": [
+          "Face Clusters"
+        ],
+        "summary": "Merge Clusters",
+        "description": "Merge two face clusters.",
+        "operationId": "merge_clusters_face_clusters_merge_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeClustersRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenameClusterResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/face-clusters/{cluster_id}/ignore": {
+      "post": {
+        "tags": [
+          "Face Clusters"
+        ],
+        "summary": "Toggle Cluster Ignore",
+        "description": "Toggle ignore status for a cluster.",
+        "operationId": "toggle_cluster_ignore_face_clusters__cluster_id__ignore_post",
+        "parameters": [
+          {
+            "name": "cluster_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cluster Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToggleIgnoreRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenameClusterResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/user-preferences/": {
       "get": {
         "tags": [
@@ -1466,6 +1611,11 @@
           "face_count": {
             "type": "integer",
             "title": "Face Count"
+          },
+          "is_ignored": {
+            "type": "boolean",
+            "title": "Is Ignored",
+            "default": false
           }
         },
         "type": "object",
@@ -2266,6 +2416,24 @@
         ],
         "title": "InputType"
       },
+      "MergeClustersRequest": {
+        "properties": {
+          "source_cluster_id": {
+            "type": "string",
+            "title": "Source Cluster Id"
+          },
+          "target_cluster_id": {
+            "type": "string",
+            "title": "Target Cluster Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_cluster_id",
+          "target_cluster_id"
+        ],
+        "title": "MergeClustersRequest"
+      },
       "MetadataModel": {
         "properties": {
           "name": {
@@ -2562,6 +2730,19 @@
           "image_id"
         ],
         "title": "ToggleFavouriteRequest"
+      },
+      "ToggleIgnoreRequest": {
+        "properties": {
+          "is_ignored": {
+            "type": "boolean",
+            "title": "Is Ignored"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_ignored"
+        ],
+        "title": "ToggleIgnoreRequest"
       },
       "UpdateAITaggingData": {
         "properties": {
