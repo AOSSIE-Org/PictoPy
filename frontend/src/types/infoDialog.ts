@@ -1,4 +1,4 @@
-export type InfoDialogVariant = 'info' | 'error';
+export type InfoDialogVariant = 'info' | 'error' | 'success';
 
 export interface InfoDialogProps {
   isOpen: boolean;

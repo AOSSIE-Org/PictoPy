@@ -1,5 +1,4 @@
-import React from 'react';
-import { Info, AlertTriangle } from 'lucide-react';
+import { Info, AlertTriangle, CheckCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -39,6 +38,12 @@ export const InfoDialog: React.FC<InfoDialogProps> = ({
       messageColor: 'text-destructive',
       icon: <AlertTriangle className="h-5 w-5" />,
       buttonVariant: 'destructive' as const,
+    },
+    success: {
+      iconColor: 'text-green-500',
+      messageColor: '',
+      icon: <CheckCircle className="h-5 w-5" />,
+      buttonVariant: 'default' as const,
     },
   };
 
