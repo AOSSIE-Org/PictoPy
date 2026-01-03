@@ -1,16 +1,10 @@
 import React, { useState } from 'react';
-import {
-  Settings as SettingsIcon,
-  RefreshCw,
-  Server,
-  Users,
-} from 'lucide-react';
+import { Settings as SettingsIcon, RefreshCw, Users } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import UpdateDialog from '@/components/Updater/UpdateDialog';
 import SettingsCard from './SettingsCard';
 
-import { restartServer } from '@/utils/serverUtils';
 import { useUpdater } from '@/hooks/useUpdater';
 import { useDispatch } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
@@ -137,17 +131,6 @@ const ApplicationControlsCard: React.FC = () => {
             <RefreshCw className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             <div className="text-left">
               <div className="font-medium">Check for Updates</div>
-            </div>
-          </Button>
-
-          <Button
-            onClick={() => restartServer()}
-            variant="outline"
-            className="flex h-12 w-full cursor-pointer gap-3"
-          >
-            <Server className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-            <div className="text-left">
-              <div className="font-medium">Restart Server</div>
             </div>
           </Button>
 

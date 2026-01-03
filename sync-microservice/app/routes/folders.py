@@ -7,14 +7,12 @@ from app.schemas.folders import (
     FolderTaggingInfo,
 )
 
-router = APIRouter(prefix="/folders", tags=["folders"])
+router = APIRouter()
 
 
 @router.get(
     "/status",
-    response_model=Union[
-        FolderTaggingStatusSuccessResponse, FolderTaggingStatusErrorResponse
-    ],
+    response_model=Union[FolderTaggingStatusSuccessResponse, FolderTaggingStatusErrorResponse],
 )
 def get_folders_tagging_status():
     """

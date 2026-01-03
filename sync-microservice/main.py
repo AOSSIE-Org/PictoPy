@@ -37,9 +37,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 # Include route modules
-app.include_router(health.router, prefix="/api/v1")
-app.include_router(watcher.router, prefix="/api/v1")
-app.include_router(folders.router, prefix="/api/v1")
+app.include_router(health.router, tags=["Health"])
+app.include_router(watcher.router, prefix="/watcher", tags=["Watcher"])
+app.include_router(folders.router, prefix="/folders", tags=["Folders"])
 
 if __name__ == "__main__":
     logger.info("Starting PictoPy Sync Microservice from main...")
@@ -55,7 +55,5 @@ if __name__ == "__main__":
     server = Server(config)
 
     # Use context manager for safe stdout/stderr redirection
-    with redirect_stdout_stderr(
-        logger, stdout_level=logging.INFO, stderr_level=logging.ERROR
-    ):
+    with redirect_stdout_stderr(logger, stdout_level=logging.INFO, stderr_level=logging.ERROR):
         server.run()
