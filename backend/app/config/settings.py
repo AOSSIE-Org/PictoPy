@@ -23,3 +23,7 @@ TEST_OUTPUT_PATH = "tests/outputs"
 DATABASE_PATH = "app/database/PictoPy.db"
 THUMBNAIL_IMAGES_PATH = "./images/thumbnails"
 IMAGES_PATH = "./images"
+
+# Videos storage
+VIDEOS_PATH = "./videos"
+THUMBNAIL_VIDEOS_PATH = "./videos/thumbnails"

@@ -42,6 +42,7 @@ from app.utils.images import (
     image_util_process_folder_images,
     image_util_process_untagged_images,
 )
+from app.utils.videos import video_util_process_folder_videos
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.utils.API import API_util_restart_sync_microservice_watcher
 
@@ -67,8 +68,9 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
             folder_data.append((folder_path_from_db, folder_id_from_db, False))
 
         logger.info(f"Add folder: {folder_data}")
-        # Process images in all folders
+        # Process images and videos in all folders
         image_util_process_folder_images(folder_data)
+        video_util_process_folder_videos(folder_data)
 
         # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()
@@ -114,8 +116,9 @@ def post_sync_folder_sequence(
             folder_data.append((added_folder_path, added_folder_id, False))
 
         logger.info(f"Sync folder: {folder_data}")
-        # Process images in all folders
+        # Process images and videos in all folders
         image_util_process_folder_images(folder_data)
+        video_util_process_folder_videos(folder_data)
         image_util_process_untagged_images()
         cluster_util_face_clusters_sync()
 
