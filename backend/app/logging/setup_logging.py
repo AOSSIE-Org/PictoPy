@@ -227,27 +227,30 @@ class InterceptHandler(logging.Handler):
         """
         super().__init__()
         self.component_name = component_name
-
+   
     def emit(self, record: logging.LogRecord) -> None:
         """
         Process a log record by forwarding it through our custom logger.
-
-        Args:
-            record: The log record to process
         """
-        # Get the appropriate module name
+        
+        # Guard against recursive logging when intercepting external loggers
+        if getattr(record, "_intercepted", False):
+            return
+
+        record._intercepted = True
+
         module_name = record.name
         if "." in module_name:
             module_name = module_name.split(".")[-1]
 
-        # Create a message that includes the original module in the format
         msg = record.getMessage()
-
-        # Find the appropriate logger
         logger = get_logger(module_name)
 
-        # Log the message with our custom formatting
-        logger.log(record.levelno, f"[uvicorn] {msg}")
+        logger.log(
+            record.levelno,
+            f"[uvicorn] {msg}",
+            extra={"_intercepted": True},
+        )
 
 
 def configure_uvicorn_logging(component_name: str) -> None:
