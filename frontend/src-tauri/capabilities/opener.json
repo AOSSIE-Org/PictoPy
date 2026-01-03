@@ -1,0 +1,28 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "opener-capability",
+  "description": "Allow opening files and URLs from the app",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:allow-open-url",
+    "opener:allow-reveal-item-in-dir",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        { "path": "$HOME/**" },
+        { "path": "$DESKTOP/**" },
+        { "path": "$DOWNLOADS/**" },
+        { "path": "$DOCUMENTS/**" },
+        { "path": "$PICTURES/**" },
+        
+        { "path": "/Volumes/**" },
+        { "path": "/media/**" },
+        { "path": "/mnt/**" },
+        { "path": "D:\\**" },
+        { "path": "E:\\**" },
+        { "path": "F:\\**" }
+      ]
+    }
+  ]
+}
