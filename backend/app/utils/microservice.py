@@ -7,12 +7,19 @@ from typing import Optional
 
 import threading
 import atexit
+import httpx
 from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
 
 # Global tracking for subprocess log threads
 _log_threads = []
+
+# Global reference to the sync microservice process
+_sync_process: Optional[subprocess.Popen] = None
+
+# Sync service URL
+SYNC_SERVICE_URL = "http://localhost:8001"
 
 
 def cleanup_log_threads():
@@ -30,12 +37,139 @@ def cleanup_log_threads():
 atexit.register(cleanup_log_threads)
 
 
-def microservice_util_stop_sync_service():
+def microservice_util_stop_sync_service(timeout: float = 5.0) -> bool:
     """
-    Stop the sync microservice and clean up log threads.
-    This function should be called during application shutdown.
+    Stop the sync microservice gracefully via HTTP, with force-kill fallback.
+
+    This function:
+    1. Sends HTTP POST to /api/v1/shutdown endpoint
+    2. Waits for the process to exit
+    3. Force-kills if timeout exceeded
+
+    Args:
+        timeout: Maximum seconds to wait for graceful shutdown
+
+    Returns:
+        bool: True if service was stopped successfully
     """
+    global _sync_process
+
+    logger.info("Stopping sync microservice...")
+
+    import time
+
+    start_time = time.time()
+
+    # Try graceful HTTP shutdown first
+    http_timeout = min(timeout, 3.0)  # HTTP request timeout
+    try:
+        logger.info("Sending shutdown request to sync microservice...")
+        with httpx.Client(timeout=http_timeout) as client:
+            response = client.post(f"{SYNC_SERVICE_URL}/api/v1/shutdown")
+            if response.status_code == 200:
+                logger.info("Sync microservice acknowledged shutdown request")
+    except httpx.TimeoutException:
+        logger.warning("Timeout waiting for sync microservice shutdown response")
+    except httpx.ConnectError:
+        logger.info("Sync microservice not reachable (may already be stopped)")
+    except Exception as e:
+        logger.warning(f"Error sending shutdown request to sync: {e}")
+
+    # Wait for process to exit if we have a reference
+    if _sync_process is not None:
+        try:
+            # Give the sync service a moment to process the shutdown
+            time.sleep(0.3)
+
+            # Wait for process to exit gracefully (use remaining timeout)
+            elapsed = time.time() - start_time
+            wait_timeout = max(timeout - elapsed, 1.0)
+            exit_code = _sync_process.wait(timeout=wait_timeout)
+            logger.info(f"Sync microservice exited with code: {exit_code}")
+            _sync_process = None
+        except subprocess.TimeoutExpired:
+            logger.warning(
+                f"Sync microservice did not exit within {wait_timeout}s, force killing..."
+            )
+            _force_kill_sync_process()
+
+    # Clean up log threads
     cleanup_log_threads()
+
+    logger.info("Sync microservice stopped")
+    return True
+
+
+def _force_kill_sync_process():
+    """
+    Force kill the sync microservice process.
+    Platform-specific implementation for Windows, macOS, and Linux.
+    """
+    global _sync_process
+
+    if _sync_process is None:
+        return
+
+    try:
+        pid = _sync_process.pid
+        logger.warning(f"Force killing sync microservice (PID: {pid})...")
+
+        system = platform.system().lower()
+
+        if system == "windows":
+            # Use taskkill with /T to kill child processes too
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(pid)],
+                capture_output=True,
+                timeout=5,
+            )
+        else:
+            # Unix/Linux/macOS - kill process group
+            import signal
+
+            try:
+                os.killpg(os.getpgid(pid), signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                # Process already dead or we don't have permission
+                _sync_process.kill()
+
+        logger.info("Sync microservice force killed")
+    except Exception as e:
+        logger.error(f"Error force killing sync microservice: {e}")
+    finally:
+        _sync_process = None
+
+
+def microservice_util_is_sync_running() -> bool:
+    """
+    Check if the sync microservice is currently running.
+
+    Returns:
+        bool: True if running, False otherwise
+    """
+    global _sync_process
+
+    if _sync_process is not None and _sync_process.poll() is None:
+        return True
+
+    # Also check via HTTP health endpoint
+    try:
+        with httpx.Client(timeout=2.0) as client:
+            response = client.get(f"{SYNC_SERVICE_URL}/api/v1/health")
+            return response.status_code == 200
+    except Exception:
+        return False
+
+
+def microservice_util_get_sync_process() -> Optional[subprocess.Popen]:
+    """
+    Get the sync microservice process reference.
+
+    Returns:
+        The subprocess.Popen object if running, None otherwise
+    """
+    global _sync_process
+    return _sync_process
 
 
 def microservice_util_start_sync_service(
@@ -125,12 +259,20 @@ def _start_frozen_sync_service() -> bool:
         cmd = str(sync_executable)  # Correct the command to use the actual path
         logger.info(f"Starting sync microservice with command: {cmd}")
 
+        # Prepare subprocess arguments for process group creation
+        kwargs = {}
+        if system == "windows":
+            kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        else:
+            kwargs["start_new_session"] = True
+
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,  # Line buffered output
+            **kwargs,
         )
 
         # Start background threads to forward output to logger
@@ -151,6 +293,10 @@ def _start_frozen_sync_service() -> bool:
         t1.start()
         t2.start()
         _log_threads.extend([t1, t2])
+
+        # Store the process reference globally for shutdown
+        global _sync_process
+        _sync_process = process
 
         logger.info(f"Sync microservice started with PID: {process.pid}")
         logger.info("Service should be available at http://localhost:8001")
@@ -314,10 +460,16 @@ def _start_fastapi_service(python_executable: Path, service_path: Path) -> bool:
             host,
             "--port",
             port,
-            "--reload",  # Enable auto-reload for development
         ]
 
         logger.info(f"Executing command: {' '.join(cmd)}")
+
+        # Prepare subprocess arguments for process group creation
+        kwargs = {}
+        if platform.system().lower() == "windows":
+            kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        else:
+            kwargs["start_new_session"] = True
 
         # Start the process (non-blocking)
         process = subprocess.Popen(
@@ -326,6 +478,7 @@ def _start_fastapi_service(python_executable: Path, service_path: Path) -> bool:
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,  # Line buffered output
+            **kwargs,
         )
 
         # Start background threads to forward output to logger
@@ -344,6 +497,10 @@ def _start_fastapi_service(python_executable: Path, service_path: Path) -> bool:
         t1.start()
         t2.start()
         _log_threads.extend([t1, t2])
+
+        # Store the process reference globally for shutdown
+        global _sync_process
+        _sync_process = process
 
         # Restore original working directory
         os.chdir(original_cwd)
