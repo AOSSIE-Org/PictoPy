@@ -15,7 +15,7 @@ import { ScrollProgress } from "./components/ui/ScrollProgress";
 
 function HomePage() {
   return (
-    <>
+    <div id="home">
       <Home /> {/* This will now render the Home component */}
       <ScrollProgress></ScrollProgress>
       <InteractiveDemo />
@@ -24,7 +24,7 @@ function HomePage() {
       <PictopyLanding />
       <FAQ />
       <Footer />
-    </>
+    </div>
   );
 }
 
