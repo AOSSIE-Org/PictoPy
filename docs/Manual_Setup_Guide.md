@@ -98,10 +98,10 @@ git remote add upstream https://github.com/AOSSIE-Org/PictoPy
     Bash/Powershell
 
     ```
-    fastapi dev
+    fastapi dev --port 52123
     ```
 
-    The server will start on `http://localhost:8000` by default. In test mode, the server will automatically restart if any errors are detected or if source files are modified.
+    The server will start on `http://localhost:52123` by default. In test mode, the server will automatically restart if any errors are detected or if source files are modified.
 
     ![alt text](/docs/assets/screenshots/serverRunning.png)
 
@@ -160,10 +160,10 @@ git remote add upstream https://github.com/AOSSIE-Org/PictoPy
     Bash/Powershell
 
     ```
-    uvicorn main:app --port 8001 --reload
+    fastapi dev --port 52124
     ```
 
-    The server will start on `http://localhost:8001` by default. In development mode, the server will automatically restart if any errors are detected or if source files are modified.
+    The server will start on `http://localhost:52124` by default. In development mode, the server will automatically restart if any errors are detected or if source files are modified.
 
 ### Troubleshooting Common Issues:
 

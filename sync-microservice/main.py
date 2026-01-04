@@ -48,7 +48,7 @@ if __name__ == "__main__":
     config = Config(
         app=app,
         host="0.0.0.0",
-        port=8001,
+        port=52124,
         log_level="info",
         log_config=None,  # Disable uvicorn's default logging config
     )

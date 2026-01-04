@@ -70,7 +70,7 @@ app = FastAPI(
         "url": "https://www.postman.com/aossie-pictopy/pictopy/overview",
     },
     servers=[
-        {"url": "http://localhost:8000", "description": "Local Development server"}
+        {"url": "http://localhost:52123", "description": "Local Development server"}
     ],
 )
 
@@ -142,7 +142,7 @@ if __name__ == "__main__":
     config = Config(
         app=app,
         host="0.0.0.0",
-        port=8000,
+        port=52123,
         log_level="info",
         log_config=None,  # This is crucial - disable Uvicorn's default logging config
     )
