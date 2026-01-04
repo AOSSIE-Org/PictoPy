@@ -12,20 +12,26 @@ export const NavigationButtons: React.FC<NavigationButtonsProps> = ({
 }) => {
   return (
     <>
+      {/* Previous */}
       <button
         onClick={onPrevious}
-        className="absolute top-1/2 left-4 z-30 flex -translate-y-1/2 transform cursor-pointer items-center rounded-full bg-black/30 p-3 text-white backdrop-blur-md transition-all duration-200 hover:bg-black/50 hover:shadow-lg"
         aria-label="Previous image"
+        className="group absolute top-1/2 left-0 z-30 flex h-40 w-40 -translate-y-1/2 items-center justify-center bg-transparent"
       >
-        <ChevronLeft className="h-6 w-6" />
+        <div className="pointer-events-none rounded-full bg-black/30 p-3 text-white backdrop-blur-md transition-all duration-200 group-hover:scale-110 group-hover:bg-black/50 group-hover:shadow-lg">
+          <ChevronLeft className="h-6 w-6" />
+        </div>
       </button>
 
+      {/* Next */}
       <button
         onClick={onNext}
-        className="absolute top-1/2 right-4 z-30 flex -translate-y-1/2 transform cursor-pointer items-center rounded-full bg-black/30 p-3 text-white backdrop-blur-md transition-all duration-200 hover:bg-black/50 hover:shadow-lg"
         aria-label="Next image"
+        className="group absolute top-1/2 right-0 z-30 flex h-40 w-40 -translate-y-1/2 items-center justify-center bg-transparent"
       >
-        <ChevronRight className="h-6 w-6" />
+        <div className="pointer-events-none rounded-full bg-black/30 p-3 text-white backdrop-blur-md transition-all duration-200 group-hover:scale-110 group-hover:bg-black/50 group-hover:shadow-lg">
+          <ChevronRight className="h-6 w-6" />
+        </div>
       </button>
     </>
   );
