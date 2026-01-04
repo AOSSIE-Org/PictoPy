@@ -1,12 +1,15 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { Image } from '@tauri-apps/api/image';
 
 interface SearchState {
   active: boolean;
+  images: Image[];
   queryImage?: string;
 }
 
 const initialState: SearchState = {
   active: false,
+  images: [],
   queryImage: undefined,
 };
 
