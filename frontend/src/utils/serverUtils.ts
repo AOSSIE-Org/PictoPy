@@ -1,11 +1,11 @@
 import { Command } from '@tauri-apps/plugin-shell';
 import { invoke } from '@tauri-apps/api/core';
-import { BACKEND_URL } from '@/config/Backend.ts';
+import { BACKEND_URL, SYNC_MICROSERVICE_URL } from '@/config/Backend.ts';
 const isWindows = () => navigator.platform.startsWith('Win');
 
 const isServerRunning = async (): Promise<boolean> => {
   try {
-    const response = await fetch(BACKEND_URL);
+    const response = await fetch(BACKEND_URL + '/health');
     if (response.ok) {
       console.log('Server is Running!');
       return true;
@@ -18,49 +18,59 @@ const isServerRunning = async (): Promise<boolean> => {
   }
 };
 
+const isSyncServiceRunning = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(SYNC_MICROSERVICE_URL + '/health');
+    if (response.ok) {
+      console.log('Sync Service is Running!');
+      return true;
+    } else {
+      return false;
+    }
+  } catch (error) {
+    console.error('Error checking sync service status:', error);
+    return false;
+  }
+};
+
 export const startServer = async () => {
   try {
-    console.log('Starting!');
+    console.log('Starting services!');
+
+    const resourcesFolderPath: string = await invoke(
+      'get_resources_folder_path',
+    );
+
+    // Start backend server
     if (!(await isServerRunning())) {
-      const serverPath: string = await invoke('get_server_path');
-      const command = Command.create(
-        isWindows() ? 'StartServerWindows' : 'StartServerUnix',
+      const backendCommand = Command.create(
+        isWindows() ? 'StartBackendWindows' : 'StartBackendUnix',
         '',
-        { cwd: serverPath },
+        { cwd: resourcesFolderPath + '/backend' },
       );
 
-      const child = await command.spawn();
-      command.stderr.on('data', (line) => console.error('Error:', line));
-      console.log('Server started with PID:', child.pid);
+      const backendChild = await backendCommand.spawn();
+      backendCommand.stderr.on('data', (line) =>
+        console.error('Backend Error:', line),
+      );
+      console.log('Backend server started with PID:', backendChild.pid);
     }
-  } catch (error) {
-    console.error('Error starting server:', error);
-  }
-};
 
-export const stopServer = async () => {
-  try {
-    console.log('Stopping!');
-    if (await isServerRunning()) {
-      const result = await Command.create(
-        isWindows() ? 'killProcessWindows' : 'killProcessUnix',
+    // Start sync service
+    if (!(await isSyncServiceRunning())) {
+      const syncCommand = Command.create(
+        isWindows() ? 'StartSyncServiceWindows' : 'StartSyncServiceUnix',
         '',
-      ).execute();
-      console.log(result);
+        { cwd: resourcesFolderPath + '/sync-microservice' },
+      );
+
+      const syncChild = await syncCommand.spawn();
+      syncCommand.stderr.on('data', (line) =>
+        console.error('Sync Service Error:', line),
+      );
+      console.log('Sync service started with PID:', syncChild.pid);
     }
   } catch (error) {
-    console.error('Error stopping server:', error);
-  }
-};
-
-export const restartServer = async () => {
-  try {
-    await stopServer();
-    setTimeout(async () => {
-      await startServer();
-    }, 2000);
-  } catch (error) {
-    console.error('Error restarting server:', error);
-    throw error;
+    console.error('Error starting services:', error);
   }
 };

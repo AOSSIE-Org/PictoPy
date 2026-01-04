@@ -92,7 +92,7 @@
       "identifier": "shell:allow-spawn",
       "allow": [
         {
-          "name": "StartServerUnix",
+          "name": "StartBackendUnix",
           "cmd": "bash",
           "args": ["-c", "./PictoPy_Server"],
           "sidecar": false
@@ -103,7 +103,7 @@
       "identifier": "shell:allow-spawn",
       "allow": [
         {
-          "name": "StartServerWindows",
+          "name": "StartBackendWindows",
           "cmd": "powershell",
           "args": ["./PictoPy_Server"],
           "sidecar": false
@@ -111,23 +111,23 @@
       ]
     },
     {
-      "identifier": "shell:allow-execute",
+      "identifier": "shell:allow-spawn",
       "allow": [
         {
-          "name": "killProcessUnix",
+          "name": "StartSyncServiceUnix",
           "cmd": "bash",
-          "args": ["-c", "pkill -f PictoPy_Server"],
+          "args": ["-c", "./PictoPy_Sync"],
           "sidecar": false
         }
       ]
     },
     {
-      "identifier": "shell:allow-execute",
+      "identifier": "shell:allow-spawn",
       "allow": [
         {
-          "name": "killProcessWindows",
+          "name": "StartSyncServiceWindows",
           "cmd": "powershell",
-          "args": ["taskkill /t /f /im PictoPy_Server.exe"],
+          "args": ["./PictoPy_Sync"],
           "sidecar": false
         }
       ]
