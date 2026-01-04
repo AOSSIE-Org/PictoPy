@@ -96,9 +96,13 @@ function FAQItem({ question, answer, isOpen, onClick, index, icon }: FAQItemProp
 
   return (
     <motion.div
-      className="rounded-xl overflow-hidden transition-all duration-300 
-        bg-white dark:bg-black border border-gray-100 dark:border-gray-800 
-        hover:shadow-md dark:hover:shadow-green-900/10"
+      className={`rounded-xl overflow-hidden transition-all duration-300 
+  bg-white dark:bg-black
+  border
+  ${isOpen 
+    ? 'border- 6 border-pink-500 dark:border-grey-500' 
+    : 'border- 6 - dark:border-grey-500'}
+`}
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
