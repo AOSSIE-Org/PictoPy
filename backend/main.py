@@ -19,7 +19,6 @@ from app.database.albums import db_create_albums_table
 from app.database.albums import db_create_album_images_table
 from app.database.folders import db_create_folders_table
 from app.database.metadata import db_create_metadata_table
-from app.utils.microservice import microservice_util_start_sync_service
 
 from app.database.connection import enable_wal_mode
 
@@ -56,7 +55,10 @@ async def lifespan(app: FastAPI):
     db_create_album_images_table()
     db_create_metadata_table()
 
+
     microservice_util_start_sync_service()
+
+
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor(max_workers=1)
 
@@ -76,7 +78,7 @@ app = FastAPI(
         "url": "https://www.postman.com/aossie-pictopy/pictopy/overview",
     },
     servers=[
-        {"url": "http://localhost:8000", "description": "Local Development server"}
+        {"url": "http://localhost:52123", "description": "Local Development server"}
     ],
 )
 
@@ -149,7 +151,7 @@ if __name__ == "__main__":
     config = Config(
         app=app,
         host="0.0.0.0",
-        port=8000,
+        port=52123,
         log_level="info",
         log_config=None,  # This is crucial - disable Uvicorn's default logging config
     )
