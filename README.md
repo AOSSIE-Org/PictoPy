@@ -9,6 +9,34 @@ PictoPy is an advanced desktop gallery application that combines the power of Ta
 1. First, join the **[Discord Server](https://discord.gg/hjUhu33uAn) (Go to Projects->PictoPy)** to chat with everyone.
 2. For detailed setup instructions, coding guidelines, and the contribution process, please check out our [CONTRIBUTING.md](./CONTRIBUTING.md) file.
 
+## Backend Setup (Python)
+
+ Follow these steps to get the Python backend running:
+
+  > ⚠️ **Important:** Python **3.11.x** is required. 
+  > Python 3.13 is **not supported** due to dependency compatibility issues (e.g., NumPy). 
+
+
+### 1. Create and activate a virtual environment
+  
+ **Windows (Git Bash):**
+```bash
+python -m venv venv
+source venv/Scripts/activate
+```
+### 2. Install backend dependencies
+
+Make sure the virtual environment is activated, then run:
+
+```bash
+pip install -r backend/requirements.txt
+```
+### 3. Run the backend server
+
+```bash
+python backend/main.py
+```
+
 # Architecture
 
 ### Frontend
