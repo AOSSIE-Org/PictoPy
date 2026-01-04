@@ -22,6 +22,24 @@
 
 /* Responsive tweaks: ensure header, images, tables and code blocks behave well on small screens */
 
+/* Global text wrapping to prevent long words/URLs from overflowing */
+.md-typeset,
+.md-content {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Headings should wrap on small screens instead of overflowing */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-typeset h5,
+.md-typeset h6 {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 /* Make images scale down to container */
 .md-typeset img,
 .md-content img {
@@ -41,6 +59,12 @@
   white-space: pre-wrap; /* allow wrapping */
   word-break: break-word;
   overflow-x: auto;
+}
+
+/* Inline code should also wrap to avoid pushing layout */
+.md-typeset code:not(pre code) {
+  white-space: break-spaces;
+  word-break: break-word;
 }
 
 /* General container/content spacing adjustments for smaller screens */
@@ -312,7 +336,6 @@
   }
 }
 
-\
 .md-footer-meta__inner.md-grid {
   display: flex !important;
   flex-direction: column !important;
