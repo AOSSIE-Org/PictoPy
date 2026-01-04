@@ -312,6 +312,18 @@
   }
 }
 
+/* fix text padding issue -prevent letters from bring cut off */
+button,
+input,
+select,
+textarea,
+.md-typeset p,
+.md-typeset li {
+  line-height : 1.5;
+  padding-top: 0.4rem;
+  padding-bottom :0.4 rem;
+}
+
 \
 .md-footer-meta__inner.md-grid {
   display: flex !important;
