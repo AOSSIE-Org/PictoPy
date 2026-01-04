@@ -243,7 +243,7 @@ class InterceptHandler(logging.Handler):
         # Create a message that includes the original module in the format
         msg = record.getMessage()
 
-        record.msg = f"[uvicorn] {msg}"
+        record.msg = f"[{module_name}] {msg}"
         record.args = ()
         # Clear exception / stack info to avoid duplicate traces
         record.exc_info = None
