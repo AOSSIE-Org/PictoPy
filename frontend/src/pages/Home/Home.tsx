@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  ChronologicalGallery,
+  // ChronologicalGallery,
   MonthMarker,
 } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
@@ -13,6 +13,9 @@ import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+
+import { ViewModeToggle } from '@/components/ViewModeToggle';
+import { GalleryView } from '@/components/GalleryView';
 
 export const Home = () => {
   const dispatch = useDispatch();
@@ -28,6 +31,7 @@ export const Home = () => {
     enabled: !isSearchActive,
   });
 
+  //  Keep main branch improvement
   useMutationFeedback(
     { isPending: isLoading, isSuccess, isError, error },
     {
@@ -35,7 +39,7 @@ export const Home = () => {
       showSuccess: false,
       errorTitle: 'Error',
       errorMessage: 'Failed to load images. Please try again later.',
-    },
+    }
   );
 
   useEffect(() => {
@@ -52,25 +56,24 @@ export const Home = () => {
 
   return (
     <div className="relative flex h-full flex-col pr-6">
-      {/* Gallery Section */}
+      <ViewModeToggle />
+
       <div
         ref={scrollableRef}
         className="hide-scrollbar flex-1 overflow-x-hidden overflow-y-auto"
       >
         {images.length > 0 ? (
-          <ChronologicalGallery
-            images={images}
-            showTitle={true}
+          <GalleryView
+            images={images as any}
             title={title}
+            scrollableRef={scrollableRef}
             onMonthOffsetsChange={setMonthMarkers}
-            scrollContainerRef={scrollableRef}
           />
         ) : (
           <EmptyGalleryState />
         )}
       </div>
 
-      {/* Timeline Scrollbar */}
       {monthMarkers.length > 0 && (
         <TimelineScrollbar
           scrollableRef={scrollableRef}
@@ -81,3 +84,5 @@ export const Home = () => {
     </div>
   );
 };
+
+export default Home;
