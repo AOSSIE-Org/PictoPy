@@ -1,13 +1,9 @@
-import sqlite3
 import bcrypt
-from app.config.settings import DATABASE_PATH
 from app.database.connection import get_db_connection
 
 
 def db_create_albums_table() -> None:
-    conn = None
-    try:
-        conn = sqlite3.connect(DATABASE_PATH)
+    with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -20,16 +16,10 @@ def db_create_albums_table() -> None:
             )
             """
         )
-        conn.commit()
-    finally:
-        if conn is not None:
-            conn.close()
 
 
 def db_create_album_images_table() -> None:
-    conn = None
-    try:
-        conn = sqlite3.connect(DATABASE_PATH)
+    with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -42,46 +32,33 @@ def db_create_album_images_table() -> None:
             )
             """
         )
-        conn.commit()
-    finally:
-        if conn is not None:
-            conn.close()
 
 
 def db_get_all_albums(show_hidden: bool = False):
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         if show_hidden:
             cursor.execute("SELECT * FROM albums")
         else:
             cursor.execute("SELECT * FROM albums WHERE is_hidden = 0")
         albums = cursor.fetchall()
         return albums
-    finally:
-        conn.close()
 
 
 def db_get_album_by_name(name: str):
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM albums WHERE album_name = ?", (name,))
         album = cursor.fetchone()
         return album if album else None
-    finally:
-        conn.close()
 
 
 def db_get_album(album_id: str):
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM albums WHERE album_id = ?", (album_id,))
         album = cursor.fetchone()
         return album if album else None
-    finally:
-        conn.close()
 
 
 def db_insert_album(
@@ -91,9 +68,8 @@ def db_insert_album(
     is_hidden: bool = False,
     password: str = None,
 ):
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         password_hash = None
         if password:
             password_hash = bcrypt.hashpw(
@@ -106,9 +82,6 @@ def db_insert_album(
             """,
             (album_id, album_name, description, int(is_hidden), password_hash),
         )
-        conn.commit()
-    finally:
-        conn.close()
 
 
 def db_update_album(
@@ -118,9 +91,8 @@ def db_update_album(
     is_hidden: bool,
     password: str = None,
 ):
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         if password is not None:
             # Update with new password
             password_hash = bcrypt.hashpw(
@@ -144,9 +116,6 @@ def db_update_album(
                 """,
                 (album_name, description, int(is_hidden), album_id),
             )
-        conn.commit()
-    finally:
-        conn.close()
 
 
 def db_delete_album(album_id: str):
@@ -156,16 +125,13 @@ def db_delete_album(album_id: str):
 
 
 def db_get_album_images(album_id: str):
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         cursor.execute(
             "SELECT image_id FROM album_images WHERE album_id = ?", (album_id,)
         )
         images = cursor.fetchall()
         return [img[0] for img in images]
-    finally:
-        conn.close()
 
 
 def db_add_images_to_album(album_id: str, image_ids: list[str]):
@@ -207,22 +173,17 @@ def db_remove_image_from_album(album_id: str, image_id: str):
 
 
 def db_remove_images_from_album(album_id: str, image_ids: list[str]):
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         cursor.executemany(
             "DELETE FROM album_images WHERE album_id = ? AND image_id = ?",
             [(album_id, img_id) for img_id in image_ids],
         )
-        conn.commit()
-    finally:
-        conn.close()
 
 
 def verify_album_password(album_id: str, password: str) -> bool:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         cursor.execute(
             "SELECT password_hash FROM albums WHERE album_id = ?", (album_id,)
         )
@@ -230,5 +191,3 @@ def verify_album_password(album_id: str, password: str) -> bool:
         if not row or not row[0]:
             return False
         return bcrypt.checkpw(password.encode("utf-8"), row[0].encode("utf-8"))
-    finally:
-        conn.close()
