@@ -78,7 +78,7 @@ git remote add upstream https://github.com/AOSSIE-Org/PictoPy
     Powershell(Windows)
 
     ```
-    .env\Scripts\activate.ps1
+    .env\Scripts\Activate.ps1
     ```
 
     After activating, you should be able to see the virtual environment's name before the current path. Something like this:
