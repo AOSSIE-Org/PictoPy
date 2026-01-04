@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
+
+
 const ShuffleHero = () => {
   // Function to scroll to downloads section
   const scrollToDownloads = () => {
@@ -52,10 +54,10 @@ const ShuffleHero = () => {
             transition={{ duration: 0.5, delay: 0.6 }}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
-            className="bg-gradient-to-r from-yellow-500 to-green-500 text-white font-medium py-2 px-6 rounded transition-all shadow-sm hover:shadow-md"
+            className="bg-gradient-to-r from-yellow-500 to-green-500 text-white font-medium py-2 px-6 rounded transition-all shadow-sm hover:shadow-md cursor-pointer inline-block"
           >
             Download
-          </motion.button>
+          </motion.a>
           
           {/* View Docs button - links to documentation */}
           <motion.a 
