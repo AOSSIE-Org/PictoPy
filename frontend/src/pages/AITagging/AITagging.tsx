@@ -13,8 +13,12 @@ import {
 } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 import { EmptyAITaggingState } from '@/components/EmptyStates/EmptyAITaggingState';
+import { useNavigate } from 'react-router-dom';
+import { Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export const AITagging = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
@@ -47,7 +51,20 @@ export const AITagging = () => {
         ref={scrollableRef}
         className="hide-scrollbar flex-1 overflow-x-hidden overflow-y-auto"
       >
-        <h1 className="mt-6 mb-6 text-2xl font-bold">AI Tagging</h1>
+        <div className="mt-6 mb-6 flex items-center justify-between">
+  <h1 className="text-2xl font-bold">AI Tagging</h1>
+
+  {/* Configure Tagging Button */}
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => navigate('/settings')}
+    className="gap-2"
+  >
+    <Settings className="h-4 w-4" />
+    Configure Tagging
+  </Button>
+</div>
 
         {/* Face Collections Section */}
         <div className="mb-8">
