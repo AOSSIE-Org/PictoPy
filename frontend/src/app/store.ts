@@ -1,11 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import loaderReducer from '@/features/loaderSlice';
 import onboardingReducer from '@/features/onboardingSlice';
-import searchReducer from '@/features/searchSlice';
 import imageReducer from '@/features/imageSlice';
 import faceClustersReducer from '@/features/faceClustersSlice';
 import infoDialogReducer from '@/features/infoDialogSlice';
 import folderReducer from '@/features/folderSlice';
+import searchReducer from '@/features/searchSlice';
 
 export const store = configureStore({
   reducer: {

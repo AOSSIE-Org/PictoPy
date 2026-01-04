@@ -9,7 +9,9 @@ from app.database.face_clusters import (
     db_get_cluster_by_id,
     db_update_cluster,
     db_get_all_clusters_with_face_counts,
-    db_get_images_by_cluster_id,  # Add this import
+    db_get_images_by_cluster_id,
+    db_merge_clusters,
+    db_toggle_cluster_ignore,
 )
 from app.schemas.face_clusters import (
     RenameClusterRequest,
@@ -18,12 +20,14 @@ from app.schemas.face_clusters import (
     ErrorResponse,
     GetClustersResponse,
     GetClustersData,
+    ClusterMetadata,
     GlobalReclusterResponse,
     GlobalReclusterData,
-    ClusterMetadata,
     GetClusterImagesResponse,
     GetClusterImagesData,
     ImageInCluster,
+    MergeClustersRequest,
+    ToggleIgnoreRequest,
 )
 from app.schemas.images import FaceSearchRequest, InputType
 from app.utils.faceSearch import perform_face_search
@@ -124,6 +128,7 @@ def get_all_clusters():
                 cluster_name=cluster["cluster_name"],
                 face_count=cluster["face_count"],
                 face_image_base64=cluster["face_image_base64"],
+                is_ignored=cluster["is_ignored"],
             )
             for cluster in clusters_data
         ]
@@ -342,5 +347,99 @@ def trigger_global_reclustering():
                 success=False,
                 error="Internal server error",
                 message=f"Global reclustering failed: {str(e)}",
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/merge",
+    response_model=RenameClusterResponse,  # Can reuse similar model or create new
+    responses={code: {"model": ErrorResponse} for code in [400, 404, 500]},
+)
+def merge_clusters(request: MergeClustersRequest):
+    """Merge two face clusters."""
+    try:
+        source = db_get_cluster_by_id(request.source_cluster_id)
+        target = db_get_cluster_by_id(request.target_cluster_id)
+
+        if not source or not target:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Cluster Not Found",
+                    message="One or both clusters do not exist.",
+                ).model_dump(),
+            )
+
+        success = db_merge_clusters(request.source_cluster_id, request.target_cluster_id)
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Merge Failed",
+                    message="Failed to merge clusters in database.",
+                ).model_dump(),
+            )
+
+        return RenameClusterResponse(
+            success=True,
+            message="Successfully merged clusters.",
+            data=RenameClusterData(
+                cluster_id=request.target_cluster_id,
+                cluster_name=target.get("cluster_name") or "Unnamed",
+            ),
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=str(e),
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/{cluster_id}/ignore",
+    response_model=RenameClusterResponse,
+    responses={code: {"model": ErrorResponse} for code in [404, 500]},
+)
+def toggle_cluster_ignore(cluster_id: str, request: ToggleIgnoreRequest):
+    """Toggle ignore status for a cluster."""
+    try:
+        success = db_toggle_cluster_ignore(cluster_id, request.is_ignored)
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Cluster Not Found",
+                    message=f"Cluster with ID '{cluster_id}' does not exist.",
+                ).model_dump(),
+            )
+
+        msg = "ignored" if request.is_ignored else "unignored"
+        return RenameClusterResponse(
+            success=True,
+            message=f"Successfully {msg} cluster.",
+            data=RenameClusterData(
+                cluster_id=cluster_id,
+                cluster_name="",  # Not needed for ignore toggle
+            ),
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=str(e),
             ).model_dump(),
         )

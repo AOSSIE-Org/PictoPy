@@ -3,6 +3,7 @@ import React from 'react';
 // Import modular components
 import FolderManagementCard from './components/FolderManagementCard';
 import UserPreferencesCard from './components/UserPreferencesCard';
+
 import ApplicationControlsCard from './components/ApplicationControlsCard';
 
 /**
@@ -18,6 +19,8 @@ const Settings: React.FC = () => {
 
         {/* User Preferences */}
         <UserPreferencesCard />
+
+
 
         {/* Application Controls */}
         <ApplicationControlsCard />

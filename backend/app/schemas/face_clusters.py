@@ -7,6 +7,15 @@ class RenameClusterRequest(BaseModel):
     cluster_name: str
 
 
+class MergeClustersRequest(BaseModel):
+    source_cluster_id: str
+    target_cluster_id: str
+
+
+class ToggleIgnoreRequest(BaseModel):
+    is_ignored: bool
+
+
 # Response Models
 class RenameClusterData(BaseModel):
     cluster_id: str
@@ -31,6 +40,7 @@ class ClusterMetadata(BaseModel):
     cluster_name: Optional[str]
     face_image_base64: Optional[str]
     face_count: int
+    is_ignored: bool = False
 
 
 class GetClustersData(BaseModel):
