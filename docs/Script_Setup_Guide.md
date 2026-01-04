@@ -48,7 +48,7 @@
 
    ```powershell
    cd .\backend
-   .env\Scripts\activate.ps1
+   .env\Scripts\Activate.ps1
    fastapi dev
    ```
 
@@ -60,7 +60,27 @@
    fastapi dev
    ```
 
-8. Start the Frontend Desktop App
+8. Start the Sync-Microservice
+
+   Open a new terminal window, navigate to the project directory, and run:
+
+   #### Windows
+
+   ```powershell
+   cd .\sync-microservice
+   .sync-env\Scripts\Activate.ps1
+   uvicorn main:app --port 8001 --reload
+   ```
+
+   #### Linux
+
+   ```bash
+   cd ./sync-microservice
+   source .sync-env/bin/activate
+   uvicorn main:app --port 8001 --reload
+   ```
+
+9. Start the Frontend Desktop App
 
    Open a new terminal window, navigate to the project directory, and run:
 
@@ -69,12 +89,12 @@
    npm run tauri dev
    ```
 
-9. Pre-commit Setup
+10. Pre-commit Setup
 
-   Before running the `git commit` command, ensure you have the following Python packages installed globally:
+Before running the `git commit` command, ensure you have the following Python packages installed globally:
 
-   ```bash
-   pip install ruff black mypy pre-commit
-   ```
+```bash
+pip install ruff black mypy pre-commit
+```
 
-   > **Note:** If you are committing from a virtual environment, these packages should already be installed as they are included in the requirements.txt file.
+> **Note:** If you are committing from a virtual environment, these packages should already be installed as they are included in the requirements.txt file.
