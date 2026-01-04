@@ -245,11 +245,14 @@ class InterceptHandler(logging.Handler):
 
         record.msg = f"[uvicorn] {msg}"
         record.args = ()
+        # Clear exception / stack info to avoid duplicate traces
+        record.exc_info = None
+        record.stack_info = None
 
         root_logger = logging.getLogger()
         for handler in root_logger.handlers:
-         if handler is not self:
-            handler.handle(record)
+            if handler is not self:
+                handler.handle(record)
 
 
 def configure_uvicorn_logging(component_name: str) -> None:
