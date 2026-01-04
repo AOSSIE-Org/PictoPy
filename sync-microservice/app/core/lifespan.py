@@ -43,11 +43,17 @@ async def lifespan(app: FastAPI):
                 break
 
             if elapsed_time >= connection_timeout:
-                logger.error(f"Failed to connect to PictoPy database after {attempt} attempts over {elapsed_time:.1f} seconds")
-                logger.error("Make sure the main PictoPy backend is set up and the database exists")
+                logger.error(
+                    f"Failed to connect to PictoPy database after {attempt} attempts over {elapsed_time:.1f} seconds"
+                )
+                logger.error(
+                    "Make sure the main PictoPy backend is set up and the database exists"
+                )
                 raise RuntimeError("Database connection failed after multiple attempts")
 
-            logger.warning(f"Database connection attempt {attempt} failed. Retrying in {retry_interval} seconds... ({elapsed_time:.1f}s elapsed)")
+            logger.warning(
+                f"Database connection attempt {attempt} failed. Retrying in {retry_interval} seconds... ({elapsed_time:.1f}s elapsed)"
+            )
             time.sleep(retry_interval)
 
         watcher_started = watcher_util_start_folder_watcher()

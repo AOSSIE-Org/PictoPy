@@ -38,7 +38,9 @@ async def restart_watcher():
                 watcher_info=WatcherStatusResponse(**watcher_util_get_watcher_info()),
             )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error restarting watcher: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error restarting watcher: {str(e)}"
+        )
 
 
 @router.post("/stop", response_model=WatcherControlResponse)
