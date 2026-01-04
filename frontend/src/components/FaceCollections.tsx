@@ -54,7 +54,7 @@ export function FaceCollections() {
           to see all their photos.
         </p>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-          {clusters.map((cluster: any) => (
+          {clusters.map((cluster: Cluster) => (
             <div
               key={cluster.cluster_id}
               className="hover:bg-accent flex cursor-pointer flex-col items-center gap-2 rounded-lg p-4 transition-colors dark:hover:bg-white/10"
