@@ -44,11 +44,10 @@ class FaceDetector:
                 bboxes.append(bbox)
                 confidences.append(float(score))
 
-                padding = 20
-                face_img = img[
-                    max(0, y1 - padding) : min(img.shape[0], y2 + padding),
-                    max(0, x1 - padding) : min(img.shape[1], x2 + padding),
-                ]
+                # Use face alignment utility for better pose handling
+                from app.utils.face_alignment import align_face_simple
+                
+                face_img = align_face_simple(img, bbox, padding=20)
                 processed_face = FaceNet_util_preprocess_image(face_img)
                 processed_faces.append(processed_face)
 
