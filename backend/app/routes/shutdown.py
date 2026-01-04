@@ -1,7 +1,6 @@
 import asyncio
 import os
 import platform
-import signal
 import functools
 from fastapi import APIRouter
 from app.utils.microservice import cleanup_log_threads
@@ -22,6 +21,25 @@ class ShutdownResponse(BaseModel):
     sync_stopped: bool
 
 
+def _final_kill_sync():
+    """
+    Final attempt to kill sync process by name right before backend exits.
+    Uses os.system() for fully synchronous, blocking execution.
+    Note: Using [P] trick to prevent pkill from matching itself.
+    """
+    system = platform.system().lower()
+    try:
+        if system == "windows":
+            os.system("taskkill /F /IM PictoPy_Sync.exe >nul 2>&1")
+        else:
+            # Use [P] trick so pkill doesn't match itself
+            os.system("pkill -9 -f '[P]ictoPy_Sync' 2>/dev/null")
+            os.system("killall -9 PictoPy_Sync 2>/dev/null")
+        logger.info("Final sync kill commands executed")
+    except Exception as e:
+        logger.warning(f"Final sync kill attempt: {e}")
+
+
 async def _delayed_shutdown(delay: float = 0.5):
     """
     Shutdown the server after a short delay to allow the response to be sent.
@@ -32,14 +50,19 @@ async def _delayed_shutdown(delay: float = 0.5):
     await asyncio.sleep(delay)
     logger.info("Backend shutdown initiated, exiting process...")
 
-    if platform.system() == "Windows":
-        try:
-            cleanup_log_threads()
-        except Exception as e:
-            logger.error(f"Error cleaning up log threads: {e}")
-        os._exit(0)
-    else:
-        os.kill(os.getpid(), signal.SIGTERM)
+    # Clean up log threads before exit
+    try:
+        cleanup_log_threads()
+    except Exception as e:
+        logger.error(f"Error cleaning up log threads: {e}")
+
+    # FINAL SAFETY: Kill sync by name right before we exit
+    # This ensures sync dies even if all other methods failed
+    _final_kill_sync()
+
+    # Use os._exit(0) for immediate termination on all platforms
+    # SIGTERM doesn't always work reliably with uvicorn
+    os._exit(0)
 
 
 @router.post("/shutdown", response_model=ShutdownResponse)
@@ -72,6 +95,10 @@ async def shutdown():
             logger.warning("Sync microservice may not have stopped cleanly")
     except Exception as e:
         logger.error(f"Error stopping sync microservice: {e}")
+
+    # KILL SYNC NOW - don't wait for delayed shutdown
+    # This ensures sync dies before we return the response
+    _final_kill_sync()
 
     # Define callback to handle potential exceptions in the background task
     def _handle_shutdown_exception(task: asyncio.Task):
