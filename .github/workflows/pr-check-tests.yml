@@ -108,7 +108,7 @@ jobs:
 
   # Backend Test Job
   backend:
-    needs: [linting]
+    needs: [linting,frontend]
     name: Backend Tests
     runs-on: ubuntu-latest
     steps:
@@ -138,7 +138,7 @@ jobs:
         working-directory: sync-microservice
         run: |
           pip install -r requirements.txt
-          
+
       - name: Test Micro Services 
         working-directory: sync-microservice
         run: pyinstaller main.py --name PictoPy_Sync_Microservice --onedir --distpath dist
