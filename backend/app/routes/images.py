@@ -3,6 +3,7 @@ from typing import List, Optional
 from app.database.images import db_get_all_images
 from app.schemas.images import ErrorResponse
 from app.utils.images import image_util_parse_metadata
+from app.utils.duplicate_detection import get_duplicate_groups_with_scores
 from pydantic import BaseModel
 from app.database.images import db_toggle_image_favourite_status
 from app.logging.setup_logging import get_logger
@@ -128,3 +129,122 @@ class ImageInfoResponse(BaseModel):
     isTagged: bool
     isFavourite: bool
     tags: Optional[List[str]] = None
+
+
+# Duplicate Detection Models
+class DuplicateImageInfo(BaseModel):
+    id: str
+    path: str
+    thumbnailPath: str
+    sharpness_score: float
+    exposure_score: float
+    overall_score: float
+    is_best_shot: bool
+
+
+class DuplicateGroup(BaseModel):
+    group_id: int
+    image_count: int
+    best_shot_id: str
+    images: List[DuplicateImageInfo]
+
+
+class GetDuplicatesResponse(BaseModel):
+    success: bool
+    message: str
+    data: List[DuplicateGroup]
+
+
+@router.get(
+    "/duplicates",
+    response_model=GetDuplicatesResponse,
+    responses={500: {"model": ErrorResponse}},
+)
+def get_duplicate_images(
+    similarity_threshold: int = Query(
+        default=10,
+        ge=1,
+        le=50,
+        description="Maximum hash distance to consider images as duplicates (lower = stricter, default 10)"
+    )
+):
+    """
+    Find duplicate/similar images and suggest the best shot from each group.
+    
+    This endpoint analyzes all images in the library to find groups of similar images
+    (e.g., multiple shots of the same scene). For each group, it calculates quality
+    scores based on sharpness and exposure, and suggests the "best shot".
+    
+    Quality Metrics:
+    - Sharpness: Measured using Laplacian variance (higher = less blur)
+    - Exposure: Analyzes histogram for proper brightness and contrast
+    - Overall: Weighted combination (60% sharpness, 40% exposure)
+    
+    Args:
+        similarity_threshold: Hash distance threshold (1-50, default 10)
+            - Lower values = stricter matching (fewer false positives)
+            - Higher values = looser matching (may group different images)
+            - Recommended: 10 for ~96% similarity
+    
+    Returns:
+        List of duplicate groups with quality scores and best shot recommendation
+    """
+    try:
+        # Get all images from database
+        images = db_get_all_images()
+        
+        if not images:
+            return GetDuplicatesResponse(
+                success=True,
+                message="No images found in library",
+                data=[]
+            )
+        
+        # Prepare image data for duplicate detection
+        image_data = [
+            {
+                'id': img['id'],
+                'path': img['path'],
+                'thumbnailPath': img.get('thumbnailPath', '')
+            }
+            for img in images
+        ]
+        
+        # Find duplicate groups with quality scores
+        duplicate_groups = get_duplicate_groups_with_scores(
+            image_data,
+            similarity_threshold=similarity_threshold
+        )
+        
+        # Convert to response format
+        response_data = [
+            DuplicateGroup(
+                group_id=group['group_id'],
+                image_count=group['image_count'],
+                best_shot_id=group['best_shot_id'],
+                images=[
+                    DuplicateImageInfo(**img_info)
+                    for img_info in group['images']
+                ]
+            )
+            for group in duplicate_groups
+        ]
+        
+        total_duplicates = sum(g.image_count for g in response_data)
+        
+        return GetDuplicatesResponse(
+            success=True,
+            message=f"Found {len(response_data)} duplicate groups with {total_duplicates} total images",
+            data=response_data
+        )
+        
+    except Exception as e:
+        logger.error(f"Error finding duplicates: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Unable to find duplicates: {str(e)}",
+            ).model_dump(),
+        )
