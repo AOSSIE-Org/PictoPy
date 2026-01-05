@@ -214,8 +214,8 @@ class InterceptHandler(logging.Handler):
     Handler to intercept logs from other loggers (like Uvicorn) and redirect them
     through our custom logger.
 
-    This implementation is based on Loguru's approach and routes logs directly to
-    the root logger.
+    This implementation avoids recursive logging by directly emitting to the root
+    logger's handlers instead of calling logger.log().
     """
 
     def __init__(self, component_name: str):
@@ -227,27 +227,40 @@ class InterceptHandler(logging.Handler):
         """
         super().__init__()
         self.component_name = component_name
+        self._inside_emit = False  # Guard against recursion
 
     def emit(self, record: logging.LogRecord) -> None:
         """
         Process a log record by forwarding it through our custom logger.
 
+        This method avoids recursion by:
+        1. Using a recursion guard flag
+        2. Directly emitting to root logger handlers instead of calling logger.log()
+
         Args:
             record: The log record to process
         """
-        # Get the appropriate module name
-        module_name = record.name
-        if "." in module_name:
-            module_name = module_name.split(".")[-1]
+        # Prevent recursive logging
+        if self._inside_emit:
+            return
 
-        # Create a message that includes the original module in the format
-        msg = record.getMessage()
+        self._inside_emit = True
+        try:
+            # Modify the record message to include uvicorn prefix
+            original_msg = record.getMessage()
+            record.msg = f"[uvicorn] {original_msg}"
+            record.args = ()  # Clear args since we've already formatted the message
 
-        # Find the appropriate logger
-        logger = get_logger(module_name)
-
-        # Log the message with our custom formatting
-        logger.log(record.levelno, f"[uvicorn] {msg}")
+            # Get the root logger and emit directly to its handlers
+            # This avoids calling logger.log() which would cause recursion
+            root_logger = logging.getLogger()
+            for handler in root_logger.handlers:
+                # Skip this handler to avoid recursion
+                if handler is not self:
+                    if record.levelno >= handler.level:
+                        handler.emit(record)
+        finally:
+            self._inside_emit = False
 
 
 def configure_uvicorn_logging(component_name: str) -> None:
