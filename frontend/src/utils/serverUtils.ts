@@ -1,6 +1,6 @@
 import { Command } from '@tauri-apps/plugin-shell';
 import { invoke } from '@tauri-apps/api/core';
-import { BACKEND_URL } from '@/config/Backend.ts';
+import { BACKEND_URL, SYNC_MICROSERVICE_URL } from '@/config/Backend.ts';
 
 const SHUTDOWN_TIMEOUT_MS = 5000;
 const SHUTDOWN_RECHECK_DELAY_MS = 1000;
@@ -39,7 +39,7 @@ const waitForTauriReady = async (): Promise<boolean> => {
 
 const isServerRunning = async (): Promise<boolean> => {
   try {
-    const response = await fetch(`${BACKEND_URL}/health`);
+    const response = await fetch(BACKEND_URL + '/health');
     if (response.ok) {
       return true;
     } else {
@@ -51,65 +51,124 @@ const isServerRunning = async (): Promise<boolean> => {
   }
 };
 
+const isSyncServiceRunning = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(SYNC_MICROSERVICE_URL + '/health');
+    if (response.ok) {
+      console.log('Sync Service is Running!');
+      return true;
+    } else {
+      return false;
+    }
+  } catch (error) {
+    console.error('Error checking sync service status:', error);
+    return false;
+  }
+};
+
 export const startServer = async () => {
   try {
-    // Wait for Tauri to be fully ready (fixes Linux initialization race)
+    // Wait for Tauri to be fully ready (fixes initialization race)
     const tauriReady = await waitForTauriReady();
     if (!tauriReady) {
       console.error('Tauri not ready, cannot start server');
       return;
     }
 
+    console.log('Starting services!');
+
+    const resourcesFolderPath: string = await invoke(
+      'get_resources_folder_path',
+    );
+
+    // Start backend server
     if (!(await isServerRunning())) {
-      const serverPath: string = await invoke('get_server_path');
-      const command = Command.create(
-        isWindows() ? 'StartServerWindows' : 'StartServerUnix',
+      const backendCommand = Command.create(
+        isWindows() ? 'StartBackendWindows' : 'StartBackendUnix',
         '',
-        { cwd: serverPath },
+        { cwd: resourcesFolderPath + '/backend' },
       );
 
-      const child = await command.spawn();
-      command.stderr.on('data', (line) => console.error('Error:', line));
-      console.log('PictoPy Server started with PID:', child.pid);
+      const backendChild = await backendCommand.spawn();
+      backendCommand.stderr.on('data', (line) =>
+        console.error('Backend Error:', line),
+      );
+      console.log('Backend server started with PID:', backendChild.pid);
+    }
+
+    // Start sync service
+    if (!(await isSyncServiceRunning())) {
+      const syncCommand = Command.create(
+        isWindows() ? 'StartSyncServiceWindows' : 'StartSyncServiceUnix',
+        '',
+        { cwd: resourcesFolderPath + '/sync-microservice' },
+      );
+
+      const syncChild = await syncCommand.spawn();
+      syncCommand.stderr.on('data', (line) =>
+        console.error('Sync Service Error:', line),
+      );
+      console.log('Sync service started with PID:', syncChild.pid);
     }
   } catch (error) {
-    console.error('Error starting server:', error);
+    console.error('Error starting services:', error);
   }
 };
 
-// Fire-and-forget shutdown trigger.
+// Fire-and-forget shutdown trigger for both services
 export const triggerShutdown = (): void => {
   if (shutdownInProgress) {
     console.log('Shutdown already in progress, skipping...');
     return;
   }
   shutdownInProgress = true;
-  console.log('Initialized backend shutdown...');
+  console.log('Initialized shutdown for all services...');
 
-  // Always call forceKillServer as backup - it will kill both Server and Sync
-  // This is belt-and-suspenders: HTTP shutdown + process kill
+  // Belt-and-suspenders: Always call forceKillServer to kill both Server and Sync
   forceKillServer().catch((err) =>
     console.error('Force kill during shutdown:', err),
   );
 
+  // Send shutdown request to backend
   fetch(`${BACKEND_URL}/shutdown`, {
     method: 'POST',
     keepalive: true,
   })
     .then((response) => {
       if (response.ok) {
-        console.log('Shutdown request sent successfully');
+        console.log('Backend shutdown request sent successfully');
       } else {
         console.error(
-          `Shutdown request failed with status: ${response.status}`,
+          `Backend shutdown request failed with status: ${response.status}`,
         );
       }
-      shutdownInProgress = false; // Reset on success or handled failure
     })
     .catch((error) => {
-      console.error('Shutdown request failed:', error);
-      shutdownInProgress = false; // Reset on error
+      console.error('Backend shutdown request failed:', error);
     });
+
+  // Send shutdown request to sync service
+  fetch(`${SYNC_MICROSERVICE_URL}/shutdown`, {
+    method: 'POST',
+    keepalive: true,
+  })
+    .then((response) => {
+      if (response.ok) {
+        console.log('Sync service shutdown request sent successfully');
+      } else {
+        console.error(
+          `Sync service shutdown request failed with status: ${response.status}`,
+        );
+      }
+    })
+    .catch((error) => {
+      console.error('Sync service shutdown request failed:', error);
+    });
+
+  // Reset flag after a delay
+  setTimeout(() => {
+    shutdownInProgress = false;
+  }, 2000);
 };
 
 export const stopServer = async () => {
@@ -120,7 +179,7 @@ export const stopServer = async () => {
   shutdownInProgress = true;
 
   try {
-    if (!(await isServerRunning())) {
+    if (!(await isServerRunning()) && !(await isSyncServiceRunning())) {
       shutdownInProgress = false;
       return;
     }
@@ -128,14 +187,14 @@ export const stopServer = async () => {
     const shutdownSuccessful = await attemptGracefulShutdown();
 
     if (shutdownSuccessful) {
-      console.log('Server shutdown completed gracefully');
+      console.log('Services shutdown completed gracefully');
       shutdownInProgress = false;
       return;
     }
 
     await sleep(SHUTDOWN_RECHECK_DELAY_MS);
 
-    if (!(await isServerRunning())) {
+    if (!(await isServerRunning()) && !(await isSyncServiceRunning())) {
       shutdownInProgress = false;
       return;
     }
@@ -144,7 +203,7 @@ export const stopServer = async () => {
     await forceKillServer();
     shutdownInProgress = false;
   } catch (error) {
-    console.error('Error stopping server:', error);
+    console.error('Error stopping services:', error);
     try {
       await forceKillServer();
     } catch (forceKillError) {
@@ -159,19 +218,28 @@ async function attemptGracefulShutdown(): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), SHUTDOWN_TIMEOUT_MS);
 
-    const response = await fetch(`${BACKEND_URL}/shutdown`, {
-      method: 'POST',
-      signal: controller.signal,
-    });
+    // Try to shutdown both services
+    const [backendResponse, syncResponse] = await Promise.allSettled([
+      fetch(`${BACKEND_URL}/shutdown`, {
+        method: 'POST',
+        signal: controller.signal,
+      }),
+      fetch(`${SYNC_MICROSERVICE_URL}/shutdown`, {
+        method: 'POST',
+        signal: controller.signal,
+      }),
+    ]);
 
     clearTimeout(timeoutId);
 
-    if (response.ok) {
-      // Consume response body (may be empty if 204 No Content)
-      await response.text().catch(() => {});
+    const backendOk =
+      backendResponse.status === 'fulfilled' && backendResponse.value.ok;
+    const syncOk = syncResponse.status === 'fulfilled' && syncResponse.value.ok;
+
+    if (backendOk || syncOk) {
       return true;
     } else {
-      console.warn(response.status);
+      console.warn('Shutdown requests did not succeed');
       return false;
     }
   } catch (error) {
@@ -187,7 +255,7 @@ async function attemptGracefulShutdown(): Promise<boolean> {
 async function forceKillServer(): Promise<void> {
   try {
     const platformName = isWindows() ? 'windows' : 'unix';
-    console.log(`Force killing server on platform: ${platformName}`);
+    console.log(`Force killing services on platform: ${platformName}`);
 
     const commandName = isWindows() ? 'killProcessWindows' : 'killProcessUnix';
 

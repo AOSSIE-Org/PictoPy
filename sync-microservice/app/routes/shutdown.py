@@ -1,7 +1,5 @@
 import asyncio
 import os
-import platform
-import signal
 from fastapi import APIRouter
 from pydantic import BaseModel
 from app.utils.watcher import watcher_util_stop_folder_watcher
@@ -28,11 +26,7 @@ async def _delayed_shutdown(delay: float = 0.1):
     """
     await asyncio.sleep(delay)
     logger.info("Exiting sync microservice...")
-
-    if platform.system() == "Windows":
-        os._exit(0)
-    else:
-        os.kill(os.getpid(), signal.SIGTERM)
+    os._exit(0)
 
 
 @router.post("/shutdown", response_model=ShutdownResponse)

@@ -18,6 +18,10 @@ import { Sun, Moon, Monitor } from 'lucide-react';
 
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
 import { useTheme } from '@/contexts/ThemeContext';
+
+import { setIsEditing } from '@/features/onboardingSlice';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/app/store';
 interface ThemeSelectionStepProps {
   stepIndex: number;
   totalSteps: number;
@@ -30,10 +34,13 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
   currentStepDisplayIndex,
 }) => {
   const { setTheme, theme } = useTheme();
+  const isEditing = useSelector(
+    (state: RootState) => state.onboarding.isEditing,
+  );
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
-    if (localStorage.getItem('themeChosen')) {
+    if (localStorage.getItem('themeChosen') === 'true' && !isEditing) {
       dispatch(markCompleted(stepIndex));
     }
   }, []);
@@ -47,9 +54,10 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
   };
 
   const handleBack = () => {
+    dispatch(setIsEditing(true));
     dispatch(previousStep());
   };
-  if (localStorage.getItem('themeChosen')) {
+  if (localStorage.getItem('themeChosen') === 'true' && !isEditing) {
     return null;
   }
 
