@@ -1,12 +1,21 @@
 name: PR Check Build
 on:
   pull_request:
-    paths:
-      - "frontend/**"
+    # paths:
+    #   - "frontend/**"  # just for testing the build
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   tauri-build-check:
-    name: Tauri Build Check
+    name: Tauri Build Check (${{matrix.platform}})
+    timeout-minutes: 30
+
     strategy:
       fail-fast: false
       matrix:
@@ -17,14 +26,19 @@ jobs:
             args: ""
           - platform: "windows-latest"
             args: ""
+
     runs-on: ${{ matrix.platform }}
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: lts/*
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -35,12 +49,27 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y \
+            libwebkit2gtk-4.0-dev \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            frontend/src-tauri/target
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('frontend/src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: install frontend dependencies
-        run: |
-          cd frontend
-          npm install
+        working-directory: frontend
+        run: npm ci
 
       # - name: cache cargo registry and build
       #   uses: actions/cache@v3
@@ -53,7 +82,7 @@ jobs:
       #     restore-keys: |
       #       ${{ runner.os }}-cargo-
 
-      - uses: tauri-apps/tauri-action@v0
+      - uses: tauri-apps/tauri-action@v0.6.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Don't worry, the below key is just a sample key for PR-Checks. Actual app build workflow uses a secret private key :)
