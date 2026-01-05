@@ -2,6 +2,36 @@
 
 PictoPy is an advanced desktop gallery application that combines the power of Tauri, React, and Rust for the frontend with a Python backend for sophisticated image analysis and management.
 
+## Installation
+
+### Arch Linux (AUR)
+
+PictoPy is available on the Arch User Repository (AUR) for Arch-based distributions (Arch, Manjaro, EndeavourOS, etc.):
+
+```bash
+# Using yay
+yay -S pictopy
+
+# Using paru
+paru -S pictopy
+
+# Using pikaur
+pikaur -S pictopy
+```
+
+For the development version built from source:
+```bash
+yay -S pictopy-git
+```
+
+### Other Linux Distributions
+
+Download the AppImage or .deb package from the [Releases](https://github.com/AOSSIE-Org/PictoPy/releases) page.
+
+### Windows & macOS
+
+Download the installer from the [Releases](https://github.com/AOSSIE-Org/PictoPy/releases) page.
+
 # Want to Contribute? 😄
 
 &nbsp;&nbsp;&nbsp;<a href="https://discord.gg/hjUhu33uAn"><img src="https://github.com/user-attachments/assets/3ed93273-5055-4532-a524-87a337a4fbba" height="40"></a>
