@@ -1,8 +1,8 @@
 name: PR Check Build
 on:
   pull_request:
-    # paths:
-    #   - "frontend/**"  # just for testing the build
+    paths:
+      - "frontend/**"  
 
 permissions:
   contents: read
