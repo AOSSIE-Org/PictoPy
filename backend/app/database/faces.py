@@ -2,7 +2,16 @@ import sqlite3
 import json
 import numpy as np
 from typing import Optional, List, Dict, Union, TypedDict
-from app.config.settings import DATABASE_PATH
+
+from app.database.connection import (
+    get_db_connection,
+    get_db_transaction,
+    get_db_write_transaction,
+)
+from app.logging.setup_logging import get_logger
+
+# Initialize logger
+logger = get_logger(__name__)
 
 # Type definitions
 FaceId = int
@@ -27,10 +36,8 @@ FaceClusterMapping = Dict[FaceId, Optional[ClusterId]]
 
 
 def db_create_faces_table() -> None:
-    conn = None
-    try:
-        conn = sqlite3.connect(DATABASE_PATH)
-        conn.execute("PRAGMA foreign_keys = ON")
+    """Create the faces table if it doesn't exist."""
+    with get_db_transaction() as conn:
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -46,10 +53,6 @@ def db_create_faces_table() -> None:
             )
         """
         )
-        conn.commit()
-    finally:
-        if conn is not None:
-            conn.close()
 
 
 def db_insert_face_embeddings(
@@ -62,18 +65,19 @@ def db_insert_face_embeddings(
     """
     Insert face embeddings with additional metadata.
 
-
     Args:
         image_id: ID of the image this face belongs to
         embeddings: Face embedding vector (numpy array)
         confidence: Confidence score for face detection (optional)
         bbox: Bounding box coordinates as dict with keys: x, y, width, height (optional)
         cluster_id: ID of the face cluster this face belongs to (optional)
-    """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
 
-    try:
+    Returns:
+        The face_id of the inserted record
+    """
+    with get_db_write_transaction() as conn:
+        cursor = conn.cursor()
+
         embeddings_json = json.dumps([emb.tolist() for emb in embeddings])
 
         # Convert bbox to JSON string if provided
@@ -87,11 +91,7 @@ def db_insert_face_embeddings(
             (image_id, cluster_id, embeddings_json, confidence, bbox_json),
         )
 
-        face_id = cursor.lastrowid
-        conn.commit()
-        return face_id
-    finally:
-        conn.close()
+        return cursor.lastrowid
 
 
 def db_insert_face_embeddings_by_image_id(
@@ -110,8 +110,10 @@ def db_insert_face_embeddings_by_image_id(
         confidence: Confidence score(s) for face detection (optional)
         bbox: Bounding box coordinates or list of bounding boxes (optional)
         cluster_id: Cluster ID(s) for the face(s) (optional)
-    """
 
+    Returns:
+        Single face_id or list of face_ids
+    """
     # Handle multiple faces in one image
     if (
         isinstance(embeddings, list)
@@ -142,10 +144,10 @@ def db_insert_face_embeddings_by_image_id(
 
 
 def get_all_face_embeddings():
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    """Get all face embeddings with associated image data."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
 
-    try:
         cursor.execute(
             """
             SELECT
@@ -212,8 +214,6 @@ def get_all_face_embeddings():
         # Sort by path
         images.sort(key=lambda x: x["path"])
         return images
-    finally:
-        conn.close()
 
 
 def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbedding]]]:
@@ -223,10 +223,9 @@ def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbed
     Returns:
         List of dictionaries containing face_id and embeddings (as numpy array)
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
 
-    try:
         cursor.execute("SELECT face_id, embeddings FROM faces WHERE cluster_id IS NULL")
 
         rows = cursor.fetchall()
@@ -239,8 +238,6 @@ def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbed
             faces.append({"face_id": face_id, "embeddings": embeddings})
 
         return faces
-    finally:
-        conn.close()
 
 
 def db_get_all_faces_with_cluster_names() -> (
@@ -252,10 +249,9 @@ def db_get_all_faces_with_cluster_names() -> (
     Returns:
         List of dictionaries containing face_id, embeddings (as numpy array), and cluster_name
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
 
-    try:
         cursor.execute(
             """
             SELECT f.face_id, f.embeddings, fc.cluster_name
@@ -281,8 +277,6 @@ def db_get_all_faces_with_cluster_names() -> (
             )
 
         return faces
-    finally:
-        conn.close()
 
 
 def db_update_face_cluster_ids_batch(
@@ -307,19 +301,15 @@ def db_update_face_cluster_ids_batch(
     if not face_cluster_mapping:
         return
 
-    own_connection = cursor is None
-    if own_connection:
-        conn = sqlite3.connect(DATABASE_PATH)
-        cursor = conn.cursor()
+    # Prepare update data as tuples (cluster_id, face_id)
+    update_data = []
+    for mapping in face_cluster_mapping:
+        face_id = mapping.get("face_id")
+        cluster_id = mapping.get("cluster_id")
+        update_data.append((cluster_id, face_id))
 
-    try:
-        # Prepare update data as tuples (cluster_id, face_id)
-        update_data = []
-        for mapping in face_cluster_mapping:
-            face_id = mapping.get("face_id")
-            cluster_id = mapping.get("cluster_id")
-            update_data.append((cluster_id, face_id))
-
+    if cursor is not None:
+        # Use provided cursor (external transaction management)
         cursor.executemany(
             """
             UPDATE faces 
@@ -328,17 +318,18 @@ def db_update_face_cluster_ids_batch(
             """,
             update_data,
         )
-
-        if own_connection:
-            conn.commit()
-    except Exception:
-        if own_connection:
-            conn.rollback()
-        print("Error updating face cluster IDs in batch.")
-        raise
-    finally:
-        if own_connection:
-            conn.close()
+    else:
+        # Use our own transaction
+        with get_db_write_transaction() as conn:
+            cur = conn.cursor()
+            cur.executemany(
+                """
+                UPDATE faces 
+                SET cluster_id = ? 
+                WHERE face_id = ?
+                """,
+                update_data,
+            )
 
 
 def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]]]:
@@ -349,10 +340,9 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
         List of dictionaries containing cluster_id and mean_embedding (as numpy array)
         Only returns clusters that have at least one face assigned
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
 
-    try:
         cursor.execute(
             """
             SELECT f.cluster_id, f.embeddings
@@ -390,5 +380,3 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
             )
 
         return cluster_means
-    finally:
-        conn.close()
