@@ -1,7 +1,11 @@
 import sqlite3
-from typing import Optional, List, Dict, TypedDict, Union
+from typing import Dict, List, Optional, TypedDict, Union
+
 from app.config.settings import DATABASE_PATH
 
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
 # Type definitions
 ClusterId = str
 ClusterName = str
@@ -347,5 +351,30 @@ def db_get_images_by_cluster_id(
             )
 
         return images
+    finally:
+        conn.close()
+
+
+def db_delete_empty_clusters() -> int:
+    """
+    Delete all clusters that have no faces associated with them.
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            DELETE FROM face_clusters
+            WHERE cluster_id NOT IN (
+                SELECT DISTINCT cluster_id FROM faces WHERE cluster_id IS NOT NULL
+            )
+            """
+        )
+
+        deleted_count = cursor.rowcount
+        conn.commit()
+        logger.info(f"Deleted {deleted_count} empty clusters.")
+        return deleted_count
     finally:
         conn.close()

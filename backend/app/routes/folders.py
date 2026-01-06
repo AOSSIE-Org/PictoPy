@@ -1,49 +1,54 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Request
+import os
+from concurrent.futures import ProcessPoolExecutor
 from typing import List, Tuple
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+
 from app.database.folders import (
-    db_update_parent_ids_for_subtree,
-    db_folder_exists,
-    db_find_parent_folder_id,
-    db_enable_ai_tagging_batch,
-    db_disable_ai_tagging_batch,
     db_delete_folders_batch,
+    db_disable_ai_tagging_batch,
+    db_enable_ai_tagging_batch,
+    db_find_parent_folder_id,
+    db_folder_exists,
+    db_get_all_folder_details,
     db_get_direct_child_folders,
     db_get_folder_ids_by_path_prefix,
-    db_get_all_folder_details,
+    db_update_parent_ids_for_subtree,
 )
 from app.logging.setup_logging import get_logger
 from app.schemas.folders import (
+    AddFolderData,
     AddFolderRequest,
     AddFolderResponse,
-    AddFolderData,
-    ErrorResponse,
-    UpdateAITaggingRequest,
-    UpdateAITaggingResponse,
-    UpdateAITaggingData,
+    DeleteFoldersData,
     DeleteFoldersRequest,
     DeleteFoldersResponse,
-    DeleteFoldersData,
+    ErrorResponse,
+    FolderDetails,
+    GetAllFoldersData,
+    GetAllFoldersResponse,
+    SyncFolderData,
     SyncFolderRequest,
     SyncFolderResponse,
-    SyncFolderData,
-    GetAllFoldersResponse,
-    GetAllFoldersData,
-    FolderDetails,
+    UpdateAITaggingData,
+    UpdateAITaggingRequest,
+    UpdateAITaggingResponse,
 )
-import os
+from app.utils.API import API_util_restart_sync_microservice_watcher
+from app.utils.face_clusters import (
+    cluster_util_delete_empty_clusters,
+    cluster_util_face_clusters_sync,
+)
 from app.utils.folders import (
     folder_util_add_folder_tree,
     folder_util_add_multiple_folder_trees,
     folder_util_delete_obsolete_folders,
     folder_util_get_filesystem_direct_child_folders,
 )
-from concurrent.futures import ProcessPoolExecutor
 from app.utils.images import (
     image_util_process_folder_images,
     image_util_process_untagged_images,
 )
-from app.utils.face_clusters import cluster_util_face_clusters_sync
-from app.utils.API import API_util_restart_sync_microservice_watcher
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -72,7 +77,8 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
 
         # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()
-
+        # Delete empty clusters after folder addition
+        cluster_util_delete_empty_clusters()
     except Exception as e:
         logger.error(
             f"Error in post processing after folder {folder_path} was added: {e}"
@@ -121,6 +127,9 @@ def post_sync_folder_sequence(
 
         # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()
+
+        # Delete empty clusters after folder sync
+        cluster_util_delete_empty_clusters()
     except Exception as e:
         logger.error(
             f"Error in post processing after folder {folder_path} was synced: {e}"
@@ -322,7 +331,7 @@ def delete_folders(request: DeleteFoldersRequest):
             raise ValueError("No folder IDs provided")
 
         deleted_count = db_delete_folders_batch(request.folder_ids)
-
+        cluster_util_delete_empty_clusters()
         return DeleteFoldersResponse(
             data=DeleteFoldersData(
                 deleted_count=deleted_count, folder_ids=request.folder_ids
