@@ -138,7 +138,10 @@
         {
           "name": "killProcessUnix",
           "cmd": "bash",
-          "args": ["-c", "pkill -9 -f '[P]ictoPy_Server'; pkill -9 -f '[P]ictoPy_Sync'"],
+          "args": [
+            "-c",
+            "pkill -9 -f '[P]ictoPy_Server'; pkill -9 -f '[P]ictoPy_Sync'"
+          ],
           "sidecar": false
         }
       ]
@@ -149,7 +152,9 @@
         {
           "name": "killProcessWindows",
           "cmd": "powershell",
-          "args": ["taskkill /t /f /im PictoPy_Server.exe; taskkill /t /f /im PictoPy_Sync.exe"],
+          "args": [
+            "taskkill /t /f /im PictoPy_Server.exe; taskkill /t /f /im PictoPy_Sync.exe"
+          ],
           "sidecar": false
         }
       ]

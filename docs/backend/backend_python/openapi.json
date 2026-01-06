@@ -18,9 +18,7 @@
   "paths": {
     "/health": {
       "get": {
-        "tags": [
-          "Health"
-        ],
+        "tags": ["Health"],
         "summary": "Root",
         "operationId": "root_health_get",
         "responses": {
@@ -37,9 +35,7 @@
     },
     "/folders/add-folder": {
       "post": {
-        "tags": [
-          "Folders"
-        ],
+        "tags": ["Folders"],
         "summary": "Add Folder",
         "operationId": "add_folder_folders_add_folder_post",
         "requestBody": {
@@ -118,9 +114,7 @@
     },
     "/folders/enable-ai-tagging": {
       "post": {
-        "tags": [
-          "Folders"
-        ],
+        "tags": ["Folders"],
         "summary": "Enable Ai Tagging",
         "description": "Enable AI tagging for multiple folders.",
         "operationId": "enable_ai_tagging_folders_enable_ai_tagging_post",
@@ -180,9 +174,7 @@
     },
     "/folders/disable-ai-tagging": {
       "post": {
-        "tags": [
-          "Folders"
-        ],
+        "tags": ["Folders"],
         "summary": "Disable Ai Tagging",
         "description": "Disable AI tagging for multiple folders.",
         "operationId": "disable_ai_tagging_folders_disable_ai_tagging_post",
@@ -242,9 +234,7 @@
     },
     "/folders/delete-folders": {
       "delete": {
-        "tags": [
-          "Folders"
-        ],
+        "tags": ["Folders"],
         "summary": "Delete Folders",
         "description": "Delete multiple folders by their IDs.",
         "operationId": "delete_folders_folders_delete_folders_delete",
@@ -304,9 +294,7 @@
     },
     "/folders/sync-folder": {
       "post": {
-        "tags": [
-          "Folders"
-        ],
+        "tags": ["Folders"],
         "summary": "Sync Folder",
         "description": "Sync a folder by comparing filesystem folders with database entries and removing extra DB entries.",
         "operationId": "sync_folder_folders_sync_folder_post",
@@ -376,9 +364,7 @@
     },
     "/folders/all-folders": {
       "get": {
-        "tags": [
-          "Folders"
-        ],
+        "tags": ["Folders"],
         "summary": "Get All Folders",
         "description": "Get details of all folders in the database.",
         "operationId": "get_all_folders_folders_all_folders_get",
@@ -408,9 +394,7 @@
     },
     "/albums/": {
       "get": {
-        "tags": [
-          "Albums"
-        ],
+        "tags": ["Albums"],
         "summary": "Get Albums",
         "operationId": "get_albums_albums__get",
         "parameters": [
@@ -449,9 +433,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Albums"
-        ],
+        "tags": ["Albums"],
         "summary": "Create Album",
         "operationId": "create_album_albums__post",
         "requestBody": {
@@ -490,9 +472,7 @@
     },
     "/albums/{album_id}": {
       "get": {
-        "tags": [
-          "Albums"
-        ],
+        "tags": ["Albums"],
         "summary": "Get Album",
         "operationId": "get_album_albums__album_id__get",
         "parameters": [
@@ -530,9 +510,7 @@
         }
       },
       "put": {
-        "tags": [
-          "Albums"
-        ],
+        "tags": ["Albums"],
         "summary": "Update Album",
         "operationId": "update_album_albums__album_id__put",
         "parameters": [
@@ -580,9 +558,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Albums"
-        ],
+        "tags": ["Albums"],
         "summary": "Delete Album",
         "operationId": "delete_album_albums__album_id__delete",
         "parameters": [
@@ -622,9 +598,7 @@
     },
     "/albums/{album_id}/images/get": {
       "post": {
-        "tags": [
-          "Albums"
-        ],
+        "tags": ["Albums"],
         "summary": "Get Album Images",
         "operationId": "get_album_images_albums__album_id__images_get_post",
         "parameters": [
@@ -674,9 +648,7 @@
     },
     "/albums/{album_id}/images": {
       "post": {
-        "tags": [
-          "Albums"
-        ],
+        "tags": ["Albums"],
         "summary": "Add Images To Album",
         "operationId": "add_images_to_album_albums__album_id__images_post",
         "parameters": [
@@ -724,9 +696,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Albums"
-        ],
+        "tags": ["Albums"],
         "summary": "Remove Images From Album",
         "operationId": "remove_images_from_album_albums__album_id__images_delete",
         "parameters": [
@@ -776,9 +746,7 @@
     },
     "/albums/{album_id}/images/{image_id}": {
       "delete": {
-        "tags": [
-          "Albums"
-        ],
+        "tags": ["Albums"],
         "summary": "Remove Image From Album",
         "operationId": "remove_image_from_album_albums__album_id__images__image_id__delete",
         "parameters": [
@@ -827,9 +795,7 @@
     },
     "/images/": {
       "get": {
-        "tags": [
-          "Images"
-        ],
+        "tags": ["Images"],
         "summary": "Get All Images",
         "description": "Get all images from the database.",
         "operationId": "get_all_images_images__get",
@@ -889,9 +855,7 @@
     },
     "/images/toggle-favourite": {
       "post": {
-        "tags": [
-          "Images"
-        ],
+        "tags": ["Images"],
         "summary": "Toggle Favourite",
         "operationId": "toggle_favourite_images_toggle_favourite_post",
         "requestBody": {
@@ -928,9 +892,7 @@
     },
     "/face-clusters/{cluster_id}": {
       "put": {
-        "tags": [
-          "Face Clusters"
-        ],
+        "tags": ["Face Clusters"],
         "summary": "Rename Cluster",
         "description": "Rename a face cluster by its ID.",
         "operationId": "rename_cluster_face_clusters__cluster_id__put",
@@ -1011,9 +973,7 @@
     },
     "/face-clusters/": {
       "get": {
-        "tags": [
-          "Face Clusters"
-        ],
+        "tags": ["Face Clusters"],
         "summary": "Get All Clusters",
         "description": "Get metadata for all face clusters including face counts.",
         "operationId": "get_all_clusters_face_clusters__get",
@@ -1043,9 +1003,7 @@
     },
     "/face-clusters/{cluster_id}/images": {
       "get": {
-        "tags": [
-          "Face Clusters"
-        ],
+        "tags": ["Face Clusters"],
         "summary": "Get Cluster Images",
         "description": "Get all images that contain faces belonging to a specific cluster.",
         "operationId": "get_cluster_images_face_clusters__cluster_id__images_get",
@@ -1106,9 +1064,7 @@
     },
     "/face-clusters/face-search": {
       "post": {
-        "tags": [
-          "Face Clusters"
-        ],
+        "tags": ["Face Clusters"],
         "summary": "Face Tagging",
         "operationId": "face_tagging_face_clusters_face_search_post",
         "parameters": [
@@ -1183,9 +1139,7 @@
     },
     "/face-clusters/global-recluster": {
       "post": {
-        "tags": [
-          "Face Clusters"
-        ],
+        "tags": ["Face Clusters"],
         "summary": "Trigger Global Reclustering",
         "description": "Manually trigger global face reclustering.\nThis forces full reclustering regardless of the 24-hour rule.",
         "operationId": "trigger_global_reclustering_face_clusters_global_recluster_post",
@@ -1215,9 +1169,7 @@
     },
     "/user-preferences/": {
       "get": {
-        "tags": [
-          "User Preferences"
-        ],
+        "tags": ["User Preferences"],
         "summary": "Get User Preferences",
         "description": "Get user preferences from metadata.",
         "operationId": "get_user_preferences_user_preferences__get",
@@ -1245,9 +1197,7 @@
         }
       },
       "put": {
-        "tags": [
-          "User Preferences"
-        ],
+        "tags": ["User Preferences"],
         "summary": "Update User Preferences",
         "description": "Update user preferences in metadata.",
         "operationId": "update_user_preferences_user_preferences__put",
@@ -1320,10 +1270,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "folder_id",
-          "folder_path"
-        ],
+        "required": ["folder_id", "folder_path"],
         "title": "AddFolderData"
       },
       "AddFolderRequest": {
@@ -1357,9 +1304,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "folder_path"
-        ],
+        "required": ["folder_path"],
         "title": "AddFolderRequest"
       },
       "AddFolderResponse": {
@@ -1402,9 +1347,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success"
-        ],
+        "required": ["success"],
         "title": "AddFolderResponse"
       },
       "Album": {
@@ -1427,12 +1370,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "album_id",
-          "album_name",
-          "description",
-          "is_hidden"
-        ],
+        "required": ["album_id", "album_name", "description", "is_hidden"],
         "title": "Album"
       },
       "ClusterMetadata": {
@@ -1514,9 +1452,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "title": "CreateAlbumRequest"
       },
       "CreateAlbumResponse": {
@@ -1531,10 +1467,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success",
-          "album_id"
-        ],
+        "required": ["success", "album_id"],
         "title": "CreateAlbumResponse"
       },
       "DeleteFoldersData": {
@@ -1552,10 +1485,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "deleted_count",
-          "folder_ids"
-        ],
+        "required": ["deleted_count", "folder_ids"],
         "title": "DeleteFoldersData"
       },
       "DeleteFoldersRequest": {
@@ -1569,9 +1499,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "folder_ids"
-        ],
+        "required": ["folder_ids"],
         "title": "DeleteFoldersRequest"
       },
       "DeleteFoldersResponse": {
@@ -1614,9 +1542,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success"
-        ],
+        "required": ["success"],
         "title": "DeleteFoldersResponse"
       },
       "FaceSearchRequest": {
@@ -1729,10 +1655,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success",
-          "image_ids"
-        ],
+        "required": ["success", "image_ids"],
         "title": "GetAlbumImagesResponse"
       },
       "GetAlbumResponse": {
@@ -1746,10 +1669,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success",
-          "data"
-        ],
+        "required": ["success", "data"],
         "title": "GetAlbumResponse"
       },
       "GetAlbumsResponse": {
@@ -1767,10 +1687,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success",
-          "albums"
-        ],
+        "required": ["success", "albums"],
         "title": "GetAlbumsResponse"
       },
       "GetAllFoldersData": {
@@ -1788,10 +1705,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "folders",
-          "total_count"
-        ],
+        "required": ["folders", "total_count"],
         "title": "GetAllFoldersData"
       },
       "GetAllFoldersResponse": {
@@ -1834,9 +1748,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success"
-        ],
+        "required": ["success"],
         "title": "GetAllFoldersResponse"
       },
       "GetAllImagesResponse": {
@@ -1858,11 +1770,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success",
-          "message",
-          "data"
-        ],
+        "required": ["success", "message", "data"],
         "title": "GetAllImagesResponse"
       },
       "GetClusterImagesData": {
@@ -1895,11 +1803,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "cluster_id",
-          "images",
-          "total_images"
-        ],
+        "required": ["cluster_id", "images", "total_images"],
         "title": "GetClusterImagesData",
         "description": "Data model for cluster images response."
       },
@@ -1943,9 +1847,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success"
-        ],
+        "required": ["success"],
         "title": "GetClusterImagesResponse",
         "description": "Response model for getting images in a cluster."
       },
@@ -1960,9 +1862,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "clusters"
-        ],
+        "required": ["clusters"],
         "title": "GetClustersData"
       },
       "GetClustersResponse": {
@@ -2005,9 +1905,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success"
-        ],
+        "required": ["success"],
         "title": "GetClustersResponse"
       },
       "GetUserPreferencesResponse": {
@@ -2025,11 +1923,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success",
-          "message",
-          "user_preferences"
-        ],
+        "required": ["success", "message", "user_preferences"],
         "title": "GetUserPreferencesResponse",
         "description": "Response model for getting user preferences"
       },
@@ -2090,9 +1984,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success"
-        ],
+        "required": ["success"],
         "title": "GlobalReclusterResponse"
       },
       "HTTPValidationError": {
@@ -2175,9 +2067,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "image_ids"
-        ],
+        "required": ["image_ids"],
         "title": "ImageIdsRequest"
       },
       "ImageInCluster": {
@@ -2250,20 +2140,13 @@
           }
         },
         "type": "object",
-        "required": [
-          "id",
-          "path",
-          "face_id"
-        ],
+        "required": ["id", "path", "face_id"],
         "title": "ImageInCluster",
         "description": "Represents an image that contains faces from a specific cluster."
       },
       "InputType": {
         "type": "string",
-        "enum": [
-          "path",
-          "base64"
-        ],
+        "enum": ["path", "base64"],
         "title": "InputType"
       },
       "MetadataModel": {
@@ -2361,10 +2244,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "cluster_id",
-          "cluster_name"
-        ],
+        "required": ["cluster_id", "cluster_name"],
         "title": "RenameClusterData"
       },
       "RenameClusterRequest": {
@@ -2375,9 +2255,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "cluster_name"
-        ],
+        "required": ["cluster_name"],
         "title": "RenameClusterRequest"
       },
       "RenameClusterResponse": {
@@ -2420,9 +2298,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success"
-        ],
+        "required": ["success"],
         "title": "RenameClusterResponse"
       },
       "SuccessResponse": {
@@ -2437,10 +2313,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success",
-          "msg"
-        ],
+        "required": ["success", "msg"],
         "title": "SuccessResponse"
       },
       "SyncFolderData": {
@@ -2499,10 +2372,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "folder_path",
-          "folder_id"
-        ],
+        "required": ["folder_path", "folder_id"],
         "title": "SyncFolderRequest"
       },
       "SyncFolderResponse": {
@@ -2545,9 +2415,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success"
-        ],
+        "required": ["success"],
         "title": "SyncFolderResponse"
       },
       "ToggleFavouriteRequest": {
@@ -2558,9 +2426,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "image_id"
-        ],
+        "required": ["image_id"],
         "title": "ToggleFavouriteRequest"
       },
       "UpdateAITaggingData": {
@@ -2578,10 +2444,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "updated_count",
-          "folder_ids"
-        ],
+        "required": ["updated_count", "folder_ids"],
         "title": "UpdateAITaggingData"
       },
       "UpdateAITaggingRequest": {
@@ -2595,9 +2458,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "folder_ids"
-        ],
+        "required": ["folder_ids"],
         "title": "UpdateAITaggingRequest"
       },
       "UpdateAITaggingResponse": {
@@ -2640,9 +2501,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success"
-        ],
+        "required": ["success"],
         "title": "UpdateAITaggingResponse"
       },
       "UpdateAlbumRequest": {
@@ -2691,10 +2550,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "name",
-          "is_hidden"
-        ],
+        "required": ["name", "is_hidden"],
         "title": "UpdateAlbumRequest"
       },
       "UpdateUserPreferencesRequest": {
@@ -2703,11 +2559,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "enum": [
-                  "nano",
-                  "small",
-                  "medium"
-                ]
+                "enum": ["nano", "small", "medium"]
               },
               {
                 "type": "null"
@@ -2746,11 +2598,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success",
-          "message",
-          "user_preferences"
-        ],
+        "required": ["success", "message", "user_preferences"],
         "title": "UpdateUserPreferencesResponse",
         "description": "Response model for updating user preferences"
       },
@@ -2758,11 +2606,7 @@
         "properties": {
           "YOLO_model_size": {
             "type": "string",
-            "enum": [
-              "nano",
-              "small",
-              "medium"
-            ],
+            "enum": ["nano", "small", "medium"],
             "title": "Yolo Model Size",
             "default": "small"
           },
@@ -2802,11 +2646,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
+        "required": ["loc", "msg", "type"],
         "title": "ValidationError"
       },
       "app__schemas__face_clusters__ErrorResponse": {
@@ -2892,10 +2732,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "message",
-          "error"
-        ],
+        "required": ["message", "error"],
         "title": "ErrorResponse"
       },
       "app__schemas__user_preferences__ErrorResponse": {
@@ -2914,11 +2751,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success",
-          "error",
-          "message"
-        ],
+        "required": ["success", "error", "message"],
         "title": "ErrorResponse",
         "description": "Error response model"
       }

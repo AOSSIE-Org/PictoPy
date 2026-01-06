@@ -31,7 +31,6 @@ git remote add upstream https://github.com/AOSSIE-Org/PictoPy
 Before setting up the Python backend and sync-microservice, you need to have **Miniconda** installed and set up on your system.
 
 1. **Download and Install Miniconda:**
-
    - Visit the [Miniconda installation guide](https://www.anaconda.com/docs/getting-started/miniconda/install#quickstart-install-instructions)
    - Follow the quickstart install instructions for your operating system
    - Make sure `conda` is available in your terminal after installation
