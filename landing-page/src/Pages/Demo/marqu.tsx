@@ -32,9 +32,9 @@ export default function TechMarquee() {
       <motion.div
         className="flex space-x-6 items-center"
         initial={{ x: '0%' }}
-        animate={{ x: '-100%' }}
+        animate={{ x: '100%' }}
         transition={{
-          duration: 10,
+          duration: 15,
           ease: "linear",
           repeat: Infinity,
           repeatType: "loop"
