@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import BrowserWarning from './components/BrowserWarning';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { isProd } from './utils/isProd';
 import { startServer } from './utils/serverUtils';
 import { isTauriEnvironment } from './utils/tauriUtils';
@@ -32,9 +33,11 @@ const Main = () => {
   }
 
   return (
-    <Provider store={store}>
-      <App />
-    </Provider>
+    <ErrorBoundary>
+      <Provider store={store}>
+        <App />
+      </Provider>
+    </ErrorBoundary>
   );
 };
 

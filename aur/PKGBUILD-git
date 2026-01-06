@@ -1,0 +1,164 @@
+# Maintainer: AOSSIE <aossie.oss@gmail.com>
+# Contributor: PictoPy Team
+
+pkgname=pictopy-git
+pkgver=1.1.0
+pkgrel=1
+pkgdesc="A privacy-focused photo management application with AI-powered tagging and face recognition (git version)"
+arch=('x86_64' 'aarch64')
+url="https://github.com/AOSSIE-Org/PictoPy"
+license=('MIT')
+depends=(
+    'webkit2gtk-4.1'
+    'gtk3'
+    'glib2'
+    'cairo'
+    'pango'
+    'gdk-pixbuf2'
+    'libsoup3'
+    'openssl'
+    'hicolor-icon-theme'
+)
+makedepends=(
+    'git'
+    'rust'
+    'cargo'
+    'nodejs'
+    'npm'
+    'python'
+    'python-pip'
+    'python-virtualenv'
+    'webkit2gtk-4.1'
+    'base-devel'
+    'curl'
+    'wget'
+    'file'
+    'openssl'
+    'appmenu-gtk-module'
+    'librsvg'
+)
+optdepends=(
+    'python-onnxruntime: For AI model inference'
+    'python-opencv: For image processing'
+    'python-numpy: For numerical operations'
+)
+provides=('pictopy')
+conflicts=('pictopy')
+options=('!strip' '!emptydirs')
+install=pictopy.install
+source=("${pkgname}::git+${url}.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "${srcdir}/${pkgname}"
+    git describe --tags --long 2>/dev/null | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g' || echo "1.1.0"
+}
+
+build() {
+    cd "${srcdir}/${pkgname}"
+
+    # Build backend server
+    echo "Building backend server..."
+    cd backend
+    python -m venv venv
+    source venv/bin/activate
+    pip install --upgrade pip
+    pip install -r requirements.txt
+    pip install pyinstaller
+    pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
+    mkdir -p dist/PictoPy_Server/images
+    cp -r app dist/PictoPy_Server/
+    deactivate
+    cd ..
+
+    # Build sync microservice
+    echo "Building sync microservice..."
+    cd sync-microservice
+    python -m venv venv
+    source venv/bin/activate
+    pip install --upgrade pip
+    pip install -r requirements.txt
+    pip install pyinstaller
+    pyinstaller main.py --name PictoPy_Sync --onedir --distpath dist
+    cp -r app dist/PictoPy_Sync/
+    deactivate
+    cd ..
+
+    # Build frontend with Tauri
+    echo "Building frontend..."
+    cd frontend
+    npm install
+    npm run build
+    cd src-tauri
+    cargo build --release
+    cd ../..
+}
+
+package() {
+    cd "${srcdir}/${pkgname}"
+
+    # Install the main application binary
+    install -Dm755 "frontend/src-tauri/target/release/picto-py" \
+        "${pkgdir}/usr/bin/pictopy"
+
+    # Install backend resources
+    install -dm755 "${pkgdir}/usr/lib/pictopy/resources/backend"
+    cp -r backend/dist/PictoPy_Server/* "${pkgdir}/usr/lib/pictopy/resources/backend/"
+
+    # Install sync microservice resources
+    install -dm755 "${pkgdir}/usr/lib/pictopy/resources/sync-microservice"
+    cp -r sync-microservice/dist/PictoPy_Sync/* "${pkgdir}/usr/lib/pictopy/resources/sync-microservice/"
+
+    # Set permissions for resources
+    chmod -R 755 "${pkgdir}/usr/lib/pictopy/resources"
+
+    # Install desktop entry
+    install -Dm644 /dev/stdin "${pkgdir}/usr/share/applications/pictopy.desktop" << EOF
+[Desktop Entry]
+Name=PictoPy
+Comment=Privacy-focused photo management with AI-powered tagging
+Exec=pictopy
+Icon=pictopy
+Terminal=false
+Type=Application
+Categories=Graphics;Photography;Viewer;
+Keywords=photo;image;gallery;ai;tagging;face;recognition;
+StartupWMClass=PictoPy
+EOF
+
+    # Install icons
+    install -Dm644 "frontend/src-tauri/icons/32x32.png" \
+        "${pkgdir}/usr/share/icons/hicolor/32x32/apps/pictopy.png"
+    install -Dm644 "frontend/src-tauri/icons/128x128.png" \
+        "${pkgdir}/usr/share/icons/hicolor/128x128/apps/pictopy.png"
+    install -Dm644 "frontend/src-tauri/icons/128x128@2x.png" \
+        "${pkgdir}/usr/share/icons/hicolor/256x256/apps/pictopy.png"
+    install -Dm644 "frontend/src-tauri/icons/icon.png" \
+        "${pkgdir}/usr/share/icons/hicolor/512x512/apps/pictopy.png"
+
+    # Install license
+    install -Dm644 "LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE" 2>/dev/null || \
+    install -Dm644 /dev/stdin "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE" << 'EOF'
+MIT License
+
+Copyright (c) AOSSIE
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+EOF
+}

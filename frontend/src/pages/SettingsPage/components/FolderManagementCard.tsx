@@ -1,9 +1,17 @@
-import React from 'react';
-import { Folder, Trash2, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { Folder, Trash2, Check, AlertTriangle } from 'lucide-react';
 
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/store';
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
@@ -28,6 +36,33 @@ const FolderManagementCard: React.FC = () => {
   const taggingStatus = useSelector(
     (state: RootState) => state.folders.taggingStatus,
   );
+
+  // State for delete confirmation dialog
+  const [folderToDelete, setFolderToDelete] = useState<FolderDetails | null>(
+    null,
+  );
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  // Handle delete button click - show confirmation dialog
+  const handleDeleteClick = (folder: FolderDetails) => {
+    setFolderToDelete(folder);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Handle confirmed deletion
+  const handleConfirmDelete = () => {
+    if (folderToDelete) {
+      deleteFolder(folderToDelete.folder_id);
+      setIsDeleteDialogOpen(false);
+      setFolderToDelete(null);
+    }
+  };
+
+  // Handle cancel deletion
+  const handleCancelDelete = () => {
+    setIsDeleteDialogOpen(false);
+    setFolderToDelete(null);
+  };
 
   return (
     <SettingsCard
@@ -68,7 +103,7 @@ const FolderManagementCard: React.FC = () => {
                   </div>
 
                   <Button
-                    onClick={() => deleteFolder(folder.folder_id)}
+                    onClick={() => handleDeleteClick(folder)}
                     variant="outline"
                     size="sm"
                     className="h-8 w-8 cursor-pointer text-gray-500 hover:border-red-300 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
@@ -131,6 +166,47 @@ const FolderManagementCard: React.FC = () => {
       <div className="border-border mt-6 border-t pt-6">
         <FolderPicker />
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              </div>
+              <DialogTitle>Delete Folder</DialogTitle>
+            </div>
+            <DialogDescription className="pt-2">
+              Are you sure you want to delete this folder from your library?
+              <span className="mt-2 block font-medium text-foreground">
+                {folderToDelete?.folder_path}
+              </span>
+              <span className="mt-2 block text-red-600 dark:text-red-400">
+                This action is irreversible. All associated data including AI
+                tags and metadata will be permanently removed.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={handleCancelDelete}
+              disabled={deleteFolderPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deleteFolderPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteFolderPending ? 'Deleting...' : 'Delete Folder'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SettingsCard>
   );
 };

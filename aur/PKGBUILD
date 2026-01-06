@@ -1,0 +1,85 @@
+# Maintainer: AOSSIE <aossie.oss@gmail.com>
+# Contributor: PictoPy Team
+
+pkgname=pictopy
+pkgver=1.1.0
+pkgrel=1
+pkgdesc="A privacy-focused photo management application with AI-powered tagging and face recognition"
+arch=('x86_64' 'aarch64')
+url="https://github.com/AOSSIE-Org/PictoPy"
+license=('MIT')
+depends=(
+    'webkit2gtk-4.1'
+    'gtk3'
+    'glib2'
+    'cairo'
+    'pango'
+    'gdk-pixbuf2'
+    'libsoup3'
+    'openssl'
+    'hicolor-icon-theme'
+)
+makedepends=(
+    'rust'
+    'cargo'
+    'nodejs'
+    'npm'
+    'python'
+    'python-pip'
+    'pyinstaller'
+    'webkit2gtk-4.1'
+    'base-devel'
+    'curl'
+    'wget'
+    'file'
+    'openssl'
+    'appmenu-gtk-module'
+    'librsvg'
+)
+optdepends=(
+    'python-onnxruntime: For AI model inference'
+    'python-opencv: For image processing'
+    'python-numpy: For numerical operations'
+)
+options=('!strip' '!emptydirs')
+install=${pkgname}.install
+source_x86_64=("${pkgname}-${pkgver}-x86_64.tar.gz::${url}/releases/download/v${pkgver}/pictopy_${pkgver}_amd64.tar.gz")
+source_aarch64=("${pkgname}-${pkgver}-aarch64.tar.gz::${url}/releases/download/v${pkgver}/pictopy_${pkgver}_arm64.tar.gz")
+sha256sums_x86_64=('SKIP')
+sha256sums_aarch64=('SKIP')
+
+package() {
+    cd "${srcdir}"
+
+    # Install the main application binary
+    install -Dm755 "usr/bin/picto-py" "${pkgdir}/usr/bin/pictopy"
+
+    # Install libraries and resources
+    if [ -d "usr/lib" ]; then
+        cp -r usr/lib "${pkgdir}/usr/"
+    fi
+
+    # Install desktop entry
+    install -Dm644 "usr/share/applications/picto-py.desktop" \
+        "${pkgdir}/usr/share/applications/pictopy.desktop"
+
+    # Update desktop entry to use correct binary name
+    sed -i 's/Exec=picto-py/Exec=pictopy/g' "${pkgdir}/usr/share/applications/pictopy.desktop"
+
+    # Install icons
+    for size in 32x32 128x128 256x256; do
+        if [ -f "usr/share/icons/hicolor/${size}/apps/picto-py.png" ]; then
+            install -Dm644 "usr/share/icons/hicolor/${size}/apps/picto-py.png" \
+                "${pkgdir}/usr/share/icons/hicolor/${size}/apps/pictopy.png"
+        fi
+    done
+
+    # Install scalable icon if available
+    if [ -f "usr/share/icons/hicolor/scalable/apps/picto-py.svg" ]; then
+        install -Dm644 "usr/share/icons/hicolor/scalable/apps/picto-py.svg" \
+            "${pkgdir}/usr/share/icons/hicolor/scalable/apps/pictopy.svg"
+    fi
+
+    # Install license
+    install -Dm644 "${srcdir}/../LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE" 2>/dev/null || true
+}
