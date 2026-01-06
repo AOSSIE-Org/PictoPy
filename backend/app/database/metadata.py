@@ -2,14 +2,13 @@
 import sqlite3
 import json
 from typing import Optional, Dict, Any
-from app.config.settings import DATABASE_PATH
+from app.database.connection import get_db_connection
 
 
 def db_create_metadata_table() -> None:
     """Create the metadata table if it doesn't exist."""
-    conn = None
-    try:
-        conn = sqlite3.connect(DATABASE_PATH)
+
+    with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -24,11 +23,6 @@ def db_create_metadata_table() -> None:
         if cursor.fetchone()[0] == 0:
             cursor.execute("INSERT INTO metadata (metadata) VALUES (?)", ("{}",))
 
-        conn.commit()
-    finally:
-        if conn is not None:
-            conn.close()
-
 
 def db_get_metadata() -> Optional[Dict[str, Any]]:
     """
@@ -37,10 +31,9 @@ def db_get_metadata() -> Optional[Dict[str, Any]]:
     Returns:
         Dictionary containing metadata, or None if not found
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
 
-    try:
         cursor.execute("SELECT metadata FROM metadata LIMIT 1")
 
         row = cursor.fetchone()
@@ -51,45 +44,32 @@ def db_get_metadata() -> Optional[Dict[str, Any]]:
             except json.JSONDecodeError:
                 return None
         return None
-    finally:
-        conn.close()
 
 
 def db_update_metadata(
-    metadata: Dict[str, Any], cursor: Optional[sqlite3.Cursor] = None
+    metadata: Dict[str, Any], conn: Optional[sqlite3.Connection] = None
 ) -> bool:
     """
     Update the metadata in the database.
 
     Args:
         metadata: Dictionary containing metadata to store
-        cursor: Optional existing database cursor. If None, creates a new connection.
+        conn: Optional existing database connection. If None, creates a new connection.
 
     Returns:
         True if the metadata was updated, False otherwise
     """
-    own_connection = cursor is None
-    if own_connection:
-        conn = sqlite3.connect(DATABASE_PATH)
-        cursor = conn.cursor()
 
-    try:
+    def _update(cursor: sqlite3.Cursor) -> bool:
         metadata_json = json.dumps(metadata)
-
-        # Delete all existing rows and insert new one
         cursor.execute("DELETE FROM metadata")
         cursor.execute("INSERT INTO metadata (metadata) VALUES (?)", (metadata_json,))
+        return cursor.rowcount > 0
 
-        success = cursor.rowcount > 0
-        if own_connection:
-            conn.commit()
-        return success
-    except Exception as e:
-        if own_connection:
-            conn.rollback()
-
-        print(f"Error updating metadata: {e}")
-        raise
-    finally:
-        if own_connection:
-            conn.close()
+    if conn:
+        cursor = conn.cursor()
+        return _update(cursor)
+    else:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            return _update(cursor)
