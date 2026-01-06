@@ -31,6 +31,7 @@ git remote add upstream https://github.com/AOSSIE-Org/PictoPy
 Before setting up the Python backend and sync-microservice, you need to have **Miniconda** installed and set up on your system.
 
 1. **Download and Install Miniconda:**
+
    - Visit the [Miniconda installation guide](https://www.anaconda.com/docs/getting-started/miniconda/install#quickstart-install-instructions)
    - Follow the quickstart install instructions for your operating system
    - Make sure `conda` is available in your terminal after installation
@@ -75,7 +76,7 @@ Before setting up the Python backend and sync-microservice, you need to have **M
     Bash/Powershell
 
     ```
-    conda create -n .env python=3.12
+    conda create -p .env python=3.12
     ```
 
 3.  **Activate the Conda Environment:**
@@ -86,23 +87,7 @@ Before setting up the Python backend and sync-microservice, you need to have **M
     conda activate ./.env
     ```
 
-4.  **Update PATH (Important):** Ensure the conda environment's binaries are prioritized:
-
-    Bash (Linux/MacOS)
-
-    ```
-    export PATH="$CONDA_PREFIX/bin:$PATH"
-    ```
-
-    Powershell (Windows)
-
-    ```
-    $env:PATH = "$env:CONDA_PREFIX\Scripts;$env:PATH"
-    ```
-
-    After activating, you should be able to see the conda environment's name before the current path.
-
-5.  **Install Dependencies:** The `requirements.txt` file lists required packages. Install them using pip:
+4.  **Install Dependencies:** The `requirements.txt` file lists required packages. Install them using pip:
 
     Bash/Powershell
 
@@ -110,7 +95,7 @@ Before setting up the Python backend and sync-microservice, you need to have **M
     pip install -r requirements.txt
     ```
 
-6.  **Running the backend:**: To start the backend in development mode, run this command while being in the backend folder and the conda environment activated:
+5.  **Running the backend:**: To start the backend in development mode, run this command while being in the backend folder and the conda environment activated:
 
     Bash/Powershell
 
@@ -139,7 +124,7 @@ Before setting up the Python backend and sync-microservice, you need to have **M
     Bash/Powershell
 
     ```
-    conda create -n .sync-env python=3.12
+    conda create -p .sync-env python=3.12
     ```
 
 3.  **Activate the Conda Environment:**
@@ -150,23 +135,7 @@ Before setting up the Python backend and sync-microservice, you need to have **M
     conda activate ./.sync-env
     ```
 
-4.  **Update PATH (Important):** Ensure the conda environment's binaries are prioritized:
-
-    Bash (Linux/MacOS)
-
-    ```
-    export PATH="$CONDA_PREFIX/bin:$PATH"
-    ```
-
-    Powershell (Windows)
-
-    ```
-    $env:PATH = "$env:CONDA_PREFIX\Scripts;$env:PATH"
-    ```
-
-    After activating, you should be able to see the conda environment's name before the current path.
-
-5.  **Install Dependencies:** The `requirements.txt` file lists required packages. Install them using pip:
+4.  **Install Dependencies:** The `requirements.txt` file lists required packages. Install them using pip:
 
     Bash/Powershell
 
@@ -174,7 +143,7 @@ Before setting up the Python backend and sync-microservice, you need to have **M
     pip install -r requirements.txt
     ```
 
-6.  **Running the sync-microservice:** To start the sync-microservice in development mode, run this command while being in the sync-microservice folder and the conda environment activated:
+5.  **Running the sync-microservice:** To start the sync-microservice in development mode, run this command while being in the sync-microservice folder and the conda environment activated:
 
     Bash/Powershell
 
