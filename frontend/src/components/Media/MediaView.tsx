@@ -21,6 +21,7 @@ import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import { useToggleFav } from '../../hooks/useToggleFav';
 import { useLocation } from 'react-router';
 import { ROUTES } from '@/constants/routes';
+import { isTauriEnvironment } from '@/utils/tauriUtils';
 
 export function MediaView({
   onClose,
@@ -91,7 +92,17 @@ export function MediaView({
   const handleOpenFolder = async () => {
     if (!currentImage?.path) return;
     try {
-      // await revealItemInDir(currentImage.path);
+      if (!isTauriEnvironment()) {
+        console.warn('Open folder is only available in Tauri environment');
+        return;
+      }
+
+      const opener = await import('@tauri-apps/plugin-opener');
+      if (typeof opener.revealItemInDir === 'function') {
+        await opener.revealItemInDir(currentImage.path);
+      } else {
+        console.warn('revealItemInDir function not found');
+      }
     } catch (err) {
       console.log(err);
       console.error('Failed to open folder.');
