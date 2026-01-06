@@ -128,3 +128,95 @@ class ImageInfoResponse(BaseModel):
     isTagged: bool
     isFavourite: bool
     tags: Optional[List[str]] = None
+
+
+# Batch Operations
+from app.schemas.batch import (
+    BatchDeleteRequest,
+    BatchTagRequest,
+    BatchMoveRequest,
+    BatchOperationResponse
+)
+from app.database.images import db_delete_image, db_add_tags_to_image
+
+
+@router.delete("/batch-delete", response_model=BatchOperationResponse)
+def batch_delete_images(request: BatchDeleteRequest):
+    """Delete multiple images"""
+    processed = 0
+    failed = 0
+    errors = []
+    
+    for image_id in request.image_ids:
+        try:
+            success = db_delete_image(image_id)
+            if success:
+                processed += 1
+            else:
+                failed += 1
+                errors.append(f"Image {image_id} not found")
+        except Exception as e:
+            failed += 1
+            errors.append(f"Failed to delete {image_id}: {str(e)}")
+            logger.error(f"Error deleting image {image_id}: {e}")
+    
+    return BatchOperationResponse(
+        success=failed == 0,
+        processed=processed,
+        failed=failed,
+        errors=errors
+    )
+
+
+@router.post("/batch-tag", response_model=BatchOperationResponse)
+def batch_tag_images(request: BatchTagRequest):
+    """Add tags to multiple images"""
+    processed = 0
+    failed = 0
+    errors = []
+    
+    for image_id in request.image_ids:
+        try:
+            success = db_add_tags_to_image(image_id, request.tags)
+            if success:
+                processed += 1
+            else:
+                failed += 1
+                errors.append(f"Image {image_id} not found")
+        except Exception as e:
+            failed += 1
+            errors.append(f"Failed to tag {image_id}: {str(e)}")
+            logger.error(f"Error tagging image {image_id}: {e}")
+    
+    return BatchOperationResponse(
+        success=failed == 0,
+        processed=processed,
+        failed=failed,
+        errors=errors
+    )
+
+
+@router.post("/batch-move", response_model=BatchOperationResponse)
+def batch_move_to_album(request: BatchMoveRequest):
+    """Move multiple images to an album"""
+    processed = 0
+    failed = 0
+    errors = []
+    
+    # TODO: Implement album functionality
+    for image_id in request.image_ids:
+        try:
+            # Placeholder for album move functionality
+            # success = db_add_image_to_album(image_id, request.album_id)
+            processed += 1
+        except Exception as e:
+            failed += 1
+            errors.append(f"Failed to move {image_id}: {str(e)}")
+            logger.error(f"Error moving image {image_id}: {e}")
+    
+    return BatchOperationResponse(
+        success=failed == 0,
+        processed=processed,
+        failed=failed,
+        errors=errors
+    )

@@ -13,6 +13,8 @@ import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { BatchToolbar } from '@/components/Batch/BatchToolbar';
+import { useBatchKeyboard } from '@/hooks/useBatchKeyboard';
 
 export const Home = () => {
   const dispatch = useDispatch();
@@ -50,6 +52,10 @@ export const Home = () => {
       ? `Face Search Results (${images.length} found)`
       : 'Image Gallery';
 
+  // Enable batch keyboard shortcuts
+  const allImageIds = images.map((img) => img.id);
+  useBatchKeyboard(allImageIds);
+
   return (
     <div className="relative flex h-full flex-col pr-6">
       {/* Gallery Section */}
@@ -78,6 +84,9 @@ export const Home = () => {
           className="absolute top-0 right-0 h-full w-4"
         />
       )}
+      
+      {/* Batch Operations Toolbar */}
+      <BatchToolbar />
     </div>
   );
 };
