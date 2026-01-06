@@ -1,11 +1,11 @@
 import React from 'react';
-import { Info, Folder, Heart, Play, Pause, X } from 'lucide-react';
+import { Info, Heart, Play, Pause, X } from 'lucide-react';
 
 interface MediaViewControlsProps {
   showInfo: boolean;
   onToggleInfo: () => void;
   onToggleFavourite: () => void;
-  onOpenFolder: () => Promise<void>;
+  // onOpenFolder: () => Promise<void>; // [Disabled] Uncomment when Open Folder is re-enabled
   isFavourite: boolean;
   isSlideshowActive: boolean;
   onToggleSlideshow: () => void;
@@ -17,7 +17,6 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
   showInfo,
   onToggleInfo,
   onToggleFavourite,
-  onOpenFolder,
   isFavourite,
   isSlideshowActive,
   onToggleSlideshow,
@@ -37,7 +36,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
         <Info className="h-5 w-5" />
       </button>
 
-      {/* TODO: Hidden until revealItemInDir from @tauri-apps/plugin-opener is implemented
+      {/* Hidden until revealItemInDir from @tauri-apps/plugin-opener is implemented
       <button
         onClick={onOpenFolder}
         className="cursor-pointer rounded-full bg-black/50 p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg"
