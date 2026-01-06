@@ -16,7 +16,7 @@ class FaceDetector:
     def __init__(self):
         self.yolo_detector = YOLO(
             YOLO_util_get_model_path("face"),
-            conf_threshold=0.35,
+            conf_threshold=0.45,
             iou_threshold=0.45,
         )
         self.facenet = FaceNet(FaceNet_util_get_model_path())
