@@ -30,3 +30,8 @@ export const userPreferencesEndpoints = {
 export const healthEndpoints = {
   healthCheck: '/health',
 };
+
+export const duplicatesEndpoints = {
+  getDuplicates: '/duplicates/',
+  deleteDuplicates: '/duplicates/delete',
+};
