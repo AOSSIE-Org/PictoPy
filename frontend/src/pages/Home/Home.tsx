@@ -13,10 +13,12 @@ import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { filterImages } from '@/utils/filterImages';
 
 export const Home = () => {
   const dispatch = useDispatch();
   const images = useSelector(selectImages);
+  const filters = useSelector((state: RootState) => state.filters);
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
   const searchState = useSelector((state: RootState) => state.search);
@@ -45,10 +47,20 @@ export const Home = () => {
     }
   }, [data, isSuccess, dispatch, isSearchActive]);
 
-  const title =
-    isSearchActive && images.length > 0
-      ? `Face Search Results (${images.length} found)`
-      : 'Image Gallery';
+  // Apply filters to images (works with both regular images and search results)
+  const filteredImages = filters.active ? filterImages(images, filters) : images;
+
+  // Improved title logic that handles both search and filters
+  const getTitle = () => {
+    if (isSearchActive && filters.active) {
+      return `Filtered Search Results (${filteredImages.length} found)`;
+    } else if (isSearchActive) {
+      return `Face Search Results (${images.length} found)`;
+    } else if (filters.active) {
+      return `Filtered Results (${filteredImages.length} found)`;
+    }
+    return 'Image Gallery';
+  };
 
   return (
     <div className="relative flex h-full flex-col pr-6">
@@ -57,11 +69,11 @@ export const Home = () => {
         ref={scrollableRef}
         className="hide-scrollbar flex-1 overflow-x-hidden overflow-y-auto"
       >
-        {images.length > 0 ? (
+        {filteredImages.length > 0 ? (
           <ChronologicalGallery
-            images={images}
+            images={filteredImages}
             showTitle={true}
-            title={title}
+            title={getTitle()}
             onMonthOffsetsChange={setMonthMarkers}
             scrollContainerRef={scrollableRef}
           />
