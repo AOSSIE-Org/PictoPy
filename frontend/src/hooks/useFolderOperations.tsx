@@ -159,6 +159,30 @@ export const useFolderOperations = () => {
     deleteFolderMutation.mutate(folderId);
   };
 
+  // Bulk mutations for AI tagging
+  const enableBulkAITaggingMutation = usePictoMutation({
+    mutationFn: async (folder_ids: string[]) => enableAITagging({ folder_ids }),
+    autoInvalidateTags: ['folders'],
+  });
+
+  const disableBulkAITaggingMutation = usePictoMutation({
+    mutationFn: async (folder_ids: string[]) =>
+      disableAITagging({ folder_ids }),
+    autoInvalidateTags: ['folders'],
+  });
+
+  const tagAllFolders = () => {
+    const ids = folders.filter((f) => !f.AI_Tagging).map((f) => f.folder_id);
+    if (ids.length > 0) enableBulkAITaggingMutation.mutate(ids);
+  };
+
+  const tagSelectedFolders = (selectedIds: string[]) => {
+    const pending = selectedIds.filter(
+      (id) => !folders.find((f) => f.folder_id === id)?.AI_Tagging,
+    );
+    if (pending.length > 0) enableBulkAITaggingMutation.mutate(pending);
+  };
+
   return {
     // Data
     folders,
@@ -167,11 +191,15 @@ export const useFolderOperations = () => {
     // Operations
     toggleAITagging,
     deleteFolder,
+    tagAllFolders,
+    tagSelectedFolders,
 
     // Mutation states (for use in UI, e.g., disabling buttons)
     enableAITaggingPending: enableAITaggingMutation.isPending,
     disableAITaggingPending: disableAITaggingMutation.isPending,
     deleteFolderPending: deleteFolderMutation.isPending,
+    bulkEnablePending: enableBulkAITaggingMutation.isPending,
+    bulkDisablePending: disableBulkAITaggingMutation.isPending,
   };
 };
 
