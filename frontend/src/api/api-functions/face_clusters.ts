@@ -1,6 +1,8 @@
 import { faceClustersEndpoints } from '../apiEndpoints';
 import { apiClient } from '../axiosConfig';
 import { APIResponse } from '@/types/API';
+import { BackendRes } from '@/hooks/useQueryExtension';
+import type { Image } from '@/types/Media';
 
 //Request Types
 export interface RenameClusterRequest {
@@ -57,8 +59,8 @@ export const fetchSearchedFaces = async (
 
 export const fetchSearchedFacesBase64 = async (
   request: FetchSearchedFacesBase64Request,
-): Promise<APIResponse> => {
-  const response = await apiClient.post<APIResponse>(
+): Promise<BackendRes<Image[]>> => {
+  const response = await apiClient.post<BackendRes<Image[]>>(
     faceClustersEndpoints.searchForFacesBase64,
     request,
   );
