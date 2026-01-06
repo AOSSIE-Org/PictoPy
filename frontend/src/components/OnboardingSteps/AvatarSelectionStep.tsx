@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   setAvatar,
   setName,
@@ -18,23 +18,35 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { avatars } from '@/constants/avatars';
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
+import { RootState } from '@/app/store';
 
 interface AvatarNameSelectionStepProps {
   stepIndex: number;
   totalSteps: number;
+  currentStepDisplayIndex: number;
 }
 
 export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
   stepIndex,
   totalSteps,
+  currentStepDisplayIndex,
 }) => {
   const dispatch = useDispatch();
 
-  const [name, setLocalName] = useState('');
-  const [selectedAvatar, setLocalAvatar] = useState('');
+  const [name, setLocalName] = useState(localStorage.getItem('name') || '');
+  const [selectedAvatar, setLocalAvatar] = useState(
+    localStorage.getItem('avatar') || '',
+  );
+  const isEditing = useSelector(
+    (state: RootState) => state.onboarding.isEditing,
+  );
 
   useEffect(() => {
-    if (localStorage.getItem('name') && localStorage.getItem('avatar')) {
+    if (
+      localStorage.getItem('name') &&
+      localStorage.getItem('avatar') &&
+      !isEditing
+    ) {
       dispatch(markCompleted(stepIndex));
     }
   }, []);
@@ -55,7 +67,11 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
     dispatch(markCompleted(stepIndex));
   };
 
-  if (localStorage.getItem('name') && localStorage.getItem('avatar')) {
+  if (
+    localStorage.getItem('name') &&
+    localStorage.getItem('avatar') &&
+    !isEditing
+  ) {
     return null;
   }
 
@@ -65,14 +81,18 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
         <CardHeader className="p-3">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
-              Step {stepIndex + 1} of {totalSteps}
+              Step {currentStepDisplayIndex + 1} of {totalSteps}
             </span>
-            <span>{Math.round(((stepIndex + 1) / totalSteps) * 100)}%</span>
+            <span>
+              {Math.round(((currentStepDisplayIndex + 1) / totalSteps) * 100)}%
+            </span>
           </div>
           <div className="bg-muted mb-2 h-1.5 w-full rounded-full">
             <div
               className="bg-primary h-full rounded-full transition-all duration-300"
-              style={{ width: `${((stepIndex + 1) / totalSteps) * 100}%` }}
+              style={{
+                width: `${((currentStepDisplayIndex + 1) / totalSteps) * 100}%`,
+              }}
             />
           </div>
           <CardTitle className="mt-1 text-xl font-semibold">

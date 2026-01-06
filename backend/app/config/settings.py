@@ -2,7 +2,7 @@
 MODEL_EXPORTS_PATH = "app/models/ONNX_Exports"
 
 # Microservice URLs
-SYNC_MICROSERVICE_URL = "http://localhost:8001/api/v1"
+SYNC_MICROSERVICE_URL = "http://localhost:52124"
 
 CONFIDENCE_PERCENT = 0.6
 # Object Detection Models:

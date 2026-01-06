@@ -23,9 +23,12 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
   stepIndex,
   stepName,
 }) => {
+  const visibleStepIndex = VISIBLE_STEPS.indexOf(stepName);
+
   const sharedProps = {
     stepIndex,
     totalSteps: VISIBLE_STEPS.length,
+    currentStepDisplayIndex: visibleStepIndex,
   };
 
   const renderStepComponent = () => {
