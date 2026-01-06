@@ -151,7 +151,7 @@ if __name__ == "__main__":
 
     config = Config(
         app=app,
-        host="0.0.0.0",
+        host=host,
         port=52123,
         log_level="info",
         log_config=None,  # This is crucial - disable Uvicorn's default logging config

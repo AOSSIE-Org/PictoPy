@@ -1,5 +1,7 @@
 import asyncio
 import os
+import platform
+import signal
 from fastapi import APIRouter
 from pydantic import BaseModel
 from app.logging.setup_logging import get_logger
@@ -25,7 +27,13 @@ async def _delayed_shutdown(delay: float = 0.5):
     """
     await asyncio.sleep(delay)
     logger.info("Backend shutdown initiated, exiting process...")
-    os._exit(0)
+
+    if platform.system() == "Windows":
+        # Windows: SIGTERM doesn't work reliably with uvicorn subprocesses
+        os._exit(0)
+    else:
+        # Unix (Linux/macOS): SIGTERM allows cleanup handlers to run
+        os.kill(os.getpid(), signal.SIGTERM)
 
 
 @router.post("/shutdown", response_model=ShutdownResponse)

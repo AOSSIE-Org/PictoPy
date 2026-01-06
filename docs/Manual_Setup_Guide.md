@@ -24,6 +24,24 @@ cd PictoPy
 git remote add upstream https://github.com/AOSSIE-Org/PictoPy
 ```
 
+### Prerequisites:
+
+#### Install and Setup Miniconda
+
+Before setting up the Python backend and sync-microservice, you need to have **Miniconda** installed and set up on your system.
+
+1. **Download and Install Miniconda:**
+
+   - Visit the [Miniconda installation guide](https://www.anaconda.com/docs/getting-started/miniconda/install#quickstart-install-instructions)
+   - Follow the quickstart install instructions for your operating system
+   - Make sure `conda` is available in your terminal after installation
+
+2. **Verify Installation:**
+   ```bash
+   conda --version
+   ```
+   You should see the conda version number if installed correctly.
+
 ### Tauri Frontend Setup:
 
 1. **Install Tauri prerequisites based on your OS using this** [guide](https://tauri.app/start/prerequisites/).
@@ -43,7 +61,7 @@ git remote add upstream https://github.com/AOSSIE-Org/PictoPy
 
 ### Python (FastAPI) Backend Setup Steps:
 
-> **Note:** For backend setup make sure that you have **Python version 3.12**. Additionally, for Windows, make sure that you are using Powershell for the setup, not command prompt.
+> **Note:** For backend setup make sure that you have **Miniconda installed** (see Prerequisites section above). Additionally, for Windows, make sure that you are using Powershell for the setup, not command prompt.
 
 1.  **Navigate to the Backend Directory:** Open your terminal and use `cd` to change directories:
 
@@ -53,47 +71,31 @@ git remote add upstream https://github.com/AOSSIE-Org/PictoPy
     cd backend
     ```
 
-2.  **Set Up a Virtual Environment (Highly Recommended):** Virtual environments isolate project dependencies. Create one using:
+2.  **Create a Conda Environment:** Create a new conda environment with Python 3.12:
 
-    Bash(Linux/MacOS)
-
-    ```
-    python3 -m venv .env
-    ```
-
-    Powershell(Windows)
+    Bash/Powershell
 
     ```
-    python -m venv .env
+    conda create -p .env python=3.12
     ```
 
-3.  **Activate the Virtual Environment:**
+3.  **Activate the Conda Environment:**
 
-    Bash(Linux/MacOS)
-
-    ```
-    source .env/bin/activate
-    ```
-
-    Powershell(Windows)
+    Bash/Powershell
 
     ```
-    .env\Scripts\Activate.ps1
+    conda activate ./.env
     ```
-
-    After activating, you should be able to see the virtual environment's name before the current path. Something like this:
-
-    ![alt text](/docs/assets/screenshots/virtualEnv.png)
 
 4.  **Install Dependencies:** The `requirements.txt` file lists required packages. Install them using pip:
 
-    Bash
+    Bash/Powershell
 
     ```
     pip install -r requirements.txt
     ```
 
-5.  **Running the backend:**: To start the backend in development mode, run this command while being in the backend folder and the virtual environment activated:
+5.  **Running the backend:**: To start the backend in development mode, run this command while being in the backend folder and the conda environment activated:
 
     Bash/Powershell
 
@@ -107,7 +109,7 @@ git remote add upstream https://github.com/AOSSIE-Org/PictoPy
 
 ### Sync-Microservice Setup Steps:
 
-> **Note:** For sync-microservice setup make sure that you have **Python version 3.12**. Additionally, for Windows, make sure that you are using Powershell for the setup, not command prompt.
+> **Note:** For sync-microservice setup make sure that you have **Miniconda installed** (see Prerequisites section above). Additionally, for Windows, make sure that you are using Powershell for the setup, not command prompt.
 
 1.  **Navigate to the Sync-Microservice Directory:** Open your terminal and use `cd` to change directories:
 
@@ -117,45 +119,31 @@ git remote add upstream https://github.com/AOSSIE-Org/PictoPy
     cd sync-microservice
     ```
 
-2.  **Set Up a Virtual Environment (Highly Recommended):** Virtual environments isolate project dependencies. Create one using:
+2.  **Create a Conda Environment:** Create a new conda environment with Python 3.12:
 
-    Bash(Linux/MacOS)
-
-    ```
-    python3 -m venv .sync-env
-    ```
-
-    Powershell(Windows)
+    Bash/Powershell
 
     ```
-    python -m venv .sync-env
+    conda create -p .sync-env python=3.12
     ```
 
-3.  **Activate the Virtual Environment:**
+3.  **Activate the Conda Environment:**
 
-    Bash(Linux/MacOS)
-
-    ```
-    source .sync-env/bin/activate
-    ```
-
-    Powershell(Windows)
+    Bash/Powershell
 
     ```
-    .sync-env\Scripts\Activate.ps1
+    conda activate ./.sync-env
     ```
-
-    After activating, you should be able to see the virtual environment's name before the current path.
 
 4.  **Install Dependencies:** The `requirements.txt` file lists required packages. Install them using pip:
 
-    Bash
+    Bash/Powershell
 
     ```
     pip install -r requirements.txt
     ```
 
-5.  **Running the sync-microservice:** To start the sync-microservice in development mode, run this command while being in the sync-microservice folder and the virtual environment activated:
+5.  **Running the sync-microservice:** To start the sync-microservice in development mode, run this command while being in the sync-microservice folder and the conda environment activated:
 
     Bash/Powershell
 

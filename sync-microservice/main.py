@@ -44,7 +44,7 @@ app.include_router(folders.router, prefix="/folders", tags=["Folders"])
 app.include_router(shutdown.router, tags=["Shutdown"])
 
 if __name__ == "__main__":
-    logger.info("Starting PictoPy Sync Microservice from main...")
+    logger.info("Starting PictoPy Sync Microservice")
 
     # Create config with log_config=None to disable Uvicorn's default logging
     # Use PICTOPY_HOST env var if set, otherwise default to secure localhost
@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
     config = Config(
         app=app,
-        host="0.0.0.0",
+        host=host,
         port=52124,
         log_level="info",
         log_config=None,  # Disable uvicorn's default logging config

@@ -115,7 +115,7 @@ export const startServer = async () => {
   }
 };
 
-// Fire-and-forget shutdown trigger for both services
+// Fire-and-forget shutdown trigger for both services (used on window close)
 export const triggerShutdown = (): void => {
   if (shutdownInProgress) {
     console.log('Shutdown already in progress, skipping...');
@@ -124,12 +124,8 @@ export const triggerShutdown = (): void => {
   shutdownInProgress = true;
   console.log('Initialized shutdown for all services...');
 
-  // Belt-and-suspenders: Always call forceKillServer to kill both Server and Sync
-  forceKillServer().catch((err) =>
-    console.error('Force kill during shutdown:', err),
-  );
-
-  // Send shutdown request to backend
+  // Send graceful shutdown requests FIRST (keepalive ensures they complete even if window closes)
+  // These are faster to initiate than shell commands
   fetch(`${BACKEND_URL}/shutdown`, {
     method: 'POST',
     keepalive: true,
@@ -147,7 +143,6 @@ export const triggerShutdown = (): void => {
       console.error('Backend shutdown request failed:', error);
     });
 
-  // Send shutdown request to sync service
   fetch(`${SYNC_MICROSERVICE_URL}/shutdown`, {
     method: 'POST',
     keepalive: true,
@@ -165,7 +160,13 @@ export const triggerShutdown = (): void => {
       console.error('Sync service shutdown request failed:', error);
     });
 
-  // Reset flag after a delay
+  // Force kill as safety net AFTER HTTP requests are initiated
+  // Shell commands are slower to spawn, giving HTTP requests a head start
+  forceKillServer().catch((err) =>
+    console.error('Force kill during shutdown:', err),
+  );
+
+  // Reset flag after a delay (may not fire on window close, but that's ok)
   setTimeout(() => {
     shutdownInProgress = false;
   }, 2000);
