@@ -132,6 +132,33 @@
         }
       ]
     },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "killProcessUnix",
+          "cmd": "bash",
+          "args": [
+            "-c",
+            "pkill -9 -f '[P]ictoPy_Server'; pkill -9 -f '[P]ictoPy_Sync'"
+          ],
+          "sidecar": false
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "killProcessWindows",
+          "cmd": "powershell",
+          "args": [
+            "taskkill /t /f /im PictoPy_Server.exe; taskkill /t /f /im PictoPy_Sync.exe"
+          ],
+          "sidecar": false
+        }
+      ]
+    },
     "shell:default",
     "fs:default",
     "dialog:default",

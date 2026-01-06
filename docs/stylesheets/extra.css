@@ -1,6 +1,5 @@
 .md-typeset .admonition-title {
   margin-bottom: 10px;
-  
 }
 
 .md-header__button.md-logo img {
@@ -12,12 +11,12 @@
   display: flex;
   align-items: center;
 
-  padding-right: 0;     
-  margin-right: 0;      
+  padding-right: 0;
+  margin-right: 0;
 }
- 
+
 .md-header__title {
-  margin-left: 8px !important;  
+  margin-left: 8px !important;
 }
 
 /* Responsive tweaks: ensure header, images, tables and code blocks behave well on small screens */
@@ -44,7 +43,8 @@
 }
 
 /* General container/content spacing adjustments for smaller screens */
-.md-main, .md-content {
+.md-main,
+.md-content {
   padding-left: 1rem;
   padding-right: 1rem;
 }
@@ -191,7 +191,8 @@
 }
 
 /* Ensure code samples are responsive */
-.swagger-ui pre, .swagger-ui code {
+.swagger-ui pre,
+.swagger-ui code {
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -208,10 +209,12 @@
 }
 
 /* Redoc-specific fixes in case the component renders Redoc */
-.redoc-wrap, .redoc {
+.redoc-wrap,
+.redoc {
   max-width: 100%;
 }
-.redoc .menu-content, .redoc .operations-wrapper {
+.redoc .menu-content,
+.redoc .operations-wrapper {
   overflow-x: auto;
 }
 
@@ -312,8 +315,7 @@
   }
 }
 
-\
-.md-footer-meta__inner.md-grid {
+\ .md-footer-meta__inner.md-grid {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
@@ -345,9 +347,3 @@
   display: inline-block !important;
   vertical-align: middle !important;
 }
-
-
-
-
-
-

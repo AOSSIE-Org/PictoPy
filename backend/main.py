@@ -25,6 +25,7 @@ from app.routes.albums import router as albums_router
 from app.routes.images import router as images_router
 from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
+from app.routes.shutdown import router as shutdown_router
 from fastapi.openapi.utils import get_openapi
 from app.logging.setup_logging import (
     configure_uvicorn_logging,
@@ -130,6 +131,7 @@ app.include_router(
 app.include_router(
     user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
 )
+app.include_router(shutdown_router, tags=["Shutdown"])
 
 
 # Entry point for running with: python3 main.py
@@ -139,9 +141,17 @@ if __name__ == "__main__":
     logger.info("Starting PictoPy backend server...")
 
     # Create a simple config with log_config=None to disable Uvicorn's default logging
+    # Use PICTOPY_HOST env var if set, otherwise default to secure localhost
+    host = os.getenv("PICTOPY_HOST", "127.0.0.1")
+    if host not in ("127.0.0.1", "localhost"):
+        logger.warning(
+            f"Backend is binding to {host} - this may expose the service to external networks. "
+            "Ensure this is intentional and network security is properly configured."
+        )
+
     config = Config(
         app=app,
-        host="localhost",
+        host=host,
         port=52123,
         log_level="info",
         log_config=None,  # This is crucial - disable Uvicorn's default logging config
