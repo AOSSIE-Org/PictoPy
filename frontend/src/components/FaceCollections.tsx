@@ -15,7 +15,12 @@ export function FaceCollections() {
 
   const { clusters } = useSelector((state: RootState) => state.faceClusters);
 
-  const { data: clustersData, isSuccess: clustersSuccess } = usePictoQuery({
+  const {
+    data: clustersData,
+    isSuccess: clustersSuccess,
+    isLoading: clustersLoading,
+    isError: clustersError,
+  } = usePictoQuery({
     queryKey: ['clusters'],
     queryFn: fetchAllClusters,
   });
@@ -31,14 +36,39 @@ export function FaceCollections() {
     navigate(`/person/${clusterId}`);
   };
 
+  if (clustersLoading) {
+    return (
+      <Card className="border-primary/20 w-full animate-pulse">
+        <CardContent className="p-6">
+          <h2 className="mb-4 text-xl font-semibold">Face Collections</h2>
+          <div className="flex items-center justify-center p-8">
+            <p className="text-muted-foreground italic">Detecting and grouping faces...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (clustersError) {
+    return (
+      <Card className="border-destructive/20 w-full">
+        <CardContent className="p-6">
+          <h2 className="mb-4 text-xl font-semibold text-destructive">Face Collections</h2>
+          <p className="text-muted-foreground">
+            Error loading face collections. Please try refreshing or checking the backend logs.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!clusters || clusters.length === 0) {
     return (
       <Card className="border-primary/20 w-full">
         <CardContent className="p-6">
           <h2 className="mb-4 text-xl font-semibold">Face Collections</h2>
-          <p className="text-muted-foreground">
-            No face collections found. PictoPy will automatically detect and
-            group faces as you add more photos.
+          <p className="text-muted-foreground italic">
+            No face collections detected yet. PictoPy will automatically group faces as you add more photos with AI tagging enabled.
           </p>
         </CardContent>
       </Card>

@@ -11,6 +11,7 @@ interface MediaViewControlsProps {
   onToggleSlideshow: () => void;
   onClose: () => void;
   type?: string;
+
 }
 
 export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
@@ -23,14 +24,14 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
   onToggleSlideshow,
   onClose,
   type = 'image',
+
 }) => {
   return (
     <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
       <button
         onClick={onToggleInfo}
-        className={`cursor-pointer rounded-full ${
-          showInfo ? 'bg-indigo-500/70' : 'bg-black/50'
-        } p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg`}
+        className={`cursor-pointer rounded-full ${showInfo ? 'bg-indigo-500/70' : 'bg-black/50'
+          } p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg`}
         aria-label="Show Info"
         title="Show Info"
       >
@@ -47,11 +48,10 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
       </button>
       <button
         onClick={onToggleFavourite}
-        className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${
-          isFavourite
-            ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
-            : 'bg-black/50 hover:bg-black/20 hover:text-white hover:shadow-lg'
-        }`}
+        className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${isFavourite
+          ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
+          : 'bg-black/50 hover:bg-black/20 hover:text-white hover:shadow-lg'
+          }`}
         aria-label={
           isFavourite ? 'Remove from favourites' : 'Add to favourites'
         }
@@ -59,6 +59,8 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
       >
         <Heart className={`h-5 w-5 ${isFavourite ? 'fill-current' : ''}`} />
       </button>
+
+
 
       {type === 'image' && (
         <button

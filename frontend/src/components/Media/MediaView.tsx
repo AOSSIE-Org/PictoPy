@@ -5,6 +5,7 @@ import { MediaViewProps } from '@/types/Media';
 import { selectCurrentViewIndex } from '@/features/imageSelectors';
 import { setCurrentViewIndex, closeImageView } from '@/features/imageSlice';
 
+
 // Modular components
 import { MediaViewControls } from './MediaViewControls';
 import { ZoomControls } from './ZoomControls';
@@ -137,6 +138,8 @@ export function MediaView({
     onRotate: handlers.handleRotate,
     onToggleInfo: toggleInfo,
   });
+
+
 
   // Early return if no images or invalid index
   if (!images?.length || currentViewIndex === -1 || !currentImage) {

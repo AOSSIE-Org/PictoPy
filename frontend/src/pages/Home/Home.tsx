@@ -10,7 +10,6 @@ import { setImages } from '@/features/imageSlice';
 import { selectImages } from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
-import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 
@@ -19,8 +18,9 @@ export const Home = () => {
   const images = useSelector(selectImages);
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
-  const searchState = useSelector((state: RootState) => state.search);
-  const isSearchActive = searchState.active;
+  // const searchState = useSelector((state: RootState) => state.search);
+  // const isSearchActive = searchState.active;
+  const isSearchActive = false;
 
   const { data, isLoading, isSuccess, isError, error } = usePictoQuery({
     queryKey: ['images'],
@@ -45,10 +45,7 @@ export const Home = () => {
     }
   }, [data, isSuccess, dispatch, isSearchActive]);
 
-  const title =
-    isSearchActive && images.length > 0
-      ? `Face Search Results (${images.length} found)`
-      : 'Image Gallery';
+  const title = 'Image Gallery';
 
   return (
     <div className="relative flex h-full flex-col pr-6">

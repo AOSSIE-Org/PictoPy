@@ -25,15 +25,19 @@ export function ImageCard({
   onClick,
 }: ImageCardViewProps) {
   const [isImageHovered, setIsImageHovered] = useState(false);
-  // Default to empty array if no tags are provided
   const tags = image.tags || [];
   const { toggleFavourite } = useToggleFav();
 
-  const handleToggleFavourite = useCallback(() => {
-    if (image?.id) {
-      toggleFavourite(image.id);
-    }
-  }, [image, toggleFavourite]);
+  const handleToggleFavourite = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (image?.id) {
+        toggleFavourite(image.id);
+      }
+    },
+    [image, toggleFavourite],
+  );
+
   return (
     <div
       className={cn(
@@ -58,7 +62,7 @@ export function ImageCard({
             src={convertFileSrc(
               image.thumbnailPath || image.path || '/placeholder.svg',
             )}
-            alt={'Sample Title'}
+            alt={image.path || 'Image'}
             className={cn(
               'h-full w-full object-cover transition-transform group-hover:scale-105',
               isSelected ? 'opacity-95' : '',
@@ -72,19 +76,16 @@ export function ImageCard({
             <Button
               variant="ghost"
               size="icon"
-              className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${
+              className={cn(
+                'cursor-pointer rounded-full p-2.5 text-white transition-all duration-300',
                 image.isFavourite
                   ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
                   : 'bg-white/10 hover:bg-white/20 hover:shadow-lg'
-              }`}
-              onClick={(e) => {
-                console.log(image);
-                e.stopPropagation();
-                handleToggleFavourite();
-              }}
+              )}
+              onClick={handleToggleFavourite}
             >
               {image.isFavourite ? (
-                <Heart className="h-5 w-5" fill="currentColor"></Heart>
+                <Heart className="h-5 w-5 fill-current" />
               ) : (
                 <Heart className="h-5 w-5" />
               )}
