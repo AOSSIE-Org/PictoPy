@@ -24,7 +24,7 @@ export const EmptyGalleryState = () => {
             <button
               type="button"
               onClick={() => navigate("/settings")}
-              className="text-blue-500 hover:underline focus:outline-none"
+              className="text-blue-500 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded"
             >
               Settings
             </button>{" "}
