@@ -1,5 +1,6 @@
 import { FolderOpen, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from "react-router";
+import { ROUTES } from '@/constants/routes'; 
 
 export const EmptyGalleryState = () => {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export const EmptyGalleryState = () => {
             Go to{" "}
             <button
               type="button"
-              onClick={() => navigate("/settings")}
+              onClick={() => navigate(`/${ROUTES.SETTINGS}`)} 
               className="text-blue-500 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded"
             >
               Settings
