@@ -1,4 +1,5 @@
 import sqlite3
+import uuid
 from typing import Optional, List, Dict, TypedDict, Union
 from app.config.settings import DATABASE_PATH
 
@@ -349,3 +350,29 @@ def db_get_images_by_cluster_id(
         return images
     finally:
         conn.close()
+
+
+def db_get_or_create_cluster_by_name(name: str) -> str:
+    """Gets an existing cluster ID by name or creates a new one."""
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        # Check if exists
+        cursor.execute(
+            "SELECT cluster_id FROM face_clusters WHERE cluster_name = ?", (name,)
+        )
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+
+        # Create new
+        cluster_id = str(uuid.uuid4())
+        cursor.execute(
+            "INSERT INTO face_clusters (cluster_id, cluster_name) VALUES (?, ?)",
+            (cluster_id, name),
+        )
+        conn.commit()
+        return cluster_id
+    finally:
+        conn.close()
+
