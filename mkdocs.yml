@@ -61,8 +61,13 @@ extra_css:
 nav:
   - Home:
       - Introduction: index.md
-      - Overview: overview/features.md
-      - Setup: setup.md
+      - Overview:
+          - Features: overview/features.md
+          - Architecture: overview/architecture.md
+      - Setup:
+          - Quick Setup: setup.md
+          - Manual Setup: Manual_Setup_Guide.md
+          - Script Setup: Script_Setup_Guide.md
       - Backend:
           - Python Backend API: backend/backend_python/api.md
           - Python Backend Database: backend/backend_python/database.md
