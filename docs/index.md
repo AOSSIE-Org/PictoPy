@@ -62,18 +62,13 @@ This project was announced by [AOSSIE](https://aossie.org/), an umbrella organiz
         <h2>Frontend</h2>
         <ul>
             <li>
-                <a href="./frontend/ui-components">
-                    UI Components
-                </a>
-            </li>
-            <li>
                 <a href="./frontend/state-management">
                     State Management
                 </a>
             </li>
             <li>
-                <a href="./frontend/gallery-view">
-                    Gallery View
+                <a href="./frontend/screenshots">
+                    Screenshots
                 </a>
             </li>
         </ul>
