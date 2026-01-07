@@ -6,6 +6,7 @@ from typing import Any, List, Mapping, Tuple, TypedDict, Union
 from app.config.settings import (
     DATABASE_PATH,
 )
+from app.database.connection import get_db_connection
 from app.logging.setup_logging import get_logger
 
 # Initialize logger
@@ -43,8 +44,11 @@ ImageClassPair = Tuple[ImageId, ClassId]
 
 
 def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(DATABASE_PATH)
-    # Ensure ON DELETE CASCADE and other FKs are enforced
+    """Legacy connection function - use get_db_connection() context manager instead"""
+    conn = sqlite3.connect(DATABASE_PATH, timeout=30.0)
+    # Basic concurrency settings for legacy usage
+    conn.execute("PRAGMA journal_mode = WAL;")
+    conn.execute("PRAGMA busy_timeout = 30000;")
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
@@ -397,25 +401,21 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
 
 
 def db_toggle_image_favourite_status(image_id: str) -> bool:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT id FROM images WHERE id = ?", (image_id,))
-        if not cursor.fetchone():
-            return False
-        cursor.execute(
-            """
-            UPDATE images
-            SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
-            WHERE id = ?
-            """,
-            (image_id,),
-        )
-        conn.commit()
-        return cursor.rowcount > 0
-    except Exception as e:
-        logger.error(f"Database error: {e}")
-        conn.rollback()
-        return False
-    finally:
-        conn.close()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT id FROM images WHERE id = ?", (image_id,))
+            if not cursor.fetchone():
+                return False
+            cursor.execute(
+                """
+                UPDATE images
+                SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
+                WHERE id = ?
+                """,
+                (image_id,),
+            )
+            return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Database error: {e}")
+            raise
