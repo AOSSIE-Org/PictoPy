@@ -69,6 +69,8 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
         logger.info(f"Add folder: {folder_data}")
         # Process images in all folders
         image_util_process_folder_images(folder_data)
+        image_util_process_untagged_images()
+        cluster_util_face_clusters_sync(force_full_reclustering=True)  # Force full reclustering for new photos
 
         # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()
@@ -117,7 +119,7 @@ def post_sync_folder_sequence(
         # Process images in all folders
         image_util_process_folder_images(folder_data)
         image_util_process_untagged_images()
-        cluster_util_face_clusters_sync()
+        cluster_util_face_clusters_sync(force_full_reclustering=True)  # Force full reclustering for synced photos
 
         # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()
@@ -184,7 +186,7 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
         root_folder_id, folder_map = folder_util_add_folder_tree(
             root_path=request.folder_path,
             parent_folder_id=parent_folder_id,
-            AI_Tagging=False,
+            AI_Tagging=True,  # Enable AI tagging by default for automatic face detection
             taggingCompleted=request.taggingCompleted,
         )
 

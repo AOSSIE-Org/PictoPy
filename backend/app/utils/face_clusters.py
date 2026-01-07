@@ -186,19 +186,19 @@ def _validate_embedding(embedding: NDArray, min_norm: float = 1e-6) -> bool:
 
 
 def cluster_util_cluster_all_face_embeddings(
-    eps: float = 0.75,
+    eps: float = 0.5,
     min_samples: int = 2,
-    similarity_threshold: float = 0.85,
+    similarity_threshold: float = 0.65,
     merge_threshold: float = None,
 ) -> List[ClusterResult]:
     """
     Cluster face embeddings using DBSCAN with similarity validation.
 
     Args:
-        eps: DBSCAN epsilon parameter for maximum distance between samples (default: 0.75)
+        eps: DBSCAN epsilon parameter for maximum distance between samples (default: 0.5)
         min_samples: DBSCAN minimum samples parameter for core points (default: 2)
-        similarity_threshold: Minimum similarity to consider same person (default: 0.85, range: 0.75-0.90)
-        merge_threshold: Similarity threshold for post-clustering merge (default: None, uses similarity_threshold)
+        similarity_threshold: Minimum similarity to consider same person (default: 0.65, range: 0.60-0.85)
+        merge_threshold: Similarity threshold for post-clustering merge (default: None, uses 0.60)
 
     Returns:
         List of ClusterResult objects containing face_id, embedding, cluster_uuid, and cluster_name
@@ -306,8 +306,8 @@ def cluster_util_cluster_all_face_embeddings(
             results.append(result)
 
     # Post-clustering merge: merge similar clusters based on representative faces
-    # Use similarity_threshold if merge_threshold not explicitly provided
-    effective_merge_threshold = merge_threshold if merge_threshold is not None else 0.7
+    # Use lower threshold if merge_threshold not explicitly provided to combine similar clusters
+    effective_merge_threshold = merge_threshold if merge_threshold is not None else 0.60
     results = _merge_similar_clusters(
         results, merge_threshold=effective_merge_threshold
     )
@@ -316,7 +316,7 @@ def cluster_util_cluster_all_face_embeddings(
 
 
 def cluster_util_assign_cluster_to_faces_without_clusterId(
-    similarity_threshold: float = 0.8,
+    similarity_threshold: float = 0.65,
 ) -> List[Dict]:
     """
     Assign cluster IDs to faces that don't have clusters using nearest mean method with similarity threshold.
@@ -331,7 +331,7 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
     Args:
         similarity_threshold:
             Minimum cosine similarity required for assignment (0.0 to 1.0)
-            Higher values = more strict assignment. Default: 0.7
+            Higher values = more strict assignment. Default: 0.65
 
     Returns:
         List of face-cluster mappings ready for batch update
