@@ -607,30 +607,32 @@ def _update_cluster_face_image(
     Returns:
         True if update was successful, False otherwise
     """
-    own_connection = cursor is None
-    if own_connection:
-        conn = sqlite3.connect(DATABASE_PATH)
-        cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-            "UPDATE face_clusters SET face_image_base64 = ? WHERE cluster_id = ?",
-            (face_image_base64, cluster_id),
-        )
-        success = cursor.rowcount > 0
-        if own_connection:
-            conn.commit()
-        return success
-    except Exception as e:
-        logger.error(f"Error updating face image for cluster {cluster_id}: {e}")
-        if own_connection:
-            conn.rollback()
+    if cursor is not None:
+        # Use provided cursor (external transaction management)
+        try:
+            cursor.execute(
+                "UPDATE face_clusters SET face_image_base64 = ? WHERE cluster_id = ?",
+                (face_image_base64, cluster_id),
+            )
+            return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error updating face image for cluster {cluster_id}: {e}")
+            raise
+    else:
+        # Use thread-safe connection manager
+        from app.database.connection import get_db_write_transaction
+        
+        try:
+            with get_db_write_transaction() as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    "UPDATE face_clusters SET face_image_base64 = ? WHERE cluster_id = ?",
+                    (face_image_base64, cluster_id),
+                )
+                return cur.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error updating face image for cluster {cluster_id}: {e}")
             return False
-
-        raise
-    finally:
-        if own_connection:
-            conn.close()
 
 
 def _get_cluster_face_data(
