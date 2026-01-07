@@ -1,3 +1,5 @@
+from platformdirs import user_data_dir
+
 # Model Exports Path
 MODEL_EXPORTS_PATH = "app/models/ONNX_Exports"
 PRIMARY_BACKEND_URL = "http://localhost:52123"
@@ -19,6 +21,6 @@ DEFAULT_FACENET_MODEL = f"{MODEL_EXPORTS_PATH}/FaceNet_128D.onnx"
 TEST_INPUT_PATH = "tests/inputs"
 TEST_OUTPUT_PATH = "tests/outputs"
 # Point to the main PictoPy database
-DATABASE_PATH = "../backend/app/database/PictoPy.db"
+DATABASE_PATH = f"{user_data_dir('PictoPy')}/database/PictoPy.db"
 THUMBNAIL_IMAGES_PATH = "./images/thumbnails"
 IMAGES_PATH = "./images"

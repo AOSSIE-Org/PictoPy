@@ -38,6 +38,16 @@ fn on_window_event(window: &Window, event: &WindowEvent) {
     app_handle.exit(0);
 }
 
+#[cfg(unix)]
+fn kill_process(process: &sysinfo::Process) {
+    use sysinfo::Signal;
+    let _ = process.kill_with(Signal::Term);
+}
+
+#[cfg(windows)]
+fn kill_process(process: &sysinfo::Process) {
+    let _ = process.kill();
+}
 fn kill_process_tree(pid: u32) -> Result<(), String> {
     let mut system = System::new_all();
     system.refresh_all();
@@ -59,14 +69,12 @@ fn kill_process_tree(pid: u32) -> Result<(), String> {
 
     for pid in to_kill {
         if let Some(process) = system.process(pid) {
-            let _ = process.kill_with(Signal::Kill);
-            let _ = process.kill();
+            kill_process(process);
         }
     }
 
     Ok(())
 }
-
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())

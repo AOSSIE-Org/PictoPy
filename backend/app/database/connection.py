@@ -1,4 +1,5 @@
 import sqlite3
+import os
 from contextlib import contextmanager
 from typing import Generator
 from app.config.settings import DATABASE_PATH
@@ -13,6 +14,7 @@ def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
     - Works for both single and multi-step transactions
     - Automatically commits on success or rolls back on failure
     """
+    os.makedirs(DATABASE_PATH, exist_ok=True)
     conn = sqlite3.connect(DATABASE_PATH)
 
     # --- Strict enforcement of all relational and logical rules ---
