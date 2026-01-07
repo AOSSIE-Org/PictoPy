@@ -38,10 +38,7 @@ class AddSingleImageResponse(BaseModel):
     data: Dict[str, str]
 
 
-class ErrorResponse(BaseModel):
-    success: bool = False
-    message: str
-    error: str
+
 
 
 class TestImageResponse(BaseModel):

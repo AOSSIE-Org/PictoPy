@@ -16,7 +16,6 @@ from app.schemas.folders import (
     AddFolderRequest,
     AddFolderResponse,
     AddFolderData,
-    ErrorResponse,
     UpdateAITaggingRequest,
     UpdateAITaggingResponse,
     UpdateAITaggingData,
@@ -30,6 +29,7 @@ from app.schemas.folders import (
     GetAllFoldersData,
     FolderDetails,
 )
+from app.schemas.common import ErrorResponse
 import os
 from app.utils.folders import (
     folder_util_add_folder_tree,

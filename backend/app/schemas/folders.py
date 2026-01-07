@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List
+from .common import ErrorResponse
 
 
 # Request Models
@@ -97,7 +98,4 @@ class SyncFolderResponse(BaseModel):
     data: Optional[SyncFolderData] = None
 
 
-class ErrorResponse(BaseModel):
-    success: bool = False
-    message: Optional[str] = None
-    error: Optional[str] = None
+

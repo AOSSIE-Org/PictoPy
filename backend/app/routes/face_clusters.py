@@ -11,7 +11,7 @@ from app.database.face_clusters import (
     db_get_all_clusters_with_face_counts,
     db_get_images_by_cluster_id,  # Add this import
 )
-from app.schemas.face_clusters import (
+from app.schemas.faces import (
     RenameClusterRequest,
     RenameClusterResponse,
     RenameClusterData,

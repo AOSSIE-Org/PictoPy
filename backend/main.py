@@ -25,6 +25,7 @@ from app.routes.albums import router as albums_router
 from app.routes.images import router as images_router
 from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
+from app.routes.avatar import router as avatar_router
 from fastapi.openapi.utils import get_openapi
 from app.logging.setup_logging import (
     configure_uvicorn_logging,
@@ -130,6 +131,7 @@ app.include_router(
 app.include_router(
     user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
 )
+app.include_router(avatar_router, prefix="/avatars", tags=["Avatar"])
 
 
 # Entry point for running with: python3 main.py

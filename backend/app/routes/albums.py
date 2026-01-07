@@ -8,11 +8,10 @@ from app.schemas.album import (
     GetAlbumImagesRequest,
     GetAlbumImagesResponse,
     UpdateAlbumRequest,
-    SuccessResponse,
-    ErrorResponse,
     ImageIdsRequest,
     Album,
 )
+from app.schemas.common import ErrorResponse, SuccessResponse
 from app.database.albums import (
     db_get_all_albums,
     db_get_album_by_name,

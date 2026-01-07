@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, status
 from typing import List, Optional
 from app.database.images import db_get_all_images
-from app.schemas.images import ErrorResponse
+from app.schemas.common import ErrorResponse
 from app.utils.images import image_util_parse_metadata
 from pydantic import BaseModel
 from app.database.images import db_toggle_image_favourite_status

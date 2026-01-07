@@ -4,6 +4,7 @@ import React from 'react';
 import FolderManagementCard from './components/FolderManagementCard';
 import UserPreferencesCard from './components/UserPreferencesCard';
 import ApplicationControlsCard from './components/ApplicationControlsCard';
+import { UserProfileCard } from './components/UserProfileCard';
 
 /**
  * Settings page component
@@ -13,6 +14,9 @@ const Settings: React.FC = () => {
   return (
     <div className="mx-auto flex-1 px-8 py-6">
       <div className="mx-auto max-w-5xl space-y-8">
+        {/* User Profile */}
+        <UserProfileCard />
+
         {/* Folder Management */}
         <FolderManagementCard />
 

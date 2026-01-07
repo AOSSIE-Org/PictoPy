@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, Literal
+from .common import ErrorResponse
 
 
 class UserPreferencesData(BaseModel):
@@ -7,6 +8,7 @@ class UserPreferencesData(BaseModel):
 
     YOLO_model_size: Literal["nano", "small", "medium"] = "small"
     GPU_Acceleration: bool = True
+    avatar: Optional[str] = None
 
 
 class GetUserPreferencesResponse(BaseModel):
@@ -22,6 +24,7 @@ class UpdateUserPreferencesRequest(BaseModel):
 
     YOLO_model_size: Optional[Literal["nano", "small", "medium"]] = None
     GPU_Acceleration: Optional[bool] = None
+    avatar: Optional[str] = None
 
 
 class UpdateUserPreferencesResponse(BaseModel):
@@ -32,9 +35,4 @@ class UpdateUserPreferencesResponse(BaseModel):
     user_preferences: UserPreferencesData
 
 
-class ErrorResponse(BaseModel):
-    """Error response model"""
 
-    success: bool
-    error: str
-    message: str
