@@ -59,7 +59,11 @@ fn kill_process_tree(pid: u32) -> Result<(), String> {
 
     for pid in to_kill {
         if let Some(process) = system.process(pid) {
+            #[cfg(unix)]
             let _ = process.kill_with(Signal::Term);
+
+            #[cfg(windows)]
+            let _ = process::exit(0x0100);
         }
     }
 
