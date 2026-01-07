@@ -13,6 +13,7 @@ import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { ScrollToTopButton } from '@/components/ScrollToTopButton/ScrollToTopButton';
 
 export const Home = () => {
   const dispatch = useDispatch();
@@ -48,7 +49,7 @@ export const Home = () => {
   const title =
     isSearchActive && images.length > 0
       ? `Face Search Results (${images.length} found)`
-      : 'Image Gallery';
+      : 'Image Gallery'; 
 
   return (
     <div className="relative flex h-full flex-col pr-6">
@@ -78,6 +79,9 @@ export const Home = () => {
           className="absolute top-0 right-0 h-full w-4"
         />
       )}
+
+      <ScrollToTopButton scrollContainerRef={scrollableRef} />
     </div>
+    
   );
 };

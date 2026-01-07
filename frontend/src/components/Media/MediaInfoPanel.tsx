@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { open } from '@tauri-apps/plugin-shell';
 import {
   X,
@@ -26,6 +26,19 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
   currentIndex,
   totalImages,
 }) => {
+  const [isVisible, setIsVisible] = useState(show);
+
+  useEffect(() => {
+    if (show) {
+      setIsVisible(true);
+    }
+  }, [show]);
+
+  const handleClose = () => {
+    setIsVisible(false);
+    setTimeout(onClose, 300); // must match animation duration
+  };
+
   const getFormattedDate = () => {
     if (currentImage?.metadata?.date_created) {
       return new Date(currentImage.metadata.date_created).toLocaleDateString(
@@ -58,19 +71,29 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
     }
   };
 
-  if (!show) return null;
+  if (!show && !isVisible) return null;
+
 
   return (
-    <div className="animate-in slide-in-from-left absolute top-10 left-6 z-50 w-[350px] rounded-xl border border-white/10 bg-black/60 p-6 shadow-xl backdrop-blur-lg transition-all duration-300">
+    <div
+      className={`
+    absolute top-10 left-6 z-50 w-[350px]
+    rounded-xl border border-white/10 bg-black/60 p-6
+    shadow-xl backdrop-blur-lg
+    transform transition-all duration-300 ease-in-out
+    ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-6'}
+  `}
+    >
       <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
         <h3 className="text-xl font-medium text-white">Image Details</h3>
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="text-white/70 hover:text-white"
           aria-label="Close info panel"
         >
           <X className="h-5 w-5" />
         </button>
+
       </div>
 
       <div className="space-y-4 text-sm">
@@ -106,7 +129,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           <div className="min-w-0 flex-1">
             <p className="text-xs text-white/50">Location</p>
             {currentImage?.metadata?.latitude &&
-            currentImage?.metadata?.longitude ? (
+              currentImage?.metadata?.longitude ? (
               <button
                 type="button"
                 onClick={handleLocationClick}
