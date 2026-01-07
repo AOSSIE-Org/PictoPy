@@ -3,6 +3,7 @@
 
 mod services;
 
+use std::process;
 use std::sync::Mutex;
 use sysinfo::{Pid, Signal, System};
 use tauri::path::BaseDirectory;
