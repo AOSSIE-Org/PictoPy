@@ -43,7 +43,7 @@ fn kill_process(process: &sysinfo::Process) {
     let _ = process.kill_with(Signal::Term);
 }
 
-#[cfg(unix)]
+#[cfg(windows)]
 fn kill_process(pid: u32) -> Result<(), String> {
     std::process::Command::new("taskkill")
         .args(["/PID", &pid.to_string(), "/T", "/F"])
