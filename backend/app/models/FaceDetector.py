@@ -2,10 +2,12 @@
 
 import cv2
 from app.models.FaceNet import FaceNet
+from app.models.CelebrityMatcher import CelebrityMatcher
 from app.utils.FaceNet import FaceNet_util_preprocess_image, FaceNet_util_get_model_path
 from app.utils.YOLO import YOLO_util_get_model_path
 from app.models.YOLO import YOLO
 from app.database.faces import db_insert_face_embeddings_by_image_id
+from app.database.face_clusters import db_get_or_create_cluster_by_name
 from app.logging.setup_logging import get_logger
 
 # Initialize logger
@@ -20,8 +22,9 @@ class FaceDetector:
             iou_threshold=0.45,
         )
         self.facenet = FaceNet(FaceNet_util_get_model_path())
+        self.celebrity_matcher = CelebrityMatcher()
         self._initialized = True
-        logger.info("FaceDetector initialized with YOLO and FaceNet models.")
+        logger.info("FaceDetector initialized with YOLO, FaceNet, and CelebrityMatcher.")
 
     def detect_faces(self, image_id: str, image_path: str, forSearch: bool = False):
         img = cv2.imread(image_path)
@@ -33,7 +36,7 @@ class FaceDetector:
         logger.debug(f"Face detection boxes: {boxes}")
         logger.info(f"Detected {len(boxes)} faces in image {image_id}.")
 
-        processed_faces, embeddings, bboxes, confidences = [], [], [], []
+        processed_faces, embeddings, bboxes, confidences, cluster_ids = [], [], [], [], []
 
         for box, score in zip(boxes, scores):
             if score > self.yolo_detector.conf_threshold:
@@ -55,9 +58,18 @@ class FaceDetector:
                 embedding = self.facenet.get_embedding(processed_face)
                 embeddings.append(embedding)
 
+                # Match celebrity
+                name = self.celebrity_matcher.identify_face(embedding)
+                if name:
+                    logger.info(f"Identified {name} in image {image_id}")
+                    cluster_id = db_get_or_create_cluster_by_name(name)
+                    cluster_ids.append(cluster_id)
+                else:
+                    cluster_ids.append(None)
+
         if not forSearch and embeddings:
             db_insert_face_embeddings_by_image_id(
-                image_id, embeddings, confidence=confidences, bbox=bboxes
+                image_id, embeddings, confidence=confidences, bbox=bboxes, cluster_id=cluster_ids
             )
 
         return {

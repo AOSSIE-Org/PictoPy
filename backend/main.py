@@ -131,7 +131,6 @@ app.include_router(
     user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
 )
 
-
 # Entry point for running with: python3 main.py
 if __name__ == "__main__":
     multiprocessing.freeze_support()  # Required for Windows
