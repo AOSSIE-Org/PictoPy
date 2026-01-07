@@ -30,3 +30,14 @@ export const userPreferencesEndpoints = {
 export const healthEndpoints = {
   healthCheck: '/health',
 };
+
+export const albumsEndpoints = {
+  createAlbum: '/albums/',
+  getAlbums: '/albums/',
+  addImagesToAlbum: (albumId: string) => `/albums/${albumId}/images`,
+  getAlbumImages: (albumId: string) => `/albums/${albumId}/images/get`,
+  updateAlbum: (albumId: string) => `/albums/${albumId}`,
+  removeImageFromAlbum: (albumId: string, imageId: string) =>
+    `/albums/${albumId}/images/${imageId}`,
+  deleteAlbum: (albumId: string) => `/albums/${albumId}`,
+};
