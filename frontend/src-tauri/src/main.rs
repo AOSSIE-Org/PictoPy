@@ -3,7 +3,6 @@
 
 mod services;
 
-use std::process;
 use std::sync::Mutex;
 use sysinfo::{Pid, Signal, System};
 use tauri::path::BaseDirectory;
@@ -64,7 +63,9 @@ fn kill_process_tree(pid: u32) -> Result<(), String> {
             let _ = process.kill_with(Signal::Term);
 
             #[cfg(windows)]
-            let _ = process::exit(0x0100);
+            if let Err(error) = process.kill_and_wait() {
+                println!("`kill_and_wait` failed: {error:?}");
+            }
         }
     }
 
