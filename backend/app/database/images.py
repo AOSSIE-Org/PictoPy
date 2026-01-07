@@ -52,44 +52,6 @@ def _connect() -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
-
-def db_create_images_table() -> None:
-    conn = _connect()
-    cursor = conn.cursor()
-
-    # Create new images table with merged fields
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS images (
-            id TEXT PRIMARY KEY,
-            path VARCHAR UNIQUE,
-            folder_id INTEGER,
-            thumbnailPath TEXT UNIQUE,
-            metadata TEXT,
-            isTagged BOOLEAN DEFAULT 0,
-            isFavourite BOOLEAN DEFAULT 0,
-            FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
-        )
-    """
-    )
-
-    # Create new image_classes junction table
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS image_classes (
-            image_id TEXT,
-            class_id INTEGER,
-            PRIMARY KEY (image_id, class_id),
-            FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
-            FOREIGN KEY (class_id) REFERENCES mappings(class_id) ON DELETE CASCADE
-        )
-    """
-    )
-
-    conn.commit()
-    conn.close()
-
-
 def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
     """Insert multiple image records in a single transaction."""
     if not image_records:
@@ -399,7 +361,6 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
     finally:
         conn.close()
 
-
 def db_toggle_image_favourite_status(image_id: str) -> bool:
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -419,3 +380,4 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         except Exception as e:
             logger.error(f"Database error: {e}")
             raise
+            return False

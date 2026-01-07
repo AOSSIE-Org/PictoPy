@@ -30,9 +30,7 @@ def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
         # --- Strict enforcement of all relational and logical rules ---
         conn.execute("PRAGMA foreign_keys = ON;")  # Enforce FK constraints
         conn.execute("PRAGMA ignore_check_constraints = OFF;")  # Enforce CHECK constraints
-        conn.execute("PRAGMA recursive_triggers = ON;")  # Allow nested triggers
         conn.execute("PRAGMA defer_foreign_keys = OFF;")  # Immediate FK checking
-        conn.execute("PRAGMA case_sensitive_like = ON;")  # Make LIKE case-sensitive
 
         yield conn
         conn.commit()
