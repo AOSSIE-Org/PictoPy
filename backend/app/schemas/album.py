@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from pydantic_core.core_schema import ValidationInfo
+from .common import ErrorResponse, SuccessResponse
 
 
 class Album(BaseModel):
@@ -75,12 +76,4 @@ class GetAlbumImagesResponse(BaseModel):
     image_ids: List[str]
 
 
-class SuccessResponse(BaseModel):
-    success: bool
-    msg: str
 
-
-class ErrorResponse(BaseModel):
-    success: bool = False
-    message: str
-    error: str

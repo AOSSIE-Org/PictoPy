@@ -8,3 +8,5 @@ export const avatars = [
   '/avatars/avatar7.png',
   '/avatars/avatar8.png',
 ];
+
+export const DEFAULT_AVATAR = '/avatars/avatar1.png';

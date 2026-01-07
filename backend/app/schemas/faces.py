@@ -1,13 +1,38 @@
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Union, Any
+from .common import ErrorResponse
 
 
-# Request Models
+# Face Tagging Models
+class SimilarPair(BaseModel):
+    image1: str
+    image2: str
+    similarity: float
+
+
+class FaceMatchingResponse(BaseModel):
+    success: bool
+    message: str
+    similar_pairs: List[SimilarPair]
+
+
+class FaceClustersResponse(BaseModel):
+    success: bool
+    message: str
+    clusters: Dict[int, List[str]]
+
+
+class GetRelatedImagesResponse(BaseModel):
+    success: bool
+    message: str
+    data: Dict[str, List[str]]
+
+
+# Face Clusters Models
 class RenameClusterRequest(BaseModel):
     cluster_name: str
 
 
-# Response Models
 class RenameClusterData(BaseModel):
     cluster_id: str
     cluster_name: str
@@ -18,12 +43,6 @@ class RenameClusterResponse(BaseModel):
     message: Optional[str] = None
     error: Optional[str] = None
     data: Optional[RenameClusterData] = None
-
-
-class ErrorResponse(BaseModel):
-    success: bool = False
-    message: Optional[str] = None
-    error: Optional[str] = None
 
 
 class ClusterMetadata(BaseModel):
@@ -46,7 +65,6 @@ class GetClustersResponse(BaseModel):
 
 class ImageInCluster(BaseModel):
     """Represents an image that contains faces from a specific cluster."""
-
     id: str
     path: str
     thumbnailPath: Optional[str] = None
@@ -58,7 +76,6 @@ class ImageInCluster(BaseModel):
 
 class GetClusterImagesData(BaseModel):
     """Data model for cluster images response."""
-
     cluster_id: str
     cluster_name: Optional[str] = None
     images: List[ImageInCluster]
@@ -67,7 +84,6 @@ class GetClusterImagesData(BaseModel):
 
 class GetClusterImagesResponse(BaseModel):
     """Response model for getting images in a cluster."""
-
     success: bool
     message: Optional[str] = None
     error: Optional[str] = None

@@ -1,6 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel
 from typing import Optional, List, Union
+from .common import ErrorResponse
 
 
 class InputType(str, Enum):
@@ -56,10 +57,7 @@ class GetImagesResponse(BaseModel):
     data: ImagesResponse
 
 
-class ErrorResponse(BaseModel):
-    success: bool = False
-    message: str
-    error: str
+
 
 
 class AddMultipleImagesResponse(BaseModel):

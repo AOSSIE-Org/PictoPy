@@ -8,7 +8,7 @@ from app.database.folders import (
     db_update_parent_ids_for_subtree,
     db_delete_folders_batch,
 )
-from app.schemas.folders import ErrorResponse
+from app.schemas.common import ErrorResponse
 from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
