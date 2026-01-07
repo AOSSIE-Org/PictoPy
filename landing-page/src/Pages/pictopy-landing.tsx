@@ -126,7 +126,7 @@ const PictopyLanding: FC = () => {
               alt="Pictopy Logo"
               className="h-16 w-16 object-contain"
             />
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-green-500 transition-all duration-300">
+            <h1 className="pb-3 text-4xl md:text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-green-500 transition-all duration-300">
               PictoPy
             </h1>
           </div>
