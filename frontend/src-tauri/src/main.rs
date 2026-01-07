@@ -40,14 +40,18 @@ fn on_window_event(window: &Window, event: &WindowEvent) {
 
 #[cfg(unix)]
 fn kill_process(process: &sysinfo::Process) {
-    use sysinfo::Signal;
     let _ = process.kill_with(Signal::Term);
 }
 
 #[cfg(windows)]
-fn kill_process(process: &sysinfo::Process) {
-    let _ = process.kill();
+fn kill_process_tree(pid: u32) -> Result<(), String> {
+    std::process::Command::new("taskkill")
+        .args(["/PID", &pid.to_string(), "/T", "/F"])
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }
+
 fn kill_process_tree(pid: u32) -> Result<(), String> {
     let mut system = System::new_all();
     system.refresh_all();
