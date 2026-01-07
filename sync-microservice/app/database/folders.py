@@ -1,4 +1,5 @@
 import sqlite3
+import os
 from typing import List, Tuple, NamedTuple
 from app.config.settings import DATABASE_PATH
 from app.logging.setup_logging import get_sync_logger
@@ -26,6 +27,9 @@ def db_get_all_folders_with_ids() -> List[FolderIdPath]:
     Returns:
         List of tuples containing (folder_id, folder_path)
     """
+
+    path = os.path.dirname(DATABASE_PATH)
+    os.makedirs(path, exist_ok=True)
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
