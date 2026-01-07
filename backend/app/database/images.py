@@ -380,4 +380,4 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         except Exception as e:
             logger.error(f"Database error: {e}")
             raise
-            return False
+        
