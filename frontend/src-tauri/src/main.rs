@@ -46,13 +46,17 @@ fn kill_process(process: &sysinfo::Process) -> Result<(), String> {
 
 #[cfg(windows)]
 fn kill_process(process: &sysinfo::Process) -> Result<(), String> {
-    std::process::Command::new("taskkill")
-        .args(["/PID", &process.pid().to_string(), "/T", "/F"])
-        .spawn()
+    let graceful = std::process::Command::new("taskkill")
+        .args(["/PID", &process.pid().to_string(), "/T"])
+        .status()
         .map_err(|e| e.to_string())?;
+
+    if !graceful.success() {
+        return Err("Failed to gracefully terminate process".to_string());
+    }
+
     Ok(())
 }
-
 fn kill_process_tree(pid: u32) -> Result<(), String> {
     let mut system = System::new_all();
     system.refresh_all();
@@ -74,7 +78,7 @@ fn kill_process_tree(pid: u32) -> Result<(), String> {
 
     for pid in to_kill {
         if let Some(process) = system.process(pid) {
-            kill_process(process);
+            let _ = kill_process(process);
         }
     }
 
