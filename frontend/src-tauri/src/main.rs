@@ -38,25 +38,6 @@ fn on_window_event(window: &Window, event: &WindowEvent) {
     app_handle.exit(0);
 }
 
-#[cfg(unix)]
-fn kill_process(process: &sysinfo::Process) -> Result<(), String> {
-    let _ = process.kill_with(Signal::Term);
-    Ok(())
-}
-
-#[cfg(windows)]
-fn kill_process(process: &sysinfo::Process) -> Result<(), String> {
-    let graceful = std::process::Command::new("taskkill")
-        .args(["/PID", &process.pid().to_string(), "/T"])
-        .status()
-        .map_err(|e| e.to_string())?;
-
-    if !graceful.success() {
-        return Err("Failed to gracefully terminate process".to_string());
-    }
-
-    Ok(())
-}
 fn kill_process_tree(pid: u32) -> Result<(), String> {
     let mut system = System::new_all();
     system.refresh_all();
@@ -78,7 +59,7 @@ fn kill_process_tree(pid: u32) -> Result<(), String> {
 
     for pid in to_kill {
         if let Some(process) = system.process(pid) {
-            let _ = kill_process(process);
+            let _ = process.kill_with(Signal::Term);
         }
     }
 
@@ -98,9 +79,11 @@ fn main() {
             let resource_path = app.path().resolve("resources", BaseDirectory::Resource)?;
             println!("Resource path: {:?}", resource_path);
 
+            //let backend_path = resource_path.join("backend/backend");
             let backend_path = resource_path.join("backend");
             let backend_executable = backend_path.join("PictoPy_Server");
 
+            //let sync_path = resource_path.join("sync-microservice/PictoPy_Sync");
             let sync_path = resource_path.join("sync-microservice");
             let sync_executable = sync_path.join("PictoPy_Sync");
 
