@@ -28,8 +28,6 @@ def db_get_all_folders_with_ids() -> List[FolderIdPath]:
         List of tuples containing (folder_id, folder_path)
     """
 
-    path = os.path.dirname(DATABASE_PATH)
-    os.makedirs(path, exist_ok=True)
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 

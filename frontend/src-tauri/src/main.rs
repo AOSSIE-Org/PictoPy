@@ -155,7 +155,6 @@ fn main() {
                 .current_dir(sync_path)
                 .spawn()
                 .map_err(|e| format!("Failed to Spawn {:?}: {:?}", &sync_executable, e))?;
-            sync_child.pid();
 
             tauri::async_runtime::spawn(async move {
                 while let Some(event) = sync_rx.recv().await {
@@ -183,6 +182,10 @@ fn main() {
             let state = app.state::<Mutex<Pids>>();
             {
                 let mut pids = state.lock().unwrap();
+                if pids.backend != 0 || pids.sync != 0 {
+                    println!("Backend or sync micrservice already running, skipping spawn");
+                    return Ok(());
+                }
                 pids.backend = backend_child.pid();
                 pids.sync = sync_child.pid();
             }
