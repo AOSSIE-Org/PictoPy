@@ -7,6 +7,7 @@ import { Image } from '@/types/Media';
 import { ImageTags } from './ImageTags';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { useToggleFav } from '@/hooks/useToggleFav';
+import { LazyImage } from "../LazyImage/LazyImage";
 
 interface ImageCardViewProps {
   image: Image;
@@ -54,7 +55,7 @@ export function ImageCard({
         )}
 
         <AspectRatio ratio={1}>
-          <img
+          <LazyImage
             src={convertFileSrc(
               image.thumbnailPath || image.path || '/placeholder.svg',
             )}
