@@ -38,12 +38,13 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
     Returns:
         bool: True if all folders processed successfully, False otherwise
     """
+    BATCH_SIZE = 50
     try:
         # Ensure thumbnail directory exists
         os.makedirs(THUMBNAIL_IMAGES_PATH, exist_ok=True)
 
-        all_image_records = []
         all_folder_ids = []
+        total_processed = 0
 
         # Process each folder in the provided data
         for folder_path, folder_id, recursive in folder_data:
@@ -60,11 +61,26 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
                 # Step 2: Create folder path mapping for this folder
                 folder_path_to_id = {os.path.abspath(folder_path): folder_id}
 
-                # Step 3: Prepare image records for this folder
-                folder_image_records = image_util_prepare_image_records(
-                    image_files, folder_path_to_id
-                )
-                all_image_records.extend(folder_image_records)
+                # Step 3: Prepare image records for this folder in batches
+                batch_records = []
+                for i, image_file in enumerate(image_files, 1):
+                    # prepare single image record
+                    image_records = image_util_prepare_single_image_records(
+                        image_file, folder_path_to_id
+                    )
+                    if image_records:
+                        batch_records.append(image_records)
+
+                    # commit batch when it reaches BATCH_SIZE or at the end
+                    if len(batch_records) >= BATCH_SIZE or i == len(image_files):
+                        if batch_records:
+                            db_bulk_insert_images(batch_records)
+                            total_processed += len(batch_records)
+                            logger.info(
+                                f"Committed batch of {len(batch_records)} images from folder {folder_path} "
+                                f"Total processed so far: {total_processed}"
+                            )
+                            batch_records = []  # reset batch records
 
             except Exception as e:
                 logger.error(f"Error processing folder {folder_path}: {e}")
@@ -74,13 +90,12 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
         if all_folder_ids:
             image_util_remove_obsolete_images(all_folder_ids)
 
-        # Step 5: Bulk insert all new records if any exist
-        if all_image_records:
-            return db_bulk_insert_images(all_image_records)
-
-        return True  # No images to process is not an error
+        logger.info(
+            f"Finished processing folders. Total images processed: {total_processed}"
+        )
+        return True
     except Exception as e:
-        logger.error(f"Error processing folders: {e}")
+        logger.error(f"Error in image_util_process_folder_images: {e}")
         return False
 
 
@@ -136,48 +151,41 @@ def image_util_classify_and_face_detect_images(
         face_detector.close()
 
 
-def image_util_prepare_image_records(
-    image_files: List[str], folder_path_to_id: Dict[str, int]
-) -> List[Dict]:
+def image_util_prepare_single_image_records(
+    image_path: str, folder_path_to_id: Dict[str, int]
+) -> Dict | None:
     """
-    Prepare image records with thumbnails for database insertion.
+    Prepare a single image record with thumbnail for database insertion.
 
     Args:
-        image_files: List of image file paths
+        image_path: Path to the image file
         folder_path_to_id: Dictionary mapping folder paths to IDs
 
     Returns:
-        List of image record dictionaries ready for database insertion
+        Image record dictionary ready for database insertion, or None if preparation fails
     """
-    image_records = []
-    for image_path in image_files:
-        folder_id = image_util_find_folder_id_for_image(image_path, folder_path_to_id)
+    folder_id = image_util_find_folder_id_for_image(image_path, folder_path_to_id)
 
-        if not folder_id:
-            continue  # Skip if no matching folder ID found
-
-        image_id = str(uuid.uuid4())
-        thumbnail_name = f"thumbnail_{image_id}.jpg"
-        thumbnail_path = os.path.abspath(
-            os.path.join(THUMBNAIL_IMAGES_PATH, thumbnail_name)
-        )
-
-        # Generate thumbnail
-        if image_util_generate_thumbnail(image_path, thumbnail_path):
-            metadata = image_util_extract_metadata(image_path)
-            logger.debug(f"Extracted metadata for {image_path}: {metadata}")
-            image_records.append(
-                {
-                    "id": image_id,
-                    "path": image_path,
-                    "folder_id": folder_id,
-                    "thumbnailPath": thumbnail_path,
-                    "metadata": json.dumps(metadata),
-                    "isTagged": False,
-                }
-            )
-
-    return image_records
+    if not folder_id:
+        return None  # Skip if no matching folder ID found
+    image_id = str(uuid.uuid4())
+    thumbnail_name = f"thumbnail_{image_id}.jpg"
+    thumbnail_path = os.path.abspath(
+        os.path.join(THUMBNAIL_IMAGES_PATH, thumbnail_name)
+    )
+    # Generate thumbnail
+    if image_util_generate_thumbnail(image_path, thumbnail_path):
+        metadata = image_util_extract_metadata(image_path)
+        logger.debug(f"Extracted metadata for {image_path}: {metadata}")
+        return {
+            "id": image_id,
+            "path": image_path,
+            "folder_id": folder_id,
+            "thumbnailPath": thumbnail_path,
+            "metadata": json.dumps(metadata),
+            "isTagged": False,
+        }
+    return None
 
 
 def image_util_get_images_from_folder(
