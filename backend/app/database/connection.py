@@ -1,5 +1,4 @@
 import sqlite3
-import os
 from contextlib import contextmanager
 from typing import Generator
 from app.config.settings import DATABASE_PATH
