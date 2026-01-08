@@ -118,11 +118,11 @@ export const MediaThumbnails: React.FC<MediaThumbnailsProps> = ({
             } cursor-pointer transition-all duration-200 hover:scale-105`}
           >
             <LazyImage
-              src={convertFileSrc(image.thumbnailPath) || '/placeholder.svg'}
-              alt={`thumbnail-${index}`}
-              className="h-full w-full object-cover"
-             
-            />
+  src={convertFileSrc(image.thumbnailPath) || '/placeholder.svg'}
+  alt={`thumbnail-${index}`}
+  className="h-full w-full object-cover"
+/>
+
           </div>
         ))}
       </div>

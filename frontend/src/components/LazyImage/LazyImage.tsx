@@ -5,7 +5,6 @@ interface LazyImageProps {
   src: string;
   alt: string;
   className?: string;
-  placeholder?: string;
   rootMargin?: string;
   threshold?: number;
 }
@@ -14,10 +13,10 @@ export function LazyImage({
   src,
   alt,
   className = "",
-  placeholder,
   rootMargin = "200px",
   threshold = 0.1,
 }: LazyImageProps) {
+
   const containerRef = useRef<HTMLDivElement>(null);
   const isVisible = useIntersectionObserver(containerRef, {
     rootMargin,

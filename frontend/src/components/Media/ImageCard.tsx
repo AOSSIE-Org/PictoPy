@@ -59,7 +59,13 @@ export function ImageCard({
             src={convertFileSrc(
               image.thumbnailPath || image.path || '/placeholder.svg',
             )}
-            alt={'Sample Title'}
+            alt={
+  image.path
+    ? image.path.split('/').pop() ?? 'Image thumbnail'
+    : 'Image thumbnail'
+}
+
+
             className={cn(
               'h-full w-full object-cover transition-transform group-hover:scale-105',
               isSelected ? 'opacity-95' : '',
