@@ -14,8 +14,6 @@ def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
     - Works for both single and multi-step transactions
     - Automatically commits on success or rolls back on failure
     """
-    path = os.path.dirname(DATABASE_PATH)
-    os.makedirs(path, exist_ok=True)
     conn = sqlite3.connect(DATABASE_PATH)
 
     # --- Strict enforcement of all relational and logical rules ---

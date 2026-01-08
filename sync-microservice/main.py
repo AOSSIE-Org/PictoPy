@@ -1,4 +1,6 @@
 import logging
+import os
+from app.config.settings import DATABASE_PATH
 from fastapi import FastAPI
 from uvicorn import Config, Server
 from app.core.lifespan import lifespan
@@ -17,6 +19,8 @@ setup_logging("sync-microservice")
 # Configure Uvicorn logging to use our custom formatter
 configure_uvicorn_logging("sync-microservice")
 
+path = os.path.dirname(DATABASE_PATH)
+os.makedirs(path, exist_ok=True)
 # Use the sync-specific logger for this module
 logger = get_sync_logger(__name__)
 
@@ -55,7 +59,5 @@ if __name__ == "__main__":
     server = Server(config)
 
     # Use context manager for safe stdout/stderr redirection
-    with redirect_stdout_stderr(
-        logger, stdout_level=logging.INFO, stderr_level=logging.ERROR
-    ):
+    with redirect_stdout_stderr(logger, stdout_level=logging.INFO, stderr_level=logging.ERROR):
         server.run()
