@@ -10,7 +10,7 @@ theme:
   icon:
     repo: fontawesome/brands/github
   features:
-    - navigation.tabs
+    # - navigation.tabs   # Disabled to fix duplicate "Home" and navbar height issue (#684)
     - navigation.sections
     - toc.integrate
     - navigation.top
@@ -37,8 +37,7 @@ theme:
 
 plugins:
   - search
-  - swagger-ui-tag:
-  
+  - swagger-ui-tag # Re-enabled: used for rendering OpenAPI docs in backend_python/api.md
 
 markdown_extensions:
   - pymdownx.highlight:
