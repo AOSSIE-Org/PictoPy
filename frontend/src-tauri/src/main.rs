@@ -4,7 +4,7 @@
 mod services;
 
 use std::sync::Mutex;
-use sysinfo::{Pid, Signal, System};
+use sysinfo::{Pid, System};
 use tauri::path::BaseDirectory;
 use tauri::{Manager, Window, WindowEvent};
 use tauri_plugin_shell::process::CommandEvent;
@@ -38,6 +38,38 @@ fn on_window_event(window: &Window, event: &WindowEvent) {
     app_handle.exit(0);
 }
 
+#[cfg(unix)]
+fn kill_process(process: &sysinfo::Process) {
+    use sysinfo::Signal;
+    let _ = process.kill_with(Signal::Term);
+}
+
+#[cfg(windows)]
+pub fn kill_process(_process: &sysinfo::Process) -> Result<(), String> {
+    use reqwest::blocking::Client;
+
+    let client = Client::builder().build().map_err(|e| e.to_string())?;
+
+    let endpoints = [
+        ("BACKEND", "http://localhost:52123/shutdown"),
+        ("SYNC", "http://localhost:52124/shutdown"),
+    ];
+
+    for (name, url) in endpoints {
+        match client.post(url).send() {
+            Ok(resp) => {
+                let status = resp.status();
+
+                if status.is_success() {
+                    println!("[{}] Shutdown OK ({})", name, status);
+                }
+            }
+            Err(_err) => {}
+        }
+    }
+
+    Ok(())
+}
 fn kill_process_tree(pid: u32) -> Result<(), String> {
     let mut system = System::new_all();
     system.refresh_all();
@@ -59,13 +91,7 @@ fn kill_process_tree(pid: u32) -> Result<(), String> {
 
     for pid in to_kill {
         if let Some(process) = system.process(pid) {
-            #[cfg(unix)]
-            let _ = process.kill_with(Signal::Term);
-
-            #[cfg(windows)]
-            if let Err(error) = process.kill_and_wait() {
-                println!("`kill_and_wait` failed: {error:?}");
-            }
+            let _ = kill_process(process);
         }
     }
 
