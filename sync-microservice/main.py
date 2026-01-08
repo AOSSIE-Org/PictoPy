@@ -1,5 +1,4 @@
 import logging
-import os
 from fastapi import FastAPI
 from uvicorn import Config, Server
 from app.core.lifespan import lifespan
@@ -56,5 +55,7 @@ if __name__ == "__main__":
     server = Server(config)
 
     # Use context manager for safe stdout/stderr redirection
-    with redirect_stdout_stderr(logger, stdout_level=logging.INFO, stderr_level=logging.ERROR):
+    with redirect_stdout_stderr(
+        logger, stdout_level=logging.INFO, stderr_level=logging.ERROR
+    ):
         server.run()
