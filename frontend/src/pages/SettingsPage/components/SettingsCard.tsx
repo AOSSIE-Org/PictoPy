@@ -15,6 +15,10 @@ interface SettingsCardProps {
    */
   description?: string;
   /**
+   * Optional action element to display in the header
+   */
+  action?: React.ReactNode;
+  /**
    * Card content
    */
   children: React.ReactNode;
@@ -27,6 +31,7 @@ const SettingsCard: React.FC<SettingsCardProps> = ({
   icon: Icon,
   title,
   description,
+  action,
   children,
 }) => {
   return (
@@ -39,6 +44,7 @@ const SettingsCard: React.FC<SettingsCardProps> = ({
             <p className="text-muted-foreground text-sm">{description}</p>
           )}
         </div>
+        {action && <div className="ml-auto">{action}</div>}
       </div>
       {children}
     </div>
