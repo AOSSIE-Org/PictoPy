@@ -97,23 +97,30 @@ class ToggleFavouriteRequest(BaseModel):
 
 @router.post("/toggle-favourite")
 def toggle_favourite(req: ToggleFavouriteRequest):
+    """
+    Toggle the favourite status of an image.
+    
+    Performance optimized: The toggle function now returns the new status directly,
+    avoiding the need to fetch all images just to find one (O(n) -> O(1)).
+    """
     image_id = req.image_id
     try:
-        success = db_toggle_image_favourite_status(image_id)
-        if not success:
+        # db_toggle_image_favourite_status now returns the new status directly
+        new_favourite_status = db_toggle_image_favourite_status(image_id)
+        
+        if new_favourite_status is None:
             raise HTTPException(
                 status_code=404, detail="Image not found or failed to toggle"
             )
-        # Fetch updated status to return
-        image = next(
-            (img for img in db_get_all_images() if img["id"] == image_id), None
-        )
+        
         return {
             "success": True,
             "image_id": image_id,
-            "isFavourite": image.get("isFavourite", False),
+            "isFavourite": new_favourite_status,
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"error in /toggle-favourite route: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")

@@ -396,26 +396,108 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
         conn.close()
 
 
-def db_toggle_image_favourite_status(image_id: str) -> bool:
+def db_toggle_image_favourite_status(image_id: str) -> Union[bool, None]:
+    """
+    Toggle the favourite status of an image.
+    
+    Args:
+        image_id: The ID of the image to toggle
+        
+    Returns:
+        The new isFavourite status (True/False) if successful, None if image not found
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT id FROM images WHERE id = ?", (image_id,))
-        if not cursor.fetchone():
-            return False
+        cursor.execute("SELECT id, isFavourite FROM images WHERE id = ?", (image_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        
+        current_status = bool(row[1])
+        new_status = not current_status
+        
         cursor.execute(
-            """
-            UPDATE images
-            SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
-            WHERE id = ?
-            """,
-            (image_id,),
+            "UPDATE images SET isFavourite = ? WHERE id = ?",
+            (new_status, image_id),
         )
         conn.commit()
-        return cursor.rowcount > 0
+        return new_status if cursor.rowcount > 0 else None
     except Exception as e:
         logger.error(f"Database error: {e}")
         conn.rollback()
-        return False
+        return None
+    finally:
+        conn.close()
+
+
+def db_get_image_by_id(image_id: str) -> Union[dict, None]:
+    """
+    Get a single image by its ID - O(1) lookup.
+    
+    Args:
+        image_id: The ID of the image to retrieve
+        
+    Returns:
+        Dictionary containing image data, or None if not found
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute(
+            """
+            SELECT 
+                i.id, 
+                i.path, 
+                i.folder_id, 
+                i.thumbnailPath, 
+                i.metadata, 
+                i.isTagged,
+                i.isFavourite,
+                m.name as tag_name
+            FROM images i
+            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN mappings m ON ic.class_id = m.class_id
+            WHERE i.id = ?
+            ORDER BY m.name
+            """,
+            (image_id,)
+        )
+        
+        results = cursor.fetchall()
+        
+        if not results:
+            return None
+        
+        # Process the first row for image data
+        first_row = results[0]
+        from app.utils.images import image_util_parse_metadata
+        
+        image_data = {
+            "id": first_row[0],
+            "path": first_row[1],
+            "folder_id": str(first_row[2]),
+            "thumbnailPath": first_row[3],
+            "metadata": image_util_parse_metadata(first_row[4]),
+            "isTagged": bool(first_row[5]),
+            "isFavourite": bool(first_row[6]),
+            "tags": [],
+        }
+        
+        # Collect all tags
+        for row in results:
+            tag_name = row[7]
+            if tag_name and tag_name not in image_data["tags"]:
+                image_data["tags"].append(tag_name)
+        
+        if not image_data["tags"]:
+            image_data["tags"] = None
+            
+        return image_data
+        
+    except Exception as e:
+        logger.error(f"Error getting image by ID: {e}")
+        return None
     finally:
         conn.close()
