@@ -10,7 +10,7 @@ interface IntersectionOptions {
  * Hook to detect when an element enters the viewport
  */
 export function useIntersectionObserver(
-  ref: RefObject<Element>,
+  ref: RefObject<Element | null>,
   options: IntersectionOptions = {}
 ) {
   const [isVisible, setIsVisible] = useState(false);
