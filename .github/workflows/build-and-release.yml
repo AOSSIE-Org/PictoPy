@@ -66,10 +66,11 @@ jobs:
 
       - name: Copy app folder
         working-directory: backend
-        shell: bash
+        shell: ${{ matrix.platform == 'windows-latest' && 'pwsh' || 'bash' }}
         run: |
           ${{ matrix.mkdir-cmd }}
           ${{ matrix.copy-cmd }}
+
 
       - name: Create ZIP package
         working-directory: backend/dist/PictoPy_Server
@@ -128,9 +129,10 @@ jobs:
 
       - name: Copy app folder
         working-directory: sync-microservice
-        shell: bash
+        shell: ${{ matrix.platform == 'windows-latest' && 'pwsh' || 'bash' }}
         run: |
           ${{ matrix.copy-cmd }}
+
 
       - name: Create ZIP package
         working-directory: sync-microservice/dist/PictoPy_Sync
