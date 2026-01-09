@@ -6,8 +6,11 @@ import {
 } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 import { Image } from '@/types/Media';
-import { setImages } from '@/features/imageSlice';
-import { selectImages } from '@/features/imageSelectors';
+import { setGalleryImages } from '@/features/imageSlice';
+import {
+  selectImages,
+  selectNeedsGalleryRefresh,
+} from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
@@ -17,16 +20,19 @@ import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 export const Home = () => {
   const dispatch = useDispatch();
   const images = useSelector(selectImages);
+  const needsRefresh = useSelector(selectNeedsGalleryRefresh);
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
   const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
 
-  const { data, isLoading, isSuccess, isError, error } = usePictoQuery({
-    queryKey: ['images'],
-    queryFn: () => fetchAllImages(),
-    enabled: !isSearchActive,
-  });
+  const { data, isLoading, isSuccess, isError, error, refetch } = usePictoQuery(
+    {
+      queryKey: ['images'],
+      queryFn: () => fetchAllImages(),
+      enabled: !isSearchActive,
+    },
+  );
 
   useMutationFeedback(
     { isPending: isLoading, isSuccess, isError, error },
@@ -38,10 +44,17 @@ export const Home = () => {
     },
   );
 
+  // Refetch gallery images if returning from cluster/search view
+  useEffect(() => {
+    if (!isSearchActive && needsRefresh) {
+      refetch();
+    }
+  }, [needsRefresh, isSearchActive, refetch]);
+
   useEffect(() => {
     if (!isSearchActive && isSuccess) {
       const images = data?.data as Image[];
-      dispatch(setImages(images));
+      dispatch(setGalleryImages(images));
     }
   }, [data, isSuccess, dispatch, isSearchActive]);
 
