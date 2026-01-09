@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Camera, ScanFace } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Camera, ScanFace, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -20,14 +20,126 @@ import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useNavigate } from 'react-router';
 import { ROUTES } from '@/constants/routes';
 import WebcamComponent from '../WebCam/WebCamComponent';
+import { InfoDialog } from '@/components/Dialog/InfoDialog';
+import { type } from '@tauri-apps/plugin-os';
+import { open } from '@tauri-apps/plugin-shell';
 
 import { setImages } from '@/features/imageSlice';
+
+interface PlatformSettings {
+  name: string;
+  instructions: string;
+  settingsUrl: string | null;
+  troubleshootUrl?: string;
+  isWebViewPermission?: boolean;
+}
+
+const TROUBLESHOOT_URL =
+  'https://aossie-org.github.io/PictoPy/Camera-Permission-Troubleshooting/';
+
+const getPlatformSettings = (os: string): PlatformSettings => {
+  switch (os) {
+    case 'macos':
+      return {
+        name: 'macOS',
+        instructions: 'System Settings → Privacy & Security → Camera',
+        settingsUrl:
+          'x-apple.systempreferences:com.apple.preference.security?Privacy_Camera',
+      };
+    case 'windows':
+      return {
+        name: 'Windows',
+        instructions:
+          'This permission is stored by the app, not Windows settings.',
+        settingsUrl: null,
+        troubleshootUrl: TROUBLESHOOT_URL,
+        isWebViewPermission: true,
+      };
+    case 'linux':
+      return {
+        name: 'Linux',
+        instructions: 'Settings → Privacy → Camera',
+        settingsUrl: null,
+      };
+    default:
+      return {
+        name: 'your system',
+        instructions: 'Check your system privacy settings for camera access.',
+        settingsUrl: null,
+      };
+  }
+};
+
 export function FaceSearchDialog() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [showPermissionDeniedDialog, setShowPermissionDeniedDialog] =
+    useState(false);
+  const [showCameraConfirmDialog, setShowCameraConfirmDialog] = useState(false);
+  const [hasAcknowledgedCameraWarning, setHasAcknowledgedCameraWarning] =
+    useState(() => {
+      try {
+        return (
+          localStorage.getItem('pictopy_camera_warning_acknowledged') === 'true'
+        );
+      } catch {
+        try {
+          return (
+            sessionStorage.getItem('pictopy_camera_warning_acknowledged') ===
+            'true'
+          );
+        } catch {
+          return false;
+        }
+      }
+    });
+  const [platformSettings, setPlatformSettings] = useState<PlatformSettings>({
+    name: 'your system',
+    instructions: 'System Settings → Privacy → Camera',
+    settingsUrl: null,
+  });
   const { pickSingleFile } = useFile({ title: 'Select File' });
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    try {
+      const os = type();
+      setPlatformSettings(getPlatformSettings(os));
+    } catch {
+      setPlatformSettings(getPlatformSettings(''));
+    }
+  }, []);
+
+  const handleOpenSettings = async () => {
+    if (!platformSettings.settingsUrl) return;
+    try {
+      await open(platformSettings.settingsUrl);
+    } catch {
+      dispatch(
+        showInfoDialog({
+          title: 'Unable to Open Settings',
+          message: `Could not open ${platformSettings.name} settings automatically. Please navigate to: ${platformSettings.instructions}`,
+          variant: 'error',
+        }),
+      );
+    }
+  };
+
+  const handleOpenTroubleshoot = async () => {
+    if (!platformSettings.troubleshootUrl) return;
+    try {
+      await open(platformSettings.troubleshootUrl);
+    } catch {
+      dispatch(
+        showInfoDialog({
+          title: 'Unable to Open Link',
+          message: `Could not open the troubleshooting guide. Please visit: ${platformSettings.troubleshootUrl}`,
+          variant: 'error',
+        }),
+      );
+    }
+  };
 
   const { mutate: getSearchImages } = usePictoMutation({
     mutationFn: async (path: string) => fetchSearchedFaces({ path }),
@@ -60,24 +172,59 @@ export function FaceSearchDialog() {
       );
     },
   });
-  const handleWebCam = async () => {
+
+  const handleWebCamClick = () => {
+    setIsDialogOpen(false);
+    if (hasAcknowledgedCameraWarning) {
+      triggerCameraPermission();
+    } else {
+      setShowCameraConfirmDialog(true);
+    }
+  };
+
+  const handleWebCamConfirmed = () => {
+    setShowCameraConfirmDialog(false);
+    try {
+      localStorage.setItem('pictopy_camera_warning_acknowledged', 'true');
+    } catch {
+      // If localStorage fails, continue anyway - acknowledgment is in-memory only
+    }
+    setHasAcknowledgedCameraWarning(true);
+    triggerCameraPermission();
+  };
+  const triggerCameraPermission = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       stream.getTracks().forEach((track) => track.stop());
       navigate(`/${ROUTES.HOME}`);
-      setIsDialogOpen(false);
       setShowCamera(true);
     } catch (error) {
-      dispatch(
-        showInfoDialog({
-          title: 'Webcam Not Supported',
-          message:
-            'Webcam is not supported or access was denied on this device.',
-          variant: 'error',
-        }),
-      );
+      const err = error as DOMException;
+      if (err.name === 'NotAllowedError') {
+        // Permission explicitly denied. Shows recovery dialog
+        setIsDialogOpen(false);
+        setShowPermissionDeniedDialog(true);
+      } else if (err.name === 'NotFoundError') {
+        // No camera hardware detected
+        dispatch(
+          showInfoDialog({
+            title: 'No Camera Found',
+            message: 'No camera hardware was detected on this device.',
+            variant: 'error',
+          }),
+        );
+      } else {
+        dispatch(
+          showInfoDialog({
+            title: 'Camera Error',
+            message: 'An unexpected error occurred while accessing the camera.',
+            variant: 'error',
+          }),
+        );
+      }
     }
   };
+
   const handlePickFile = async () => {
     navigate(`/${ROUTES.HOME}`);
     const filePath = await pickSingleFile();
@@ -88,6 +235,44 @@ export function FaceSearchDialog() {
       getSearchImages(filePath);
     }
   };
+
+  // Permission denied dialog content
+  const permissionDeniedMessage = platformSettings.isWebViewPermission ? (
+    // Windows: WebView2-based permission
+    <div className="space-y-3">
+      <p>
+        Camera access was denied. The app cannot re-request permission
+        automatically.
+      </p>
+      <p>
+        On <strong>{platformSettings.name}</strong>, this permission is managed
+        by the app itself, not Windows Settings. Once denied, it requires
+        clearing the app's local data to reset.
+      </p>
+      <p className="text-muted-foreground text-xs">
+        See our troubleshooting guide for detailed recovery steps.
+      </p>
+    </div>
+  ) : (
+    // macOS/Linux: OS-level permission
+    <div className="space-y-3">
+      <p>
+        Camera access was denied. The app cannot re-request permission
+        automatically.
+      </p>
+      <p>
+        To enable camera access on <strong>{platformSettings.name}</strong>, go
+        to:
+      </p>
+      <p className="bg-muted rounded-md px-3 py-2 font-mono text-sm">
+        {platformSettings.instructions}
+      </p>
+      <p className="text-muted-foreground text-xs">
+        Find PictoPy in the list and enable camera access, then try again.
+      </p>
+    </div>
+  );
+
   return (
     <>
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -129,7 +314,7 @@ export function FaceSearchDialog() {
 
             {/* Webcam Button */}
             <Button
-              onClick={handleWebCam}
+              onClick={handleWebCamClick}
               disabled={false}
               className="flex h-32 cursor-pointer flex-col items-center justify-center gap-2 p-0"
               variant="outline"
@@ -147,6 +332,59 @@ export function FaceSearchDialog() {
       <WebcamComponent
         isOpen={showCamera}
         onClose={() => setShowCamera(false)}
+      />
+
+      <InfoDialog
+        isOpen={showPermissionDeniedDialog}
+        onClose={() => setShowPermissionDeniedDialog(false)}
+        title="Camera Access Required"
+        message={permissionDeniedMessage}
+        variant="warning"
+        primaryAction={
+          platformSettings.settingsUrl
+            ? {
+                label: 'Open Settings',
+                icon: <ExternalLink className="h-4 w-4" />,
+                onClick: handleOpenSettings,
+              }
+            : platformSettings.troubleshootUrl
+              ? {
+                  label: 'Learn how to fix this',
+                  icon: <ExternalLink className="h-4 w-4" />,
+                  onClick: handleOpenTroubleshoot,
+                }
+              : undefined
+        }
+      />
+
+      {/* Pre-confirmation dialog before triggering OS permission prompt */}
+      <InfoDialog
+        isOpen={showCameraConfirmDialog}
+        onClose={() => {
+          setShowCameraConfirmDialog(false);
+          setIsDialogOpen(true);
+        }}
+        title="Camera Permission"
+        message={
+          <div className="space-y-3">
+            <p>
+              PictoPy needs camera access for face search. Your system will ask
+              for permission next.
+            </p>
+            <p className="font-medium text-amber-600 dark:text-amber-400">
+              ⚠️ Clicking "Block" could permanently restrict access and may be
+              irreversible on some platforms.
+            </p>
+            <p className="text-muted-foreground text-sm">
+              After clicking "Continue", click "Allow" to grant camera access.
+            </p>
+          </div>
+        }
+        variant="info"
+        primaryAction={{
+          label: 'Continue',
+          onClick: handleWebCamConfirmed,
+        }}
       />
     </>
   );
