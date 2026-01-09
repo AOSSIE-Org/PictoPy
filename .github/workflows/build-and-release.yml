@@ -358,3 +358,114 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+
+  # Create tar.gz archives for AUR (Arch Linux)
+  create-aur-tarball:
+    needs: [publish-tauri]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Download Linux deb from release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          TAG="${{ steps.get_version.outputs.tag }}"
+          REPO="AOSSIE-Org/PictoPy"
+          
+          echo "Waiting for .deb asset to be available in release ${TAG}..."
+          
+          # Poll for up to 10 minutes (60 attempts, 10 seconds apart)
+          MAX_ATTEMPTS=60
+          ATTEMPT=0
+          DEB_ASSET_URL=""
+          DEB_ASSET_NAME=""
+          
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: Checking for release assets..."
+            
+            # Query GitHub API for release assets
+            ASSETS_JSON=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/${REPO}/releases/tags/${TAG}")
+            
+            # Check if release exists
+            if echo "$ASSETS_JSON" | jq -e '.assets' > /dev/null 2>&1; then
+              # Look for .deb file in assets (case-insensitive, amd64)
+              DEB_ASSET=$(echo "$ASSETS_JSON" | jq -r '.assets[] | select(.name | test(".*amd64\\.deb$"; "i")) | {name: .name, url: .browser_download_url}' | head -1)
+              
+              if [ -n "$DEB_ASSET" ] && [ "$DEB_ASSET" != "null" ]; then
+                DEB_ASSET_NAME=$(echo "$ASSETS_JSON" | jq -r '.assets[] | select(.name | test(".*amd64\\.deb$"; "i")) | .name' | head -1)
+                DEB_ASSET_URL=$(echo "$ASSETS_JSON" | jq -r '.assets[] | select(.name | test(".*amd64\\.deb$"; "i")) | .browser_download_url' | head -1)
+                
+                if [ -n "$DEB_ASSET_URL" ] && [ "$DEB_ASSET_URL" != "null" ]; then
+                  echo "Found .deb asset: ${DEB_ASSET_NAME}"
+                  echo "Download URL: ${DEB_ASSET_URL}"
+                  break
+                fi
+              fi
+            fi
+            
+            if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+              echo "Asset not found yet, waiting 10 seconds..."
+              sleep 10
+            fi
+          done
+          
+          # Verify we found the asset
+          if [ -z "$DEB_ASSET_URL" ] || [ "$DEB_ASSET_URL" = "null" ]; then
+            echo "Error: Could not find .deb asset after ${MAX_ATTEMPTS} attempts"
+            echo "Available assets:"
+            echo "$ASSETS_JSON" | jq -r '.assets[].name' 2>/dev/null || echo "No assets found"
+            exit 1
+          fi
+          
+          # Download the deb package
+          echo "Downloading ${DEB_ASSET_NAME}..."
+          curl -fLo pictopy.deb "$DEB_ASSET_URL"
+          
+          echo "Successfully downloaded: pictopy.deb"
+          ls -la pictopy.deb
+
+      - name: Extract and repackage as tar.gz
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          
+          # Extract deb package
+          mkdir -p extract
+          dpkg-deb -x pictopy.deb extract/
+          
+          # Create tar.gz with proper structure
+          cd extract
+          tar -czvf "../pictopy_${VERSION}_amd64.tar.gz" .
+          cd ..
+          
+          # Calculate checksum
+          sha256sum "pictopy_${VERSION}_amd64.tar.gz" > "pictopy_${VERSION}_amd64.tar.gz.sha256"
+
+      - name: Upload tar.gz to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.tag }}
+          files: |
+            pictopy_${{ steps.get_version.outputs.version }}_amd64.tar.gz
+            pictopy_${{ steps.get_version.outputs.version }}_amd64.tar.gz.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
