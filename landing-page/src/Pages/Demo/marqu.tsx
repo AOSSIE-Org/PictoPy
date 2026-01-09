@@ -1,8 +1,11 @@
 
-import { motion } from "framer-motion";
+import { motion, useAnimation } from "framer-motion";
 import { ImageIcon, FolderSync, Search, Code } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export default function TechMarquee() {
+  const [isHovered, setIsHovered] = useState(false);
+  const controls = useAnimation();
   const technologies = [
     { 
       text: "PictoAI", 
@@ -22,28 +25,42 @@ export default function TechMarquee() {
     }
   ];
 
-  return (
-    <div className="relative w-full overflow-hidden 
-      bg-white 
-      dark:bg-black
-      py-4 
-      dark:shadow-[0_0_50px_rgba(255,255,255,0.1)]
-      transition-shadow duration-500">
-      <motion.div
-        className="flex space-x-6 items-center"
-        initial={{ x: '0%' }}
-        animate={{ x: '-100%' }}
-        transition={{
+  useEffect(() => {
+    if (!isHovered) {
+      controls.start({
+        x: '-50%',
+        transition: {
           duration: 10,
           ease: "linear",
           repeat: Infinity,
           repeatType: "loop"
-        }}
+        }
+      });
+    } else {
+      controls.stop();
+    }
+  }, [isHovered, controls]);
+
+  return (
+    <div className="relative w-full overflow-hidden 
+        bg-white 
+        dark:bg-black
+        py-4 
+        dark:shadow-[0_0_50px_rgba(255,255,255,0.1)]
+        transition-shadow duration-500
+        z-10"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        >
+      <motion.div
+        className="flex space-x-6 items-center will-change-transform"
+        initial={{ x: '0%' }}
+        animate={controls}
       >
-        {[...technologies, ...technologies, ...technologies].map((tech, index) => (
+        {[...technologies, ...technologies, ...technologies, ...technologies, ...technologies, ...technologies].map((tech, index) => (
           <div
             key={index}
-            className="flex-shrink-0 flex items-center text-gray-600 dark:text-gray-300 text-xs font-medium"
+            className="flex-shrink-0 flex items-center text-gray-600 dark:text-gray-300 text-xs font-medium relative z-10"
           >
             <motion.span 
               className="flex items-center 
@@ -53,7 +70,9 @@ export default function TechMarquee() {
                 rounded-full 
                 transition-all duration-300
                 border border-gray-200 dark:border-white/10
-                shadow-sm"
+                shadow-sm
+                relative z-20
+                cursor-pointer"
               whileHover={{ 
                 scale: 1.05,
                 transition: { duration: 0.2 }
