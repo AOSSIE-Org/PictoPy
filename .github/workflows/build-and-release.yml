@@ -1,6 +1,5 @@
 name: Build and Release App
 on:
-  pull_request: #adding for testing 
   release:
     types: [published]
   workflow_dispatch: # Ability to manually trigger the workflow
