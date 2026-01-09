@@ -1,5 +1,4 @@
 import sqlite3
-import os
 from typing import List, Tuple, NamedTuple
 from app.config.settings import DATABASE_PATH
 from app.logging.setup_logging import get_sync_logger
