@@ -1,35 +1,33 @@
-import sqlite3
 import json
 import numpy as np
 from sklearn.cluster import DBSCAN
-from app.config.settings import DATABASE_PATH
+from app.database.connection import get_db_connection
 
 
 def get_all_face_embeddings():
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT image_id, embeddings FROM faces")
-    results = cursor.fetchall()
+        cursor.execute("SELECT image_id, embeddings FROM faces")
+        results = cursor.fetchall()
 
-    all_embeddings = []
-    image_paths = []
-    skipped_images = []
-    for image_id, embeddings_json in results:
-        cursor.execute("SELECT path FROM image_id_mapping WHERE id = ?", (image_id,))
-        image_path = cursor.fetchone()[0]
-        embeddings = np.array(json.loads(embeddings_json))
+        all_embeddings = []
+        image_paths = []
+        skipped_images = []
+        for image_id, embeddings_json in results:
+            cursor.execute("SELECT path FROM image_id_mapping WHERE id = ?", (image_id,))
+            image_path = cursor.fetchone()[0]
+            embeddings = np.array(json.loads(embeddings_json))
 
-        # Skip images with more than 10 faces
-        if len(embeddings) > 10:
-            skipped_images.append(image_path)
-            continue
+            # Skip images with more than 10 faces
+            if len(embeddings) > 10:
+                skipped_images.append(image_path)
+                continue
 
-        all_embeddings.extend(embeddings)
-        image_paths.extend([image_path] * len(embeddings))
+            all_embeddings.extend(embeddings)
+            image_paths.extend([image_path] * len(embeddings))
 
-    conn.close()
-    return np.array(all_embeddings), image_paths, skipped_images
+        return np.array(all_embeddings), image_paths, skipped_images
 
 
 def main():

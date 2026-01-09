@@ -358,3 +358,63 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+
+  # Create tar.gz archives for AUR (Arch Linux)
+  create-aur-tarball:
+    needs: [publish-tauri]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Download Linux deb from release
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          TAG="${{ steps.get_version.outputs.tag }}"
+          
+          # Wait for release assets to be available
+          sleep 30
+          
+          # Download the deb package
+          curl -fLo pictopy.deb "https://github.com/AOSSIE-Org/PictoPy/releases/download/${TAG}/picto-py_${VERSION}_amd64.deb" || \
+          curl -fLo pictopy.deb "https://github.com/AOSSIE-Org/PictoPy/releases/download/${TAG}/PictoPy_${VERSION}_amd64.deb"
+
+      - name: Extract and repackage as tar.gz
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          
+          # Extract deb package
+          mkdir -p extract
+          dpkg-deb -x pictopy.deb extract/
+          
+          # Create tar.gz with proper structure
+          cd extract
+          tar -czvf "../pictopy_${VERSION}_amd64.tar.gz" .
+          cd ..
+          
+          # Calculate checksum
+          sha256sum "pictopy_${VERSION}_amd64.tar.gz" > "pictopy_${VERSION}_amd64.tar.gz.sha256"
+
+      - name: Upload tar.gz to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.tag }}
+          files: |
+            pictopy_${{ steps.get_version.outputs.version }}_amd64.tar.gz
+            pictopy_${{ steps.get_version.outputs.version }}_amd64.tar.gz.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

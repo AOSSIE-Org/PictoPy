@@ -1,0 +1,162 @@
+name: Publish to AUR
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag name for the release (e.g., v1.1.0)"
+        required: true
+        type: string
+
+jobs:
+  publish-aur:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          # Remove 'v' prefix if present
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Wait for release assets
+        run: |
+          echo "Waiting for release assets to be available..."
+          sleep 60
+
+      - name: Calculate SHA256 checksums
+        id: checksums
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          BASE_URL="https://github.com/AOSSIE-Org/PictoPy/releases/download/v${VERSION}"
+          
+          # Download and calculate checksums for x86_64
+          echo "Downloading x86_64 tarball..."
+          if curl -fLo pictopy_amd64.tar.gz "${BASE_URL}/pictopy_${VERSION}_amd64.tar.gz"; then
+            SHA256_X86_64=$(sha256sum pictopy_amd64.tar.gz | cut -d' ' -f1)
+            echo "sha256_x86_64=${SHA256_X86_64}" >> $GITHUB_OUTPUT
+          else
+            echo "sha256_x86_64=SKIP" >> $GITHUB_OUTPUT
+          fi
+          
+          # Download and calculate checksums for aarch64
+          echo "Downloading aarch64 tarball..."
+          if curl -fLo pictopy_arm64.tar.gz "${BASE_URL}/pictopy_${VERSION}_arm64.tar.gz"; then
+            SHA256_AARCH64=$(sha256sum pictopy_arm64.tar.gz | cut -d' ' -f1)
+            echo "sha256_aarch64=${SHA256_AARCH64}" >> $GITHUB_OUTPUT
+          else
+            echo "sha256_aarch64=SKIP" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update PKGBUILD
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          SHA256_X86_64="${{ steps.checksums.outputs.sha256_x86_64 }}"
+          SHA256_AARCH64="${{ steps.checksums.outputs.sha256_aarch64 }}"
+          
+          cd aur
+          
+          # Update version in PKGBUILD
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          
+          # Update source URLs
+          sed -i "s|pictopy_[0-9.]*_amd64|pictopy_${VERSION}_amd64|g" PKGBUILD
+          sed -i "s|pictopy_[0-9.]*_arm64|pictopy_${VERSION}_arm64|g" PKGBUILD
+          sed -i "s|/v[0-9.]*/|/v${VERSION}/|g" PKGBUILD
+          
+          # Update checksums
+          if [ "${SHA256_X86_64}" != "SKIP" ]; then
+            sed -i "s/^sha256sums_x86_64=.*/sha256sums_x86_64=('${SHA256_X86_64}')/" PKGBUILD
+          fi
+          if [ "${SHA256_AARCH64}" != "SKIP" ]; then
+            sed -i "s/^sha256sums_aarch64=.*/sha256sums_aarch64=('${SHA256_AARCH64}')/" PKGBUILD
+          fi
+          
+          cat PKGBUILD
+
+      - name: Generate .SRCINFO
+        run: |
+          cd aur
+          
+          VERSION="${{ steps.get_version.outputs.version }}"
+          SHA256_X86_64="${{ steps.checksums.outputs.sha256_x86_64 }}"
+          SHA256_AARCH64="${{ steps.checksums.outputs.sha256_aarch64 }}"
+          
+          cat > .SRCINFO << EOF
+          pkgbase = pictopy
+          	pkgdesc = A privacy-focused photo management application with AI-powered tagging and face recognition
+          	pkgver = ${VERSION}
+          	pkgrel = 1
+          	url = https://github.com/AOSSIE-Org/PictoPy
+          	install = pictopy.install
+          	arch = x86_64
+          	arch = aarch64
+          	license = MIT
+          	makedepends = rust
+          	makedepends = cargo
+          	makedepends = nodejs
+          	makedepends = npm
+          	makedepends = python
+          	makedepends = python-pip
+          	makedepends = pyinstaller
+          	makedepends = webkit2gtk-4.1
+          	makedepends = base-devel
+          	makedepends = curl
+          	makedepends = wget
+          	makedepends = file
+          	makedepends = openssl
+          	makedepends = appmenu-gtk-module
+          	makedepends = librsvg
+          	depends = webkit2gtk-4.1
+          	depends = gtk3
+          	depends = glib2
+          	depends = cairo
+          	depends = pango
+          	depends = gdk-pixbuf2
+          	depends = libsoup3
+          	depends = openssl
+          	depends = hicolor-icon-theme
+          	optdepends = python-onnxruntime: For AI model inference
+          	optdepends = python-opencv: For image processing
+          	optdepends = python-numpy: For numerical operations
+          	options = !strip
+          	options = !emptydirs
+          	source_x86_64 = pictopy-${VERSION}-x86_64.tar.gz::https://github.com/AOSSIE-Org/PictoPy/releases/download/v${VERSION}/pictopy_${VERSION}_amd64.tar.gz
+          	sha256sums_x86_64 = ${SHA256_X86_64}
+          	source_aarch64 = pictopy-${VERSION}-aarch64.tar.gz::https://github.com/AOSSIE-Org/PictoPy/releases/download/v${VERSION}/pictopy_${VERSION}_arm64.tar.gz
+          	sha256sums_aarch64 = ${SHA256_AARCH64}
+
+          pkgname = pictopy
+          EOF
+          
+          # Remove leading whitespace
+          sed -i 's/^          //' .SRCINFO
+          
+          cat .SRCINFO
+
+      - name: Publish to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
+        with:
+          pkgname: pictopy
+          pkgbuild: ./aur/PKGBUILD
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: "Update to version ${{ steps.get_version.outputs.version }}"
+          ssh_keyscan_types: ed25519
+          force_push: true
+          assets: |
+            ./aur/pictopy.install
+            ./aur/.SRCINFO
