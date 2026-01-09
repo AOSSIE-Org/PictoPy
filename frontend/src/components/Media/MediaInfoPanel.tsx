@@ -1,5 +1,5 @@
 import React from 'react';
-import { open } from '@tauri-apps/plugin-shell';
+import { openPath, openUrl } from '@tauri-apps/plugin-opener';
 import {
   X,
   ImageIcon as ImageLucide,
@@ -26,6 +26,18 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
   currentIndex,
   totalImages,
 }) => {
+  const handleLocationClick = async () => {
+    if (currentImage?.metadata?.latitude && currentImage?.metadata?.longitude) {
+      const { latitude, longitude } = currentImage.metadata;
+      const url = `https://maps.google.com/?q=${latitude},${longitude}`;
+      try {
+        await openUrl(url);
+      } catch (error) {
+        console.error('Failed to open map URL:', error);
+      }
+    }
+  };
+
   const getFormattedDate = () => {
     if (currentImage?.metadata?.date_created) {
       return new Date(currentImage.metadata.date_created).toLocaleDateString(
@@ -44,18 +56,6 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
     if (!currentImage) return 'Image';
     // Handle both Unix (/) and Windows (\) path separators
     return currentImage.path?.split(/[/\\]/).pop() || 'Image';
-  };
-
-  const handleLocationClick = async () => {
-    if (currentImage?.metadata?.latitude && currentImage?.metadata?.longitude) {
-      const { latitude, longitude } = currentImage.metadata;
-      const url = `https://maps.google.com/?q=${latitude},${longitude}`;
-      try {
-        await open(url);
-      } catch (error) {
-        console.error('Failed to open map URL:', error);
-      }
-    }
   };
 
   if (!show) return null;
@@ -163,7 +163,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
             onClick={async () => {
               if (currentImage?.path) {
                 try {
-                  await open(currentImage.path);
+                  await openPath(currentImage.path);
                 } catch (error) {
                   console.error('Failed to open file:', error);
                 }
@@ -171,6 +171,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
             }}
           >
             Open Original File
+            <SquareArrowOutUpRight className="ml-2 inline h-4 w-4" />
           </button>
         </div>
       </div>
