@@ -1,5 +1,5 @@
 
-import { motion } from "framer-motion";
+import { motion } from "motion/react"
 import { ImageIcon, FolderSync, Search, Code } from "lucide-react";
 
 export default function TechMarquee() {
