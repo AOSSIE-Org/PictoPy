@@ -130,7 +130,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Backend Test
+      - name: Build Backend Executable
         working-directory: backend
         run: pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
 
@@ -139,7 +139,7 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Test Micro Services 
+      - name: Build Sync Microservice Executable 
         working-directory: sync-microservice
         run: pyinstaller main.py --name PictoPy_Sync_Microservice --onedir --distpath dist
 
