@@ -12,7 +12,9 @@ tauri-build = { version = "2.0.6", features = [] }
 
 [dependencies]
 tauri = { version = "2.9.1", features = ["protocol-asset", "devtools"] }
+reqwest = { version = "0.12", features = ["blocking"] }
 walkdir = "2.3"
+sysinfo = "0.37.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 anyhow = "1.0"

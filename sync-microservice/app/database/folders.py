@@ -26,6 +26,7 @@ def db_get_all_folders_with_ids() -> List[FolderIdPath]:
     Returns:
         List of tuples containing (folder_id, folder_path)
     """
+
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
