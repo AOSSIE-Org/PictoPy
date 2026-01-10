@@ -851,6 +851,25 @@
               "title": "Tagged"
             },
             "description": "Filter images by tagged status"
+          },
+          {
+            "name": "include_deleted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Include soft deleted images",
+              "default": false,
+              "title": "Include Deleted"
+            },
+            "description": "Include soft deleted images"
           }
         ],
         "responses": {
@@ -910,6 +929,239 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/delete": {
+      "post": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Delete Image",
+        "operationId": "delete_image_images_delete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/soft-delete": {
+      "post": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Soft Delete Images",
+        "description": "Soft delete multiple images.",
+        "operationId": "soft_delete_images_images_soft_delete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SoftDeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoftDeleteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/restore": {
+      "post": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Restore Images",
+        "description": "Restore multiple soft deleted images.",
+        "operationId": "restore_images_images_restore_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/deleted": {
+      "get": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Get Deleted Images",
+        "description": "Get all soft deleted images.",
+        "operationId": "get_deleted_images_images_deleted_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetDeletedImagesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/permanent-delete": {
+      "post": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Permanent Delete Images",
+        "description": "Permanently delete images from history.",
+        "operationId": "permanent_delete_images_images_permanent_delete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PermanentDeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermanentDeleteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/cleanup": {
+      "post": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Cleanup Old Images",
+        "description": "Permanently delete images that have been soft deleted for more than the specified days.",
+        "operationId": "cleanup_old_images_images_cleanup_post",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Days after which to permanently delete",
+              "default": 30,
+              "title": "Days"
+            },
+            "description": "Days after which to permanently delete"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CleanupOldImagesResponse"
+                }
               }
             }
           },
@@ -1435,6 +1687,29 @@
         ],
         "title": "Album"
       },
+      "CleanupOldImagesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "deleted_count": {
+            "type": "integer",
+            "title": "Deleted Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "deleted_count"
+        ],
+        "title": "CleanupOldImagesResponse"
+      },
       "ClusterMetadata": {
         "properties": {
           "cluster_id": {
@@ -1618,6 +1893,19 @@
           "success"
         ],
         "title": "DeleteFoldersResponse"
+      },
+      "DeleteRequest": {
+        "properties": {
+          "image_id": {
+            "type": "string",
+            "title": "Image Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_id"
+        ],
+        "title": "DeleteRequest"
       },
       "FaceSearchRequest": {
         "properties": {
@@ -2010,6 +2298,32 @@
         ],
         "title": "GetClustersResponse"
       },
+      "GetDeletedImagesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ImageData"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetDeletedImagesResponse"
+      },
       "GetUserPreferencesResponse": {
         "properties": {
           "success": {
@@ -2136,6 +2450,29 @@
           "isFavourite": {
             "type": "boolean",
             "title": "Isfavourite"
+          },
+          "is_deleted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Deleted",
+            "default": false
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted At"
           },
           "tags": {
             "anyOf": [
@@ -2349,6 +2686,45 @@
         ],
         "title": "MetadataModel"
       },
+      "PermanentDeleteRequest": {
+        "properties": {
+          "image_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Image Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_ids"
+        ],
+        "title": "PermanentDeleteRequest"
+      },
+      "PermanentDeleteResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "deleted_count": {
+            "type": "integer",
+            "title": "Deleted Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "deleted_count"
+        ],
+        "title": "PermanentDeleteResponse"
+      },
       "RenameClusterData": {
         "properties": {
           "cluster_id": {
@@ -2424,6 +2800,84 @@
           "success"
         ],
         "title": "RenameClusterResponse"
+      },
+      "RestoreRequest": {
+        "properties": {
+          "image_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Image Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_ids"
+        ],
+        "title": "RestoreRequest"
+      },
+      "RestoreResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "restored_count": {
+            "type": "integer",
+            "title": "Restored Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "restored_count"
+        ],
+        "title": "RestoreResponse"
+      },
+      "SoftDeleteRequest": {
+        "properties": {
+          "image_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Image Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_ids"
+        ],
+        "title": "SoftDeleteRequest"
+      },
+      "SoftDeleteResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "deleted_count": {
+            "type": "integer",
+            "title": "Deleted Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "deleted_count"
+        ],
+        "title": "SoftDeleteResponse"
       },
       "SuccessResponse": {
         "properties": {

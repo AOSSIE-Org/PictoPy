@@ -20,6 +20,8 @@ export interface Image {
   isFavourite?: boolean;
   tags?: string[];
   bboxes?: { x: number; y: number; width: number; height: number }[];
+  is_deleted?: boolean;
+  deleted_at?: string;
 }
 
 export interface ImageGalleryProps {
