@@ -8,6 +8,8 @@ import { GlobalLoader } from './components/Loader/GlobalLoader';
 import { InfoDialog } from './components/Dialog/InfoDialog';
 import { useSelector } from 'react-redux';
 import { RootState } from './app/store';
+import BackToTop from "@/components/Navigation/BackToTop/BackToTop"; 
+
 const App: React.FC = () => {
   const { loading, message } = useSelector((state: RootState) => state.loader);
   const {
@@ -17,11 +19,14 @@ const App: React.FC = () => {
     variant,
     showCloseButton,
   } = useSelector((state: RootState) => state.infoDialog);
+
   return (
     <ThemeProvider>
       <QueryClientProviders>
         <BrowserRouter>
+          {/* ✅ IMPORTANT: BackToTop MUST be inside BrowserRouter */}
           <AppRoutes />
+          <BackToTop /> {/* ← MOVE HERE (inside BrowserRouter, but still outside AppRoutes content) */}
         </BrowserRouter>
         <GlobalLoader loading={loading} message={message} />
         <InfoDialog
