@@ -11,6 +11,7 @@ from app.database.folders import (
     db_get_folder_ids_by_path_prefix,
     db_get_all_folder_details,
 )
+from app.database.images import db_get_total_image_count
 from app.logging.setup_logging import get_logger
 from app.schemas.folders import (
     AddFolderRequest,
@@ -460,9 +461,15 @@ def get_all_folders():
                     taggingCompleted=tagging_completed,
                 )
             )
+        
+        total_images = db_get_total_image_count()
 
         return GetAllFoldersResponse(
-            data=GetAllFoldersData(folders=folders, total_count=len(folders)),
+            data=GetAllFoldersData(
+                folders=folders, 
+                total_count=len(folders),
+                total_images=total_images
+            ),
             success=True,
             message=f"Successfully retrieved {len(folders)} folder(s)",
         )

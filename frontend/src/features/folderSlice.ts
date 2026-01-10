@@ -6,11 +6,13 @@ interface FolderState {
   folders: FolderDetails[];
   taggingStatus: Record<string, FolderTaggingInfo>;
   lastUpdatedAt?: number;
+  totalImages: number;
 }
 
 const initialState: FolderState = {
   folders: [],
   taggingStatus: {},
+  totalImages: 0,
 };
 
 const folderSlice = createSlice({
@@ -20,6 +22,11 @@ const folderSlice = createSlice({
     // Set all folders
     setFolders(state, action: PayloadAction<FolderDetails[]>) {
       state.folders = action.payload;
+    },
+
+    // Set total images
+    setTotalImages(state, action: PayloadAction<number>) {
+      state.totalImages = action.payload;
     },
 
     // Add a single folder
@@ -69,6 +76,7 @@ const folderSlice = createSlice({
     // Clear all folder data
     clearFolders(state) {
       state.folders = [];
+      state.totalImages = 0;
     },
 
     // Set tagging status for folders
@@ -91,6 +99,7 @@ const folderSlice = createSlice({
 
 export const {
   setFolders,
+  setTotalImages,
   addFolder,
   updateFolder,
   removeFolders,

@@ -32,11 +32,13 @@ const FolderManagementCard: React.FC = () => {
     (state: RootState) => state.folders.taggingStatus,
   );
 
+  const totalImages = useSelector((state: RootState) => state.folders.totalImages);
+
   return (
     <SettingsCard
       icon={Folder}
       title="Folder Management"
-      description="Configure your photo library folders and AI settings"
+      description={`Configure your photo library folders and AI settings (${totalImages} images total)`}
       action={
         <Button
           variant="ghost"
@@ -112,8 +114,8 @@ const FolderManagementCard: React.FC = () => {
                         >
                           {(taggingStatus[folder.folder_id]
                             ?.tagging_percentage ?? 0) >= 100 && (
-                            <Check className="h-3 w-3" />
-                          )}
+                              <Check className="h-3 w-3" />
+                            )}
                           {Math.round(
                             taggingStatus[folder.folder_id]
                               ?.tagging_percentage ?? 0,

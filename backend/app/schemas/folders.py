@@ -35,6 +35,7 @@ class FolderDetails(BaseModel):
 class GetAllFoldersData(BaseModel):
     folders: List[FolderDetails]
     total_count: int
+    total_images: int
 
 
 class AddFolderData(BaseModel):
