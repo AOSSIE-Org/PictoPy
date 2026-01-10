@@ -419,3 +419,22 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         return False
     finally:
         conn.close()
+
+
+def db_get_total_image_count() -> int:
+    """
+    Get the total number of images in the database.
+    Returns:
+        Total count of images
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT COUNT(*) FROM images")
+        result = cursor.fetchone()
+        return result[0] if result else 0
+    except Exception as e:
+        logger.error(f"Error getting total image count: {e}")
+        return 0
+    finally:
+        conn.close()

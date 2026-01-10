@@ -8,7 +8,7 @@ import {
   deleteFolders,
 } from '@/api/api-functions';
 import { selectAllFolders } from '@/features/folderSelectors';
-import { setFolders, setTaggingStatus } from '@/features/folderSlice';
+import { setFolders, setTaggingStatus, setTotalImages } from '@/features/folderSlice';
 import { FolderDetails } from '@/types/Folder';
 import { useMutationFeedback } from './useMutationFeedback';
 import { getFoldersTaggingStatus } from '@/api/api-functions/folders';
@@ -61,6 +61,12 @@ export const useFolderOperations = () => {
     if (foldersQuery.data?.data?.folders) {
       const folders = foldersQuery.data.data.folders as FolderDetails[];
       dispatch(setFolders(folders));
+      dispatch(
+        setTotalImages(
+          (foldersQuery.data.data as unknown as { total_images: number })
+            .total_images || 0,
+        ),
+      );
     }
   }, [foldersQuery.data, dispatch]);
 

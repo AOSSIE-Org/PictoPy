@@ -1785,12 +1785,17 @@
           "total_count": {
             "type": "integer",
             "title": "Total Count"
+          },
+          "total_images": {
+            "type": "integer",
+            "title": "Total Images"
           }
         },
         "type": "object",
         "required": [
           "folders",
-          "total_count"
+          "total_count",
+          "total_images"
         ],
         "title": "GetAllFoldersData"
       },

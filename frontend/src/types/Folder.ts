@@ -10,4 +10,5 @@ export interface FolderDetails {
 export interface GetAllFoldersData {
   folders: FolderDetails[];
   total_count: number;
+  total_images: number;
 }
