@@ -1,6 +1,6 @@
-# app/detectors/FaceDetector.py
 
 import cv2
+from fastapi import HTTPException
 from app.models.FaceNet import FaceNet
 from app.utils.FaceNet import FaceNet_util_preprocess_image, FaceNet_util_get_model_path
 from app.utils.YOLO import YOLO_util_get_model_path
@@ -27,7 +27,10 @@ class FaceDetector:
         img = cv2.imread(image_path)
         if img is None:
             logger.error(f"Failed to load image: {image_path}")
-            return None
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid or unreadable image file"
+            )
 
         boxes, scores, class_ids = self.yolo_detector(img)
         logger.debug(f"Face detection boxes: {boxes}")
