@@ -22,8 +22,8 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../../backend/dist/": "resources/backend",
-      "../../sync-microservice/dist/": "resources/sync-microservice"
+      "../../backend/dist/backend/": "resources/backend",
+      "../../sync-microservice/dist/PictoPy_Sync/": "resources/sync-microservice"
     },
     "macOS": {
       "signingIdentity": "-",
