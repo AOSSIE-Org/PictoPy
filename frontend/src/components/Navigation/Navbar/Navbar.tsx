@@ -3,7 +3,7 @@ import { ThemeSelector } from '@/components/ThemeToggle';
 import { Search } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
-import { clearSearch } from '@/features/searchSlice';
+import { startSearch, clearSearch } from '@/features/searchSlice';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
 
@@ -14,8 +14,18 @@ export function Navbar() {
   const searchState = useSelector((state: any) => state.search);
   const isSearchActive = searchState.active;
   const queryImage = searchState.queryImage;
+  const queryText = searchState.queryText;
 
   const dispatch = useDispatch();
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement> | React.MouseEvent) => {
+    if ((e.type === 'keydown' && (e as React.KeyboardEvent).key === 'Enter') || e.type === 'click') {
+      const target = document.querySelector('input[type="search"]') as HTMLInputElement;
+      if (target && target.value.trim()) {
+        dispatch(startSearch(target.value.trim()));
+      }
+    }
+  };
   return (
     <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur">
       {/* Logo */}
@@ -57,8 +67,10 @@ export function Navbar() {
           {/* Input */}
           <Input
             type="search"
-            placeholder="Add to your search"
+            placeholder="Search images..."
             className="mr-2 flex-1 border-0 bg-neutral-200"
+            defaultValue={queryText || ''}
+            onKeyDown={handleSearch}
           />
 
           {/* FaceSearch Dialog */}
@@ -69,6 +81,7 @@ export function Navbar() {
             className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
             title="Search"
             aria-label="Search"
+            onClick={handleSearch}
           >
             <Search className="h-4 w-4" />
           </button>

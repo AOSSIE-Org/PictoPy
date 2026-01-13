@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, RefreshCw, Users } from 'lucide-react';
+import { Settings as SettingsIcon, RefreshCw, Users, Search } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import UpdateDialog from '@/components/Updater/UpdateDialog';
 import SettingsCard from './SettingsCard';
 
@@ -10,7 +11,8 @@ import { useDispatch } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { triggerGlobalReclustering } from '@/api/api-functions/face_clusters';
-import { usePictoMutation } from '@/hooks/useQueryExtension';
+import { triggerIndexing, getIndexingStatus } from '@/api/api-functions/semantic';
+import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtension';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 
 /**
@@ -58,6 +60,34 @@ const ApplicationControlsCard: React.FC = () => {
   );
 
   useMutationFeedback(reclusterMutation, feedbackOptions);
+
+  const indexMutation = usePictoMutation({
+    mutationFn: triggerIndexing,
+  });
+
+  const indexFeedbackOptions = React.useMemo(
+    () => ({
+      loadingMessage: 'Starting background indexing...',
+      successTitle: 'Indexing Started',
+      successMessage: 'The background indexing process has started.',
+      errorTitle: 'Indexing Failed',
+      errorMessage: 'Failed to start indexing process.',
+    }),
+    [],
+  );
+
+  useMutationFeedback(indexMutation, indexFeedbackOptions);
+
+  const { data: indexingStatus } = usePictoQuery({
+    queryKey: ['indexing-status'],
+    queryFn: getIndexingStatus,
+    refetchInterval: 3000,
+  });
+
+  const isIndexing = indexingStatus?.is_active;
+  const progressValue = indexingStatus?.total > 0
+    ? (indexingStatus.current / indexingStatus.total) * 100
+    : 0;
 
   const onGlobalReclusterClick = () => {
     reclusterMutation.mutate(undefined);
@@ -143,6 +173,24 @@ const ApplicationControlsCard: React.FC = () => {
             <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             <div className="text-left">
               <div className="font-medium">Recluster Faces</div>
+            </div>
+          </Button>
+
+          <Button
+            onClick={() => indexMutation.mutate(undefined)}
+            variant="outline"
+            className="flex h-12 w-full gap-3"
+            title="Index all images for semantic search (required for search to work)"
+            disabled={isIndexing}
+          >
+            <Search className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+            <div className="text-left w-full">
+              <div className="font-medium">
+                {isIndexing ? 'Indexing...' : 'Index Images'}
+              </div>
+              {isIndexing && (
+                <Progress value={progressValue} className="h-1 mt-1 w-full" />
+              )}
             </div>
           </Button>
         </div>

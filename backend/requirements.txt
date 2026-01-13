@@ -71,3 +71,5 @@ ruff>=0.0.241
 psutil>=5.9.5
 pytest-asyncio>=1.0.0
 setuptools==66.1.1
+sentence-transformers>=2.7.0
+torch

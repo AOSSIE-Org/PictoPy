@@ -1304,6 +1304,93 @@
           }
         }
       }
+    },
+    "/semantic/status": {
+      "get": {
+        "tags": [
+          "Semantic Search"
+        ],
+        "summary": "Get Status",
+        "description": "Get current indexing status.",
+        "operationId": "get_status_semantic_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/semantic/index": {
+      "post": {
+        "tags": [
+          "Semantic Search"
+        ],
+        "summary": "Trigger Indexing",
+        "description": "Trigger background indexing of images.",
+        "operationId": "trigger_indexing_semantic_index_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/semantic/search": {
+      "get": {
+        "tags": [
+          "Semantic Search"
+        ],
+        "summary": "Search",
+        "description": "Search images by text query.",
+        "operationId": "search_semantic_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SearchResponse"
+                  },
+                  "title": "Response Search Semantic Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2424,6 +2511,67 @@
           "success"
         ],
         "title": "RenameClusterResponse"
+      },
+      "SearchResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          },
+          "thumbnailPath": {
+            "type": "string",
+            "title": "Thumbnailpath"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/MetadataModel"
+          },
+          "isTagged": {
+            "type": "boolean",
+            "title": "Istagged"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "folder_id",
+          "thumbnailPath",
+          "metadata",
+          "isTagged",
+          "isFavourite",
+          "score"
+        ],
+        "title": "SearchResponse"
       },
       "SuccessResponse": {
         "properties": {

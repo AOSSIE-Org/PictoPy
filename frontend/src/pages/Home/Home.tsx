@@ -13,6 +13,7 @@ import { fetchAllImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { semanticSearch } from '@/api/api-functions';
 
 export const Home = () => {
   const dispatch = useDispatch();
@@ -21,6 +22,7 @@ export const Home = () => {
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
   const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
+  const queryText = searchState.queryText;
 
   const { data, isLoading, isSuccess, isError, error } = usePictoQuery({
     queryKey: ['images'],
@@ -38,6 +40,27 @@ export const Home = () => {
     },
   );
 
+  // Semantic Search Query
+  const {
+    data: searchData,
+    isLoading: isSearchLoading,
+    isSuccess: isSearchSuccess
+  } = usePictoQuery({
+    queryKey: ['semantic-search', queryText],
+    queryFn: () => semanticSearch(queryText || ''),
+    enabled: isSearchActive && !!queryText,
+  });
+
+  useMutationFeedback(
+    { isPending: isSearchLoading, isSuccess: isSearchSuccess },
+    {
+      loadingMessage: 'Searching images...',
+      showSuccess: false,
+      errorTitle: 'Search Error',
+      errorMessage: 'Failed to search images.',
+    },
+  );
+
   useEffect(() => {
     if (!isSearchActive && isSuccess) {
       const images = data?.data as Image[];
@@ -45,9 +68,18 @@ export const Home = () => {
     }
   }, [data, isSuccess, dispatch, isSearchActive]);
 
+  useEffect(() => {
+    if (isSearchActive && !!queryText && isSearchSuccess) {
+      // searchData is directly the array of images
+      dispatch(setImages(searchData as Image[]));
+    }
+  }, [searchData, isSearchSuccess, isSearchActive, queryText, dispatch]);
+
   const title =
     isSearchActive && images.length > 0
-      ? `Face Search Results (${images.length} found)`
+      ? queryText
+        ? `Search Results: "${queryText}" (${images.length})`
+        : `Face Search Results (${images.length} found)`
       : 'Image Gallery';
 
   return (
