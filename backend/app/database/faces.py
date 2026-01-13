@@ -1,7 +1,7 @@
 import sqlite3
 import json
 import numpy as np
-from typing import Optional, List, Dict, Union, TypedDict
+from typing import Optional, List, Dict, Union, TypedDict, Any
 from app.config.settings import DATABASE_PATH
 
 # Type definitions
@@ -58,7 +58,7 @@ def db_insert_face_embeddings(
     confidence: Optional[float] = None,
     bbox: Optional[BoundingBox] = None,
     cluster_id: Optional[ClusterId] = None,
-) -> FaceId:
+) -> Optional[FaceId]:
     """
     Insert face embeddings with additional metadata.
 
@@ -69,6 +69,9 @@ def db_insert_face_embeddings(
         confidence: Confidence score for face detection (optional)
         bbox: Bounding box coordinates as dict with keys: x, y, width, height (optional)
         cluster_id: ID of the face cluster this face belongs to (optional)
+
+    Returns:
+        FaceId if successful, None if insert failed
     """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
@@ -100,7 +103,7 @@ def db_insert_face_embeddings_by_image_id(
     confidence: Optional[Union[float, List[float]]] = None,
     bbox: Optional[Union[BoundingBox, List[BoundingBox]]] = None,
     cluster_id: Optional[Union[ClusterId, List[ClusterId]]] = None,
-) -> Union[FaceId, List[FaceId]]:
+) -> Union[Optional[FaceId], List[Optional[FaceId]]]:
     """
     Insert face embeddings using image path (convenience function).
 
@@ -110,6 +113,9 @@ def db_insert_face_embeddings_by_image_id(
         confidence: Confidence score(s) for face detection (optional)
         bbox: Bounding box coordinates or list of bounding boxes (optional)
         cluster_id: Cluster ID(s) for the face(s) (optional)
+
+    Returns:
+        FaceId or list of FaceIds. Can be None if insert failed.
     """
 
     # Handle multiple faces in one image
@@ -118,30 +124,58 @@ def db_insert_face_embeddings_by_image_id(
         and len(embeddings) > 0
         and isinstance(embeddings[0], np.ndarray)
     ):
-        face_ids = []
+        face_ids: List[Optional[FaceId]] = []
         for i, emb in enumerate(embeddings):
-            conf = (
-                confidence[i]
-                if isinstance(confidence, list) and i < len(confidence)
-                else confidence
-            )
-            bb = bbox[i] if isinstance(bbox, list) and i < len(bbox) else bbox
-            cid = (
-                cluster_id[i]
-                if isinstance(cluster_id, list) and i < len(cluster_id)
-                else cluster_id
-            )
+            # Extract single confidence value
+            conf: Optional[float] = None
+            if isinstance(confidence, list) and i < len(confidence):
+                conf = confidence[i]
+            elif isinstance(confidence, (int, float)):
+                conf = float(confidence)
+
+            # Extract single bbox value
+            bb: Optional[BoundingBox] = None
+            if isinstance(bbox, list) and i < len(bbox):
+                bb = bbox[i]
+            elif isinstance(bbox, dict):
+                bb = bbox
+
+            # Extract single cluster_id value
+            cid: Optional[ClusterId] = None
+            if isinstance(cluster_id, list) and i < len(cluster_id):
+                cid = cluster_id[i]
+            elif isinstance(cluster_id, int):
+                cid = cluster_id
+
             face_id = db_insert_face_embeddings(image_id, emb, conf, bb, cid)
             face_ids.append(face_id)
         return face_ids
     else:
-        # Single face
+        # Single face - extract single values from potential lists
+        single_conf: Optional[float] = None
+        if isinstance(confidence, list) and len(confidence) > 0:
+            single_conf = confidence[0]
+        elif isinstance(confidence, (int, float)):
+            single_conf = float(confidence)
+
+        single_bbox: Optional[BoundingBox] = None
+        if isinstance(bbox, list) and len(bbox) > 0:
+            single_bbox = bbox[0]
+        elif isinstance(bbox, dict):
+            single_bbox = bbox
+
+        single_cid: Optional[ClusterId] = None
+        if isinstance(cluster_id, list) and len(cluster_id) > 0:
+            single_cid = cluster_id[0]
+        elif isinstance(cluster_id, int):
+            single_cid = cluster_id
+
         return db_insert_face_embeddings(
-            image_id, embeddings, confidence, bbox, cluster_id
+            image_id, embeddings, single_conf, single_bbox, single_cid
         )
 
 
-def get_all_face_embeddings() -> List[Dict]:
+def get_all_face_embeddings() -> List[Dict[str, Any]]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -151,11 +185,11 @@ def get_all_face_embeddings() -> List[Dict]:
             SELECT
                 f.embeddings,
                 f.bbox,
-                i.id, 
-                i.path, 
-                i.folder_id, 
-                i.thumbnailPath, 
-                i.metadata, 
+                i.id,
+                i.path,
+                i.folder_id,
+                i.thumbnailPath,
+                i.metadata,
                 i.isTagged,
                 m.name as tag_name
             FROM faces f
@@ -168,7 +202,7 @@ def get_all_face_embeddings() -> List[Dict]:
 
         from app.utils.images import image_util_parse_metadata
 
-        images_dict = {}
+        images_dict: Dict[str, Dict[str, Any]] = {}
         for (
             embeddings,
             bbox,
@@ -203,7 +237,7 @@ def get_all_face_embeddings() -> List[Dict]:
                 images_dict[image_id]["tags"].append(tag_name)
 
         # Convert to list and set tags to None if empty
-        images = []
+        images: List[Dict[str, Any]] = []
         for image_data in images_dict.values():
             if not image_data["tags"]:
                 image_data["tags"] = None
@@ -231,7 +265,7 @@ def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbed
 
         rows = cursor.fetchall()
 
-        faces = []
+        faces: List[Dict[str, Union[FaceId, FaceEmbedding]]] = []
         for row in rows:
             face_id, embeddings_json = row
             # Convert JSON string back to numpy array
@@ -267,7 +301,7 @@ def db_get_all_faces_with_cluster_names() -> (
 
         rows = cursor.fetchall()
 
-        faces = []
+        faces: List[Dict[str, Union[FaceId, FaceEmbedding, Optional[str]]]] = []
         for row in rows:
             face_id, embeddings_json, cluster_name = row
             # Convert JSON string back to numpy array
@@ -286,7 +320,7 @@ def db_get_all_faces_with_cluster_names() -> (
 
 
 def db_update_face_cluster_ids_batch(
-    face_cluster_mapping: List[Dict[str, Union[FaceId, ClusterId]]],
+    face_cluster_mapping: List[Dict[str, Union[FaceId, ClusterId, None]]],
     cursor: Optional[sqlite3.Cursor] = None,
 ) -> None:
     """
@@ -299,8 +333,8 @@ def db_update_face_cluster_ids_batch(
 
     Example:
         face_cluster_mapping = [
-            {'face_id': 1, 'cluster_id': 'uuid-cluster-1'},
-            {'face_id': 2, 'cluster_id': 'uuid-cluster-2'},
+            {'face_id': 1, 'cluster_id': 1},
+            {'face_id': 2, 'cluster_id': 2},
             {'face_id': 3, 'cluster_id': None}  # To unassign cluster
         ]
     """
@@ -309,13 +343,18 @@ def db_update_face_cluster_ids_batch(
 
     conn = None
     own_connection = cursor is None
+    
     if own_connection:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
 
+    # At this point cursor should never be None
+    if cursor is None:
+        raise ValueError("Database cursor is required")
+
     try:
         # Prepare update data as tuples (cluster_id, face_id)
-        update_data = []
+        update_data: List[tuple] = []
         for mapping in face_cluster_mapping:
             face_id = mapping.get("face_id")
             cluster_id = mapping.get("cluster_id")
@@ -323,8 +362,8 @@ def db_update_face_cluster_ids_batch(
 
         cursor.executemany(
             """
-            UPDATE faces 
-            SET cluster_id = ? 
+            UPDATE faces
+            SET cluster_id = ?
             WHERE face_id = ?
             """,
             update_data,
@@ -369,7 +408,7 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[int, FaceEmbedding]
             return []
 
         # Group embeddings by cluster_id
-        cluster_embeddings = {}
+        cluster_embeddings: Dict[int, List[np.ndarray]] = {}
         for row in rows:
             cluster_id, embeddings_json = row
             # Convert JSON string back to numpy array
@@ -380,7 +419,7 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[int, FaceEmbedding]
             cluster_embeddings[cluster_id].append(embeddings)
 
         # Calculate mean embeddings for each cluster
-        cluster_means = []
+        cluster_means: List[Dict[str, Union[int, FaceEmbedding]]] = []
         for cluster_id, embeddings_list in cluster_embeddings.items():
             # Stack all embeddings for this cluster and calculate mean
             stacked_embeddings = np.stack(embeddings_list)
