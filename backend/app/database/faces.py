@@ -128,7 +128,7 @@ def db_insert_face_embeddings_by_image_id(
         FaceId or list of FaceIds. Can be None if insert failed.
     """
 
-    # Handle multiple faces in one image
+    # Handle multiple faces in one image (Check if it's a list of numpy arrays)
     if (
         isinstance(embeddings, list)
         and len(embeddings) > 0
@@ -190,19 +190,17 @@ def get_all_face_embeddings() -> List[Dict[str, Any]]:
     Get all face embeddings with associated image data.
 
     Returns:
-        List of dictionaries, one per face, containing face embeddings, bbox,
-        face_id, and associated image information including tags.
-
-    Note:
-        This function returns one entry per face. Images with multiple faces
-        will have multiple entries with the same image_id but different face data.
+        List of dictionaries, one per face. 
+        Note: Images with multiple faces will appear multiple times, 
+        once for each face entry.
     """
     conn = None
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
 
-        # Get all faces with their image data
+        # Step 1: Get all faces with their image data
+        # We explicitly select face_id to ensure uniqueness
         cursor.execute(
             """
             SELECT
@@ -222,7 +220,8 @@ def get_all_face_embeddings() -> List[Dict[str, Any]]:
         )
         face_results = cursor.fetchall()
 
-        # Get tags for all images that have faces
+        # Step 2: Get tags for all images that have faces
+        # We do this separately to avoid a Cartesian product in the main query
         cursor.execute(
             """
             SELECT DISTINCT i.id, m.name as tag_name
@@ -237,7 +236,7 @@ def get_all_face_embeddings() -> List[Dict[str, Any]]:
 
         from app.utils.images import image_util_parse_metadata
 
-        # Build a mapping of image_id to tags
+        # Build a mapping of image_id -> list of tags
         image_tags: Dict[str, List[str]] = {}
         for image_id, tag_name in tag_results:
             if image_id not in image_tags:
@@ -245,6 +244,7 @@ def get_all_face_embeddings() -> List[Dict[str, Any]]:
             if tag_name not in image_tags[image_id]:
                 image_tags[image_id].append(tag_name)
 
+        # Step 3: Construct the result list (one entry per face)
         faces: List[Dict[str, Any]] = []
         for (
             face_id,
@@ -263,6 +263,7 @@ def get_all_face_embeddings() -> List[Dict[str, Any]]:
             except json.JSONDecodeError:
                 continue
 
+            # Attach tags belonging to this image
             tags = image_tags.get(image_id)
             if tags is not None and len(tags) == 0:
                 tags = None
@@ -271,6 +272,7 @@ def get_all_face_embeddings() -> List[Dict[str, Any]]:
                 "face_id": face_id,
                 "embeddings": embeddings_json,
                 "bbox": bbox_json,
+                # Image Metadata
                 "id": image_id,
                 "path": path,
                 "folder_id": folder_id,
@@ -379,13 +381,6 @@ def db_update_face_cluster_ids_batch(
         face_cluster_mapping: List of dictionaries containing face_id and cluster_id pairs
                              Each dict should have keys: 'face_id' and 'cluster_id'
         cursor: Optional existing database cursor. If None, creates a new connection.
-
-    Example:
-        face_cluster_mapping = [
-            {'face_id': 1, 'cluster_id': 1},
-            {'face_id': 2, 'cluster_id': 2},
-            {'face_id': 3, 'cluster_id': None}  # To unassign cluster
-        ]
     """
     if not face_cluster_mapping:
         return
