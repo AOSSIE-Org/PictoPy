@@ -27,6 +27,7 @@ FaceClusterMapping = Dict[FaceId, Optional[ClusterId]]
 
 
 def db_create_faces_table() -> None:
+    """Create the faces table if it doesn't exist."""
     conn = None
     try:
         conn = sqlite3.connect(DATABASE_PATH)
@@ -47,6 +48,9 @@ def db_create_faces_table() -> None:
         """
         )
         conn.commit()
+    except sqlite3.Error as e:
+        print(f"Error creating faces table: {e}")
+        raise
     finally:
         if conn is not None:
             conn.close()
@@ -62,7 +66,6 @@ def db_insert_face_embeddings(
     """
     Insert face embeddings with additional metadata.
 
-
     Args:
         image_id: ID of the image this face belongs to
         embeddings: Face embedding vector (numpy array)
@@ -73,10 +76,11 @@ def db_insert_face_embeddings(
     Returns:
         FaceId if successful, None if insert failed
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-
+    conn = None
     try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+
         embeddings_json = json.dumps(embeddings.tolist())
 
         # Convert bbox to JSON string if provided
@@ -86,15 +90,21 @@ def db_insert_face_embeddings(
             """
             INSERT INTO faces (image_id, cluster_id, embeddings, confidence, bbox)
             VALUES (?, ?, ?, ?, ?)
-        """,
+            """,
             (image_id, cluster_id, embeddings_json, confidence, bbox_json),
         )
 
         face_id = cursor.lastrowid
         conn.commit()
         return face_id
+    except sqlite3.Error as e:
+        print(f"Error inserting face embeddings: {e}")
+        if conn:
+            conn.rollback()
+        return None
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 def db_insert_face_embeddings_by_image_id(
@@ -176,13 +186,27 @@ def db_insert_face_embeddings_by_image_id(
 
 
 def get_all_face_embeddings() -> List[Dict[str, Any]]:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    """
+    Get all face embeddings with associated image data.
 
+    Returns:
+        List of dictionaries, one per face, containing face embeddings, bbox,
+        face_id, and associated image information including tags.
+
+    Note:
+        This function returns one entry per face. Images with multiple faces
+        will have multiple entries with the same image_id but different face data.
+    """
+    conn = None
     try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+
+        # Get all faces with their image data
         cursor.execute(
             """
             SELECT
+                f.face_id,
                 f.embeddings,
                 f.bbox,
                 i.id,
@@ -190,20 +214,40 @@ def get_all_face_embeddings() -> List[Dict[str, Any]]:
                 i.folder_id,
                 i.thumbnailPath,
                 i.metadata,
-                i.isTagged,
-                m.name as tag_name
+                i.isTagged
             FROM faces f
-            JOIN images i ON f.image_id=i.id
+            JOIN images i ON f.image_id = i.id
+            ORDER BY i.path, f.face_id
+            """
+        )
+        face_results = cursor.fetchall()
+
+        # Get tags for all images that have faces
+        cursor.execute(
+            """
+            SELECT DISTINCT i.id, m.name as tag_name
+            FROM faces f
+            JOIN images i ON f.image_id = i.id
             LEFT JOIN image_classes ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
-        """
+            WHERE m.name IS NOT NULL
+            """
         )
-        results = cursor.fetchall()
+        tag_results = cursor.fetchall()
 
         from app.utils.images import image_util_parse_metadata
 
-        images_dict: Dict[str, Dict[str, Any]] = {}
+        # Build a mapping of image_id to tags
+        image_tags: Dict[str, List[str]] = {}
+        for image_id, tag_name in tag_results:
+            if image_id not in image_tags:
+                image_tags[image_id] = []
+            if tag_name not in image_tags[image_id]:
+                image_tags[image_id].append(tag_name)
+
+        faces: List[Dict[str, Any]] = []
         for (
+            face_id,
             embeddings,
             bbox,
             image_id,
@@ -212,42 +256,37 @@ def get_all_face_embeddings() -> List[Dict[str, Any]]:
             thumbnail_path,
             metadata,
             is_tagged,
-            tag_name,
-        ) in results:
-            if image_id not in images_dict:
-                try:
-                    embeddings_json = json.loads(embeddings) if embeddings else None
-                    bbox_json = json.loads(bbox) if bbox else None
-                except json.JSONDecodeError:
-                    continue
-                images_dict[image_id] = {
-                    "embeddings": embeddings_json,
-                    "bbox": bbox_json,
-                    "id": image_id,
-                    "path": path,
-                    "folder_id": folder_id,
-                    "thumbnailPath": thumbnail_path,
-                    "metadata": image_util_parse_metadata(metadata),
-                    "isTagged": bool(is_tagged),
-                    "tags": [],
-                }
+        ) in face_results:
+            try:
+                embeddings_json = json.loads(embeddings) if embeddings else None
+                bbox_json = json.loads(bbox) if bbox else None
+            except json.JSONDecodeError:
+                continue
 
-            # Add tag if it exists
-            if tag_name:
-                images_dict[image_id]["tags"].append(tag_name)
+            tags = image_tags.get(image_id)
+            if tags is not None and len(tags) == 0:
+                tags = None
 
-        # Convert to list and set tags to None if empty
-        images: List[Dict[str, Any]] = []
-        for image_data in images_dict.values():
-            if not image_data["tags"]:
-                image_data["tags"] = None
-            images.append(image_data)
+            faces.append({
+                "face_id": face_id,
+                "embeddings": embeddings_json,
+                "bbox": bbox_json,
+                "id": image_id,
+                "path": path,
+                "folder_id": folder_id,
+                "thumbnailPath": thumbnail_path,
+                "metadata": image_util_parse_metadata(metadata),
+                "isTagged": bool(is_tagged),
+                "tags": tags,
+            })
 
-        # Sort by path
-        images.sort(key=lambda x: x["path"])
-        return images
+        return faces
+    except sqlite3.Error as e:
+        print(f"Error getting face embeddings: {e}")
+        return []
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbedding]]]:
@@ -257,10 +296,11 @@ def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbed
     Returns:
         List of dictionaries containing face_id and embeddings (as numpy array)
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-
+    conn = None
     try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+
         cursor.execute("SELECT face_id, embeddings FROM faces WHERE cluster_id IS NULL")
 
         rows = cursor.fetchall()
@@ -273,8 +313,12 @@ def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbed
             faces.append({"face_id": face_id, "embeddings": embeddings})
 
         return faces
+    except sqlite3.Error as e:
+        print(f"Error getting unassigned faces: {e}")
+        return []
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 def db_get_all_faces_with_cluster_names() -> (
@@ -286,10 +330,11 @@ def db_get_all_faces_with_cluster_names() -> (
     Returns:
         List of dictionaries containing face_id, embeddings (as numpy array), and cluster_name
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-
+    conn = None
     try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+
         cursor.execute(
             """
             SELECT f.face_id, f.embeddings, fc.cluster_name
@@ -315,8 +360,12 @@ def db_get_all_faces_with_cluster_names() -> (
             )
 
         return faces
+    except sqlite3.Error as e:
+        print(f"Error getting faces with cluster names: {e}")
+        return []
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 def db_update_face_cluster_ids_batch(
@@ -343,7 +392,7 @@ def db_update_face_cluster_ids_batch(
 
     conn = None
     own_connection = cursor is None
-    
+
     if own_connection:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
@@ -371,10 +420,10 @@ def db_update_face_cluster_ids_batch(
 
         if own_connection and conn:
             conn.commit()
-    except Exception:
+    except sqlite3.Error as e:
         if own_connection and conn:
             conn.rollback()
-        print("Error updating face cluster IDs in batch.")
+        print(f"Error updating face cluster IDs in batch: {e}")
         raise
     finally:
         if own_connection and conn:
@@ -389,10 +438,11 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[int, FaceEmbedding]
         List of dictionaries containing cluster_id and mean_embedding (as numpy array)
         Only returns clusters that have at least one face assigned
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-
+    conn = None
     try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+
         cursor.execute(
             """
             SELECT f.cluster_id, f.embeddings
@@ -430,5 +480,9 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[int, FaceEmbedding]
             )
 
         return cluster_means
+    except sqlite3.Error as e:
+        print(f"Error getting cluster mean embeddings: {e}")
+        return []
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
