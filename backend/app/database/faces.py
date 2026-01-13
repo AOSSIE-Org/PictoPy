@@ -7,13 +7,12 @@ from app.config.settings import DATABASE_PATH
 # Type definitions
 FaceId = int
 ImageId = str
-ClusterId = str  # Consistent with TEXT in DB
-FaceEmbedding = np.ndarray
-BoundingBox = Dict[str, Union[int, float]]
+ClusterId = str
+FaceEmbedding = np.ndarray  # 512-dim vector
+BoundingBox = Dict[str, int]  # {'x': int, 'y': int, 'width': int, 'height': int}
 
 
 class FaceData(TypedDict):
-    """Represents the full faces table structure"""
     face_id: FaceId
     image_id: ImageId
     embeddings: FaceEmbedding
@@ -183,7 +182,6 @@ def get_all_face_embeddings() -> List[Dict[str, Any]]:
         cursor = conn.cursor()
 
         # Step 1: Get all faces with their image data
-        # We explicitly select face_id to ensure uniqueness
         cursor.execute(
             """
             SELECT
@@ -193,8 +191,8 @@ def get_all_face_embeddings() -> List[Dict[str, Any]]:
                 i.id,
                 i.path,
                 i.folder_id,
-                i.thumbnailPath,
-                i.metadata,
+                i.thumbnailPath, 
+                i.metadata, 
                 i.isTagged
             FROM faces f
             JOIN images i ON f.image_id = i.id
@@ -204,7 +202,6 @@ def get_all_face_embeddings() -> List[Dict[str, Any]]:
         face_results = cursor.fetchall()
 
         # Step 2: Get tags for all images that have faces
-        # We do this separately to avoid a Cartesian product in the main query
         cursor.execute(
             """
             SELECT DISTINCT i.id, m.name as tag_name
@@ -227,7 +224,7 @@ def get_all_face_embeddings() -> List[Dict[str, Any]]:
             if tag_name not in image_tags[image_id]:
                 image_tags[image_id].append(tag_name)
 
-        # Step 3: Construct the result list (one entry per face)
+        # Step 3: Construct the result list
         faces: List[Dict[str, Any]] = []
         for (
             face_id,
@@ -364,7 +361,6 @@ def db_update_face_cluster_ids_batch(
         conn = get_db_conn()
         cursor = conn.cursor()
 
-    # At this point cursor should never be None
     if cursor is None:
         raise ValueError("Database cursor is required")
 
@@ -428,7 +424,6 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[int, FaceEmbedding]
 
         cluster_means: List[Dict[str, Union[int, FaceEmbedding]]] = []
         for cluster_id, embeddings_list in cluster_embeddings.items():
-            # Stack all embeddings for this cluster and calculate mean
             stacked_embeddings = np.stack(embeddings_list)
             mean_embedding = np.mean(stacked_embeddings, axis=0)
             cluster_means.append(
