@@ -74,7 +74,7 @@ def db_insert_face_embeddings(
     cursor = conn.cursor()
 
     try:
-        embeddings_json = json.dumps([emb.tolist() for emb in embeddings])
+        embeddings_json = json.dumps(embeddings.tolist())
 
         # Convert bbox to JSON string if provided
         bbox_json = json.dumps(bbox) if bbox is not None else None
@@ -141,7 +141,7 @@ def db_insert_face_embeddings_by_image_id(
         )
 
 
-def get_all_face_embeddings():
+def get_all_face_embeddings() -> List[Dict]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
@@ -182,8 +182,8 @@ def get_all_face_embeddings():
         ) in results:
             if image_id not in images_dict:
                 try:
-                    embeddings_json = json.loads(embeddings)
-                    bbox_json = json.loads(bbox)
+                    embeddings_json = json.loads(embeddings) if embeddings else None
+                    bbox_json = json.loads(bbox) if bbox else None
                 except json.JSONDecodeError:
                     continue
                 images_dict[image_id] = {
@@ -307,6 +307,7 @@ def db_update_face_cluster_ids_batch(
     if not face_cluster_mapping:
         return
 
+    conn = None
     own_connection = cursor is None
     if own_connection:
         conn = sqlite3.connect(DATABASE_PATH)
@@ -329,19 +330,19 @@ def db_update_face_cluster_ids_batch(
             update_data,
         )
 
-        if own_connection:
+        if own_connection and conn:
             conn.commit()
     except Exception:
-        if own_connection:
+        if own_connection and conn:
             conn.rollback()
         print("Error updating face cluster IDs in batch.")
         raise
     finally:
-        if own_connection:
+        if own_connection and conn:
             conn.close()
 
 
-def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]]]:
+def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[int, FaceEmbedding]]]:
     """
     Get cluster IDs and their corresponding mean face embeddings.
 
