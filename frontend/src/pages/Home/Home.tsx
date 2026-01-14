@@ -44,7 +44,9 @@ export const Home = () => {
   const {
     data: searchData,
     isLoading: isSearchLoading,
-    isSuccess: isSearchSuccess
+    isSuccess: isSearchSuccess,
+    isError: isSearchError,
+    error: searchError
   } = usePictoQuery({
     queryKey: ['semantic-search', queryText],
     queryFn: () => semanticSearch(queryText || ''),
@@ -52,7 +54,12 @@ export const Home = () => {
   });
 
   useMutationFeedback(
-    { isPending: isSearchLoading, isSuccess: isSearchSuccess },
+    {
+      isPending: isSearchLoading,
+      isSuccess: isSearchSuccess,
+      isError: isSearchError,
+      error: searchError
+    },
     {
       loadingMessage: 'Searching images...',
       showSuccess: false,

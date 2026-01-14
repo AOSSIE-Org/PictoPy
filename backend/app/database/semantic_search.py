@@ -11,17 +11,23 @@ def _connect() -> sqlite3.Connection:
 def db_create_embeddings_table() -> None:
     conn = _connect()
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS image_embeddings (
-            image_id TEXT PRIMARY KEY,
-            embedding BLOB,
-            FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE
+    try:
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS image_embeddings (
+                image_id TEXT PRIMARY KEY,
+                embedding BLOB,
+                FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE
+            )
+            """
         )
-        """
-    )
-    conn.commit()
-    conn.close()
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error creating embeddings table: {e}")
+        raise e
+    finally:
+        conn.close()
 
 def db_upsert_embedding(image_id: str, embedding: np.ndarray) -> bool:
     conn = _connect()

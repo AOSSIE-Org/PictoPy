@@ -5,12 +5,19 @@ export const semanticSearch = async (query: string) => {
     return response.data;
 };
 
-export const triggerIndexing = async () => {
+export const triggerIndexing = async (): Promise<{ message: string }> => {
     const response = await apiClient.post('/semantic/index');
     return response.data;
 };
 
-export const getIndexingStatus = async () => {
+export interface IndexingStatus {
+    is_active: boolean;
+    current: number;
+    total: number;
+    error: string | null;
+}
+
+export const getIndexingStatus = async (): Promise<IndexingStatus> => {
     const response = await apiClient.get('/semantic/status');
     return response.data;
 };

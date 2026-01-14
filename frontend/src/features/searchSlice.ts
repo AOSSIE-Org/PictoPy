@@ -16,15 +16,22 @@ const searchSlice = createSlice({
   name: 'search',
   initialState,
   reducers: {
+    setSearchQuery(state, action: PayloadAction<string>) {
+      state.queryText = action.payload;
+    },
     startSearch(state, action: PayloadAction<string>) {
       state.active = true;
-      // Check if payload is data URL or file path (basic check)
-      if (action.payload.startsWith('data:') || action.payload.includes('/') || action.payload.includes('\\')) {
-        state.queryImage = action.payload;
+      const query = action.payload.trim();
+
+      // Improved path detection
+      const isPath = query.startsWith('data:') ||
+        (query.length > 3 && (query.includes('/') || query.includes('\\')) && /\.(jpg|jpeg|png|webp|gif)$/i.test(query));
+
+      if (isPath) {
+        state.queryImage = query;
         state.queryText = undefined;
       } else {
-        // Assume text query
-        state.queryText = action.payload;
+        state.queryText = query;
         state.queryImage = undefined;
       }
     },
@@ -36,5 +43,5 @@ const searchSlice = createSlice({
   },
 });
 
-export const { startSearch, clearSearch } = searchSlice.actions;
+export const { startSearch, clearSearch, setSearchQuery } = searchSlice.actions;
 export default searchSlice.reducer;

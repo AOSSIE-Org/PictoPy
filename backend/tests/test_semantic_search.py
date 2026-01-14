@@ -51,5 +51,8 @@ class TestSemanticSearch(unittest.TestCase):
         self.assertEqual(results[1]['image_id'], "img_b")
         self.assertAlmostEqual(results[1]['score'], 0.0, places=5)
 
+        self.assertEqual(results[2]['image_id'], "img_c")
+        self.assertAlmostEqual(results[2]['score'], -1.0, places=5)
+
 if __name__ == '__main__':
     unittest.main()

@@ -3,7 +3,7 @@ import { ThemeSelector } from '@/components/ThemeToggle';
 import { Search } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
-import { startSearch, clearSearch } from '@/features/searchSlice';
+import { startSearch, clearSearch, setSearchQuery } from '@/features/searchSlice';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
 
@@ -20,9 +20,8 @@ export function Navbar() {
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement> | React.MouseEvent) => {
     if ((e.type === 'keydown' && (e as React.KeyboardEvent).key === 'Enter') || e.type === 'click') {
-      const target = document.querySelector('input[type="search"]') as HTMLInputElement;
-      if (target && target.value.trim()) {
-        dispatch(startSearch(target.value.trim()));
+      if (queryText?.trim()) {
+        dispatch(startSearch(queryText.trim()));
       }
     }
   };
@@ -69,7 +68,8 @@ export function Navbar() {
             type="search"
             placeholder="Search images..."
             className="mr-2 flex-1 border-0 bg-neutral-200"
-            defaultValue={queryText || ''}
+            value={queryText || ''}
+            onChange={(e) => dispatch(setSearchQuery(e.target.value))}
             onKeyDown={handleSearch}
           />
 

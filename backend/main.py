@@ -52,7 +52,6 @@ async def lifespan(app: FastAPI):
     db_create_faces_table()
     db_create_albums_table()
     db_create_album_images_table()
-    db_create_album_images_table()
     db_create_metadata_table()
     db_create_embeddings_table()
     # Create ProcessPoolExecutor and attach it to app.state

@@ -29,7 +29,7 @@ class SearchResponse(ImageData):
 def process_indexing_task():
     """Background task to index images."""
     global indexing_status
-    indexing_status["is_active"] = True
+    # is_active should be set to True by the caller (trigger_indexing)
     indexing_status["error"] = None
     logger.info("Starting background indexing task...")
     
@@ -82,6 +82,11 @@ def get_status():
 @router.post("/index")
 async def trigger_indexing(background_tasks: BackgroundTasks):
     """Trigger background indexing of images."""
+    global indexing_status
+    if indexing_status["is_active"]:
+        raise HTTPException(status_code=409, detail="Indexing is already in progress.")
+    
+    indexing_status["is_active"] = True
     background_tasks.add_task(process_indexing_task)
     return {"message": "Indexing started in background"}
 
@@ -106,7 +111,6 @@ async def search(q: str):
         for result in results:
             img_id = result['image_id']
             if img_id in image_details_map:
-                details = image_details_map[img_id]
                 details = image_details_map[img_id]
                 response.append(SearchResponse(
                     id=details['id'],

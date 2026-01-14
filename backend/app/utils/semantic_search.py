@@ -6,29 +6,33 @@ from app.logging.setup_logging import get_logger
 logger = get_logger(__name__)
 
 # Global variable to hold the model singleton
+import threading
 _model = None
+_model_lock = threading.Lock()
 
 def get_model():
-    """Load the CLIP model lazily."""
+    """Load the CLIP model lazily and safely."""
     global _model
     if _model is None:
-        logger.info("Loading CLIP model 'sentence-transformers/clip-ViT-B-32'...")
-        try:
-            _model = SentenceTransformer('sentence-transformers/clip-ViT-B-32')
-            logger.info("CLIP model loaded successfully.")
-        except Exception as e:
-            logger.error(f"Failed to load CLIP model: {e}")
-            raise e
+        with _model_lock:
+            if _model is None:
+                logger.info("Loading CLIP model 'sentence-transformers/clip-ViT-B-32'...")
+                try:
+                    _model = SentenceTransformer('sentence-transformers/clip-ViT-B-32')
+                    logger.info("CLIP model loaded successfully.")
+                except Exception as e:
+                    logger.error(f"Failed to load CLIP model: {e}")
+                    raise e
     return _model
 
 def generate_clip_embedding(image_path: str) -> np.ndarray:
     """Generate normalized embedding for an image."""
     model = get_model()
     try:
-        image = Image.open(image_path)
-        # SentenceTransformer handles preprocessing
-        embedding = model.encode(image)
-        return embedding
+        with Image.open(image_path) as image:
+            # SentenceTransformer handles preprocessing
+            embedding = model.encode(image)
+            return embedding
     except Exception as e:
         logger.error(f"Error generating embedding for {image_path}: {e}")
         raise e
