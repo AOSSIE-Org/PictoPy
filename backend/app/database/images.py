@@ -1,6 +1,6 @@
 # Standard library imports
 import sqlite3
-from typing import Any, List, Mapping, Tuple, TypedDict, Union
+from typing import Any, List, Mapping, Optional, Tuple, TypedDict, Union
 
 # App-specific imports
 from app.config.settings import (
@@ -80,6 +80,16 @@ def db_create_images_table() -> None:
             FOREIGN KEY (class_id) REFERENCES mappings(class_id) ON DELETE CASCADE
         )
     """
+    )
+
+    # Create deleted_images table (tombstone)
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS deleted_images (
+            path TEXT PRIMARY KEY,
+            deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
     )
 
     conn.commit()
@@ -417,5 +427,77 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         logger.error(f"Database error: {e}")
         conn.rollback()
         return False
+    finally:
+        conn.close()
+
+
+def db_get_image_by_id(image_id: str) -> Optional[dict]:
+    """
+    Fetch a single image record by its ID.
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT id, path, folder_id, thumbnailPath, metadata, isTagged, isFavourite FROM images WHERE id = ?",
+            (image_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+
+        from app.utils.images import image_util_parse_metadata
+
+        (
+            img_id,
+            path,
+            folder_id,
+            thumbnail_path,
+            metadata,
+            is_tagged,
+            is_favourite,
+        ) = row
+        return {
+            "id": img_id,
+            "path": path,
+            "folder_id": str(folder_id),
+            "thumbnailPath": thumbnail_path,
+            "metadata": image_util_parse_metadata(metadata),
+            "isTagged": bool(is_tagged),
+            "isFavourite": bool(is_favourite),
+        }
+    finally:
+        conn.close()
+
+
+def db_add_to_deleted_images(path: str) -> bool:
+    """
+    Record a path in the deleted_images tombstone table.
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT OR IGNORE INTO deleted_images (path) VALUES (?)",
+            (path,),
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Error adding to deleted_images: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def db_is_image_deleted(path: str) -> bool:
+    """
+    Check if a path exists in the deleted_images tombstone table.
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT 1 FROM deleted_images WHERE path = ?", (path,))
+        return cursor.fetchone() is not None
     finally:
         conn.close()

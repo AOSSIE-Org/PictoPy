@@ -926,6 +926,69 @@
         }
       }
     },
+    "/images/{image_id}": {
+      "delete": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Delete Image",
+        "description": "Explicitly delete an image from the library.\nSteps:\n1. Fetch image record from DB.\n2. Add to 'deleted_images' tombstone (prevents re-sync).\n3. Delete physical files (original + thumbnail).\n4. Delete DB record (triggers cascaded delete for tags/metadata).",
+        "operationId": "delete_image_images__image_id__delete",
+        "parameters": [
+          {
+            "name": "image_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Image Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteImageResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/face-clusters/{cluster_id}": {
       "put": {
         "tags": [
@@ -1618,6 +1681,29 @@
           "success"
         ],
         "title": "DeleteFoldersResponse"
+      },
+      "DeleteImageResponse": {
+        "properties": {
+          "data": {
+            "type": "string",
+            "title": "Data"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "message",
+          "success"
+        ],
+        "title": "DeleteImageResponse"
       },
       "FaceSearchRequest": {
         "properties": {
