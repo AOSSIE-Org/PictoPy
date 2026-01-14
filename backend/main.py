@@ -19,7 +19,7 @@ from app.database.albums import db_create_albums_table
 from app.database.albums import db_create_album_images_table
 from app.database.folders import db_create_folders_table
 from app.database.metadata import db_create_metadata_table
-from app.database.semantic_search import db_create_embeddings_table
+from app.database.semantic_search import db_create_embeddings_table, db_create_indexing_status_table
 
 from app.routes.folders import router as folders_router
 from app.routes.albums import router as albums_router
@@ -54,6 +54,7 @@ async def lifespan(app: FastAPI):
     db_create_album_images_table()
     db_create_metadata_table()
     db_create_embeddings_table()
+    db_create_indexing_status_table()
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor(max_workers=1)
 

@@ -5,7 +5,9 @@ from app.logging.setup_logging import get_logger
 from app.database.semantic_search import (
     db_get_missing_embeddings_image_ids,
     db_upsert_embedding,
-    db_get_all_embeddings
+    db_get_all_embeddings,
+    db_update_indexing_status,
+    db_get_indexing_status
 )
 from app.database.images import db_get_all_images
 from app.utils.semantic_search import generate_clip_embedding, search_images
@@ -15,34 +17,27 @@ from app.utils.images import image_util_parse_metadata
 logger = get_logger(__name__)
 router = APIRouter()
 
-# Global indexing status
-indexing_status = {
-    "is_active": False,
-    "current": 0,
-    "total": 0,
-    "error": None
-}
+# Removed global indexing_status in favor of DB persistence
+
 
 class SearchResponse(ImageData):
     score: float
 
 def process_indexing_task():
     """Background task to index images."""
-    global indexing_status
-    # is_active should be set to True by the caller (trigger_indexing)
-    indexing_status["error"] = None
+    # indexing_status["is_active"] = True is set by trigger_indexing
+    db_update_indexing_status(error=None)
     logger.info("Starting background indexing task...")
     
     try:
         # 1. Get images that need indexing
         missing_ids = db_get_missing_embeddings_image_ids()
         total = len(missing_ids)
-        indexing_status["total"] = total
-        indexing_status["current"] = 0
+        db_update_indexing_status(total=total, current=0)
         
         if not missing_ids:
             logger.info("No images to index.")
-            indexing_status["is_active"] = False
+            db_update_indexing_status(is_active=False)
             return
 
         # 2. Get image paths for these IDs
@@ -58,11 +53,15 @@ def process_indexing_task():
             path = image_map[image_id]
             try:
                 embedding = generate_clip_embedding(path)
-                db_upsert_embedding(image_id, embedding)
-                count += 1
-                indexing_status["current"] = count
-                if count % 10 == 0:
-                    logger.info(f"Indexed {count}/{total} images...")
+                success = db_upsert_embedding(image_id, embedding)
+                
+                if success:
+                    count += 1
+                    db_update_indexing_status(current=count)
+                    if count % 10 == 0:
+                        logger.info(f"Indexed {count}/{total} images...")
+                else:
+                    logger.error(f"Failed to upsert embedding for {path}")
             except Exception as e:
                 logger.error(f"Failed to index {path}: {e}")
                 continue
@@ -70,23 +69,23 @@ def process_indexing_task():
         logger.info(f"Indexing completed. Processed {count} images.")
     except Exception as e:
         logger.error(f"Indexing task failed: {e}")
-        indexing_status["error"] = str(e)
+        db_update_indexing_status(error=str(e))
     finally:
-        indexing_status["is_active"] = False
+        db_update_indexing_status(is_active=False)
 
 @router.get("/status")
 def get_status():
     """Get current indexing status."""
-    return indexing_status
+    return db_get_indexing_status()
 
 @router.post("/index")
 async def trigger_indexing(background_tasks: BackgroundTasks):
     """Trigger background indexing of images."""
-    global indexing_status
-    if indexing_status["is_active"]:
+    status = db_get_indexing_status()
+    if status["is_active"]:
         raise HTTPException(status_code=409, detail="Indexing is already in progress.")
     
-    indexing_status["is_active"] = True
+    db_update_indexing_status(is_active=True, error=None)
     background_tasks.add_task(process_indexing_task)
     return {"message": "Indexing started in background"}
 
