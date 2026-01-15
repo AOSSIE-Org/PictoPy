@@ -86,7 +86,7 @@ fn main() {
 
         // -------- Register commands --------
         .invoke_handler(tauri::generate_handler![
-            services::get_server_path,
+            services::get_resources_folder_path,
             copy_image_to_clipboard
         ])
 
