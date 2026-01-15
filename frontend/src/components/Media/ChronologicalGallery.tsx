@@ -20,6 +20,7 @@ type ChronologicalGalleryProps = {
   className?: string;
   onMonthOffsetsChange?: (markers: MonthMarker[]) => void;
   scrollContainerRef?: React.RefObject<HTMLElement | null>;
+  onViewInfo?: (image: Image, index: number) => void;
 };
 
 export const ChronologicalGallery = ({
@@ -29,6 +30,7 @@ export const ChronologicalGallery = ({
   className = '',
   onMonthOffsetsChange,
   scrollContainerRef,
+  onViewInfo,
 }: ChronologicalGalleryProps) => {
   const dispatch = useDispatch();
   const monthHeaderRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
@@ -166,6 +168,8 @@ export const ChronologicalGallery = ({
                         <div key={img.id} className="group relative">
                           <ImageCard
                             image={img}
+                            imageIndex={chronologicalIndex}
+                            onViewInfo={onViewInfo}
                             onClick={() =>
                               dispatch(setCurrentViewIndex(chronologicalIndex))
                             }

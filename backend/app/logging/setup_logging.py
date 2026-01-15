@@ -243,16 +243,9 @@ class InterceptHandler(logging.Handler):
         # Create a message that includes the original module in the format
         msg = record.getMessage()
 
-        record.msg = f"[{module_name}] {msg}"
-        record.args = ()
-        # Clear exception / stack info to avoid duplicate traces
-        record.exc_info = None
-        record.stack_info = None
-
-        root_logger = logging.getLogger()
-        for handler in root_logger.handlers:
-            if handler is not self:
-                handler.handle(record)
+        # Use the root logger to avoid recursion if the module-specific logger 
+        # is the one we are currently intercepting.
+        logging.getLogger().log(record.levelno, f"[{module_name}] {msg}")
 
 
 def configure_uvicorn_logging(component_name: str) -> None:

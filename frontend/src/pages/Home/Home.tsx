@@ -14,6 +14,8 @@ import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 
+import { MediaInfoPanel } from '@/components/Media/MediaInfoPanel';
+
 export const Home = () => {
   const dispatch = useDispatch();
   const images = useSelector(selectImages);
@@ -21,6 +23,11 @@ export const Home = () => {
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
   const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
+
+  // Media Info Modal State
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [infoImage, setInfoImage] = useState<Image | null>(null);
+  const [infoIndex, setInfoIndex] = useState<number>(0);
 
   const { data, isLoading, isSuccess, isError, error } = usePictoQuery({
     queryKey: ['images'],
@@ -50,6 +57,17 @@ export const Home = () => {
       ? `Face Search Results (${images.length} found)`
       : 'Image Gallery';
 
+  const handleOpenInfo = (image: Image, index: number) => {
+    setInfoImage(image);
+    setInfoIndex(index);
+    setIsInfoOpen(true);
+  };
+
+  const handleCloseInfo = () => {
+    setIsInfoOpen(false);
+    setInfoImage(null);
+  };
+
   return (
     <div className="relative flex h-full flex-col pr-6">
       {/* Gallery Section */}
@@ -64,6 +82,7 @@ export const Home = () => {
             title={title}
             onMonthOffsetsChange={setMonthMarkers}
             scrollContainerRef={scrollableRef}
+            onViewInfo={handleOpenInfo}
           />
         ) : (
           <EmptyGalleryState />
@@ -77,6 +96,22 @@ export const Home = () => {
           monthMarkers={monthMarkers}
           className="absolute top-0 right-0 h-full w-4"
         />
+      )}
+
+      {/* Media Info Modal Overlay */}
+      {isInfoOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={handleCloseInfo}>
+          <div onClick={(e) => e.stopPropagation()} className="relative">
+            <MediaInfoPanel
+              show={isInfoOpen}
+              onClose={handleCloseInfo}
+              currentImage={infoImage}
+              currentIndex={infoIndex}
+              totalImages={images.length}
+              className="static top-0 left-0 w-[400px] m-0! border-white/20 shadow-2xl"
+            />
+          </div>
+        </div>
       )}
     </div>
   );

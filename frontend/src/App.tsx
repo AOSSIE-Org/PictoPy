@@ -8,6 +8,7 @@ import { GlobalLoader } from './components/Loader/GlobalLoader';
 import { InfoDialog } from './components/Dialog/InfoDialog';
 import { useSelector } from 'react-redux';
 import { RootState } from './app/store';
+
 const App: React.FC = () => {
   const { loading, message } = useSelector((state: RootState) => state.loader);
   const {

@@ -15,6 +15,7 @@ from app.database.images import (
     db_insert_image_classes_batch,
     db_get_images_by_folder_ids,
     db_delete_images_by_ids,
+    db_is_image_deleted,
 )
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
@@ -151,6 +152,11 @@ def image_util_prepare_image_records(
     """
     image_records = []
     for image_path in image_files:
+        # Check if image was explicitly deleted before (tombstone)
+        if db_is_image_deleted(image_path):
+            logger.debug(f"Skipping tombstoned image: {image_path}")
+            continue
+
         folder_id = image_util_find_folder_id_for_image(image_path, folder_path_to_id)
 
         if not folder_id:
@@ -511,3 +517,36 @@ def image_util_parse_metadata(db_metadata: Any) -> Mapping[str, Any]:
         return db_metadata
 
     return {}
+
+
+def image_util_delete_image_files(image: dict) -> bool:
+    """
+    Safely delete original image and its thumbnail from disk.
+
+    Args:
+        image: Image record dictionary containing 'path' and 'thumbnailPath'
+    """
+    try:
+        original_path = image.get("path")
+        thumbnail_path = image.get("thumbnailPath")
+
+        # Delete original file
+        if original_path and os.path.exists(original_path):
+            try:
+                os.remove(original_path)
+                logger.info(f"Deleted original image: {original_path}")
+            except OSError as e:
+                logger.error(f"Error deleting original image {original_path}: {e}")
+
+        # Delete thumbnail
+        if thumbnail_path and os.path.exists(thumbnail_path):
+            try:
+                os.remove(thumbnail_path)
+                logger.info(f"Deleted thumbnail: {thumbnail_path}")
+            except OSError as e:
+                logger.error(f"Error deleting thumbnail {thumbnail_path}: {e}")
+
+        return True
+    except Exception as e:
+        logger.error(f"Unexpected error in image_util_delete_image_files: {e}")
+        return False

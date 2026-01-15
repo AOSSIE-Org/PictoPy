@@ -10,6 +10,7 @@ import {
   SquareArrowOutUpRight,
 } from 'lucide-react';
 import { Image } from '@/types/Media';
+import { cn } from '@/lib/utils';
 
 interface MediaInfoPanelProps {
   show: boolean;
@@ -17,6 +18,7 @@ interface MediaInfoPanelProps {
   currentImage: Image | null;
   currentIndex: number;
   totalImages: number;
+  className?: string;
 }
 
 export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
@@ -25,6 +27,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
   currentImage,
   currentIndex,
   totalImages,
+  className,
 }) => {
   const getFormattedDate = () => {
     if (currentImage?.metadata?.date_created) {
@@ -61,7 +64,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
   if (!show) return null;
 
   return (
-    <div className="animate-in slide-in-from-left absolute top-10 left-6 z-50 w-[350px] rounded-xl border border-white/10 bg-black/60 p-6 shadow-xl backdrop-blur-lg transition-all duration-300">
+    <div className={cn("animate-in slide-in-from-left absolute top-10 left-6 z-50 w-[350px] rounded-xl border border-white/10 bg-black/60 p-6 shadow-xl backdrop-blur-lg transition-all duration-300", className)}>
       <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
         <h3 className="text-xl font-medium text-white">Image Details</h3>
         <button
@@ -106,7 +109,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           <div className="min-w-0 flex-1">
             <p className="text-xs text-white/50">Location</p>
             {currentImage?.metadata?.latitude &&
-            currentImage?.metadata?.longitude ? (
+              currentImage?.metadata?.longitude ? (
               <button
                 type="button"
                 onClick={handleLocationClick}
