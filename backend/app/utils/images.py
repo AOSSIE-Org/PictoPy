@@ -112,24 +112,59 @@ def image_util_classify_and_face_detect_images(
             image_path = image["path"]
             image_id = image["id"]
 
-            # Step 1: Get classes
-            classes = object_classifier.get_classes(image_path)
+            try:
+                # Step 0: Check if image file still exists on disk
+                if not os.path.exists(image_path):
+                    logger.warning(
+                        f"Image file no longer exists, removing from database: {image_path}"
+                    )
+                    db_delete_images_by_ids([image_id])
+                    continue
 
-            # Step 2: Insert class-image pairs if classes were detected
-            if len(classes) > 0:
-                # Create image-class pairs
-                image_class_pairs = [(image_id, class_id) for class_id in classes]
-                logger.debug(f"Image-class pairs: {image_class_pairs}")
+                # Step 1: Get classes
+                classes = object_classifier.get_classes(image_path)
 
-                # Insert the pairs into the database
-                db_insert_image_classes_batch(image_class_pairs)
+                # Handle missing/corrupt images gracefully - skip but mark as tagged
+                if classes is None:
+                    logger.warning(
+                        f"Skipping image (file not readable or corrupt): {image_path}"
+                    )
+                    # Mark as tagged to prevent infinite retry loop
+                    db_update_image_tagged_status(image_id, True)
+                    continue
 
-            # Step 3: Detect faces if "person" class is present
-            if classes and 0 in classes and 0 < classes.count(0) < 7:
-                face_detector.detect_faces(image_id, image_path)
+                # Step 2: Insert class-image pairs if classes were detected
+                if len(classes) > 0:
+                    # Create image-class pairs
+                    image_class_pairs = [(image_id, class_id) for class_id in classes]
+                    logger.debug(f"Image-class pairs: {image_class_pairs}")
 
-            # Step 4: Update the image status in the database
-            db_update_image_tagged_status(image_id, True)
+                    # Insert the pairs into the database
+                    db_insert_image_classes_batch(image_class_pairs)
+
+                # Step 3: Detect faces if "person" class is present
+                if classes and 0 in classes and 0 < classes.count(0) < 7:
+                    result = face_detector.detect_faces(image_id, image_path)
+                    if result is None:
+                        logger.warning(
+                            f"Face detection failed for image: {image_path}"
+                        )
+
+                # Step 4: Update the image status in the database
+                db_update_image_tagged_status(image_id, True)
+
+            except Exception as e:
+                # Log error for this specific image but continue processing others
+                logger.error(
+                    f"Error processing image {image_path} (id: {image_id}): {e}"
+                )
+                # Mark as tagged to prevent infinite retry on persistent errors
+                try:
+                    db_update_image_tagged_status(image_id, True)
+                except Exception:
+                    pass  # If we can't update status, just move on
+                continue
+
     finally:
         # Ensure resources are cleaned up
         object_classifier.close()
