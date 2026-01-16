@@ -1,12 +1,13 @@
 # PictoPy
 
-PictoPy is an advanced desktop gallery application that combines the power of Tauri, React, and Rust for the frontend with a Python backend for sophisticated image analysis and management.
+PictoPy is an advanced desktop gallery application that combines the power of Tauri, React, and Rust on the frontend with a Python backend for sophisticated image analysis and management.
 
-# Want to Contribute? 😄
+
+## Want to Contribute? 😄
 
 &nbsp;&nbsp;&nbsp;<a href="https://discord.gg/hjUhu33uAn"><img src="https://github.com/user-attachments/assets/3ed93273-5055-4532-a524-87a337a4fbba" height="40"></a>
 
-1. First, join the **[Discord Server](https://discord.gg/hjUhu33uAn) (Go to Projects->PictoPy)** to chat with everyone.
+1. First, join the **[Discord Server](https://discord.gg/hjUhu33uAn)** (Go to Projects → PictoPy) to chat with the community.
 2. For detailed setup instructions, coding guidelines, and the contribution process, please check out our [CONTRIBUTING.md](./CONTRIBUTING.md) file.
 
 # Architecture
@@ -17,7 +18,7 @@ PictoPy is an advanced desktop gallery application that combines the power of Ta
 - **React**: Used for creating the user interface
 - **Rust**: Powers the backend, which the frontend communicates with through Tauri's API
 
-### Backend (Python)
+### Backend (Python - FastAPI)
 
 - **FastAPI**: Serves as the API framework
 - **SQLite**: Database for storing metadata and embeddings
