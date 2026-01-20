@@ -9,7 +9,6 @@ import os
 import json
 import logging
 import sys
-import threading
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -219,9 +218,6 @@ class InterceptHandler(logging.Handler):
     the root logger.
     """
 
-    # Thread-local storage to prevent recursion
-    _emitting = threading.local()
-
     def __init__(self, component_name: str):
         """
         Initialize the InterceptHandler.
@@ -239,30 +235,43 @@ class InterceptHandler(logging.Handler):
         Args:
             record: The log record to process
         """
-        # Prevent recursion: check if we're already emitting in this thread
-        if getattr(self._emitting, "active", False):
-            return
+        # Get the appropriate module name
+        module_name = record.name
+        if "." in module_name:
+            module_name = module_name.split(".")[-1]
 
-        try:
-            # Set the flag to indicate we're currently emitting
-            self._emitting.active = True
+        # Create a new log record with modified message to prevent recursion
+        # We modify the record in place and pass it directly to handlers
+        msg = record.getMessage()
 
-            # Get the appropriate module name
-            module_name = record.name
-            if "." in module_name:
-                module_name = module_name.split(".")[-1]
+        # Create a new record to avoid modifying the original
+        new_record = logging.LogRecord(
+            name=module_name,
+            level=record.levelno,
+            pathname=record.pathname,
+            lineno=record.lineno,
+            msg=f"[{module_name}] {msg}",
+            args=(),
+            exc_info=None,
+            func=record.funcName,
+            sinfo=None,
+        )
 
-            # Create a message that includes the original module in the format
-            msg = record.getMessage()
+        # Copy extra attributes
+        new_record.created = record.created
+        new_record.msecs = record.msecs
+        new_record.relativeCreated = record.relativeCreated
 
-            # Find the appropriate logger
-            logger = get_logger(module_name)
-
-            # Log the message with our custom formatting
-            logger.log(record.levelno, f"[uvicorn] {msg}")
-        finally:
-            # Always reset the flag, even if an exception occurs
-            self._emitting.active = False
+        # Get root logger's handlers and call them directly to avoid recursion
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers:
+            # Skip this InterceptHandler to prevent recursion
+            if handler is not self and not isinstance(handler, InterceptHandler):
+                try:
+                    handler.handle(new_record)
+                except Exception:
+                    # Silently ignore handler errors to prevent crashes
+                    pass
 
 
 def configure_uvicorn_logging(component_name: str) -> None:
