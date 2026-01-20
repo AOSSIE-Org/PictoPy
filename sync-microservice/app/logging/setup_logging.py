@@ -248,32 +248,37 @@ class InterceptHandler(logging.Handler):
         if "." in module_name:
             module_name = module_name.split(".")[-1]
 
-        # Build a new record so we do not re-enter the logging pipeline
+        # Create a new log record with modified message to prevent recursion
+        # We modify the record in place and pass it directly to handlers
         msg = record.getMessage()
+
+        # Create a new record to avoid modifying the original
         new_record = logging.LogRecord(
             name=module_name,
             level=record.levelno,
             pathname=record.pathname,
             lineno=record.lineno,
-            msg=f"[uvicorn] {msg}",
+            msg=f"[{module_name}] {msg}",
             args=(),
             exc_info=None,
             func=record.funcName,
             sinfo=None,
         )
 
-        # Preserve timing metadata
+        # Copy extra attributes
         new_record.created = record.created
         new_record.msecs = record.msecs
         new_record.relativeCreated = record.relativeCreated
 
-        # Send directly to root handlers, skipping intercepts to avoid recursion
+        # Get root logger's handlers and call them directly to avoid recursion
         root_logger = logging.getLogger()
         for handler in root_logger.handlers:
+            # Skip this InterceptHandler to prevent recursion
             if handler is not self and not isinstance(handler, InterceptHandler):
                 try:
                     handler.handle(new_record)
                 except Exception:
+                    # Silently ignore handler errors to prevent crashes
                     pass
 
 
