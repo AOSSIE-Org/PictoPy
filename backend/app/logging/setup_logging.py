@@ -9,6 +9,7 @@ import os
 import json
 import logging
 import sys
+import threading
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -218,6 +219,9 @@ class InterceptHandler(logging.Handler):
     the root logger.
     """
 
+    # Thread-local storage to prevent recursion
+    _emitting = threading.local()
+
     def __init__(self, component_name: str):
         """
         Initialize the InterceptHandler.
@@ -235,19 +239,30 @@ class InterceptHandler(logging.Handler):
         Args:
             record: The log record to process
         """
-        # Get the appropriate module name
-        module_name = record.name
-        if "." in module_name:
-            module_name = module_name.split(".")[-1]
+        # Prevent recursion: check if we're already emitting in this thread
+        if getattr(self._emitting, "active", False):
+            return
 
-        # Create a message that includes the original module in the format
-        msg = record.getMessage()
+        try:
+            # Set the flag to indicate we're currently emitting
+            self._emitting.active = True
 
-        # Find the appropriate logger
-        logger = get_logger(module_name)
+            # Get the appropriate module name
+            module_name = record.name
+            if "." in module_name:
+                module_name = module_name.split(".")[-1]
 
-        # Log the message with our custom formatting
-        logger.log(record.levelno, f"[uvicorn] {msg}")
+            # Create a message that includes the original module in the format
+            msg = record.getMessage()
+
+            # Find the appropriate logger
+            logger = get_logger(module_name)
+
+            # Log the message with our custom formatting
+            logger.log(record.levelno, f"[uvicorn] {msg}")
+        finally:
+            # Always reset the flag, even if an exception occurs
+            self._emitting.active = False
 
 
 def configure_uvicorn_logging(component_name: str) -> None:
