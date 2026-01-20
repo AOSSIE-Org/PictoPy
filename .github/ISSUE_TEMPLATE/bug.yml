@@ -22,17 +22,3 @@ body:
       options:
         - label: "I agree to follow this project's Code of Conduct"
           required: true
-  - type: checkboxes
-    attributes:
-      label: "Checklist before Submitting"
-      options:
-        - label: "Have you updated docs for it?"
-          required: false
-        - label: "Have you added unit tests?"
-          required: false
-        - label: "Have you made sure unit tests pass?"
-          required: false
-        - label: "Have you made sure code formatting is correct?"
-          required: true
-        - label: "Do Your changes passes all tests?"
-          required: false
