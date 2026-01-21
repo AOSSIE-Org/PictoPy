@@ -109,27 +109,38 @@ def image_util_classify_and_face_detect_images(
     face_detector = FaceDetector()
     try:
         for image in untagged_images:
-            image_path = image["path"]
-            image_id = image["id"]
+            try:
+                image_path = image["path"]
+                image_id = image["id"]
 
-            # Step 1: Get classes
-            classes = object_classifier.get_classes(image_path)
+                # Step 1: Get classes
+                classes = object_classifier.get_classes(image_path)
 
-            # Step 2: Insert class-image pairs if classes were detected
-            if len(classes) > 0:
-                # Create image-class pairs
-                image_class_pairs = [(image_id, class_id) for class_id in classes]
-                logger.debug(f"Image-class pairs: {image_class_pairs}")
+                if classes is None:
+                    logger.warning(
+                        f"Skipping tagging for image {image_path}: Classification failed"
+                    )
+                    continue
 
-                # Insert the pairs into the database
-                db_insert_image_classes_batch(image_class_pairs)
+                # Step 2: Insert class-image pairs if classes were detected
+                if len(classes) > 0:
+                    # Create image-class pairs
+                    image_class_pairs = [(image_id, class_id) for class_id in classes]
+                    logger.debug(f"Image-class pairs: {image_class_pairs}")
 
-            # Step 3: Detect faces if "person" class is present
-            if classes and 0 in classes and 0 < classes.count(0) < 7:
-                face_detector.detect_faces(image_id, image_path)
+                    # Insert the pairs into the database
+                    db_insert_image_classes_batch(image_class_pairs)
 
-            # Step 4: Update the image status in the database
-            db_update_image_tagged_status(image_id, True)
+                # Step 3: Detect faces if "person" class is present
+                if classes and 0 in classes and 0 < classes.count(0) < 7:
+                    face_detector.detect_faces(image_id, image_path)
+
+                # Step 4: Update the image status in the database
+                db_update_image_tagged_status(image_id, True)
+
+            except Exception as e:
+                logger.error(f"Error processing image {image.get('path', 'unknown')}: {e}")
+                continue
     finally:
         # Ensure resources are cleaned up
         object_classifier.close()
