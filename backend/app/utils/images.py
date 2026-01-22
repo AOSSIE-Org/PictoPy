@@ -69,32 +69,38 @@ def image_util_detect_document(image_path: str) -> Optional[List[int]]:
         std_intensity = np.std(gray)
         
         # High contrast is typical of documents (black text on white background)
-        is_high_contrast = std_intensity > 50
+        # Lowered threshold to be more lenient
+        is_high_contrast = std_intensity > 30
         
         # Detect edges (text and lines in documents create many edges)
         edges = cv2.Canny(gray, 50, 150)
         edge_density = np.sum(edges > 0) / (width * height)
         
         # Documents typically have high edge density (lots of text/lines)
-        has_high_edge_density = edge_density > 0.1
+        # Lowered threshold to be more lenient
+        has_high_edge_density = edge_density > 0.05
         
         # Check if image is mostly light (typical document background)
-        is_mostly_light = mean_intensity > 200
+        # Lowered threshold to be more lenient
+        is_mostly_light = mean_intensity > 150
         
         # Detect horizontal lines (common in documents)
         horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (40, 1))
         detected_lines = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, horizontal_kernel)
         line_density = np.sum(detected_lines > 0) / (width * height)
-        has_lines = line_density > 0.05
+        # Lowered threshold to be more lenient
+        has_lines = line_density > 0.02
         
         # Decision logic: Image is likely a document if:
         # 1. Has high edge density (text/lines) AND high contrast
         # 2. OR has lines (document structure) AND is mostly light
         # 3. OR is rectangular with high contrast (typical document shape)
+        # 4. OR has significant edge density (more lenient)
         is_document = (
             (has_high_edge_density and is_high_contrast) or
             (has_lines and is_mostly_light) or
-            (is_rectangular and is_high_contrast and mean_intensity > 180)
+            (is_rectangular and is_high_contrast and mean_intensity > 150) or
+            (edge_density > 0.08 and std_intensity > 25)  # More lenient fallback
         )
         
         if is_document:
@@ -107,10 +113,11 @@ def image_util_detect_document(image_path: str) -> Optional[List[int]]:
                     class_id = class_names.index(doc_class)
                     document_class_ids.append(class_id)
             
-            logger.debug(
+            logger.info(
                 f"Document detected in {image_path}: "
                 f"edge_density={edge_density:.3f}, contrast={std_intensity:.1f}, "
-                f"mean_intensity={mean_intensity:.1f}, aspect_ratio={aspect_ratio:.2f}"
+                f"mean_intensity={mean_intensity:.1f}, aspect_ratio={aspect_ratio:.2f}, "
+                f"classes={document_class_ids}"
             )
             
             return document_class_ids if document_class_ids else None
@@ -207,6 +214,8 @@ def image_util_classify_and_face_detect_images(
 
             # Step 1: Get classes from YOLO object detection
             classes = object_classifier.get_classes(image_path)
+            if classes is None:
+                classes = []
             
             # Step 1.5: Detect document images and add document-related classes
             document_classes = image_util_detect_document(image_path)
@@ -215,7 +224,12 @@ def image_util_classify_and_face_detect_images(
                 for doc_class_id in document_classes:
                     if doc_class_id not in classes:
                         classes.append(doc_class_id)
-                logger.debug(f"Document classes added: {document_classes}")
+                logger.info(
+                    f"Document detected! Image {image_id}: Added classes {document_classes}. "
+                    f"Total classes: {classes}"
+                )
+            else:
+                logger.debug(f"No document detected in {image_path}")
 
             # Step 2: Insert class-image pairs if classes were detected
             if len(classes) > 0:
