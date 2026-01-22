@@ -30,6 +30,15 @@ PictoPy is an advanced desktop gallery application that combines the power of Ta
 
 Handles file system operations and provides a secure bridge between the frontend and local system.
 
+## Supported Python Versions (Backend)
+
+The PictoPy backend is tested and known to work with:
+
+- **Python 3.11**
+
+Using older or newer Python versions (for example, Python 3.9 or Python 3.13+) may lead to dependency installation or build issues, especially on Windows.
+
+
 ## Features
 
 - Smart tagging of photos based on detected objects, faces, and their recognition

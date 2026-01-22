@@ -17,7 +17,9 @@ PictoPy documentation uses MkDocs with the Material theme and the Swagger UI plu
 
 To set up and run the docs website on your local machine:
 
-1. Ensure you have **Python 3** and **pip** installed. Navigate to the `/docs` folder.
+1. Ensure you are using a supported Python version and have **pip** installed.  
+   The supported Python version for the backend is documented in the README.  
+   Navigate to the `/docs` folder.
 2. Create a virtual environment:
 
 ```bash
