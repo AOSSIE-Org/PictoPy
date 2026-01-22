@@ -3,9 +3,11 @@ import uuid
 import datetime
 import json
 import logging
-from typing import List, Tuple, Dict, Any, Mapping
+from typing import List, Tuple, Dict, Any, Mapping, Optional
 from PIL import Image, ExifTags
 from pathlib import Path
+import cv2
+import numpy as np
 
 from app.config.settings import THUMBNAIL_IMAGES_PATH
 from app.database.images import (
@@ -19,6 +21,7 @@ from app.database.images import (
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
 from app.logging.setup_logging import get_logger
+from app.utils.YOLO import class_names
 
 logger = get_logger(__name__)
 
@@ -27,6 +30,96 @@ logger = get_logger(__name__)
 GPS_INFO_TAG = 34853
 
 logger = logging.getLogger(__name__)
+
+
+def image_util_detect_document(image_path: str) -> Optional[List[int]]:
+    """
+    Detect if an image is a document/page and return corresponding class IDs.
+    
+    Uses image analysis to detect document characteristics:
+    - High text content (edge detection)
+    - Document-like aspect ratio
+    - High contrast (typical of scanned documents)
+    
+    Args:
+        image_path: Path to the image file
+        
+    Returns:
+        List of class IDs for document-related classes, or None if not detected
+        Returns class IDs for: document, page, paper, text
+    """
+    try:
+        # Read image
+        img = cv2.imread(image_path)
+        if img is None:
+            return None
+            
+        # Get image dimensions
+        height, width = img.shape[:2]
+        
+        # Check aspect ratio (documents are often rectangular, not square)
+        aspect_ratio = width / height if height > 0 else 0
+        is_rectangular = aspect_ratio > 1.2 or aspect_ratio < 0.8
+        
+        # Convert to grayscale for analysis
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # Calculate image statistics
+        mean_intensity = np.mean(gray)
+        std_intensity = np.std(gray)
+        
+        # High contrast is typical of documents (black text on white background)
+        is_high_contrast = std_intensity > 50
+        
+        # Detect edges (text and lines in documents create many edges)
+        edges = cv2.Canny(gray, 50, 150)
+        edge_density = np.sum(edges > 0) / (width * height)
+        
+        # Documents typically have high edge density (lots of text/lines)
+        has_high_edge_density = edge_density > 0.1
+        
+        # Check if image is mostly light (typical document background)
+        is_mostly_light = mean_intensity > 200
+        
+        # Detect horizontal lines (common in documents)
+        horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (40, 1))
+        detected_lines = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, horizontal_kernel)
+        line_density = np.sum(detected_lines > 0) / (width * height)
+        has_lines = line_density > 0.05
+        
+        # Decision logic: Image is likely a document if:
+        # 1. Has high edge density (text/lines) AND high contrast
+        # 2. OR has lines (document structure) AND is mostly light
+        # 3. OR is rectangular with high contrast (typical document shape)
+        is_document = (
+            (has_high_edge_density and is_high_contrast) or
+            (has_lines and is_mostly_light) or
+            (is_rectangular and is_high_contrast and mean_intensity > 180)
+        )
+        
+        if is_document:
+            # Get class IDs for document-related classes
+            document_class_ids = []
+            document_classes = ["document", "page", "paper", "text"]
+            
+            for doc_class in document_classes:
+                if doc_class in class_names:
+                    class_id = class_names.index(doc_class)
+                    document_class_ids.append(class_id)
+            
+            logger.debug(
+                f"Document detected in {image_path}: "
+                f"edge_density={edge_density:.3f}, contrast={std_intensity:.1f}, "
+                f"mean_intensity={mean_intensity:.1f}, aspect_ratio={aspect_ratio:.2f}"
+            )
+            
+            return document_class_ids if document_class_ids else None
+        
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error detecting document in {image_path}: {e}")
+        return None
 
 
 def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -> bool:
@@ -112,8 +205,17 @@ def image_util_classify_and_face_detect_images(
             image_path = image["path"]
             image_id = image["id"]
 
-            # Step 1: Get classes
+            # Step 1: Get classes from YOLO object detection
             classes = object_classifier.get_classes(image_path)
+            
+            # Step 1.5: Detect document images and add document-related classes
+            document_classes = image_util_detect_document(image_path)
+            if document_classes:
+                # Add document classes if not already detected
+                for doc_class_id in document_classes:
+                    if doc_class_id not in classes:
+                        classes.append(doc_class_id)
+                logger.debug(f"Document classes added: {document_classes}")
 
             # Step 2: Insert class-image pairs if classes were detected
             if len(classes) > 0:

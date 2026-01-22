@@ -83,6 +83,10 @@ class_names = [
     "teddy bear",
     "hair drier",
     "toothbrush",
+    "document",
+    "page",
+    "paper",
+    "text",
 ]
 
 # Create a list of colors for each class where each color is a tuple of 3 integer values
