@@ -37,45 +37,100 @@ class ImageData(BaseModel):
     tags: Optional[List[str]] = None
 
 
+class PaginationInfo(BaseModel):
+    page: int
+    limit: int
+    total_count: int
+    total_pages: int
+    has_next: bool
+    has_previous: bool
+
+
 class GetAllImagesResponse(BaseModel):
     success: bool
     message: str
     data: List[ImageData]
 
 
+class PaginatedImagesResponse(BaseModel):
+    success: bool
+    message: str
+    data: List[ImageData]
+    pagination: PaginationInfo
+
+
 @router.get(
     "/",
-    response_model=GetAllImagesResponse,
+    response_model=None,
     responses={500: {"model": ErrorResponse}},
 )
 def get_all_images(
-    tagged: Optional[bool] = Query(None, description="Filter images by tagged status")
+    tagged: Optional[bool] = Query(None, description="Filter images by tagged status"),
+    page: Optional[int] = Query(None, ge=1, description="Page number (1-indexed)"),
+    limit: Optional[int] = Query(
+        None, ge=1, le=100, description="Number of images per page (max 100)"
+    ),
 ):
-    """Get all images from the database."""
+    """
+    Get all images from the database.
+
+    - If `page` and `limit` are provided, returns paginated results.
+    - If `page` and `limit` are not provided, returns all images (backward compatible).
+    """
     try:
-        # Get all images with tags from database (single query with optional filter)
-        images = db_get_all_images(tagged=tagged)
+        # Get images with optional pagination
+        result = db_get_all_images(tagged=tagged, page=page, limit=limit)
 
-        # Convert to response format
-        image_data = [
-            ImageData(
-                id=image["id"],
-                path=image["path"],
-                folder_id=image["folder_id"],
-                thumbnailPath=image["thumbnailPath"],
-                metadata=image_util_parse_metadata(image["metadata"]),
-                isTagged=image["isTagged"],
-                isFavourite=image.get("isFavourite", False),
-                tags=image["tags"],
+        # Check if paginated result
+        if page is not None and limit is not None:
+            images = result["images"]
+            pagination = result["pagination"]
+
+            # Convert to response format
+            image_data = [
+                ImageData(
+                    id=image["id"],
+                    path=image["path"],
+                    folder_id=image["folder_id"],
+                    thumbnailPath=image["thumbnailPath"],
+                    metadata=image_util_parse_metadata(image["metadata"]),
+                    isTagged=image["isTagged"],
+                    isFavourite=image.get("isFavourite", False),
+                    tags=image["tags"],
+                )
+                for image in images
+            ]
+
+            return PaginatedImagesResponse(
+                success=True,
+                message=f"Successfully retrieved {len(image_data)} images (page {pagination['page']} of {pagination['total_pages']})",
+                data=image_data,
+                pagination=PaginationInfo(**pagination),
             )
-            for image in images
-        ]
+        else:
+            # Non-paginated response (backward compatible)
+            images = result
 
-        return GetAllImagesResponse(
-            success=True,
-            message=f"Successfully retrieved {len(image_data)} images",
-            data=image_data,
-        )
+            # Convert to response format
+            image_data = [
+                ImageData(
+                    id=image["id"],
+                    path=image["path"],
+                    folder_id=image["folder_id"],
+                    thumbnailPath=image["thumbnailPath"],
+                    metadata=image_util_parse_metadata(image["metadata"]),
+                    isTagged=image["isTagged"],
+                    isFavourite=image.get("isFavourite", False),
+                    tags=image["tags"],
+                )
+                for image in images
+            ]
+
+            return GetAllImagesResponse(
+                success=True,
+                message=f"Successfully retrieved {len(image_data)} images",
+                data=image_data,
+            )
 
     except Exception as e:
         raise HTTPException(

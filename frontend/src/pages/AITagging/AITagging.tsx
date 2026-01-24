@@ -1,32 +1,49 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { FaceCollections } from '@/components/FaceCollections';
 import { Image } from '@/types/Media';
-import { setImages } from '@/features/imageSlice';
+import {
+  setImages,
+  appendImages,
+  setPagination,
+  setLoadingMore,
+} from '@/features/imageSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
-import { selectImages } from '@/features/imageSelectors';
+import {
+  selectImages,
+  selectHasNextPage,
+  selectIsLoadingMore,
+  selectPagination,
+} from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
-import { fetchAllImages } from '@/api/api-functions';
+import { fetchPaginatedImages } from '@/api/api-functions';
 import {
   ChronologicalGallery,
   MonthMarker,
 } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 import { EmptyAITaggingState } from '@/components/EmptyStates/EmptyAITaggingState';
+import { PaginatedAPIResponse } from '@/types/API';
+
+const IMAGES_PER_PAGE = 50;
 
 export const AITagging = () => {
   const dispatch = useDispatch();
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
   const taggedImages = useSelector(selectImages);
+  const pagination = useSelector(selectPagination);
+  const hasNextPage = useSelector(selectHasNextPage);
+  const isLoadingMore = useSelector(selectIsLoadingMore);
+
   const {
     data: imagesData,
     isLoading: imagesLoading,
     isSuccess: imagesSuccess,
     isError: imagesError,
   } = usePictoQuery({
-    queryKey: ['images', { tagged: true }],
-    queryFn: () => fetchAllImages(true),
+    queryKey: ['images', 'paginated', 'tagged', 1],
+    queryFn: () => fetchPaginatedImages(1, IMAGES_PER_PAGE, true),
   });
 
   useEffect(() => {
@@ -34,12 +51,41 @@ export const AITagging = () => {
       dispatch(showLoader('Loading AI tagging data'));
     } else if (imagesError) {
       dispatch(hideLoader());
-    } else if (imagesSuccess) {
-      const images = imagesData?.data as Image[];
-      dispatch(setImages(images));
+    } else if (imagesSuccess && imagesData) {
+      const paginatedData = imagesData as PaginatedAPIResponse<Image>;
+      dispatch(setImages(paginatedData.data));
+      if (paginatedData.pagination) {
+        dispatch(setPagination(paginatedData.pagination));
+      }
       dispatch(hideLoader());
     }
   }, [imagesData, imagesSuccess, imagesError, imagesLoading, dispatch]);
+
+  // Load more images function for infinite scroll
+  const loadMoreImages = useCallback(async () => {
+    if (isLoadingMore || !hasNextPage) return;
+
+    const nextPage = pagination.page + 1;
+    dispatch(setLoadingMore(true));
+
+    try {
+      const response = await fetchPaginatedImages(
+        nextPage,
+        IMAGES_PER_PAGE,
+        true,
+      );
+      const paginatedData = response as PaginatedAPIResponse<Image>;
+
+      dispatch(appendImages(paginatedData.data));
+      if (paginatedData.pagination) {
+        dispatch(setPagination(paginatedData.pagination));
+      }
+    } catch (err) {
+      console.error('Error loading more images:', err);
+    } finally {
+      dispatch(setLoadingMore(false));
+    }
+  }, [dispatch, hasNextPage, isLoadingMore, pagination.page]);
 
   return (
     <div className="relative flex h-full flex-col pr-6">
@@ -63,9 +109,12 @@ export const AITagging = () => {
               title="All Images"
               onMonthOffsetsChange={setMonthMarkers}
               scrollContainerRef={scrollableRef}
+              onLoadMore={loadMoreImages}
+              hasMore={hasNextPage}
+              isLoadingMore={isLoadingMore}
             />
           ) : (
-            <EmptyAITaggingState />
+            !imagesLoading && <EmptyAITaggingState />
           )}
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   ChronologicalGallery,
@@ -6,25 +6,43 @@ import {
 } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 import { Image } from '@/types/Media';
-import { setImages } from '@/features/imageSlice';
-import { selectImages } from '@/features/imageSelectors';
+import {
+  setImages,
+  appendImages,
+  setPagination,
+  setLoadingMore,
+  clearImages,
+} from '@/features/imageSlice';
+import {
+  selectImages,
+  selectHasNextPage,
+  selectIsLoadingMore,
+  selectPagination,
+} from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
-import { fetchAllImages } from '@/api/api-functions';
+import { fetchPaginatedImages } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { PaginatedAPIResponse } from '@/types/API';
+
+const IMAGES_PER_PAGE = 50;
 
 export const Home = () => {
   const dispatch = useDispatch();
   const images = useSelector(selectImages);
+  const pagination = useSelector(selectPagination);
+  const hasNextPage = useSelector(selectHasNextPage);
+  const isLoadingMore = useSelector(selectIsLoadingMore);
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
   const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
 
+  // Initial page load
   const { data, isLoading, isSuccess, isError, error } = usePictoQuery({
-    queryKey: ['images'],
-    queryFn: () => fetchAllImages(),
+    queryKey: ['images', 'paginated', 1],
+    queryFn: () => fetchPaginatedImages(1, IMAGES_PER_PAGE),
     enabled: !isSearchActive,
   });
 
@@ -38,12 +56,45 @@ export const Home = () => {
     },
   );
 
+  // Handle initial data load
   useEffect(() => {
-    if (!isSearchActive && isSuccess) {
-      const images = data?.data as Image[];
-      dispatch(setImages(images));
+    if (!isSearchActive && isSuccess && data) {
+      const paginatedData = data as PaginatedAPIResponse<Image>;
+      dispatch(setImages(paginatedData.data));
+      if (paginatedData.pagination) {
+        dispatch(setPagination(paginatedData.pagination));
+      }
     }
   }, [data, isSuccess, dispatch, isSearchActive]);
+
+  // Clear images when search becomes active
+  useEffect(() => {
+    if (isSearchActive) {
+      // Don't clear images during search - let search handle it
+    }
+  }, [isSearchActive]);
+
+  // Load more images function for infinite scroll
+  const loadMoreImages = useCallback(async () => {
+    if (isLoadingMore || !hasNextPage || isSearchActive) return;
+
+    const nextPage = pagination.page + 1;
+    dispatch(setLoadingMore(true));
+
+    try {
+      const response = await fetchPaginatedImages(nextPage, IMAGES_PER_PAGE);
+      const paginatedData = response as PaginatedAPIResponse<Image>;
+
+      dispatch(appendImages(paginatedData.data));
+      if (paginatedData.pagination) {
+        dispatch(setPagination(paginatedData.pagination));
+      }
+    } catch (err) {
+      console.error('Error loading more images:', err);
+    } finally {
+      dispatch(setLoadingMore(false));
+    }
+  }, [dispatch, hasNextPage, isLoadingMore, isSearchActive, pagination.page]);
 
   const title =
     isSearchActive && images.length > 0
@@ -64,9 +115,12 @@ export const Home = () => {
             title={title}
             onMonthOffsetsChange={setMonthMarkers}
             scrollContainerRef={scrollableRef}
+            onLoadMore={loadMoreImages}
+            hasMore={hasNextPage}
+            isLoadingMore={isLoadingMore}
           />
         ) : (
-          <EmptyGalleryState />
+          !isLoading && <EmptyGalleryState />
         )}
       </div>
 

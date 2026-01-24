@@ -20,6 +20,10 @@ type ChronologicalGalleryProps = {
   className?: string;
   onMonthOffsetsChange?: (markers: MonthMarker[]) => void;
   scrollContainerRef?: React.RefObject<HTMLElement | null>;
+  // Pagination props
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
 };
 
 export const ChronologicalGallery = ({
@@ -29,6 +33,9 @@ export const ChronologicalGallery = ({
   className = '',
   onMonthOffsetsChange,
   scrollContainerRef,
+  onLoadMore,
+  hasMore = false,
+  isLoadingMore = false,
 }: ChronologicalGalleryProps) => {
   const dispatch = useDispatch();
   const monthHeaderRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
@@ -111,6 +118,38 @@ export const ChronologicalGallery = ({
     };
   }, [recomputeMarkers, scrollContainerRef]);
 
+  // Infinite scroll: Intersection Observer for loading more images
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!onLoadMore || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && hasMore && !isLoadingMore) {
+          onLoadMore();
+        }
+      },
+      {
+        root: scrollContainerRef?.current ?? null,
+        rootMargin: '100px', // Start loading 100px before reaching the bottom
+        threshold: 0.1,
+      },
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [onLoadMore, hasMore, isLoadingMore, scrollContainerRef]);
+
   return (
     <>
       <div ref={galleryRef} className={`space-y-0 ${className}`}>
@@ -180,6 +219,26 @@ export const ChronologicalGallery = ({
             })}
           </div>
         ))}
+
+        {/* Infinite Scroll Loading Indicator */}
+        {onLoadMore && (
+          <div
+            ref={loadMoreRef}
+            className="flex items-center justify-center py-8"
+          >
+            {isLoadingMore && (
+              <div className="flex items-center gap-2 text-gray-500">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary" />
+                <span>Loading more images...</span>
+              </div>
+            )}
+            {!hasMore && images.length > 0 && (
+              <div className="text-gray-400 text-sm">
+                All images loaded
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {isImageViewOpen && <MediaView images={chronologicallySortedImages} />}
     </>

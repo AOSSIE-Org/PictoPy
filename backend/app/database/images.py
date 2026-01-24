@@ -1,6 +1,7 @@
 # Standard library imports
 import sqlite3
 from typing import Any, List, Mapping, Tuple, TypedDict, Union
+import math
 
 # App-specific imports
 from app.config.settings import (
@@ -37,6 +38,24 @@ class UntaggedImageRecord(TypedDict):
     folder_id: FolderId
     thumbnailPath: str
     metadata: Mapping[str, Any]
+
+
+class PaginationInfo(TypedDict):
+    """Represents pagination metadata"""
+
+    page: int
+    limit: int
+    total_count: int
+    total_pages: int
+    has_next: bool
+    has_previous: bool
+
+
+class PaginatedImagesResult(TypedDict):
+    """Represents paginated images result"""
+
+    images: List[dict]
+    pagination: PaginationInfo
 
 
 ImageClassPair = Tuple[ImageId, ClassId]
@@ -120,22 +139,39 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
         conn.close()
 
 
-def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
+def db_get_all_images(
+    tagged: Union[bool, None] = None,
+    page: Union[int, None] = None,
+    limit: Union[int, None] = None,
+) -> Union[List[dict], PaginatedImagesResult]:
     """
     Get all images from the database with their tags.
 
     Args:
         tagged: Optional filter for tagged status. If None, returns all images.
                 If True, returns only tagged images. If False, returns only untagged images.
+        page: Optional page number (1-indexed). If None, returns all images without pagination.
+        limit: Optional number of images per page. If None, returns all images without pagination.
 
     Returns:
-        List of dictionaries containing all image data including tags
+        If page and limit are provided: PaginatedImagesResult with images and pagination info
+        Otherwise: List of dictionaries containing all image data including tags
     """
     conn = _connect()
     cursor = conn.cursor()
 
     try:
-        # Build the query with optional WHERE clause
+        # First, get total count for pagination
+        count_query = "SELECT COUNT(DISTINCT i.id) FROM images i"
+        count_params = []
+        if tagged is not None:
+            count_query += " WHERE i.isTagged = ?"
+            count_params.append(tagged)
+
+        cursor.execute(count_query, count_params)
+        total_count = cursor.fetchone()[0]
+
+        # Build the main query with optional WHERE clause
         query = """
             SELECT 
                 i.id, 
@@ -205,10 +241,43 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
         # Sort by path
         images.sort(key=lambda x: x["path"])
 
+        # Apply pagination if page and limit are provided
+        if page is not None and limit is not None:
+            # Calculate pagination values
+            total_pages = math.ceil(total_count / limit) if limit > 0 else 0
+            offset = (page - 1) * limit
+            paginated_images = images[offset : offset + limit]
+
+            pagination_info: PaginationInfo = {
+                "page": page,
+                "limit": limit,
+                "total_count": total_count,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_previous": page > 1,
+            }
+
+            return {
+                "images": paginated_images,
+                "pagination": pagination_info,
+            }
+
         return images
 
     except Exception as e:
         logger.error(f"Error getting all images: {e}")
+        if page is not None and limit is not None:
+            return {
+                "images": [],
+                "pagination": {
+                    "page": page,
+                    "limit": limit,
+                    "total_count": 0,
+                    "total_pages": 0,
+                    "has_next": False,
+                    "has_previous": False,
+                },
+            }
         return []
     finally:
         conn.close()
