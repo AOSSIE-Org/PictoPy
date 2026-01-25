@@ -112,6 +112,38 @@ if (-not (Test-Command cmake)) {
     Write-Host "CMake is already installed. Version: $(cmake --version)" -ForegroundColor Green
 }
 
+# --------------------------------------------------
+# Miniconda
+# --------------------------------------------------
+$condaRoot = "$env:USERPROFILE\miniconda3"
+$condaExe  = "$condaRoot\Scripts\conda.exe"
+
+if (-not (Test-Path $condaExe)) {
+    Write-Host "Installing Miniconda..." -ForegroundColor Yellow
+    $installer = "$env:TEMP\miniconda.exe"
+    Invoke-WebRequest `
+        -Uri "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe" `
+        -OutFile $installer
+
+    Start-Process -Wait -FilePath $installer -ArgumentList `
+        "/InstallationType=JustMe",
+        "/AddToPath=0",
+        "/RegisterPython=0",
+        "/S",
+        "/D=$condaRoot"
+
+    Remove-Item $installer
+}
+
+# --------------------------------------------------
+# Initialize Conda (THIS WAS MISSING BEFORE)
+# --------------------------------------------------
+$env:Path = "$condaRoot;$condaRoot\Scripts;$condaRoot\condabin;$env:Path"
+
+$condaBase = & $condaExe info --base
+& "$condaBase\shell\condabin\conda-hook.ps1"
+
+
 # ---- Set up the frontend ----
 Write-Host "Setting up frontend..." -ForegroundColor Yellow
 try {
@@ -134,13 +166,14 @@ try {
     Set-Location .\backend\
     
     # Create virtual environment
-    python -m venv .env
+    conda remove -n backend_env --all -y 2>$null
+    conda create -n backend_env python=3.12 -y
     
     # Activate virtual environment and install dependencies
-    .\.env\Scripts\Activate.ps1
+    conda activate backend_env
     python -m pip install --upgrade pip
     python -m pip install -r requirements.txt
-    deactivate
+    conda deactivate
     
     Set-Location ..
     
@@ -156,13 +189,14 @@ try {
     Set-Location .\sync-microservice\
     
     # Create virtual environment
-    python -m venv .sync-env
+    conda remove -n sync_env --all -y 2>$null
+    conda create -n sync_env python=3.12 -y    
     
     # Activate virtual environment and install dependencies
-    .\.sync-env\Scripts\Activate.ps1
+    conda activate sync_env
     python -m pip install --upgrade pip
     python -m pip install -r requirements.txt
-    deactivate
+    conda deactivate
     
     Set-Location ..
     
