@@ -34,6 +34,9 @@ def db_create_clusters_table() -> None:
             )
         """
         )
+        cursor.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_cluster_name ON face_clusters(cluster_name)"
+        )
         conn.commit()
     finally:
         if conn is not None:
@@ -362,6 +365,11 @@ def db_get_or_create_cluster_by_name(name: str, cursor: Optional[sqlite3.Cursor]
         conn = cursor.connection
 
     try:
+        # Ensure unique index exists so INSERT OR IGNORE works as expected
+        cursor.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_cluster_name ON face_clusters(cluster_name)"
+        )
+
         cluster_id = str(uuid.uuid4())
         # Attempt to insert first (optimistic)
         cursor.execute(
