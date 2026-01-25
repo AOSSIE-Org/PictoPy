@@ -125,7 +125,7 @@ if (-not (Test-Path $condaExe)) {
         -Uri "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe" `
         -OutFile $installer
 
-    if ($LASTEXITCODE -ne 0 -or !(Test-Path $installerPath)) {
+    if ($LASTEXITCODE -ne 0 -or !(Test-Path $installer)) {
         throw "Failed to download Miniconda installer"
     }
 
