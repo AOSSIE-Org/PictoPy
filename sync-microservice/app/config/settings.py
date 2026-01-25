@@ -1,7 +1,7 @@
 # Model Exports Path
 MODEL_EXPORTS_PATH = "app/models/ONNX_Exports"
-PRIMARY_BACKEND_URL = "http://localhost:8000"
-SYNC_MICROSERVICE_URL = "http://localhost:8001/api/v1"
+PRIMARY_BACKEND_URL = "http://localhost:52123"
+SYNC_MICROSERVICE_URL = "http://localhost:52124"
 
 # Object Detection Models:
 SMALL_OBJ_DETECTION_MODEL = f"{MODEL_EXPORTS_PATH}/YOLOv11_Small.onnx"
