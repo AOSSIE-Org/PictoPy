@@ -352,27 +352,45 @@ def db_get_images_by_cluster_id(
         conn.close()
 
 
-def db_get_or_create_cluster_by_name(name: str) -> str:
+def db_get_or_create_cluster_by_name(name: str, cursor: Optional[sqlite3.Cursor] = None) -> str:
     """Gets an existing cluster ID by name or creates a new one."""
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    own_connection = cursor is None
+    if own_connection:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+    else:
+        conn = cursor.connection
+
     try:
-        # Check if exists
+        cluster_id = str(uuid.uuid4())
+        # Attempt to insert first (optimistic)
+        cursor.execute(
+            "INSERT OR IGNORE INTO face_clusters (cluster_id, cluster_name) VALUES (?, ?)",
+            (cluster_id, name),
+        )
+
+        if cursor.rowcount > 0:
+            if own_connection:
+                conn.commit()
+            return cluster_id
+
+        # If insert was ignored, it means it exists
         cursor.execute(
             "SELECT cluster_id FROM face_clusters WHERE cluster_name = ?", (name,)
         )
         result = cursor.fetchone()
         if result:
+            if own_connection:
+                conn.commit()
             return result[0]
 
-        # Create new
-        cluster_id = str(uuid.uuid4())
-        cursor.execute(
-            "INSERT INTO face_clusters (cluster_id, cluster_name) VALUES (?, ?)",
-            (cluster_id, name),
-        )
-        conn.commit()
-        return cluster_id
+        raise Exception(f"Failed to get or create cluster with name: {name}")
+
+    except Exception:
+        if own_connection:
+            conn.rollback()
+        raise
     finally:
-        conn.close()
+        if own_connection:
+            conn.close()
 

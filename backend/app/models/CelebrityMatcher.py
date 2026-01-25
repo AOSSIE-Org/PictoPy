@@ -41,6 +41,8 @@ class CelebrityMatcher:
             return
 
         try:
+            # WARNING: Only load pickle files from trusted sources
+            # Pickle can execute arbitrary code during deserialization
             with open(path, 'rb') as f:
                 data = pickle.load(f)
             
