@@ -22,9 +22,7 @@ def format_debug_changes(changes: Set[Tuple[Change, str]]) -> str:
             change_type = (
                 "deleted"
                 if change == Change.deleted
-                else "modified"
-                if change == Change.modified
-                else "added"
+                else "modified" if change == Change.modified else "added"
             )
             debug_changes.append(f"  - {change_type}: {path}")
         indented = "\n".join("    " + line for line in debug_changes)
