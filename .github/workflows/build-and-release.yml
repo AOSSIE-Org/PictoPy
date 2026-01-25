@@ -319,6 +319,11 @@ jobs:
           unzip -o *.zip
           rm *.zip
           ls -l
+      - name: Copy utils folder
+        shell: bash
+        run: |
+          cp -r utils backend/dist/utils
+          cp -r utils sync-microservice/dist/utils
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
