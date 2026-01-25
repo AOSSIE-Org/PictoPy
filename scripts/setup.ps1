@@ -129,15 +129,10 @@ if (-not (Test-Path $condaExe)) {
         throw "Failed to download Miniconda installer"
     }
 
-    Start-Process -Wait -FilePath $installer -ArgumentList `
-        "/InstallationType=JustMe",
-        "/AddToPath=0",
-        "/RegisterPython=0",
-        "/S",
-        "/D=$condaRoot"
-
-   if ($LASTEXITCODE -ne 0) {
-        throw "Miniconda installer exited with an error"
+    $installerArgs = "/InstallationType=JustMe /AddToPath=0 /RegisterPython=0 /S /D=$condaRoot"
+    & $installer $installerArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Miniconda installer failed with exit code $LASTEXITCODE"
     }
 
     Remove-Item $installer
