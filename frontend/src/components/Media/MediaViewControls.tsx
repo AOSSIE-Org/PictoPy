@@ -13,6 +13,7 @@ interface MediaViewControlsProps {
   type?: string;
 }
 
+/** Control buttons for the full-screen media viewer. */
 export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
   showInfo,
   onToggleInfo,

@@ -87,7 +87,7 @@ export function MediaView({
     handleNextImage,
   );
 
-  // Folder Open functionality
+  /** Opens the system file explorer at the current image's location. */
   const handleOpenFolder = async () => {
     if (!currentImage?.path) return;
     try {
