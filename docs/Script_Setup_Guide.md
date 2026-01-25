@@ -5,6 +5,8 @@
 - [Windows](https://youtu.be/nNVAE4or280?si=j_y9Xn8Kra6tPHjw)
 - [Ubuntu (Debian)](https://www.youtube.com/watch?v=a7I0ZRE-SHk)
 
+> Note that the Step No. 8 given below is not mentioned in the video, please follow that step also.
+
 ### Prerequisites:
 
 - [NodeJS](https://nodejs.org/en) (LTS Version Recommended)
@@ -48,8 +50,8 @@
 
    ```powershell
    cd .\backend
-   .env\Scripts\activate.ps1
-   fastapi dev
+   .env\Scripts\Activate.ps1
+   fastapi dev --port 52123
    ```
 
    #### Linux
@@ -57,10 +59,30 @@
    ```bash
    cd ./backend
    source .env/bin/activate
-   fastapi dev
+   fastapi dev --port 52123
    ```
 
-8. Start the Frontend Desktop App
+8. Start the Sync-Microservice
+
+   Open a new terminal window, navigate to the project directory, and run:
+
+   #### Windows
+
+   ```powershell
+   cd .\sync-microservice
+   .sync-env\Scripts\Activate.ps1
+   fastapi dev --port 52124
+   ```
+
+   #### Linux
+
+   ```bash
+   cd ./sync-microservice
+   source .sync-env/bin/activate
+   fastapi dev --port 52124
+   ```
+
+9. Start the Frontend Desktop App
 
    Open a new terminal window, navigate to the project directory, and run:
 
@@ -69,12 +91,12 @@
    npm run tauri dev
    ```
 
-9. Pre-commit Setup
+10. Pre-commit Setup
 
-   Before running the `git commit` command, ensure you have the following Python packages installed globally:
+    Before running the `git commit` command, ensure you have the following Python packages installed globally:
 
-   ```bash
-   pip install ruff black mypy pre-commit
-   ```
+    ```bash
+    pip install ruff black mypy pre-commit
+    ```
 
-   > **Note:** If you are committing from a virtual environment, these packages should already be installed as they are included in the requirements.txt file.
+    > **Note:** If you are committing from a virtual environment, these packages should already be installed as they are included in the requirements.txt file.
