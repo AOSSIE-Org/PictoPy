@@ -163,20 +163,37 @@ try {
 # ---- Set up the backend using Python 3.12 ----
 Write-Host "Setting up backend..." -ForegroundColor Yellow
 try {
-    Set-Location .\backend\
-    
-    # Create virtual environment
-    conda remove -n backend_env --all -y 2>$null
+
+     Set-Location .\backend\
+
+    Write-Host "Setting up backend Conda environment..." -ForegroundColor Cyan
+
+    # Remove existing environment (ignore if it does not exist)
+    conda remove -n backend_env --all -y
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Environment did not exist or could not be removed, continuing..." -ForegroundColor Yellow
+    }
+
+    # Create fresh environment
     conda create -n backend_env python=3.12 -y
-    
-    # Activate virtual environment and install dependencies
-    conda activate backend_env
-    python -m pip install --upgrade pip
-    python -m pip install -r requirements.txt
-    conda deactivate
-    
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to create Conda environment"
+    }
+
+    # Upgrade pip inside the environment
+    conda run -n backend_env python -m pip install --upgrade pip
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to upgrade pip inside Conda environment"
+    }
+
+    # Install backend dependencies
+    conda run -n backend_env python -m pip install -r requirements.txt
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to install backend dependencies"
+    }
+
     Set-Location ..
-    
+
     Write-Host "Backend setup completed successfully." -ForegroundColor Green
 } catch {
     Write-Host "Error setting up backend: $_" -ForegroundColor Red
@@ -188,18 +205,34 @@ Write-Host "Setting up sync-microservice..." -ForegroundColor Yellow
 try {
     Set-Location .\sync-microservice\
     
-    # Create virtual environment
-    conda remove -n sync_env --all -y 2>$null
-    conda create -n sync_env python=3.12 -y    
-    
-    # Activate virtual environment and install dependencies
-    conda activate sync_env
-    python -m pip install --upgrade pip
-    python -m pip install -r requirements.txt
-    conda deactivate
-    
+    Write-Host "Setting up sync-microservice Conda environment..." -ForegroundColor Cyan
+
+    # Remove existing environment (ignore if it does not exist)
+    conda remove -n sync_env --all -y
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Environment did not exist or could not be removed, continuing..." -ForegroundColor Yellow
+    }
+
+    # Create fresh environment
+    conda create -n sync_env python=3.12 -y
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to create Conda environment for sync-microservice"
+    }
+
+    # Upgrade pip inside the environment
+    conda run -n sync_env python -m pip install --upgrade pip
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to upgrade pip in sync_env"
+    }
+
+    # Install dependencies inside the environment
+    conda run -n sync_env python -m pip install -r requirements.txt
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to install sync-microservice dependencies"
+    }
+
     Set-Location ..
-    
+
     Write-Host "Sync-microservice setup completed successfully." -ForegroundColor Green
 } catch {
     Write-Host "Error setting up sync-microservice: $_" -ForegroundColor Red
