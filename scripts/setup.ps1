@@ -125,6 +125,10 @@ if (-not (Test-Path $condaExe)) {
         -Uri "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe" `
         -OutFile $installer
 
+    if ($LASTEXITCODE -ne 0 -or !(Test-Path $installerPath)) {
+        throw "Failed to download Miniconda installer"
+    }
+
     Start-Process -Wait -FilePath $installer -ArgumentList `
         "/InstallationType=JustMe",
         "/AddToPath=0",
@@ -132,7 +136,21 @@ if (-not (Test-Path $condaExe)) {
         "/S",
         "/D=$condaRoot"
 
+   if ($LASTEXITCODE -ne 0) {
+        throw "Miniconda installer exited with an error"
+    }
+
     Remove-Item $installer
+
+    # Validate installation
+    if (-not (Test-Path $condaExe)) {
+        throw "Conda executable not found after Miniconda installation"
+    }
+
+    Write-Host "Miniconda installed successfully." -ForegroundColor Green
+}
+else {
+    Write-Host "Miniconda already installed. Skipping installation." -ForegroundColor Green
 }
 
 # --------------------------------------------------
