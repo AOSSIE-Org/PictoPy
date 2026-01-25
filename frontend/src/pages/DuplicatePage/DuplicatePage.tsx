@@ -204,6 +204,9 @@ export const DuplicatePage: React.FC = () => {
                 );
               })}
             </div>
+          </div>
+        ))}
+      </div>
 
       {/* Image Preview Modal */}
       {viewingImage && (
@@ -258,9 +261,6 @@ export const DuplicatePage: React.FC = () => {
           </div>
         </div>
       )}
-          </div>
-        ))}
-      </div>
     </div>
   );
 };
