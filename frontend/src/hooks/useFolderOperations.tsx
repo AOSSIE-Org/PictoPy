@@ -25,6 +25,8 @@ export const useFolderOperations = () => {
   const foldersQuery = usePictoQuery({
     queryKey: ['folders'],
     queryFn: getAllFolders,
+    // Ensure we re-check filesystem existence when navigating back to Settings
+    refetchOnMount: 'always',
   });
 
   const taggingStatusQuery = usePictoQuery({

@@ -30,6 +30,7 @@ class FolderDetails(BaseModel):
     last_modified_time: int
     AI_Tagging: bool
     taggingCompleted: Optional[bool] = None
+    exists: bool = True
 
 
 class GetAllFoldersData(BaseModel):

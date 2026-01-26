@@ -1686,6 +1686,11 @@
               }
             ],
             "title": "Taggingcompleted"
+          },
+          "exists": {
+            "type": "boolean",
+            "title": "Exists",
+            "default": true
           }
         },
         "type": "object",

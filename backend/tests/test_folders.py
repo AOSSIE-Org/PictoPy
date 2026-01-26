@@ -586,11 +586,13 @@ class TestFoldersAPI:
     # ============================================================================
 
     @patch("app.routes.folders.db_get_all_folder_details")
+    @patch("app.routes.folders.os.path.isdir")
     def test_get_all_folders_success(
-        self, mock_get_all_folders, client, sample_folder_details
+        self, mock_isdir, mock_get_all_folders, client, sample_folder_details
     ):
         """Test successfully retrieving all folders."""
         mock_get_all_folders.return_value = sample_folder_details
+        mock_isdir.return_value = True
 
         response = client.get("/folders/all-folders")
 
@@ -608,8 +610,10 @@ class TestFoldersAPI:
         assert first_folder["parent_folder_id"] is None
         assert first_folder["AI_Tagging"] is True
         assert first_folder["taggingCompleted"] is False
+        assert first_folder["exists"] is True
 
         mock_get_all_folders.assert_called_once()
+        assert mock_isdir.call_count == 2
 
     @patch("app.routes.folders.db_get_all_folder_details")
     def test_get_all_folders_empty(self, mock_get_all_folders, client):

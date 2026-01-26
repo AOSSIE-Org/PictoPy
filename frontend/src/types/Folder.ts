@@ -5,6 +5,7 @@ export interface FolderDetails {
   last_modified_time: number;
   AI_Tagging: boolean;
   taggingCompleted?: boolean;
+  exists?: boolean;
 }
 
 export interface GetAllFoldersData {

@@ -450,6 +450,8 @@ def get_all_folders():
                 ai_tagging,
                 tagging_completed,
             ) = folder_data
+            # Check if folder path still exists on filesystem
+            folder_exists = os.path.isdir(folder_path)
             folders.append(
                 FolderDetails(
                     folder_id=folder_id,
@@ -458,6 +460,7 @@ def get_all_folders():
                     last_modified_time=last_modified_time,
                     AI_Tagging=ai_tagging,
                     taggingCompleted=tagging_completed,
+                    exists=folder_exists,
                 )
             )
 

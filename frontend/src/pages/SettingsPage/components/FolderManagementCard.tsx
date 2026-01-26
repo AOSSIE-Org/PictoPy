@@ -37,11 +37,14 @@ const FolderManagementCard: React.FC = () => {
     >
       {folders.length > 0 ? (
         <div className="space-y-3">
-          {folders.map((folder: FolderDetails, index: number) => (
-            <div
-              key={index}
-              className="group border-border bg-background/50 relative rounded-lg border p-4 transition-all hover:border-gray-300 hover:shadow-sm dark:hover:border-gray-600"
-            >
+          {folders.map((folder: FolderDetails, index: number) => {
+            const isMissing = folder.exists === false;
+
+            return (
+              <div
+                key={index}
+                className="group border-border bg-background/50 relative rounded-lg border p-4 transition-all hover:border-gray-300 hover:shadow-sm dark:hover:border-gray-600"
+              >
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-3">
@@ -49,6 +52,11 @@ const FolderManagementCard: React.FC = () => {
                     <span className="text-foreground truncate">
                       {folder.folder_path}
                     </span>
+                    {folder.exists === false && (
+                      <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                        Missing
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -62,7 +70,9 @@ const FolderManagementCard: React.FC = () => {
                       checked={folder.AI_Tagging}
                       onCheckedChange={() => toggleAITagging(folder)}
                       disabled={
-                        enableAITaggingPending || disableAITaggingPending
+                        enableAITaggingPending ||
+                        disableAITaggingPending ||
+                        folder.exists === false
                       }
                     />
                   </div>
@@ -71,7 +81,11 @@ const FolderManagementCard: React.FC = () => {
                     onClick={() => deleteFolder(folder.folder_id)}
                     variant="outline"
                     size="sm"
-                    className="h-8 w-8 cursor-pointer text-gray-500 hover:border-red-300 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                    className={
+                      isMissing
+                        ? 'h-8 w-8 cursor-pointer border-red-300 bg-red-50 text-red-700 hover:border-red-400 hover:bg-red-100 hover:text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30'
+                        : 'h-8 w-8 cursor-pointer text-gray-500 hover:border-red-300 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400'
+                    }
                     disabled={deleteFolderPending}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -113,8 +127,9 @@ const FolderManagementCard: React.FC = () => {
                   />
                 </div>
               )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="py-8 text-center">
