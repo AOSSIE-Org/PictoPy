@@ -18,20 +18,29 @@ import { Sun, Moon, Monitor } from 'lucide-react';
 
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
 import { useTheme } from '@/contexts/ThemeContext';
+
+import { setIsEditing } from '@/features/onboardingSlice';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/app/store';
 interface ThemeSelectionStepProps {
   stepIndex: number;
   totalSteps: number;
+  currentStepDisplayIndex: number;
 }
 
 export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
   stepIndex,
   totalSteps,
+  currentStepDisplayIndex,
 }) => {
   const { setTheme, theme } = useTheme();
+  const isEditing = useSelector(
+    (state: RootState) => state.onboarding.isEditing,
+  );
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
-    if (localStorage.getItem('themeChosen')) {
+    if (localStorage.getItem('themeChosen') === 'true' && !isEditing) {
       dispatch(markCompleted(stepIndex));
     }
   }, []);
@@ -45,20 +54,23 @@ export const ThemeSelectionStep: React.FC<ThemeSelectionStepProps> = ({
   };
 
   const handleBack = () => {
+    dispatch(setIsEditing(true));
     dispatch(previousStep());
   };
-  if (localStorage.getItem('themeChosen')) {
+  if (localStorage.getItem('themeChosen') === 'true' && !isEditing) {
     return null;
   }
 
-  const progressPercent = Math.round(((stepIndex + 1) / totalSteps) * 100);
+  const progressPercent = Math.round(
+    ((currentStepDisplayIndex + 1) / totalSteps) * 100,
+  );
   return (
     <>
       <Card className="flex max-h-full w-1/2 flex-col border p-4">
         <CardHeader className="p-3">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
-              Step {stepIndex + 1} of {totalSteps}
+              Step {currentStepDisplayIndex + 1} of {totalSteps}
             </span>
             <span>{progressPercent}%</span>
           </div>
