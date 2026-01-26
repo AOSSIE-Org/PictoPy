@@ -2659,11 +2659,25 @@
             "title": "Thumbnail Image Id"
           },
           "center_lat": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Center Lat"
           },
           "center_lon": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Center Lon"
           }
         },
@@ -2677,9 +2691,7 @@
           "date_end",
           "image_count",
           "images",
-          "thumbnail_image_id",
-          "center_lat",
-          "center_lon"
+          "thumbnail_image_id"
         ],
         "title": "Memory",
         "description": "Memory object containing grouped images."

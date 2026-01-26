@@ -46,7 +46,19 @@ async def lifespan(app: FastAPI):
     generate_openapi_json()
     db_create_folders_table()
     db_create_images_table()
-    db_migrate_add_memories_columns()  # Add Memories columns to existing database
+    
+    # Only run migrations in the primary process or when explicitly enabled
+    should_run_migrations = os.getenv("RUN_MIGRATIONS", "true").lower() == "true"
+    if should_run_migrations:
+        try:
+            db_migrate_add_memories_columns()  
+            logger.info("Database migrations completed successfully")
+        except Exception as e:
+            logger.error(f"Failed to run database migrations: {e}", exc_info=True)
+            
+    else:
+        logger.info("Skipping migrations (RUN_MIGRATIONS not set or false)")
+    
     db_create_YOLO_classes_table()
     db_create_clusters_table()  # Create clusters table first since faces references it
     db_create_faces_table()
