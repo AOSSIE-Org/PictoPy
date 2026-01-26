@@ -19,6 +19,7 @@ from app.database.images import (
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
 from app.logging.setup_logging import get_logger
+from app.utils.duplicate_detector import calculate_phash
 
 logger = get_logger(__name__)
 
@@ -165,6 +166,7 @@ def image_util_prepare_image_records(
         # Generate thumbnail
         if image_util_generate_thumbnail(image_path, thumbnail_path):
             metadata = image_util_extract_metadata(image_path)
+            phash = calculate_phash(image_path)
             logger.debug(f"Extracted metadata for {image_path}: {metadata}")
             image_records.append(
                 {
@@ -174,6 +176,7 @@ def image_util_prepare_image_records(
                     "thumbnailPath": thumbnail_path,
                     "metadata": json.dumps(metadata),
                     "isTagged": False,
+                    "phash": phash,
                 }
             )
 
