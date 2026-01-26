@@ -296,10 +296,17 @@ async def get_on_this_day():
                 continue
 
         # Sort by year (most recent first)
-        all_images.sort(
-            key=lambda x: (datetime.fromisoformat(x["captured_at"]) if x.get("captured_at") else datetime.min),
-            reverse=True,
-        )
+        def parse_captured_at(img):
+            """Safely parse captured_at date, return datetime.min on failure."""
+            captured_at = img.get("captured_at")
+            if not captured_at:
+                return datetime.min
+            try:
+                return datetime.fromisoformat(captured_at)
+            except (ValueError, TypeError):
+                return datetime.min
+
+        all_images.sort(key=parse_captured_at, reverse=True)
 
         return OnThisDayResponse(
             success=True,

@@ -163,7 +163,7 @@ class MemoryClustering:
             skipped_count = 0
 
             for img in images:
-                has_gps = img.get("latitude") and img.get("longitude")
+                has_gps = img.get("latitude") is not None and img.get("longitude") is not None
                 has_date = img.get("captured_at")
 
                 if has_gps:
@@ -191,7 +191,7 @@ class MemoryClustering:
                 memories.extend(date_memories)
 
             # Sort by date descending
-            memories.sort(key=lambda m: m.get("date_start", ""), reverse=True)
+            memories.sort(key=lambda m: m.get("date_start") or "", reverse=True)
 
             logger.info(f"Generated {len(memories)} total memories")
             return memories
@@ -217,7 +217,8 @@ class MemoryClustering:
                 for temp_cluster in temporal_clusters:
                     if len(temp_cluster) >= self.min_images_per_memory:
                         memory = self._create_simple_memory(temp_cluster, memory_type="location")
-                        memories.append(memory)
+                        if memory is not None:
+                            memories.append(memory)
 
             return memories
         except Exception as e:
@@ -298,8 +299,8 @@ class MemoryClustering:
             # Simple titles
             if memory_type == "location":
                 # Calculate center first
-                lats = [img["latitude"] for img in images if img.get("latitude")]
-                lons = [img["longitude"] for img in images if img.get("longitude")]
+                lats = [img["latitude"] for img in images if img.get("latitude") is not None]
+                lons = [img["longitude"] for img in images if img.get("longitude") is not None]
                 center_lat = np.mean(lats) if lats else 0
                 center_lon = np.mean(lons) if lons else 0
 
@@ -330,8 +331,8 @@ class MemoryClustering:
                 center_lat = 0
                 center_lon = 0
 
-            # Create memory
-            memory_id = f"{memory_type}_{int(date_obj.timestamp())}_{len(images)}"
+            # Create memory - use _generate_memory_id for unique IDs
+            memory_id = self._generate_memory_id(center_lat, center_lon, date_obj)
 
             return {
                 "memory_id": memory_id,
@@ -553,7 +554,7 @@ class MemoryClustering:
         for img in images:
             try:
                 # Check for required fields
-                if not img.get("latitude") or not img.get("longitude"):
+                if img.get("latitude") is None or img.get("longitude") is None:
                     continue
 
                 # Parse captured_at if it's a string
@@ -582,6 +583,8 @@ class MemoryClustering:
                             else:
                                 # Could not parse date, but location is still valid
                                 logger.debug(f"Could not parse date for image {img.get('id')}: {captured_at}")
+                                # Clear the unparseable string to prevent downstream errors
+                                img_copy["captured_at"] = None
                     elif isinstance(captured_at, datetime):
                         img_copy["captured_at"] = captured_at
 

@@ -10,7 +10,7 @@ Usage:
 import requests
 import json
 
-BASE_URL = "http://localhost:8000/api/memories"
+BASE_URL = "http://localhost:52123/api/memories"
 
 
 def print_response(endpoint: str, response: requests.Response):
@@ -98,7 +98,7 @@ def test_locations():
 def check_server():
     """Check if the server is running."""
     try:
-        response = requests.get("http://localhost:8000/health", timeout=2)
+        response = requests.get("http://localhost:52123/health", timeout=2)
         if response.status_code == 200:
             print("Server is running")
             return True
@@ -108,7 +108,7 @@ def check_server():
     except requests.exceptions.ConnectionError:
         print("Server is not running")
         print("\nStart the server with:")
-        print("   cd /Users/harshit/Code/pictopy/PictoPy/backend")
+        print("   cd backend")
         print("   python main.py")
         return False
 
