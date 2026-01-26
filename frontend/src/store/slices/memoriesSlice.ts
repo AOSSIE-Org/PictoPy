@@ -211,6 +211,45 @@ const memoriesSlice = createSlice({
     },
     
     /**
+     * Toggle favorite status of an image across all memories
+     */
+    toggleImageFavorite: (state, action: PayloadAction<string>) => {
+      const imageId = action.payload;
+      
+      // Helper function to update image in a memory array
+      const updateMemoriesArray = (memories: Memory[]) => {
+        memories.forEach(memory => {
+          memory.images.forEach(image => {
+            if (image.id === imageId) {
+              image.isFavourite = !image.isFavourite;
+            }
+          });
+        });
+      };
+      
+      // Update across all memory collections
+      updateMemoriesArray(state.allMemories);
+      updateMemoriesArray(state.recentMemories);
+      updateMemoriesArray(state.yearMemories);
+      
+      // Update onThisDay images
+      state.onThisDayImages.forEach(image => {
+        if (image.id === imageId) {
+          image.isFavourite = !image.isFavourite;
+        }
+      });
+      
+      // Update selected memory if it exists
+      if (state.selectedMemory) {
+        state.selectedMemory.images.forEach(image => {
+          if (image.id === imageId) {
+            image.isFavourite = !image.isFavourite;
+          }
+        });
+      }
+    },
+    
+    /**
      * Clear all errors
      */
     clearErrors: (state) => {
@@ -311,6 +350,7 @@ const memoriesSlice = createSlice({
 
 export const {
   setSelectedMemory,
+  toggleImageFavorite,
   clearErrors,
   resetMemories
 } = memoriesSlice.actions;

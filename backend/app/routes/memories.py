@@ -48,6 +48,7 @@ class MemoryImage(BaseModel):
     latitude: Optional[float]
     longitude: Optional[float]
     captured_at: Optional[str]
+    isFavourite: Optional[bool] = False  # Add favorite status
 
 
 class Memory(BaseModel):

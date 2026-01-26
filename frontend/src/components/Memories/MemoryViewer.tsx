@@ -11,8 +11,9 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   setSelectedMemory,
   selectSelectedMemory,
+  toggleImageFavorite,
 } from '@/store/slices/memoriesSlice';
-import { setCurrentViewIndex } from '@/features/imageSlice';
+import { setCurrentViewIndex, setImages } from '@/features/imageSlice';
 import { MediaView } from '@/components/Media/MediaView';
 import {
   formatDateRangeRelative,
@@ -21,6 +22,7 @@ import {
   generateMemoryTitle,
   formatLocationName,
 } from '@/services/memoriesApi';
+import { togglefav } from '@/api/api-functions/togglefav';
 
 /**
  * Memory Viewer Modal Component
@@ -35,12 +37,51 @@ export const MemoryViewer: React.FC = () => {
     dispatch(setSelectedMemory(null));
   }, [dispatch]);
 
+  // Handle favorite toggle - update both API and Redux state
+  const handleToggleFavorite = useCallback(
+    async (imageId: string) => {
+      try {
+        // Call API to toggle favorite in database
+        await togglefav(imageId);
+        // Update Redux state to reflect the change immediately
+        dispatch(toggleImageFavorite(imageId));
+      } catch (error) {
+        console.error('Failed to toggle favorite:', error);
+      }
+    },
+    [dispatch],
+  );
+
   // Handle image click - open MediaView
   const handleImageClick = useCallback(
     (index: number) => {
       if (!memory) return;
 
-      // Just set the current index - MediaView will use the images prop
+      // Convert memory images to Image[] format for Redux state
+      const formattedImages = memory.images.map((img) => ({
+        id: img.id,
+        path: img.path,
+        thumbnailPath: img.thumbnailPath,
+        folder_id: '',
+        isTagged: false,
+        isFavourite: img.isFavourite || false,
+        tags: [],
+        metadata: {
+          name: img.path.split('/').pop() || '',
+          date_created: img.captured_at,
+          width: 0,
+          height: 0,
+          file_location: img.path,
+          file_size: 0,
+          item_type: 'image' as const,
+          latitude: img.latitude || undefined,
+          longitude: img.longitude || undefined,
+        },
+      }));
+
+      // Set images in Redux state first
+      dispatch(setImages(formattedImages));
+      // Then set the current index
       dispatch(setCurrentViewIndex(index));
       setShowMediaView(true);
     },
@@ -281,13 +322,14 @@ export const MemoryViewer: React.FC = () => {
         <MediaView
           onClose={handleMediaViewClose}
           type="image"
+          onToggleFavorite={handleToggleFavorite}
           images={memory.images.map((img) => ({
             id: img.id,
             path: img.path,
             thumbnailPath: img.thumbnailPath,
             folder_id: '', // Memory images don't have folder_id
             isTagged: false, // Memory images don't track tagging
-            isFavourite: false, // Can be added later if needed
+            isFavourite: img.isFavourite || false, // Use actual favorite status from backend
             tags: [], // Can be added later if needed
             metadata: {
               name: img.path.split('/').pop() || '',

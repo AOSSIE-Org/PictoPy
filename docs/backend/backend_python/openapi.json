@@ -2730,6 +2730,18 @@
               }
             ],
             "title": "Captured At"
+          },
+          "isFavourite": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isfavourite",
+            "default": false
           }
         },
         "type": "object",

@@ -25,6 +25,7 @@ export interface MemoryImage {
   latitude: number | null;
   longitude: number | null;
   captured_at: string | null; // ISO 8601 format
+  isFavourite?: boolean; // Favorite status
 }
 
 /**

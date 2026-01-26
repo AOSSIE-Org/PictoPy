@@ -26,6 +26,7 @@ export function MediaView({
   onClose,
   type = 'image',
   images = [],
+  onToggleFavorite,
 }: MediaViewProps) {
   const dispatch = useDispatch();
 
@@ -107,11 +108,16 @@ export function MediaView({
   const handleToggleFavourite = useCallback(() => {
     if (currentImage) {
       if (currentImage?.id) {
-        toggleFavourite(currentImage.id);
+        // Use custom handler if provided, otherwise use default
+        if (onToggleFavorite) {
+          onToggleFavorite(currentImage.id);
+        } else {
+          toggleFavourite(currentImage.id);
+        }
       }
       if (location.pathname === ROUTES.FAVOURITES) handleClose();
     }
-  }, [currentImage, toggleFavourite]);
+  }, [currentImage, toggleFavourite, onToggleFavorite, location.pathname, handleClose]);
 
   const handleZoomIn = useCallback(() => {
     imageViewerRef.current?.zoomIn();
