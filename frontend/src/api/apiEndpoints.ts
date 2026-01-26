@@ -1,6 +1,11 @@
 export const imagesEndpoints = {
   getAllImages: '/images/',
   setFavourite: '/images/toggle-favourite',
+  softDelete: '/images/soft-delete',
+  restore: '/images/restore',
+  getDeletedImages: '/images/deleted',
+  permanentDelete: '/images/permanent-delete',
+  cleanup: '/images/cleanup',
 };
 
 export const faceClustersEndpoints = {

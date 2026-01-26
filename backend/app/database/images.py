@@ -1,6 +1,7 @@
 # Standard library imports
 import sqlite3
-from typing import Any, List, Mapping, Tuple, TypedDict, Union
+from typing import Any, List, Mapping, Tuple, TypedDict, Union, Optional
+from datetime import datetime, timedelta
 
 # App-specific imports
 from app.config.settings import (
@@ -27,6 +28,8 @@ class ImageRecord(TypedDict):
     thumbnailPath: str
     metadata: Union[Mapping[str, Any], str]
     isTagged: bool
+    is_deleted: bool
+    deleted_at: Optional[str]
 
 
 class UntaggedImageRecord(TypedDict):
@@ -40,6 +43,17 @@ class UntaggedImageRecord(TypedDict):
 
 
 ImageClassPair = Tuple[ImageId, ClassId]
+
+
+class ActionHistoryRecord(TypedDict):
+    """Represents an action history record"""
+
+    id: int
+    action_type: str
+    entity_type: str
+    entity_id: str
+    timestamp: str
+    metadata: Optional[str]
 
 
 def _connect() -> sqlite3.Connection:
@@ -64,6 +78,8 @@ def db_create_images_table() -> None:
             metadata TEXT,
             isTagged BOOLEAN DEFAULT 0,
             isFavourite BOOLEAN DEFAULT 0,
+            is_deleted BOOLEAN DEFAULT 0,
+            deleted_at DATETIME,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
     """
@@ -82,6 +98,34 @@ def db_create_images_table() -> None:
     """
     )
 
+    # Create action_history table
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS action_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action_type TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            entity_id TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            metadata TEXT
+        )
+    """
+    )
+
+    # Create indexes
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_action_history_timestamp
+        ON action_history(timestamp DESC)
+    """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_images_is_deleted
+        ON images(is_deleted)
+    """
+    )
+
     conn.commit()
     conn.close()
 
@@ -97,8 +141,8 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
     try:
         cursor.executemany(
             """
-            INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)
-            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged)
+            INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged, is_deleted, deleted_at)
+            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged, 0, NULL)
             ON CONFLICT(path) DO UPDATE SET
                 folder_id=excluded.folder_id,
                 thumbnailPath=excluded.thumbnailPath,
@@ -120,7 +164,9 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
         conn.close()
 
 
-def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
+def db_get_all_images(
+    tagged: Union[bool, None] = None, include_deleted: bool = False
+) -> List[dict]:
     """
     Get all images from the database with their tags.
 
@@ -145,6 +191,8 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                 i.metadata, 
                 i.isTagged,
                 i.isFavourite,
+                i.is_deleted,
+                i.deleted_at,
                 m.name as tag_name
             FROM images i
             LEFT JOIN image_classes ic ON i.id = ic.image_id
@@ -152,9 +200,17 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
         """
 
         params = []
+        where_conditions = []
+
         if tagged is not None:
-            query += " WHERE i.isTagged = ?"
+            where_conditions.append("i.isTagged = ?")
             params.append(tagged)
+
+        if not include_deleted:
+            where_conditions.append("i.is_deleted = 0")
+
+        if where_conditions:
+            query += " WHERE " + " AND ".join(where_conditions)
 
         query += " ORDER BY i.path, m.name"
 
@@ -172,6 +228,8 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
             metadata,
             is_tagged,
             is_favourite,
+            is_deleted,
+            deleted_at,
             tag_name,
         ) in results:
             if image_id not in images_dict:
@@ -188,6 +246,8 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                     "metadata": metadata_dict,
                     "isTagged": bool(is_tagged),
                     "isFavourite": bool(is_favourite),
+                    "is_deleted": bool(is_deleted),
+                    "deleted_at": deleted_at,
                     "tags": [],
                 }
 
@@ -415,6 +475,277 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         return cursor.rowcount > 0
     except Exception as e:
         logger.error(f"Database error: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def db_soft_delete_images(image_ids: List[ImageId]) -> bool:
+    """
+    Soft delete multiple images by setting is_deleted = 1 and deleted_at timestamp.
+
+    Args:
+        image_ids: List of image IDs to soft delete
+
+    Returns:
+        True if deletion was successful, False otherwise
+    """
+    if not image_ids:
+        return True
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        # Update images to be soft deleted
+        placeholders = ",".join("?" for _ in image_ids)
+        cursor.execute(
+            f"UPDATE images SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP WHERE id IN ({placeholders})",
+            image_ids,
+        )
+
+        # Remove from albums
+        cursor.execute(
+            f"DELETE FROM album_images WHERE image_id IN ({placeholders})",
+            image_ids,
+        )
+
+        # Log the actions in history
+        for image_id in image_ids:
+            cursor.execute(
+                """
+                INSERT INTO action_history (action_type, entity_type, entity_id, metadata)
+                VALUES (?, ?, ?, ?)
+                """,
+                ("delete", "image", image_id, None),
+            )
+            cursor.execute(
+                """
+                INSERT INTO action_history (action_type, entity_type, entity_id, metadata)
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    "album_remove",
+                    "album_image",
+                    image_id,
+                    '{"reason": "image_deleted"}',
+                ),
+            )
+
+        conn.commit()
+        logger.info(f"Soft deleted {cursor.rowcount} image(s)")
+        return True
+    except Exception as e:
+        logger.error(f"Error soft deleting images: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def db_restore_images(image_ids: List[ImageId]) -> bool:
+    """
+    Restore multiple soft deleted images.
+
+    Args:
+        image_ids: List of image IDs to restore
+
+    Returns:
+        True if restoration was successful, False otherwise
+    """
+    if not image_ids:
+        return True
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        # Update images to be restored
+        placeholders = ",".join("?" for _ in image_ids)
+        cursor.execute(
+            f"UPDATE images SET is_deleted = 0, deleted_at = NULL WHERE id IN ({placeholders})",
+            image_ids,
+        )
+
+        # Log the action in history
+        for image_id in image_ids:
+            cursor.execute(
+                """
+                INSERT INTO action_history (action_type, entity_type, entity_id, metadata)
+                VALUES (?, ?, ?, ?)
+                """,
+                ("restore", "image", image_id, None),
+            )
+
+        conn.commit()
+        logger.info(f"Restored {cursor.rowcount} image(s)")
+        return True
+    except Exception as e:
+        logger.error(f"Error restoring images: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def db_get_deleted_images() -> List[dict]:
+    """
+    Get all soft deleted images.
+
+    Returns:
+        List of deleted image dictionaries
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT id, path, folder_id, thumbnailPath, metadata, isTagged, isFavourite, deleted_at
+            FROM images
+            WHERE is_deleted = 1
+            ORDER BY deleted_at DESC
+            """
+        )
+
+        results = cursor.fetchall()
+        deleted_images = []
+
+        for (
+            image_id,
+            path,
+            folder_id,
+            thumbnail_path,
+            metadata,
+            is_tagged,
+            is_favourite,
+            deleted_at,
+        ) in results:
+            from app.utils.images import image_util_parse_metadata
+
+            metadata_dict = image_util_parse_metadata(metadata)
+
+            deleted_images.append(
+                {
+                    "id": image_id,
+                    "path": path,
+                    "folder_id": str(folder_id),
+                    "thumbnailPath": thumbnail_path,
+                    "metadata": metadata_dict,
+                    "isTagged": bool(is_tagged),
+                    "isFavourite": bool(is_favourite),
+                    "deleted_at": deleted_at,
+                }
+            )
+
+        return deleted_images
+
+    except Exception as e:
+        logger.error(f"Error getting deleted images: {e}")
+        return []
+    finally:
+        conn.close()
+
+
+def db_permanently_delete_old_images(days: int = 30) -> int:
+    """
+    Permanently delete images that have been soft deleted for more than the specified days.
+
+    Args:
+        days: Number of days after which to permanently delete
+
+    Returns:
+        Number of images permanently deleted
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        # Calculate the cutoff date
+        cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
+
+        # Get IDs of images to permanently delete
+        cursor.execute(
+            "SELECT id FROM images WHERE is_deleted = 1 AND deleted_at < ?",
+            (cutoff_date,),
+        )
+
+        image_ids = [row[0] for row in cursor.fetchall()]
+
+        if not image_ids:
+            return 0
+
+        # Permanently delete the images (this will cascade to image_classes)
+        placeholders = ",".join("?" for _ in image_ids)
+        cursor.execute(
+            f"DELETE FROM images WHERE id IN ({placeholders})",
+            image_ids,
+        )
+
+        deleted_count = cursor.rowcount
+
+        # Log the permanent deletion
+        for image_id in image_ids:
+            cursor.execute(
+                """
+                INSERT INTO action_history (action_type, entity_type, entity_id, metadata)
+                VALUES (?, ?, ?, ?)
+                """,
+                ("permanent_delete", "image", image_id, f'{{"days": {days}}}'),
+            )
+
+        conn.commit()
+        logger.info(f"Permanently deleted {deleted_count} old image(s)")
+        return deleted_count
+
+    except Exception as e:
+        logger.error(f"Error permanently deleting old images: {e}")
+        conn.rollback()
+        return 0
+    finally:
+        conn.close()
+
+
+def db_permanently_delete_images(image_ids: List[ImageId]) -> bool:
+    """
+    Permanently delete specific images from history.
+
+    Args:
+        image_ids: List of image IDs to permanently delete
+
+    Returns:
+        True if deletion was successful, False otherwise
+    """
+    if not image_ids:
+        return True
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        # Permanently delete the images (this will cascade to image_classes)
+        placeholders = ",".join("?" for _ in image_ids)
+        cursor.execute(
+            f"DELETE FROM images WHERE id IN ({placeholders})",
+            image_ids,
+        )
+
+        # Log the permanent deletion
+        for image_id in image_ids:
+            cursor.execute(
+                """
+                INSERT INTO action_history (action_type, entity_type, entity_id, metadata)
+                VALUES (?, ?, ?, ?)
+                """,
+                ("manual_permanent_delete", "image", image_id, None),
+            )
+
+        conn.commit()
+        logger.info(f"Manually permanently deleted {cursor.rowcount} image(s)")
+        return True
+    except Exception as e:
+        logger.error(f"Error permanently deleting images: {e}")
         conn.rollback()
         return False
     finally:
