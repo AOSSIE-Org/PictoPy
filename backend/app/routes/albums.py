@@ -63,9 +63,7 @@ def create_album(body: CreateAlbumRequest):
 
     album_id = str(uuid.uuid4())
     try:
-        db_insert_album(
-            album_id, body.name, body.description, body.is_hidden, body.password
-        )
+        db_insert_album(album_id, body.name, body.description, body.is_hidden, body.password)
         return CreateAlbumResponse(success=True, album_id=album_id)
     except Exception as e:
         raise HTTPException(
@@ -85,9 +83,7 @@ def get_album(album_id: str = Path(...)):
     if not album:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=ErrorResponse(
-                success=False, error="Album Not Found", message="Album not found"
-            ).model_dump(),
+            detail=ErrorResponse(success=False, error="Album Not Found", message="Album not found").model_dump(),
         )
 
     try:
@@ -153,16 +149,12 @@ def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)
             )
 
     try:
-        db_update_album(
-            album_id, body.name, body.description, body.is_hidden, body.password
-        )
+        db_update_album(album_id, body.name, body.description, body.is_hidden, body.password)
         return SuccessResponse(success=True, msg="Album updated successfully")
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ErrorResponse(
-                success=False, error="Failed to Update Album", message=str(e)
-            ).model_dump(),
+            detail=ErrorResponse(success=False, error="Failed to Update Album", message=str(e)).model_dump(),
         )
 
 
@@ -186,9 +178,7 @@ def delete_album(album_id: str = Path(...)):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False, error="Failed to Delete Album", message=str(e)
-            ).model_dump(),
+            detail=ErrorResponse(success=False, error="Failed to Delete Album", message=str(e)).model_dump(),
         )
 
 
@@ -197,9 +187,7 @@ def delete_album(album_id: str = Path(...)):
 # GET requests do not accept a body by default.
 # Since we need to send a password securely, switching this to POST -- necessary.
 # Open to suggestions if better approach possible.
-def get_album_images(
-    album_id: str = Path(...), body: GetAlbumImagesRequest = Body(...)
-):
+def get_album_images(album_id: str = Path(...), body: GetAlbumImagesRequest = Body(...)):
     album = db_get_album(album_id)
     if not album:
         raise HTTPException(
@@ -245,9 +233,7 @@ def get_album_images(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False, error="Failed to Retrieve Images", message=str(e)
-            ).model_dump(),
+            detail=ErrorResponse(success=False, error="Failed to Retrieve Images", message=str(e)).model_dump(),
         )
 
 
@@ -277,15 +263,11 @@ def add_images_to_album(album_id: str = Path(...), body: ImageIdsRequest = Body(
 
     try:
         db_add_images_to_album(album_id, body.image_ids)
-        return SuccessResponse(
-            success=True, msg=f"Added {len(body.image_ids)} images to album"
-        )
+        return SuccessResponse(success=True, msg=f"Added {len(body.image_ids)} images to album")
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False, error="Failed to Add Images", message=str(e)
-            ).model_dump(),
+            detail=ErrorResponse(success=False, error="Failed to Add Images", message=str(e)).model_dump(),
         )
 
 
@@ -305,23 +287,17 @@ def remove_image_from_album(album_id: str = Path(...), image_id: str = Path(...)
 
     try:
         db_remove_image_from_album(album_id, image_id)
-        return SuccessResponse(
-            success=True, msg="Image removed from album successfully"
-        )
+        return SuccessResponse(success=True, msg="Image removed from album successfully")
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False, error="Failed to Remove Image", message=str(e)
-            ).model_dump(),
+            detail=ErrorResponse(success=False, error="Failed to Remove Image", message=str(e)).model_dump(),
         )
 
 
 # DELETE /albums/{album_id}/images - Remove multiple images from album
 @router.delete("/{album_id}/images", response_model=SuccessResponse)
-def remove_images_from_album(
-    album_id: str = Path(...), body: ImageIdsRequest = Body(...)
-):
+def remove_images_from_album(album_id: str = Path(...), body: ImageIdsRequest = Body(...)):
     album = db_get_album(album_id)
     if not album:
         raise HTTPException(
@@ -345,13 +321,9 @@ def remove_images_from_album(
 
     try:
         db_remove_images_from_album(album_id, body.image_ids)
-        return SuccessResponse(
-            success=True, msg=f"Removed {len(body.image_ids)} images from album"
-        )
+        return SuccessResponse(success=True, msg=f"Removed {len(body.image_ids)} images from album")
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False, error="Failed to Remove Images", message=str(e)
-            ).model_dump(),
+            detail=ErrorResponse(success=False, error="Failed to Remove Images", message=str(e)).model_dump(),
         )

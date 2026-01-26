@@ -48,9 +48,7 @@ class GetAllImagesResponse(BaseModel):
     response_model=GetAllImagesResponse,
     responses={500: {"model": ErrorResponse}},
 )
-def get_all_images(
-    tagged: Optional[bool] = Query(None, description="Filter images by tagged status")
-):
+def get_all_images(tagged: Optional[bool] = Query(None, description="Filter images by tagged status")):
     """Get all images from the database."""
     try:
         # Get all images with tags from database (single query with optional filter)
@@ -101,13 +99,9 @@ def toggle_favourite(req: ToggleFavouriteRequest):
     try:
         success = db_toggle_image_favourite_status(image_id)
         if not success:
-            raise HTTPException(
-                status_code=404, detail="Image not found or failed to toggle"
-            )
+            raise HTTPException(status_code=404, detail="Image not found or failed to toggle")
         # Fetch updated status to return
-        image = next(
-            (img for img in db_get_all_images() if img["id"] == image_id), None
-        )
+        image = next((img for img in db_get_all_images() if img["id"] == image_id), None)
         return {
             "success": True,
             "image_id": image_id,

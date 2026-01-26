@@ -1,6 +1,6 @@
 /**
  * Redux Hooks
- * 
+ *
  * Typed hooks for use throughout the application.
  * These hooks ensure type safety when using Redux with TypeScript.
  */

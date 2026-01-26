@@ -45,9 +45,7 @@ class MetadataExtractor:
             "errors": 0,
         }
 
-    def extract_gps_coordinates(
-        self, metadata: Dict[str, Any]
-    ) -> Tuple[Optional[float], Optional[float]]:
+    def extract_gps_coordinates(self, metadata: Dict[str, Any]) -> Tuple[Optional[float], Optional[float]]:
         """
         Extract GPS coordinates from metadata dictionary.
 
@@ -102,9 +100,7 @@ class MetadataExtractor:
                         latitude = lat
                         longitude = lon
                     else:
-                        logger.warning(
-                            f"Invalid coordinate range: lat={lat}, lon={lon}"
-                        )
+                        logger.warning(f"Invalid coordinate range: lat={lat}, lon={lon}")
                 except (ValueError, TypeError) as e:
                     logger.warning(f"Could not convert coordinates to float: {e}")
 
@@ -151,12 +147,7 @@ class MetadataExtractor:
             if not date_str:
                 exif = metadata.get("exif", {})
                 if isinstance(exif, dict):
-                    date_str = (
-                        exif.get("datetime")
-                        or exif.get("DateTime")
-                        or exif.get("DateTimeOriginal")
-                        or exif.get("DateTimeDigitized")
-                    )
+                    date_str = exif.get("datetime") or exif.get("DateTime") or exif.get("DateTimeOriginal") or exif.get("DateTimeDigitized")
 
             # Parse datetime string
             if date_str:
@@ -179,9 +170,7 @@ class MetadataExtractor:
                 if "T" in date_str:
                     try:
                         # Remove timezone suffix for simpler parsing
-                        date_str_clean = (
-                            date_str.replace("Z", "").split("+")[0].split("-")
-                        )
+                        date_str_clean = date_str.replace("Z", "").split("+")[0].split("-")
                         # Rejoin only date-time parts (not timezone)
                         if len(date_str_clean) >= 3:
                             date_str_clean = "-".join(date_str_clean[:3])
@@ -206,9 +195,7 @@ class MetadataExtractor:
 
         return captured_at
 
-    def extract_all(
-        self, metadata_json: str
-    ) -> Tuple[Optional[float], Optional[float], Optional[datetime]]:
+    def extract_all(self, metadata_json: str) -> Tuple[Optional[float], Optional[float], Optional[datetime]]:
         """
         Extract GPS coordinates and datetime from metadata JSON string.
 
@@ -361,15 +348,9 @@ class MetadataExtractor:
         logger.info("=" * 70)
         logger.info(f"Total images processed:       {self.stats['total']}")
         logger.info(f"Images updated:               {self.stats['updated']}")
-        logger.info(
-            f"Images with location data:    {self.stats['with_location']} ({self._percentage('with_location')}%)"
-        )
-        logger.info(
-            f"Images with datetime:         {self.stats['with_datetime']} ({self._percentage('with_datetime')}%)"
-        )
-        logger.info(
-            f"Images with both:             {self.stats['with_both']} ({self._percentage('with_both')}%)"
-        )
+        logger.info(f"Images with location data:    {self.stats['with_location']} ({self._percentage('with_location')}%)")
+        logger.info(f"Images with datetime:         {self.stats['with_datetime']} ({self._percentage('with_datetime')}%)")
+        logger.info(f"Images with both:             {self.stats['with_both']} ({self._percentage('with_both')}%)")
         logger.info(f"Images skipped (no data):     {self.stats['skipped']}")
         logger.info(f"Errors encountered:           {self.stats['errors']}")
         logger.info("=" * 70)

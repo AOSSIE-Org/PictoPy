@@ -56,9 +56,7 @@ class TestUserPreferencesAPI:
     """Test class for User Preferences API endpoints."""
 
     @patch("app.routes.user_preferences.db_get_metadata")
-    def test_get_user_preferences_with_existing_data(
-        self, mock_get_metadata, sample_metadata_with_preferences
-    ):
+    def test_get_user_preferences_with_existing_data(self, mock_get_metadata, sample_metadata_with_preferences):
         """Test successful retrieval of user preferences when data exists."""
 
         mock_get_metadata.return_value = sample_metadata_with_preferences
@@ -78,9 +76,7 @@ class TestUserPreferencesAPI:
         mock_get_metadata.assert_called_once()
 
     @patch("app.routes.user_preferences.db_get_metadata")
-    def test_get_user_preferences_with_defaults(
-        self, mock_get_metadata, sample_metadata_without_preferences
-    ):
+    def test_get_user_preferences_with_defaults(self, mock_get_metadata, sample_metadata_without_preferences):
         """Test retrieval of user preferences with default values when no preferences exist."""
 
         mock_get_metadata.return_value = sample_metadata_without_preferences
@@ -133,9 +129,7 @@ class TestUserPreferencesAPI:
     def test_get_user_preferences_partial_data(self, mock_get_metadata):
         """Test retrieval when only some preference fields exist."""
 
-        mock_get_metadata.return_value = {
-            "user_preferences": {"YOLO_model_size": "medium"}
-        }
+        mock_get_metadata.return_value = {"user_preferences": {"YOLO_model_size": "medium"}}
 
         response = client.get("/user_preferences/")
 
@@ -201,9 +195,7 @@ class TestUserPreferencesAPI:
 
     @patch("app.routes.user_preferences.db_update_metadata")
     @patch("app.routes.user_preferences.db_get_metadata")
-    def test_update_user_preferences_partial_update(
-        self, mock_get_metadata, mock_update_metadata, sample_metadata_with_preferences
-    ):
+    def test_update_user_preferences_partial_update(self, mock_get_metadata, mock_update_metadata, sample_metadata_with_preferences):
         """Test successful partial update of user preferences."""
 
         mock_get_metadata.return_value = sample_metadata_with_preferences
@@ -222,9 +214,7 @@ class TestUserPreferencesAPI:
 
     @patch("app.routes.user_preferences.db_update_metadata")
     @patch("app.routes.user_preferences.db_get_metadata")
-    def test_update_user_preferences_new_metadata(
-        self, mock_get_metadata, mock_update_metadata
-    ):
+    def test_update_user_preferences_new_metadata(self, mock_get_metadata, mock_update_metadata):
         """Test update when no existing metadata exists."""
 
         mock_get_metadata.return_value = None
@@ -253,9 +243,7 @@ class TestUserPreferencesAPI:
     )
     @patch("app.routes.user_preferences.db_update_metadata")
     @patch("app.routes.user_preferences.db_get_metadata")
-    def test_update_user_preferences_various_combinations(
-        self, mock_get_metadata, mock_update_metadata, yolo_size, gpu_accel
-    ):
+    def test_update_user_preferences_various_combinations(self, mock_get_metadata, mock_update_metadata, yolo_size, gpu_accel):
         """Test update with various parameter combinations."""
 
         mock_get_metadata.return_value = {}
@@ -283,17 +271,11 @@ class TestUserPreferencesAPI:
         if "detail" in response_data:
             assert response_data["detail"]["success"] is False
             assert response_data["detail"]["error"] == "Validation Error"
-            assert (
-                "At least one preference field must be provided"
-                in response_data["detail"]["message"]
-            )
+            assert "At least one preference field must be provided" in response_data["detail"]["message"]
         else:
             assert response_data["success"] is False
             assert response_data["error"] == "Validation Error"
-            assert (
-                "At least one preference field must be provided"
-                in response_data["message"]
-            )
+            assert "At least one preference field must be provided" in response_data["message"]
 
     def test_update_user_preferences_all_none_fields(self):
         """Test update with all fields explicitly set to None."""
@@ -308,23 +290,15 @@ class TestUserPreferencesAPI:
         if "detail" in response_data:
             assert response_data["detail"]["success"] is False
             assert response_data["detail"]["error"] == "Validation Error"
-            assert (
-                "At least one preference field must be provided"
-                in response_data["detail"]["message"]
-            )
+            assert "At least one preference field must be provided" in response_data["detail"]["message"]
         else:
             assert response_data["success"] is False
             assert response_data["error"] == "Validation Error"
-            assert (
-                "At least one preference field must be provided"
-                in response_data["message"]
-            )
+            assert "At least one preference field must be provided" in response_data["message"]
 
     @patch("app.routes.user_preferences.db_update_metadata")
     @patch("app.routes.user_preferences.db_get_metadata")
-    def test_update_user_preferences_database_update_failed(
-        self, mock_get_metadata, mock_update_metadata
-    ):
+    def test_update_user_preferences_database_update_failed(self, mock_get_metadata, mock_update_metadata):
         """Test update when database update fails."""
 
         mock_get_metadata.return_value = {}
@@ -338,10 +312,7 @@ class TestUserPreferencesAPI:
         if "detail" in response_data:
             assert response_data["detail"]["success"] is False
             assert response_data["detail"]["error"] == "Update Failed"
-            assert (
-                "Failed to update user preferences"
-                in response_data["detail"]["message"]
-            )
+            assert "Failed to update user preferences" in response_data["detail"]["message"]
         else:
             assert response_data["success"] is False
             assert response_data["error"] == "Update Failed"
@@ -369,9 +340,7 @@ class TestUserPreferencesAPI:
 
     @patch("app.routes.user_preferences.db_update_metadata")
     @patch("app.routes.user_preferences.db_get_metadata")
-    def test_update_user_preferences_database_update_exception(
-        self, mock_get_metadata, mock_update_metadata
-    ):
+    def test_update_user_preferences_database_update_exception(self, mock_get_metadata, mock_update_metadata):
         """Test update when database update raises an exception."""
 
         mock_get_metadata.return_value = {}
@@ -413,16 +382,11 @@ class TestUserPreferencesAPI:
 
     def test_update_user_preferences_response_structure(self):
         """Test that update user preferences returns correct response structure."""
-        with patch("app.routes.user_preferences.db_get_metadata") as mock_get, patch(
-            "app.routes.user_preferences.db_update_metadata"
-        ) as mock_update:
-
+        with patch("app.routes.user_preferences.db_get_metadata") as mock_get, patch("app.routes.user_preferences.db_update_metadata") as mock_update:
             mock_get.return_value = {}
             mock_update.return_value = True
 
-            response = client.put(
-                "/user_preferences/", json={"YOLO_model_size": "medium"}
-            )
+            response = client.put("/user_preferences/", json={"YOLO_model_size": "medium"})
 
             assert response.status_code == 200
             response_data = response.json()
@@ -438,10 +402,7 @@ class TestUserPreferencesAPI:
 
     def test_update_user_preferences_preserves_other_metadata(self):
         """Test that updating preferences preserves other metadata fields."""
-        with patch("app.routes.user_preferences.db_get_metadata") as mock_get, patch(
-            "app.routes.user_preferences.db_update_metadata"
-        ) as mock_update:
-
+        with patch("app.routes.user_preferences.db_get_metadata") as mock_get, patch("app.routes.user_preferences.db_update_metadata") as mock_update:
             existing_metadata = {
                 "user_preferences": {"YOLO_model_size": "small"},
                 "other_field": "should_be_preserved",
@@ -467,9 +428,7 @@ class TestUserPreferencesAPI:
 
     def test_update_user_preferences_invalid_yolo_size(self):
         """Test update with invalid YOLO model size."""
-        response = client.put(
-            "/user_preferences/", json={"YOLO_model_size": "invalid_size"}
-        )
+        response = client.put("/user_preferences/", json={"YOLO_model_size": "invalid_size"})
 
         assert response.status_code == 422
         response_data = response.json()
@@ -484,15 +443,9 @@ class TestUserPreferencesAPI:
         response_data = response.json()
 
         if "detail" in response_data:
-            assert (
-                "At least one preference field must be provided"
-                in response_data["detail"]["message"]
-            )
+            assert "At least one preference field must be provided" in response_data["detail"]["message"]
         else:
-            assert (
-                "At least one preference field must be provided"
-                in response_data["message"]
-            )
+            assert "At least one preference field must be provided" in response_data["message"]
 
     @pytest.mark.parametrize(
         "method,endpoint",

@@ -78,13 +78,7 @@ class ColorFormatter(logging.Formatter):
             component_start = formatted_message.find(f"[{component_prefix}]")
             if component_start >= 0:
                 component_end = component_start + len(f"[{component_prefix}]")
-                formatted_message = (
-                    formatted_message[:component_start]
-                    + self.COLORS[component_color]
-                    + formatted_message[component_start:component_end]
-                    + self.COLORS["reset"]
-                    + formatted_message[component_end:]
-                )
+                formatted_message = formatted_message[:component_start] + self.COLORS[component_color] + formatted_message[component_start:component_end] + self.COLORS["reset"] + formatted_message[component_end:]
 
         # Add color to the log level
         level_color = self.level_colors.get(record.levelname, "")
@@ -99,13 +93,7 @@ class ColorFormatter(logging.Formatter):
                 level_start = formatted_message.find(f" {record.levelname} ")
                 if level_start >= 0:
                     level_end = level_start + len(f" {record.levelname} ")
-                    formatted_message = (
-                        formatted_message[:level_start]
-                        + color_codes
-                        + formatted_message[level_start:level_end]
-                        + self.COLORS["reset"]
-                        + formatted_message[level_end:]
-                    )
+                    formatted_message = formatted_message[:level_start] + color_codes + formatted_message[level_start:level_end] + self.COLORS["reset"] + formatted_message[level_end:]
 
         return formatted_message
 
@@ -117,12 +105,7 @@ def load_config() -> Dict[str, Any]:
     Returns:
         Dict containing the logging configuration
     """
-    config_path = (
-        Path(__file__).parent.parent.parent.parent
-        / "utils"
-        / "logging"
-        / "logging_config.json"
-    )
+    config_path = Path(__file__).parent.parent.parent.parent / "utils" / "logging" / "logging_config.json"
     try:
         with open(config_path, "r") as f:
             return json.load(f)
@@ -142,16 +125,12 @@ def setup_logging(component_name: str, environment: Optional[str] = None) -> Non
     """
     config = load_config()
     if not config:
-        print(
-            "No logging configuration found. Using default settings.", file=sys.stderr
-        )
+        print("No logging configuration found. Using default settings.", file=sys.stderr)
         return
 
     # Get environment settings
     if not environment:
-        environment = os.environ.get(
-            "ENV", config.get("default_environment", "development")
-        )
+        environment = os.environ.get("ENV", config.get("default_environment", "development"))
 
     env_settings = config.get("environments", {}).get(environment, {})
     log_level = getattr(logging, env_settings.get("level", "INFO"), logging.INFO)
@@ -159,9 +138,7 @@ def setup_logging(component_name: str, environment: Optional[str] = None) -> Non
     console_logging = env_settings.get("console_logging", True)
 
     # Get component configuration
-    component_config = config.get("components", {}).get(
-        component_name, {"prefix": component_name.upper(), "color": "white"}
-    )
+    component_config = config.get("components", {}).get(component_name, {"prefix": component_name.upper(), "color": "white"})
 
     # Configure root logger
     root_logger = logging.getLogger()
@@ -184,14 +161,8 @@ def setup_logging(component_name: str, environment: Optional[str] = None) -> Non
         console_handler.setLevel(log_level)
 
         # Create formatter with component and color information
-        fmt = (
-            config.get("formatters", {})
-            .get("default", {})
-            .get("format", "[%(component)s] | %(levelname)s | %(message)s")
-        )
-        formatter = ColorFormatter(
-            fmt, component_config, config.get("colors", {}), use_colors
-        )
+        fmt = config.get("formatters", {}).get("default", {}).get("format", "[%(component)s] | %(levelname)s | %(message)s")
+        formatter = ColorFormatter(fmt, component_config, config.get("colors", {}), use_colors)
         console_handler.setFormatter(formatter)
         root_logger.addHandler(console_handler)
 
@@ -269,13 +240,9 @@ def configure_uvicorn_logging(component_name: str) -> None:
 
     # Make sure the handler uses our ColorFormatter
     config = load_config()
-    component_config = config.get("components", {}).get(
-        component_name, {"prefix": component_name.upper(), "color": "white"}
-    )
+    component_config = config.get("components", {}).get(component_name, {"prefix": component_name.upper(), "color": "white"})
     level_colors = config.get("colors", {})
-    env_settings = config.get("environments", {}).get(
-        os.environ.get("ENV", config.get("default_environment", "development")), {}
-    )
+    env_settings = config.get("environments", {}).get(os.environ.get("ENV", config.get("default_environment", "development")), {})
     use_colors = env_settings.get("colored_output", True)
 
     fmt = "[%(component)s] | %(module)s | %(levelname)s | %(message)s"

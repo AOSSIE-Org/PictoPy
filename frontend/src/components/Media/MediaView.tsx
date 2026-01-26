@@ -117,7 +117,13 @@ export function MediaView({
       }
       if (location.pathname === ROUTES.FAVOURITES) handleClose();
     }
-  }, [currentImage, toggleFavourite, onToggleFavorite, location.pathname, handleClose]);
+  }, [
+    currentImage,
+    toggleFavourite,
+    onToggleFavorite,
+    location.pathname,
+    handleClose,
+  ]);
 
   const handleZoomIn = useCallback(() => {
     imageViewerRef.current?.zoomIn();

@@ -46,19 +46,19 @@ async def lifespan(app: FastAPI):
     generate_openapi_json()
     db_create_folders_table()
     db_create_images_table()
-    
+
     # Only run migrations in the primary process or when explicitly enabled
     should_run_migrations = os.getenv("RUN_MIGRATIONS", "true").lower() == "true"
     if should_run_migrations:
         try:
-            db_migrate_add_memories_columns()  
+            db_migrate_add_memories_columns()
             logger.info("Database migrations completed successfully")
         except Exception as e:
             logger.error(f"Failed to run database migrations: {e}", exc_info=True)
-            
+
     else:
         logger.info("Skipping migrations (RUN_MIGRATIONS not set or false)")
-    
+
     db_create_YOLO_classes_table()
     db_create_clusters_table()  # Create clusters table first since faces references it
     db_create_faces_table()
@@ -83,9 +83,7 @@ app = FastAPI(
         "name": "PictoPy Postman Collection",
         "url": "https://www.postman.com/aossie-pictopy/pictopy/overview",
     },
-    servers=[
-        {"url": "http://localhost:52123", "description": "Local Development server"}
-    ],
+    servers=[{"url": "http://localhost:52123", "description": "Local Development server"}],
 )
 
 
@@ -106,9 +104,7 @@ def generate_openapi_json():
         openapi_schema["info"]["contact"] = app.contact
 
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        openapi_path = os.path.join(
-            project_root, "docs", "backend", "backend_python", "openapi.json"
-        )
+        openapi_path = os.path.join(project_root, "docs", "backend", "backend_python", "openapi.json")
 
         os.makedirs(os.path.dirname(openapi_path), exist_ok=True)
 
@@ -138,16 +134,9 @@ async def root():
 app.include_router(folders_router, prefix="/folders", tags=["Folders"])
 app.include_router(albums_router, prefix="/albums", tags=["Albums"])
 app.include_router(images_router, prefix="/images", tags=["Images"])
-app.include_router(
-    face_clusters_router, prefix="/face-clusters", tags=["Face Clusters"]
-)
-app.include_router(
-    user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
-)
+app.include_router(face_clusters_router, prefix="/face-clusters", tags=["Face Clusters"])
+app.include_router(user_preferences_router, prefix="/user-preferences", tags=["User Preferences"])
 app.include_router(memories_router)  # Memories router (prefix already defined in router)
-
-logger.info("✅ All routes initialized")
-logger.info("✅ Memories feature enabled at /api/memories")
 
 
 # Entry point for running with: python3 main.py

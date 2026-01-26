@@ -1,6 +1,6 @@
 /**
  * Memories Redux Slice
- * 
+ *
  * Manages state for the Memories feature including:
  * - All memories (generated from all photos)
  * - Recent memories (last 30 days)
@@ -16,7 +16,7 @@ import {
   getOnThisDay,
   Memory,
   MemoryImage,
-  ApiError
+  ApiError,
 } from '@/services/memoriesApi';
 
 // ============================================================================
@@ -33,10 +33,10 @@ interface MemoriesState {
     today: string;
     years: number[];
   } | null;
-  
+
   // Selected memory for viewer modal
   selectedMemory: Memory | null;
-  
+
   // Loading states for each section
   loading: {
     all: boolean;
@@ -44,7 +44,7 @@ interface MemoriesState {
     year: boolean;
     onThisDay: boolean;
   };
-  
+
   // Error states
   error: {
     all: string | null;
@@ -52,7 +52,7 @@ interface MemoriesState {
     year: string | null;
     onThisDay: string | null;
   };
-  
+
   // Metadata
   lastFetched: number | null;
 }
@@ -72,15 +72,15 @@ const initialState: MemoriesState = {
     all: false,
     recent: false,
     year: false,
-    onThisDay: false
+    onThisDay: false,
   },
   error: {
     all: null,
     recent: null,
     year: null,
-    onThisDay: null
+    onThisDay: null,
   },
-  lastFetched: null
+  lastFetched: null,
 };
 
 // ============================================================================
@@ -94,18 +94,15 @@ export const fetchAllMemories = createAsyncThunk<
   Memory[],
   void,
   { rejectValue: string }
->(
-  'memories/fetchAll',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await generateMemories();
-      return response.memories;
-    } catch (error) {
-      const apiError = error as ApiError;
-      return rejectWithValue(apiError.message);
-    }
+>('memories/fetchAll', async (_, { rejectWithValue }) => {
+  try {
+    const response = await generateMemories();
+    return response.memories;
+  } catch (error) {
+    const apiError = error as ApiError;
+    return rejectWithValue(apiError.message);
   }
-);
+});
 
 /**
  * Fetch recent memories (last 30 days)
@@ -114,18 +111,15 @@ export const fetchRecentMemories = createAsyncThunk<
   Memory[],
   number,
   { rejectValue: string }
->(
-  'memories/fetchRecent',
-  async (days = 30, { rejectWithValue }) => {
-    try {
-      const response = await getTimeline(days);
-      return response.memories;
-    } catch (error) {
-      const apiError = error as ApiError;
-      return rejectWithValue(apiError.message);
-    }
+>('memories/fetchRecent', async (days = 30, { rejectWithValue }) => {
+  try {
+    const response = await getTimeline(days);
+    return response.memories;
+  } catch (error) {
+    const apiError = error as ApiError;
+    return rejectWithValue(apiError.message);
   }
-);
+});
 
 /**
  * Fetch memories from current year
@@ -134,18 +128,15 @@ export const fetchYearMemories = createAsyncThunk<
   Memory[],
   number,
   { rejectValue: string }
->(
-  'memories/fetchYear',
-  async (days = 365, { rejectWithValue }) => {
-    try {
-      const response = await getTimeline(days);
-      return response.memories;
-    } catch (error) {
-      const apiError = error as ApiError;
-      return rejectWithValue(apiError.message);
-    }
+>('memories/fetchYear', async (days = 365, { rejectWithValue }) => {
+  try {
+    const response = await getTimeline(days);
+    return response.memories;
+  } catch (error) {
+    const apiError = error as ApiError;
+    return rejectWithValue(apiError.message);
   }
-);
+});
 
 /**
  * Fetch "On This Day" images
@@ -154,22 +145,19 @@ export const fetchOnThisDay = createAsyncThunk<
   { images: MemoryImage[]; today: string; years: number[] },
   void,
   { rejectValue: string }
->(
-  'memories/fetchOnThisDay',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await getOnThisDay();
-      return {
-        images: response.images,
-        today: response.today,
-        years: response.years
-      };
-    } catch (error) {
-      const apiError = error as ApiError;
-      return rejectWithValue(apiError.message);
-    }
+>('memories/fetchOnThisDay', async (_, { rejectWithValue }) => {
+  try {
+    const response = await getOnThisDay();
+    return {
+      images: response.images,
+      today: response.today,
+      years: response.years,
+    };
+  } catch (error) {
+    const apiError = error as ApiError;
+    return rejectWithValue(apiError.message);
   }
-);
+});
 
 /**
  * Fetch all memories data at once (parallel requests)
@@ -178,22 +166,19 @@ export const fetchAllMemoriesData = createAsyncThunk<
   void,
   void,
   { rejectValue: string }
->(
-  'memories/fetchAllData',
-  async (_, { dispatch, rejectWithValue }) => {
-    try {
-      await Promise.all([
-        dispatch(fetchOnThisDay()),
-        dispatch(fetchRecentMemories(30)),
-        dispatch(fetchYearMemories(365)),
-        dispatch(fetchAllMemories())
-      ]);
-    } catch (error) {
-      const apiError = error as ApiError;
-      return rejectWithValue(apiError.message);
-    }
+>('memories/fetchAllData', async (_, { dispatch, rejectWithValue }) => {
+  try {
+    await Promise.all([
+      dispatch(fetchOnThisDay()),
+      dispatch(fetchRecentMemories(30)),
+      dispatch(fetchYearMemories(365)),
+      dispatch(fetchAllMemories()),
+    ]);
+  } catch (error) {
+    const apiError = error as ApiError;
+    return rejectWithValue(apiError.message);
   }
-);
+});
 
 // ============================================================================
 // Slice
@@ -209,46 +194,46 @@ const memoriesSlice = createSlice({
     setSelectedMemory: (state, action: PayloadAction<Memory | null>) => {
       state.selectedMemory = action.payload;
     },
-    
+
     /**
      * Toggle favorite status of an image across all memories
      */
     toggleImageFavorite: (state, action: PayloadAction<string>) => {
       const imageId = action.payload;
-      
+
       // Helper function to update image in a memory array
       const updateMemoriesArray = (memories: Memory[]) => {
-        memories.forEach(memory => {
-          memory.images.forEach(image => {
+        memories.forEach((memory) => {
+          memory.images.forEach((image) => {
             if (image.id === imageId) {
               image.isFavourite = !image.isFavourite;
             }
           });
         });
       };
-      
+
       // Update across all memory collections
       updateMemoriesArray(state.allMemories);
       updateMemoriesArray(state.recentMemories);
       updateMemoriesArray(state.yearMemories);
-      
+
       // Update onThisDay images
-      state.onThisDayImages.forEach(image => {
+      state.onThisDayImages.forEach((image) => {
         if (image.id === imageId) {
           image.isFavourite = !image.isFavourite;
         }
       });
-      
+
       // Update selected memory if it exists
       if (state.selectedMemory) {
-        state.selectedMemory.images.forEach(image => {
+        state.selectedMemory.images.forEach((image) => {
           if (image.id === imageId) {
             image.isFavourite = !image.isFavourite;
           }
         });
       }
     },
-    
+
     /**
      * Clear all errors
      */
@@ -257,16 +242,16 @@ const memoriesSlice = createSlice({
         all: null,
         recent: null,
         year: null,
-        onThisDay: null
+        onThisDay: null,
       };
     },
-    
+
     /**
      * Reset memories state
      */
     resetMemories: () => {
       return initialState;
-    }
+    },
   },
   extraReducers: (builder) => {
     // ========================================================================
@@ -301,7 +286,8 @@ const memoriesSlice = createSlice({
       })
       .addCase(fetchRecentMemories.rejected, (state, action) => {
         state.loading.recent = false;
-        state.error.recent = action.payload || 'Failed to fetch recent memories';
+        state.error.recent =
+          action.payload || 'Failed to fetch recent memories';
       });
 
     // ========================================================================
@@ -334,14 +320,14 @@ const memoriesSlice = createSlice({
         state.onThisDayImages = action.payload.images;
         state.onThisDayMeta = {
           today: action.payload.today,
-          years: action.payload.years
+          years: action.payload.years,
         };
       })
       .addCase(fetchOnThisDay.rejected, (state, action) => {
         state.loading.onThisDay = false;
         state.error.onThisDay = action.payload || 'Failed to fetch On This Day';
       });
-  }
+  },
 });
 
 // ============================================================================
@@ -352,7 +338,7 @@ export const {
   setSelectedMemory,
   toggleImageFavorite,
   clearErrors,
-  resetMemories
+  resetMemories,
 } = memoriesSlice.actions;
 
 export default memoriesSlice.reducer;
@@ -361,15 +347,24 @@ export default memoriesSlice.reducer;
 // Selectors
 // ============================================================================
 
-export const selectAllMemories = (state: { memories: MemoriesState }) => state.memories.allMemories;
-export const selectRecentMemories = (state: { memories: MemoriesState }) => state.memories.recentMemories;
-export const selectYearMemories = (state: { memories: MemoriesState }) => state.memories.yearMemories;
-export const selectOnThisDayImages = (state: { memories: MemoriesState }) => state.memories.onThisDayImages;
-export const selectOnThisDayMeta = (state: { memories: MemoriesState }) => state.memories.onThisDayMeta;
-export const selectSelectedMemory = (state: { memories: MemoriesState }) => state.memories.selectedMemory;
-export const selectMemoriesLoading = (state: { memories: MemoriesState }) => state.memories.loading;
-export const selectMemoriesError = (state: { memories: MemoriesState }) => state.memories.error;
-export const selectLastFetched = (state: { memories: MemoriesState }) => state.memories.lastFetched;
+export const selectAllMemories = (state: { memories: MemoriesState }) =>
+  state.memories.allMemories;
+export const selectRecentMemories = (state: { memories: MemoriesState }) =>
+  state.memories.recentMemories;
+export const selectYearMemories = (state: { memories: MemoriesState }) =>
+  state.memories.yearMemories;
+export const selectOnThisDayImages = (state: { memories: MemoriesState }) =>
+  state.memories.onThisDayImages;
+export const selectOnThisDayMeta = (state: { memories: MemoriesState }) =>
+  state.memories.onThisDayMeta;
+export const selectSelectedMemory = (state: { memories: MemoriesState }) =>
+  state.memories.selectedMemory;
+export const selectMemoriesLoading = (state: { memories: MemoriesState }) =>
+  state.memories.loading;
+export const selectMemoriesError = (state: { memories: MemoriesState }) =>
+  state.memories.error;
+export const selectLastFetched = (state: { memories: MemoriesState }) =>
+  state.memories.lastFetched;
 
 /**
  * Select total memory count across all sections

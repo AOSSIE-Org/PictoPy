@@ -14,6 +14,7 @@ import {
   toggleImageFavorite,
 } from '@/store/slices/memoriesSlice';
 import { setCurrentViewIndex, setImages } from '@/features/imageSlice';
+import { showInfoDialog } from '@/features/infoDialogSlice';
 import { MediaView } from '@/components/Media/MediaView';
 import {
   formatDateRangeRelative,
@@ -23,6 +24,7 @@ import {
   formatLocationName,
 } from '@/services/memoriesApi';
 import { togglefav } from '@/api/api-functions/togglefav';
+import { getErrorMessage } from '@/lib/utils';
 
 /**
  * Memory Viewer Modal Component
@@ -40,12 +42,24 @@ export const MemoryViewer: React.FC = () => {
   // Handle favorite toggle - update both API and Redux state
   const handleToggleFavorite = useCallback(
     async (imageId: string) => {
+      // Optimistic update - toggle UI immediately
+      dispatch(toggleImageFavorite(imageId));
+
       try {
         // Call API to toggle favorite in database
         await togglefav(imageId);
-        // Update Redux state to reflect the change immediately
-        dispatch(toggleImageFavorite(imageId));
       } catch (error) {
+        // Revert the optimistic change on failure
+        dispatch(toggleImageFavorite(imageId));
+
+        // Show error dialog to user
+        dispatch(
+          showInfoDialog({
+            title: 'Failed to Update Favorite',
+            message: getErrorMessage(error),
+            variant: 'error',
+          }),
+        );
         console.error('Failed to toggle favorite:', error);
       }
     },

@@ -76,9 +76,7 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
             )
 
         for image in images:
-            similarity = FaceNet_util_cosine_similarity(
-                new_embedding, image["embeddings"]
-            )
+            similarity = FaceNet_util_cosine_similarity(new_embedding, image["embeddings"])
             if similarity >= CONFIDENCE_PERCENT:
                 matches.append(
                     ImageData(

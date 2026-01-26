@@ -55,9 +55,7 @@ def db_get_metadata() -> Optional[Dict[str, Any]]:
         conn.close()
 
 
-def db_update_metadata(
-    metadata: Dict[str, Any], cursor: Optional[sqlite3.Cursor] = None
-) -> bool:
+def db_update_metadata(metadata: Dict[str, Any], cursor: Optional[sqlite3.Cursor] = None) -> bool:
     """
     Update the metadata in the database.
 

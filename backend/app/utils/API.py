@@ -20,9 +20,7 @@ def API_util_restart_sync_microservice_watcher():
             logger.info("Successfully restarted sync microservice watcher")
             return True
         else:
-            logger.warning(
-                f"Failed to restart sync microservice watcher. Status code: {response.status_code}"
-            )
+            logger.warning(f"Failed to restart sync microservice watcher. Status code: {response.status_code}")
             return False
 
     except requests.exceptions.RequestException as e:

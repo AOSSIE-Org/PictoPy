@@ -18,9 +18,7 @@ def FaceNet_util_normalize_embedding(embedding):
 
 
 def FaceNet_util_cosine_similarity(embedding1, embedding2):
-    return np.dot(embedding1, embedding2) / (
-        np.linalg.norm(embedding1) * np.linalg.norm(embedding2)
-    )
+    return np.dot(embedding1, embedding2) / (np.linalg.norm(embedding1) * np.linalg.norm(embedding2))
 
 
 def FaceNet_util_get_model_path():

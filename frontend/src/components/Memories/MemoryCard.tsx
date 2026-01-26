@@ -37,7 +37,7 @@ export const MemoryCard = React.memo<MemoryCardProps>(({ memory, onClick }) => {
 
   // Determine memory type
   // Backend uses 0,0 as sentinel for date-based memories (no GPS data)
-   const isDateBased = memory.center_lat == null || memory.center_lon == null;
+  const isDateBased = memory.center_lat == null || memory.center_lon == null;
 
   // Format title based on memory type
   let displayTitle = memory.title || 'Untitled Memory';

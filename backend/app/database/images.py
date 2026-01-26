@@ -80,15 +80,9 @@ def db_create_images_table() -> None:
 
     # Create indexes for Memories feature queries
     cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_latitude ON images(latitude)")
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS ix_images_longitude ON images(longitude)"
-    )
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS ix_images_captured_at ON images(captured_at)"
-    )
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS ix_images_favourite_captured_at ON images(isFavourite, captured_at)"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_longitude ON images(longitude)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_captured_at ON images(captured_at)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_favourite_captured_at ON images(isFavourite, captured_at)")
 
     # Create new image_classes junction table
     cursor.execute(
@@ -117,13 +111,9 @@ def db_migrate_add_memories_columns() -> None:
 
     try:
         # Check if images table exists
-        cursor.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='images'"
-        )
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='images'")
         if not cursor.fetchone():
-            logger.info(
-                "Images table does not exist yet, will be created by db_create_images_table()"
-            )
+            logger.info("Images table does not exist yet, will be created by db_create_images_table()")
             conn.close()
             return
 
@@ -150,18 +140,10 @@ def db_migrate_add_memories_columns() -> None:
             changes_made = True
 
         # Create indexes
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS ix_images_latitude ON images(latitude)"
-        )
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS ix_images_longitude ON images(longitude)"
-        )
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS ix_images_captured_at ON images(captured_at)"
-        )
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS ix_images_favourite_captured_at ON images(isFavourite, captured_at)"
-        )
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_latitude ON images(latitude)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_longitude ON images(longitude)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_captured_at ON images(captured_at)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_favourite_captured_at ON images(isFavourite, captured_at)")
 
         if changes_made:
             logger.info("Memories feature columns migration completed")
@@ -288,9 +270,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                     "isFavourite": bool(is_favourite),
                     "latitude": latitude,
                     "longitude": longitude,
-                    "captured_at": (
-                        captured_at if captured_at else None
-                    ),  # SQLite returns string
+                    "captured_at": (captured_at if captured_at else None),  # SQLite returns string
                     "tags": [],
                 }
 
@@ -529,9 +509,7 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
 # ============================================================================
 
 
-def db_get_images_by_date_range(
-    start_date: datetime, end_date: datetime, include_favorites_only: bool = False
-) -> List[dict]:
+def db_get_images_by_date_range(start_date: datetime, end_date: datetime, include_favorites_only: bool = False) -> List[dict]:
     """
     Get images captured within a date range for Memories timeline.
 
@@ -608,9 +586,7 @@ def db_get_images_by_date_range(
         conn.close()
 
 
-def db_get_images_near_location(
-    latitude: float, longitude: float, radius_km: float = 5.0
-) -> List[dict]:
+def db_get_images_near_location(latitude: float, longitude: float, radius_km: float = 5.0) -> List[dict]:
     """
     Get images near a location within radius_km using bounding box approximation.
 

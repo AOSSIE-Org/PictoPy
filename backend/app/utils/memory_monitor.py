@@ -34,13 +34,7 @@ def log_memory_usage(func: Callable) -> Callable:
         end_time = time.time()
 
         # Log memory usage
-        logger.info(
-            f"Memory usage for {func.__name__}:\n"
-            f"  Before: {mem_before:.2f}MB\n"
-            f"  After: {mem_after:.2f}MB\n"
-            f"  Difference: {mem_after - mem_before:.2f}MB\n"
-            f"  Execution time: {(end_time - start_time)*1000:.2f}ms"
-        )
+        logger.info(f"Memory usage for {func.__name__}:\n  Before: {mem_before:.2f}MB\n  After: {mem_after:.2f}MB\n  Difference: {mem_after - mem_before:.2f}MB\n  Execution time: {(end_time - start_time) * 1000:.2f}ms")
 
         return result
 

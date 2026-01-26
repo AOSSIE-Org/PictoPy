@@ -141,13 +141,9 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
                 face_image_base64 = _generate_cluster_face_image(cluster_id, cursor)
                 if face_image_base64:
                     # Update the cluster with the generated face image
-                    success = _update_cluster_face_image(
-                        cluster_id, face_image_base64, cursor
-                    )
+                    success = _update_cluster_face_image(cluster_id, face_image_base64, cursor)
                     if not success:
-                        raise RuntimeError(
-                            f"Failed to update face image for cluster {cluster_id}"
-                        )
+                        raise RuntimeError(f"Failed to update face image for cluster {cluster_id}")
 
             # Update metadata with new reclustering time, preserving other values
             current_metadata = metadata or {}
@@ -225,9 +221,7 @@ def cluster_util_cluster_all_face_embeddings(
             existing_cluster_names.append(face["cluster_name"])
         else:
             invalid_count += 1
-            logger.warning(
-                f"Skipping invalid embedding for face_id {face['face_id']} (NaN or zero vector)"
-            )
+            logger.warning(f"Skipping invalid embedding for face_id {face['face_id']} (NaN or zero vector)")
 
     if invalid_count > 0:
         logger.warning(f"Filtered out {invalid_count} invalid embeddings")
@@ -246,18 +240,14 @@ def cluster_util_cluster_all_face_embeddings(
 
     # Guard against NaN distances (shouldn't happen after validation, but double-check)
     if not np.isfinite(distances).all():
-        logger.error(
-            "NaN or infinite values detected in distance matrix after validation"
-        )
+        logger.error("NaN or infinite values detected in distance matrix after validation")
         # Replace NaN/inf with max distance (1.0)
         distances = np.nan_to_num(distances, nan=1.0, posinf=1.0, neginf=1.0)
 
     # Apply similarity threshold - mark dissimilar faces as completely different
     max_distance = 1 - similarity_threshold  # Convert similarity to distance
     distances[distances > max_distance] = 1.0  # Mark as completely different
-    logger.info(
-        f"Applied similarity threshold: {similarity_threshold} (max_distance: {max_distance:.3f})"
-    )
+    logger.info(f"Applied similarity threshold: {similarity_threshold} (max_distance: {max_distance:.3f})")
 
     # Perform DBSCAN clustering with precomputed distances
     dbscan = DBSCAN(
@@ -268,9 +258,7 @@ def cluster_util_cluster_all_face_embeddings(
     )
 
     cluster_labels = dbscan.fit_predict(distances)
-    logger.info(
-        f"DBSCAN found {len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)} clusters"
-    )
+    logger.info(f"DBSCAN found {len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)} clusters")
 
     # Group faces by cluster labels
     clusters = defaultdict(list)
@@ -308,9 +296,7 @@ def cluster_util_cluster_all_face_embeddings(
     # Post-clustering merge: merge similar clusters based on representative faces
     # Use similarity_threshold if merge_threshold not explicitly provided
     effective_merge_threshold = merge_threshold if merge_threshold is not None else 0.7
-    results = _merge_similar_clusters(
-        results, merge_threshold=effective_merge_threshold
-    )
+    results = _merge_similar_clusters(results, merge_threshold=effective_merge_threshold)
 
     return results
 
@@ -361,9 +347,7 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
             mean_embeddings.append(mean_emb)
         else:
             invalid_clusters += 1
-            logger.warning(
-                f"Skipping invalid cluster mean for cluster_id {cluster_data['cluster_id']}"
-            )
+            logger.warning(f"Skipping invalid cluster mean for cluster_id {cluster_data['cluster_id']}")
 
     if invalid_clusters > 0:
         logger.warning(f"Filtered out {invalid_clusters} invalid cluster means")
@@ -406,21 +390,15 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
             nearest_cluster_idx = np.argmin(distances)
             nearest_cluster_id = cluster_ids[nearest_cluster_idx]
 
-            face_cluster_mappings.append(
-                {"face_id": face_id, "cluster_id": nearest_cluster_id}
-            )
+            face_cluster_mappings.append({"face_id": face_id, "cluster_id": nearest_cluster_id})
 
     if skipped_invalid > 0:
-        logger.warning(
-            f"Skipped {skipped_invalid} faces with invalid embeddings during assignment"
-        )
+        logger.warning(f"Skipped {skipped_invalid} faces with invalid embeddings during assignment")
 
     return face_cluster_mappings
 
 
-def _merge_similar_clusters(
-    results: List[ClusterResult], merge_threshold: float = 0.85
-) -> List[ClusterResult]:
+def _merge_similar_clusters(results: List[ClusterResult], merge_threshold: float = 0.85) -> List[ClusterResult]:
     """
     Merge clusters that are too similar based on their mean embeddings.
 
@@ -455,9 +433,7 @@ def _merge_similar_clusters(
             cluster_means[cluster_uuid] = mean_embedding
         else:
             invalid_clusters.append(cluster_uuid)
-            logger.warning(
-                f"Cluster {cluster_uuid} has invalid mean embedding, excluding from merge"
-            )
+            logger.warning(f"Cluster {cluster_uuid} has invalid mean embedding, excluding from merge")
 
     # Remove invalid clusters from consideration
     for invalid_uuid in invalid_clusters:
@@ -487,17 +463,13 @@ def _merge_similar_clusters(
 
             # Guard against NaN similarity
             if not np.isfinite(similarity):
-                logger.warning(
-                    f"NaN similarity between clusters {uuid1} and {uuid2}, skipping merge"
-                )
+                logger.warning(f"NaN similarity between clusters {uuid1} and {uuid2}, skipping merge")
                 continue
 
             # If very similar, merge cluster2 into cluster1
             if similarity >= merge_threshold:
                 merge_mapping[uuid2] = uuid1
-                logger.info(
-                    f"Merging cluster {uuid2} into {uuid1} (similarity: {similarity:.3f})"
-                )
+                logger.info(f"Merging cluster {uuid2} into {uuid1} (similarity: {similarity:.3f})")
 
     # Apply merges
     if merge_mapping:
@@ -545,17 +517,13 @@ def _merge_similar_clusters(
         for result in merged_results:
             result.cluster_name = final_cluster_names.get(result.cluster_uuid)
 
-        logger.info(
-            f"Merged {len(merge_mapping)} clusters. Final count: {len(set(r.cluster_uuid for r in merged_results))}"
-        )
+        logger.info(f"Merged {len(merge_mapping)} clusters. Final count: {len(set(r.cluster_uuid for r in merged_results))}")
         return merged_results
 
     return results
 
 
-def _calculate_cosine_distances(
-    face_embedding: NDArray, cluster_means: NDArray
-) -> NDArray:
+def _calculate_cosine_distances(face_embedding: NDArray, cluster_means: NDArray) -> NDArray:
     """
     Calculate cosine distances between a face embedding and cluster means.
     Handles edge cases with zero vectors and ensures finite results.
@@ -576,9 +544,7 @@ def _calculate_cosine_distances(
 
     # Normalize cluster means with safe division
     cluster_norm_values = np.linalg.norm(cluster_means, axis=1, keepdims=True)
-    cluster_norm_values = np.maximum(
-        cluster_norm_values, 1e-6
-    )  # Prevent division by zero
+    cluster_norm_values = np.maximum(cluster_norm_values, 1e-6)  # Prevent division by zero
     cluster_norms = cluster_means / cluster_norm_values
 
     # Calculate cosine similarities (dot product of normalized vectors)
@@ -593,9 +559,7 @@ def _calculate_cosine_distances(
     return cosine_distances
 
 
-def _update_cluster_face_image(
-    cluster_id: str, face_image_base64: str, cursor: Optional[sqlite3.Cursor] = None
-) -> bool:
+def _update_cluster_face_image(cluster_id: str, face_image_base64: str, cursor: Optional[sqlite3.Cursor] = None) -> bool:
     """
     Update the face image for a specific cluster.
 
@@ -633,9 +597,7 @@ def _update_cluster_face_image(
             conn.close()
 
 
-def _get_cluster_face_data(
-    cluster_uuid: str, cursor: sqlite3.Cursor
-) -> Optional[tuple]:
+def _get_cluster_face_data(cluster_uuid: str, cursor: sqlite3.Cursor) -> Optional[tuple]:
     """
     Get the image path and bounding box for the first face in a cluster.
 
@@ -678,9 +640,7 @@ def _get_cluster_face_data(
         return None
 
 
-def _calculate_square_crop_bounds(
-    bbox: Dict, img_shape: tuple, padding: int = 50
-) -> tuple:
+def _calculate_square_crop_bounds(bbox: Dict, img_shape: tuple, padding: int = 50) -> tuple:
     """
     Calculate square crop bounds centered on a face bounding box.
 
@@ -743,9 +703,7 @@ def _calculate_square_crop_bounds(
     return (square_x_start, square_y_start, square_x_end, square_y_end)
 
 
-def _crop_and_resize_face(
-    img: np.ndarray, crop_bounds: tuple, target_size: int = 300
-) -> Optional[np.ndarray]:
+def _crop_and_resize_face(img: np.ndarray, crop_bounds: tuple, target_size: int = 300) -> Optional[np.ndarray]:
     """
     Crop and resize a face region from an image.
 
@@ -795,9 +753,7 @@ def _encode_image_to_base64(img: np.ndarray, format: str = ".jpg") -> Optional[s
         return None
 
 
-def _generate_cluster_face_image(
-    cluster_uuid: str, cursor: sqlite3.Cursor
-) -> Optional[str]:
+def _generate_cluster_face_image(cluster_uuid: str, cursor: sqlite3.Cursor) -> Optional[str]:
     """
     Generate a base64 encoded face image for a cluster.
 
@@ -848,11 +804,7 @@ def _determine_cluster_name(faces_in_cluster: List[Dict]) -> Optional[str]:
         Most common non-null cluster name, or None if no named clusters exist
     """
     # Extract non-null cluster names
-    existing_names = [
-        face["existing_cluster_name"]
-        for face in faces_in_cluster
-        if face["existing_cluster_name"] is not None
-    ]
+    existing_names = [face["existing_cluster_name"] for face in faces_in_cluster if face["existing_cluster_name"] is not None]
 
     if not existing_names:
         return None

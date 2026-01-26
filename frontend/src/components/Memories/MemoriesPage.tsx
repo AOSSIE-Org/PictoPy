@@ -153,19 +153,23 @@ export const MemoriesPage: React.FC = () => {
 
   // Calculate counts
   const locationCount = allMemories.filter(
-    (m) => m.center_lat !== 0 || m.center_lon !== 0,
+    (m) => m.center_lat != null && m.center_lon != null,
   ).length;
   const dateCount = allMemories.filter(
-    (m) => m.center_lat === 0 && m.center_lon === 0,
+    (m) => m.center_lat == null || m.center_lon == null,
   ).length;
 
   // Simple filter function
   const applyFilter = (memories: Memory[]) => {
     if (filter === 'location') {
-      return memories.filter((m) => m.center_lat !== 0 || m.center_lon !== 0);
+      return memories.filter(
+        (m) => m.center_lat != null && m.center_lon != null,
+      );
     }
     if (filter === 'date') {
-      return memories.filter((m) => m.center_lat === 0 && m.center_lon === 0);
+      return memories.filter(
+        (m) => m.center_lat == null || m.center_lon == null,
+      );
     }
     return memories; // 'all'
   };
@@ -199,8 +203,8 @@ export const MemoriesPage: React.FC = () => {
         image_count: onThisDayImages.length,
         images: onThisDayImages,
         thumbnail_image_id: onThisDayImages[0]?.id || '',
-        center_lat: onThisDayImages[0]?.latitude || 0,
-        center_lon: onThisDayImages[0]?.longitude || 0,
+        center_lat: onThisDayImages[0]?.latitude ?? null,
+        center_lon: onThisDayImages[0]?.longitude ?? null,
       };
       dispatch(setSelectedMemory(tempMemory));
     }

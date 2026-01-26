@@ -70,9 +70,7 @@ def db_delete_all_clusters(cursor: Optional[sqlite3.Cursor] = None) -> int:
             conn.close()
 
 
-def db_insert_clusters_batch(
-    clusters: List[ClusterData], cursor: Optional[sqlite3.Cursor] = None
-) -> List[ClusterId]:
+def db_insert_clusters_batch(clusters: List[ClusterData], cursor: Optional[sqlite3.Cursor] = None) -> List[ClusterId]:
     """
     Insert multiple clusters into the database in batch.
 
@@ -145,9 +143,7 @@ def db_get_cluster_by_id(cluster_id: ClusterId) -> Optional[ClusterData]:
         row = cursor.fetchone()
 
         if row:
-            return ClusterData(
-                cluster_id=row[0], cluster_name=row[1], face_image_base64=row[2]
-            )
+            return ClusterData(cluster_id=row[0], cluster_name=row[1], face_image_base64=row[2])
         return None
     finally:
         conn.close()
@@ -164,19 +160,13 @@ def db_get_all_clusters() -> List[ClusterData]:
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            "SELECT cluster_id, cluster_name, face_image_base64 FROM face_clusters ORDER BY cluster_id"
-        )
+        cursor.execute("SELECT cluster_id, cluster_name, face_image_base64 FROM face_clusters ORDER BY cluster_id")
 
         rows = cursor.fetchall()
 
         clusters = []
         for row in rows:
-            clusters.append(
-                ClusterData(
-                    cluster_id=row[0], cluster_name=row[1], face_image_base64=row[2]
-                )
-            )
+            clusters.append(ClusterData(cluster_id=row[0], cluster_name=row[1], face_image_base64=row[2]))
 
         return clusters
     finally:
@@ -232,9 +222,7 @@ def db_update_cluster(
         conn.close()
 
 
-def db_get_all_clusters_with_face_counts() -> (
-    List[Dict[str, Union[str, Optional[str], int]]]
-):
+def db_get_all_clusters_with_face_counts() -> List[Dict[str, Union[str, Optional[str], int]]]:
     """
     Retrieve all clusters with their face counts and stored face images.
 

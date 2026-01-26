@@ -11,9 +11,8 @@ Author: PictoPy Team
 Date: 2025-12-14
 """
 
-import math
-from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime
+from typing import List, Dict, Any, Optional
 from collections import defaultdict
 
 import numpy as np
@@ -66,9 +65,7 @@ CITY_COORDINATES = {
 }
 
 
-def find_nearest_city(
-    latitude: float, longitude: float, max_distance_km: float = 50.0
-) -> Optional[str]:
+def find_nearest_city(latitude: float, longitude: float, max_distance_km: float = 50.0) -> Optional[str]:
     """
     Find the nearest known city to given coordinates.
 
@@ -135,11 +132,7 @@ class MemoryClustering:
         EARTH_RADIUS_KM = 6371.0
         self.location_eps_radians = location_radius_km / EARTH_RADIUS_KM
 
-        logger.info(
-            f"MemoryClustering initialized: radius={location_radius_km}km, "
-            f"date_tolerance={date_tolerance_days}days, "
-            f"min_images={min_images_per_memory}"
-        )
+        logger.info(f"MemoryClustering initialized: radius={location_radius_km}km, date_tolerance={date_tolerance_days}days, min_images={min_images_per_memory}")
 
     def cluster_memories(self, images: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -183,9 +176,7 @@ class MemoryClustering:
                     # Has neither GPS nor date → skip
                     skipped_count += 1
 
-            logger.info(
-                f"GPS-based: {len(gps_images)}, Date-only: {len(date_only_images)}, Skipped: {skipped_count}"
-            )
+            logger.info(f"GPS-based: {len(gps_images)}, Date-only: {len(date_only_images)}, Skipped: {skipped_count}")
 
             memories = []
 
@@ -209,9 +200,7 @@ class MemoryClustering:
             logger.error(f"Clustering failed: {e}", exc_info=True)
             return []
 
-    def _cluster_location_images(
-        self, images: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _cluster_location_images(self, images: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         SIMPLIFIED: Use existing DBSCAN clustering for GPS images.
         """
@@ -227,9 +216,7 @@ class MemoryClustering:
                 temporal_clusters = self._cluster_by_date(cluster)
                 for temp_cluster in temporal_clusters:
                     if len(temp_cluster) >= self.min_images_per_memory:
-                        memory = self._create_simple_memory(
-                            temp_cluster, memory_type="location"
-                        )
+                        memory = self._create_simple_memory(temp_cluster, memory_type="location")
                         memories.append(memory)
 
             return memories
@@ -237,9 +224,7 @@ class MemoryClustering:
             logger.error(f"Location clustering failed: {e}")
             return []
 
-    def _cluster_date_images(
-        self, images: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _cluster_date_images(self, images: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         FLEXIBLE: Group date-only images by year-month.
         Uses min_images_per_memory (default: 2) as threshold.
@@ -272,9 +257,7 @@ class MemoryClustering:
             memories = []
             for month_key, month_images in monthly_groups.items():
                 if len(month_images) >= self.min_images_per_memory:
-                    memory = self._create_simple_memory(
-                        month_images, memory_type="date"
-                    )
+                    memory = self._create_simple_memory(month_images, memory_type="date")
                     if memory:
                         memories.append(memory)
 
@@ -283,9 +266,7 @@ class MemoryClustering:
             logger.error(f"Date clustering failed: {e}")
             return []
 
-    def _create_simple_memory(
-        self, images: List[Dict[str, Any]], memory_type: str = "location"
-    ) -> Dict[str, Any]:
+    def _create_simple_memory(self, images: List[Dict[str, Any]], memory_type: str = "location") -> Dict[str, Any]:
         """
         SIMPLIFIED: Create a memory object with minimal fields.
         Ensures all datetime objects are converted to ISO strings.
@@ -295,23 +276,15 @@ class MemoryClustering:
             cleaned_images = []
             for img in images:
                 img_copy = img.copy()
-                if img_copy.get("captured_at") and isinstance(
-                    img_copy["captured_at"], datetime
-                ):
+                if img_copy.get("captured_at") and isinstance(img_copy["captured_at"], datetime):
                     img_copy["captured_at"] = img_copy["captured_at"].isoformat()
                 cleaned_images.append(img_copy)
 
             # Sort by date
-            sorted_images = sorted(
-                cleaned_images, key=lambda x: x.get("captured_at", "")
-            )
+            sorted_images = sorted(cleaned_images, key=lambda x: x.get("captured_at", ""))
 
             # Get date range
-            dates = [
-                img.get("captured_at")
-                for img in sorted_images
-                if img.get("captured_at")
-            ]
+            dates = [img.get("captured_at") for img in sorted_images if img.get("captured_at")]
             if dates:
                 if isinstance(dates[0], str):
                     dates = [datetime.fromisoformat(d.replace("Z", "")) for d in dates]
@@ -378,9 +351,7 @@ class MemoryClustering:
             logger.error(f"Memory creation failed: {e}")
             return None
 
-    def _cluster_gps_based_memories(
-        self, images: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _cluster_gps_based_memories(self, images: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Cluster images with GPS data into location-based memories.
         This is the original clustering logic.
@@ -417,9 +388,7 @@ class MemoryClustering:
 
         return memories
 
-    def _cluster_date_based_memories(
-        self, images: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _cluster_date_based_memories(self, images: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Cluster images WITHOUT GPS data into date-based memories.
         Groups photos by capture date/time only (screenshots, downloads, edits, etc.)
@@ -441,9 +410,7 @@ class MemoryClustering:
             if captured_at:
                 if isinstance(captured_at, str):
                     try:
-                        captured_at = datetime.fromisoformat(
-                            captured_at.replace("Z", "")
-                        )
+                        captured_at = datetime.fromisoformat(captured_at.replace("Z", ""))
                         img_copy["captured_at"] = captured_at
                     except Exception:
                         # Try alternative formats
@@ -459,9 +426,7 @@ class MemoryClustering:
                             except Exception:
                                 continue
                         else:
-                            logger.debug(
-                                f"Could not parse date for image {img.get('id')}"
-                            )
+                            logger.debug(f"Could not parse date for image {img.get('id')}")
                             continue
                 elif isinstance(captured_at, datetime):
                     img_copy["captured_at"] = captured_at
@@ -537,11 +502,7 @@ class MemoryClustering:
                 elif days <= 31:
                     title = date_start.strftime("%B %Y")
                 else:
-                    title = (
-                        date_start.strftime("%B - %B %Y")
-                        if date_start.month != date_end.month
-                        else date_start.strftime("%B %Y")
-                    )
+                    title = date_start.strftime("%B - %B %Y") if date_start.month != date_end.month else date_start.strftime("%B %Y")
         else:
             title = "Memories Collection"
 
@@ -553,19 +514,13 @@ class MemoryClustering:
         thumbnail_image_id = images[thumbnail_idx]["id"]
 
         # Create memory ID (use timestamp only)
-        memory_id = (
-            f"mem_date_{date_start.strftime('%Y%m%d')}"
-            if date_start
-            else f"mem_date_unknown_{hash(tuple(img['id'] for img in images[:5]))}"
-        )
+        memory_id = f"mem_date_{date_start.strftime('%Y%m%d')}" if date_start else f"mem_date_unknown_{hash(tuple(img['id'] for img in images[:5]))}"
 
         # Convert captured_at datetime objects to ISO strings
         serialized_images = []
         for img in images:
             img_copy = img.copy()
-            if img_copy.get("captured_at") and isinstance(
-                img_copy["captured_at"], datetime
-            ):
+            if img_copy.get("captured_at") and isinstance(img_copy["captured_at"], datetime):
                 img_copy["captured_at"] = img_copy["captured_at"].isoformat()
             serialized_images.append(img_copy)
 
@@ -583,9 +538,7 @@ class MemoryClustering:
             "center_lon": 0.0,  # No GPS data
         }
 
-    def _filter_valid_images(
-        self, images: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _filter_valid_images(self, images: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Filter images that have valid location and datetime data.
 
@@ -611,11 +564,9 @@ class MemoryClustering:
                     if isinstance(captured_at, str):
                         try:
                             # SQLite returns ISO format: "YYYY-MM-DDTHH:MM:SS"
-                            captured_at = datetime.fromisoformat(
-                                captured_at.replace("Z", "")
-                            )
+                            captured_at = datetime.fromisoformat(captured_at.replace("Z", ""))
                             img_copy["captured_at"] = captured_at
-                        except Exception as e:
+                        except Exception:
                             # Try alternative formats
                             for fmt in [
                                 "%Y-%m-%d %H:%M:%S",
@@ -630,9 +581,7 @@ class MemoryClustering:
                                     continue
                             else:
                                 # Could not parse date, but location is still valid
-                                logger.debug(
-                                    f"Could not parse date for image {img.get('id')}: {captured_at}"
-                                )
+                                logger.debug(f"Could not parse date for image {img.get('id')}: {captured_at}")
                     elif isinstance(captured_at, datetime):
                         img_copy["captured_at"] = captured_at
 
@@ -644,9 +593,7 @@ class MemoryClustering:
 
         return valid_images
 
-    def _cluster_by_location(
-        self, images: List[Dict[str, Any]]
-    ) -> List[List[Dict[str, Any]]]:
+    def _cluster_by_location(self, images: List[Dict[str, Any]]) -> List[List[Dict[str, Any]]]:
         """
         Cluster images by geographic location using DBSCAN.
 
@@ -690,9 +637,7 @@ class MemoryClustering:
 
         return list(clusters.values())
 
-    def _cluster_by_date(
-        self, images: List[Dict[str, Any]]
-    ) -> List[List[Dict[str, Any]]]:
+    def _cluster_by_date(self, images: List[Dict[str, Any]]) -> List[List[Dict[str, Any]]]:
         """
         Cluster images by date within a location cluster.
 
@@ -790,9 +735,7 @@ class MemoryClustering:
         serialized_images = []
         for img in images:
             img_copy = img.copy()
-            if img_copy.get("captured_at") and isinstance(
-                img_copy["captured_at"], datetime
-            ):
+            if img_copy.get("captured_at") and isinstance(img_copy["captured_at"], datetime):
                 img_copy["captured_at"] = img_copy["captured_at"].isoformat()
             serialized_images.append(img_copy)
 
@@ -827,17 +770,13 @@ class MemoryClustering:
         city_name = find_nearest_city(latitude, longitude, max_distance_km=50.0)
 
         if city_name:
-            logger.debug(
-                f"Mapped coordinates ({latitude:.4f}, {longitude:.4f}) to {city_name}"
-            )
+            logger.debug(f"Mapped coordinates ({latitude:.4f}, {longitude:.4f}) to {city_name}")
             return city_name
 
         # Fallback: Return formatted coordinates
         return f"{latitude:.4f}°, {longitude:.4f}°"
 
-    def _generate_title(
-        self, location_name: str, date: Optional[datetime], image_count: int
-    ) -> str:
+    def _generate_title(self, location_name: str, date: Optional[datetime], image_count: int) -> str:
         """
         Generate a title for the memory.
 
@@ -881,9 +820,7 @@ class MemoryClustering:
         else:
             return f"{image_count} photos"
 
-    def _generate_memory_id(
-        self, latitude: float, longitude: float, date: Optional[datetime]
-    ) -> str:
+    def _generate_memory_id(self, latitude: float, longitude: float, date: Optional[datetime]) -> str:
         """
         Generate a unique ID for the memory.
 
