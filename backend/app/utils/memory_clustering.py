@@ -302,7 +302,7 @@ class MemoryClustering:
                 cleaned_images.append(img_copy)
 
             # Sort by date
-            sorted_images = sorted(cleaned_images, key=lambda x: x.get("captured_at", ""))
+            sorted_images = sorted(cleaned_images, key=lambda x: x.get("captured_at") or "")
 
             # Get date range
             dates = [img.get("captured_at") for img in sorted_images if img.get("captured_at")]
