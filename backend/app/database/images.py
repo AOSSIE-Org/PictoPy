@@ -423,7 +423,9 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         conn.close()
 
 def db_get_image_by_id(image_id: str) -> Optional[dict]:
-    """Get a single image by ID with its favorite status."""
+    """
+    Get a single image by ID with its favorite status.
+    """
     conn = _connect()
     cursor = conn.cursor()
     try:
