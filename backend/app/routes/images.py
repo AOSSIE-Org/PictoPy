@@ -4,8 +4,9 @@ from app.database.images import db_get_all_images
 from app.schemas.images import ErrorResponse
 from app.utils.images import image_util_parse_metadata
 from pydantic import BaseModel
-from app.database.images import db_toggle_image_favourite_status
+from app.database.images import db_toggle_image_favourite_status, db_get_image_by_id
 from app.logging.setup_logging import get_logger
+
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -105,9 +106,14 @@ def toggle_favourite(req: ToggleFavouriteRequest):
                 status_code=404, detail="Image not found or failed to toggle"
             )
         # Fetch updated status to return
-        image = next(
-            (img for img in db_get_all_images() if img["id"] == image_id), None
-        )
+        #image = next(
+        #    (img for img in db_get_all_images() if img["id"] == image_id), None
+        #)
+        image = db_get_image_by_id(image_id)
+        if not image:
+            raise HTTPException(
+                status_code=404, detail="Image not found after toggle"
+            )
         return {
             "success": True,
             "image_id": image_id,
