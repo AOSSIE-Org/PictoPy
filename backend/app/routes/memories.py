@@ -283,8 +283,25 @@ async def get_on_this_day():
             try:
                 images = db_get_images_by_year_month(target_year, current_month)
 
-                # Filter to specific day
-                day_images = [img for img in images if img.get("captured_at") and datetime.fromisoformat(img["captured_at"]).day == current_day]
+                # Filter to specific day - parse each image defensively
+                day_images = []
+                for img in images:
+                    captured_at_str = img.get("captured_at")
+                    if not captured_at_str:
+                        continue
+                    
+                    try:
+                        # Strip trailing Z and parse ISO format
+                        captured_at_str = captured_at_str.rstrip("Z")
+                        captured_dt = datetime.fromisoformat(captured_at_str)
+                        
+                        # Only include if day matches
+                        if captured_dt.day == current_day:
+                            day_images.append(img)
+                    except (ValueError, TypeError, AttributeError):
+                        # Skip images with malformed dates
+                        logger.debug(f"Skipping image with invalid date: {captured_at_str}")
+                        continue
 
                 if day_images:
                     all_images.extend(day_images)

@@ -11,6 +11,7 @@ import requests
 import json
 
 BASE_URL = "http://localhost:52123/api/memories"
+REQUEST_TIMEOUT = 10  # seconds
 
 
 def print_response(endpoint: str, response: requests.Response):
@@ -35,7 +36,11 @@ def test_generate_memories():
     """Test POST /api/memories/generate"""
     print("\nTesting: Generate Memories")
 
-    response = requests.post(f"{BASE_URL}/generate", params={"location_radius_km": 5.0, "date_tolerance_days": 3, "min_images": 2})
+    response = requests.post(
+        f"{BASE_URL}/generate",
+        params={"location_radius_km": 5.0, "date_tolerance_days": 3, "min_images": 2},
+        timeout=REQUEST_TIMEOUT,
+    )
 
     print_response("POST /api/memories/generate", response)
 
@@ -51,7 +56,11 @@ def test_timeline():
     """Test GET /api/memories/timeline"""
     print("\nTesting: Timeline")
 
-    response = requests.get(f"{BASE_URL}/timeline", params={"days": 30, "location_radius_km": 5.0, "date_tolerance_days": 3})
+    response = requests.get(
+        f"{BASE_URL}/timeline",
+        params={"days": 30, "location_radius_km": 5.0, "date_tolerance_days": 3},
+        timeout=REQUEST_TIMEOUT,
+    )
 
     print_response("GET /api/memories/timeline", response)
 
@@ -66,7 +75,7 @@ def test_on_this_day():
     """Test GET /api/memories/on-this-day"""
     print("\nTesting: On This Day")
 
-    response = requests.get(f"{BASE_URL}/on-this-day")
+    response = requests.get(f"{BASE_URL}/on-this-day", timeout=REQUEST_TIMEOUT)
 
     print_response("GET /api/memories/on-this-day", response)
 
@@ -82,7 +91,11 @@ def test_locations():
     """Test GET /api/memories/locations"""
     print("\nTesting: Locations")
 
-    response = requests.get(f"{BASE_URL}/locations", params={"location_radius_km": 5.0, "max_sample_images": 3})
+    response = requests.get(
+        f"{BASE_URL}/locations",
+        params={"location_radius_km": 5.0, "max_sample_images": 3},
+        timeout=REQUEST_TIMEOUT,
+    )
 
     print_response("GET /api/memories/locations", response)
 

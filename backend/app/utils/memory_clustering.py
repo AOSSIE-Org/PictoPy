@@ -294,7 +294,7 @@ class MemoryClustering:
                 date_obj = min(dates)
             else:
                 date_start = date_end = None
-                date_obj = datetime.now()
+                date_obj = None 
 
             # Simple titles
             if memory_type == "location":
@@ -326,7 +326,10 @@ class MemoryClustering:
                     title = location_name
             else:
                 # Date-based: "Month Year"
-                title = date_obj.strftime("%B %Y")
+                if date_obj:
+                    title = date_obj.strftime("%B %Y")
+                else:
+                    title = "Undated Photos"  
                 location_name = ""
                 center_lat = 0
                 center_lon = 0
