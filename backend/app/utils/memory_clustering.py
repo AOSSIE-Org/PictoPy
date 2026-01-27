@@ -139,7 +139,7 @@ class MemoryClustering:
         FLEXIBLE: Cluster ALL images into memories.
         - Has GPS + Date: Cluster by location using DBSCAN, then by date within each location
         - Has GPS only: Cluster by location using DBSCAN
-        - Has Date only: Group by month (if ≥5 photos per month)
+        - Has Date only: Group by month (if ≥ min_images_per_memory photos per month; default 2)
         - Has neither: Skip (can't create meaningful memory)
 
         Images work with EITHER date OR location - not both required!
