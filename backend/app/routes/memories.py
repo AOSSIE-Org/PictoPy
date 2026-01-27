@@ -33,9 +33,9 @@ router = APIRouter(prefix="/api/memories", tags=["memories"])
 logger = get_logger(__name__)
 
 
-# ============================================================================
+
 # Response Models
-# ============================================================================
+
 
 
 class MemoryImage(BaseModel):
@@ -113,13 +113,13 @@ class LocationsResponse(BaseModel):
     locations: List[LocationCluster]
 
 
-# ============================================================================
+
 # API Endpoints
-# ============================================================================
+
 
 
 @router.post("/generate", response_model=GenerateMemoriesResponse)
-async def generate_memories(
+def generate_memories(
     location_radius_km: float = Query(5.0, ge=0.1, le=100, description="Location clustering radius in km"),
     date_tolerance_days: int = Query(3, ge=1, le=30, description="Date tolerance in days"),
     min_images: int = Query(2, ge=1, le=10, description="Minimum images per memory"),
@@ -174,12 +174,12 @@ async def generate_memories(
         )
 
     except Exception as e:
-        logger.error(f"Error generating memories: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error generating memories", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to generate memories")
 
 
 @router.get("/timeline", response_model=TimelineResponse)
-async def get_timeline(
+def get_timeline(
     days: int = Query(365, ge=1, le=3650, description="Number of days to look back"),
     location_radius_km: float = Query(5.0, ge=0.1, le=100, description="Location clustering radius in km"),
     date_tolerance_days: int = Query(3, ge=1, le=30, description="Date tolerance in days"),
@@ -244,12 +244,12 @@ async def get_timeline(
         )
 
     except Exception as e:
-        logger.error(f"Error getting timeline: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get timeline: {str(e)}")
+        logger.error("Error getting timeline", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to get timeline")
 
 
 @router.get("/on-this-day", response_model=OnThisDayResponse)
-async def get_on_this_day():
+def get_on_this_day():
     """
     Get photos taken on this date in previous years.
 
@@ -337,12 +337,12 @@ async def get_on_this_day():
         )
 
     except Exception as e:
-        logger.error(f"Error getting 'On This Day': {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get 'On This Day': {str(e)}")
+        logger.error("Error getting 'On This Day'", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to get 'On This Day'")
 
 
 @router.get("/locations", response_model=LocationsResponse)
-async def get_locations(
+def get_locations(
     location_radius_km: float = Query(5.0, ge=0.1, le=100, description="Location clustering radius in km"),
     max_sample_images: int = Query(5, ge=1, le=20, description="Max sample images per location"),
 ):
@@ -418,5 +418,5 @@ async def get_locations(
         return LocationsResponse(success=True, location_count=len(locations), locations=locations)
 
     except Exception as e:
-        logger.error(f"Error getting locations: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get locations: {str(e)}")
+        logger.error("Error getting locations", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to get locations")
