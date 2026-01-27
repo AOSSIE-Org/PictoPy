@@ -14,6 +14,7 @@ Date: 2025-12-14
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from collections import defaultdict
+import hashlib
 
 import numpy as np
 from sklearn.cluster import DBSCAN
@@ -538,7 +539,13 @@ class MemoryClustering:
         thumbnail_image_id = images[thumbnail_idx]["id"]
 
         # Create memory ID (use timestamp only)
-        memory_id = f"mem_date_{date_start.strftime('%Y%m%d')}" if date_start else f"mem_date_unknown_{hash(tuple(img['id'] for img in images[:5]))}"
+        if date_start:
+            memory_id = f"mem_date_{date_start.strftime('%Y%m%d')}"
+        else:
+            # Deterministic hash of first 5 image IDs
+            image_ids = "|".join(img["id"] for img in images[:5])
+            hash_digest = hashlib.sha256(image_ids.encode()).hexdigest()[:8]
+            memory_id = f"mem_date_unknown_{hash_digest}"
 
         # Convert captured_at datetime objects to ISO strings
         serialized_images = []
@@ -858,10 +865,16 @@ class MemoryClustering:
         Returns:
             Unique memory ID
         """
-        # Create hash from location and date
-        location_hash = hash((round(latitude, 2), round(longitude, 2)))
+        # Create deterministic hash from location and date
+        lat_rounded = round(latitude, 2)
+        lon_rounded = round(longitude, 2)
+        
         if date:
             date_str = date.strftime("%Y%m%d")
-            return f"mem_{date_str}_{abs(location_hash)}"
+            hash_input = f"lat:{lat_rounded}|lon:{lon_rounded}|date:{date_str}"
+            hash_digest = hashlib.sha256(hash_input.encode()).hexdigest()[:8]
+            return f"mem_{date_str}_{hash_digest}"
         else:
-            return f"mem_nodate_{abs(location_hash)}"
+            hash_input = f"lat:{lat_rounded}|lon:{lon_rounded}"
+            hash_digest = hashlib.sha256(hash_input.encode()).hexdigest()[:8]
+            return f"mem_nodate_{hash_digest}"
