@@ -3,9 +3,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 import { Image } from '@/types/Media';
-import { setCurrentViewIndex, setImages } from '@/features/imageSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
-import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
+import { selectIsImageViewOpen } from '@/features/imageSelectors';
 import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtension';
 import { fetchClusterImages, renameCluster } from '@/api/api-functions';
 import { useNavigate, useParams } from 'react-router';
@@ -19,7 +18,7 @@ export const PersonImages = () => {
   const navigate = useNavigate();
   const { clusterId } = useParams<{ clusterId: string }>();
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
-  const images = useSelector(selectImages);
+  const [personImages, setPersonImages] = useState<Image[]>([]);
   const [clusterName, setClusterName] = useState<string>('random_name');
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const { data, isLoading, isSuccess, isError } = usePictoQuery({
@@ -37,22 +36,20 @@ export const PersonImages = () => {
       dispatch(showLoader('Loading images'));
     } else if (isError) {
       dispatch(hideLoader());
-    } else if (isSuccess) {
-      const res: any = data?.data;
-      const images = (res?.images || []) as Image[];
-      dispatch(setImages(images));
-      setClusterName(res?.cluster_name || 'random_name');
+    } else if (isSuccess && data?.data) {
+      const res = data.data as { images?: Image[]; cluster_name?: string };
+      const images = res.images || [];
+      setPersonImages(images);
+      setClusterName(res.cluster_name || 'random_name');
       dispatch(hideLoader());
     }
   }, [data, isSuccess, isError, isLoading, dispatch]);
 
   const handleEditName = () => {
-    setClusterName(clusterName);
     setIsEditing(true);
   };
 
   const handleSaveName = () => {
-    setClusterName(clusterName);
     renameClusterMutate(clusterName);
     setIsEditing(false);
   };
@@ -108,20 +105,53 @@ export const PersonImages = () => {
         )}
       </div>
       <h1 className="mb-6 text-2xl font-bold">{clusterName}</h1>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {images.map((image, index) => (
-          <ImageCard
-            key={image.id}
-            image={image}
-            imageIndex={index}
-            className="w-full"
-            onClick={() => dispatch(setCurrentViewIndex(index))}
-          />
-        ))}
-      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+            <p className="text-muted-foreground mt-4">Loading images...</p>
+          </div>
+        </div>
+      ) : isError ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <p className="text-destructive text-lg font-semibold">
+              Failed to load images
+            </p>
+            <p className="text-muted-foreground mt-2">
+              Please try again later or check your connection.
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => window.location.reload()}
+              className="mt-4"
+            >
+              Retry
+            </Button>
+          </div>
+        </div>
+      ) : personImages.length === 0 ? (
+        <div className="flex items-center justify-center py-12">
+          <p className="text-muted-foreground">
+            No images found for this person.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {personImages.map((image, index) => (
+            <ImageCard
+              key={image.id}
+              image={image}
+              imageIndex={index}
+              className="w-full"
+            />
+          ))}
+        </div>
+      )}
 
       {/* Media Viewer Modal */}
-      {isImageViewOpen && <MediaView images={images} />}
+      {isImageViewOpen && <MediaView images={personImages} />}
     </div>
   );
 };
