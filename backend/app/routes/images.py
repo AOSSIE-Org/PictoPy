@@ -106,9 +106,6 @@ def toggle_favourite(req: ToggleFavouriteRequest):
                 status_code=404, detail="Image not found or failed to toggle"
             )
         # Fetch updated status to return
-        #image = next(
-        #    (img for img in db_get_all_images() if img["id"] == image_id), None
-        #)
         image = db_get_image_by_id(image_id)
         if not image:
             raise HTTPException(
@@ -119,11 +116,11 @@ def toggle_favourite(req: ToggleFavouriteRequest):
             "image_id": image_id,
             "isFavourite": image.get("isFavourite", False),
         }
-
+    except HTTPException:
+        raise 
     except Exception as e:
         logger.error(f"error in /toggle-favourite route: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
-
 
 class ImageInfoResponse(BaseModel):
     id: str

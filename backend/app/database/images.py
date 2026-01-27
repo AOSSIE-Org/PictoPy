@@ -435,12 +435,16 @@ def db_get_image_by_id(image_id: str) -> Optional[dict]:
         row = cursor.fetchone()
         if not row:
             return None
+        try:
+            metadata = json.loads(row[4]) if row[4] else {}
+        except json.JSONDecodeError:
+            metadata = {}
         return {
             "id": row[0],
             "path": row[1],
             "folder_id": row[2],
             "thumbnailPath": row[3],
-            "metadata": json.loads(row[4]) if row[4] else {},
+            "metadata": metadata,
             "isTagged": bool(row[5]),
             "isFavourite": bool(row[6]),
         }
