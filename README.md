@@ -26,6 +26,16 @@ PictoPy is an advanced desktop gallery application that combines the power of Ta
 - **ONNX Runtime**: Runs the models efficiently
 - **DBSCAN**: Performs clustering for face embeddings
 
+#### ⚠️ Supported Python Version
+
+The PictoPy backend is currently tested and validated with **Python 3.11**.
+
+Using other Python versions may lead to dependency installation or runtime issues, especially on Windows.
+
+Known compatibility notes:
+- **Python ≤ 3.9**: incompatible dependency versions  
+- **Python ≥ 3.13**: some dependencies (e.g. `onnxruntime`, `numpy`) may not yet provide Windows wheels
+
 ### Backend (Rust via Tauri)
 
 Handles file system operations and provides a secure bridge between the frontend and local system.
