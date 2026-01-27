@@ -319,8 +319,11 @@ async def get_on_this_day():
             if not captured_at:
                 return datetime.min
             try:
+                
+                if isinstance(captured_at, str):
+                    captured_at = captured_at.rstrip("Z")
                 return datetime.fromisoformat(captured_at)
-            except (ValueError, TypeError):
+            except (ValueError, TypeError, AttributeError):
                 return datetime.min
 
         all_images.sort(key=parse_captured_at, reverse=True)
