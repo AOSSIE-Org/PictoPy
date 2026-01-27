@@ -379,12 +379,12 @@ def get_locations(
         # Cluster by location only (no date clustering)
         clustering = MemoryClustering(
             location_radius_km=location_radius_km,
-            date_tolerance_days=999999,  # Large number to group all dates together
+            date_tolerance_days=3,  
             min_images_per_memory=1,
         )
 
-        # Use internal method to get location clusters
-        location_clusters = clustering._cluster_by_location(clustering._filter_valid_images(images))
+        # Get location clusters using public API
+        location_clusters = clustering.cluster_by_location_only(images)
 
         # Create location cluster objects
         locations = []

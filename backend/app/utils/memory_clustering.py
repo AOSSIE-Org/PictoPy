@@ -200,6 +200,26 @@ class MemoryClustering:
             logger.error(f"Clustering failed: {e}", exc_info=True)
             return []
 
+    def cluster_by_location_only(self, images: List[Dict[str, Any]]) -> List[List[Dict[str, Any]]]:
+        """
+        Public API: Cluster images by location only, without temporal grouping.
+        
+        Args:
+            images: List of image dictionaries with GPS coordinates
+            
+        Returns:
+            List of location clusters (each cluster is a list of images)
+        """
+        try:
+            valid_images = self._filter_valid_images(images)
+            if not valid_images:
+                return []
+            
+            return self._cluster_by_location(valid_images)
+        except Exception as e:
+            logger.error(f"Location-only clustering failed: {e}", exc_info=True)
+            return []
+
     def _cluster_location_images(self, images: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         SIMPLIFIED: Use existing DBSCAN clustering for GPS images.
