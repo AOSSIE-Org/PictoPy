@@ -87,7 +87,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-border/40 mt-auto border-t py-4">
         <div className="text-muted-foreground space-y-1 px-4 text-xs">
           <div className="font-medium">PictoPy v{version}</div>
-          <div>© 2025 PictoPy</div>
+          <div>© {new Date().getFullYear()} PictoPy</div>
         </div>
       </SidebarFooter>
     </Sidebar>
