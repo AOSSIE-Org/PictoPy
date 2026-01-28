@@ -4,8 +4,16 @@ import time
 import logging
 from typing import List, Tuple, Dict, Optional
 from watchfiles import watch, Change
-import httpx
-from app.database.folders import db_get_all_folder_details
+from app.database.folders import (
+    db_get_all_folder_details,
+    db_delete_folders_batch,
+    db_get_direct_child_folders,
+)
+from app.utils.folders import (
+    folder_util_add_multiple_folder_trees,
+    folder_util_delete_obsolete_folders,
+    folder_util_get_filesystem_direct_child_folders,
+)
 from app.config.settings import *
 from app.logging.setup_logging import get_logger
 
@@ -19,6 +27,9 @@ logging.getLogger("watchfiles.main").setLevel(
 logger = get_logger(__name__)
 
 FolderIdPath = Tuple[str, str]
+
+# Thread lock for global state synchronization
+state_lock = threading.Lock()
 
 watcher_thread: Optional[threading.Thread] = None
 stop_event = threading.Event()
@@ -38,9 +49,10 @@ def watcher_util_get_folder_id_if_watched(file_path: str) -> Optional[str]:
     """
     normalized_path = os.path.abspath(file_path)
 
-    for folder_id, folder_path in watched_folders:
-        if os.path.abspath(folder_path) == normalized_path:
-            return folder_id
+    with state_lock:
+        for folder_id, folder_path in watched_folders:
+            if os.path.abspath(folder_path) == normalized_path:
+                return folder_id
 
     return None
 
@@ -111,59 +123,57 @@ def watcher_util_find_closest_parent_folder(
 
 def watcher_util_call_sync_folder_api(folder_id: str, folder_path: str) -> None:
     """
-    Call the backend's sync-folder API endpoint.
+    Sync a folder by calling the sync logic directly.
 
     Args:
         folder_id: ID of the folder to sync
         folder_path: Path of the folder to sync
     """
     try:
-        from app.config.settings import BACKEND_URL
-        url = f"{BACKEND_URL}/folders/sync-folder"
-        payload = {"folder_path": folder_path, "folder_id": folder_id}
+        logger.info(f"Syncing folder {folder_path} (ID: {folder_id})")
+        
+        # Step 1: Get current state from both sources
+        db_child_folders = db_get_direct_child_folders(folder_id)
+        filesystem_folders = folder_util_get_filesystem_direct_child_folders(folder_path)
 
-        with httpx.Client(timeout=30.0) as client:
-            response = client.request("POST", url, json=payload)
+        # Step 2: Compare and identify differences
+        filesystem_folder_set = set(filesystem_folders)
+        db_folder_paths = {fp for fid, fp in db_child_folders}
 
-            if response.status_code == 200:
-                logger.info(
-                    f"Successfully synced folder {folder_path} (ID: {folder_id})"
-                )
-            else:
-                logger.error(
-                    f"Failed to sync folder {folder_path}. Status: {response.status_code}, Response: {response.text}"
-                )
+        folders_to_delete = db_folder_paths - filesystem_folder_set
+        folders_to_add = filesystem_folder_set - db_folder_paths
 
-    except httpx.RequestError as e:
-        logger.error(f"Network error while syncing folder {folder_path}: {e}")
+        # Step 3: Perform synchronization operations
+        deleted_count, deleted_folders = folder_util_delete_obsolete_folders(
+            db_child_folders, folders_to_delete
+        )
+        added_count, added_folders_with_ids = folder_util_add_multiple_folder_trees(
+            folders_to_add, folder_id
+        )
+
+        logger.info(
+            f"Successfully synced folder {folder_path} (ID: {folder_id}). "
+            f"Added {added_count}, deleted {deleted_count}"
+        )
+        
+        # Note: We skip the post_sync_folder_sequence here as it would create
+        # a circular dependency and the watcher is already handling file monitoring
+        
     except Exception as e:
         logger.error(f"Unexpected error while syncing folder {folder_path}: {e}")
 
 
 def watcher_util_call_delete_folders_api(folder_ids: List[str]) -> None:
     """
-    Call the backend's delete-folders API endpoint.
+    Delete folders by calling the database function directly.
 
     Args:
         folder_ids: List of folder IDs to delete
     """
     try:
-        from app.config.settings import BACKEND_URL
-        url = f"{BACKEND_URL}/folders/delete-folders"
-        payload = {"folder_ids": folder_ids}
-
-        with httpx.Client(timeout=30.0) as client:
-            response = client.request("DELETE", url, json=payload)
-
-            if response.status_code == 200:
-                logger.info(f"Successfully deleted folders with IDs: {folder_ids}")
-            else:
-                logger.error(
-                    f"Failed to delete folders. Status: {response.status_code}, Response: {response.text}"
-                )
-
-    except httpx.RequestError as e:
-        logger.error(f"Network error while deleting folders {folder_ids}: {e}")
+        logger.info(f"Deleting folders with IDs: {folder_ids}")
+        deleted_count = db_delete_folders_batch(folder_ids)
+        logger.info(f"Successfully deleted {deleted_count} folder(s) with IDs: {folder_ids}")
     except Exception as e:
         logger.error(f"Unexpected error while deleting folders {folder_ids}: {e}")
 
@@ -256,10 +266,11 @@ def watcher_util_start_folder_watcher() -> bool:
             logger.info("No existing folders to watch")
             return False
 
-        watched_folders = existing_folders
-        folder_id_map = {
-            folder_path: folder_id for folder_id, folder_path in existing_folders
-        }
+        with state_lock:
+            watched_folders = existing_folders
+            folder_id_map = {
+                folder_path: folder_id for folder_id, folder_path in existing_folders
+            }
 
         folder_paths = [folder_path for _, folder_path in existing_folders]
 
@@ -307,8 +318,9 @@ def watcher_util_stop_folder_watcher() -> None:
         logger.error(f"Error stopping watcher: {e}")
     finally:
         watcher_thread = None
-        watched_folders = []
-        folder_id_map = {}
+        with state_lock:
+            watched_folders = []
+            folder_id_map = {}
 
 
 def watcher_util_restart_folder_watcher() -> bool:
@@ -325,15 +337,19 @@ def watcher_util_restart_folder_watcher() -> bool:
 
 def watcher_util_get_watcher_info() -> dict:
     """Get information about the current watcher state."""
-    return {
-        "is_running": watcher_util_is_watcher_running(),
-        "folders_count": len(watched_folders),
-        "thread_alive": watcher_thread.is_alive() if watcher_thread else False,
-        "thread_id": watcher_thread.ident if watcher_thread else None,
-        "watched_folders": [
+    with state_lock:
+        watched_folders_copy = [
             {"id": folder_id, "path": folder_path}
             for folder_id, folder_path in watched_folders
-        ],
+        ]
+        folders_count = len(watched_folders)
+    
+    return {
+        "is_running": watcher_util_is_watcher_running(),
+        "folders_count": folders_count,
+        "thread_alive": watcher_thread.is_alive() if watcher_thread else False,
+        "thread_id": watcher_thread.ident if watcher_thread else None,
+        "watched_folders": watched_folders_copy,
     }
 
 
