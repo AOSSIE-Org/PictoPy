@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export const useSlideshow = (totalImages: number, onNextImage: () => void) => {
+export const useSlideshow = (
+  totalImages: number,
+  onNextImage: () => void,
+  onLoopToStart?: () => void,
+  currentIndex?: number,
+) => {
   const [isSlideshowActive, setIsSlideshowActive] = useState(false);
 
   useEffect(() => {
@@ -8,7 +13,16 @@ export const useSlideshow = (totalImages: number, onNextImage: () => void) => {
 
     if (isSlideshowActive && totalImages > 1) {
       slideshowInterval = setInterval(() => {
-        onNextImage();
+        // Loop back to first image when at the end
+        if (
+          currentIndex !== undefined &&
+          onLoopToStart &&
+          currentIndex >= totalImages - 1
+        ) {
+          onLoopToStart();
+        } else {
+          onNextImage();
+        }
       }, 3000);
     }
 
@@ -17,7 +31,7 @@ export const useSlideshow = (totalImages: number, onNextImage: () => void) => {
         clearInterval(slideshowInterval);
       }
     };
-  }, [isSlideshowActive, totalImages, onNextImage]);
+  }, [isSlideshowActive, totalImages, onNextImage, onLoopToStart, currentIndex]);
 
   const toggleSlideshow = useCallback(() => {
     setIsSlideshowActive((prev) => !prev);
