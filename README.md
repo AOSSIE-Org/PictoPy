@@ -63,3 +63,7 @@ Handles file system operations and provides a secure bridge between the frontend
 ---
 
 Our Code of Conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
