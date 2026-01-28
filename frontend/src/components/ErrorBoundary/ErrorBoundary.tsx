@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RotateCw } from 'lucide-react';
+import { AlertTriangle, RotateCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ErrorBoundaryProps {
@@ -9,7 +9,9 @@ interface ErrorBoundaryProps {
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
+  errorInfo: ErrorInfo | null;
   isRetrying: boolean;
+  showDetails: boolean;
 }
 
 /**
@@ -19,7 +21,13 @@ interface ErrorBoundaryState {
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null, isRetrying: false };
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      isRetrying: false,
+      showDetails: false,
+    };
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
@@ -27,17 +35,25 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error('ErrorBoundary caught an error:', error);
-    console.error('Component stack:', errorInfo.componentStack);
+    this.setState({ errorInfo });
   }
 
   handleRetry = (): void => {
     this.setState({ isRetrying: true }, () => {
-      // Small delay to show the spinner, then attempt recovery
       setTimeout(() => {
-        this.setState({ hasError: false, error: null, isRetrying: false });
+        this.setState({
+          hasError: false,
+          error: null,
+          errorInfo: null,
+          isRetrying: false,
+          showDetails: false,
+        });
       }, 500);
     });
+  };
+
+  toggleDetails = (): void => {
+    this.setState((prev) => ({ showDetails: !prev.showDetails }));
   };
 
   render(): ReactNode {
@@ -57,6 +73,36 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               An unexpected error occurred. Please try reloading the
               application.
             </p>
+
+            <div className="mb-4">
+              <button
+                onClick={this.toggleDetails}
+                className="text-muted-foreground hover:text-foreground flex w-full items-center justify-center gap-1 text-sm transition-colors"
+              >
+                {this.state.showDetails ? (
+                  <>
+                    Hide Details <ChevronUp className="h-4 w-4" />
+                  </>
+                ) : (
+                  <>
+                    Show Details <ChevronDown className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+
+              {this.state.showDetails && (
+                <div className="bg-muted mt-3 max-h-48 overflow-auto rounded-md p-3 text-left">
+                  <p className="text-destructive mb-2 text-sm font-medium">
+                    {this.state.error?.name}: {this.state.error?.message}
+                  </p>
+                  {this.state.errorInfo?.componentStack && (
+                    <pre className="text-muted-foreground whitespace-pre-wrap text-xs">
+                      {this.state.errorInfo.componentStack}
+                    </pre>
+                  )}
+                </div>
+              )}
+            </div>
 
             <Button onClick={this.handleRetry} disabled={this.state.isRetrying}>
               <RotateCw
