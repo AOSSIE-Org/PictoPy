@@ -11,7 +11,7 @@
     "lint:fix": "cd frontend && eslint --max-warnings 0 --config .eslintrc.json . --fix",
     "format:fix": "cd frontend && prettier --write \"**/*.{ts,tsx,json}\"",
     "format:check": "cd frontend && prettier --check \"**/*.{ts,tsx,json}\"",
-    "cargo:check": "cd backend && cargo check",
+    "cargo:check": "cd frontend/src-tauri && cargo check",
     "setup": "cd scripts && node setup.js"
   },
   "devDependencies": {
