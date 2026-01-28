@@ -99,16 +99,6 @@ pip install -r requirements.txt
 deactivate
 cd ..
 
-# ---- Set up the sync-microservice ----
-echo -e "${YELLOW}Setting up sync-microservice...${NC}"
-cd sync-microservice
-python -m venv .sync-env
-source .sync-env/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-deactivate
-cd ..
-
 # ---- Set up the frontend ----
 echo -e "${YELLOW}Setting up frontend...${NC}"
 cd frontend
