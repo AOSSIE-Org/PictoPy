@@ -77,6 +77,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
             <div className="mb-4">
               <button
+                type="button"
                 onClick={this.toggleDetails}
                 className="text-muted-foreground hover:text-foreground flex w-full items-center justify-center gap-1 text-sm transition-colors"
               >
