@@ -7,7 +7,11 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "deb", "app"],
+    "targets": [
+      "nsis",
+      "deb",
+      "app"
+    ],
     "createUpdaterArtifacts": true,
     "linux": {
       "deb": {
@@ -22,8 +26,7 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../../backend/dist/": "resources/backend",
-      "../../sync-microservice/dist/": "resources/sync-microservice"
+      "../../backend/dist/": "resources/backend"
     },
     "macOS": {
       "signingIdentity": "-",
@@ -59,10 +62,12 @@
     ],
     "security": {
       "assetProtocol": {
-        "scope": ["**"],
+        "scope": [
+          "**"
+        ],
         "enable": true
       },
-      "csp": "default-src 'self'; img-src 'self' data: asset: http://asset.localhost; media-src 'self' blob: data:; connect-src 'self' ipc: http://ipc.localhost http://localhost:52123 ws://localhost:52123 http://localhost:52124 ws://localhost:52124"
+      "csp": "default-src 'self'; img-src 'self' data: asset: http://asset.localhost; media-src 'self' blob: data:; connect-src 'self' ipc: http://ipc.localhost http://localhost:52123 ws://localhost:52123"
     }
   }
 }
