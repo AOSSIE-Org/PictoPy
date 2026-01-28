@@ -1,33 +1,23 @@
-import requests
-from app.config.settings import SYNC_MICROSERVICE_URL
 import logging
 
 logger = logging.getLogger(__name__)
 
-
 def API_util_restart_sync_microservice_watcher():
     """
-    Send a POST request to restart the sync microservice watcher.
+    Restart the folder watcher (now integrated into the backend).
 
     Returns:
-        bool: True if request was successful, False otherwise
+        bool: True if restart was successful, False otherwise
     """
     try:
-        url = f"{SYNC_MICROSERVICE_URL}/watcher/restart"
-        response = requests.post(url, timeout=30)
-
-        if response.status_code == 200:
-            logger.info("Successfully restarted sync microservice watcher")
+        from app.utils.watcher import watcher_util_restart_folder_watcher
+        success = watcher_util_restart_folder_watcher()
+        if success:
+            logger.info("Successfully restarted folder watcher")
             return True
         else:
-            logger.warning(
-                f"Failed to restart sync microservice watcher. Status code: {response.status_code}"
-            )
+            logger.warning("Failed to restart folder watcher")
             return False
-
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error communicating with sync microservice: {e}")
-        return False
     except Exception as e:
-        logger.error(f"Unexpected error restarting sync microservice watcher: {e}")
+        logger.error(f"Unexpected error restarting folder watcher: {e}")
         return False
