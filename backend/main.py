@@ -39,6 +39,9 @@ setup_logging("backend")
 # Configure Uvicorn logging to use our custom formatter
 configure_uvicorn_logging("backend")
 
+# Initialize logger for this module
+logger = get_logger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -53,7 +56,11 @@ async def lifespan(app: FastAPI):
     db_create_album_images_table()
     db_create_metadata_table()
     app.state.executor = ProcessPoolExecutor(max_workers=1)
-    from app.utils.watcher import watcher_util_start_folder_watcher, watcher_util_stop_folder_watcher
+    from app.utils.watcher import (
+        watcher_util_start_folder_watcher,
+        watcher_util_stop_folder_watcher,
+        watcher_util_is_watcher_running,
+    )
     watcher_started = watcher_util_start_folder_watcher()
     if watcher_started:
         logger.info("Folder watcher started successfully")
@@ -63,7 +70,8 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         app.state.executor.shutdown(wait=True)
-        if watcher_started:
+        # Always check if watcher is running before stopping, regardless of how it was started
+        if watcher_util_is_watcher_running():
             watcher_util_stop_folder_watcher()
             logger.info("Folder watcher stopped")
 
@@ -84,8 +92,7 @@ app = FastAPI(
 )
 
 
-# Initialize logger for this module
-logger = get_logger(__name__)
+
 
 
 def generate_openapi_json():
