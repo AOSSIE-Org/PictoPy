@@ -107,7 +107,8 @@ def watcher_util_handle_file_changes(changes: set) -> None:
 
     if deleted_folder_ids:
         logger.info(f"Processing {len(deleted_folder_ids)} deleted folders")
-        watcher_util_call_delete_folders_api(deleted_folder_ids)
+        # Deduplicate folder IDs to avoid redundant delete operations
+        watcher_util_call_delete_folders_api(list(set(deleted_folder_ids)))
         logger.warning(
             f"Deleted {len(deleted_folder_ids)} watched folder(s). "
             "Use the /watcher/restart endpoint to refresh monitored folders."
