@@ -94,6 +94,14 @@ def watcher_util_handle_file_changes(changes: set) -> None:
             folder_id, folder_path = closest_folder
             affected_folders[folder_path] = folder_id
 
+    # Filter out folders scheduled for deletion to avoid syncing folders that will be deleted
+    if deleted_folder_ids:
+        deleted_ids_set = set(deleted_folder_ids)
+        affected_folders = {
+            path: fid for path, fid in affected_folders.items() 
+            if fid not in deleted_ids_set
+        }
+
     for folder_path, folder_id in affected_folders.items():
         watcher_util_call_sync_folder_api(folder_id, folder_path)
 
