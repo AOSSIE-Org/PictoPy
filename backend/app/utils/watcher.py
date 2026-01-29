@@ -72,6 +72,10 @@ def watcher_util_handle_file_changes(changes: set) -> None:
 
     affected_folders = {}  # folder_path -> folder_id mapping
 
+    # Get a thread-safe snapshot of watched folders to avoid race conditions
+    with state_lock:
+        folders_snapshot = list(watched_folders)
+
     for change, file_path in changes:
         if change == Change.deleted:
             deleted_folder_id = watcher_util_get_folder_id_if_watched(file_path)
@@ -80,7 +84,7 @@ def watcher_util_handle_file_changes(changes: set) -> None:
                 continue
 
         closest_folder = watcher_util_find_closest_parent_folder(
-            file_path, watched_folders
+            file_path, folders_snapshot
         )
         if closest_folder:
             folder_id, folder_path = closest_folder
@@ -360,12 +364,17 @@ def watcher_util_get_watcher_info() -> dict:
             for folder_id, folder_path in watched_folders
         ]
         folders_count = len(watched_folders)
+        # Capture thread reference atomically to avoid inconsistent state
+        thread_ref = watcher_thread
+    
+    # Use captured reference for consistent results
+    is_running = thread_ref is not None and thread_ref.is_alive()
     
     return {
-        "is_running": watcher_util_is_watcher_running(),
+        "is_running": is_running,
         "folders_count": folders_count,
-        "thread_alive": watcher_thread.is_alive() if watcher_thread else False,
-        "thread_id": watcher_thread.ident if watcher_thread else None,
+        "thread_alive": thread_ref.is_alive() if thread_ref else False,
+        "thread_id": thread_ref.ident if thread_ref else None,
         "watched_folders": watched_folders_copy,
     }
 
