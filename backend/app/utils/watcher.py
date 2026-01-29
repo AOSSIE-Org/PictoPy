@@ -33,6 +33,10 @@ FolderIdPath = Tuple[str, str]
 # to prevent race conditions between the watcher worker thread and main thread operations
 state_lock = threading.Lock()
 
+# Lifecycle lock - serializes start/stop/restart operations to prevent concurrent lifecycle races
+# Uses RLock (reentrant) so restart can call stop then start without deadlocking
+lifecycle_lock = threading.RLock()
+
 watcher_thread: Optional[threading.Thread] = None
 stop_event = threading.Event()
 
@@ -244,7 +248,8 @@ def watcher_util_get_existing_folders(
 
 def watcher_util_is_watcher_running() -> bool:
     """Check if the watcher thread is running."""
-    return watcher_thread is not None and watcher_thread.is_alive()
+    thread_ref = watcher_thread
+    return thread_ref is not None and thread_ref.is_alive()
 
 
 def watcher_util_start_folder_watcher() -> bool:
@@ -254,94 +259,96 @@ def watcher_util_start_folder_watcher() -> bool:
     Returns:
         True if watcher started successfully, False otherwise
     """
-    global watcher_thread, watched_folders, folder_id_map
+    with lifecycle_lock:
+        global watcher_thread, watched_folders, folder_id_map
 
-    if watcher_util_is_watcher_running():
-        logger.info("Watcher is already running.")
-        return False
-
-    logger.info("Initializing folder watcher...")
-    logger.debug("Debug logging is enabled")
-
-    try:
-        all_folder_details = db_get_all_folder_details()
-        
-        folders = [(folder_id, folder_path) for folder_id, folder_path, *_ in all_folder_details]
-        
-        if not folders:
-            logger.info("No folders found in database")
+        if watcher_util_is_watcher_running():
+            logger.info("Watcher is already running.")
             return False
 
-        logger.info(f"Found {len(folders)} folders in database")
+        logger.info("Initializing folder watcher...")
+        logger.debug("Debug logging is enabled")
 
-        existing_folders = watcher_util_get_existing_folders(folders)
-        if not existing_folders:
-            logger.info("No existing folders to watch")
+        try:
+            all_folder_details = db_get_all_folder_details()
+            
+            folders = [(folder_id, folder_path) for folder_id, folder_path, *_ in all_folder_details]
+            
+            if not folders:
+                logger.info("No folders found in database")
+                return False
+
+            logger.info(f"Found {len(folders)} folders in database")
+
+            existing_folders = watcher_util_get_existing_folders(folders)
+            if not existing_folders:
+                logger.info("No existing folders to watch")
+                return False
+
+            with state_lock:
+                watched_folders = existing_folders
+                folder_id_map = {
+                    folder_path: folder_id for folder_id, folder_path in existing_folders
+                }
+
+            folder_paths = [folder_path for _, folder_path in existing_folders]
+
+            logger.info(f"Starting to watch {len(folder_paths)} folders:")
+            for folder_id, folder_path in existing_folders:
+                logger.info(f"  - {folder_path} (ID: {folder_id})")
+
+            stop_event.clear()
+            watcher_thread = threading.Thread(
+                target=watcher_util_watcher_worker,
+                args=(folder_paths,),
+                daemon=True,  # Dies when main program exits
+            )
+            watcher_thread.start()
+
+            logger.info("Folder watcher started successfully")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error starting folder watcher: {e}")
             return False
-
-        with state_lock:
-            watched_folders = existing_folders
-            folder_id_map = {
-                folder_path: folder_id for folder_id, folder_path in existing_folders
-            }
-
-        folder_paths = [folder_path for _, folder_path in existing_folders]
-
-        logger.info(f"Starting to watch {len(folder_paths)} folders:")
-        for folder_id, folder_path in existing_folders:
-            logger.info(f"  - {folder_path} (ID: {folder_id})")
-
-        stop_event.clear()
-        watcher_thread = threading.Thread(
-            target=watcher_util_watcher_worker,
-            args=(folder_paths,),
-            daemon=True,  # Dies when main program exits
-        )
-        watcher_thread.start()
-
-        logger.info("Folder watcher started successfully")
-        return True
-
-    except Exception as e:
-        logger.error(f"Error starting folder watcher: {e}")
-        return False
 
 
 def watcher_util_stop_folder_watcher() -> None:
     """Stop the folder watcher."""
-    global watcher_thread, watched_folders, folder_id_map
+    with lifecycle_lock:
+        global watcher_thread, watched_folders, folder_id_map
 
-    if not watcher_util_is_watcher_running():
-        logger.info("Watcher is not running")
-        return
+        if not watcher_util_is_watcher_running():
+            logger.info("Watcher is not running")
+            return
 
-    try:
-        logger.info("Stopping folder watcher...")
-        stop_event.set()
+        try:
+            logger.info("Stopping folder watcher...")
+            stop_event.set()
 
-        if watcher_thread:
-            watcher_thread.join(timeout=5.0)
+            if watcher_thread:
+                watcher_thread.join(timeout=5.0)
 
-            if watcher_thread.is_alive():
-                logger.warning(
-                    "Watcher thread did not stop gracefully within 5 seconds. "
-                    "Thread may still be running. Not clearing state to prevent errors."
-                )
-                # Do NOT clear state - thread is still alive and may access it
-                return
-            else:
-                logger.info("Watcher stopped successfully")
+                if watcher_thread.is_alive():
+                    logger.warning(
+                        "Watcher thread did not stop gracefully within 5 seconds. "
+                        "Thread may still be running. Not clearing state to prevent errors."
+                    )
+                    # Do NOT clear state - thread is still alive and may access it
+                    return
+                else:
+                    logger.info("Watcher stopped successfully")
 
-    except Exception as e:
-        logger.error(f"Error stopping watcher: {e}")
-        # Don't clear state if error occurred - thread state is unknown
-        return
-    
-    # Only clear state if we successfully stopped the thread
-    watcher_thread = None
-    with state_lock:
-        watched_folders = []
-        folder_id_map = {}
+        except Exception as e:
+            logger.error(f"Error stopping watcher: {e}")
+            # Don't clear state if error occurred - thread state is unknown
+            return
+        
+        # Only clear state if we successfully stopped the thread
+        watcher_thread = None
+        with state_lock:
+            watched_folders = []
+            folder_id_map = {}
 
 
 def watcher_util_restart_folder_watcher() -> bool:
@@ -351,9 +358,10 @@ def watcher_util_restart_folder_watcher() -> bool:
     Returns:
         True if restart was successful, False otherwise
     """
-    logger.info("Restarting folder watcher...")
-    watcher_util_stop_folder_watcher()
-    return watcher_util_start_folder_watcher()
+    with lifecycle_lock:
+        logger.info("Restarting folder watcher...")
+        watcher_util_stop_folder_watcher()
+        return watcher_util_start_folder_watcher()
 
 
 def watcher_util_get_watcher_info() -> dict:
