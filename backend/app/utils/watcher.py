@@ -28,11 +28,15 @@ logger = get_logger(__name__)
 
 FolderIdPath = Tuple[str, str]
 
-# Thread lock for global state synchronization
+# Thread synchronization for global state
+# All access to watched_folders and folder_id_map MUST be protected by state_lock
+# to prevent race conditions between the watcher worker thread and main thread operations
 state_lock = threading.Lock()
 
 watcher_thread: Optional[threading.Thread] = None
 stop_event = threading.Event()
+
+# Protected by state_lock - accessed from both worker and main threads
 watched_folders: List[FolderIdPath] = []
 folder_id_map: Dict[str, str] = {}
 
@@ -88,7 +92,12 @@ def watcher_util_handle_file_changes(changes: set) -> None:
     if deleted_folder_ids:
         logger.info(f"Processing {len(deleted_folder_ids)} deleted folders")
         watcher_util_call_delete_folders_api(deleted_folder_ids)
-        watcher_util_restart_folder_watcher()
+        logger.warning(
+            f"Deleted {len(deleted_folder_ids)} watched folder(s). "
+            "Use the /watcher/restart endpoint to refresh monitored folders."
+        )
+        # NOTE: Do NOT call restart_folder_watcher() here - would cause deadlock
+        # This function runs on the worker thread, which cannot join itself
 
 
 def watcher_util_find_closest_parent_folder(
@@ -304,23 +313,31 @@ def watcher_util_stop_folder_watcher() -> None:
 
     try:
         logger.info("Stopping folder watcher...")
-
         stop_event.set()
 
-        watcher_thread.join(timeout=5.0)
+        if watcher_thread:
+            watcher_thread.join(timeout=5.0)
 
-        if watcher_thread.is_alive():
-            logger.warning("Warning: Watcher thread did not stop gracefully")
-        else:
-            logger.info("Watcher stopped successfully")
+            if watcher_thread.is_alive():
+                logger.warning(
+                    "Watcher thread did not stop gracefully within 5 seconds. "
+                    "Thread may still be running. Not clearing state to prevent errors."
+                )
+                # Do NOT clear state - thread is still alive and may access it
+                return
+            else:
+                logger.info("Watcher stopped successfully")
 
     except Exception as e:
         logger.error(f"Error stopping watcher: {e}")
-    finally:
-        watcher_thread = None
-        with state_lock:
-            watched_folders = []
-            folder_id_map = {}
+        # Don't clear state if error occurred - thread state is unknown
+        return
+    
+    # Only clear state if we successfully stopped the thread
+    watcher_thread = None
+    with state_lock:
+        watched_folders = []
+        folder_id_map = {}
 
 
 def watcher_util_restart_folder_watcher() -> bool:
