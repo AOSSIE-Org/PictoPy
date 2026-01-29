@@ -383,9 +383,12 @@ def watcher_util_wait_for_watcher() -> None:
     """
     Wait for the watcher to finish (useful for keeping the program running).
     """
-    if watcher_thread and watcher_thread.is_alive():
+    # Capture thread reference to avoid race condition
+    thread_ref = watcher_thread
+    
+    if thread_ref and thread_ref.is_alive():
         try:
-            watcher_thread.join()  # Wait indefinitely
+            thread_ref.join()  # Wait indefinitely
         except KeyboardInterrupt:
             logger.info("Interrupted by user")
             watcher_util_stop_folder_watcher()
