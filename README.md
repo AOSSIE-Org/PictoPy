@@ -63,3 +63,6 @@ Handles file system operations and provides a secure bridge between the frontend
 ---
 
 Our Code of Conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+
+
+<!-- Issue #886 addressed -->
