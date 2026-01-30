@@ -54,96 +54,120 @@ describe('Sidebar', () => {
   describe('Navigation Interaction Tests', () => {
     test('clicking Settings link navigates to /settings', async () => {
       const user = userEvent.setup();
-      render(<SidebarWithRoutes />, { initialRoutes: ['/'] });
+      render(<SidebarWithRoutes />, { initialRoutes: [`/${ROUTES.HOME}`] });
 
-      expect(screen.getByTestId('location-display')).toHaveTextContent('/'); // start location
+      expect(screen.getByTestId('location-display')).toHaveTextContent(
+        `/${ROUTES.HOME}`,
+      ); // start location
 
       await user.click(screen.getByText('Settings')); // click settings
 
       // verify
       expect(screen.getByTestId('location-display')).toHaveTextContent(
-        '/settings',
+        `/${ROUTES.SETTINGS}`,
       );
       expect(screen.getByText('Settings Page')).toBeInTheDocument();
     });
 
     test('clicking Home link navigates to /home', async () => {
       const user = userEvent.setup();
-      render(<SidebarWithRoutes />, { initialRoutes: ['/settings'] });
+      render(<SidebarWithRoutes />, { initialRoutes: [`/${ROUTES.SETTINGS}`] });
 
       // start location
       expect(screen.getByTestId('location-display')).toHaveTextContent(
-        '/settings',
+        `/${ROUTES.SETTINGS}`,
       );
 
       await user.click(screen.getByText('Home')); // click home
 
       // verify
-      expect(screen.getByTestId('location-display')).toHaveTextContent('/home');
+      expect(screen.getByTestId('location-display')).toHaveTextContent(
+        `/${ROUTES.HOME}`,
+      );
       expect(screen.getByText('Home Page')).toBeInTheDocument();
     });
 
     test('clicking AI Tagging link navigates to /ai-tagging', async () => {
       const user = userEvent.setup();
-      render(<SidebarWithRoutes />, { initialRoutes: ['/'] });
+      render(<SidebarWithRoutes />, { initialRoutes: [`/${ROUTES.HOME}`] });
+
+      expect(screen.getByTestId('location-display')).toHaveTextContent(
+        `/${ROUTES.HOME}`,
+      );
 
       await user.click(screen.getByText('AI Tagging')); // click ai-tagging
 
       // verify
       expect(screen.getByTestId('location-display')).toHaveTextContent(
-        '/ai-tagging',
+        `/${ROUTES.AI}`,
       );
       expect(screen.getByText('AI Tagging Page')).toBeInTheDocument();
     });
 
     test('clicking Favourites link navigates to /favourites', async () => {
       const user = userEvent.setup();
-      render(<SidebarWithRoutes />, { initialRoutes: ['/'] });
+      render(<SidebarWithRoutes />, { initialRoutes: [`/${ROUTES.HOME}`] });
+
+      expect(screen.getByTestId('location-display')).toHaveTextContent(
+        `/${ROUTES.HOME}`,
+      );
 
       await user.click(screen.getByText('Favourites')); // click favourites
 
       // verify
       expect(screen.getByTestId('location-display')).toHaveTextContent(
-        '/favourites',
+        `/${ROUTES.FAVOURITES}`,
       );
       expect(screen.getByText('Favourites Page')).toBeInTheDocument();
     });
 
     test('clicking Videos link navigates to /videos', async () => {
       const user = userEvent.setup();
-      render(<SidebarWithRoutes />, { initialRoutes: ['/'] });
+      render(<SidebarWithRoutes />, { initialRoutes: [`/${ROUTES.HOME}`] });
+
+      expect(screen.getByTestId('location-display')).toHaveTextContent(
+        `/${ROUTES.HOME}`,
+      );
 
       await user.click(screen.getByText('Videos')); // click videos
 
       // verify
       expect(screen.getByTestId('location-display')).toHaveTextContent(
-        '/videos',
+        `/${ROUTES.VIDEOS}`,
       );
       expect(screen.getByText('Videos Page')).toBeInTheDocument();
     });
 
     test('clicking Albums link navigates to /albums', async () => {
       const user = userEvent.setup();
-      render(<SidebarWithRoutes />, { initialRoutes: ['/'] });
+      render(<SidebarWithRoutes />, { initialRoutes: [`/${ROUTES.HOME}`] });
+
+      expect(screen.getByTestId('location-display')).toHaveTextContent(
+        `/${ROUTES.HOME}`,
+      );
 
       await user.click(screen.getByText('Albums')); // click albums
 
       // verify
       expect(screen.getByTestId('location-display')).toHaveTextContent(
-        '/albums',
+        `/${ROUTES.ALBUMS}`,
       );
       expect(screen.getByText('Albums Page')).toBeInTheDocument();
     });
 
     test('clicking Memories link navigates to /memories', async () => {
       const user = userEvent.setup();
-      render(<SidebarWithRoutes />, { initialRoutes: ['/'] });
+      render(<SidebarWithRoutes />, { initialRoutes: [`/${ROUTES.HOME}`] });
+
+      expect(screen.getByTestId('location-display')).toHaveTextContent(
+        `/${ROUTES.HOME}`,
+      );
 
       await user.click(screen.getByText('Memories')); // click memories
 
       // verify
       expect(screen.getByTestId('location-display')).toHaveTextContent(
-        '/memories',
+        `/${ROUTES.MEMORIES}`,
       );
       expect(screen.getByText('Memories Page')).toBeInTheDocument();
     });

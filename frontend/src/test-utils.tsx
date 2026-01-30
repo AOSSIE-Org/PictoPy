@@ -16,20 +16,14 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
 const AllTheProviders = ({
   children,
   store,
+  queryClient,
   initialRoutes = ['/'],
 }: {
   children: React.ReactNode;
   store: ReturnType<typeof configureStore>;
+  queryClient: QueryClient;
   initialRoutes?: string[];
 }) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-      },
-    },
-  });
-
   return (
     <Provider store={store}>
       <ThemeProvider>
@@ -52,11 +46,20 @@ const customRender = (ui: ReactElement, options?: CustomRenderOptions) => {
       preloadedState,
     });
 
+  const testQueryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
   return render(ui, {
     wrapper: (props) => (
       <AllTheProviders
         {...props}
         store={testStore}
+        queryClient={testQueryClient}
         initialRoutes={initialRoutes}
       />
     ),

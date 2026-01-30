@@ -26,6 +26,6 @@ describe('Page Sanity Tests', () => {
         screen.getByRole('button', { name: /Check for Updates/i }),
       ).toBeInTheDocument();
       expect(screen.getByText('GPU Acceleration')).toBeInTheDocument();
-    });
+    }); // Settings is expected to render synchronously.
   });
 });
