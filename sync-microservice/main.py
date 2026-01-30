@@ -43,8 +43,8 @@ if __name__ == "__main__":
     configure_uvicorn_logging("sync-microservice")
     config = Config(
         app=app,
-        host="0.0.0.0",
-        port=8001,
+        host="localhost",
+        port=52124,
         log_level="info",
         log_config=None,  
     )
