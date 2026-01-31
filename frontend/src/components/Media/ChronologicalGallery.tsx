@@ -163,10 +163,10 @@ export const ChronologicalGallery = ({
                   </div>
 
                   {/* Images Grid */}
-                  <div 
+                  <div
                     className="grid gap-4 p-2 transition-all duration-300"
-                    style={{ 
-                      gridTemplateColumns: `repeat(auto-fill, minmax(${gridMinSize}, 1fr))` 
+                    style={{
+                      gridTemplateColumns: `repeat(auto-fill, minmax(${gridMinSize}, 1fr))`,
                     }}
                   >
                     {imgs.map((img) => {

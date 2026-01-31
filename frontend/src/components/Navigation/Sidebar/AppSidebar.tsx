@@ -36,18 +36,14 @@ export function AppSidebar() {
   const [version, setVersion] = useState<string>('1.0.0');
   const { open, setOpen, toggleSidebar } = useSidebar();
 
-  // Load collapsed state from localStorage on mount
   useEffect(() => {
     const savedState = localStorage.getItem('sidebar-open');
     if (savedState !== null) {
       const shouldBeOpen = savedState === 'true';
-      if (open !== shouldBeOpen) {
-        toggleSidebar();
-      }
+      setOpen(shouldBeOpen);
     }
-  }, []);
+  }, [setOpen]);
 
-  // Save collapsed state to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('sidebar-open', String(open));
   }, [open]);
@@ -115,14 +111,20 @@ export function AppSidebar() {
           <div
             className={`text-muted-foreground space-y-1 px-4 text-xs transition-all duration-300 ${
               open
-                ? 'opacity-100 translate-x-0'
-                : 'opacity-0 -translate-x-2 pointer-events-none absolute'
+                ? 'translate-x-0 opacity-100'
+                : 'pointer-events-none absolute -translate-x-2 opacity-0'
             }`}
           >
-            <div className="font-medium whitespace-nowrap">PictoPy v{version}</div>
-            <div className="whitespace-nowrap">© 2025 PictoPy</div>
+            <div className="font-medium whitespace-nowrap">
+              PictoPy v{version}
+            </div>
+            <div className="whitespace-nowrap">
+              © {new Date().getFullYear()} PictoPy
+            </div>
           </div>
-          <div className={`flex transition-all duration-300 ${open ? 'justify-end px-4' : 'justify-center'}`}>
+          <div
+            className={`flex transition-all duration-300 ${open ? 'justify-end px-4' : 'justify-center'}`}
+          >
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -130,7 +132,7 @@ export function AppSidebar() {
                     variant="ghost"
                     size="icon"
                     onClick={toggleSidebar}
-                    className="h-8 w-8 transition-transform duration-300 ease-in-out hover:bg-accent"
+                    className="hover:bg-accent h-8 w-8 transition-transform duration-300 ease-in-out"
                   >
                     <ChevronLeft
                       className={`h-5 w-5 transition-transform duration-300 ease-in-out ${
