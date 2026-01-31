@@ -13,17 +13,27 @@ import { InfoDialogProps } from '@/types/infoDialog';
 import { useDispatch } from 'react-redux';
 import { hideInfoDialog } from '@/features/infoDialogSlice';
 
-export const InfoDialog: React.FC<InfoDialogProps> = ({
+interface ExtendedInfoDialogProps extends InfoDialogProps {
+  onClose?: () => void;
+}
+
+export const InfoDialog: React.FC<ExtendedInfoDialogProps> = ({
   isOpen,
   title,
   message,
   variant = 'info',
   showCloseButton = true,
+  primaryAction,
+  onClose,
 }) => {
   const dispatch = useDispatch();
 
   const handleClose = () => {
-    dispatch(hideInfoDialog());
+    if (onClose) {
+      onClose();
+    } else {
+      dispatch(hideInfoDialog());
+    }
   };
 
   // Define styles and icons based on variant
@@ -32,6 +42,12 @@ export const InfoDialog: React.FC<InfoDialogProps> = ({
       iconColor: 'text-primary',
       messageColor: '',
       icon: <Info className="h-5 w-5" />,
+      buttonVariant: 'default' as const,
+    },
+    warning: {
+      iconColor: 'text-yellow-500',
+      messageColor: '',
+      icon: <AlertTriangle className="h-5 w-5" />,
       buttonVariant: 'default' as const,
     },
     error: {
@@ -58,15 +74,31 @@ export const InfoDialog: React.FC<InfoDialogProps> = ({
             <span className={iconColor}>{icon}</span>
             {title}
           </DialogTitle>
-          <DialogDescription className={messageColor}>
-            {message}
+          <DialogDescription
+            className={messageColor}
+            asChild={typeof message !== 'string'}
+          >
+            {typeof message === 'string' ? message : <div>{message}</div>}
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter>
+        <DialogFooter className="flex-row justify-end gap-2 sm:gap-2">
+          {primaryAction && (
+            <Button
+              className="cursor-pointer"
+              variant="default"
+              onClick={primaryAction.onClick}
+              disabled={primaryAction.disabled}
+            >
+              {primaryAction.icon && (
+                <span className="mr-2">{primaryAction.icon}</span>
+              )}
+              {primaryAction.label}
+            </Button>
+          )}
           {showCloseButton && (
             <Button
               className="cursor-pointer"
-              variant={buttonVariant}
+              variant={primaryAction ? 'outline' : buttonVariant}
               onClick={handleClose}
             >
               Close
