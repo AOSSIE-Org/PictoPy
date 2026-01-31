@@ -6,6 +6,7 @@ import { groupImagesByYearMonthFromMetadata } from '@/utils/dateUtils';
 import { setCurrentViewIndex } from '@/features/imageSlice';
 import { MediaView } from './MediaView';
 import { selectIsImageViewOpen } from '@/features/imageSelectors';
+import { useSidebar } from '@/components/ui/sidebar';
 
 export type MonthMarker = {
   offset: number;
@@ -34,6 +35,11 @@ export const ChronologicalGallery = ({
   const monthHeaderRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const galleryRef = useRef<HTMLDivElement>(null);
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
+  const { open: sidebarOpen } = useSidebar();
+
+  // Adjust grid minmax based on sidebar state
+  // When sidebar is collapsed, reduce min size to fit more images per row
+  const gridMinSize = sidebarOpen ? '224px' : '200px';
 
   // Optimized grouping with proper date handling
   const grouped = useMemo(
@@ -157,7 +163,12 @@ export const ChronologicalGallery = ({
                   </div>
 
                   {/* Images Grid */}
-                  <div className="grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4 p-2">
+                  <div 
+                    className="grid gap-4 p-2 transition-all duration-300"
+                    style={{ 
+                      gridTemplateColumns: `repeat(auto-fill, minmax(${gridMinSize}, 1fr))` 
+                    }}
+                  >
                     {imgs.map((img) => {
                       const chronologicalIndex =
                         imageIndexMap.get(img.id) ?? -1;

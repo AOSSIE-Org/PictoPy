@@ -7,6 +7,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import {
   Bolt,
@@ -16,15 +17,40 @@ import {
   Video,
   BookImage,
   ClockFading,
+  ChevronLeft,
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router';
 import { ROUTES } from '@/constants/routes';
 import { getVersion } from '@tauri-apps/api/app';
 import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export function AppSidebar() {
   const location = useLocation();
   const [version, setVersion] = useState<string>('1.0.0');
+  const { open, setOpen, toggleSidebar } = useSidebar();
+
+  // Load collapsed state from localStorage on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem('sidebar-open');
+    if (savedState !== null) {
+      const shouldBeOpen = savedState === 'true';
+      if (open !== shouldBeOpen) {
+        toggleSidebar();
+      }
+    }
+  }, []);
+
+  // Save collapsed state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('sidebar-open', String(open));
+  }, [open]);
 
   useEffect(() => {
     getVersion().then((version) => {
@@ -59,7 +85,7 @@ export function AppSidebar() {
     <Sidebar
       variant="sidebar"
       collapsible="icon"
-      className="border-border/40 border-r shadow-sm"
+      className="border-border/40 border-r shadow-sm transition-all duration-300 ease-in-out"
     >
       <SidebarHeader className="flex justify-center py-3">
         <div className="text-lg font-semibold">.</div>
@@ -73,7 +99,7 @@ export function AppSidebar() {
                 asChild
                 isActive={isActive(item.path)}
                 tooltip={item.name}
-                className="rounded-sm"
+                className="rounded-sm transition-all duration-200"
               >
                 <Link to={item.path} className="flex items-center gap-3">
                   <item.icon className="h-5 w-5" />
@@ -85,9 +111,40 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="border-border/40 mt-auto border-t py-4">
-        <div className="text-muted-foreground space-y-1 px-4 text-xs">
-          <div className="font-medium">PictoPy v{version}</div>
-          <div>© 2025 PictoPy</div>
+        <div className="space-y-3">
+          <div
+            className={`text-muted-foreground space-y-1 px-4 text-xs transition-all duration-300 ${
+              open
+                ? 'opacity-100 translate-x-0'
+                : 'opacity-0 -translate-x-2 pointer-events-none absolute'
+            }`}
+          >
+            <div className="font-medium whitespace-nowrap">PictoPy v{version}</div>
+            <div className="whitespace-nowrap">© 2025 PictoPy</div>
+          </div>
+          <div className={`flex transition-all duration-300 ${open ? 'justify-end px-4' : 'justify-center'}`}>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleSidebar}
+                    className="h-8 w-8 transition-transform duration-300 ease-in-out hover:bg-accent"
+                  >
+                    <ChevronLeft
+                      className={`h-5 w-5 transition-transform duration-300 ease-in-out ${
+                        !open ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>{open ? 'Collapse sidebar' : 'Expand sidebar'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>
