@@ -7,6 +7,7 @@ from app.config.settings import (
     DATABASE_PATH,
 )
 from app.logging.setup_logging import get_logger
+from app.utils.images import image_util_parse_metadata
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -176,8 +177,6 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
         ) in results:
             if image_id not in images_dict:
                 # Safely parse metadata JSON -> dict
-                from app.utils.images import image_util_parse_metadata
-
                 metadata_dict = image_util_parse_metadata(metadata)
 
                 images_dict[image_id] = {
@@ -242,8 +241,6 @@ def db_get_untagged_images() -> List[UntaggedImageRecord]:
 
         untagged_images = []
         for image_id, path, folder_id, thumbnail_path, metadata in results:
-            from app.utils.images import image_util_parse_metadata
-
             md = image_util_parse_metadata(metadata)
             untagged_images.append(
                 {
