@@ -1,4 +1,4 @@
-import { render, screen } from '@/test-utils';
+import { render, screen, waitFor } from '@/test-utils';
 import userEvent from '@testing-library/user-event';
 import { ThemeSelector } from '../ThemeToggle';
 
@@ -22,37 +22,39 @@ describe('ThemeSelector', () => {
       await user.click(button); // open dropdown
 
       // verify dropdown options are visible
-      expect(screen.getByText('Light')).toBeInTheDocument();
+      await screen.findByText('Light');
       expect(screen.getByText('Dark')).toBeInTheDocument();
       expect(screen.getByText('System')).toBeInTheDocument();
     });
 
-    test('selecting Dark theme option closes dropdown', async () => {
-      const user = userEvent.setup();
-      render(<ThemeSelector />);
+    const themeSelectionCases = [
+      { theme: 'Light', expectedClass: 'light', hiddenOption: 'Dark' },
+      { theme: 'Dark', expectedClass: 'dark', hiddenOption: 'Light' },
+      { theme: 'System', expectedClass: 'light', hiddenOption: 'Dark' }, // system resolves to light (matchMedia mock returns false)
+    ];
 
-      const button = screen.getByRole('button', { name: /themes/i });
-      await user.click(button); // open dropdown
+    test.each(themeSelectionCases)(
+      'selecting $theme theme applies class and closes dropdown',
+      async ({ theme, expectedClass, hiddenOption }) => {
+        const user = userEvent.setup();
+        render(<ThemeSelector />);
 
-      const darkOption = screen.getByText('Dark');
-      await user.click(darkOption); // select dark
+        const button = screen.getByRole('button', { name: /themes/i });
+        await user.click(button); // open dropdown
 
-      // dropdown should close (options no longer visible)
-      expect(screen.queryByText('Light')).not.toBeInTheDocument();
-    });
+        const themeOption = screen.getByText(theme);
+        await user.click(themeOption); // select theme
 
-    test('selecting Light theme option closes dropdown', async () => {
-      const user = userEvent.setup();
-      render(<ThemeSelector />);
+        // verify theme class is applied to document
+        await waitFor(() =>
+          expect(document.documentElement).toHaveClass(expectedClass),
+        );
 
-      const button = screen.getByRole('button', { name: /themes/i });
-      await user.click(button); // open dropdown
-
-      const lightOption = screen.getByText('Light');
-      await user.click(lightOption); // select light
-
-      // dropdown should close
-      expect(screen.queryByText('Dark')).not.toBeInTheDocument();
-    });
+        // verify dropdown closed
+        await waitFor(() =>
+          expect(screen.queryByText(hiddenOption)).not.toBeInTheDocument(),
+        );
+      },
+    );
   });
 });

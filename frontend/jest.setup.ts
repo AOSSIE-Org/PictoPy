@@ -1,6 +1,15 @@
 import '@testing-library/jest-dom';
 import { TextEncoder, TextDecoder } from 'util';
 
+// Suppress console.log during tests
+const originalConsoleLog = console.log;
+beforeAll(() => {
+  console.log = jest.fn();
+});
+afterAll(() => {
+  console.log = originalConsoleLog;
+});
+
 if (typeof global.TextEncoder === 'undefined') {
   global.TextEncoder = TextEncoder;
 }

@@ -50,11 +50,16 @@ const customRender = (ui: ReactElement, options?: CustomRenderOptions) => {
     defaultOptions: {
       queries: {
         retry: false,
+        gcTime: Infinity,
+        staleTime: Infinity,
+      },
+      mutations: {
+        retry: false,
       },
     },
   });
 
-  return render(ui, {
+  const renderResult = render(ui, {
     wrapper: (props) => (
       <AllTheProviders
         {...props}
@@ -65,6 +70,12 @@ const customRender = (ui: ReactElement, options?: CustomRenderOptions) => {
     ),
     ...renderOptions,
   });
+
+  return {
+    ...renderResult,
+    store: testStore,
+    queryClient: testQueryClient,
+  };
 };
 
 // Re-export everything

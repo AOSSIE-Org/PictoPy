@@ -11,17 +11,6 @@ import { BrowserRouter } from 'react-router';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Provider } from 'react-redux';
 import { store } from '@/app/store';
-beforeAll(() => {
-  window.matchMedia =
-    window.matchMedia ||
-    function () {
-      return {
-        matches: false,
-        addListener: () => {}, // deprecated
-        removeListener: () => {}, // deprecated
-      };
-    };
-});
 
 const pages = [
   { path: ROUTES.HOME, Component: Home },
