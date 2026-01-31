@@ -138,6 +138,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
     try:
         # Build the query using GROUP_CONCAT to aggregate tags in SQL
         # This is more efficient than Python iteration for large datasets
+        # Use unit separator (\x1f) as delimiter since tag names may contain commas
         query = """
             SELECT 
                 i.id, 
@@ -147,7 +148,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                 i.metadata, 
                 i.isTagged,
                 i.isFavourite,
-                GROUP_CONCAT(DISTINCT m.name) as tags
+                GROUP_CONCAT(DISTINCT m.name, '\x1f') as tags
             FROM images i
             LEFT JOIN image_classes ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
@@ -179,13 +180,13 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
             # Safely parse metadata JSON -> dict
             metadata_dict = image_util_parse_metadata(metadata)
 
-            # Parse comma-separated tags from GROUP_CONCAT
-            tags = tags_str.split(",") if tags_str else None
+            # Parse unit separator-delimited tags from GROUP_CONCAT and sort for deterministic ordering
+            tags = sorted(tags_str.split("\x1f")) if tags_str else None
 
             images.append({
                 "id": image_id,
                 "path": path,
-                "folder_id": str(folder_id),
+                "folder_id": str(folder_id) if folder_id is not None else None,
                 "thumbnailPath": thumbnail_path,
                 "metadata": metadata_dict,
                 "isTagged": bool(is_tagged),
