@@ -2,7 +2,7 @@
 
 import cv2
 from app.models.FaceNet import FaceNet
-from app.models.CelebrityMatcher import CelebrityMatcher
+from app.models.celebrity_detection.CelebrityMatcher import CelebrityMatcher
 from app.utils.FaceNet import FaceNet_util_preprocess_image, FaceNet_util_get_model_path
 from app.utils.YOLO import YOLO_util_get_model_path
 from app.models.YOLO import YOLO

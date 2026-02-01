@@ -1,5 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks
-from app.models.CelebrityMatcher import CelebrityMatcher
+from app.models.celebrity_detection.CelebrityMatcher import CelebrityMatcher
 from app.database.faces import db_get_all_faces_with_cluster_names, db_update_face_cluster_ids_batch
 from app.database.face_clusters import db_get_or_create_cluster_by_name
 from app.logging.setup_logging import get_logger
