@@ -95,8 +95,9 @@ export const ChronologicalGallery = ({
   }, [onMonthOffsetsChange, scrollContainerRef]);
 
   useEffect(() => {
+    if (images.length === 0) return;
     recomputeMarkers();
-  }, [images, recomputeMarkers]);
+  }, [images]);
 
   useEffect(() => {
     const elementToObserve = scrollContainerRef?.current ?? galleryRef.current;

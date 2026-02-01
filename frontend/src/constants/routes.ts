@@ -9,4 +9,5 @@ export const ROUTES = {
   ALBUMS: 'albums',
   MEMORIES: 'memories',
   PERSON: 'person/:clusterId',
+  SEARCH: 'search/:query',
 };
