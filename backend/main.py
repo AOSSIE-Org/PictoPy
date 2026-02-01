@@ -43,8 +43,7 @@ configure_uvicorn_logging("backend")
 path = os.path.dirname(DATABASE_PATH)
 os.makedirs(path, exist_ok=True)
 
-thumbnail_path = os.path.dirname(THUMBNAIL_IMAGES_PATH)
-os.makedirs(thumbnail_path, exist_ok=True)
+os.makedirs(THUMBNAIL_IMAGES_PATH, exist_ok=True)
 
 
 @asynccontextmanager
