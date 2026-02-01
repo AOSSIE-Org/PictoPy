@@ -22,7 +22,7 @@ export function FaceCollections() {
 
   useEffect(() => {
     if (clustersSuccess && clustersData?.data?.clusters) {
-      const clusters = (clustersData.data.clusters || []) as Cluster[];
+      const clusters = clustersData.data.clusters as Cluster[];
       dispatch(setClusters(clusters));
     }
   }, [clustersData, clustersSuccess, dispatch]);
