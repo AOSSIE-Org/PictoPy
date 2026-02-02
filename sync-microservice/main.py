@@ -1,6 +1,10 @@
 import logging
 import os
-from app.config.settings import DATABASE_PATH
+from app.config.settings import (
+    DATABASE_PATH,
+    SYNC_MICROSERVICE_HOST,
+    SYNC_MICROSERVICE_PORT,
+)
 from fastapi import FastAPI
 from uvicorn import Config, Server
 from app.core.lifespan import lifespan
@@ -51,8 +55,8 @@ if __name__ == "__main__":
 
     config = Config(
         app=app,
-        host="localhost",
-        port=52124,
+        host=SYNC_MICROSERVICE_HOST,
+        port=SYNC_MICROSERVICE_PORT,
         log_level="info",
         log_config=None,  # Disable uvicorn's default logging config
     )

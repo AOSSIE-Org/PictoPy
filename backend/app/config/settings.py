@@ -1,11 +1,20 @@
 from platformdirs import user_data_dir
 import os
 
+# Server Configuration
+BACKEND_HOST = os.getenv('BACKEND_HOST', 'localhost')
+BACKEND_PORT = int(os.getenv('BACKEND_PORT', '52123'))
+
+# Microservice Configuration
+SYNC_MICROSERVICE_HOST = os.getenv('SYNC_MICROSERVICE_HOST', 'localhost')
+SYNC_MICROSERVICE_PORT = int(os.getenv('SYNC_MICROSERVICE_PORT', '52124'))
+SYNC_MICROSERVICE_URL = os.getenv(
+    'SYNC_MICROSERVICE_URL',
+    f'http://{SYNC_MICROSERVICE_HOST}:{SYNC_MICROSERVICE_PORT}'
+)
+
 # Model Exports Path
 MODEL_EXPORTS_PATH = "app/models/ONNX_Exports"
-
-# Microservice URLs
-SYNC_MICROSERVICE_URL = "http://localhost:52124"
 
 CONFIDENCE_PERCENT = 0.6
 # Object Detection Models:
