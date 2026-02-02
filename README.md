@@ -2,12 +2,16 @@
 
 PictoPy is an advanced desktop gallery application that combines the power of Tauri, React, and Rust for the frontend with a Python backend for sophisticated image analysis and management.
 
-# Want to Contribute? 😄
+# Contributing
 
-&nbsp;&nbsp;&nbsp;<a href="https://discord.gg/hjUhu33uAn"><img src="https://github.com/user-attachments/assets/3ed93273-5055-4532-a524-87a337a4fbba" height="40"></a>
+We welcome contributions of all kinds — code, documentation, tests, bug reports, and ideas. For full contribution guidelines, please read our [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
-1. First, join the **[Discord Server](https://discord.gg/hjUhu33uAn) (Go to Projects->PictoPy)** to chat with everyone.
-2. For detailed setup instructions, coding guidelines, and the contribution process, please check out our [CONTRIBUTING.md](./CONTRIBUTING.md) file.
+- **Chat & discuss:** Join our **[Discord Server](https://discord.gg/hjUhu33uAn)** (see Projects → PictoPy) to ask questions and propose changes.
+- **Report issues:** Use GitHub Issues for bugs and feature requests.
+- **Contribute code:** Fork the repo, create a descriptive branch (e.g., `feature/add-thing`), add tests and documentation, then open a Pull Request against `main`. Follow the coding standards and testing instructions in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+
+
 
 # Architecture
 
@@ -63,3 +67,7 @@ Handles file system operations and provides a secure bridge between the frontend
 ---
 
 Our Code of Conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+
+## License
+
+This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**. See the full license in [`LICENSE.md`](./LICENSE.md).
