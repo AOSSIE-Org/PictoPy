@@ -1,2 +1,4 @@
-export const BACKEND_URL = 'http://localhost:52123';
-export const SYNC_MICROSERVICE_URL = 'http://localhost:52124';
+export const BACKEND_URL =
+  import.meta.env.VITE_BACKEND_URL || 'http://localhost:52123';
+export const SYNC_MICROSERVICE_URL =
+  import.meta.env.VITE_SYNC_MICROSERVICE_URL || 'http://localhost:52124';

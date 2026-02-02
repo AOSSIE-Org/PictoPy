@@ -6,7 +6,12 @@ import multiprocessing
 import os
 import json
 
-from app.config.settings import DATABASE_PATH, THUMBNAIL_IMAGES_PATH
+from app.config.settings import (
+    DATABASE_PATH,
+    THUMBNAIL_IMAGES_PATH,
+    BACKEND_HOST,
+    BACKEND_PORT,
+)
 from uvicorn import Config, Server
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -77,7 +82,7 @@ app = FastAPI(
         "url": "https://www.postman.com/aossie-pictopy/pictopy/overview",
     },
     servers=[
-        {"url": "http://localhost:52123", "description": "Local Development server"}
+        {"url": f"http://{BACKEND_HOST}:{BACKEND_PORT}", "description": "Local Development server"}
     ],
 )
 
@@ -148,8 +153,8 @@ if __name__ == "__main__":
 
     config = Config(
         app=app,
-        host="localhost",
-        port=52123,
+        host=BACKEND_HOST,
+        port=BACKEND_PORT,
         log_level="info",
         log_config=None,  # This is crucial - disable Uvicorn's default logging config
     )
