@@ -1540,6 +1540,29 @@
           }
         }
       }
+    },
+    "/shutdown": {
+      "post": {
+        "tags": [
+          "Shutdown",
+          "Shutdown"
+        ],
+        "summary": "Shutdown",
+        "description": "Gracefully shutdown the PictoPy backend.\n\nThis endpoint schedules backend server termination after response is sent.\nThe frontend is responsible for shutting down the sync service separately.\n\nReturns:\n    ShutdownResponse with status and message",
+        "operationId": "shutdown_shutdown_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShutdownResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2966,6 +2989,25 @@
           "success"
         ],
         "title": "RenameClusterResponse"
+      },
+      "ShutdownResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "message"
+        ],
+        "title": "ShutdownResponse",
+        "description": "Response model for shutdown endpoint."
       },
       "SuccessResponse": {
         "properties": {
