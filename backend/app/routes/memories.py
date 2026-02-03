@@ -15,7 +15,7 @@ Date: 2025-12-14
 """
 
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -62,6 +62,7 @@ class Memory(BaseModel):
     thumbnail_image_id: str
     center_lat: Optional[float] = None
     center_lon: Optional[float] = None
+    type: Literal["location", "date"]  # Memory clustering type
 
 
 class GenerateMemoriesResponse(BaseModel):

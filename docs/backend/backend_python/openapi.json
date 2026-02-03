@@ -2702,6 +2702,14 @@
               }
             ],
             "title": "Center Lon"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "location",
+              "date"
+            ],
+            "title": "Type"
           }
         },
         "type": "object",
@@ -2714,7 +2722,8 @@
           "date_end",
           "image_count",
           "images",
-          "thumbnail_image_id"
+          "thumbnail_image_id",
+          "type"
         ],
         "title": "Memory",
         "description": "Memory object containing grouped images."
