@@ -69,7 +69,9 @@ def check_dependencies():
             version = getattr(module, "__version__", "Unknown")
 
             if expected_version and version != expected_version:
-                print_warning(f"{package} installed (v{version}), expected v{expected_version}")
+                print_warning(
+                    f"{package} installed (v{version}), expected v{expected_version}"
+                )
             else:
                 print_success(f"{package} v{version}")
         except ImportError:
@@ -124,7 +126,9 @@ def check_database_schema():
         cursor = conn.cursor()
 
         # Check if images table exists
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='images'")
+        cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='images'"
+        )
         if not cursor.fetchone():
             print_error("Table 'images' does not exist")
             conn.close()
@@ -167,7 +171,9 @@ def check_database_schema():
             if index_name in indexes:
                 print_success(f"Index '{index_name}'")
             else:
-                print_warning(f"Index '{index_name}' not found (recommended for performance)")
+                print_warning(
+                    f"Index '{index_name}' not found (recommended for performance)"
+                )
 
         conn.close()
         return all_columns_exist
@@ -244,18 +250,28 @@ def print_summary(results):
 
     for check_name, result in results.items():
         status = "✓ PASS" if result else ("⚠ WARNING" if result is None else "✗ FAIL")
-        color = Colors.GREEN if result else (Colors.YELLOW if result is None else Colors.RED)
+        color = (
+            Colors.GREEN
+            if result
+            else (Colors.YELLOW if result is None else Colors.RED)
+        )
         print(f"{color}{status}{Colors.RESET} - {check_name}")
 
     print()
     if all_passed:
-        print(f"{Colors.BOLD}{Colors.GREEN}🎉 All checks passed! Memories feature is ready to use.{Colors.RESET}")
+        print(
+            f"{Colors.BOLD}{Colors.GREEN}🎉 All checks passed! Memories feature is ready to use.{Colors.RESET}"
+        )
         print_info("Next steps:")
         print_info("1. Start the backend: cd backend && ./run.sh")
-        print_info("2. Run metadata extraction: python -m app.utils.extract_location_metadata")
+        print_info(
+            "2. Run metadata extraction: python -m app.utils.extract_location_metadata"
+        )
         print_info("3. Test API endpoints: see MEMORIES_TESTING_GUIDE.md")
     else:
-        print(f"{Colors.BOLD}{Colors.RED}❌ Some checks failed. Please fix the issues above.{Colors.RESET}")
+        print(
+            f"{Colors.BOLD}{Colors.RED}❌ Some checks failed. Please fix the issues above.{Colors.RESET}"
+        )
         print_info("See MEMORIES_README.md for setup instructions")
 
     print()

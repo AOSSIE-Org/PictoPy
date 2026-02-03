@@ -4,7 +4,6 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from app.routes.face_clusters import router as face_clusters_router
 
-
 app = FastAPI()
 app.include_router(face_clusters_router, prefix="/face_clusters")
 client = TestClient(app)
@@ -95,7 +94,9 @@ class TestFaceClustersAPI:
 
     @patch("app.routes.face_clusters.db_update_cluster")
     @patch("app.routes.face_clusters.db_get_cluster_by_id")
-    def test_rename_cluster_success(self, mock_get_cluster, mock_update_cluster, sample_rename_request):
+    def test_rename_cluster_success(
+        self, mock_get_cluster, mock_update_cluster, sample_rename_request
+    ):
         """Test successfully renaming a cluster."""
         cluster_id = "cluster_123"
         mock_get_cluster.return_value = {
@@ -104,7 +105,9 @@ class TestFaceClustersAPI:
         }
         mock_update_cluster.return_value = True
 
-        response = client.put(f"/face_clusters/{cluster_id}", json=sample_rename_request)
+        response = client.put(
+            f"/face_clusters/{cluster_id}", json=sample_rename_request
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -114,7 +117,9 @@ class TestFaceClustersAPI:
         assert data["data"]["cluster_name"] == sample_rename_request["cluster_name"]
 
         mock_get_cluster.assert_called_once_with(cluster_id)
-        mock_update_cluster.assert_called_once_with(cluster_id=cluster_id, cluster_name=sample_rename_request["cluster_name"])
+        mock_update_cluster.assert_called_once_with(
+            cluster_id=cluster_id, cluster_name=sample_rename_request["cluster_name"]
+        )
 
     @patch("app.routes.face_clusters.db_get_cluster_by_id")
     def test_rename_cluster_not_found(self, mock_get_cluster):
@@ -191,12 +196,16 @@ class TestFaceClustersAPI:
 
     @patch("app.routes.face_clusters.db_update_cluster")
     @patch("app.routes.face_clusters.db_get_cluster_by_id")
-    def test_rename_cluster_name_whitespace_trimming(self, mock_get_cluster, mock_update_cluster, sample_cluster_data):
+    def test_rename_cluster_name_whitespace_trimming(
+        self, mock_get_cluster, mock_update_cluster, sample_cluster_data
+    ):
         """Test that cluster names are properly trimmed of whitespace."""
         mock_get_cluster.return_value = sample_cluster_data
         mock_update_cluster.return_value = True
 
-        response = client.put("/face_clusters/cluster_123", json={"cluster_name": "  John Doe  "})
+        response = client.put(
+            "/face_clusters/cluster_123", json={"cluster_name": "  John Doe  "}
+        )
 
         assert response.status_code == 200
         response_data = response.json()
@@ -212,7 +221,9 @@ class TestFaceClustersAPI:
     # ============================================================================
 
     @patch("app.routes.face_clusters.db_get_all_clusters_with_face_counts")
-    def test_get_all_clusters_success(self, mock_get_clusters, sample_clusters_with_counts):
+    def test_get_all_clusters_success(
+        self, mock_get_clusters, sample_clusters_with_counts
+    ):
         """Test successfully retrieving all clusters."""
         mock_get_clusters.return_value = sample_clusters_with_counts
 
@@ -260,7 +271,9 @@ class TestFaceClustersAPI:
 
     def test_get_all_clusters_response_structure(self, sample_clusters_with_counts):
         """Test that get all clusters returns correct response structure."""
-        with patch("app.routes.face_clusters.db_get_all_clusters_with_face_counts") as mock_get:
+        with patch(
+            "app.routes.face_clusters.db_get_all_clusters_with_face_counts"
+        ) as mock_get:
             mock_get.return_value = sample_clusters_with_counts
 
             response = client.get("/face_clusters/")
@@ -286,7 +299,9 @@ class TestFaceClustersAPI:
 
     @patch("app.routes.face_clusters.db_get_images_by_cluster_id")
     @patch("app.routes.face_clusters.db_get_cluster_by_id")
-    def test_get_cluster_images_success(self, mock_get_cluster, mock_get_images, sample_cluster_images):
+    def test_get_cluster_images_success(
+        self, mock_get_cluster, mock_get_images, sample_cluster_images
+    ):
         """Test successfully retrieving images for a cluster."""
         cluster_id = "cluster_123"
         mock_get_cluster.return_value = {
@@ -374,7 +389,9 @@ class TestFaceClustersAPI:
 
     def test_rename_cluster_invalid_json(self):
         """Test rename cluster with invalid JSON structure."""
-        response = client.put("/face_clusters/cluster_123", json={"invalid_field": "value"})
+        response = client.put(
+            "/face_clusters/cluster_123", json={"invalid_field": "value"}
+        )
 
         assert response.status_code == 422
 

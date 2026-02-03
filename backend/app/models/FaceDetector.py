@@ -56,7 +56,9 @@ class FaceDetector:
                 embeddings.append(embedding)
 
         if not forSearch and embeddings:
-            db_insert_face_embeddings_by_image_id(image_id, embeddings, confidence=confidences, bbox=bboxes)
+            db_insert_face_embeddings_by_image_id(
+                image_id, embeddings, confidence=confidences, bbox=bboxes
+            )
 
         return {
             "ids": f"{class_ids}",

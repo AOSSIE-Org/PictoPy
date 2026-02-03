@@ -33,9 +33,7 @@ router = APIRouter(prefix="/api/memories", tags=["memories"])
 logger = get_logger(__name__)
 
 
-
 # Response Models
-
 
 
 class MemoryImage(BaseModel):
@@ -113,15 +111,17 @@ class LocationsResponse(BaseModel):
     locations: List[LocationCluster]
 
 
-
 # API Endpoints
-
 
 
 @router.post("/generate", response_model=GenerateMemoriesResponse)
 def generate_memories(
-    location_radius_km: float = Query(5.0, ge=0.1, le=100, description="Location clustering radius in km"),
-    date_tolerance_days: int = Query(3, ge=1, le=30, description="Date tolerance in days"),
+    location_radius_km: float = Query(
+        5.0, ge=0.1, le=100, description="Location clustering radius in km"
+    ),
+    date_tolerance_days: int = Query(
+        3, ge=1, le=30, description="Date tolerance in days"
+    ),
     min_images: int = Query(2, ge=1, le=10, description="Minimum images per memory"),
 ):
     """
@@ -132,7 +132,9 @@ def generate_memories(
     Returns simple breakdown: {location_count, date_count, total}
     """
     try:
-        logger.info(f"Generating memories: radius={location_radius_km}km, date_tolerance={date_tolerance_days}days, min_images={min_images}")
+        logger.info(
+            f"Generating memories: radius={location_radius_km}km, date_tolerance={date_tolerance_days}days, min_images={min_images}"
+        )
 
         # Fetch ALL images
         from app.database.images import db_get_all_images_for_memories
@@ -163,7 +165,9 @@ def generate_memories(
         location_count = sum(1 for m in memories if m.get("type") == "location")
         date_count = sum(1 for m in memories if m.get("type") == "date")
 
-        logger.info(f"Generated {len(memories)} memories (location: {location_count}, date: {date_count})")
+        logger.info(
+            f"Generated {len(memories)} memories (location: {location_count}, date: {date_count})"
+        )
 
         return GenerateMemoriesResponse(
             success=True,
@@ -173,7 +177,7 @@ def generate_memories(
             memories=memories,
         )
 
-    except Exception as e:
+    except Exception:
         logger.error("Error generating memories", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to generate memories")
 
@@ -181,8 +185,12 @@ def generate_memories(
 @router.get("/timeline", response_model=TimelineResponse)
 def get_timeline(
     days: int = Query(365, ge=1, le=3650, description="Number of days to look back"),
-    location_radius_km: float = Query(5.0, ge=0.1, le=100, description="Location clustering radius in km"),
-    date_tolerance_days: int = Query(3, ge=1, le=30, description="Date tolerance in days"),
+    location_radius_km: float = Query(
+        5.0, ge=0.1, le=100, description="Location clustering radius in km"
+    ),
+    date_tolerance_days: int = Query(
+        3, ge=1, le=30, description="Date tolerance in days"
+    ),
 ):
     """
     Get memories from the past N days as a timeline.
@@ -243,7 +251,7 @@ def get_timeline(
             memories=memories,
         )
 
-    except Exception as e:
+    except Exception:
         logger.error("Error getting timeline", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to get timeline")
 
@@ -289,18 +297,20 @@ def get_on_this_day():
                     captured_at_str = img.get("captured_at")
                     if not captured_at_str:
                         continue
-                    
+
                     try:
                         # Strip trailing Z and parse ISO format
                         captured_at_str = captured_at_str.rstrip("Z")
                         captured_dt = datetime.fromisoformat(captured_at_str)
-                        
+
                         # Only include if day matches
                         if captured_dt.day == current_day:
                             day_images.append(img)
                     except (ValueError, TypeError, AttributeError):
                         # Skip images with malformed dates
-                        logger.debug(f"Skipping image with invalid date: {captured_at_str}")
+                        logger.debug(
+                            f"Skipping image with invalid date: {captured_at_str}"
+                        )
                         continue
 
                 if day_images:
@@ -319,7 +329,7 @@ def get_on_this_day():
             if not captured_at:
                 return datetime.min
             try:
-                
+
                 if isinstance(captured_at, str):
                     captured_at = captured_at.rstrip("Z")
                 return datetime.fromisoformat(captured_at)
@@ -336,15 +346,19 @@ def get_on_this_day():
             images=all_images,
         )
 
-    except Exception as e:
+    except Exception:
         logger.error("Error getting 'On This Day'", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to get 'On This Day'")
 
 
 @router.get("/locations", response_model=LocationsResponse)
 def get_locations(
-    location_radius_km: float = Query(5.0, ge=0.1, le=100, description="Location clustering radius in km"),
-    max_sample_images: int = Query(5, ge=1, le=20, description="Max sample images per location"),
+    location_radius_km: float = Query(
+        5.0, ge=0.1, le=100, description="Location clustering radius in km"
+    ),
+    max_sample_images: int = Query(
+        5, ge=1, le=20, description="Max sample images per location"
+    ),
 ):
     """
     Get all unique locations where photos were taken.
@@ -379,7 +393,7 @@ def get_locations(
         # Cluster by location only (no date clustering)
         clustering = MemoryClustering(
             location_radius_km=location_radius_km,
-            date_tolerance_days=3,  
+            date_tolerance_days=3,
             min_images_per_memory=1,
         )
 
@@ -393,8 +407,12 @@ def get_locations(
                 continue
 
             # Calculate center
-            center_lat = sum(img["latitude"] for img in cluster_images) / len(cluster_images)
-            center_lon = sum(img["longitude"] for img in cluster_images) / len(cluster_images)
+            center_lat = sum(img["latitude"] for img in cluster_images) / len(
+                cluster_images
+            )
+            center_lon = sum(img["longitude"] for img in cluster_images) / len(
+                cluster_images
+            )
 
             # Get location name
             location_name = clustering._reverse_geocode(center_lat, center_lon)
@@ -415,8 +433,10 @@ def get_locations(
         # Sort by image count (most photos first)
         locations.sort(key=lambda loc: loc.image_count, reverse=True)
 
-        return LocationsResponse(success=True, location_count=len(locations), locations=locations)
+        return LocationsResponse(
+            success=True, location_count=len(locations), locations=locations
+        )
 
-    except Exception as e:
+    except Exception:
         logger.error("Error getting locations", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to get locations")

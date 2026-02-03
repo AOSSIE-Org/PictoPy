@@ -9,8 +9,7 @@ def db_create_albums_table() -> None:
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS albums (
                 album_id TEXT PRIMARY KEY,
                 album_name TEXT UNIQUE,
@@ -18,8 +17,7 @@ def db_create_albums_table() -> None:
                 is_hidden BOOLEAN DEFAULT 0,
                 password_hash TEXT
             )
-            """
-        )
+            """)
         conn.commit()
     finally:
         if conn is not None:
@@ -31,8 +29,7 @@ def db_create_album_images_table() -> None:
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS album_images (
                 album_id TEXT,
                 image_id TEXT,
@@ -40,8 +37,7 @@ def db_create_album_images_table() -> None:
                 FOREIGN KEY (album_id) REFERENCES albums(album_id) ON DELETE CASCADE,
                 FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE
             )
-            """
-        )
+            """)
         conn.commit()
     finally:
         if conn is not None:
@@ -96,7 +92,9 @@ def db_insert_album(
     try:
         password_hash = None
         if password:
-            password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+            password_hash = bcrypt.hashpw(
+                password.encode("utf-8"), bcrypt.gensalt()
+            ).decode("utf-8")
         cursor.execute(
             """
             INSERT INTO albums (album_id, album_name, description, is_hidden, password_hash)
@@ -121,7 +119,9 @@ def db_update_album(
     try:
         if password is not None:
             # Update with new password
-            password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+            password_hash = bcrypt.hashpw(
+                password.encode("utf-8"), bcrypt.gensalt()
+            ).decode("utf-8")
             cursor.execute(
                 """
                 UPDATE albums
@@ -155,7 +155,9 @@ def db_get_album_images(album_id: str):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT image_id FROM album_images WHERE album_id = ?", (album_id,))
+        cursor.execute(
+            "SELECT image_id FROM album_images WHERE album_id = ?", (album_id,)
+        )
         images = cursor.fetchall()
         return [img[0] for img in images]
     finally:
@@ -166,7 +168,9 @@ def db_add_images_to_album(album_id: str, image_ids: list[str]):
     with get_db_connection() as conn:
         cursor = conn.cursor()
 
-        query = f"SELECT id FROM images WHERE id IN ({','.join('?' for _ in image_ids)})"
+        query = (
+            f"SELECT id FROM images WHERE id IN ({','.join('?' for _ in image_ids)})"
+        )
         cursor.execute(query, image_ids)
         valid_images = [row[0] for row in cursor.fetchall()]
 
@@ -215,7 +219,9 @@ def verify_album_password(album_id: str, password: str) -> bool:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT password_hash FROM albums WHERE album_id = ?", (album_id,))
+        cursor.execute(
+            "SELECT password_hash FROM albums WHERE album_id = ?", (album_id,)
+        )
         row = cursor.fetchone()
         if not row or not row[0]:
             return False

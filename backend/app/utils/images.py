@@ -62,7 +62,9 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
                 folder_path_to_id = {os.path.abspath(folder_path): folder_id}
 
                 # Step 3: Prepare image records for this folder
-                folder_image_records = image_util_prepare_image_records(image_files, folder_path_to_id)
+                folder_image_records = image_util_prepare_image_records(
+                    image_files, folder_path_to_id
+                )
                 all_image_records.extend(folder_image_records)
 
             except Exception as e:
@@ -135,7 +137,9 @@ def image_util_classify_and_face_detect_images(
         face_detector.close()
 
 
-def image_util_prepare_image_records(image_files: List[str], folder_path_to_id: Dict[str, int]) -> List[Dict]:
+def image_util_prepare_image_records(
+    image_files: List[str], folder_path_to_id: Dict[str, int]
+) -> List[Dict]:
     """
     Prepare image records with thumbnails for database insertion.
     Automatically extracts GPS coordinates and capture datetime from metadata.
@@ -158,7 +162,9 @@ def image_util_prepare_image_records(image_files: List[str], folder_path_to_id: 
 
         image_id = str(uuid.uuid4())
         thumbnail_name = f"thumbnail_{image_id}.jpg"
-        thumbnail_path = os.path.abspath(os.path.join(THUMBNAIL_IMAGES_PATH, thumbnail_name))
+        thumbnail_path = os.path.abspath(
+            os.path.join(THUMBNAIL_IMAGES_PATH, thumbnail_name)
+        )
 
         # Generate thumbnail
         if image_util_generate_thumbnail(image_path, thumbnail_path):
@@ -175,11 +181,17 @@ def image_util_prepare_image_records(image_files: List[str], folder_path_to_id: 
 
                 # Log GPS extraction results
                 if latitude and longitude:
-                    logger.info(f"GPS extracted for {os.path.basename(image_path)}: ({latitude}, {longitude})")
+                    logger.info(
+                        f"GPS extracted for {os.path.basename(image_path)}: ({latitude}, {longitude})"
+                    )
                 if captured_at:
-                    logger.debug(f"Date extracted for {os.path.basename(image_path)}: {captured_at}")
+                    logger.debug(
+                        f"Date extracted for {os.path.basename(image_path)}: {captured_at}"
+                    )
             except Exception as e:
-                logger.warning(f"GPS extraction failed for {os.path.basename(image_path)}: {e}")
+                logger.warning(
+                    f"GPS extraction failed for {os.path.basename(image_path)}: {e}"
+                )
                 # Continue without GPS - don't fail the upload
 
             # Build image record with GPS data
@@ -194,7 +206,11 @@ def image_util_prepare_image_records(image_files: List[str], folder_path_to_id: 
                 "isTagged": False,
                 "latitude": latitude,  # Can be None
                 "longitude": longitude,  # Can be None
-                "captured_at": (captured_at.isoformat() if isinstance(captured_at, datetime.datetime) and captured_at else captured_at),  # Can be None
+                "captured_at": (
+                    captured_at.isoformat()
+                    if isinstance(captured_at, datetime.datetime) and captured_at
+                    else captured_at
+                ),  # Can be None
             }
 
             image_records.append(image_record)
@@ -202,7 +218,9 @@ def image_util_prepare_image_records(image_files: List[str], folder_path_to_id: 
     return image_records
 
 
-def image_util_get_images_from_folder(folder_path: str, recursive: bool = True) -> List[str]:
+def image_util_get_images_from_folder(
+    folder_path: str, recursive: bool = True
+) -> List[str]:
     """Get all image files from a folder.
 
     Args:
@@ -234,7 +252,9 @@ def image_util_get_images_from_folder(folder_path: str, recursive: bool = True) 
     return image_files
 
 
-def image_util_generate_thumbnail(image_path: str, thumbnail_path: str, size: Tuple[int, int] = (600, 600)) -> bool:
+def image_util_generate_thumbnail(
+    image_path: str, thumbnail_path: str, size: Tuple[int, int] = (600, 600)
+) -> bool:
     """Generate thumbnail for a single image."""
     try:
         with Image.open(image_path) as img:
@@ -301,7 +321,9 @@ def image_util_create_folder_path_mapping(
     return folder_path_to_id
 
 
-def image_util_find_folder_id_for_image(image_path: str, folder_path_to_id: Dict[str, int]) -> int:
+def image_util_find_folder_id_for_image(
+    image_path: str, folder_path_to_id: Dict[str, int]
+) -> int:
     """
     Find the most specific folder ID for a given image path.
 
@@ -345,7 +367,11 @@ def _convert_to_degrees(value):
     """Converts a GPS coordinate value from DMS to decimal degrees."""
 
     def to_float(v):
-        return float(v.numerator) / float(v.denominator) if hasattr(v, "numerator") else float(v)
+        return (
+            float(v.numerator) / float(v.denominator)
+            if hasattr(v, "numerator")
+            else float(v)
+        )
 
     d, m, s = (to_float(v) for v in value[:3])
     return d + (m / 60.0) + (s / 3600.0)
@@ -426,7 +452,11 @@ def image_util_extract_metadata(image_path: str) -> dict:
 
                 # Robust EXIF extraction with safe fallback
                 try:
-                    exif_data = img.getexif() if hasattr(img, "getexif") else getattr(img, "_getexif", lambda: None)()
+                    exif_data = (
+                        img.getexif()
+                        if hasattr(img, "getexif")
+                        else getattr(img, "_getexif", lambda: None)()
+                    )
                 except Exception:
                     exif_data = None
 
@@ -436,7 +466,11 @@ def image_util_extract_metadata(image_path: str) -> dict:
 
                 for k, v in exif.items():
                     if ExifTags.TAGS.get(k) == "DateTimeOriginal":
-                        dt_original = v.decode("utf-8", "ignore") if isinstance(v, (bytes, bytearray)) else str(v)
+                        dt_original = (
+                            v.decode("utf-8", "ignore")
+                            if isinstance(v, (bytes, bytearray))
+                            else str(v)
+                        )
                         break
 
                 # Safe parse; fall back to mtime without losing width/height
@@ -447,9 +481,13 @@ def image_util_extract_metadata(image_path: str) -> dict:
                             "%Y:%m:%d %H:%M:%S",
                         ).isoformat()
                     except ValueError:
-                        date_created = datetime.datetime.fromtimestamp(stats.st_mtime).isoformat()
+                        date_created = datetime.datetime.fromtimestamp(
+                            stats.st_mtime
+                        ).isoformat()
                 else:
-                    date_created = datetime.datetime.fromtimestamp(stats.st_mtime).isoformat()
+                    date_created = datetime.datetime.fromtimestamp(
+                        stats.st_mtime
+                    ).isoformat()
 
             metadata_dict = {
                 "name": os.path.basename(image_path),
@@ -471,7 +509,9 @@ def image_util_extract_metadata(image_path: str) -> dict:
             logger.error(f"Pillow could not open image {image_path}: {e}")
             return {
                 "name": os.path.basename(image_path),
-                "date_created": datetime.datetime.fromtimestamp(stats.st_mtime).isoformat(),
+                "date_created": datetime.datetime.fromtimestamp(
+                    stats.st_mtime
+                ).isoformat(),
                 "file_location": image_path,
                 "file_size": stats.st_size,
                 "width": 0,

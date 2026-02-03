@@ -29,7 +29,11 @@ def test_gps_extraction():
     extractor = MetadataExtractor()
 
     # Test case 1: Sample metadata with GPS
-    sample_metadata = {"latitude": 28.6139, "longitude": 77.2090, "CreateDate": "2024:11:15 14:30:00"}
+    sample_metadata = {
+        "latitude": 28.6139,
+        "longitude": 77.2090,
+        "CreateDate": "2024:11:15 14:30:00",
+    }
 
     metadata_json = json.dumps(sample_metadata)
     lat, lon, captured_at = extractor.extract_all(metadata_json)

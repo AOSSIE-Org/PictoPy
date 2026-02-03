@@ -60,8 +60,7 @@ def db_create_images_table() -> None:
     cursor = conn.cursor()
 
     # Create new images table with merged fields including Memories feature columns
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS images (
             id TEXT PRIMARY KEY,
             path VARCHAR UNIQUE,
@@ -75,18 +74,22 @@ def db_create_images_table() -> None:
             captured_at DATETIME,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
-    """
-    )
+    """)
 
     # Create indexes for Memories feature queries
     cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_latitude ON images(latitude)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_longitude ON images(longitude)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_captured_at ON images(captured_at)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_favourite_captured_at ON images(isFavourite, captured_at)")
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS ix_images_longitude ON images(longitude)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS ix_images_captured_at ON images(captured_at)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS ix_images_favourite_captured_at ON images(isFavourite, captured_at)"
+    )
 
     # Create new image_classes junction table
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS image_classes (
             image_id TEXT,
             class_id INTEGER,
@@ -94,8 +97,7 @@ def db_create_images_table() -> None:
             FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
             FOREIGN KEY (class_id) REFERENCES mappings(class_id) ON DELETE CASCADE
         )
-    """
-    )
+    """)
 
     conn.commit()
     conn.close()
@@ -111,9 +113,13 @@ def db_migrate_add_memories_columns() -> None:
 
     try:
         # Check if images table exists
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='images'")
+        cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='images'"
+        )
         if not cursor.fetchone():
-            logger.info("Images table does not exist yet, will be created by db_create_images_table()")
+            logger.info(
+                "Images table does not exist yet, will be created by db_create_images_table()"
+            )
             conn.close()
             return
 
@@ -140,10 +146,18 @@ def db_migrate_add_memories_columns() -> None:
             changes_made = True
 
         # Create indexes
-        cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_latitude ON images(latitude)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_longitude ON images(longitude)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_captured_at ON images(captured_at)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_favourite_captured_at ON images(isFavourite, captured_at)")
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS ix_images_latitude ON images(latitude)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS ix_images_longitude ON images(longitude)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS ix_images_captured_at ON images(captured_at)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS ix_images_favourite_captured_at ON images(isFavourite, captured_at)"
+        )
 
         if changes_made:
             logger.info("Memories feature columns migration completed")
@@ -270,7 +284,9 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                     "isFavourite": bool(is_favourite),
                     "latitude": latitude,
                     "longitude": longitude,
-                    "captured_at": (captured_at if captured_at else None),  # SQLite returns string
+                    "captured_at": (
+                        captured_at if captured_at else None
+                    ),  # SQLite returns string
                     "tags": [],
                 }
 
@@ -311,15 +327,13 @@ def db_get_untagged_images() -> List[UntaggedImageRecord]:
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT i.id, i.path, i.folder_id, i.thumbnailPath, i.metadata
             FROM images i
             JOIN folders f ON i.folder_id = f.folder_id
             WHERE f.AI_Tagging = TRUE
             AND i.isTagged = FALSE
-            """
-        )
+            """)
 
         results = cursor.fetchall()
 
@@ -509,7 +523,9 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
 # ============================================================================
 
 
-def db_get_images_by_date_range(start_date: datetime, end_date: datetime, include_favorites_only: bool = False) -> List[dict]:
+def db_get_images_by_date_range(
+    start_date: datetime, end_date: datetime, include_favorites_only: bool = False
+) -> List[dict]:
     """
     Get images captured within a date range for Memories timeline.
 
@@ -586,7 +602,9 @@ def db_get_images_by_date_range(start_date: datetime, end_date: datetime, includ
         conn.close()
 
 
-def db_get_images_near_location(latitude: float, longitude: float, radius_km: float = 5.0) -> List[dict]:
+def db_get_images_near_location(
+    latitude: float, longitude: float, radius_km: float = 5.0
+) -> List[dict]:
     """
     Get images near a location within radius_km using bounding box approximation.
 
@@ -761,8 +779,7 @@ def db_get_images_with_location() -> List[dict]:
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT 
                 i.id, 
                 i.path, 
@@ -782,8 +799,7 @@ def db_get_images_with_location() -> List[dict]:
               AND i.longitude IS NOT NULL
             GROUP BY i.id
             ORDER BY i.captured_at DESC
-        """
-        )
+        """)
 
         results = cursor.fetchall()
 
@@ -828,8 +844,7 @@ def db_get_all_images_for_memories() -> List[dict]:
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT 
                 i.id, 
                 i.path, 
@@ -847,8 +862,7 @@ def db_get_all_images_for_memories() -> List[dict]:
             LEFT JOIN mappings m ON ic.class_id = m.class_id
             GROUP BY i.id
             ORDER BY i.captured_at DESC
-        """
-        )
+        """)
 
         results = cursor.fetchall()
 

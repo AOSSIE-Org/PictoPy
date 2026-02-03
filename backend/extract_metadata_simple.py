@@ -22,7 +22,9 @@ def extract_and_update():
     cursor = conn.cursor()
 
     # Get all images with metadata
-    cursor.execute("SELECT id, metadata FROM images WHERE metadata IS NOT NULL AND metadata != ''")
+    cursor.execute(
+        "SELECT id, metadata FROM images WHERE metadata IS NOT NULL AND metadata != ''"
+    )
     images = cursor.fetchall()
 
     print(f"\nFound {len(images)} images with metadata")
@@ -48,13 +50,22 @@ def extract_and_update():
             if has_location or has_datetime:
                 # Update the database
                 if has_location and has_datetime:
-                    cursor.execute("UPDATE images SET latitude = ?, longitude = ?, captured_at = ? WHERE id = ?", (latitude, longitude, date_created, image_id))
+                    cursor.execute(
+                        "UPDATE images SET latitude = ?, longitude = ?, captured_at = ? WHERE id = ?",
+                        (latitude, longitude, date_created, image_id),
+                    )
                     both_count += 1
                 elif has_location:
-                    cursor.execute("UPDATE images SET latitude = ?, longitude = ? WHERE id = ?", (latitude, longitude, image_id))
+                    cursor.execute(
+                        "UPDATE images SET latitude = ?, longitude = ? WHERE id = ?",
+                        (latitude, longitude, image_id),
+                    )
                     location_count += 1
                 elif has_datetime:
-                    cursor.execute("UPDATE images SET captured_at = ? WHERE id = ?", (date_created, image_id))
+                    cursor.execute(
+                        "UPDATE images SET captured_at = ? WHERE id = ?",
+                        (date_created, image_id),
+                    )
                     datetime_count += 1
 
                 updated_count += 1
@@ -77,7 +88,9 @@ def extract_and_update():
     cursor.execute("SELECT COUNT(*) FROM images WHERE captured_at IS NOT NULL")
     total_with_datetime = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM images WHERE latitude IS NOT NULL AND captured_at IS NOT NULL")
+    cursor.execute(
+        "SELECT COUNT(*) FROM images WHERE latitude IS NOT NULL AND captured_at IS NOT NULL"
+    )
     total_with_both = cursor.fetchone()[0]
 
     conn.close()
@@ -88,9 +101,15 @@ def extract_and_update():
     print("=" * 70)
     print(f"Total images processed:       {len(images)}")
     print(f"Images updated:               {updated_count}")
-    print(f"Images with location data:    {total_with_location} ({100 * total_with_location / len(images):.1f}%)")
-    print(f"Images with datetime:         {total_with_datetime} ({100 * total_with_datetime / len(images):.1f}%)")
-    print(f"Images with both:             {total_with_both} ({100 * total_with_both / len(images):.1f}%)")
+    print(
+        f"Images with location data:    {total_with_location} ({100 * total_with_location / len(images):.1f}%)"
+    )
+    print(
+        f"Images with datetime:         {total_with_datetime} ({100 * total_with_datetime / len(images):.1f}%)"
+    )
+    print(
+        f"Images with both:             {total_with_both} ({100 * total_with_both / len(images):.1f}%)"
+    )
     print(f"Images skipped (no data):     {len(images) - updated_count}")
     print("=" * 70)
     print("\n✅ Migration completed successfully!")

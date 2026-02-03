@@ -104,8 +104,12 @@ def test_locations():
         print("\nSummary:")
         print(f"   - Location Count: {data.get('location_count', 0)}")
         if data.get("locations"):
-            print(f"   - Top Location: {data['locations'][0].get('location_name', 'N/A')}")
-            print(f"   - Photos at Top Location: {data['locations'][0].get('image_count', 0)}")
+            print(
+                f"   - Top Location: {data['locations'][0].get('location_name', 'N/A')}"
+            )
+            print(
+                f"   - Photos at Top Location: {data['locations'][0].get('image_count', 0)}"
+            )
 
 
 def check_server():

@@ -68,7 +68,9 @@ class TestAlbumRoutes:
         ],
     )
     def test_create_album_variants(self, album_data):
-        with patch("app.routes.albums.db_get_album_by_name") as mock_get_by_name, patch("app.routes.albums.db_insert_album") as mock_insert:
+        with patch("app.routes.albums.db_get_album_by_name") as mock_get_by_name, patch(
+            "app.routes.albums.db_insert_album"
+        ) as mock_insert:
             mock_get_by_name.return_value = None  # No existing album
             mock_insert.return_value = None
 
@@ -131,8 +133,13 @@ class TestAlbumRoutes:
             assert isinstance(json_response["albums"], list)
             assert len(json_response["albums"]) == 1
             assert json_response["albums"][0]["album_id"] == mock_db_album["album_id"]
-            assert json_response["albums"][0]["album_name"] == mock_db_album["album_name"]
-            assert json_response["albums"][0]["description"] == mock_db_album["description"]
+            assert (
+                json_response["albums"][0]["album_name"] == mock_db_album["album_name"]
+            )
+            assert (
+                json_response["albums"][0]["description"]
+                == mock_db_album["description"]
+            )
             assert json_response["albums"][0]["is_hidden"] == mock_db_album["is_hidden"]
 
             mock_get_all.assert_called_once_with(False)
@@ -284,8 +291,14 @@ class TestAlbumRoutes:
             ),
         ],
     )
-    def test_update_album(self, album_data, request_data, verify_password_return, expected_status):
-        with patch("app.routes.albums.db_get_album") as mock_get_album, patch("app.routes.albums.db_update_album") as mock_update_album, patch("app.routes.albums.verify_album_password") as mock_verify:
+    def test_update_album(
+        self, album_data, request_data, verify_password_return, expected_status
+    ):
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_update_album"
+        ) as mock_update_album, patch(
+            "app.routes.albums.verify_album_password"
+        ) as mock_verify:
             mock_get_album.return_value = album_data
             mock_verify.return_value = verify_password_return
 
@@ -312,7 +325,9 @@ class TestAlbumRoutes:
             mock_db_album["password_hash"],
         )
 
-        with patch("app.routes.albums.db_get_album") as mock_get_album, patch("app.routes.albums.db_delete_album") as mock_delete_album:
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_delete_album"
+        ) as mock_delete_album:
             mock_get_album.return_value = album_tuple
             mock_delete_album.return_value = None
 
@@ -351,7 +366,9 @@ class TestAlbumImageManagement:
             mock_db_album["password_hash"],
         )
 
-        with patch("app.routes.albums.db_get_album") as mock_get_album, patch("app.routes.albums.db_add_images_to_album") as mock_add_images:
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_add_images_to_album"
+        ) as mock_add_images:
             mock_get_album.return_value = album_tuple
             mock_add_images.return_value = None
 
@@ -384,7 +401,9 @@ class TestAlbumImageManagement:
             mock_db_album["password_hash"],
         )
 
-        with patch("app.routes.albums.db_get_album") as mock_get_album, patch("app.routes.albums.db_get_album_images") as mock_get_images:
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_get_album_images"
+        ) as mock_get_images:
             mock_get_album.return_value = album_tuple
             mock_get_images.return_value = expected_image_ids
 
@@ -414,7 +433,9 @@ class TestAlbumImageManagement:
             mock_db_album["password_hash"],
         )
 
-        with patch("app.routes.albums.db_get_album") as mock_get_album, patch("app.routes.albums.db_remove_image_from_album") as mock_remove:
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_remove_image_from_album"
+        ) as mock_remove:
             mock_get_album.return_value = album_tuple
             mock_remove.return_value = None
 
@@ -436,12 +457,18 @@ class TestAlbumImageManagement:
         album_id = mock_db_album["album_id"]
         image_ids_to_remove = {"image_ids": [str(uuid.uuid4()), str(uuid.uuid4())]}
 
-        with patch("app.routes.albums.db_get_album") as mock_get, patch("app.routes.albums.db_remove_images_from_album") as mock_remove_bulk:
+        with patch("app.routes.albums.db_get_album") as mock_get, patch(
+            "app.routes.albums.db_remove_images_from_album"
+        ) as mock_remove_bulk:
             mock_get.return_value = tuple(mock_db_album.values())
-            response = client.request("DELETE", f"/albums/{album_id}/images", json=image_ids_to_remove)
+            response = client.request(
+                "DELETE", f"/albums/{album_id}/images", json=image_ids_to_remove
+            )
             assert response.status_code == 200
             json_response = response.json()
             assert json_response["success"] is True
             assert str(len(image_ids_to_remove["image_ids"])) in json_response["msg"]
             mock_get.assert_called_once_with(album_id)
-            mock_remove_bulk.assert_called_once_with(album_id, image_ids_to_remove["image_ids"])
+            mock_remove_bulk.assert_called_once_with(
+                album_id, image_ids_to_remove["image_ids"]
+            )

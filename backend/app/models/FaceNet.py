@@ -11,12 +11,16 @@ logger = get_logger(__name__)
 
 class FaceNet:
     def __init__(self, model_path):
-        self.session = onnxruntime.InferenceSession(model_path, providers=ONNX_util_get_execution_providers())
+        self.session = onnxruntime.InferenceSession(
+            model_path, providers=ONNX_util_get_execution_providers()
+        )
         self.input_tensor_name = self.session.get_inputs()[0].name
         self.output_tensor_name = self.session.get_outputs()[0].name
 
     def get_embedding(self, preprocessed_image):
-        result = self.session.run([self.output_tensor_name], {self.input_tensor_name: preprocessed_image})[0]
+        result = self.session.run(
+            [self.output_tensor_name], {self.input_tensor_name: preprocessed_image}
+        )[0]
         embedding = result[0]
         return FaceNet_util_normalize_embedding(embedding)
 

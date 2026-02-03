@@ -10,7 +10,6 @@ from concurrent.futures import ProcessPoolExecutor
 
 from app.routes.folders import router as folders_router
 
-
 # ##############################
 # Pytest Fixtures
 # ##############################
@@ -163,7 +162,9 @@ class TestFoldersAPI:
         mock_add_folder_tree.assert_called_once()
 
     @patch("app.routes.folders.db_folder_exists")
-    def test_add_folder_already_exists(self, mock_folder_exists, client, temp_folder_structure):
+    def test_add_folder_already_exists(
+        self, mock_folder_exists, client, temp_folder_structure
+    ):
         """Test adding folder that already exists in database."""
         mock_folder_exists.return_value = True
 
@@ -231,7 +232,9 @@ class TestFoldersAPI:
         """Test adding folder with specified parent_folder_id."""
 
         mock_folder_exists.return_value = False
-        mock_find_parent.return_value = None  # Should not be called when parent_id provided
+        mock_find_parent.return_value = (
+            None  # Should not be called when parent_id provided
+        )
         mock_add_folder_tree.return_value = ("child-folder-id", {})
         mock_update_parent_ids.return_value = None
 
@@ -254,7 +257,9 @@ class TestFoldersAPI:
 
     @patch("app.routes.folders.folder_util_add_folder_tree")
     @patch("app.routes.folders.db_folder_exists")
-    def test_add_folder_database_error(self, mock_folder_exists, mock_add_folder_tree, client, temp_folder_structure):
+    def test_add_folder_database_error(
+        self, mock_folder_exists, mock_add_folder_tree, client, temp_folder_structure
+    ):
         """Test handling database errors during folder addition."""
         mock_folder_exists.return_value = False
         mock_add_folder_tree.side_effect = Exception("Database connection failed")
@@ -388,7 +393,9 @@ class TestFoldersAPI:
         assert data["detail"]["error"] == "Internal server error"
 
     @patch("app.routes.folders.db_enable_ai_tagging_batch")
-    def test_enable_ai_tagging_background_processing_called(self, mock_enable_batch, client):
+    def test_enable_ai_tagging_background_processing_called(
+        self, mock_enable_batch, client
+    ):
         """Test that background processing is triggered after enabling AI tagging."""
         mock_enable_batch.return_value = 2
 
@@ -411,7 +418,9 @@ class TestFoldersAPI:
         """Test successfully disabling AI tagging for folders."""
         mock_disable_batch.return_value = 5  # 5 folders updated
 
-        request_data = {"folder_ids": ["folder-1", "folder-2", "folder-3", "folder-4", "folder-5"]}
+        request_data = {
+            "folder_ids": ["folder-1", "folder-2", "folder-3", "folder-4", "folder-5"]
+        }
 
         response = client.post("/folders/disable-ai-tagging", json=request_data)
 
@@ -428,7 +437,9 @@ class TestFoldersAPI:
             "folder-5",
         ]
 
-        mock_disable_batch.assert_called_once_with(["folder-1", "folder-2", "folder-3", "folder-4", "folder-5"])
+        mock_disable_batch.assert_called_once_with(
+            ["folder-1", "folder-2", "folder-3", "folder-4", "folder-5"]
+        )
 
     @patch("app.routes.folders.db_disable_ai_tagging_batch")
     def test_disable_ai_tagging_single_folder(self, mock_disable_batch, client):
@@ -479,7 +490,9 @@ class TestFoldersAPI:
         assert data["detail"]["error"] == "Internal server error"
 
     @patch("app.routes.folders.db_disable_ai_tagging_batch")
-    def test_disable_ai_tagging_no_background_processing(self, mock_disable_batch, client):
+    def test_disable_ai_tagging_no_background_processing(
+        self, mock_disable_batch, client
+    ):
         """Test that no background processing is triggered when disabling AI tagging."""
         mock_disable_batch.return_value = 2
 
@@ -572,7 +585,9 @@ class TestFoldersAPI:
     # ============================================================================
 
     @patch("app.routes.folders.db_get_all_folder_details")
-    def test_get_all_folders_success(self, mock_get_all_folders, client, sample_folder_details):
+    def test_get_all_folders_success(
+        self, mock_get_all_folders, client, sample_folder_details
+    ):
         """Test successfully retrieving all folders."""
         mock_get_all_folders.return_value = sample_folder_details
 
@@ -660,7 +675,9 @@ class TestFoldersAPI:
         """Test disabling AI tagging when no folders are actually updated."""
         mock_disable_batch.return_value = 0
 
-        request_data = {"folder_ids": ["non-existent-folder-1", "non-existent-folder-2"]}
+        request_data = {
+            "folder_ids": ["non-existent-folder-1", "non-existent-folder-2"]
+        }
 
         response = client.post("/folders/disable-ai-tagging", json=request_data)
 
@@ -719,7 +736,9 @@ class TestFoldersAPI:
 
     @patch("app.routes.folders.db_enable_ai_tagging_batch")
     @patch("app.routes.folders.db_disable_ai_tagging_batch")
-    def test_ai_tagging_toggle_workflow(self, mock_disable_batch, mock_enable_batch, client):
+    def test_ai_tagging_toggle_workflow(
+        self, mock_disable_batch, mock_enable_batch, client
+    ):
         """Test toggling AI tagging on and off for folders."""
         folder_ids = ["folder-1", "folder-2"]
 
@@ -732,7 +751,9 @@ class TestFoldersAPI:
         assert enable_response.json()["data"]["updated_count"] == 2
 
         disable_request = {"folder_ids": folder_ids}
-        disable_response = client.post("/folders/disable-ai-tagging", json=disable_request)
+        disable_response = client.post(
+            "/folders/disable-ai-tagging", json=disable_request
+        )
         assert disable_response.status_code == 200
         assert disable_response.json()["data"]["updated_count"] == 2
 
@@ -786,7 +807,9 @@ class TestFoldersAPI:
 
     @patch("app.routes.folders.db_delete_folders_batch")
     @patch("app.routes.folders.db_enable_ai_tagging_batch")
-    def test_complete_folder_lifecycle(self, mock_enable_batch, mock_delete_batch, client):
+    def test_complete_folder_lifecycle(
+        self, mock_enable_batch, mock_delete_batch, client
+    ):
         """Test complete folder lifecycle: enable AI -> delete."""
         folder_ids = ["folder-1", "folder-2"]
 

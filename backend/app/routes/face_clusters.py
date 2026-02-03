@@ -28,7 +28,6 @@ from app.schemas.face_clusters import (
 from app.schemas.images import FaceSearchRequest, InputType
 from app.utils.faceSearch import perform_face_search
 
-
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -213,7 +212,9 @@ def get_cluster_images(cluster_id: str):
 )
 def face_tagging(
     payload: FaceSearchRequest,
-    input_type: Annotated[InputType, Query(description="Choose input type: 'path' or 'base64'")] = InputType.path,
+    input_type: Annotated[
+        InputType, Query(description="Choose input type: 'path' or 'base64'")
+    ] = InputType.path,
 ):
     image_path = None
 
@@ -274,8 +275,14 @@ def face_tagging(
                 ).model_dump(),
             )
 
-        format_match = base64_data.split(";")[0].split("/")[-1] if ";" in base64_data else "jpeg"
-        extension = format_match if format_match in ["jpeg", "jpg", "png", "gif", "webp"] else "jpeg"
+        format_match = (
+            base64_data.split(";")[0].split("/")[-1] if ";" in base64_data else "jpeg"
+        )
+        extension = (
+            format_match
+            if format_match in ["jpeg", "jpg", "png", "gif", "webp"]
+            else "jpeg"
+        )
         image_id = str(uuid.uuid4())[:8]
         temp_dir = "temp_uploads"
         os.makedirs(temp_dir, exist_ok=True)

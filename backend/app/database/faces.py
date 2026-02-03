@@ -32,8 +32,7 @@ def db_create_faces_table() -> None:
         conn = sqlite3.connect(DATABASE_PATH)
         conn.execute("PRAGMA foreign_keys = ON")
         cursor = conn.cursor()
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS faces (
                 face_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 image_id TEXT,
@@ -44,8 +43,7 @@ def db_create_faces_table() -> None:
                 FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
                 FOREIGN KEY (cluster_id) REFERENCES face_clusters(cluster_id) ON DELETE SET NULL
             )
-        """
-        )
+        """)
         conn.commit()
     finally:
         if conn is not None:
@@ -113,18 +111,32 @@ def db_insert_face_embeddings_by_image_id(
     """
 
     # Handle multiple faces in one image
-    if isinstance(embeddings, list) and len(embeddings) > 0 and isinstance(embeddings[0], np.ndarray):
+    if (
+        isinstance(embeddings, list)
+        and len(embeddings) > 0
+        and isinstance(embeddings[0], np.ndarray)
+    ):
         face_ids = []
         for i, emb in enumerate(embeddings):
-            conf = confidence[i] if isinstance(confidence, list) and i < len(confidence) else confidence
+            conf = (
+                confidence[i]
+                if isinstance(confidence, list) and i < len(confidence)
+                else confidence
+            )
             bb = bbox[i] if isinstance(bbox, list) and i < len(bbox) else bbox
-            cid = cluster_id[i] if isinstance(cluster_id, list) and i < len(cluster_id) else cluster_id
+            cid = (
+                cluster_id[i]
+                if isinstance(cluster_id, list) and i < len(cluster_id)
+                else cluster_id
+            )
             face_id = db_insert_face_embeddings(image_id, emb, conf, bb, cid)
             face_ids.append(face_id)
         return face_ids
     else:
         # Single face
-        return db_insert_face_embeddings(image_id, embeddings, confidence, bbox, cluster_id)
+        return db_insert_face_embeddings(
+            image_id, embeddings, confidence, bbox, cluster_id
+        )
 
 
 def get_all_face_embeddings():
@@ -132,8 +144,7 @@ def get_all_face_embeddings():
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT
                 f.embeddings,
                 f.bbox,
@@ -148,8 +159,7 @@ def get_all_face_embeddings():
             JOIN images i ON f.image_id=i.id
             LEFT JOIN image_classes ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
-        """
-        )
+        """)
         results = cursor.fetchall()
 
         from app.utils.images import image_util_parse_metadata
@@ -229,7 +239,9 @@ def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbed
         conn.close()
 
 
-def db_get_all_faces_with_cluster_names() -> List[Dict[str, Union[FaceId, FaceEmbedding, Optional[str]]]]:
+def db_get_all_faces_with_cluster_names() -> (
+    List[Dict[str, Union[FaceId, FaceEmbedding, Optional[str]]]]
+):
     """
     Get all faces with their corresponding cluster names.
 
@@ -240,14 +252,12 @@ def db_get_all_faces_with_cluster_names() -> List[Dict[str, Union[FaceId, FaceEm
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT f.face_id, f.embeddings, fc.cluster_name
             FROM faces f
             LEFT JOIN face_clusters fc ON f.cluster_id = fc.cluster_id
             ORDER BY f.face_id
-            """
-        )
+            """)
 
         rows = cursor.fetchall()
 
@@ -337,14 +347,12 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT f.cluster_id, f.embeddings
             FROM faces f
             WHERE f.cluster_id IS NOT NULL
             ORDER BY f.cluster_id
-            """
-        )
+            """)
 
         rows = cursor.fetchall()
 
@@ -369,7 +377,9 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
             stacked_embeddings = np.stack(embeddings_list)
             mean_embedding = np.mean(stacked_embeddings, axis=0)
 
-            cluster_means.append({"cluster_id": cluster_id, "mean_embedding": mean_embedding})
+            cluster_means.append(
+                {"cluster_id": cluster_id, "mean_embedding": mean_embedding}
+            )
 
         return cluster_means
     finally:

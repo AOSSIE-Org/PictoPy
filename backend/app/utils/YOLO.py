@@ -158,7 +158,9 @@ def YOLO_util_xywh2xyxy(x):
     return y
 
 
-def YOLO_util_draw_detections(image, boxes, scores, class_ids, mask_alpha=0.3, confidence_threshold=0.3):
+def YOLO_util_draw_detections(
+    image, boxes, scores, class_ids, mask_alpha=0.3, confidence_threshold=0.3
+):
     det_img = image.copy()
 
     img_height, img_width = image.shape[:2]
@@ -223,7 +225,9 @@ def YOLO_util_draw_text(
     )
 
 
-def YOLO_util_draw_masks(image: np.ndarray, boxes: np.ndarray, classes: np.ndarray, mask_alpha: float = 0.3) -> np.ndarray:
+def YOLO_util_draw_masks(
+    image: np.ndarray, boxes: np.ndarray, classes: np.ndarray, mask_alpha: float = 0.3
+) -> np.ndarray:
     mask_img = image.copy()
 
     # Draw bounding boxes and labels of detections

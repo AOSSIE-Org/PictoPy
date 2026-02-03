@@ -67,7 +67,9 @@ def check_database_exists():
 
 def check_images_table(cursor):
     """Check if images table exists"""
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='images'")
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='images'"
+    )
     if not cursor.fetchone():
         print_error("Table 'images' does not exist")
         print_info("Run the app first to create the database schema.")
@@ -126,10 +128,22 @@ def create_indexes(cursor):
     print_header("Creating Performance Indexes")
 
     indexes = [
-        ("ix_images_latitude", "CREATE INDEX IF NOT EXISTS ix_images_latitude ON images(latitude)"),
-        ("ix_images_longitude", "CREATE INDEX IF NOT EXISTS ix_images_longitude ON images(longitude)"),
-        ("ix_images_captured_at", "CREATE INDEX IF NOT EXISTS ix_images_captured_at ON images(captured_at)"),
-        ("ix_images_favourite_captured_at", "CREATE INDEX IF NOT EXISTS ix_images_favourite_captured_at ON images(isFavourite, captured_at)"),
+        (
+            "ix_images_latitude",
+            "CREATE INDEX IF NOT EXISTS ix_images_latitude ON images(latitude)",
+        ),
+        (
+            "ix_images_longitude",
+            "CREATE INDEX IF NOT EXISTS ix_images_longitude ON images(longitude)",
+        ),
+        (
+            "ix_images_captured_at",
+            "CREATE INDEX IF NOT EXISTS ix_images_captured_at ON images(captured_at)",
+        ),
+        (
+            "ix_images_favourite_captured_at",
+            "CREATE INDEX IF NOT EXISTS ix_images_favourite_captured_at ON images(isFavourite, captured_at)",
+        ),
     ]
 
     for index_name, sql in indexes:
@@ -149,7 +163,9 @@ def show_final_schema(cursor):
         primary = " PRIMARY KEY" if pk else ""
         print(f"  {col_name:<20} {col_type:<15} {nullable:<10}{primary}")
 
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='images'")
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='images'"
+    )
     indexes = cursor.fetchall()
     print(f"\n{Colors.BOLD}Indexes:{Colors.RESET}")
     for index in indexes:
@@ -192,7 +208,9 @@ def migrate():
         # Summary
         print_header("Migration Summary")
         if changes_made:
-            print(f"{Colors.BOLD}{Colors.GREEN}✅ Migration completed successfully!{Colors.RESET}\n")
+            print(
+                f"{Colors.BOLD}{Colors.GREEN}✅ Migration completed successfully!{Colors.RESET}\n"
+            )
             print_info("New columns added to 'images' table:")
             print_info("  - latitude (REAL)")
             print_info("  - longitude (REAL)")
@@ -200,11 +218,15 @@ def migrate():
             print_info("")
             print_info("Performance indexes created for fast queries.")
         else:
-            print(f"{Colors.BOLD}{Colors.GREEN}✅ Database is already up to date!{Colors.RESET}\n")
+            print(
+                f"{Colors.BOLD}{Colors.GREEN}✅ Database is already up to date!{Colors.RESET}\n"
+            )
             print_info("All required columns and indexes already exist.")
 
         print(f"\n{Colors.BOLD}Next Steps:{Colors.RESET}")
-        print_info("1. Run metadata extraction: python -m app.utils.extract_location_metadata")
+        print_info(
+            "1. Run metadata extraction: python -m app.utils.extract_location_metadata"
+        )
         print_info("2. Verify setup: python -m app.utils.verify_memories_setup")
         print_info("3. Start the backend: ./run.sh")
         print()
