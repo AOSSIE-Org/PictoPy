@@ -1,7 +1,7 @@
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Check, Heart, MoreVertical, Plus, Trash } from 'lucide-react';
+import { Check, Heart, MoreVertical, Trash } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { Image } from '@/types/Media';
 import { ImageTags } from './ImageTags';
@@ -13,30 +13,25 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AddToAlbumDialog } from '@/components/Dialog/AddToAlbumDialog';
 
-interface ImageCardViewProps {
+interface AlbumImageCardProps {
   image: Image;
   className?: string;
   isSelected?: boolean;
   showTags?: boolean;
   onClick?: () => void;
-  imageIndex?: number;
-  albumId?: string;
-  onRemoveFromAlbum?: (imageId: string) => void;
+  onRemoveFromAlbum: (imageId: string) => void;
 }
 
-export function ImageCard({
+export function AlbumImageCard({
   image,
   className,
   isSelected = false,
   showTags = true,
   onClick,
-  albumId,
   onRemoveFromAlbum,
-}: ImageCardViewProps) {
+}: AlbumImageCardProps) {
   const [isImageHovered, setIsImageHovered] = useState(false);
-  const [isAddToAlbumOpen, setIsAddToAlbumOpen] = useState(false);
   // Default to empty array if no tags are provided
   const tags = image.tags || [];
   const { toggleFavourite } = useToggleFav();
@@ -119,22 +114,13 @@ export function ImageCard({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {albumId && onRemoveFromAlbum ? (
-                      <DropdownMenuItem
-                        onClick={() => onRemoveFromAlbum(image.id)}
-                        className="text-red-500 focus:bg-red-50 focus:text-red-500"
-                      >
-                        <Trash className="mr-2 h-4 w-4" />
-                        Remove from Album
-                      </DropdownMenuItem>
-                    ) : (
-                      <DropdownMenuItem
-                        onClick={() => setIsAddToAlbumOpen(true)}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add to Album
-                      </DropdownMenuItem>
-                    )}
+                    <DropdownMenuItem
+                      onClick={() => onRemoveFromAlbum(image.id)}
+                      className="text-red-500 focus:bg-red-50 focus:text-red-500"
+                    >
+                      <Trash className="mr-2 h-4 w-4" />
+                      Remove from Album
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -149,12 +135,6 @@ export function ImageCard({
           />
         </div>
       </div>
-
-      <AddToAlbumDialog
-        isOpen={isAddToAlbumOpen}
-        onClose={() => setIsAddToAlbumOpen(false)}
-        imageIds={[image.id]}
-      />
     </>
   );
 }
