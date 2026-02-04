@@ -35,7 +35,6 @@ export function Navbar() {
 
   return (
     <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur">
-
       {/* Logo */}
       <div className="flex w-[256px] items-center justify-center">
         <a href="/" className="flex items-center space-x-2">
@@ -64,6 +63,7 @@ export function Navbar() {
 
           {/* Search Input */}
           <Input
+            ref={inputRef}
             type="search"
             placeholder="Search by tags, faces, or location..."
             className="mr-2 flex-1 border-0 bg-neutral-200"

@@ -26,13 +26,13 @@ export const Home = () => {
 
   // GLOBAL SEARCH STATE
   const searchState = useSelector((state: RootState) => state.search);
-  const isTextSearchActive = searchState.active && searchState.type === "text";
-  const isFaceSearchActive = searchState.active && searchState.type === "face";
-  const searchQuery = searchState.query || "";
+  const isTextSearchActive = searchState.active && searchState.type === 'text';
+  const isFaceSearchActive = searchState.active && searchState.type === 'face';
+  const searchQuery = searchState.query || '';
 
   // NORMAL FETCH — disabled during search
   const { data, isLoading, isSuccess, isError, error } = usePictoQuery({
-    queryKey: ["images"],
+    queryKey: ['images'],
     queryFn: () => fetchAllImages(),
     enabled: !searchState.active,
   });
@@ -56,11 +56,11 @@ export const Home = () => {
       error,
     },
     {
-      loadingMessage: "Loading images",
+      loadingMessage: 'Loading images',
       showSuccess: false,
-      errorTitle: "Error",
-      errorMessage: "Failed to load images. Please try again later.",
-    }
+      errorTitle: 'Error',
+      errorMessage: 'Failed to load images. Please try again later.',
+    },
   );
 
   // UPDATE IMAGES BASED ON STATE
@@ -69,7 +69,7 @@ export const Home = () => {
     if (isTextSearchActive && searchSuccess) {
       const images = (searchData?.data || []) as Image[];
       if (!Array.isArray(images)) {
-        console.error("Invalid search data format");
+        console.error('Invalid search data format');
         return;
       }
       dispatch(setImages(images));
@@ -81,14 +81,22 @@ export const Home = () => {
       const images = (data?.data || []) as Image[];
       dispatch(setImages(images));
     }
-  }, [dispatch, searchData, data]);
+  }, [
+    dispatch,
+    searchData,
+    data,
+    isTextSearchActive,
+    searchSuccess,
+    searchState.active,
+    isSuccess,
+  ]);
 
   // TITLE
   const title = isTextSearchActive
     ? `Search Results for "${searchQuery}" (${images.length} found)`
     : isFaceSearchActive && images.length > 0
-    ? `Face Search Results (${images.length} found)`
-    : "Image Gallery";
+      ? `Face Search Results (${images.length} found)`
+      : 'Image Gallery';
 
   return (
     <div className="relative flex h-full flex-col pr-6">

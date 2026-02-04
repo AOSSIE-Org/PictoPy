@@ -423,15 +423,13 @@ def db_search_images(query: str, tagged: Optional[bool] = None) -> List[dict]:
                 i.metadata,
                 i.isTagged,
                 i.isFavourite,
-                m.name as tag_name,
-                md.location as location_name
+                m.name as tag_name
             FROM images i
             LEFT JOIN image_classes ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
-            LEFT JOIN metadata md ON i.id = md.image_id
             WHERE (
                 m.name LIKE ? OR
-                md.location LIKE ? OR
+                i.metadata LIKE ? OR
                 i.path LIKE ?
             )
         """
@@ -461,7 +459,6 @@ def db_search_images(query: str, tagged: Optional[bool] = None) -> List[dict]:
             is_tagged,
             is_favourite,
             tag_name,
-            location_name,
         ) in results:
 
             if image_id not in images_dict:
