@@ -31,7 +31,13 @@ export const useSlideshow = (
         clearInterval(slideshowInterval);
       }
     };
-  }, [isSlideshowActive, totalImages, onNextImage, onLoopToStart, currentIndex]);
+  }, [
+    isSlideshowActive,
+    totalImages,
+    onNextImage,
+    onLoopToStart,
+    currentIndex,
+  ]);
 
   const toggleSlideshow = useCallback(() => {
     setIsSlideshowActive((prev) => !prev);
