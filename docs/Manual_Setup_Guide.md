@@ -180,15 +180,15 @@ Before setting up the Python backend and sync-microservice, you need to have **M
 
     For other systems, consult your distribution's documentation.
 
-   3. ### ONNX Runtime warning on Windows 11 (safe to ignore)
+  ### ONNX Runtime warning on Windows 11 (safe to ignore)
 
-      While running backend tests or starting the PictoPy backend on Windows 11, you may see a warning similar to:
+While running backend tests or starting the PictoPy backend on Windows 11, you may see a warning similar to:
 
-      UserWarning: Unsupported Windows version (11).
-      ONNX Runtime supports Windows 10 and above.
+UserWarning: Unsupported Windows version (11).
+ONNX Runtime supports Windows 10 and above.
 
+This warning is **harmless**. If backend tests pass successfully and the application runs as expected, the setup is working correctly.
 
-    This warning is **harmless**. If backend tests pass successfully and the application runs as expected, the setup is working correctly.
+The warning originates from ONNX Runtime's internal OS version check and does **not** indicate a compatibility issue with PictoPy on Windows 11.
 
-    The warning originates from ONNX Runtime's internal OS version check and does s **not** indicate a compatibility issue with PictoPy on Windows 11.
 
