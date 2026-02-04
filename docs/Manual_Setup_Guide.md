@@ -200,7 +200,8 @@ Jest did not exit one second after the test run has completed.
 
 This warning does **not** indicate a test failure. All tests may still pass successfully.
 
-It is usually caused by open async handles such as timers, watchers, or dev-server related processes.  
+It is usually caused by open async handles such as timers, watchers, or dev-server-related processes.
+  
 If tests pass and no processes are hanging, the warning can be safely ignored.
 
 For debugging purposes, contributors can optionally run:
