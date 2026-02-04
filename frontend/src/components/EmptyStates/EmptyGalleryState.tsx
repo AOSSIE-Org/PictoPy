@@ -1,6 +1,6 @@
 import { FolderOpen, Image as ImageIcon } from 'lucide-react';
-import { useNavigate } from "react-router";
-import { ROUTES } from '@/constants/routes'; 
+import { useNavigate } from 'react-router';
+import { ROUTES } from '@/constants/routes';
 
 export const EmptyGalleryState = () => {
   const navigate = useNavigate();
@@ -21,14 +21,14 @@ export const EmptyGalleryState = () => {
         <div className="flex items-center gap-2">
           <FolderOpen className="h-4 w-4" />
           <span>
-            Go to{" "}
+            Go to{' '}
             <button
               type="button"
-              onClick={() => navigate(`/${ROUTES.SETTINGS}`)} 
-              className="text-blue-500 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded"
+              onClick={() => navigate(`/${ROUTES.SETTINGS}`)}
+              className="rounded text-blue-500 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               Settings
-            </button>{" "}
+            </button>{' '}
             to add folders.
           </span>
         </div>
