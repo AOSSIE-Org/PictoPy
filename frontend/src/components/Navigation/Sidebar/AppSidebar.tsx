@@ -27,26 +27,13 @@ import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
 export function AppSidebar() {
   const location = useLocation();
   const [version, setVersion] = useState<string>('1.0.0');
-  const { open, setOpen, toggleSidebar } = useSidebar();
-
-  useEffect(() => {
-    const savedState = localStorage.getItem('sidebar-open');
-    if (savedState !== null) {
-      const shouldBeOpen = savedState === 'true';
-      setOpen(shouldBeOpen);
-    }
-  }, [setOpen]);
-
-  useEffect(() => {
-    localStorage.setItem('sidebar-open', String(open));
-  }, [open]);
+  const { open, toggleSidebar } = useSidebar();
 
   useEffect(() => {
     getVersion().then((version) => {
@@ -125,27 +112,25 @@ export function AppSidebar() {
           <div
             className={`flex transition-all duration-300 ${open ? 'justify-end px-4' : 'justify-center'}`}
           >
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleSidebar}
-                    className="hover:bg-accent h-8 w-8 transition-transform duration-300 ease-in-out"
-                  >
-                    <ChevronLeft
-                      className={`h-5 w-5 transition-transform duration-300 ease-in-out ${
-                        !open ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>{open ? 'Collapse sidebar' : 'Expand sidebar'}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleSidebar}
+                  className="hover:bg-accent h-8 w-8 transition-transform duration-300 ease-in-out"
+                >
+                  <ChevronLeft
+                    className={`h-5 w-5 transition-transform duration-300 ease-in-out ${
+                      !open ? 'rotate-180' : ''
+                    }`}
+                  />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>{open ? 'Collapse sidebar' : 'Expand sidebar'}</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </SidebarFooter>
