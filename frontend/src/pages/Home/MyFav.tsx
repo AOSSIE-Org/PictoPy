@@ -48,7 +48,7 @@ export const MyFav = () => {
   }, [data, isSuccess, dispatch, isSearchActive]);
 
   const favouriteImages = useMemo(
-    () => images.filter((image) => image.isFavourite === true),
+    () => images.filter((image) => image.isFavourite),
     [images],
   );
 
