@@ -94,7 +94,6 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="border-border/40 mt-auto border-t py-4">
-<<<<<<< sidebar-toggle
         <div className="space-y-3">
           <div
             className={`text-muted-foreground space-y-1 px-4 text-xs transition-all duration-300 ${
@@ -133,11 +132,6 @@ export function AppSidebar() {
               </TooltipContent>
             </Tooltip>
           </div>
-=======
-        <div className="text-muted-foreground space-y-1 px-4 text-xs">
-          <div className="font-medium">PictoPy v{version}</div>
-          <div>© {new Date().getFullYear()} PictoPy</div>
->>>>>>> main
         </div>
       </SidebarFooter>
     </Sidebar>
