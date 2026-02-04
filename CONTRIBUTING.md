@@ -66,7 +66,7 @@ npm test
 
 > **Note:** After running the frontend tests, you may see a warning:
 > `Jest did not exit one second after the test run has completed.`
-> This is a known behavior and **does not indicate a problem** when all tests pass. It occurs due to async handles that Jest detects but doesn't affect test results or application functionality.
+> This is a known behavior and **does not indicate a problem** when all tests pass. It occurs due to open handles (unclosed servers, DB connections, timers, etc.) that prevent the Node process from exiting cleanly. To identify the root cause, run `npx jest --detectOpenHandles` and ensure resources are properly closed in test teardown (`afterEach`/`afterAll`).
 
 ### Backend
 
