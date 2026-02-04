@@ -9,6 +9,7 @@ interface OnboardingState {
   stepStatus: boolean[];
   avatar: string | null;
   name: string;
+  isEditing: boolean;
 }
 
 const initialState: OnboardingState = {
@@ -17,6 +18,7 @@ const initialState: OnboardingState = {
   stepStatus: STEP_NAMES.map(() => false),
   avatar: localStorage.getItem('avatar'),
   name: localStorage.getItem('name') || '',
+  isEditing: false,
 };
 const onboardingSlice = createSlice({
   name: 'onboarding',
@@ -27,6 +29,9 @@ const onboardingSlice = createSlice({
     },
     setName(state, action: PayloadAction<string>) {
       state.name = action.payload;
+    },
+    setIsEditing(state, action: PayloadAction<boolean>) {
+      state.isEditing = action.payload;
     },
     markCompleted(state, action: PayloadAction<number>) {
       const stepIndex = action.payload;
@@ -51,7 +56,7 @@ const onboardingSlice = createSlice({
   },
 });
 
-export const { setAvatar, setName, markCompleted, previousStep } =
+export const { setAvatar, setName, setIsEditing, markCompleted, previousStep } =
   onboardingSlice.actions;
 
 export default onboardingSlice.reducer;
