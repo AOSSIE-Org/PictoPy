@@ -21,6 +21,8 @@ from app.database.albums import db_create_album_images_table
 from app.database.folders import db_create_folders_table
 from app.database.metadata import db_create_metadata_table
 
+from app.database.connection import enable_wal_mode
+
 from app.routes.folders import router as folders_router
 from app.routes.albums import router as albums_router
 from app.routes.images import router as images_router
@@ -50,6 +52,7 @@ os.makedirs(THUMBNAIL_IMAGES_PATH, exist_ok=True)
 async def lifespan(app: FastAPI):
     # Create tables and initialize systems
     generate_openapi_json()
+    enable_wal_mode()
     db_create_folders_table()
     db_create_images_table()
     db_create_YOLO_classes_table()
@@ -58,6 +61,11 @@ async def lifespan(app: FastAPI):
     db_create_albums_table()
     db_create_album_images_table()
     db_create_metadata_table()
+
+
+    microservice_util_start_sync_service()
+
+
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor(max_workers=1)
 
@@ -138,6 +146,7 @@ app.include_router(
     user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
 )
 app.include_router(shutdown_router, tags=["Shutdown"])
+
 
 
 # Entry point for running with: python3 main.py
