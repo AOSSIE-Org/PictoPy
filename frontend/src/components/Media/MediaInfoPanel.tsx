@@ -65,10 +65,8 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
-          transition={{ type: "spring", stiffness: 260, damping: 25 }}
-          className="absolute top-10 left-6 z-50 w-[350px] rounded-xl
-                     border border-white/10 bg-black/60 p-6 shadow-xl
-                     backdrop-blur-lg"
+          transition={{ type: 'spring', stiffness: 260, damping: 25 }}
+          className="absolute top-10 left-6 z-50 w-[350px] rounded-xl border border-white/10 bg-black/60 p-6 shadow-xl backdrop-blur-lg"
         >
           <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
             <h3 className="text-xl font-medium text-white">Image Details</h3>
@@ -88,7 +86,10 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-white/50">Name</p>
-                <p className="truncate font-medium text-white" title={getImageName()}>
+                <p
+                  className="truncate font-medium text-white"
+                  title={getImageName()}
+                >
                   {getImageName()}
                 </p>
               </div>
@@ -121,7 +122,9 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
                     <SquareArrowOutUpRight className="ml-1 h-[14px] w-[14px]" />
                   </button>
                 ) : (
-                  <p className="font-medium text-white">Location not available</p>
+                  <p className="font-medium text-white">
+                    Location not available
+                  </p>
                 )}
               </div>
             </div>
