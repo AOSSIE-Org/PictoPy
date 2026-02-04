@@ -88,50 +88,6 @@
     "shell:default",
     "dialog:default",
     "dialog:default",
-    {
-      "identifier": "shell:allow-spawn",
-      "allow": [
-        {
-          "name": "StartBackendUnix",
-          "cmd": "bash",
-          "args": ["-c", "./PictoPy_Server"],
-          "sidecar": false
-        }
-      ]
-    },
-    {
-      "identifier": "shell:allow-spawn",
-      "allow": [
-        {
-          "name": "StartBackendWindows",
-          "cmd": "powershell",
-          "args": ["./PictoPy_Server"],
-          "sidecar": false
-        }
-      ]
-    },
-    {
-      "identifier": "shell:allow-spawn",
-      "allow": [
-        {
-          "name": "StartSyncServiceUnix",
-          "cmd": "bash",
-          "args": ["-c", "./PictoPy_Sync"],
-          "sidecar": false
-        }
-      ]
-    },
-    {
-      "identifier": "shell:allow-spawn",
-      "allow": [
-        {
-          "name": "StartSyncServiceWindows",
-          "cmd": "powershell",
-          "args": ["./PictoPy_Sync"],
-          "sidecar": false
-        }
-      ]
-    },
     "shell:default",
     "fs:default",
     "dialog:default",

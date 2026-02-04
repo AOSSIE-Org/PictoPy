@@ -6,6 +6,7 @@ import multiprocessing
 import os
 import json
 
+from app.config.settings import DATABASE_PATH, THUMBNAIL_IMAGES_PATH
 from uvicorn import Config, Server
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +26,7 @@ from app.routes.albums import router as albums_router
 from app.routes.images import router as images_router
 from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
+from app.routes.shutdown import router as shutdown_router
 from fastapi.openapi.utils import get_openapi
 from app.logging.setup_logging import (
     configure_uvicorn_logging,
@@ -37,6 +39,11 @@ setup_logging("backend")
 
 # Configure Uvicorn logging to use our custom formatter
 configure_uvicorn_logging("backend")
+
+path = os.path.dirname(DATABASE_PATH)
+os.makedirs(path, exist_ok=True)
+
+os.makedirs(THUMBNAIL_IMAGES_PATH, exist_ok=True)
 
 
 @asynccontextmanager
@@ -130,6 +137,7 @@ app.include_router(
 app.include_router(
     user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
 )
+app.include_router(shutdown_router, tags=["Shutdown"])
 
 
 # Entry point for running with: python3 main.py
@@ -138,7 +146,6 @@ if __name__ == "__main__":
     logger = get_logger(__name__)
     logger.info("Starting PictoPy backend server...")
 
-    # Create a simple config with log_config=None to disable Uvicorn's default logging
     config = Config(
         app=app,
         host="localhost",
