@@ -82,10 +82,18 @@ export function MediaView({
   const location = useLocation();
   const { toggleFavourite } = useToggleFav();
 
+  // Loop to first image handler for slideshow
+  const handleLoopToStart = useCallback(() => {
+    dispatch(setCurrentViewIndex(0));
+    handlers.resetZoom();
+  }, [dispatch, handlers]);
+
   // Slideshow functionality
   const { isSlideshowActive, toggleSlideshow } = useSlideshow(
     totalImages,
     handleNextImage,
+    handleLoopToStart,
+    currentViewIndex,
   );
 
   /** Opens the system file explorer at the current image's location. */
