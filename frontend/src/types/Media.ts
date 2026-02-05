@@ -36,6 +36,7 @@ export interface MediaViewProps {
   onClose?: () => void;
   type?: string;
   images: Image[];
+  onToggleFavorite?: (imageId: string) => void | Promise<void>;
 }
 
 export interface SortingControlsProps {
