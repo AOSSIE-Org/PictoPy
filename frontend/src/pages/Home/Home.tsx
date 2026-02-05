@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useMutation } from '@tanstack/react-query';
+import { scanCelebrities } from '@/api/api-functions';
+import { Button } from '@/components/ui/button';
+import { Sparkles } from 'lucide-react'; 
 import {
   ChronologicalGallery,
   MonthMarker,
@@ -28,6 +32,25 @@ export const Home = () => {
     enabled: !isSearchActive,
   });
 
+  const scanMutation = useMutation({
+    mutationFn: scanCelebrities,
+  });
+
+  useMutationFeedback(
+    { 
+      isPending: scanMutation.isPending, 
+      isSuccess: scanMutation.isSuccess, 
+      isError: scanMutation.isError, 
+      error: scanMutation.error 
+    },
+    {
+      loadingMessage: 'Scanning for celebrities...',
+      successMessage: 'Celebrity scan started in background.',
+      errorTitle: 'Scan Failed',
+      errorMessage: 'Failed to start celebrity scan.',
+    },
+  );
+
   useMutationFeedback(
     { isPending: isLoading, isSuccess, isError, error },
     {
@@ -52,6 +75,19 @@ export const Home = () => {
 
   return (
     <div className="relative flex h-full flex-col pr-6">
+      <div className="flex justify-end pb-2 pt-2">
+         <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => scanMutation.mutate()}
+            disabled={scanMutation.isPending}
+            className="gap-2"
+         >
+            <Sparkles className="h-4 w-4" />
+            {scanMutation.isPending ? 'Scanning...' : 'Scan Celebrities'}
+         </Button>
+      </div>
+
       {/* Gallery Section */}
       <div
         ref={scrollableRef}

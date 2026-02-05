@@ -1,4 +1,5 @@
 import sqlite3
+import uuid
 from typing import Optional, List, Dict, TypedDict, Union
 from app.config.settings import DATABASE_PATH
 
@@ -32,6 +33,9 @@ def db_create_clusters_table() -> None:
                 face_image_base64 TEXT
             )
         """
+        )
+        cursor.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_cluster_name ON face_clusters(cluster_name)"
         )
         conn.commit()
     finally:
@@ -349,3 +353,52 @@ def db_get_images_by_cluster_id(
         return images
     finally:
         conn.close()
+
+
+def db_get_or_create_cluster_by_name(name: str, cursor: Optional[sqlite3.Cursor] = None) -> str:
+    """Gets an existing cluster ID by name or creates a new one."""
+    own_connection = cursor is None
+    if own_connection:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+    else:
+        conn = cursor.connection
+
+    try:
+        # Ensure unique index exists so INSERT OR IGNORE works as expected
+        cursor.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_cluster_name ON face_clusters(cluster_name)"
+        )
+
+        cluster_id = str(uuid.uuid4())
+        # Attempt to insert first (optimistic)
+        cursor.execute(
+            "INSERT OR IGNORE INTO face_clusters (cluster_id, cluster_name) VALUES (?, ?)",
+            (cluster_id, name),
+        )
+
+        if cursor.rowcount > 0:
+            if own_connection:
+                conn.commit()
+            return cluster_id
+
+        # If insert was ignored, it means it exists
+        cursor.execute(
+            "SELECT cluster_id FROM face_clusters WHERE cluster_name = ?", (name,)
+        )
+        result = cursor.fetchone()
+        if result:
+            if own_connection:
+                conn.commit()
+            return result[0]
+
+        raise Exception(f"Failed to get or create cluster with name: {name}")
+
+    except Exception:
+        if own_connection:
+            conn.rollback()
+        raise
+    finally:
+        if own_connection:
+            conn.close()
+
