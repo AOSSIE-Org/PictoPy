@@ -1,6 +1,8 @@
 # Standard library imports
 import sqlite3
-from typing import Any, List, Mapping, Tuple, TypedDict, Union
+from typing import Any, List, Mapping, Tuple, TypedDict, Union, Optional
+import json
+
 
 # App-specific imports
 from app.config.settings import (
@@ -417,5 +419,36 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         logger.error(f"Database error: {e}")
         conn.rollback()
         return False
+    finally:
+        conn.close()
+
+def db_get_image_by_id(image_id: str) -> Optional[dict]:
+    """
+    Get a single image by ID with its favorite status.
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT id, path, folder_id, thumbnailPath, metadata, isTagged, isFavourite
+            FROM images
+            WHERE id = ?
+        """, (image_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        try:
+            metadata = json.loads(row[4]) if row[4] else {}
+        except json.JSONDecodeError:
+            metadata = {}
+        return {
+            "id": row[0],
+            "path": row[1],
+            "folder_id": row[2],
+            "thumbnailPath": row[3],
+            "metadata": metadata,
+            "isTagged": bool(row[5]),
+            "isFavourite": bool(row[6]),
+        }
     finally:
         conn.close()
