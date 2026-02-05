@@ -110,11 +110,14 @@ const Navbar: React.FC = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex-shrink-0 flex items-center">
               <div className="mr-4">
-                <Link to="/">
+                <Link to="/" onClick={(e) => {
+                  e.preventDefault();
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}>
                   <img
                     src={YourLogo}
                     alt="PictoPy Logo"
-                    className="w-10 h-10 object-contain"
+                    className="w-10 h-10 object-contain cursor-pointer"
                   />
                 </Link>
               </div>
@@ -123,6 +126,10 @@ const Navbar: React.FC = () => {
               <div className="relative group">
                 <Link
                   to="/"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
                   className="text-2xl font-bold 
                   bg-gradient-to-r from-yellow-500 to-green-500 
                   bg-clip-text text-transparent
