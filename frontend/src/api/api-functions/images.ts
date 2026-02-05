@@ -12,3 +12,13 @@ export const fetchAllImages = async (
   );
   return response.data;
 };
+
+
+export const searchImages = async (query: string, tagged?: boolean): Promise<any> => {
+  const params = new URLSearchParams({ query });
+  if (tagged !== undefined) {
+    params.append('tagged', tagged.toString());
+  }
+  const response = await apiClient.get(`/images/search?${params.toString()}`);
+  return response.data;
+};

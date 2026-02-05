@@ -1,6 +1,6 @@
 # Standard library imports
 import sqlite3
-from typing import Any, List, Mapping, Tuple, TypedDict, Union
+from typing import Any, List, Mapping, Tuple, TypedDict, Union, Optional
 
 # App-specific imports
 from app.config.settings import (
@@ -392,6 +392,106 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
         logger.error(f"Error deleting images: {e}")
         conn.rollback()
         return False
+    finally:
+        conn.close()
+
+
+def db_search_images(query: str, tagged: Optional[bool] = None) -> List[dict]:
+    """
+    Search images by tags, metadata, or filename.
+
+    Args:
+        query: Search term to match against tags, metadata, or path
+        tagged: Optional filter for tagged status
+
+    Returns:
+        List of dictionaries containing matching image data
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        search_pattern = f"%{query}%"
+
+        # FIXED QUERY — removed face_clusters (they do NOT exist in DB)
+        base_query = """
+            SELECT DISTINCT
+                i.id,
+                i.path,
+                i.folder_id,
+                i.thumbnailPath,
+                i.metadata,
+                i.isTagged,
+                i.isFavourite,
+                m.name as tag_name
+            FROM images i
+            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN mappings m ON ic.class_id = m.class_id
+            WHERE (
+                m.name LIKE ? OR
+                i.metadata LIKE ? OR
+                i.path LIKE ?
+            )
+        """
+
+        params = [search_pattern, search_pattern, search_pattern]
+
+        # Optional filter
+        if tagged is not None:
+            base_query += " AND i.isTagged = ?"
+            params.append(tagged)
+
+        base_query += " ORDER BY i.path, m.name"
+
+        cursor.execute(base_query, params)
+        results = cursor.fetchall()
+
+        # Group results into image format
+        images_dict = {}
+        from app.utils.images import image_util_parse_metadata
+
+        for (
+            image_id,
+            path,
+            folder_id,
+            thumbnail_path,
+            metadata,
+            is_tagged,
+            is_favourite,
+            tag_name,
+        ) in results:
+
+            if image_id not in images_dict:
+                metadata_dict = image_util_parse_metadata(metadata)
+
+                images_dict[image_id] = {
+                    "id": image_id,
+                    "path": path,
+                    "folder_id": str(folder_id),
+                    "thumbnailPath": thumbnail_path,
+                    "metadata": metadata_dict,
+                    "isTagged": bool(is_tagged),
+                    "isFavourite": bool(is_favourite),
+                    "tags": [],
+                }
+
+            if tag_name and tag_name not in images_dict[image_id]["tags"]:
+                images_dict[image_id]["tags"].append(tag_name)
+
+        # Convert dict → list
+        images = list(images_dict.values())
+
+        for img in images:
+            if not img["tags"]:
+                img["tags"] = None
+
+        images.sort(key=lambda x: x["path"])
+
+        return images
+
+    except Exception as e:
+        logger.error(f"Error searching images: {e}")
+        return []
     finally:
         conn.close()
 

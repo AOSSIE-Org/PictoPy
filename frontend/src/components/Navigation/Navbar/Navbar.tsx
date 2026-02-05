@@ -1,21 +1,38 @@
+import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { startTextSearch, clearSearch } from '@/features/searchSlice';
+
 import { Input } from '@/components/ui/input';
 import { ThemeSelector } from '@/components/ThemeToggle';
 import { Search } from 'lucide-react';
-import { useDispatch, useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
-import { clearSearch } from '@/features/searchSlice';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
+import { useRef } from 'react';
 
 export function Navbar() {
   const userName = useSelector(selectName);
   const userAvatar = useSelector(selectAvatar);
-
-  const searchState = useSelector((state: any) => state.search);
-  const isSearchActive = searchState.active;
-  const queryImage = searchState.queryImage;
-
+  const queryImage = useSelector((state: any) => state.search.queryImage);
   const dispatch = useDispatch();
+  const [searchInput, setSearchInput] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Debounce search
+  useEffect(() => {
+    const trimmed = searchInput.trim();
+
+    const timer = setTimeout(() => {
+      if (trimmed) {
+        dispatch(startTextSearch(trimmed));
+      } else {
+        dispatch(clearSearch());
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput, dispatch]);
+
   return (
     <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur">
       {/* Logo */}
@@ -29,46 +46,45 @@ export function Navbar() {
       {/* Search Bar */}
       <div className="mx-auto flex max-w-md flex-1 justify-center px-4">
         <div className="dark:bg-muted/50 flex w-full items-center gap-1 rounded-md bg-neutral-100 px-1 py-1">
-          {/* Query Image */}
+          {/* Query Image Preview */}
           {queryImage && (
             <div className="relative mr-2 ml-2">
               <img
                 src={
-                  queryImage?.startsWith('data:')
+                  queryImage.startsWith('data:')
                     ? queryImage
                     : convertFileSrc(queryImage)
                 }
                 alt="Query"
                 className="h-7 w-7 rounded object-cover"
               />
-              {isSearchActive && (
-                <button
-                  onClick={() => dispatch(clearSearch())}
-                  className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white"
-                  title="Close"
-                  aria-label="Close"
-                >
-                  ✕
-                </button>
-              )}
             </div>
           )}
 
-          {/* Input */}
+          {/* Search Input */}
           <Input
+            ref={inputRef}
             type="search"
-            placeholder="Add to your search"
+            placeholder="Search by tags, faces, or location..."
             className="mr-2 flex-1 border-0 bg-neutral-200"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setSearchInput('');
+                dispatch(clearSearch());
+              }
+            }}
           />
 
-          {/* FaceSearch Dialog */}
-
+          {/* Face Search */}
           <FaceSearchDialog />
 
+          {/* Search Icon */}
           <button
-            className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
-            title="Search"
-            aria-label="Search"
+            onClick={() => inputRef.current?.focus()}
+            className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 rounded-sm p-2"
+            title="Focus search"
           >
             <Search className="h-4 w-4" />
           </button>

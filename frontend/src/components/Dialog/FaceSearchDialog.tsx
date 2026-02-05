@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { useDispatch } from 'react-redux';
 import { useFile } from '@/hooks/selectFile';
-import { startSearch, clearSearch } from '@/features/searchSlice';
+import { startFaceSearch, clearSearch } from '@/features/searchSlice';
 import type { Image } from '@/types/Media';
 import { hideLoader, showLoader } from '@/features/loaderSlice';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
@@ -83,7 +83,7 @@ export function FaceSearchDialog() {
     const filePath = await pickSingleFile();
     if (filePath) {
       setIsDialogOpen(false);
-      dispatch(startSearch(filePath));
+      dispatch(startFaceSearch(filePath));
       dispatch(showLoader('Searching faces...'));
       getSearchImages(filePath);
     }
