@@ -165,7 +165,6 @@ const PictopyLanding: FC = () => {
               className="bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 dark:from-green-500 dark:to-green-600 dark:hover:from-green-600 dark:hover:to-green-700 h-12 px-8 transition-all duration-300 
                          border-2 border-transparent hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               size="lg"
-              variant="outline"
               onClick={() =>
                 handleDownloadClick("Windows", downloadLinks.windows)
               }
@@ -178,7 +177,6 @@ const PictopyLanding: FC = () => {
               className="bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 dark:from-green-500 dark:to-green-600 dark:hover:from-green-600 dark:hover:to-green-700 h-12 px-8 transition-all duration-300 
                          border-2 border-transparent hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               size="lg"
-              variant="outline"
               onClick={() => handleDownloadClick("Linux", downloadLinks.linux)}
               disabled={loading || !downloadLinks.linux}
             >
