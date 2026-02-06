@@ -1,8 +1,7 @@
-import sqlite3
 import os
 import uuid
 from typing import List, Tuple, Dict, Optional
-from app.config.settings import DATABASE_PATH
+from app.database.connection import get_db_connection
 
 # Type definitions
 FolderId = str
@@ -13,9 +12,7 @@ FolderIdPath = Tuple[FolderId, str]
 
 
 def db_create_folders_table() -> None:
-    conn = None
-    try:
-        conn = sqlite3.connect(DATABASE_PATH)
+    with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -30,10 +27,6 @@ def db_create_folders_table() -> None:
             )
             """
         )
-        conn.commit()
-    finally:
-        if conn is not None:
-            conn.close()
 
 
 def db_insert_folders_batch(folders_data: List[FolderData]) -> None:
@@ -42,20 +35,13 @@ def db_insert_folders_batch(folders_data: List[FolderData]) -> None:
     folders_data: list of tuples (folder_id, folder_path,
     parent_folder_id,last_modified_time, AI_Tagging, taggingCompleted)
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
 
-    try:
         cursor.executemany(
             """INSERT OR IGNORE INTO folders (folder_id, folder_path, parent_folder_id, last_modified_time, AI_Tagging, taggingCompleted) VALUES (?, ?, ?, ?, ?, ?)""",
             folders_data,
         )
-        conn.commit()
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        conn.close()
 
 
 def db_insert_folder(
@@ -65,10 +51,9 @@ def db_insert_folder(
     taggingCompleted: Optional[bool] = None,
     folder_id: Optional[FolderId] = None,
 ) -> FolderId:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
 
-    try:
         abs_folder_path = os.path.abspath(folder_path)
         if not os.path.isdir(abs_folder_path):
             raise ValueError(f"Error: '{folder_path}' is not a valid directory.")
@@ -100,16 +85,12 @@ def db_insert_folder(
             ),
         )
 
-        conn.commit()
         return folder_id
-    finally:
-        conn.close()
 
 
 def db_get_folder_id_from_path(folder_path: FolderPath) -> Optional[FolderId]:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         abs_folder_path = os.path.abspath(folder_path)
         cursor.execute(
             "SELECT folder_id FROM folders WHERE folder_path = ?",
@@ -117,39 +98,31 @@ def db_get_folder_id_from_path(folder_path: FolderPath) -> Optional[FolderId]:
         )
         result = cursor.fetchone()
         return result[0] if result else None
-    finally:
-        conn.close()
 
 
 def db_get_folder_path_from_id(folder_id: FolderId) -> Optional[FolderPath]:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         cursor.execute(
             "SELECT folder_path FROM folders WHERE folder_id = ?",
             (folder_id,),
         )
         result = cursor.fetchone()
         return result[0] if result else None
-    finally:
-        conn.close()
 
 
 def db_get_all_folders() -> List[FolderPath]:
-    with sqlite3.connect(DATABASE_PATH) as conn:
+    with get_db_connection() as conn:
         rows = conn.execute("SELECT folder_path FROM folders").fetchall()
         return [row[0] for row in rows] if rows else []
 
 
 def db_get_all_folder_ids() -> List[FolderId]:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         cursor.execute("SELECT folder_id from folders")
         rows = cursor.fetchall()
         return [row[0] for row in rows] if rows else []
-    finally:
-        conn.close()
 
 
 def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
@@ -161,13 +134,11 @@ def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
     if not folder_ids:
         return 0
 
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
 
-    try:
         # Enable foreign keys for cascading deletes
         cursor.execute("PRAGMA foreign_keys = ON;")
-        conn.commit()
 
         # Create placeholders for the IN clause
         placeholders = ",".join("?" * len(folder_ids))
@@ -178,19 +149,12 @@ def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
         )
 
         deleted_count = cursor.rowcount
-        conn.commit()
         return deleted_count
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        conn.close()
 
 
 def db_delete_folder(folder_path: FolderPath) -> None:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         abs_folder_path = os.path.abspath(folder_path)
         cursor.execute(
             "PRAGMA foreign_keys = ON;"
@@ -212,10 +176,6 @@ def db_delete_folder(folder_path: FolderPath) -> None:
             (abs_folder_path,),
         )
 
-        conn.commit()
-    finally:
-        conn.close()
-
 
 def db_update_parent_ids_for_subtree(
     root_folder_path: FolderPath, folder_map: FolderMap
@@ -225,9 +185,8 @@ def db_update_parent_ids_for_subtree(
     Only updates folders whose parent_folder_id is NULL.
     folder_map: dict mapping folder_path to tuple of (folder_id, parent_id)
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         for folder_path, (folder_id, parent_id) in folder_map.items():
             if parent_id:
                 cursor.execute(
@@ -238,9 +197,6 @@ def db_update_parent_ids_for_subtree(
                     """,
                     (parent_id, folder_path),
                 )
-        conn.commit()
-    finally:
-        conn.close()
 
 
 def db_folder_exists(folder_path: FolderPath) -> bool:
@@ -248,17 +204,14 @@ def db_folder_exists(folder_path: FolderPath) -> bool:
     Check if a folder exists in the database.
     Returns True if the folder exists, False otherwise.
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         abs_path = os.path.abspath(folder_path)
         cursor.execute(
             "SELECT folder_id FROM folders WHERE folder_path = ?", (abs_path,)
         )
         result = cursor.fetchone()
         return bool(result)
-    finally:
-        conn.close()
 
 
 def db_find_parent_folder_id(folder_path: FolderPath) -> Optional[FolderId]:
@@ -270,16 +223,13 @@ def db_find_parent_folder_id(folder_path: FolderPath) -> Optional[FolderId]:
     if not parent_path or parent_path == folder_path:  # Root directory
         return None
 
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         cursor.execute(
             "SELECT folder_id FROM folders WHERE folder_path = ?", (parent_path,)
         )
         result = cursor.fetchone()
         return result[0] if result else None
-    finally:
-        conn.close()
 
 
 def db_update_ai_tagging_batch(
@@ -294,10 +244,9 @@ def db_update_ai_tagging_batch(
     if not folder_ids:
         return 0
 
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
 
-    try:
         # Create placeholders for the IN clause
         placeholders = ",".join("?" * len(folder_ids))
 
@@ -307,13 +256,7 @@ def db_update_ai_tagging_batch(
         )
 
         updated_count = cursor.rowcount
-        conn.commit()
         return updated_count
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        conn.close()
 
 
 def db_enable_ai_tagging_batch(folder_ids: List[FolderId]) -> int:
@@ -336,10 +279,9 @@ def db_disable_ai_tagging_batch(folder_ids: List[FolderId]) -> int:
 
 def db_get_folder_ids_by_path_prefix(root_path: str) -> List[FolderIdPath]:
     """Get all folder IDs and paths whose path starts with the given root path."""
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
 
-    try:
         # Use path LIKE with wildcard to match all subfolders
         cursor.execute(
             """
@@ -350,8 +292,6 @@ def db_get_folder_ids_by_path_prefix(root_path: str) -> List[FolderIdPath]:
         )
 
         return cursor.fetchall()
-    finally:
-        conn.close()
 
 
 def db_get_folder_ids_by_paths(
@@ -369,10 +309,9 @@ def db_get_folder_ids_by_paths(
     if not folder_paths:
         return {}
 
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
 
-    try:
         # Convert all paths to absolute paths
         abs_paths = [os.path.abspath(path) for path in folder_paths]
 
@@ -390,8 +329,6 @@ def db_get_folder_ids_by_paths(
         path_to_id = {folder_path: folder_id for folder_path, folder_id in results}
 
         return path_to_id
-    finally:
-        conn.close()
 
 
 def db_get_all_folder_details() -> (
@@ -402,10 +339,8 @@ def db_get_all_folder_details() -> (
     last_modified_time, AI_Tagging, and taggingCompleted.
     Returns list of tuples with all folder information.
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-
-    try:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         cursor.execute(
             """
             SELECT folder_id, folder_path, parent_folder_id, last_modified_time, AI_Tagging, taggingCompleted 
@@ -414,8 +349,6 @@ def db_get_all_folder_details() -> (
             """
         )
         return cursor.fetchall()
-    finally:
-        conn.close()
 
 
 def db_get_direct_child_folders(parent_folder_id: str) -> List[Tuple[str, str]]:
@@ -423,10 +356,9 @@ def db_get_direct_child_folders(parent_folder_id: str) -> List[Tuple[str, str]]:
     Get all direct child folders (not subfolders) for a given parent folder.
     Returns list of tuples (folder_id, folder_path).
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
 
-    try:
         cursor.execute(
             """
             SELECT folder_id, folder_path FROM folders 
@@ -436,5 +368,3 @@ def db_get_direct_child_folders(parent_folder_id: str) -> List[Tuple[str, str]]:
         )
 
         return cursor.fetchall()
-    finally:
-        conn.close()
