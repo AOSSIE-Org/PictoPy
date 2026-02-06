@@ -76,6 +76,11 @@ This project was announced by [AOSSIE](https://aossie.org/), an umbrella organiz
                     Gallery View
                 </a>
             </li>
+            <li>
+                <a href="./frontend/screenshots">
+                    Screenshots
+                </a>
+            </li>
         </ul>
     </div>
 </div>
