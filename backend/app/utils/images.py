@@ -176,6 +176,12 @@ def image_util_prepare_image_records(
                     "isTagged": False,
                 }
             )
+        else:
+            # Thumbnail generation failed - log warning and skip image
+            logger.warning(
+                f"Image skipped: Failed to generate thumbnail for {image_path}. "
+                f"The image will not be added to the database."
+            )
 
     return image_records
 
