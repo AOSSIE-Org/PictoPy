@@ -51,6 +51,7 @@ class ImageInCluster(BaseModel):
     path: str
     thumbnailPath: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+    isFavourite: bool = False  # Add this field
     face_id: int
     confidence: Optional[float] = None
     bbox: Optional[Dict[str, Union[int, float]]] = None

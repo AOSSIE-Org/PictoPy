@@ -13,10 +13,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ROUTES } from '@/constants/routes';
 import { Check, Pencil, ArrowLeft } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const PersonImages = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { clusterId } = useParams<{ clusterId: string }>();
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const images = useSelector(selectImages);
@@ -25,6 +27,7 @@ export const PersonImages = () => {
   const { data, isLoading, isSuccess, isError } = usePictoQuery({
     queryKey: ['person-images', clusterId],
     queryFn: async () => fetchClusterImages({ clusterId: clusterId || '' }),
+    refetchOnWindowFocus: true,
   });
 
   const { mutate: renameClusterMutate } = usePictoMutation({
@@ -46,6 +49,24 @@ export const PersonImages = () => {
     }
   }, [data, isSuccess, isError, isLoading, dispatch]);
 
+  // Listen to query cache changes and update Redux state
+  useEffect(() => {
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (
+        event.type === 'updated' &&
+        event.query.queryKey[0] === 'person-images' &&
+        event.query.queryKey[1] === clusterId
+      ) {
+        const updatedData = event.query.state.data as any;
+        if (updatedData?.data?.images) {
+          dispatch(setImages(updatedData.data.images));
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [clusterId, dispatch, queryClient]);
+
   const handleEditName = () => {
     setClusterName(clusterName);
     setIsEditing(true);
@@ -66,6 +87,7 @@ export const PersonImages = () => {
       handleSaveName();
     }
   };
+  
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
