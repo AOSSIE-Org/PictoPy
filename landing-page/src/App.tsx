@@ -1,5 +1,4 @@
-import { useContext, useEffect } from "react";
-import { ThemeProvider, ThemeContext, ThemeOptions } from "./context/theme-provider";
+import { ThemeProvider } from "./context/theme-provider";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "./Pages/Landing page/Navbar";
 import InteractiveDemo from "./Pages/Demo/marqu";

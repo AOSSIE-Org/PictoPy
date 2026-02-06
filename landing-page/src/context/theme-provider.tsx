@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 
 // Export the ThemeOptions enum
 export enum ThemeOptions {
@@ -13,7 +13,7 @@ interface ThemeContextStructure {
 
 const defaultThemeContext: ThemeContextStructure = {
     theme: ThemeOptions.Light,
-    toggleTheme: () => {},
+    toggleTheme: () => { },
 };
 
 export const ThemeContext = React.createContext<ThemeContextStructure>(defaultThemeContext);
@@ -25,7 +25,7 @@ function validateThemeCode(themeCode: number): boolean {
 
 function getInitialTheme(): ThemeOptions {
     const storedTheme = '';
-    
+
     if (storedTheme) {
         const themeCode = parseInt(storedTheme, 10);
         if (validateThemeCode(themeCode)) {

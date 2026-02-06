@@ -98,9 +98,14 @@ const PictopyLanding: FC = () => {
           xmlns="http://www.w3.org/2000/svg"
           preserveAspectRatio="none"
         >
+          <defs>
+            <linearGradient id="wave-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style={{ stopColor: 'rgb(34, 197, 94)', stopOpacity: 0.1 }} />
+              <stop offset="100%" style={{ stopColor: 'rgb(250, 204, 21)', stopOpacity: 0.1 }} />
+            </linearGradient>
+          </defs>
           <path
-            fill="#00FF00"
-            fillOpacity="0.1"
+            fill="url(#wave-gradient)"
             d="M0,192L48,160C96,128,192,64,288,58.7C384,53,480,107,576,128C672,149,768,128,864,101.3C960,75,1056,53,1152,69.3C1248,85,1344,139,1392,192L1440,256V0H1392C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z"
           >
             <animate
@@ -126,13 +131,13 @@ const PictopyLanding: FC = () => {
               alt="Pictopy Logo"
               className="h-16 w-16 object-contain"
             />
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-green-500 transition-all duration-300">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-yellow-400 dark:from-yellow-400 dark:to-green-500 transition-all duration-300">
               PictoPy
             </h1>
           </div>
 
           {/* Subheading */}
-          <p className="text-xl md:text-2xl text-green-700 dark:text-yellow-300 max-w-3xl mb-8 transition-colors duration-300">
+          <p className="text-xl md:text-2xl text-gray-700 dark:text-gray-300 max-w-3xl mb-8 transition-colors duration-300 font-medium">
             Organize your photos effortlessly. Available for Mac, Windows, and
             Linux.
           </p>
@@ -147,9 +152,8 @@ const PictopyLanding: FC = () => {
           {/* Download Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
-              className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 h-12 px-8 transition-all duration-300 
-                         border-2 border-transparent hover:border-black dark:hover:border-white 
-                         transform hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 dark:from-green-500 dark:to-green-600 dark:hover:from-green-600 dark:hover:to-green-700 h-12 px-8 transition-all duration-300 
+                         border-2 border-transparent hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               size="lg"
               onClick={() => handleDownloadClick("Mac", downloadLinks.mac)}
               disabled={loading || !downloadLinks.mac}
@@ -158,9 +162,8 @@ const PictopyLanding: FC = () => {
               Download for Mac
             </Button>
             <Button
-              className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 h-12 px-8 transition-all duration-300 
-                         border-2 border-transparent hover:border-black dark:hover:border-white 
-                         transform hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 dark:from-green-500 dark:to-green-600 dark:hover:from-green-600 dark:hover:to-green-700 h-12 px-8 transition-all duration-300 
+                         border-2 border-transparent hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               size="lg"
               variant="outline"
               onClick={() =>
@@ -172,9 +175,8 @@ const PictopyLanding: FC = () => {
               Download for Windows
             </Button>
             <Button
-              className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 h-12 px-8 transition-all duration-300 
-                         border-2 border-transparent hover:border-black dark:hover:border-white 
-                         transform hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 dark:from-green-500 dark:to-green-600 dark:hover:from-green-600 dark:hover:to-green-700 h-12 px-8 transition-all duration-300 
+                         border-2 border-transparent hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               size="lg"
               variant="outline"
               onClick={() => handleDownloadClick("Linux", downloadLinks.linux)}
