@@ -192,13 +192,9 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // When a second instance is launched, focus the primary instance's window
-            let windows = app.webview_windows();
-            windows
-                .values()
-                .next()
-                .expect("no window found")
-                .set_focus()
-                .expect("failed to set focus");
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_focus();
+            }
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
