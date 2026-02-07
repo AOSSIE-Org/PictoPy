@@ -6,7 +6,6 @@ mod services;
 use sysinfo::System;
 use tauri::path::BaseDirectory;
 use tauri::{Manager, Window, WindowEvent};
-use tauri_plugin_shell::ShellExt;
 
 const ENDPOINTS: [(&str, &str, &str); 2] = [
     (
