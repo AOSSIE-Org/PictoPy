@@ -7,6 +7,7 @@ from app.config.settings import (
     DATABASE_PATH,
 )
 from app.logging.setup_logging import get_logger
+from app.utils.images import image_util_parse_metadata
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -135,7 +136,9 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
     cursor = conn.cursor()
 
     try:
-        # Build the query with optional WHERE clause
+        # Build the query using GROUP_CONCAT to aggregate tags in SQL
+        # This is more efficient than Python iteration for large datasets
+        # Use unit separator (\x1f) as delimiter since tag names may contain commas
         query = """
             SELECT 
                 i.id, 
@@ -145,7 +148,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                 i.metadata, 
                 i.isTagged,
                 i.isFavourite,
-                m.name as tag_name
+                GROUP_CONCAT(DISTINCT m.name, '\x1f') as tags
             FROM images i
             LEFT JOIN image_classes ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
@@ -156,14 +159,14 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
             query += " WHERE i.isTagged = ?"
             params.append(tagged)
 
-        query += " ORDER BY i.path, m.name"
+        query += " GROUP BY i.id ORDER BY i.path"
 
         cursor.execute(query, params)
 
         results = cursor.fetchall()
 
-        # Group results by image ID
-        images_dict = {}
+        # Build the image list directly - one row per image now
+        images = []
         for (
             image_id,
             path,
@@ -172,38 +175,24 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
             metadata,
             is_tagged,
             is_favourite,
-            tag_name,
+            tags_str,
         ) in results:
-            if image_id not in images_dict:
-                # Safely parse metadata JSON -> dict
-                from app.utils.images import image_util_parse_metadata
+            # Safely parse metadata JSON -> dict
+            metadata_dict = image_util_parse_metadata(metadata)
 
-                metadata_dict = image_util_parse_metadata(metadata)
+            # Parse unit separator-delimited tags from GROUP_CONCAT and sort for deterministic ordering
+            tags = sorted(tags_str.split("\x1f")) if tags_str else None
 
-                images_dict[image_id] = {
-                    "id": image_id,
-                    "path": path,
-                    "folder_id": str(folder_id),
-                    "thumbnailPath": thumbnail_path,
-                    "metadata": metadata_dict,
-                    "isTagged": bool(is_tagged),
-                    "isFavourite": bool(is_favourite),
-                    "tags": [],
-                }
-
-            # Add tag if it exists (avoid duplicates)
-            if tag_name and tag_name not in images_dict[image_id]["tags"]:
-                images_dict[image_id]["tags"].append(tag_name)
-
-        # Convert to list and set tags to None if empty
-        images = []
-        for image_data in images_dict.values():
-            if not image_data["tags"]:
-                image_data["tags"] = None
-            images.append(image_data)
-
-        # Sort by path
-        images.sort(key=lambda x: x["path"])
+            images.append({
+                "id": image_id,
+                "path": path,
+                "folder_id": str(folder_id) if folder_id is not None else None,
+                "thumbnailPath": thumbnail_path,
+                "metadata": metadata_dict,
+                "isTagged": bool(is_tagged),
+                "isFavourite": bool(is_favourite),
+                "tags": tags,
+            })
 
         return images
 
@@ -242,8 +231,6 @@ def db_get_untagged_images() -> List[UntaggedImageRecord]:
 
         untagged_images = []
         for image_id, path, folder_id, thumbnail_path, metadata in results:
-            from app.utils.images import image_util_parse_metadata
-
             md = image_util_parse_metadata(metadata)
             untagged_images.append(
                 {
