@@ -1,5 +1,6 @@
 import sys
 import os
+import album
 import pytest
 import bcrypt
 from fastapi import FastAPI
@@ -88,18 +89,20 @@ class FakeDB:
         }
         return None
 
-    # db_update_album(album_id, name, description, is_hidden, password)
+# db_update_album(album_id, name, description, is_hidden, password)
     def update_album(self, album_id: str, name: str, description: str, is_hidden: bool, password):
         if album_id not in self.albums:
             raise ValueError("Album not found")
-        self.albums[album_id].update(
-            {
-                "album_name": name,
-                "description": description or "",
-                "is_hidden": bool(is_hidden),
-                "password_hash": password,
-            }
-        )
+
+        album = self.albums[album_id]
+        album["album_name"] = name
+        album["description"] = description or ""
+        album["is_hidden"] = bool(is_hidden)
+
+    # Match real DB behavior
+        if password is not None:
+            album["password_hash"] = password
+
         return None
 
     # db_delete_album(album_id)
