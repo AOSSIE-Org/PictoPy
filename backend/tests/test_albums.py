@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import patch
 import uuid
+
 from app.routes import albums as albums_router
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -13,43 +14,153 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 app = FastAPI()
 app.include_router(albums_router.router, prefix="/albums", tags=["albums"])
 
-client = TestClient(app)
 
-# ##############################
-# Pytest Fixtures
-# ##############################
+# NOTE FOR MAINTAINERS:
+# We patch db_* call-sites in app.routes.albums in ONE place (fixture) instead of patching
+# individual helpers inside each test. This keeps tests focused on observable API behavior
+# and reduces coupling/duplication in the test suite.
+#
+# This is the best "tests-only" approach without changing albums.py to use DI/DB boundary.
+
+
+# -----------------------------
+# Fake DB (in-memory behavior)
+# Matches the signatures used by albums.py
+# -----------------------------
+class FakeDB:
+    def __init__(self):
+        # album_id -> dict
+        self.albums = {}
+        # album_id -> set(image_ids)
+        self.album_images = {}
+
+    # db_get_all_albums(show_hidden: bool)
+    def get_all_albums(self, show_hidden: bool):
+        rows = []
+        for a in self.albums.values():
+            if show_hidden or not a["is_hidden"]:
+                rows.append(
+                    (
+                        a["album_id"],
+                        a["album_name"],
+                        a["description"],
+                        int(a["is_hidden"]),
+                    )
+                )
+        return rows
+
+    # db_get_album_by_name(name: str)
+    def get_album_by_name(self, name: str):
+        for a in self.albums.values():
+            if a["album_name"] == name:
+                # albums.py uses existing_album truthiness only, but keep shape similar
+                return (
+                    a["album_id"],
+                    a["album_name"],
+                    a["description"],
+                    int(a["is_hidden"]),
+                    a["password_hash"],
+                )
+        return None
+
+    # db_get_album(album_id: str) -> tuple or None
+    def get_album(self, album_id: str):
+        a = self.albums.get(album_id)
+        if not a:
+            return None
+        return (
+            a["album_id"],
+            a["album_name"],
+            a["description"],
+            int(a["is_hidden"]),
+            a["password_hash"],
+        )
+
+    # db_insert_album(album_id, name, description, is_hidden, password)
+    def insert_album(self, album_id: str, name: str, description: str, is_hidden: bool, password):
+        # store "password" as password_hash slot because albums.py expects album[4]
+        self.albums[album_id] = {
+            "album_id": album_id,
+            "album_name": name,
+            "description": description or "",
+            "is_hidden": bool(is_hidden),
+            "password_hash": password,
+        }
+        return None
+
+# db_update_album(album_id, name, description, is_hidden, password)
+    def update_album(self, album_id: str, name: str, description: str, is_hidden: bool, password):
+        if album_id not in self.albums:
+            raise ValueError("Album not found")
+
+        album = self.albums[album_id]
+        album["album_name"] = name
+        album["description"] = description or ""
+        album["is_hidden"] = bool(is_hidden)
+
+    # Match real DB behavior
+        if password is not None:
+            album["password_hash"] = password
+
+        return None
+
+    # db_delete_album(album_id)
+    def delete_album(self, album_id: str):
+        self.albums.pop(album_id, None)
+        self.album_images.pop(album_id, None)
+        return None
+
+    # db_get_album_images(album_id) -> list[str]
+    def get_album_images(self, album_id: str):
+        return list(self.album_images.get(album_id, set()))
+
+    # db_add_images_to_album(album_id, image_ids)
+    def add_images_to_album(self, album_id: str, image_ids):
+        self.album_images.setdefault(album_id, set()).update(image_ids)
+        return None
+
+    # db_remove_image_from_album(album_id, image_id)
+    def remove_image_from_album(self, album_id: str, image_id: str):
+        self.album_images.setdefault(album_id, set()).discard(image_id)
+        return None
+
+    # db_remove_images_from_album(album_id, image_ids)
+    def remove_images_from_album(self, album_id: str, image_ids):
+        s = self.album_images.setdefault(album_id, set())
+        for i in image_ids:
+            s.discard(i)
+        return None
 
 
 @pytest.fixture
-def mock_db_album():
-    return {
-        "album_id": str(uuid.uuid4()),
-        "album_name": "Summer Vacation",
-        "description": "Photos from our 2023 summer trip.",
-        "is_hidden": False,
-        "password_hash": None,
-    }
+def fake_db():
+    return FakeDB()
 
 
 @pytest.fixture
-def mock_db_hidden_album():
-    return {
-        "album_id": str(uuid.uuid4()),
-        "album_name": "Secret Party",
-        "description": "Don't tell anyone.",
-        "is_hidden": True,
-        "password_hash": "a_very_secure_hash",
-    }
+def client(fake_db):
+    # Patch all db_* names ONCE where they are used (app.routes.albums),
+    # so individual tests don't patch internal helpers.
+    with patch.multiple(
+        "app.routes.albums",
+        db_get_all_albums=fake_db.get_all_albums,
+        db_get_album_by_name=fake_db.get_album_by_name,
+        db_get_album=fake_db.get_album,
+        db_insert_album=fake_db.insert_album,
+        db_update_album=fake_db.update_album,
+        db_delete_album=fake_db.delete_album,
+        db_get_album_images=fake_db.get_album_images,
+        db_add_images_to_album=fake_db.add_images_to_album,
+        db_remove_image_from_album=fake_db.remove_image_from_album,
+        db_remove_images_from_album=fake_db.remove_images_from_album,
+    ):
+        yield TestClient(app)
 
 
-# ##############################
-# Test Classes
-# ##############################
-
-
+# -----------------------------
+# Tests (API behavior focused)
+# -----------------------------
 class TestAlbumRoutes:
-    """Test suite for the main album CRUD routes."""
-
     @pytest.mark.parametrize(
         "album_data",
         [
@@ -67,27 +178,17 @@ class TestAlbumRoutes:
             },
         ],
     )
-    def test_create_album_variants(self, album_data):
-        with patch("app.routes.albums.db_get_album_by_name") as mock_get_by_name, patch(
-            "app.routes.albums.db_insert_album"
-        ) as mock_insert:
-            mock_get_by_name.return_value = None  # No existing album
-            mock_insert.return_value = None
+    def test_create_album_variants(self, client, album_data):
+        response = client.post("/albums/", json=album_data)
+        assert response.status_code == 200
 
-            response = client.post("/albums/", json=album_data)
-            assert response.status_code == 200
+        body = response.json()
+        assert body["success"] is True
+        assert "album_id" in body
+        # albums.py generates UUIDs with uuid4
+        uuid.UUID(body["album_id"])
 
-            json_response = response.json()
-            assert json_response["success"] is True
-            assert "album_id" in json_response
-
-            mock_insert.assert_called_once()
-            # Verify that the album_id is a valid UUID
-            album_id = json_response["album_id"]
-            uuid.UUID(album_id)  # This will raise ValueError if not a valid UUID
-
-    def test_create_album_duplicate_name(self):
-        """Test creating album with duplicate name."""
+    def test_create_album_duplicate_name(self, client):
         album_data = {
             "name": "Existing Album",
             "description": "This name already exists",
@@ -95,262 +196,133 @@ class TestAlbumRoutes:
             "password": None,
         }
 
-        with patch("app.routes.albums.db_get_album_by_name") as mock_get_by_name:
-            mock_get_by_name.return_value = (
-                "existing-id",
-                "Existing Album",
-                "desc",
-                0,
-                None,
-            )
+        r1 = client.post("/albums/", json=album_data)
+        assert r1.status_code == 200
 
-            response = client.post("/albums/", json=album_data)
-            assert response.status_code == 409
+        r2 = client.post("/albums/", json=album_data)
+        assert r2.status_code == 409
 
-            json_response = response.json()
-            assert json_response["detail"]["success"] is False
-            assert json_response["detail"]["error"] == "Album Already Exists"
+        body = r2.json()
+        assert body["detail"]["success"] is False
+        assert body["detail"]["error"] == "Album Already Exists"
 
-    def test_get_all_albums_public_only(self, mock_db_album):
-        """
-        Test fetching only public albums (default behavior).
-        """
-        with patch("app.routes.albums.db_get_all_albums") as mock_get_all:
-            mock_get_all.return_value = [
-                (
-                    mock_db_album["album_id"],
-                    mock_db_album["album_name"],
-                    mock_db_album["description"],
-                    mock_db_album["is_hidden"],
-                )
-            ]
+    def test_get_all_albums_public_only(self, client):
+        # create one public, one hidden
+        client.post("/albums/", json={"name": "Public", "description": "d", "is_hidden": False, "password": None})
+        client.post("/albums/", json={"name": "Hidden", "description": "d", "is_hidden": True, "password": "x"})
 
-            response = client.get("/albums/")
-            assert response.status_code == 200
-            json_response = response.json()
+        r = client.get("/albums/")
+        assert r.status_code == 200
+        body = r.json()
 
-            assert json_response["success"] is True
-            assert isinstance(json_response["albums"], list)
-            assert len(json_response["albums"]) == 1
-            assert json_response["albums"][0]["album_id"] == mock_db_album["album_id"]
-            assert (
-                json_response["albums"][0]["album_name"] == mock_db_album["album_name"]
-            )
-            assert (
-                json_response["albums"][0]["description"]
-                == mock_db_album["description"]
-            )
-            assert json_response["albums"][0]["is_hidden"] == mock_db_album["is_hidden"]
+        assert body["success"] is True
+        assert isinstance(body["albums"], list)
+        assert len(body["albums"]) == 1
+        assert body["albums"][0]["album_name"] == "Public"
+        assert body["albums"][0]["is_hidden"] is False
 
-            mock_get_all.assert_called_once_with(False)
+    def test_get_all_albums_include_hidden(self, client):
+        client.post("/albums/", json={"name": "Public", "description": "d", "is_hidden": False, "password": None})
+        client.post("/albums/", json={"name": "Hidden", "description": "d", "is_hidden": True, "password": "x"})
 
-    def test_get_all_albums_include_hidden(self, mock_db_album, mock_db_hidden_album):
-        """
-        Test fetching all albums including hidden ones.
-        """
-        with patch("app.routes.albums.db_get_all_albums") as mock_get_all:
-            mock_get_all.return_value = [
-                (
-                    mock_db_album["album_id"],
-                    mock_db_album["album_name"],
-                    mock_db_album["description"],
-                    mock_db_album["is_hidden"],
-                ),
-                (
-                    mock_db_hidden_album["album_id"],
-                    mock_db_hidden_album["album_name"],
-                    mock_db_hidden_album["description"],
-                    mock_db_hidden_album["is_hidden"],
-                ),
-            ]
+        r = client.get("/albums/?show_hidden=true")
+        assert r.status_code == 200
+        body = r.json()
 
-            response = client.get("/albums/?show_hidden=true")
-            assert response.status_code == 200
-            json_response = response.json()
+        assert body["success"] is True
+        assert isinstance(body["albums"], list)
+        assert len(body["albums"]) == 2
 
-            assert json_response["success"] is True
-            assert isinstance(json_response["albums"], list)
-            assert len(json_response["albums"]) == 2
+    def test_get_all_albums_empty_list(self, client):
+        r = client.get("/albums/")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["success"] is True
+        assert body["albums"] == []
 
-            ids = {album["album_id"] for album in json_response["albums"]}
-            assert mock_db_album["album_id"] in ids
-            assert mock_db_hidden_album["album_id"] in ids
+    def test_get_album_by_id_success(self, client):
+        created = client.post("/albums/", json={"name": "A", "description": "D", "is_hidden": False, "password": None})
+        assert created.status_code == 200
+        album_id = created.json()["album_id"]
 
-            mock_get_all.assert_called_once_with(True)
+        r = client.get(f"/albums/{album_id}")
+        assert r.status_code == 200
+        body = r.json()
 
-    def test_get_all_albums_empty_list(self):
-        """
-        Test fetching albums when none exist.
-        """
-        with patch("app.routes.albums.db_get_all_albums") as mock_get_all:
-            mock_get_all.return_value = []
+        assert body["success"] is True
+        assert body["data"]["album_id"] == album_id
+        assert body["data"]["album_name"] == "A"
+        assert body["data"]["description"] == "D"
+        assert body["data"]["is_hidden"] is False
 
-            response = client.get("/albums/")
-            assert response.status_code == 200
-            json_response = response.json()
-
-            assert json_response["success"] is True
-            assert json_response["albums"] == []
-
-            mock_get_all.assert_called_once_with(False)
-
-    def test_get_album_by_id_success(self, mock_db_album):
-        """
-        Test fetching a single album by its ID successfully.
-        """
-        with patch("app.routes.albums.db_get_album") as mock_get_album:
-            mock_get_album.return_value = (
-                mock_db_album["album_id"],
-                mock_db_album["album_name"],
-                mock_db_album["description"],
-                mock_db_album["is_hidden"],
-            )
-
-            response = client.get(f"/albums/{mock_db_album['album_id']}")
-            assert response.status_code == 200
-            json_response = response.json()
-
-            assert json_response["success"] is True
-            assert json_response["data"]["album_id"] == mock_db_album["album_id"]
-            assert json_response["data"]["album_name"] == mock_db_album["album_name"]
-            assert json_response["data"]["description"] == mock_db_album["description"]
-            assert json_response["data"]["is_hidden"] == mock_db_album["is_hidden"]
-            mock_get_album.assert_called_once_with(mock_db_album["album_id"])
-
-    def test_get_album_by_id_not_found(self):
-        """
-        Test fetching a single album that does not exist.
-        """
+    def test_get_album_by_id_not_found(self, client):
         non_existent_id = str(uuid.uuid4())
+        r = client.get(f"/albums/{non_existent_id}")
+        assert r.status_code == 404
 
-        with patch("app.routes.albums.db_get_album") as mock_get_album:
-            mock_get_album.return_value = None
-
-            response = client.get(f"/albums/{non_existent_id}")
-            assert response.status_code == 404
-            json_response = response.json()
-
-            assert json_response["detail"]["error"] == "Album Not Found"
-            assert json_response["detail"]["message"] == "Album not found"
-            assert json_response["detail"]["success"] is False
-            mock_get_album.assert_called_once_with(non_existent_id)
+        body = r.json()
+        assert body["detail"]["error"] == "Album Not Found"
+        assert body["detail"]["message"] == "Album not found"
+        assert body["detail"]["success"] is False
 
     @pytest.mark.parametrize(
-        "album_data, request_data, verify_password_return, expected_status",
+        "is_hidden, current_password, verify_ok, expected_status",
         [
-            # Case 1: Public album (no password protection)
-            (
-                ("abc-123", "Old Name", "Old Desc", 0, None),
-                {
-                    "name": "Updated Public Album",
-                    "description": "Updated description",
-                    "is_hidden": False,
-                    "password": None,
-                    "current_password": None,
-                },
-                True,
-                200,
-            ),
-            # Case 2: Hidden album with correct current password
-            (
-                (
-                    "abc-456",
-                    "Hidden Album",
-                    "Secret",
-                    1,
-                    bcrypt.hashpw("oldpass".encode(), bcrypt.gensalt()).decode(),
-                ),
-                {
-                    "name": "Updated Hidden Album",
-                    "description": "Updated hidden description",
-                    "is_hidden": True,
-                    "password": "newpass123",
-                    "current_password": "oldpass",
-                },
-                True,
-                200,
-            ),
-            # Case 3: Hidden album with incorrect current password
-            (
-                (
-                    "abc-789",
-                    "Hidden Album",
-                    "Secret",
-                    1,
-                    bcrypt.hashpw("correctpass".encode(), bcrypt.gensalt()).decode(),
-                ),
-                {
-                    "name": "Invalid Attempt",
-                    "description": "Wrong password used",
-                    "is_hidden": True,
-                    "password": "newpass123",
-                    "current_password": "wrongpass",
-                },
-                False,
-                401,
-            ),
+            (False, None, True, 200),      # public update
+            (True, "oldpass", True, 200),  # hidden correct password
+            (True, "wrongpass", False, 401),  # hidden wrong password
         ],
     )
-    def test_update_album(
-        self, album_data, request_data, verify_password_return, expected_status
-    ):
-        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
-            "app.routes.albums.db_update_album"
-        ) as mock_update_album, patch(
-            "app.routes.albums.verify_album_password"
-        ) as mock_verify:
-            mock_get_album.return_value = album_data
-            mock_verify.return_value = verify_password_return
-
-            response = client.put(f"/albums/{album_data[0]}", json=request_data)
-            assert response.status_code == expected_status
-
-            if expected_status == 200:
-                assert response.json()["success"] is True
-                assert "msg" in response.json()
-                mock_update_album.assert_called_once()
-            else:
-                mock_update_album.assert_not_called()
-
-    def test_delete_album_success(self, mock_db_album):
-        """
-        Test successfully deleting an existing album.
-        """
-        album_id = mock_db_album["album_id"]
-        album_tuple = (
-            album_id,
-            mock_db_album["album_name"],
-            mock_db_album["description"],
-            int(mock_db_album["is_hidden"]),
-            mock_db_album["password_hash"],
+    def test_update_album(self, client, is_hidden, current_password, verify_ok, expected_status):
+        created = client.post(
+            "/albums/",
+            json={
+                "name": "Album",
+                "description": "Desc",
+                "is_hidden": is_hidden,
+                "password": "oldpass" if is_hidden else None,
+            },
         )
+        album_id = created.json()["album_id"]
 
-        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
-            "app.routes.albums.db_delete_album"
-        ) as mock_delete_album:
-            mock_get_album.return_value = album_tuple
-            mock_delete_album.return_value = None
+        update_payload = {
+            "name": "Updated Name",
+            "description": "Updated description",
+            "is_hidden": is_hidden,
+            "password": "newpass123" if is_hidden else None,
+            "current_password": current_password,
+        }
 
-            response = client.delete(f"/albums/{album_id}")
+        # Patch password verification only (pure business logic, not DB I/O)
+        with patch("app.routes.albums.verify_album_password", return_value=verify_ok):
+            r = client.put(f"/albums/{album_id}", json=update_payload)
 
-            assert response.status_code == 200
-            json_response = response.json()
+        assert r.status_code == expected_status
+        body = r.json()
 
-            assert json_response["success"] is True
-            assert json_response["msg"] == "Album deleted successfully"
-            mock_delete_album.assert_called_once_with(album_id)
+        if expected_status == 200:
+            assert body["success"] is True
+            assert body["msg"] == "Album updated successfully"
+        else:
+            assert body["detail"]["success"] is False
+
+    def test_delete_album_success(self, client):
+        created = client.post("/albums/", json={"name": "ToDelete", "description": "d", "is_hidden": False, "password": None})
+        album_id = created.json()["album_id"]
+
+        r = client.delete(f"/albums/{album_id}")
+        assert r.status_code == 200
+        body = r.json()
+
+        assert body["success"] is True
+        assert body["msg"] == "Album deleted successfully"
 
 
 class TestAlbumImageManagement:
-    """
-    Test suite for routes managing images within albums.
-    """
+    def test_add_images_to_album_success(self, client):
+        created = client.post("/albums/", json={"name": "A", "description": "d", "is_hidden": False, "password": None})
+        album_id = created.json()["album_id"]
 
-    def test_add_images_to_album_success(self, mock_db_album):
-        """
-        Test adding valid images to an existing album.
-        """
-        album_id = mock_db_album["album_id"]
         request_body = {
             "image_ids": [
                 "71abff29-27b4-43a4-9e76-b78504bea325",
@@ -358,117 +330,55 @@ class TestAlbumImageManagement:
             ]
         }
 
-        album_tuple = (
-            album_id,
-            mock_db_album["album_name"],
-            mock_db_album["description"],
-            int(mock_db_album["is_hidden"]),
-            mock_db_album["password_hash"],
-        )
+        r = client.post(f"/albums/{album_id}/images", json=request_body)
+        assert r.status_code == 200
+        body = r.json()
 
-        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
-            "app.routes.albums.db_add_images_to_album"
-        ) as mock_add_images:
-            mock_get_album.return_value = album_tuple
-            mock_add_images.return_value = None
+        assert body["success"] is True
+        assert str(len(request_body["image_ids"])) in body["msg"]
 
-            response = client.post(f"/albums/{album_id}/images", json=request_body)
-            assert response.status_code == 200
+    def test_get_album_images_success(self, client):
+        # Create hidden album because /images/get checks password if hidden
+        created = client.post("/albums/", json={"name": "Hidden", "description": "d", "is_hidden": True, "password": "pw"})
+        album_id = created.json()["album_id"]
 
-            json_response = response.json()
-            assert json_response["success"] is True
-            assert "msg" in json_response
-            assert f"{len(request_body['image_ids'])} images" in json_response["msg"]
-
-            mock_get_album.assert_called_once_with(album_id)
-            mock_add_images.assert_called_once_with(album_id, request_body["image_ids"])
-
-    def test_get_album_images_success(self, mock_db_album):
-        """
-        Test retrieving image IDs from an existing album.
-        """
-        album_id = mock_db_album["album_id"]
-        expected_image_ids = [
+        image_ids = [
             "71abff29-27b4-43a4-9e76-b78504bea325",
             "2d4bff29-1111-43a4-9e76-b78504bea999",
         ]
+        client.post(f"/albums/{album_id}/images", json={"image_ids": image_ids})
 
-        album_tuple = (
-            album_id,
-            mock_db_album["album_name"],
-            mock_db_album["description"],
-            int(mock_db_album["is_hidden"]),
-            mock_db_album["password_hash"],
-        )
+        # Patch verify_album_password so the hidden album check passes
+        with patch("app.routes.albums.verify_album_password", return_value=True):
+            r = client.post(f"/albums/{album_id}/images/get", json={"password": "pw"})
 
-        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
-            "app.routes.albums.db_get_album_images"
-        ) as mock_get_images:
-            mock_get_album.return_value = album_tuple
-            mock_get_images.return_value = expected_image_ids
+        assert r.status_code == 200
+        body = r.json()
+        assert body["success"] is True
+        assert set(body["image_ids"]) == set(image_ids)
 
-            response = client.post(f"/albums/{album_id}/images/get", json={})
-            assert response.status_code == 200
+    def test_remove_image_from_album_success(self, client):
+        created = client.post("/albums/", json={"name": "A", "description": "d", "is_hidden": False, "password": None})
+        album_id = created.json()["album_id"]
 
-            json_response = response.json()
-            assert json_response["success"] is True
-            assert "image_ids" in json_response
-            assert set(json_response["image_ids"]) == set(expected_image_ids)
-
-            mock_get_album.assert_called_once_with(album_id)
-            mock_get_images.assert_called_once_with(album_id)
-
-    def test_remove_image_from_album_success(self, mock_db_album):
-        """
-        Test successfully removing an image from an album.
-        """
-        album_id = mock_db_album["album_id"]
         image_id = "71abff29-27b4-43a4-9e76-b78504bea325"
+        client.post(f"/albums/{album_id}/images", json={"image_ids": [image_id]})
 
-        album_tuple = (
-            album_id,
-            mock_db_album["album_name"],
-            mock_db_album["description"],
-            int(mock_db_album["is_hidden"]),
-            mock_db_album["password_hash"],
-        )
+        r = client.delete(f"/albums/{album_id}/images/{image_id}")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["success"] is True
 
-        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
-            "app.routes.albums.db_remove_image_from_album"
-        ) as mock_remove:
-            mock_get_album.return_value = album_tuple
-            mock_remove.return_value = None
+    def test_remove_multiple_images_from_album(self, client):
+        created = client.post("/albums/", json={"name": "A", "description": "d", "is_hidden": False, "password": None})
+        album_id = created.json()["album_id"]
 
-            response = client.delete(f"/albums/{album_id}/images/{image_id}")
-            assert response.status_code == 200
+        ids = [str(uuid.uuid4()), str(uuid.uuid4())]
+        client.post(f"/albums/{album_id}/images", json={"image_ids": ids})
 
-            json_response = response.json()
-            assert json_response["success"] is True
-            assert "msg" in json_response
-            assert "successfully" in json_response["msg"].lower()
+        r = client.request("DELETE", f"/albums/{album_id}/images", json={"image_ids": ids})
+        assert r.status_code == 200
+        body = r.json()
 
-            mock_get_album.assert_called_once_with(album_id)
-            mock_remove.assert_called_once_with(album_id, image_id)
-
-    def test_remove_multiple_images_from_album(self, mock_db_album):
-        """
-        Test removing multiple images from an album using the bulk delete endpoint.
-        """
-        album_id = mock_db_album["album_id"]
-        image_ids_to_remove = {"image_ids": [str(uuid.uuid4()), str(uuid.uuid4())]}
-
-        with patch("app.routes.albums.db_get_album") as mock_get, patch(
-            "app.routes.albums.db_remove_images_from_album"
-        ) as mock_remove_bulk:
-            mock_get.return_value = tuple(mock_db_album.values())
-            response = client.request(
-                "DELETE", f"/albums/{album_id}/images", json=image_ids_to_remove
-            )
-            assert response.status_code == 200
-            json_response = response.json()
-            assert json_response["success"] is True
-            assert str(len(image_ids_to_remove["image_ids"])) in json_response["msg"]
-            mock_get.assert_called_once_with(album_id)
-            mock_remove_bulk.assert_called_once_with(
-                album_id, image_ids_to_remove["image_ids"]
-            )
+        assert body["success"] is True
+        assert str(len(ids)) in body["msg"]
