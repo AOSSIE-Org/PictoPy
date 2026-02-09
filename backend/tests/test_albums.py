@@ -1,6 +1,5 @@
 import sys
 import os
-import album
 import pytest
 import bcrypt
 from fastapi import FastAPI
