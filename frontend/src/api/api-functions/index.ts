@@ -3,4 +3,5 @@ export * from './face_clusters';
 export * from './images';
 export * from './folders';
 export * from './user_preferences';
+export * from './albums';
 export * from './health';
