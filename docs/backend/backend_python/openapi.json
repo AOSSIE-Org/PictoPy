@@ -926,6 +926,132 @@
         }
       }
     },
+    "/images/batch-delete": {
+      "delete": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Batch Delete Images",
+        "description": "Delete multiple images",
+        "operationId": "batch_delete_images_images_batch_delete_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchDeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchOperationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/batch-tag": {
+      "post": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Batch Tag Images",
+        "description": "Add tags to multiple images",
+        "operationId": "batch_tag_images_images_batch_tag_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchTagRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchOperationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/batch-move": {
+      "post": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Batch Move To Album",
+        "description": "Move multiple images to an album",
+        "operationId": "batch_move_to_album_images_batch_move_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchMoveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchOperationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/face-clusters/{cluster_id}": {
       "put": {
         "tags": [
@@ -1452,6 +1578,102 @@
           "is_hidden"
         ],
         "title": "Album"
+      },
+      "BatchDeleteRequest": {
+        "properties": {
+          "image_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Image Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_ids"
+        ],
+        "title": "BatchDeleteRequest",
+        "description": "Request model for batch delete operation"
+      },
+      "BatchMoveRequest": {
+        "properties": {
+          "image_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Image Ids"
+          },
+          "album_id": {
+            "type": "string",
+            "title": "Album Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_ids",
+          "album_id"
+        ],
+        "title": "BatchMoveRequest",
+        "description": "Request model for batch move to album operation"
+      },
+      "BatchOperationResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "processed": {
+            "type": "integer",
+            "title": "Processed"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "processed",
+          "failed"
+        ],
+        "title": "BatchOperationResponse",
+        "description": "Response model for batch operations"
+      },
+      "BatchTagRequest": {
+        "properties": {
+          "image_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Image Ids"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_ids",
+          "tags"
+        ],
+        "title": "BatchTagRequest",
+        "description": "Request model for batch tag operation"
       },
       "ClusterMetadata": {
         "properties": {

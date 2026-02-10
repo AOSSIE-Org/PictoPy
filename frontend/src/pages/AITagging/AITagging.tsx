@@ -13,6 +13,8 @@ import {
 } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 import { EmptyAITaggingState } from '@/components/EmptyStates/EmptyAITaggingState';
+import { BatchToolbar } from '@/components/Batch/BatchToolbar';
+import { useBatchKeyboard } from '@/hooks/useBatchKeyboard';
 
 export const AITagging = () => {
   const dispatch = useDispatch();
@@ -40,6 +42,10 @@ export const AITagging = () => {
       dispatch(hideLoader());
     }
   }, [imagesData, imagesSuccess, imagesError, imagesLoading, dispatch]);
+
+  // Enable batch keyboard shortcuts
+  const allImageIds = taggedImages.map((img) => img.id);
+  useBatchKeyboard(allImageIds);
 
   return (
     <div className="relative flex h-full flex-col pr-6">
@@ -76,6 +82,9 @@ export const AITagging = () => {
           className="absolute top-0 right-0 h-full w-4"
         />
       )}
+      
+      {/* Batch Operations Toolbar */}
+      <BatchToolbar />
     </div>
   );
 };

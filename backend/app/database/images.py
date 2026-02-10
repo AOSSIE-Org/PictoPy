@@ -419,3 +419,97 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         return False
     finally:
         conn.close()
+
+
+
+def db_delete_image(image_id: ImageId) -> bool:
+    """
+    Delete a single image from the database by its ID.
+    This will also delete associated records in image_classes due to CASCADE.
+
+    Args:
+        image_id: ID of the image to delete
+
+    Returns:
+        True if deletion was successful, False otherwise
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("DELETE FROM images WHERE id = ?", (image_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        logger.error(f"Error deleting image {image_id}: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def db_add_tags_to_image(image_id: ImageId, tags: List[str]) -> bool:
+    """
+    Add multiple tags to an image.
+
+    Args:
+        image_id: ID of the image to tag
+        tags: List of tag names to add
+
+    Returns:
+        True if tagging was successful, False otherwise
+    """
+    if not tags:
+        return True
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        # First, verify the image exists
+        cursor.execute("SELECT id FROM images WHERE id = ?", (image_id,))
+        if not cursor.fetchone():
+            logger.warning(f"Image {image_id} not found")
+            return False
+
+        # Get or create class IDs for each tag
+        class_ids = []
+        for tag in tags:
+            # Check if tag exists in mappings
+            cursor.execute("SELECT class_id FROM mappings WHERE name = ?", (tag,))
+            result = cursor.fetchone()
+
+            if result:
+                class_ids.append(result[0])
+            else:
+                # Create new mapping for this tag
+                cursor.execute(
+                    "INSERT INTO mappings (name) VALUES (?)",
+                    (tag,)
+                )
+                class_ids.append(cursor.lastrowid)
+
+        # Insert image-class pairs
+        for class_id in class_ids:
+            cursor.execute(
+                """
+                INSERT OR IGNORE INTO image_classes (image_id, class_id)
+                VALUES (?, ?)
+                """,
+                (image_id, class_id),
+            )
+
+        # Mark image as tagged
+        cursor.execute(
+            "UPDATE images SET isTagged = 1 WHERE id = ?",
+            (image_id,)
+        )
+
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Error adding tags to image {image_id}: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
