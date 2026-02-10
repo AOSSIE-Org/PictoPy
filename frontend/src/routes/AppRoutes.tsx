@@ -8,6 +8,7 @@ import { Home } from '@/pages/Home/Home';
 import { MyFav } from '@/pages/Home/MyFav';
 import { AITagging } from '@/pages/AITagging/AITagging';
 import { PersonImages } from '@/pages/PersonImages/PersonImages';
+import { PeoplePage } from '@/pages/People/PeoplePage';
 import { ComingSoon } from '@/pages/ComingSoon/ComingSoon';
 
 export const AppRoutes: React.FC = () => {
@@ -20,6 +21,7 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.FAVOURITES} element={<MyFav />} />
         <Route path={ROUTES.SETTINGS} element={<Settings />} />
         <Route path={ROUTES.AI} element={<AITagging />} />
+        <Route path={ROUTES.PEOPLE} element={<PeoplePage />} />
         <Route path={ROUTES.ALBUMS} element={<ComingSoon />} />
         <Route path={ROUTES.MEMORIES} element={<ComingSoon />} />
         <Route path={ROUTES.PERSON} element={<PersonImages />} />

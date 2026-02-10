@@ -54,4 +54,5 @@ export interface Cluster {
   cluster_name: string;
   face_count: number;
   face_image_base64?: string;
+  is_ignored: boolean;
 }

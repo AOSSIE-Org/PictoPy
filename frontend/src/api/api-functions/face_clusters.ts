@@ -19,6 +19,16 @@ export interface FetchSearchedFacesBase64Request {
   base64_data: string;
 }
 
+export interface MergeClustersRequest {
+  source_cluster_id: string;
+  target_cluster_id: string;
+}
+
+export interface ToggleIgnoreRequest {
+  cluster_id: string;
+  is_ignored: boolean;
+}
+
 export const fetchAllClusters = async (): Promise<APIResponse> => {
   const response = await apiClient.get<APIResponse>(
     faceClustersEndpoints.getAllClusters,
@@ -68,6 +78,26 @@ export const fetchSearchedFacesBase64 = async (
 export const triggerGlobalReclustering = async (): Promise<APIResponse> => {
   const response = await apiClient.post<APIResponse>(
     faceClustersEndpoints.globalRecluster,
+  );
+  return response.data;
+};
+
+export const mergeClusters = async (
+  request: MergeClustersRequest,
+): Promise<APIResponse> => {
+  const response = await apiClient.post<APIResponse>(
+    faceClustersEndpoints.mergeClusters,
+    request,
+  );
+  return response.data;
+};
+
+export const toggleIgnoreCluster = async (
+  request: ToggleIgnoreRequest,
+): Promise<APIResponse> => {
+  const response = await apiClient.post<APIResponse>(
+    faceClustersEndpoints.toggleIgnoreCluster(request.cluster_id),
+    { is_ignored: request.is_ignored },
   );
   return response.data;
 };
