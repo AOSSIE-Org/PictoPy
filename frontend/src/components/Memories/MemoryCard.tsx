@@ -3,9 +3,11 @@
  *
  * Displays a memory card with thumbnail, title, date, location, and photo count.
  * Used in grid layouts for Recent Memories, This Year, and All Memories sections.
+ * Navigates to memory detail page on click.
  */
 
 import React from 'react';
+import { useNavigate } from 'react-router';
 import { Memory } from '@/services/memoriesApi';
 import {
   formatDateRangeRelative,
@@ -15,14 +17,15 @@ import {
 
 interface MemoryCardProps {
   memory: Memory;
-  onClick: (memory: Memory) => void;
 }
 
 /**
  * Memory card component with hover effects and responsive design
- * SIMPLIFIED: Just show type badge, handle missing thumbnails, use convertFileSrc
+ * Navigates to detail page instead of using onClick callback
  */
-export const MemoryCard = React.memo<MemoryCardProps>(({ memory, onClick }) => {
+export const MemoryCard = React.memo<MemoryCardProps>(({ memory }) => {
+  const navigate = useNavigate();
+  
   // Get thumbnail image (first image or find by thumbnail_image_id)
   const thumbnailImage =
     memory.images.find((img) => img.id === memory.thumbnail_image_id) ||
@@ -57,22 +60,27 @@ export const MemoryCard = React.memo<MemoryCardProps>(({ memory, onClick }) => {
     e.currentTarget.src = '/photo.png'; // Fallback to default
   };
 
+  // Handle click - navigate to memory detail page
+  const handleClick = () => {
+    navigate(`/memories/${memory.memory_id}`);
+  };
+
   return (
     <div
-      onClick={() => onClick(memory)}
-      className="group transform cursor-pointer overflow-hidden rounded-lg bg-white shadow-md transition-all duration-200 hover:scale-[1.02] hover:shadow-xl dark:bg-gray-800"
+      onClick={handleClick}
+      className="group transform cursor-pointer overflow-hidden rounded-lg border bg-card shadow-md transition-all duration-200 hover:scale-[1.02] hover:shadow-xl"
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          onClick(memory);
+          handleClick();
         }
       }}
       aria-label={`View memory: ${displayTitle}`}
     >
       {/* Thumbnail Image */}
-      <div className="relative h-48 w-full overflow-hidden bg-gray-200 dark:bg-gray-700">
+      <div className="relative h-48 w-full overflow-hidden bg-muted">
         <img
           src={thumbnailUrl}
           alt={displayTitle}
@@ -135,18 +143,18 @@ export const MemoryCard = React.memo<MemoryCardProps>(({ memory, onClick }) => {
       {/* Card Content */}
       <div className="space-y-2 p-4">
         {/* Title */}
-        <h3 className="line-clamp-1 text-lg font-semibold text-gray-900 dark:text-white">
+        <h3 className="line-clamp-1 text-lg font-semibold">
           {displayTitle}
         </h3>
 
         {/* Date Range - Relative Format */}
-        <p className="line-clamp-1 text-sm text-gray-600 dark:text-gray-400">
+        <p className="line-clamp-1 text-sm text-muted-foreground">
           {formatDateRangeRelative(memory.date_start, memory.date_end)}
         </p>
 
         {/* Location - Only show if not coordinates */}
         {displayLocation && (
-          <div className="flex items-center text-sm text-gray-500 dark:text-gray-500">
+          <div className="flex items-center text-sm text-muted-foreground">
             <svg
               className="mr-1 h-4 w-4 shrink-0"
               fill="none"

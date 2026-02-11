@@ -34,9 +34,6 @@ interface MemoriesState {
     years: number[];
   } | null;
 
-  // Selected memory for viewer modal
-  selectedMemory: Memory | null;
-
   // Loading states for each section
   loading: {
     all: boolean;
@@ -67,7 +64,6 @@ const initialState: MemoriesState = {
   yearMemories: [],
   onThisDayImages: [],
   onThisDayMeta: null,
-  selectedMemory: null,
   loading: {
     all: false,
     recent: false,
@@ -189,13 +185,6 @@ const memoriesSlice = createSlice({
   initialState,
   reducers: {
     /**
-     * Set the selected memory for the viewer modal
-     */
-    setSelectedMemory: (state, action: PayloadAction<Memory | null>) => {
-      state.selectedMemory = action.payload;
-    },
-
-    /**
      * Toggle favorite status of an image across all memories
      */
     toggleImageFavorite: (state, action: PayloadAction<string>) => {
@@ -223,15 +212,6 @@ const memoriesSlice = createSlice({
           image.isFavourite = !image.isFavourite;
         }
       });
-
-      // Update selected memory if it exists
-      if (state.selectedMemory) {
-        state.selectedMemory.images.forEach((image) => {
-          if (image.id === imageId) {
-            image.isFavourite = !image.isFavourite;
-          }
-        });
-      }
     },
 
     /**
@@ -335,7 +315,6 @@ const memoriesSlice = createSlice({
 // ============================================================================
 
 export const {
-  setSelectedMemory,
   toggleImageFavorite,
   clearErrors,
   resetMemories,
@@ -357,8 +336,6 @@ export const selectOnThisDayImages = (state: { memories: MemoriesState }) =>
   state.memories.onThisDayImages;
 export const selectOnThisDayMeta = (state: { memories: MemoriesState }) =>
   state.memories.onThisDayMeta;
-export const selectSelectedMemory = (state: { memories: MemoriesState }) =>
-  state.memories.selectedMemory;
 export const selectMemoriesLoading = (state: { memories: MemoriesState }) =>
   state.memories.loading;
 export const selectMemoriesError = (state: { memories: MemoriesState }) =>

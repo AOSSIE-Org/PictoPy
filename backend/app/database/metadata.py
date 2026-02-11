@@ -11,11 +11,13 @@ def db_create_metadata_table() -> None:
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS metadata (
                 metadata TEXT
             )
-        """)
+        """
+        )
 
         # Insert initial row if table is empty
         cursor.execute("SELECT COUNT(*) FROM metadata")

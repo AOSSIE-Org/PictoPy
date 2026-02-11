@@ -3,9 +3,11 @@
  *
  * Large, prominent card for "On This Day" section.
  * Shows hero image with "X years ago today" text overlay.
+ * Navigates to memory detail page on click.
  */
 
 import React from 'react';
+import { useNavigate } from 'react-router';
 import { MemoryImage } from '@/services/memoriesApi';
 import {
   calculateYearsAgo,
@@ -17,7 +19,7 @@ interface FeaturedMemoryCardProps {
   images: MemoryImage[];
   today: string;
   years: number[];
-  onClick: () => void;
+  memoryId: string;
 }
 
 /**
@@ -25,7 +27,9 @@ interface FeaturedMemoryCardProps {
  * Shows larger hero image with prominent styling
  */
 export const FeaturedMemoryCard = React.memo<FeaturedMemoryCardProps>(
-  ({ images, years, onClick }) => {
+  ({ images, years, memoryId }) => {
+    const navigate = useNavigate();
+    
     // Get the first image as hero
     const heroImage = images[0];
 
@@ -43,23 +47,28 @@ export const FeaturedMemoryCard = React.memo<FeaturedMemoryCardProps>(
       e.currentTarget.src = '/photo.png';
     };
 
+    // Handle click - navigate to memory detail page
+    const handleClick = () => {
+      navigate(`/memories/${memoryId}`);
+    };
+
     return (
       <div
-        onClick={onClick}
-        className="group transform cursor-pointer overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl dark:bg-gray-800"
+        onClick={handleClick}
+        className="group transform cursor-pointer overflow-hidden rounded-xl border bg-card shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl"
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            onClick();
+            handleClick();
           }
         }}
         aria-label={`View On This Day memory from ${yearsAgo} years ago`}
       >
         <div className="relative">
           {/* Hero Image */}
-          <div className="relative h-64 w-full overflow-hidden bg-gradient-to-br from-blue-100 to-purple-100 md:h-96 lg:h-[28rem] dark:from-gray-700 dark:to-gray-800">
+          <div className="relative h-64 w-full overflow-hidden bg-muted md:h-96 lg:h-[28rem]">
             <img
               src={thumbnailUrl}
               alt="On This Day"

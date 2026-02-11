@@ -8,7 +8,6 @@
 export { default as MemoriesPage } from './MemoriesPage';
 export { default as MemoryCard } from './MemoryCard';
 export { default as FeaturedMemoryCard } from './FeaturedMemoryCard';
-export { default as MemoryViewer } from './MemoryViewer';
 
 // Export types if needed
 export type { Memory, MemoryImage } from '@/services/memoriesApi';
