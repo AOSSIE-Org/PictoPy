@@ -245,7 +245,7 @@ try {
     }
 
     # Install dependencies inside the environment
-    conda install -r requirements.txt
+    pip install -r requirements.txt
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to install sync-microservice dependencies"
     }
