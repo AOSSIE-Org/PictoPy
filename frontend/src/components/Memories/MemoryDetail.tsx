@@ -114,23 +114,17 @@ export const MemoryDetail = () => {
         file_location: img.path,
         file_size: 0,
         item_type: 'image' as const,
-        latitude: img.latitude || undefined,
-        longitude: img.longitude || undefined,
+        latitude: img.latitude ?? undefined,
+        longitude: img.longitude ?? undefined,
       },
     }));
 
-    dispatch(setImages(formattedImages));
-    dispatch(hideLoader());
+    // Defer setImages and hideLoader to next tick so loader becomes visible
+    requestAnimationFrame(() => {
+      dispatch(setImages(formattedImages));
+      dispatch(hideLoader());
+    });
   }, [memory, dispatch]);
-
-  // Refetch memory data when returning to the page to get updated favorite status
-  useEffect(() => {
-    // This will cause the component to re-render with fresh data from Redux
-    // when the user toggles a favorite and the memory data is refetched
-    return () => {
-      // Cleanup if needed
-    };
-  }, []);
 
   // If memory not found, show error
   if (!memory) {

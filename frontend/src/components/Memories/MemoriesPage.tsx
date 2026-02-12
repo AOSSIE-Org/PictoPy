@@ -23,7 +23,6 @@ import {
   selectAllMemories,
   selectMemoriesLoading,
   selectMemoriesError,
-  selectTotalMemoryCount,
 } from '@/store/slices/memoriesSlice';
 import { MemoryCard } from './MemoryCard';
 import { FeaturedMemoryCard } from './FeaturedMemoryCard';
@@ -148,7 +147,6 @@ export const MemoriesPage: React.FC = () => {
   const allMemories = useAppSelector(selectAllMemories);
   const loading = useAppSelector(selectMemoriesLoading);
   const error = useAppSelector(selectMemoriesError);
-  const totalCount = useAppSelector(selectTotalMemoryCount);
 
   // Simple filter state: 'all' | 'location' | 'date'
   const [filter, setFilter] = useState<'all' | 'location' | 'date'>('all');
@@ -158,6 +156,7 @@ export const MemoriesPage: React.FC = () => {
     memories.filter((m) => m.image_count >= 2);
 
   // Calculate counts (only memories with 2+ images)
+  const totalCount = memoriesWithMultipleImages(allMemories).length;
   const locationCount = memoriesWithMultipleImages(allMemories).filter(
     (m) => m.center_lat != null && m.center_lon != null,
   ).length;

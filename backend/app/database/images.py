@@ -889,8 +889,8 @@ def db_get_all_images_for_memories() -> List[dict]:
                     "metadata": image_util_parse_metadata(row[4]),
                     "isTagged": bool(row[5]),
                     "isFavourite": bool(row[6]),
-                    "latitude": row[7] if row[7] else None,  # Can be None
-                    "longitude": row[8] if row[8] else None,  # Can be None
+                    "latitude": row[7] if row[7] is not None else None,  # Can be None
+                    "longitude": row[8] if row[8] is not None else None,  # Can be None
                     "captured_at": row[9] if row[9] else None,
                     "tags": row[10].split(",") if row[10] else None,
                 }

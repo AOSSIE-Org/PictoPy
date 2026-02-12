@@ -162,18 +162,13 @@ export const fetchAllMemoriesData = createAsyncThunk<
   void,
   void,
   { rejectValue: string }
->('memories/fetchAllData', async (_, { dispatch, rejectWithValue }) => {
-  try {
-    await Promise.all([
-      dispatch(fetchOnThisDay()),
-      dispatch(fetchRecentMemories(30)),
-      dispatch(fetchYearMemories(365)),
-      dispatch(fetchAllMemories()),
-    ]);
-  } catch (error) {
-    const apiError = error as ApiError;
-    return rejectWithValue(apiError.message);
-  }
+>('memories/fetchAllData', async (_, { dispatch }) => {
+  await Promise.all([
+    dispatch(fetchOnThisDay()),
+    dispatch(fetchRecentMemories(30)),
+    dispatch(fetchYearMemories(365)),
+    dispatch(fetchAllMemories()),
+  ]);
 });
 
 // ============================================================================
