@@ -96,7 +96,7 @@ jobs:
                 "title": issue["title"],
                 "url": issue["url"],
                 "state": issue["state"],
-                "score": round(score * 100, 1)
+                "score": round(float(score) * 100, 1)
               })
 
           matches = sorted(matches, key=lambda x: x["score"], reverse=True)[:MAX_RESULTS]
