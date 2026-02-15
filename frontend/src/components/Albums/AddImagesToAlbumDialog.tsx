@@ -15,7 +15,6 @@ import { AddImagesToAlbumDialogProps } from '@/types/Album';
 import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtension';
 import { addImagesToAlbum, fetchAllImages } from '@/api/api-functions';
 import { showInfoDialog } from '@/features/infoDialogSlice';
-import { hideLoader, showLoader } from '@/features/loaderSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { Image } from '@/types/Media';
 import { convertFileSrc } from '@tauri-apps/api/core';

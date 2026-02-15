@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
 import {
   Dialog,
   DialogContent,
@@ -16,8 +15,6 @@ import { Switch } from '@/components/ui/switch';
 import { CreateAlbumDialogProps } from '@/types/Album';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { createAlbum } from '@/api/api-functions';
-import { showInfoDialog } from '@/features/infoDialogSlice';
-import { hideLoader, showLoader } from '@/features/loaderSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 
 export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
@@ -25,7 +22,6 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
