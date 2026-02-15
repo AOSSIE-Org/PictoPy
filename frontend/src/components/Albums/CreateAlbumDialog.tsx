@@ -145,7 +145,7 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
             {/* Lock Album Toggle */}
             <div className="flex items-center justify-between space-x-2">
               <div className="space-y-0.5">
-                <Label htmlFor="hidden">Lock Album</Label>
+                <Label htmlFor="locked">Lock Album</Label>
                 <p className="text-muted-foreground text-sm">
                   Protect your album with a password
                 </p>

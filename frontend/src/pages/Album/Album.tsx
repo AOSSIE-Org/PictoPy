@@ -67,9 +67,9 @@ function Albums() {
     errorTitle: 'Error',
     errorMessage: 'Failed to delete album. Please try again.',
     onSuccess: () => {
-      if (albumToDelete) {
-        dispatch(removeAlbum(albumToDelete.id));
-      }
+      // Close dialog and clear state after successful deletion
+      setIsDeleteDialogOpen(false);
+      setAlbumToDelete(null);
     },
   });
 
@@ -130,19 +130,18 @@ function Albums() {
 
   const confirmDelete = () => {
     if (albumToDelete) {
-      deleteAlbumMutation.mutate(albumToDelete.id);
-      setIsDeleteDialogOpen(false);
-      setAlbumToDelete(null);
+      const albumId = albumToDelete.id;
+      dispatch(removeAlbum(albumId));
+      deleteAlbumMutation.mutate(albumId);
     }
   };
 
   const handleRefresh = async () => {
     dispatch(showLoader('Refreshing albums...'));
-    try {
-      await refetch();
-      dispatch(hideLoader());
-    } catch (error) {
-      dispatch(hideLoader());
+    const result = await refetch();
+    dispatch(hideLoader());
+    
+    if (result.isError || result.error) {
       dispatch(
         showInfoDialog({
           title: 'Error',
