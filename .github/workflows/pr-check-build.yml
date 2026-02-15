@@ -21,12 +21,11 @@ jobs:
       matrix:
         include:
           - platform: "macos-latest"
-            args: "--target aarch64-apple-darwin"
+            args: "--target aarch64-apple-darwin --features ci"
           - platform: "ubuntu-22.04"
-            args: ""
+            args: "--features ci"
           - platform: "windows-latest"
-            args: ""
-
+            args: "--features ci"
     runs-on: ${{ matrix.platform }}
 
     steps:
