@@ -5,25 +5,18 @@
  * Displays memories in sections: On This Day, Recent, This Year, All Memories.
  * Includes filter tabs for All/Location/Date memories.
  *
- * Layout mimics Google Photos Memories with smart feed organization.
+ * Uses Tanstack Query for data fetching (not Redux async thunks).
  */
 
-import React, { useEffect, useState } from 'react';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import React, { useState, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { showInfoDialog } from '@/features/infoDialogSlice';
 import {
-  fetchAllMemoriesData,
-  fetchAllMemories,
-  fetchRecentMemories,
-  fetchYearMemories,
-  fetchOnThisDay,
-  selectOnThisDayImages,
-  selectOnThisDayMeta,
-  selectRecentMemories,
-  selectYearMemories,
-  selectAllMemories,
-  selectMemoriesLoading,
-  selectMemoriesError,
-} from '@/store/slices/memoriesSlice';
+  useAllMemories,
+  useRecentMemories,
+  useYearMemories,
+  useOnThisDay,
+} from '@/hooks/useMemories';
 import { MemoryCard } from './MemoryCard';
 import { FeaturedMemoryCard } from './FeaturedMemoryCard';
 import type { Memory } from '@/services/memoriesApi';
@@ -134,19 +127,85 @@ const EmptyState: React.FC<{ message: string }> = ({ message }) => (
 
 /**
  * Main Memories Page Component
- * SIMPLIFIED: Basic All/Location/Date filter buttons
+ * Uses Tanstack Query hooks for data fetching
  */
 export const MemoriesPage: React.FC = () => {
-  const dispatch = useAppDispatch();
+  const dispatch = useDispatch();
 
-  // Selectors
-  const onThisDayImages = useAppSelector(selectOnThisDayImages);
-  const onThisDayMeta = useAppSelector(selectOnThisDayMeta);
-  const recentMemories = useAppSelector(selectRecentMemories);
-  const yearMemories = useAppSelector(selectYearMemories);
-  const allMemories = useAppSelector(selectAllMemories);
-  const loading = useAppSelector(selectMemoriesLoading);
-  const error = useAppSelector(selectMemoriesError);
+  // Tanstack Query hooks
+  const allMemoriesQuery = useAllMemories();
+  const recentMemoriesQuery = useRecentMemories(30);
+  const yearMemoriesQuery = useYearMemories(365);
+  const onThisDayQuery = useOnThisDay();
+
+  // Extract data
+  const allMemories = allMemoriesQuery.data?.memories || [];
+  const recentMemories = recentMemoriesQuery.data?.memories || [];
+  const yearMemories = yearMemoriesQuery.data?.memories || [];
+  const onThisDayImages = onThisDayQuery.data?.images || [];
+  const onThisDayMeta = onThisDayQuery.data
+    ? {
+        today: onThisDayQuery.data.today,
+        years: onThisDayQuery.data.years,
+      }
+    : null;
+
+  // Loading states
+  const loading = {
+    all: allMemoriesQuery.isLoading,
+    recent: recentMemoriesQuery.isLoading,
+    year: yearMemoriesQuery.isLoading,
+    onThisDay: onThisDayQuery.isLoading,
+  };
+
+  // Error handling with InfoDialog
+  useEffect(() => {
+    if (allMemoriesQuery.isError) {
+      dispatch(
+        showInfoDialog({
+          title: 'Error Loading Memories',
+          message: allMemoriesQuery.error?.message || 'Failed to load memories',
+          variant: 'error',
+        }),
+      );
+    }
+  }, [allMemoriesQuery.isError, allMemoriesQuery.error, dispatch]);
+
+  useEffect(() => {
+    if (recentMemoriesQuery.isError) {
+      dispatch(
+        showInfoDialog({
+          title: 'Error Loading Recent Memories',
+          message: recentMemoriesQuery.error?.message || 'Failed to load recent memories',
+          variant: 'error',
+        }),
+      );
+    }
+  }, [recentMemoriesQuery.isError, recentMemoriesQuery.error, dispatch]);
+
+  useEffect(() => {
+    if (yearMemoriesQuery.isError) {
+      dispatch(
+        showInfoDialog({
+          title: 'Error Loading Year Memories',
+          message: yearMemoriesQuery.error?.message || 'Failed to load year memories',
+          variant: 'error',
+        }),
+      );
+    }
+  }, [yearMemoriesQuery.isError, yearMemoriesQuery.error, dispatch]);
+
+  useEffect(() => {
+    if (onThisDayQuery.isError) {
+      dispatch(
+        showInfoDialog({
+          title: 'Error Loading On This Day',
+          message: onThisDayQuery.error?.message || 'Failed to load On This Day',
+          variant: 'error',
+        }),
+      );
+    }
+  }, [onThisDayQuery.isError, onThisDayQuery.error, dispatch]);
 
   // Simple filter state: 'all' | 'location' | 'date'
   const [filter, setFilter] = useState<'all' | 'location' | 'date'>('all');
@@ -187,16 +246,11 @@ export const MemoriesPage: React.FC = () => {
   const filteredYearMemories = applyFilter(yearMemories);
   const filteredAllMemories = applyFilter(allMemories);
 
-  // Fetch all data on mount
-  useEffect(() => {
-    dispatch(fetchAllMemoriesData());
-  }, [dispatch]);
-
   // Retry handlers
-  const handleRetryAll = () => dispatch(fetchAllMemories());
-  const handleRetryRecent = () => dispatch(fetchRecentMemories(30));
-  const handleRetryYear = () => dispatch(fetchYearMemories(365));
-  const handleRetryOnThisDay = () => dispatch(fetchOnThisDay());
+  const handleRetryAll = () => allMemoriesQuery.refetch();
+  const handleRetryRecent = () => recentMemoriesQuery.refetch();
+  const handleRetryYear = () => yearMemoriesQuery.refetch();
+  const handleRetryOnThisDay = () => onThisDayQuery.refetch();
 
   // Check if any data exists
   const hasAnyData =
@@ -261,12 +315,15 @@ export const MemoriesPage: React.FC = () => {
           )}
 
           {/* Global Error State */}
-          {!hasAnyData && error.all && (
-            <ErrorMessage message={error.all} onRetry={handleRetryAll} />
+          {!hasAnyData && allMemoriesQuery.isError && (
+            <ErrorMessage
+              message={allMemoriesQuery.error?.message || 'Failed to load memories'}
+              onRetry={handleRetryAll}
+            />
           )}
 
           {/* Global Empty State */}
-          {!hasAnyData && !loading.all && !error.all && (
+          {!hasAnyData && !loading.all && !allMemoriesQuery.isError && (
             <EmptyState message="No memories found. Upload photos with location data to get started!" />
           )}
 
@@ -278,9 +335,9 @@ export const MemoriesPage: React.FC = () => {
               <SectionHeader title="On This Day" />
               {loading.onThisDay ? (
                 <FeaturedSkeleton />
-              ) : error.onThisDay ? (
+              ) : onThisDayQuery.isError ? (
                 <ErrorMessage
-                  message={error.onThisDay}
+                  message={onThisDayQuery.error?.message || 'Failed to load On This Day'}
                   onRetry={handleRetryOnThisDay}
                 />
               ) : (
@@ -309,9 +366,9 @@ export const MemoriesPage: React.FC = () => {
                     <MemoryCardSkeleton key={i} />
                   ))}
                 </div>
-              ) : error.recent ? (
+              ) : recentMemoriesQuery.isError ? (
                 <ErrorMessage
-                  message={error.recent}
+                  message={recentMemoriesQuery.error?.message || 'Failed to load recent memories'}
                   onRetry={handleRetryRecent}
                 />
               ) : (
@@ -340,8 +397,11 @@ export const MemoriesPage: React.FC = () => {
                     <MemoryCardSkeleton key={i} />
                   ))}
                 </div>
-              ) : error.year ? (
-                <ErrorMessage message={error.year} onRetry={handleRetryYear} />
+              ) : yearMemoriesQuery.isError ? (
+                <ErrorMessage
+                  message={yearMemoriesQuery.error?.message || 'Failed to load year memories'}
+                  onRetry={handleRetryYear}
+                />
               ) : (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
                   {filteredYearMemories.map((memory: Memory) => (
@@ -368,8 +428,11 @@ export const MemoriesPage: React.FC = () => {
                     <MemoryCardSkeleton key={i} />
                   ))}
                 </div>
-              ) : error.all ? (
-                <ErrorMessage message={error.all} onRetry={handleRetryAll} />
+              ) : allMemoriesQuery.isError ? (
+                <ErrorMessage
+                  message={allMemoriesQuery.error?.message || 'Failed to load all memories'}
+                  onRetry={handleRetryAll}
+                />
               ) : (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
                   {filteredAllMemories.map((memory: Memory) => (

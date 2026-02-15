@@ -4,6 +4,7 @@
  * Full page for viewing a memory's details and all photos.
  * Shows title, description, date, location, and a grid of all images.
  * Matches PersonImages page structure and styling.
+ * Uses Tanstack Query for data fetching.
  */
 
 import { useEffect, useMemo, useCallback } from 'react';
@@ -21,30 +22,77 @@ import {
 } from '@/features/imageSlice';
 import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
-import { useAppSelector } from '@/store/hooks';
+import { showInfoDialog } from '@/features/infoDialogSlice';
 import {
-  selectAllMemories,
-  selectRecentMemories,
-  selectYearMemories,
-  selectOnThisDayImages,
-  selectOnThisDayMeta,
-} from '@/store/slices/memoriesSlice';
+  useAllMemories,
+  useRecentMemories,
+  useYearMemories,
+  useOnThisDay,
+} from '@/hooks/useMemories';
 import { formatDateRangeRelative, type Memory } from '@/services/memoriesApi';
 import { togglefav } from '@/api/api-functions/togglefav';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const MemoryDetail = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { memoryId } = useParams<{ memoryId: string }>();
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const images = useSelector(selectImages);
 
-  // Get memories from all possible sources
-  const allMemories = useAppSelector(selectAllMemories);
-  const recentMemories = useAppSelector(selectRecentMemories);
-  const yearMemories = useAppSelector(selectYearMemories);
-  const onThisDayImages = useAppSelector(selectOnThisDayImages);
-  const onThisDayMeta = useAppSelector(selectOnThisDayMeta);
+  // Fetch data using Tanstack Query hooks
+  const allMemoriesQuery = useAllMemories();
+  const recentMemoriesQuery = useRecentMemories(30);
+  const yearMemoriesQuery = useYearMemories(365);
+  const onThisDayQuery = useOnThisDay();
+
+  // Extract data
+  const allMemories = allMemoriesQuery.data?.memories || [];
+  const recentMemories = recentMemoriesQuery.data?.memories || [];
+  const yearMemories = yearMemoriesQuery.data?.memories || [];
+  const onThisDayImages = onThisDayQuery.data?.images || [];
+  const onThisDayMeta = onThisDayQuery.data
+    ? {
+        today: onThisDayQuery.data.today,
+        years: onThisDayQuery.data.years,
+      }
+    : null;
+
+  // Show error dialog if any query fails
+  useEffect(() => {
+    if (
+      allMemoriesQuery.isError ||
+      recentMemoriesQuery.isError ||
+      yearMemoriesQuery.isError ||
+      onThisDayQuery.isError
+    ) {
+      const errorMessage =
+        allMemoriesQuery.error?.message ||
+        recentMemoriesQuery.error?.message ||
+        yearMemoriesQuery.error?.message ||
+        onThisDayQuery.error?.message ||
+        'Failed to load memory data';
+
+      dispatch(
+        showInfoDialog({
+          title: 'Error Loading Memory',
+          message: errorMessage,
+          variant: 'error',
+        }),
+      );
+    }
+  }, [
+    allMemoriesQuery.isError,
+    allMemoriesQuery.error,
+    recentMemoriesQuery.isError,
+    recentMemoriesQuery.error,
+    yearMemoriesQuery.isError,
+    yearMemoriesQuery.error,
+    onThisDayQuery.isError,
+    onThisDayQuery.error,
+    dispatch,
+  ]);
 
   // Find memory from any source or create temp memory for "on-this-day"
   const memory = useMemo(() => {
@@ -73,9 +121,9 @@ export const MemoryDetail = () => {
 
     // Search in all memory arrays
     return (
-      allMemories.find((m) => m.memory_id === memoryId) ||
-      recentMemories.find((m) => m.memory_id === memoryId) ||
-      yearMemories.find((m) => m.memory_id === memoryId)
+      allMemories.find((m: Memory) => m.memory_id === memoryId) ||
+      recentMemories.find((m: Memory) => m.memory_id === memoryId) ||
+      yearMemories.find((m: Memory) => m.memory_id === memoryId)
     );
   }, [
     memoryId,
@@ -86,18 +134,27 @@ export const MemoryDetail = () => {
     onThisDayMeta,
   ]);
 
-  // Handle favorite toggle with Redux state update
+  // Handle favorite toggle - invalidate queries to refetch
   const handleToggleFavorite = useCallback(
     async (imageId: string) => {
       try {
         await togglefav(imageId);
-        // Update Redux state to reflect the change immediately
+        // Update Redux state for immediate UI feedback
         dispatch(updateImageFavoriteStatus(imageId));
+        // Invalidate Tanstack Query cache to refetch memories
+        queryClient.invalidateQueries({ queryKey: ['memories'] });
       } catch (error) {
         console.error('Failed to toggle favorite:', error);
+        dispatch(
+          showInfoDialog({
+            title: 'Error',
+            message: 'Failed to toggle favorite. Please try again.',
+            variant: 'error',
+          }),
+        );
       }
     },
-    [dispatch],
+    [dispatch, queryClient],
   );
 
   // Load memory images into Redux state
@@ -110,7 +167,7 @@ export const MemoryDetail = () => {
     dispatch(showLoader('Loading memory'));
 
     // Convert memory images to Image[] format for Redux state
-    const formattedImages = memory.images.map((img) => ({
+    const formattedImages = memory.images.map((img: any) => ({
       id: img.id,
       path: img.path,
       thumbnailPath: img.thumbnailPath,
