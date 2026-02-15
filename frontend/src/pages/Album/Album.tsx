@@ -140,7 +140,7 @@ function Albums() {
     dispatch(showLoader('Refreshing albums...'));
     const result = await refetch();
     dispatch(hideLoader());
-    
+
     if (result.isError || result.error) {
       dispatch(
         showInfoDialog({
