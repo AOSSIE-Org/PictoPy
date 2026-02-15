@@ -22,7 +22,7 @@ jobs:
           pip install --no-cache-dir sentence-transformers scikit-learn
 
       - name: Semantic duplicate detection (open + closed)
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
@@ -45,7 +45,7 @@ jobs:
                 body: issue.body || ''
               },
               others: issues
-                .filter(i => i.number !== issue.number)
+                .filter(i => i.number !== issue.number && !i.pull_request)
                 .map(i => ({
                   number: i.number,
                   title: i.title,
@@ -64,7 +64,7 @@ jobs:
           from sentence_transformers import SentenceTransformer
           from sklearn.metrics.pairwise import cosine_similarity
 
-          THRESHOLD = 0.82  # good balance
+          THRESHOLD = 0.82
           MAX_RESULTS = 3
 
           with open("issues.json") as f:
@@ -106,7 +106,7 @@ jobs:
           EOF
 
       - name: Comment and label (non-blocking)
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
@@ -125,8 +125,8 @@ jobs:
             ).join('\n\n');
 
             const safe = async (fn) => {
-              try { await fn(); } catch {
-                core.notice('Skipped write action due to permissions');
+              try { await fn(); } catch (e) {
+                core.notice(`Skipped write action: ${e.message}`);
               }
             };
 
@@ -143,11 +143,34 @@ jobs:
               })
             );
 
+            // Ensure softer label exists
+            const labelName = 'possible-duplicate';
+
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: labelName
+              });
+            } catch (e) {
+              if (e.status === 404) {
+                await safe(() =>
+                  github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: labelName,
+                    color: 'FBCA04',
+                    description: 'Potential semantic duplicate'
+                  })
+                );
+              }
+            }
+
             await safe(() =>
               github.rest.issues.addLabels({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.payload.issue.number,
-                labels: ['duplicate']
+                labels: [labelName]
               })
             );
