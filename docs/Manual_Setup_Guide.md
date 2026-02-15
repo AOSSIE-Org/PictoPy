@@ -180,7 +180,7 @@ Before setting up the Python backend and sync-microservice, you need to have **M
 
     For other systems, consult your distribution's documentation.
 
-  ### ONNX Runtime warning on Windows 11 (safe to ignore)
+ ### ONNX Runtime warning on Windows 11 (safe to ignore)
 
 While running backend tests or starting the PictoPy backend on Windows 11, you may see a warning similar to:
 
