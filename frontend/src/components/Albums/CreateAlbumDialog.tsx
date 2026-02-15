@@ -18,6 +18,7 @@ import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { createAlbum } from '@/api/api-functions';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { hideLoader, showLoader } from '@/features/loaderSlice';
+import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 
 export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
   isOpen,
@@ -33,42 +34,21 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { mutate: createAlbumMutate, isPending } = usePictoMutation({
+  const createAlbumMutation = usePictoMutation({
     mutationFn: createAlbum,
-    onSuccess: () => {
-      dispatch(hideLoader());
-      dispatch(
-        showInfoDialog({
-          title: 'Success',
-          message: 'Album created successfully!',
-          variant: 'info',
-        }),
-      );
+  });
 
+  useMutationFeedback(createAlbumMutation, {
+    loadingMessage: 'Creating album...',
+    successTitle: 'Success',
+    successMessage: 'Album created successfully!',
+    errorTitle: 'Error',
+    errorMessage: 'Failed to create album. Please try again.',
+    onSuccess: () => {
       if (onSuccess) {
         onSuccess();
       }
-
       handleClose();
-    },
-    onError: (error: any) => {
-      dispatch(hideLoader());
-
-      let errorMessage = 'Failed to create album. Please try again.';
-
-      if (error?.response?.data?.detail?.message) {
-        errorMessage = error.response.data.detail.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-
-      dispatch(
-        showInfoDialog({
-          title: 'Error',
-          message: errorMessage,
-          variant: 'error',
-        }),
-      );
     },
   });
 
@@ -94,8 +74,6 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
       return;
     }
 
-    dispatch(showLoader('Creating album...'));
-
     const requestData = {
       name: formData.name.trim(),
       ...(formData.description.trim() && {
@@ -105,7 +83,7 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
       ...(formData.is_locked && { password: formData.password }),
     };
 
-    createAlbumMutate(requestData);
+    createAlbumMutation.mutate(requestData);
   };
 
   const handleClose = () => {
@@ -213,12 +191,12 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
               type="button"
               variant="outline"
               onClick={handleClose}
-              disabled={isPending}
+              disabled={createAlbumMutation.isPending}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? 'Creating...' : 'Create Album'}
+            <Button type="submit" disabled={createAlbumMutation.isPending}>
+              {createAlbumMutation.isPending ? 'Creating...' : 'Create Album'}
             </Button>
           </DialogFooter>
         </form>

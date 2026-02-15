@@ -18,6 +18,7 @@ import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { updateAlbum } from '@/api/api-functions';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { hideLoader, showLoader } from '@/features/loaderSlice';
+import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 
 export const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
   album,
@@ -35,45 +36,22 @@ export const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { mutate: updateAlbumMutate, isPending } = usePictoMutation({
+  const updateAlbumMutation = usePictoMutation({
     mutationFn: ({ albumId, data }: { albumId: string; data: any }) =>
       updateAlbum(albumId, data),
-    onSuccess: () => {
-      dispatch(hideLoader());
-      dispatch(
-        showInfoDialog({
-          title: 'Success',
-          message: 'Album updated successfully!',
-          variant: 'info',
-        }),
-      );
+  });
 
-      // Trigger refetch to update the albums list
+  useMutationFeedback(updateAlbumMutation, {
+    loadingMessage: 'Updating album...',
+    successTitle: 'Success',
+    successMessage: 'Album updated successfully!',
+    errorTitle: 'Error',
+    errorMessage: 'Failed to update album. Please try again.',
+    onSuccess: () => {
       if (onSuccess) {
         onSuccess();
       }
-
       handleClose();
-    },
-    onError: (error: any) => {
-      dispatch(hideLoader());
-
-      // Extract detailed error message from backend response
-      let errorMessage = 'Failed to update album. Please try again.';
-
-      if (error?.response?.data?.detail?.message) {
-        errorMessage = error.response.data.detail.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-
-      dispatch(
-        showInfoDialog({
-          title: 'Error',
-          message: errorMessage,
-          variant: 'error',
-        }),
-      );
     },
   });
 
@@ -118,8 +96,6 @@ export const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
       return;
     }
 
-    dispatch(showLoader('Updating album...'));
-
     const requestData: any = {
       name: formData.name.trim(),
       ...(formData.description.trim() && {
@@ -138,7 +114,7 @@ export const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
       requestData.password = formData.password.trim();
     }
 
-    updateAlbumMutate({ albumId: album.id, data: requestData });
+    updateAlbumMutation.mutate({ albumId: album.id, data: requestData });
   };
 
   const handleClose = () => {
@@ -286,12 +262,12 @@ export const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
               type="button"
               variant="outline"
               onClick={handleClose}
-              disabled={isPending}
+              disabled={updateAlbumMutation.isPending}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? 'Saving...' : 'Save Changes'}
+            <Button type="submit" disabled={updateAlbumMutation.isPending}>
+              {updateAlbumMutation.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </form>

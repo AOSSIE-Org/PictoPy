@@ -37,6 +37,7 @@ import {
 import { selectIsImageViewOpen } from '@/features/imageSelectors';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { Album } from '@/types/Album';
 import { Image } from '@/types/Media';
 
@@ -88,7 +89,7 @@ export const AlbumDetail = () => {
     enabled: !!albumId && !!album,
   });
 
-  const { mutate: removeImagesMutate } = usePictoMutation({
+  const removeImagesMutation = usePictoMutation({
     mutationFn: ({
       albumId,
       imageIds,
@@ -96,57 +97,34 @@ export const AlbumDetail = () => {
       albumId: string;
       imageIds: string[];
     }) => removeMultipleImagesFromAlbum(albumId, { image_ids: imageIds }),
+  });
+
+  useMutationFeedback(removeImagesMutation, {
+    loadingMessage: 'Removing images from album...',
+    successTitle: 'Success',
+    successMessage: 'Images removed from album successfully!',
+    errorTitle: 'Error',
+    errorMessage: 'Failed to remove images. Please try again.',
     onSuccess: () => {
-      dispatch(hideLoader());
-      dispatch(
-        showInfoDialog({
-          title: 'Success',
-          message: 'Images removed from album successfully!',
-          variant: 'info',
-        }),
-      );
       setSelectedImages(new Set());
       setIsSelectionMode(false);
       refetchImages();
     },
-    onError: (error: any) => {
-      dispatch(hideLoader());
-      dispatch(
-        showInfoDialog({
-          title: 'Error',
-          message:
-            error?.message || 'Failed to remove images. Please try again.',
-          variant: 'error',
-        }),
-      );
-    },
   });
 
-  const { mutate: setCoverImageMutate } = usePictoMutation({
+  const setCoverImageMutation = usePictoMutation({
     mutationFn: ({ albumId, imageId }: { albumId: string; imageId: string }) =>
       setAlbumCoverImage(albumId, imageId),
+  });
+
+  useMutationFeedback(setCoverImageMutation, {
+    loadingMessage: 'Setting album cover...',
+    successTitle: 'Success',
+    successMessage: 'Album cover image updated successfully!',
+    errorTitle: 'Error',
+    errorMessage: 'Failed to set cover image. Please try again.',
     onSuccess: () => {
-      dispatch(hideLoader());
-      dispatch(
-        showInfoDialog({
-          title: 'Success',
-          message: 'Album cover image updated successfully!',
-          variant: 'info',
-        }),
-      );
-      // Refetch album data to get updated cover image
       refetchAlbum();
-    },
-    onError: (error: any) => {
-      dispatch(hideLoader());
-      dispatch(
-        showInfoDialog({
-          title: 'Error',
-          message:
-            error?.message || 'Failed to set cover image. Please try again.',
-          variant: 'error',
-        }),
-      );
     },
   });
 
@@ -238,16 +216,14 @@ export const AlbumDetail = () => {
   const handleRemoveSelected = () => {
     if (selectedImages.size === 0) return;
 
-    dispatch(showLoader('Removing images from album...'));
-    removeImagesMutate({
+    removeImagesMutation.mutate({
       albumId: albumId!,
       imageIds: Array.from(selectedImages),
     });
   };
 
   const handleSetCoverImage = (imageId: string) => {
-    dispatch(showLoader('Setting album cover...'));
-    setCoverImageMutate({
+    setCoverImageMutation.mutate({
       albumId: albumId!,
       imageId: imageId,
     });

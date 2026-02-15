@@ -16,6 +16,7 @@ import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtension';
 import { addImagesToAlbum, fetchAllImages } from '@/api/api-functions';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { hideLoader, showLoader } from '@/features/loaderSlice';
+import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { Image } from '@/types/Media';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { Search, Check } from 'lucide-react';
@@ -43,29 +44,19 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
     }
   }, [imagesData]);
 
-  const { mutate: addImagesMutate, isPending } = usePictoMutation({
+  const addImagesMutation = usePictoMutation({
     mutationFn: (data: { image_ids: string[] }) =>
       addImagesToAlbum(albumId, data),
+  });
+
+  useMutationFeedback(addImagesMutation, {
+    loadingMessage: 'Adding images to album...',
+    successTitle: 'Success',
+    successMessage: `Images added to album successfully!`,
+    errorTitle: 'Error',
+    errorMessage: 'Failed to add images. Please try again.',
     onSuccess: () => {
-      dispatch(hideLoader());
-      dispatch(
-        showInfoDialog({
-          title: 'Success',
-          message: `Added ${selectedImages.size} image${selectedImages.size > 1 ? 's' : ''} to album!`,
-          variant: 'info',
-        }),
-      );
       handleClose();
-    },
-    onError: (error: any) => {
-      dispatch(hideLoader());
-      dispatch(
-        showInfoDialog({
-          title: 'Error',
-          message: error?.message || 'Failed to add images. Please try again.',
-          variant: 'error',
-        }),
-      );
     },
   });
 
@@ -91,8 +82,7 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
       return;
     }
 
-    dispatch(showLoader('Adding images to album...'));
-    addImagesMutate({ image_ids: Array.from(selectedImages) });
+    addImagesMutation.mutate({ image_ids: Array.from(selectedImages) });
   };
 
   const handleClose = () => {
@@ -197,15 +187,15 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
             type="button"
             variant="outline"
             onClick={handleClose}
-            disabled={isPending}
+            disabled={addImagesMutation.isPending}
           >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isPending || selectedImages.size === 0}
+            disabled={addImagesMutation.isPending || selectedImages.size === 0}
           >
-            {isPending
+            {addImagesMutation.isPending
               ? 'Adding...'
               : `Add ${selectedImages.size > 0 ? selectedImages.size : ''} Image${selectedImages.size !== 1 ? 's' : ''}`}
           </Button>

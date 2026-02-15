@@ -22,6 +22,7 @@ import { setAlbums, removeAlbum } from '@/features/albumsSlice';
 import { selectAlbums } from '@/features/albumSelectors';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { Album } from '@/types/Album';
 import {
   DropdownMenu,
@@ -55,29 +56,20 @@ function Albums() {
     queryFn: () => getAllAlbums(),
   });
 
-  const { mutate: deleteAlbumMutate } = usePictoMutation({
+  const deleteAlbumMutation = usePictoMutation({
     mutationFn: deleteAlbum,
-    onSuccess: (_, albumId) => {
-      dispatch(hideLoader());
-      dispatch(removeAlbum(albumId as string));
-      dispatch(
-        showInfoDialog({
-          title: 'Success',
-          message: 'Album deleted successfully!',
-          variant: 'info',
-        }),
-      );
-    },
-    onError: (error: any) => {
-      dispatch(hideLoader());
-      dispatch(
-        showInfoDialog({
-          title: 'Error',
-          message:
-            error?.message || 'Failed to delete album. Please try again.',
-          variant: 'error',
-        }),
-      );
+  });
+
+  useMutationFeedback(deleteAlbumMutation, {
+    loadingMessage: 'Deleting album...',
+    successTitle: 'Success',
+    successMessage: 'Album deleted successfully!',
+    errorTitle: 'Error',
+    errorMessage: 'Failed to delete album. Please try again.',
+    onSuccess: () => {
+      if (albumToDelete) {
+        dispatch(removeAlbum(albumToDelete.id));
+      }
     },
   });
 
@@ -138,8 +130,7 @@ function Albums() {
 
   const confirmDelete = () => {
     if (albumToDelete) {
-      dispatch(showLoader('Deleting album...'));
-      deleteAlbumMutate(albumToDelete.id);
+      deleteAlbumMutation.mutate(albumToDelete.id);
       setIsDeleteDialogOpen(false);
       setAlbumToDelete(null);
     }
