@@ -140,7 +140,8 @@ export const MemoriesPage: React.FC = () => {
 
   // Extract data
   const allMemories = (allMemoriesQuery.data?.data?.memories as any) || [];
-  const recentMemories = (recentMemoriesQuery.data?.data?.memories as any) || [];
+  const recentMemories =
+    (recentMemoriesQuery.data?.data?.memories as any) || [];
   const yearMemories = (yearMemoriesQuery.data?.data?.memories as any) || [];
   const onThisDayImages = (onThisDayQuery.data?.data?.images as any) || [];
   const onThisDayMeta = onThisDayQuery.data?.data
