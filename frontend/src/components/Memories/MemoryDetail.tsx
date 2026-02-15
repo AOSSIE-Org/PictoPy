@@ -29,7 +29,8 @@ import {
   useYearMemories,
   useOnThisDay,
 } from '@/hooks/useMemories';
-import { formatDateRangeRelative, type Memory } from '@/services/memoriesApi';
+import { type Memory } from '@/api/api-functions/memories';
+import { formatDateRangeRelative } from '@/utils/memories';
 import { togglefav } from '@/api/api-functions/togglefav';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -48,14 +49,14 @@ export const MemoryDetail = () => {
   const onThisDayQuery = useOnThisDay();
 
   // Extract data
-  const allMemories = allMemoriesQuery.data?.memories || [];
-  const recentMemories = recentMemoriesQuery.data?.memories || [];
-  const yearMemories = yearMemoriesQuery.data?.memories || [];
-  const onThisDayImages = onThisDayQuery.data?.images || [];
-  const onThisDayMeta = onThisDayQuery.data
+  const allMemories = (allMemoriesQuery.data?.data?.memories as any) || [];
+  const recentMemories = (recentMemoriesQuery.data?.data?.memories as any) || [];
+  const yearMemories = (yearMemoriesQuery.data?.data?.memories as any) || [];
+  const onThisDayImages = (onThisDayQuery.data?.data?.images as any) || [];
+  const onThisDayMeta = onThisDayQuery.data?.data
     ? {
-        today: onThisDayQuery.data.today,
-        years: onThisDayQuery.data.years,
+        today: (onThisDayQuery.data.data as any).today,
+        years: (onThisDayQuery.data.data as any).years,
       }
     : null;
 

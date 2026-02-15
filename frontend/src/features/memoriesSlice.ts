@@ -7,28 +7,16 @@
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Memory } from '@/services/memoriesApi';
-
-// ============================================================================
-// State Interface
-// ============================================================================
+import { Memory } from '@/api/api-functions/memories';
 
 interface MemoriesState {
   // UI state for memory viewer modal
   selectedMemory: Memory | null;
 }
 
-// ============================================================================
-// Initial State
-// ============================================================================
-
 const initialState: MemoriesState = {
   selectedMemory: null,
 };
-
-// ============================================================================
-// Slice
-// ============================================================================
 
 const memoriesSlice = createSlice({
   name: 'memories',
@@ -57,18 +45,10 @@ const memoriesSlice = createSlice({
   },
 });
 
-// ============================================================================
-// Exports
-// ============================================================================
-
 export const { setSelectedMemory, clearSelectedMemory, resetMemories } =
   memoriesSlice.actions;
 
 export default memoriesSlice.reducer;
-
-// ============================================================================
-// Selectors
-// ============================================================================
 
 export const selectSelectedMemory = (state: { memories: MemoriesState }) =>
   state.memories.selectedMemory;

@@ -10,4 +10,4 @@ export { default as MemoryCard } from './MemoryCard';
 export { default as FeaturedMemoryCard } from './FeaturedMemoryCard';
 
 // Export types if needed
-export type { Memory, MemoryImage } from '@/services/memoriesApi';
+export type { Memory, MemoryImage } from '@/api/api-functions/memories';

@@ -8,12 +8,12 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router';
-import { MemoryImage } from '@/services/memoriesApi';
+import { MemoryImage } from '@/api/api-functions/memories';
 import {
   calculateYearsAgo,
   formatPhotoCount,
   getThumbnailUrl,
-} from '@/services/memoriesApi';
+} from '@/utils/memories';
 
 interface FeaturedMemoryCardProps {
   images: MemoryImage[];

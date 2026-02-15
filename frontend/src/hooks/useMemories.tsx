@@ -3,7 +3,7 @@ import {
   generateMemories,
   getTimeline,
   getOnThisDay,
-} from '@/services/memoriesApi';
+} from '@/api/api-functions/memories';
 
 /**
  * Custom hook for fetching all memories

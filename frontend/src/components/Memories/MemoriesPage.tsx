@@ -11,7 +11,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { showInfoDialog } from '@/features/infoDialogSlice';
-import { getErrorMessage } from '@/lib/utils';
 import {
   useAllMemories,
   useRecentMemories,
@@ -20,7 +19,7 @@ import {
 } from '@/hooks/useMemories';
 import { MemoryCard } from './MemoryCard';
 import { FeaturedMemoryCard } from './FeaturedMemoryCard';
-import type { Memory } from '@/services/memoriesApi';
+import type { Memory } from '@/api/api-functions/memories';
 
 /**
  * Loading skeleton for memory cards
@@ -140,14 +139,14 @@ export const MemoriesPage: React.FC = () => {
   const onThisDayQuery = useOnThisDay();
 
   // Extract data
-  const allMemories = allMemoriesQuery.data?.memories || [];
-  const recentMemories = recentMemoriesQuery.data?.memories || [];
-  const yearMemories = yearMemoriesQuery.data?.memories || [];
-  const onThisDayImages = onThisDayQuery.data?.images || [];
-  const onThisDayMeta = onThisDayQuery.data
+  const allMemories = (allMemoriesQuery.data?.data?.memories as any) || [];
+  const recentMemories = (recentMemoriesQuery.data?.data?.memories as any) || [];
+  const yearMemories = (yearMemoriesQuery.data?.data?.memories as any) || [];
+  const onThisDayImages = (onThisDayQuery.data?.data?.images as any) || [];
+  const onThisDayMeta = onThisDayQuery.data?.data
     ? {
-        today: onThisDayQuery.data.today,
-        years: onThisDayQuery.data.years,
+        today: (onThisDayQuery.data.data as any).today,
+        years: (onThisDayQuery.data.data as any).years,
       }
     : null;
 
@@ -165,48 +164,51 @@ export const MemoriesPage: React.FC = () => {
       dispatch(
         showInfoDialog({
           title: 'Error Loading Memories',
-          message: getErrorMessage(allMemoriesQuery.error),
+          message: allMemoriesQuery.errorMessage || 'Failed to load memories',
           variant: 'error',
         }),
       );
     }
-  }, [allMemoriesQuery.isError, allMemoriesQuery.error, dispatch]);
+  }, [allMemoriesQuery.isError, allMemoriesQuery.errorMessage, dispatch]);
 
   useEffect(() => {
     if (recentMemoriesQuery.isError) {
       dispatch(
         showInfoDialog({
           title: 'Error Loading Recent Memories',
-          message: getErrorMessage(recentMemoriesQuery.error),
+          message:
+            recentMemoriesQuery.errorMessage ||
+            'Failed to load recent memories',
           variant: 'error',
         }),
       );
     }
-  }, [recentMemoriesQuery.isError, recentMemoriesQuery.error, dispatch]);
+  }, [recentMemoriesQuery.isError, recentMemoriesQuery.errorMessage, dispatch]);
 
   useEffect(() => {
     if (yearMemoriesQuery.isError) {
       dispatch(
         showInfoDialog({
           title: 'Error Loading Year Memories',
-          message: getErrorMessage(yearMemoriesQuery.error),
+          message:
+            yearMemoriesQuery.errorMessage || 'Failed to load year memories',
           variant: 'error',
         }),
       );
     }
-  }, [yearMemoriesQuery.isError, yearMemoriesQuery.error, dispatch]);
+  }, [yearMemoriesQuery.isError, yearMemoriesQuery.errorMessage, dispatch]);
 
   useEffect(() => {
     if (onThisDayQuery.isError) {
       dispatch(
         showInfoDialog({
           title: 'Error Loading On This Day',
-          message: getErrorMessage(onThisDayQuery.error),
+          message: onThisDayQuery.errorMessage || 'Failed to load On This Day',
           variant: 'error',
         }),
       );
     }
-  }, [onThisDayQuery.isError, onThisDayQuery.error, dispatch]);
+  }, [onThisDayQuery.isError, onThisDayQuery.errorMessage, dispatch]);
 
   // Simple filter state: 'all' | 'location' | 'date'
   const [filter, setFilter] = useState<'all' | 'location' | 'date'>('all');
@@ -318,7 +320,9 @@ export const MemoriesPage: React.FC = () => {
           {/* Global Error State */}
           {!hasAnyData && allMemoriesQuery.isError && (
             <ErrorMessage
-              message={getErrorMessage(allMemoriesQuery.error)}
+              message={
+                allMemoriesQuery.errorMessage || 'Failed to load memories'
+              }
               onRetry={handleRetryAll}
             />
           )}
@@ -338,7 +342,9 @@ export const MemoriesPage: React.FC = () => {
                 <FeaturedSkeleton />
               ) : onThisDayQuery.isError ? (
                 <ErrorMessage
-                  message={getErrorMessage(onThisDayQuery.error)}
+                  message={
+                    onThisDayQuery.errorMessage || 'Failed to load On This Day'
+                  }
                   onRetry={handleRetryOnThisDay}
                 />
               ) : (
@@ -369,7 +375,10 @@ export const MemoriesPage: React.FC = () => {
                 </div>
               ) : recentMemoriesQuery.isError ? (
                 <ErrorMessage
-                  message={getErrorMessage(recentMemoriesQuery.error)}
+                  message={
+                    recentMemoriesQuery.errorMessage ||
+                    'Failed to load recent memories'
+                  }
                   onRetry={handleRetryRecent}
                 />
               ) : (
@@ -400,7 +409,10 @@ export const MemoriesPage: React.FC = () => {
                 </div>
               ) : yearMemoriesQuery.isError ? (
                 <ErrorMessage
-                  message={getErrorMessage(yearMemoriesQuery.error)}
+                  message={
+                    yearMemoriesQuery.errorMessage ||
+                    'Failed to load year memories'
+                  }
                   onRetry={handleRetryYear}
                 />
               ) : (
@@ -431,7 +443,10 @@ export const MemoriesPage: React.FC = () => {
                 </div>
               ) : allMemoriesQuery.isError ? (
                 <ErrorMessage
-                  message={getErrorMessage(allMemoriesQuery.error)}
+                  message={
+                    allMemoriesQuery.errorMessage ||
+                    'Failed to load all memories'
+                  }
                   onRetry={handleRetryAll}
                 />
               ) : (

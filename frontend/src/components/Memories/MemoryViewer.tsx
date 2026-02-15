@@ -11,7 +11,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   selectSelectedMemory,
   clearSelectedMemory,
-} from '@/store/slices/memoriesSlice';
+} from '@/features/memoriesSlice';
 import { setCurrentViewIndex, setImages } from '@/features/imageSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { MediaView } from '@/components/Media/MediaView';
@@ -21,7 +21,7 @@ import {
   getThumbnailUrl,
   generateMemoryTitle,
   formatLocationName,
-} from '@/services/memoriesApi';
+} from '@/utils/memories';
 import { togglefav } from '@/api/api-functions/togglefav';
 import { getErrorMessage } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';

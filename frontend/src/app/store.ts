@@ -6,7 +6,7 @@ import imageReducer from '@/features/imageSlice';
 import faceClustersReducer from '@/features/faceClustersSlice';
 import infoDialogReducer from '@/features/infoDialogSlice';
 import folderReducer from '@/features/folderSlice';
-import memoriesReducer from '@/store/slices/memoriesSlice';
+import memoriesReducer from '@/features/memoriesSlice';
 
 export const store = configureStore({
   reducer: {
