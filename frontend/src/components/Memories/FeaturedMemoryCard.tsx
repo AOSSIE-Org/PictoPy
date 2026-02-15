@@ -29,7 +29,7 @@ interface FeaturedMemoryCardProps {
 export const FeaturedMemoryCard = React.memo<FeaturedMemoryCardProps>(
   ({ images, years, memoryId }) => {
     const navigate = useNavigate();
-    
+
     // Get the first image as hero
     const heroImage = images[0];
 
@@ -55,7 +55,7 @@ export const FeaturedMemoryCard = React.memo<FeaturedMemoryCardProps>(
     return (
       <div
         onClick={handleClick}
-        className="group transform cursor-pointer overflow-hidden rounded-xl border bg-card shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl"
+        className="group bg-card transform cursor-pointer overflow-hidden rounded-xl border shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl"
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
@@ -68,7 +68,7 @@ export const FeaturedMemoryCard = React.memo<FeaturedMemoryCardProps>(
       >
         <div className="relative">
           {/* Hero Image */}
-          <div className="relative h-64 w-full overflow-hidden bg-muted md:h-96 lg:h-[28rem]">
+          <div className="bg-muted relative h-64 w-full overflow-hidden md:h-96 lg:h-[28rem]">
             <img
               src={thumbnailUrl}
               alt="On This Day"

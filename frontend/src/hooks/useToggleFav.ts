@@ -6,12 +6,11 @@ import { updateImageFavoriteStatus } from '@/features/imageSlice';
 
 export const useToggleFav = () => {
   const dispatch = useDispatch();
-  
+
   const toggleFavouriteMutation = usePictoMutation({
     mutationFn: async (image_id: string) => togglefav(image_id),
     autoInvalidateTags: ['images'],
     onSuccess: (_data, image_id) => {
-      
       dispatch(updateImageFavoriteStatus(image_id));
     },
   });

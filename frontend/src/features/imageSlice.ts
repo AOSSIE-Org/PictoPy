@@ -51,7 +51,12 @@ const imageSlice = createSlice({
   },
 });
 
-export const { setImages, setCurrentViewIndex, closeImageView, updateImageFavoriteStatus, clearImages } =
-  imageSlice.actions;
+export const {
+  setImages,
+  setCurrentViewIndex,
+  closeImageView,
+  updateImageFavoriteStatus,
+  clearImages,
+} = imageSlice.actions;
 
 export default imageSlice.reducer;

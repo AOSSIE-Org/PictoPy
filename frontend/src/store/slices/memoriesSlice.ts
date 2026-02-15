@@ -309,11 +309,8 @@ const memoriesSlice = createSlice({
 // Exports
 // ============================================================================
 
-export const {
-  toggleImageFavorite,
-  clearErrors,
-  resetMemories,
-} = memoriesSlice.actions;
+export const { toggleImageFavorite, clearErrors, resetMemories } =
+  memoriesSlice.actions;
 
 export default memoriesSlice.reducer;
 

@@ -14,7 +14,11 @@ import { ArrowLeft } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
-import { setCurrentViewIndex, setImages, updateImageFavoriteStatus } from '@/features/imageSlice';
+import {
+  setCurrentViewIndex,
+  setImages,
+  updateImageFavoriteStatus,
+} from '@/features/imageSlice';
 import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { useAppSelector } from '@/store/hooks';
@@ -25,10 +29,7 @@ import {
   selectOnThisDayImages,
   selectOnThisDayMeta,
 } from '@/store/slices/memoriesSlice';
-import {
-  formatDateRangeRelative,
-  type Memory,
-} from '@/services/memoriesApi';
+import { formatDateRangeRelative, type Memory } from '@/services/memoriesApi';
 import { togglefav } from '@/api/api-functions/togglefav';
 
 export const MemoryDetail = () => {
@@ -37,7 +38,7 @@ export const MemoryDetail = () => {
   const { memoryId } = useParams<{ memoryId: string }>();
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const images = useSelector(selectImages);
-  
+
   // Get memories from all possible sources
   const allMemories = useAppSelector(selectAllMemories);
   const recentMemories = useAppSelector(selectRecentMemories);
@@ -48,7 +49,11 @@ export const MemoryDetail = () => {
   // Find memory from any source or create temp memory for "on-this-day"
   const memory = useMemo(() => {
     // Special case: "On This Day" - create temporary memory from images
-    if (memoryId === 'on-this-day' && onThisDayImages.length > 0 && onThisDayMeta) {
+    if (
+      memoryId === 'on-this-day' &&
+      onThisDayImages.length > 0 &&
+      onThisDayMeta
+    ) {
       const tempMemory: Memory = {
         memory_id: 'on-this-day',
         title: `On This Day - ${onThisDayMeta.today}`,
@@ -72,7 +77,14 @@ export const MemoryDetail = () => {
       recentMemories.find((m) => m.memory_id === memoryId) ||
       yearMemories.find((m) => m.memory_id === memoryId)
     );
-  }, [memoryId, allMemories, recentMemories, yearMemories, onThisDayImages, onThisDayMeta]);
+  }, [
+    memoryId,
+    allMemories,
+    recentMemories,
+    yearMemories,
+    onThisDayImages,
+    onThisDayMeta,
+  ]);
 
   // Handle favorite toggle with Redux state update
   const handleToggleFavorite = useCallback(
@@ -138,8 +150,8 @@ export const MemoryDetail = () => {
           <ArrowLeft className="h-4 w-4" />
           Back to Memories
         </Button>
-        <div className="rounded-lg border-2 border-dashed border-border bg-muted/50 p-12 text-center">
-          <p className="text-lg text-muted-foreground">Memory not found</p>
+        <div className="border-border bg-muted/50 rounded-lg border-2 border-dashed p-12 text-center">
+          <p className="text-muted-foreground text-lg">Memory not found</p>
         </div>
       </div>
     );
@@ -161,7 +173,7 @@ export const MemoryDetail = () => {
   return (
     <div className="flex h-full flex-col">
       {/* Fixed Header Section */}
-      <div className="border-b bg-background px-6 py-3">
+      <div className="bg-background border-b px-6 py-3">
         {/* Back Button */}
         <div className="mb-3">
           <Button
@@ -193,7 +205,7 @@ export const MemoryDetail = () => {
 
         {/* Description */}
         {memory.description && (
-          <p className="ml-5 mt-2 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-2 ml-5 text-sm">
             {memory.description}
           </p>
         )}

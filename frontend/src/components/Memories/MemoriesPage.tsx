@@ -33,11 +33,11 @@ import type { Memory } from '@/services/memoriesApi';
  */
 const MemoryCardSkeleton: React.FC = () => (
   <div className="animate-pulse overflow-hidden rounded-lg border shadow-md">
-    <div className="h-48 w-full bg-muted" />
+    <div className="bg-muted h-48 w-full" />
     <div className="space-y-3 p-4">
-      <div className="h-5 w-3/4 rounded bg-muted" />
-      <div className="h-4 w-1/2 rounded bg-muted" />
-      <div className="h-4 w-2/3 rounded bg-muted" />
+      <div className="bg-muted h-5 w-3/4 rounded" />
+      <div className="bg-muted h-4 w-1/2 rounded" />
+      <div className="bg-muted h-4 w-2/3 rounded" />
     </div>
   </div>
 );
@@ -47,9 +47,9 @@ const MemoryCardSkeleton: React.FC = () => (
  */
 const FeaturedSkeleton: React.FC = () => (
   <div className="animate-pulse overflow-hidden rounded-xl border shadow-lg">
-    <div className="h-64 w-full bg-muted md:h-96 lg:h-[28rem]" />
+    <div className="bg-muted h-64 w-full md:h-96 lg:h-[28rem]" />
     <div className="space-y-3 p-4">
-      <div className="h-6 w-1/2 rounded bg-muted" />
+      <div className="bg-muted h-6 w-1/2 rounded" />
     </div>
   </div>
 );
@@ -57,11 +57,11 @@ const FeaturedSkeleton: React.FC = () => (
 /**
  * Section header component with date-based styling
  */
-const SectionHeader: React.FC<{ title: string; count?: number; date?: string }> = ({
-  title,
-  count,
-  date,
-}) => (
+const SectionHeader: React.FC<{
+  title: string;
+  count?: number;
+  date?: string;
+}> = ({ title, count, date }) => (
   <div className="mb-6">
     <h2 className="flex items-center text-xl font-semibold text-gray-800 dark:text-gray-200">
       <div className="bg-primary mr-2 h-6 w-1"></div>
@@ -82,10 +82,10 @@ const ErrorMessage: React.FC<{ message: string; onRetry: () => void }> = ({
   message,
   onRetry,
 }) => (
-  <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-center">
+  <div className="border-destructive/50 bg-destructive/10 rounded-lg border p-6 text-center">
     <div className="flex flex-col items-center space-y-3">
       <svg
-        className="h-12 w-12 text-destructive"
+        className="text-destructive h-12 w-12"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -98,7 +98,7 @@ const ErrorMessage: React.FC<{ message: string; onRetry: () => void }> = ({
           d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
         />
       </svg>
-      <p className="font-medium text-destructive">{message}</p>
+      <p className="text-destructive font-medium">{message}</p>
       <button
         onClick={onRetry}
         className="rounded-lg bg-red-600 px-4 py-2 text-white transition-colors duration-200 hover:bg-red-700"
@@ -113,9 +113,9 @@ const ErrorMessage: React.FC<{ message: string; onRetry: () => void }> = ({
  * Empty state component
  */
 const EmptyState: React.FC<{ message: string }> = ({ message }) => (
-  <div className="rounded-lg border-2 border-dashed border-border bg-muted/50 p-12 text-center">
+  <div className="border-border bg-muted/50 rounded-lg border-2 border-dashed p-12 text-center">
     <svg
-      className="mx-auto mb-4 h-16 w-16 text-muted-foreground"
+      className="text-muted-foreground mx-auto mb-4 h-16 w-16"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -128,7 +128,7 @@ const EmptyState: React.FC<{ message: string }> = ({ message }) => (
         d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
       />
     </svg>
-    <p className="text-lg text-muted-foreground">{message}</p>
+    <p className="text-muted-foreground text-lg">{message}</p>
   </div>
 );
 
@@ -152,7 +152,7 @@ export const MemoriesPage: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'location' | 'date'>('all');
 
   // Filter out memories with only 1 image (same as backend min_images=2)
-  const memoriesWithMultipleImages = (memories: Memory[]) => 
+  const memoriesWithMultipleImages = (memories: Memory[]) =>
     memories.filter((m) => m.image_count >= 2);
 
   // Calculate counts (only memories with 2+ images)
@@ -168,7 +168,7 @@ export const MemoriesPage: React.FC = () => {
   const applyFilter = (memories: Memory[]) => {
     // First filter out single-image memories
     const multiImageMemories = memoriesWithMultipleImages(memories);
-    
+
     if (filter === 'location') {
       return multiImageMemories.filter(
         (m) => m.center_lat != null && m.center_lon != null,
@@ -214,7 +214,7 @@ export const MemoriesPage: React.FC = () => {
         <div className="space-y-12">
           {/* Filter Buttons */}
           {hasAnyData && (
-            <div className="flex justify-start gap-2 mb-6">
+            <div className="mb-6 flex justify-start gap-2">
               <button
                 onClick={() => setFilter('all')}
                 className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
@@ -248,146 +248,137 @@ export const MemoriesPage: React.FC = () => {
             </div>
           )}
 
-        {/* Global Loading State */}
-        {!hasAnyData && loading.all && (
-          <div className="space-y-12">
-            <FeaturedSkeleton />
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
-              {[...Array(8)].map((_, i) => (
-                <MemoryCardSkeleton key={i} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Global Error State */}
-        {!hasAnyData && error.all && (
-          <ErrorMessage message={error.all} onRetry={handleRetryAll} />
-        )}
-
-        {/* Global Empty State */}
-        {!hasAnyData && !loading.all && !error.all && (
-          <EmptyState message="No memories found. Upload photos with location data to get started!" />
-        )}
-
-        {/* ====================================================================
-            SECTION 1: On This Day
-            ==================================================================== */}
-        {onThisDayImages.length > 0 && onThisDayMeta && (
-          <section className="space-y-6">
-            <SectionHeader title="On This Day" />
-            {loading.onThisDay ? (
+          {/* Global Loading State */}
+          {!hasAnyData && loading.all && (
+            <div className="space-y-12">
               <FeaturedSkeleton />
-            ) : error.onThisDay ? (
-              <ErrorMessage
-                message={error.onThisDay}
-                onRetry={handleRetryOnThisDay}
-              />
-            ) : (
-              <FeaturedMemoryCard
-                images={onThisDayImages}
-                today={onThisDayMeta.today}
-                years={onThisDayMeta.years}
-                memoryId="on-this-day"
-              />
-            )}
-          </section>
-        )}
-
-        {/* ====================================================================
-            SECTION 2: Recent Memories (Last 30 days)
-            ==================================================================== */}
-        {filteredRecentMemories.length > 0 && (
-          <section className="space-y-6">
-            <SectionHeader
-              title="Recent Memories"
-              count={filteredRecentMemories.length}
-            />
-            {loading.recent ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
-                {[...Array(4)].map((_, i) => (
-                  <MemoryCardSkeleton key={i} />
-                ))}
-              </div>
-            ) : error.recent ? (
-              <ErrorMessage
-                message={error.recent}
-                onRetry={handleRetryRecent}
-              />
-            ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredRecentMemories.map((memory: Memory) => (
-                  <MemoryCard
-                    key={memory.memory_id}
-                    memory={memory}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* ====================================================================
-            SECTION 3: Past Year (Last 365 days)
-            ==================================================================== */}
-        {filteredYearMemories.length > 0 && (
-          <section className="space-y-6">
-            <SectionHeader
-              title="Past Year"
-              date="Past Year"
-              count={filteredYearMemories.length}
-            />
-            {loading.year ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
-                {[...Array(4)].map((_, i) => (
-                  <MemoryCardSkeleton key={i} />
-                ))}
-              </div>
-            ) : error.year ? (
-              <ErrorMessage message={error.year} onRetry={handleRetryYear} />
-            ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredYearMemories.map((memory: Memory) => (
-                  <MemoryCard
-                    key={memory.memory_id}
-                    memory={memory}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* ====================================================================
-            SECTION 4: All Memories
-            ==================================================================== */}
-        {filteredAllMemories.length > 0 && (
-          <section className="space-y-6">
-            <SectionHeader
-              title="All Memories"
-              date="All time"
-              count={filteredAllMemories.length}
-            />
-            {loading.all ? (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
                 {[...Array(8)].map((_, i) => (
                   <MemoryCardSkeleton key={i} />
                 ))}
               </div>
-            ) : error.all ? (
-              <ErrorMessage message={error.all} onRetry={handleRetryAll} />
-            ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredAllMemories.map((memory: Memory) => (
-                  <MemoryCard
-                    key={memory.memory_id}
-                    memory={memory}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        )}
+            </div>
+          )}
+
+          {/* Global Error State */}
+          {!hasAnyData && error.all && (
+            <ErrorMessage message={error.all} onRetry={handleRetryAll} />
+          )}
+
+          {/* Global Empty State */}
+          {!hasAnyData && !loading.all && !error.all && (
+            <EmptyState message="No memories found. Upload photos with location data to get started!" />
+          )}
+
+          {/* ====================================================================
+            SECTION 1: On This Day
+            ==================================================================== */}
+          {onThisDayImages.length > 0 && onThisDayMeta && (
+            <section className="space-y-6">
+              <SectionHeader title="On This Day" />
+              {loading.onThisDay ? (
+                <FeaturedSkeleton />
+              ) : error.onThisDay ? (
+                <ErrorMessage
+                  message={error.onThisDay}
+                  onRetry={handleRetryOnThisDay}
+                />
+              ) : (
+                <FeaturedMemoryCard
+                  images={onThisDayImages}
+                  today={onThisDayMeta.today}
+                  years={onThisDayMeta.years}
+                  memoryId="on-this-day"
+                />
+              )}
+            </section>
+          )}
+
+          {/* ====================================================================
+            SECTION 2: Recent Memories (Last 30 days)
+            ==================================================================== */}
+          {filteredRecentMemories.length > 0 && (
+            <section className="space-y-6">
+              <SectionHeader
+                title="Recent Memories"
+                count={filteredRecentMemories.length}
+              />
+              {loading.recent ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+                  {[...Array(4)].map((_, i) => (
+                    <MemoryCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : error.recent ? (
+                <ErrorMessage
+                  message={error.recent}
+                  onRetry={handleRetryRecent}
+                />
+              ) : (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+                  {filteredRecentMemories.map((memory: Memory) => (
+                    <MemoryCard key={memory.memory_id} memory={memory} />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* ====================================================================
+            SECTION 3: Past Year (Last 365 days)
+            ==================================================================== */}
+          {filteredYearMemories.length > 0 && (
+            <section className="space-y-6">
+              <SectionHeader
+                title="Past Year"
+                date="Past Year"
+                count={filteredYearMemories.length}
+              />
+              {loading.year ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+                  {[...Array(4)].map((_, i) => (
+                    <MemoryCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : error.year ? (
+                <ErrorMessage message={error.year} onRetry={handleRetryYear} />
+              ) : (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+                  {filteredYearMemories.map((memory: Memory) => (
+                    <MemoryCard key={memory.memory_id} memory={memory} />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* ====================================================================
+            SECTION 4: All Memories
+            ==================================================================== */}
+          {filteredAllMemories.length > 0 && (
+            <section className="space-y-6">
+              <SectionHeader
+                title="All Memories"
+                date="All time"
+                count={filteredAllMemories.length}
+              />
+              {loading.all ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+                  {[...Array(8)].map((_, i) => (
+                    <MemoryCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : error.all ? (
+                <ErrorMessage message={error.all} onRetry={handleRetryAll} />
+              ) : (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+                  {filteredAllMemories.map((memory: Memory) => (
+                    <MemoryCard key={memory.memory_id} memory={memory} />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
         </div>
       </div>
     </div>

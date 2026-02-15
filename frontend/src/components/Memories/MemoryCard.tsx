@@ -25,7 +25,7 @@ interface MemoryCardProps {
  */
 export const MemoryCard = React.memo<MemoryCardProps>(({ memory }) => {
   const navigate = useNavigate();
-  
+
   // Get thumbnail image (first image or find by thumbnail_image_id)
   const thumbnailImage =
     memory.images.find((img) => img.id === memory.thumbnail_image_id) ||
@@ -68,7 +68,7 @@ export const MemoryCard = React.memo<MemoryCardProps>(({ memory }) => {
   return (
     <div
       onClick={handleClick}
-      className="group transform cursor-pointer overflow-hidden rounded-lg border bg-card shadow-md transition-all duration-200 hover:scale-[1.02] hover:shadow-xl"
+      className="group bg-card transform cursor-pointer overflow-hidden rounded-lg border shadow-md transition-all duration-200 hover:scale-[1.02] hover:shadow-xl"
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
@@ -80,7 +80,7 @@ export const MemoryCard = React.memo<MemoryCardProps>(({ memory }) => {
       aria-label={`View memory: ${displayTitle}`}
     >
       {/* Thumbnail Image */}
-      <div className="relative h-48 w-full overflow-hidden bg-muted">
+      <div className="bg-muted relative h-48 w-full overflow-hidden">
         <img
           src={thumbnailUrl}
           alt={displayTitle}
@@ -143,18 +143,16 @@ export const MemoryCard = React.memo<MemoryCardProps>(({ memory }) => {
       {/* Card Content */}
       <div className="space-y-2 p-4">
         {/* Title */}
-        <h3 className="line-clamp-1 text-lg font-semibold">
-          {displayTitle}
-        </h3>
+        <h3 className="line-clamp-1 text-lg font-semibold">{displayTitle}</h3>
 
         {/* Date Range - Relative Format */}
-        <p className="line-clamp-1 text-sm text-muted-foreground">
+        <p className="text-muted-foreground line-clamp-1 text-sm">
           {formatDateRangeRelative(memory.date_start, memory.date_end)}
         </p>
 
         {/* Location - Only show if not coordinates */}
         {displayLocation && (
-          <div className="flex items-center text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex items-center text-sm">
             <svg
               className="mr-1 h-4 w-4 shrink-0"
               fill="none"
