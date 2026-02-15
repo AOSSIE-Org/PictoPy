@@ -21,19 +21,19 @@ jobs:
         run: |
           pip install --no-cache-dir sentence-transformers scikit-learn
 
-      - name: Semantic duplicate detection (open + closed)
+      - name: Fetch upstream issues (AOSSIE-Org/PictoPy)
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
             const issue = context.payload.issue;
 
-            const issues = await github.paginate(
+            const upstreamIssues = await github.paginate(
               github.rest.issues.listForRepo,
               {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                state: 'all',
+                owner: "AOSSIE-Org",
+                repo: "PictoPy",
+                state: "all",
                 per_page: 100
               }
             );
@@ -42,20 +42,20 @@ jobs:
               current: {
                 number: issue.number,
                 title: issue.title,
-                body: issue.body || ''
+                body: issue.body || ""
               },
-              others: issues
-                .filter(i => i.number !== issue.number && !i.pull_request)
+              others: upstreamIssues
+                .filter(i => !i.pull_request)
                 .map(i => ({
                   number: i.number,
                   title: i.title,
-                  body: i.body || '',
+                  body: i.body || "",
                   url: i.html_url,
                   state: i.state
                 }))
             };
 
-            fs.writeFileSync('issues.json', JSON.stringify(data));
+            fs.writeFileSync("issues.json", JSON.stringify(data));
 
       - name: Run semantic similarity analysis
         run: |
@@ -77,6 +77,11 @@ jobs:
 
           current_text = text(data["current"])
           others = data["others"]
+
+          if not others:
+            with open("matches.json", "w") as f:
+              json.dump([], f)
+            exit()
 
           embeddings = model.encode(
             [current_text] + [text(i) for i in others],
@@ -105,15 +110,15 @@ jobs:
             json.dump(matches, f)
           EOF
 
-      - name: Comment and label (non-blocking)
+      - name: Comment and soft-label in fork (non-blocking)
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const matches = JSON.parse(fs.readFileSync('matches.json', 'utf8'));
+            const fs = require("fs");
+            const matches = JSON.parse(fs.readFileSync("matches.json", "utf8"));
 
             if (matches.length === 0) {
-              core.notice('No semantic duplicates found.');
+              core.notice("No semantic duplicates found.");
               return;
             }
 
@@ -122,12 +127,11 @@ jobs:
                 `${i + 1}. **${m.title}** (#${m.number}, ${m.state})\n` +
                 `   ${m.url}\n` +
                 `   Similarity: ${m.score}%`
-            ).join('\n\n');
+            ).join("\n\n");
 
             const safe = async (fn) => {
-              try { await fn(); } catch (e) {
-                core.notice(`Skipped write action: ${e.message}`);
-              }
+              try { await fn(); }
+              catch (e) { core.notice(`Skipped write action: ${e.message}`); }
             };
 
             await safe(() =>
@@ -137,14 +141,13 @@ jobs:
                 issue_number: context.payload.issue.number,
                 body:
                   `⚠️ **Potential Duplicate Issue (Semantic Match)**\n\n` +
-                  `This issue appears semantically similar to the following open or closed issues:\n\n` +
+                  `This issue appears semantically similar to the following issues in AOSSIE-Org/PictoPy:\n\n` +
                   `${list}\n\n` +
                   `Please review before proceeding.`
               })
             );
 
-            // Ensure softer label exists
-            const labelName = 'possible-duplicate';
+            const labelName = "possible-duplicate";
 
             try {
               await github.rest.issues.getLabel({
@@ -159,8 +162,8 @@ jobs:
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     name: labelName,
-                    color: 'FBCA04',
-                    description: 'Potential semantic duplicate'
+                    color: "FBCA04",
+                    description: "Potential semantic duplicate (upstream comparison)"
                   })
                 );
               }
