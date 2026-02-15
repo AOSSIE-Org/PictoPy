@@ -72,4 +72,3 @@ export default memoriesSlice.reducer;
 
 export const selectSelectedMemory = (state: { memories: MemoriesState }) =>
   state.memories.selectedMemory;
-

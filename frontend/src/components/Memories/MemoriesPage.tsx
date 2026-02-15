@@ -176,7 +176,9 @@ export const MemoriesPage: React.FC = () => {
       dispatch(
         showInfoDialog({
           title: 'Error Loading Recent Memories',
-          message: recentMemoriesQuery.error?.message || 'Failed to load recent memories',
+          message:
+            recentMemoriesQuery.error?.message ||
+            'Failed to load recent memories',
           variant: 'error',
         }),
       );
@@ -188,7 +190,8 @@ export const MemoriesPage: React.FC = () => {
       dispatch(
         showInfoDialog({
           title: 'Error Loading Year Memories',
-          message: yearMemoriesQuery.error?.message || 'Failed to load year memories',
+          message:
+            yearMemoriesQuery.error?.message || 'Failed to load year memories',
           variant: 'error',
         }),
       );
@@ -200,7 +203,8 @@ export const MemoriesPage: React.FC = () => {
       dispatch(
         showInfoDialog({
           title: 'Error Loading On This Day',
-          message: onThisDayQuery.error?.message || 'Failed to load On This Day',
+          message:
+            onThisDayQuery.error?.message || 'Failed to load On This Day',
           variant: 'error',
         }),
       );
@@ -317,7 +321,9 @@ export const MemoriesPage: React.FC = () => {
           {/* Global Error State */}
           {!hasAnyData && allMemoriesQuery.isError && (
             <ErrorMessage
-              message={allMemoriesQuery.error?.message || 'Failed to load memories'}
+              message={
+                allMemoriesQuery.error?.message || 'Failed to load memories'
+              }
               onRetry={handleRetryAll}
             />
           )}
@@ -337,7 +343,10 @@ export const MemoriesPage: React.FC = () => {
                 <FeaturedSkeleton />
               ) : onThisDayQuery.isError ? (
                 <ErrorMessage
-                  message={onThisDayQuery.error?.message || 'Failed to load On This Day'}
+                  message={
+                    onThisDayQuery.error?.message ||
+                    'Failed to load On This Day'
+                  }
                   onRetry={handleRetryOnThisDay}
                 />
               ) : (
@@ -368,7 +377,10 @@ export const MemoriesPage: React.FC = () => {
                 </div>
               ) : recentMemoriesQuery.isError ? (
                 <ErrorMessage
-                  message={recentMemoriesQuery.error?.message || 'Failed to load recent memories'}
+                  message={
+                    recentMemoriesQuery.error?.message ||
+                    'Failed to load recent memories'
+                  }
                   onRetry={handleRetryRecent}
                 />
               ) : (
@@ -399,7 +411,10 @@ export const MemoriesPage: React.FC = () => {
                 </div>
               ) : yearMemoriesQuery.isError ? (
                 <ErrorMessage
-                  message={yearMemoriesQuery.error?.message || 'Failed to load year memories'}
+                  message={
+                    yearMemoriesQuery.error?.message ||
+                    'Failed to load year memories'
+                  }
                   onRetry={handleRetryYear}
                 />
               ) : (
@@ -430,7 +445,10 @@ export const MemoriesPage: React.FC = () => {
                 </div>
               ) : allMemoriesQuery.isError ? (
                 <ErrorMessage
-                  message={allMemoriesQuery.error?.message || 'Failed to load all memories'}
+                  message={
+                    allMemoriesQuery.error?.message ||
+                    'Failed to load all memories'
+                  }
                   onRetry={handleRetryAll}
                 />
               ) : (
