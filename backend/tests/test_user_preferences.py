@@ -416,7 +416,6 @@ class TestUserPreferencesAPI:
         with patch("app.routes.user_preferences.db_get_metadata") as mock_get, patch(
             "app.routes.user_preferences.db_update_metadata"
         ) as mock_update:
-
             mock_get.return_value = {}
             mock_update.return_value = True
 
@@ -441,7 +440,6 @@ class TestUserPreferencesAPI:
         with patch("app.routes.user_preferences.db_get_metadata") as mock_get, patch(
             "app.routes.user_preferences.db_update_metadata"
         ) as mock_update:
-
             existing_metadata = {
                 "user_preferences": {"YOLO_model_size": "small"},
                 "other_field": "should_be_preserved",

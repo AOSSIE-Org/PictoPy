@@ -19,6 +19,7 @@ from app.database.images import (
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
 from app.logging.setup_logging import get_logger
+from app.utils.extract_location_metadata import MetadataExtractor
 
 logger = get_logger(__name__)
 
@@ -141,6 +142,7 @@ def image_util_prepare_image_records(
 ) -> List[Dict]:
     """
     Prepare image records with thumbnails for database insertion.
+    Automatically extracts GPS coordinates and capture datetime from metadata.
 
     Args:
         image_files: List of image file paths
@@ -150,6 +152,8 @@ def image_util_prepare_image_records(
         List of image record dictionaries ready for database insertion
     """
     image_records = []
+    extractor = MetadataExtractor()
+
     for image_path in image_files:
         folder_id = image_util_find_folder_id_for_image(image_path, folder_path_to_id)
 
@@ -166,16 +170,50 @@ def image_util_prepare_image_records(
         if image_util_generate_thumbnail(image_path, thumbnail_path):
             metadata = image_util_extract_metadata(image_path)
             logger.debug(f"Extracted metadata for {image_path}: {metadata}")
-            image_records.append(
-                {
-                    "id": image_id,
-                    "path": image_path,
-                    "folder_id": folder_id,
-                    "thumbnailPath": thumbnail_path,
-                    "metadata": json.dumps(metadata),
-                    "isTagged": False,
-                }
-            )
+
+            # Automatically extract GPS coordinates and datetime from metadata
+            # Don't fail upload if extraction fails
+            metadata_json = json.dumps(metadata)
+            latitude, longitude, captured_at = None, None, None
+
+            try:
+                latitude, longitude, captured_at = extractor.extract_all(metadata_json)
+
+                # Log GPS extraction results
+                if latitude and longitude:
+                    logger.info(
+                        f"GPS extracted for {os.path.basename(image_path)}: ({latitude}, {longitude})"
+                    )
+                if captured_at:
+                    logger.debug(
+                        f"Date extracted for {os.path.basename(image_path)}: {captured_at}"
+                    )
+            except Exception as e:
+                logger.warning(
+                    f"GPS extraction failed for {os.path.basename(image_path)}: {e}"
+                )
+                # Continue without GPS - don't fail the upload
+
+            # Build image record with GPS data
+            # ALWAYS include latitude, longitude, captured_at (even if None)
+            # to satisfy SQL INSERT statement named parameters
+            image_record = {
+                "id": image_id,
+                "path": image_path,
+                "folder_id": folder_id,
+                "thumbnailPath": thumbnail_path,
+                "metadata": metadata_json,
+                "isTagged": False,
+                "latitude": latitude,  # Can be None
+                "longitude": longitude,  # Can be None
+                "captured_at": (
+                    captured_at.isoformat()
+                    if isinstance(captured_at, datetime.datetime) and captured_at
+                    else captured_at
+                ),  # Can be None
+            }
+
+            image_records.append(image_record)
 
     return image_records
 
