@@ -11,6 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { getErrorMessage } from '@/lib/utils';
 import {
   useAllMemories,
   useRecentMemories,
@@ -164,7 +165,7 @@ export const MemoriesPage: React.FC = () => {
       dispatch(
         showInfoDialog({
           title: 'Error Loading Memories',
-          message: allMemoriesQuery.error?.message || 'Failed to load memories',
+          message: getErrorMessage(allMemoriesQuery.error),
           variant: 'error',
         }),
       );
@@ -176,9 +177,7 @@ export const MemoriesPage: React.FC = () => {
       dispatch(
         showInfoDialog({
           title: 'Error Loading Recent Memories',
-          message:
-            recentMemoriesQuery.error?.message ||
-            'Failed to load recent memories',
+          message: getErrorMessage(recentMemoriesQuery.error),
           variant: 'error',
         }),
       );
@@ -190,8 +189,7 @@ export const MemoriesPage: React.FC = () => {
       dispatch(
         showInfoDialog({
           title: 'Error Loading Year Memories',
-          message:
-            yearMemoriesQuery.error?.message || 'Failed to load year memories',
+          message: getErrorMessage(yearMemoriesQuery.error),
           variant: 'error',
         }),
       );
@@ -203,8 +201,7 @@ export const MemoriesPage: React.FC = () => {
       dispatch(
         showInfoDialog({
           title: 'Error Loading On This Day',
-          message:
-            onThisDayQuery.error?.message || 'Failed to load On This Day',
+          message: getErrorMessage(onThisDayQuery.error),
           variant: 'error',
         }),
       );
@@ -321,9 +318,7 @@ export const MemoriesPage: React.FC = () => {
           {/* Global Error State */}
           {!hasAnyData && allMemoriesQuery.isError && (
             <ErrorMessage
-              message={
-                allMemoriesQuery.error?.message || 'Failed to load memories'
-              }
+              message={getErrorMessage(allMemoriesQuery.error)}
               onRetry={handleRetryAll}
             />
           )}
@@ -343,10 +338,7 @@ export const MemoriesPage: React.FC = () => {
                 <FeaturedSkeleton />
               ) : onThisDayQuery.isError ? (
                 <ErrorMessage
-                  message={
-                    onThisDayQuery.error?.message ||
-                    'Failed to load On This Day'
-                  }
+                  message={getErrorMessage(onThisDayQuery.error)}
                   onRetry={handleRetryOnThisDay}
                 />
               ) : (
@@ -377,10 +369,7 @@ export const MemoriesPage: React.FC = () => {
                 </div>
               ) : recentMemoriesQuery.isError ? (
                 <ErrorMessage
-                  message={
-                    recentMemoriesQuery.error?.message ||
-                    'Failed to load recent memories'
-                  }
+                  message={getErrorMessage(recentMemoriesQuery.error)}
                   onRetry={handleRetryRecent}
                 />
               ) : (
@@ -411,10 +400,7 @@ export const MemoriesPage: React.FC = () => {
                 </div>
               ) : yearMemoriesQuery.isError ? (
                 <ErrorMessage
-                  message={
-                    yearMemoriesQuery.error?.message ||
-                    'Failed to load year memories'
-                  }
+                  message={getErrorMessage(yearMemoriesQuery.error)}
                   onRetry={handleRetryYear}
                 />
               ) : (
@@ -445,10 +431,7 @@ export const MemoriesPage: React.FC = () => {
                 </div>
               ) : allMemoriesQuery.isError ? (
                 <ErrorMessage
-                  message={
-                    allMemoriesQuery.error?.message ||
-                    'Failed to load all memories'
-                  }
+                  message={getErrorMessage(allMemoriesQuery.error)}
                   onRetry={handleRetryAll}
                 />
               ) : (

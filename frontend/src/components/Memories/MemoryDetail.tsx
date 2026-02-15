@@ -68,10 +68,10 @@ export const MemoryDetail = () => {
       onThisDayQuery.isError
     ) {
       const errorMessage =
-        allMemoriesQuery.error?.message ||
-        recentMemoriesQuery.error?.message ||
-        yearMemoriesQuery.error?.message ||
-        onThisDayQuery.error?.message ||
+        allMemoriesQuery.errorMessage ||
+        recentMemoriesQuery.errorMessage ||
+        yearMemoriesQuery.errorMessage ||
+        onThisDayQuery.errorMessage ||
         'Failed to load memory data';
 
       dispatch(
@@ -84,13 +84,13 @@ export const MemoryDetail = () => {
     }
   }, [
     allMemoriesQuery.isError,
-    allMemoriesQuery.error,
+    allMemoriesQuery.errorMessage,
     recentMemoriesQuery.isError,
-    recentMemoriesQuery.error,
+    recentMemoriesQuery.errorMessage,
     yearMemoriesQuery.isError,
-    yearMemoriesQuery.error,
+    yearMemoriesQuery.errorMessage,
     onThisDayQuery.isError,
-    onThisDayQuery.error,
+    onThisDayQuery.errorMessage,
     dispatch,
   ]);
 
