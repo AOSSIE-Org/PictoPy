@@ -115,7 +115,7 @@ class LocationsResponse(BaseModel):
 # API Endpoints
 
 
-@router.post("/generate", response_model=GenerateMemoriesResponse)
+@router.post("/generate")
 def generate_memories(
     location_radius_km: float = Query(
         5.0, ge=0.1, le=100, description="Location clustering radius in km"
@@ -143,13 +143,15 @@ def generate_memories(
         images = db_get_all_images_for_memories()
 
         if not images:
-            return GenerateMemoriesResponse(
-                success=True,
-                message="No images found",
-                memory_count=0,
-                image_count=0,
-                memories=[],
-            )
+            return {
+                "data": {
+                    "memory_count": 0,
+                    "image_count": 0,
+                    "memories": [],
+                },
+                "success": True,
+                "message": "No images found",
+            }
 
         logger.info(f"Processing {len(images)} images")
 
@@ -170,20 +172,22 @@ def generate_memories(
             f"Generated {len(memories)} memories (location: {location_count}, date: {date_count})"
         )
 
-        return GenerateMemoriesResponse(
-            success=True,
-            message=f"{len(memories)} memories ({location_count} location, {date_count} date)",
-            memory_count=len(memories),
-            image_count=len(images),
-            memories=memories,
-        )
+        return {
+            "data": {
+                "memory_count": len(memories),
+                "image_count": len(images),
+                "memories": memories,
+            },
+            "success": True,
+            "message": f"{len(memories)} memories ({location_count} location, {date_count} date)",
+        }
 
     except Exception:
         logger.error("Error generating memories", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to generate memories")
 
 
-@router.get("/timeline", response_model=TimelineResponse)
+@router.get("/timeline")
 def get_timeline(
     days: int = Query(365, ge=1, le=3650, description="Number of days to look back"),
     location_radius_km: float = Query(
@@ -224,15 +228,18 @@ def get_timeline(
         images = db_get_images_by_date_range(start_date, end_date)
 
         if not images:
-            return TimelineResponse(
-                success=True,
-                date_range={
-                    "start": start_date.isoformat(),
-                    "end": end_date.isoformat(),
+            return {
+                "data": {
+                    "date_range": {
+                        "start": start_date.isoformat(),
+                        "end": end_date.isoformat(),
+                    },
+                    "memory_count": 0,
+                    "memories": [],
                 },
-                memory_count=0,
-                memories=[],
-            )
+                "success": True,
+                "message": "No images found in date range",
+            }
 
         logger.info(f"Found {len(images)} images in date range")
 
@@ -245,19 +252,25 @@ def get_timeline(
 
         memories = clustering.cluster_memories(images)
 
-        return TimelineResponse(
-            success=True,
-            date_range={"start": start_date.isoformat(), "end": end_date.isoformat()},
-            memory_count=len(memories),
-            memories=memories,
-        )
+        return {
+            "data": {
+                "date_range": {
+                    "start": start_date.isoformat(),
+                    "end": end_date.isoformat(),
+                },
+                "memory_count": len(memories),
+                "memories": memories,
+            },
+            "success": True,
+            "message": f"Found {len(memories)} memories",
+        }
 
     except Exception:
         logger.error("Error getting timeline", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to get timeline")
 
 
-@router.get("/on-this-day", response_model=OnThisDayResponse)
+@router.get("/on-this-day")
 def get_on_this_day():
     """
     Get photos taken on this date in previous years.
@@ -339,20 +352,23 @@ def get_on_this_day():
 
         all_images.sort(key=parse_captured_at, reverse=True)
 
-        return OnThisDayResponse(
-            success=True,
-            today=today.strftime("%B %d"),
-            years=sorted(years_found, reverse=True),
-            image_count=len(all_images),
-            images=all_images,
-        )
+        return {
+            "data": {
+                "today": today.strftime("%B %d"),
+                "years": sorted(years_found, reverse=True),
+                "image_count": len(all_images),
+                "images": all_images,
+            },
+            "success": True,
+            "message": f"Found {len(all_images)} images from {len(years_found)} years",
+        }
 
     except Exception:
         logger.error("Error getting 'On This Day'", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to get 'On This Day'")
 
 
-@router.get("/locations", response_model=LocationsResponse)
+@router.get("/locations")
 def get_locations(
     location_radius_km: float = Query(
         5.0, ge=0.1, le=100, description="Location clustering radius in km"
@@ -387,7 +403,11 @@ def get_locations(
         images = db_get_images_with_location()
 
         if not images:
-            return LocationsResponse(success=True, location_count=0, locations=[])
+            return {
+                "data": {"location_count": 0, "locations": []},
+                "success": True,
+                "message": "No images with location data",
+            }
 
         logger.info(f"Found {len(images)} images with location data")
 
@@ -434,9 +454,14 @@ def get_locations(
         # Sort by image count (most photos first)
         locations.sort(key=lambda loc: loc.image_count, reverse=True)
 
-        return LocationsResponse(
-            success=True, location_count=len(locations), locations=locations
-        )
+        return {
+            "data": {
+                "location_count": len(locations),
+                "locations": locations,
+            },
+            "success": True,
+            "message": f"Found {len(locations)} locations",
+        }
 
     except Exception:
         logger.error("Error getting locations", exc_info=True)

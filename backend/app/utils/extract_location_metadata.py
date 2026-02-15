@@ -1,23 +1,17 @@
 """
 Location and Datetime Metadata Extraction Utility
 
-This module extracts GPS coordinates and capture datetime from image metadata JSON
-and populates the dedicated latitude, longitude, and captured_at columns in the database.
-
-Usage:
-    python -m app.utils.extract_location_metadata
+This module extracts GPS coordinates and capture datetime from image metadata JSON.
+Used by the image upload process to automatically populate location and datetime fields.
 
 Author: PictoPy Team
 Date: 2025-12-14
 """
 
 import json
-import sqlite3
 from datetime import datetime
 from typing import Optional, Tuple, Dict, Any
-from pathlib import Path
 
-from app.config.settings import DATABASE_PATH
 from app.logging.setup_logging import get_logger
 
 # Initialize logger
@@ -35,15 +29,7 @@ class MetadataExtractor:
 
     def __init__(self):
         """Initialize the metadata extractor."""
-        self.stats = {
-            "total": 0,
-            "updated": 0,
-            "with_location": 0,
-            "with_datetime": 0,
-            "with_both": 0,
-            "skipped": 0,
-            "errors": 0,
-        }
+        pass
 
     def extract_gps_coordinates(
         self, metadata: Dict[str, Any]
@@ -245,171 +231,3 @@ class MetadataExtractor:
             logger.error(f"Unexpected error parsing metadata: {e}")
 
         return latitude, longitude, captured_at
-
-    def migrate_metadata(self) -> Dict[str, int]:
-        """
-        Main migration function to populate latitude, longitude, and captured_at
-        columns for all images with metadata.
-
-        This function:
-        1. Connects to the database
-        2. Retrieves all images with metadata
-        3. Extracts GPS coordinates and datetime
-        4. Updates the database with extracted values
-        5. Reports statistics
-
-        Returns:
-            Dictionary with migration statistics
-        """
-        logger.info("=" * 70)
-        logger.info("Starting metadata extraction migration...")
-        logger.info("=" * 70)
-
-        # Connect to database
-        conn = sqlite3.connect(DATABASE_PATH)
-        cursor = conn.cursor()
-
-        try:
-            # Fetch all images with metadata
-            logger.info("Fetching images from database...")
-            cursor.execute("SELECT id, metadata FROM images WHERE metadata IS NOT NULL")
-            images = cursor.fetchall()
-
-            self.stats["total"] = len(images)
-            logger.info(f"Found {self.stats['total']} images with metadata")
-
-            if self.stats["total"] == 0:
-                logger.warning("No images found with metadata")
-                return self.stats
-
-            # Process each image
-            updates = []
-            for image_id, metadata_json in images:
-                try:
-                    lat, lon, dt = self.extract_all(metadata_json)
-
-                    # Only update if we extracted something
-                    if lat is not None or lon is not None or dt is not None:
-                        updates.append(
-                            {
-                                "id": image_id,
-                                "latitude": lat,
-                                "longitude": lon,
-                                "captured_at": dt,
-                            }
-                        )
-
-                        # Track statistics
-                        has_location = lat is not None and lon is not None
-                        has_datetime = dt is not None
-
-                        if has_location:
-                            self.stats["with_location"] += 1
-                        if has_datetime:
-                            self.stats["with_datetime"] += 1
-                        if has_location and has_datetime:
-                            self.stats["with_both"] += 1
-                    else:
-                        self.stats["skipped"] += 1
-
-                except Exception as e:
-                    self.stats["errors"] += 1
-                    logger.error(f"Error processing image {image_id}: {e}")
-
-            # Batch update database
-            if updates:
-                logger.info(f"Updating {len(updates)} images...")
-
-                for update_data in updates:
-                    cursor.execute(
-                        """
-                        UPDATE images 
-                        SET latitude = ?, 
-                            longitude = ?, 
-                            captured_at = ?
-                        WHERE id = ?
-                    """,
-                        (
-                            update_data["latitude"],
-                            update_data["longitude"],
-                            update_data["captured_at"],
-                            update_data["id"],
-                        ),
-                    )
-
-                conn.commit()
-                self.stats["updated"] = len(updates)
-                logger.info(f"Successfully updated {self.stats['updated']} images")
-
-            # Print summary
-            self._print_summary()
-
-        except Exception as e:
-            logger.error(f"Migration failed: {e}")
-            conn.rollback()
-            raise
-
-        finally:
-            conn.close()
-
-        return self.stats
-
-    def _print_summary(self):
-        """Print migration summary statistics."""
-        logger.info("\n" + "=" * 70)
-        logger.info("METADATA EXTRACTION SUMMARY")
-        logger.info("=" * 70)
-        logger.info(f"Total images processed:       {self.stats['total']}")
-        logger.info(f"Images updated:               {self.stats['updated']}")
-        logger.info(
-            f"Images with location data:    {self.stats['with_location']} ({self._percentage('with_location')}%)"
-        )
-        logger.info(
-            f"Images with datetime:         {self.stats['with_datetime']} ({self._percentage('with_datetime')}%)"
-        )
-        logger.info(
-            f"Images with both:             {self.stats['with_both']} ({self._percentage('with_both')}%)"
-        )
-        logger.info(f"Images skipped (no data):     {self.stats['skipped']}")
-        logger.info(f"Errors encountered:           {self.stats['errors']}")
-        logger.info("=" * 70)
-
-    def _percentage(self, key: str) -> str:
-        """Calculate percentage for a statistic."""
-        if self.stats["total"] == 0:
-            return "0.0"
-        return f"{(self.stats[key] / self.stats['total'] * 100):.1f}"
-
-
-def main():
-    """
-    Main entry point for the metadata extraction script.
-
-    Usage:
-        python -m app.utils.extract_location_metadata
-    """
-    try:
-        # Check if database exists
-        if not Path(DATABASE_PATH).exists():
-            logger.error(f"Database not found at: {DATABASE_PATH}")
-            return
-
-        # Create extractor and run migration
-        extractor = MetadataExtractor()
-        stats = extractor.migrate_metadata()
-
-        # Exit with appropriate code
-        if stats["errors"] > 0:
-            logger.warning("Migration completed with errors")
-            exit(1)
-        else:
-            logger.info("✅ Migration completed successfully!")
-            exit(0)
-
-    except Exception as e:
-        logger.error(f"❌ Migration failed: {e}")
-        exit(1)
-
-
-if __name__ == "__main__":
-    main()

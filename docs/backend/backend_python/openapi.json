@@ -1362,9 +1362,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GenerateMemoriesResponse"
-                }
+                "schema": {}
               }
             }
           },
@@ -1438,9 +1436,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TimelineResponse"
-                }
+                "schema": {}
               }
             }
           },
@@ -1470,9 +1466,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OnThisDayResponse"
-                }
+                "schema": {}
               }
             }
           }
@@ -1522,9 +1516,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LocationsResponse"
-                }
+                "schema": {}
               }
             }
           },
@@ -1955,43 +1947,6 @@
           "AI_Tagging"
         ],
         "title": "FolderDetails"
-      },
-      "GenerateMemoriesResponse": {
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "title": "Success"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message"
-          },
-          "memory_count": {
-            "type": "integer",
-            "title": "Memory Count"
-          },
-          "image_count": {
-            "type": "integer",
-            "title": "Image Count"
-          },
-          "memories": {
-            "items": {
-              "$ref": "#/components/schemas/Memory"
-            },
-            "type": "array",
-            "title": "Memories"
-          }
-        },
-        "type": "object",
-        "required": [
-          "success",
-          "message",
-          "memory_count",
-          "image_count",
-          "memories"
-        ],
-        "title": "GenerateMemoriesResponse",
-        "description": "Response for generate memories endpoint."
       },
       "GetAlbumImagesRequest": {
         "properties": {
@@ -2562,244 +2517,6 @@
         ],
         "title": "InputType"
       },
-      "LocationCluster": {
-        "properties": {
-          "location_name": {
-            "type": "string",
-            "title": "Location Name"
-          },
-          "center_lat": {
-            "type": "number",
-            "title": "Center Lat"
-          },
-          "center_lon": {
-            "type": "number",
-            "title": "Center Lon"
-          },
-          "image_count": {
-            "type": "integer",
-            "title": "Image Count"
-          },
-          "sample_images": {
-            "items": {
-              "$ref": "#/components/schemas/MemoryImage"
-            },
-            "type": "array",
-            "title": "Sample Images"
-          }
-        },
-        "type": "object",
-        "required": [
-          "location_name",
-          "center_lat",
-          "center_lon",
-          "image_count",
-          "sample_images"
-        ],
-        "title": "LocationCluster",
-        "description": "Location cluster with photo count."
-      },
-      "LocationsResponse": {
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "title": "Success"
-          },
-          "location_count": {
-            "type": "integer",
-            "title": "Location Count"
-          },
-          "locations": {
-            "items": {
-              "$ref": "#/components/schemas/LocationCluster"
-            },
-            "type": "array",
-            "title": "Locations"
-          }
-        },
-        "type": "object",
-        "required": [
-          "success",
-          "location_count",
-          "locations"
-        ],
-        "title": "LocationsResponse",
-        "description": "Response for locations endpoint."
-      },
-      "Memory": {
-        "properties": {
-          "memory_id": {
-            "type": "string",
-            "title": "Memory Id"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description"
-          },
-          "location_name": {
-            "type": "string",
-            "title": "Location Name"
-          },
-          "date_start": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Date Start"
-          },
-          "date_end": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Date End"
-          },
-          "image_count": {
-            "type": "integer",
-            "title": "Image Count"
-          },
-          "images": {
-            "items": {
-              "$ref": "#/components/schemas/MemoryImage"
-            },
-            "type": "array",
-            "title": "Images"
-          },
-          "thumbnail_image_id": {
-            "type": "string",
-            "title": "Thumbnail Image Id"
-          },
-          "center_lat": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Center Lat"
-          },
-          "center_lon": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Center Lon"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "location",
-              "date"
-            ],
-            "title": "Type"
-          }
-        },
-        "type": "object",
-        "required": [
-          "memory_id",
-          "title",
-          "description",
-          "location_name",
-          "date_start",
-          "date_end",
-          "image_count",
-          "images",
-          "thumbnail_image_id",
-          "type"
-        ],
-        "title": "Memory",
-        "description": "Memory object containing grouped images."
-      },
-      "MemoryImage": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "path": {
-            "type": "string",
-            "title": "Path"
-          },
-          "thumbnailPath": {
-            "type": "string",
-            "title": "Thumbnailpath"
-          },
-          "latitude": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Latitude"
-          },
-          "longitude": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Longitude"
-          },
-          "captured_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Captured At"
-          },
-          "isFavourite": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Isfavourite",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "path",
-          "thumbnailPath",
-          "latitude",
-          "longitude",
-          "captured_at"
-        ],
-        "title": "MemoryImage",
-        "description": "Image within a memory."
-      },
       "MetadataModel": {
         "properties": {
           "name": {
@@ -2882,46 +2599,6 @@
           "item_type"
         ],
         "title": "MetadataModel"
-      },
-      "OnThisDayResponse": {
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "title": "Success"
-          },
-          "today": {
-            "type": "string",
-            "title": "Today"
-          },
-          "years": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Years"
-          },
-          "image_count": {
-            "type": "integer",
-            "title": "Image Count"
-          },
-          "images": {
-            "items": {
-              "$ref": "#/components/schemas/MemoryImage"
-            },
-            "type": "array",
-            "title": "Images"
-          }
-        },
-        "type": "object",
-        "required": [
-          "success",
-          "today",
-          "years",
-          "image_count",
-          "images"
-        ],
-        "title": "OnThisDayResponse",
-        "description": "Response for on-this-day endpoint."
       },
       "RenameClusterData": {
         "properties": {
@@ -3142,41 +2819,6 @@
           "success"
         ],
         "title": "SyncFolderResponse"
-      },
-      "TimelineResponse": {
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "title": "Success"
-          },
-          "date_range": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Date Range"
-          },
-          "memory_count": {
-            "type": "integer",
-            "title": "Memory Count"
-          },
-          "memories": {
-            "items": {
-              "$ref": "#/components/schemas/Memory"
-            },
-            "type": "array",
-            "title": "Memories"
-          }
-        },
-        "type": "object",
-        "required": [
-          "success",
-          "date_range",
-          "memory_count",
-          "memories"
-        ],
-        "title": "TimelineResponse",
-        "description": "Response for timeline endpoint."
       },
       "ToggleFavouriteRequest": {
         "properties": {
