@@ -1937,6 +1937,11 @@
               }
             ],
             "title": "Taggingcompleted"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count",
+            "default": 0
           }
         },
         "type": "object",
