@@ -148,6 +148,16 @@ else {
     Write-Host "Miniconda already installed. Skipping installation." -ForegroundColor Green
 }
 
+# Permanently add Conda to USER environment PATH if missing 
+$currentMachinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+if ($currentMachinePath -notlike "*$condaRoot*") {
+    $newMachinePath = "$currentMachinePath;$condaRoot;$condaRoot\Scripts;$condaRoot\condabin"
+    [System.Environment]::SetEnvironmentVariable("Path", $newMachinePath, "Machine")
+    Write-Host "Conda paths added permanently to MACHINE environment variables." -ForegroundColor Green 
+} else {
+     Write-Host "Conda paths already exist in MACHINE environment variables." -ForegroundColor Green 
+}
+
 # --------------------------------------------------
 # Initialize Conda (THIS WAS MISSING BEFORE)
 # --------------------------------------------------
