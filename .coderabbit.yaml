@@ -39,7 +39,6 @@ reviews:
             - 'WIP'
         drafts: false
         base_branches:
-            - main
             - develop
 
     high_level_summary: true
@@ -79,7 +78,7 @@ reviews:
             enabled: true
         gitleaks:
             enabled: true
-        cargo-clippy:
+        clippy:
             enabled: true
 
     labeling_instructions:
@@ -94,16 +93,18 @@ reviews:
         - label: Linter
           instructions: Apply when the purpose of the PR/MR is related to fixing the feedback from a linter
 
-    instructions: >-
-        - Verify that documentation and comments are free of spelling mistakes
-        - Ensure that test code is automated, comprehensive, and follows testing best practices
-        - Verify that all critical functionality is covered by tests
-        - Confirm that the code meets the project's requirements and objectives
-        - Point out redundant obvious comments that do not add clarity to the code
-        - Look for code duplication
-        - Suggest code completions when seeing a TODO or FIXME comment
-
     path_instructions:
+        # Catch-all general instructions that apply to all files
+        - path: '**/*'
+          instructions: |
+              - Verify that documentation and comments are free of spelling mistakes
+              - Ensure that test code is automated, comprehensive, and follows testing best practices
+              - Verify that all critical functionality is covered by tests
+              - Confirm that the code meets the project's requirements and objectives
+              - Point out redundant obvious comments that do not add clarity to the code
+              - Look for code duplication
+              - Suggest code completions when seeing a TODO or FIXME comment
+
         # TypeScript/JavaScript/React files (Vite Frontend)
         - path: '**/*.{ts,tsx,js,jsx}'
           instructions: |
