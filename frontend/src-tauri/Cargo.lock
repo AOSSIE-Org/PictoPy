@@ -3127,6 +3127,7 @@ dependencies = [
  "data-encoding",
  "directories",
  "image",
+ "log",
  "rand 0.8.5",
  "reqwest",
  "ring 0.16.20",

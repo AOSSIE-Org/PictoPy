@@ -77,10 +77,8 @@ export const useFolderOperations = () => {
 
   useEffect(() => {
     if (taggingStatusQuery.isError) {
-      logger.error('Failed to fetch tagging status:', taggingStatusQuery.error);
-
       const errorMessage = taggingStatusQuery.errorMessage || 'Unknown error';
-      logger.warn(`Tagging status query failed: ${errorMessage}`);
+      logger.error('Failed to fetch tagging status:', errorMessage, taggingStatusQuery.error);
     }
   }, [
     taggingStatusQuery.isError,
