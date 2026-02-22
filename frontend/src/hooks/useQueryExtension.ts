@@ -16,7 +16,7 @@ import {
 
 import { getErrorMessage } from '@/lib/utils';
 
-interface BackendRes<T = any> {
+export interface BackendRes<T = any> {
   success: boolean;
   error?: string;
   message?: string;
