@@ -16,6 +16,8 @@ class FolderTaggingInfo(NamedTuple):
 
     folder_id: FolderId
     folder_path: FolderPath
+    total_images: int
+    tagged_images: int
     tagging_percentage: float
 
 
@@ -101,7 +103,6 @@ def db_get_tagging_progress() -> List[FolderTaggingInfo]:
 
         folder_info_list = []
         for folder_id, folder_path, total_images, tagged_images in results:
-            # Calculate percentage, handle division by zero
             if total_images > 0:
                 tagging_percentage = (tagged_images / total_images) * 100
             else:
@@ -111,6 +112,8 @@ def db_get_tagging_progress() -> List[FolderTaggingInfo]:
                 FolderTaggingInfo(
                     folder_id=folder_id,
                     folder_path=folder_path,
+                    total_images=total_images,
+                    tagged_images=tagged_images,
                     tagging_percentage=round(tagging_percentage, 2),
                 )
             )
