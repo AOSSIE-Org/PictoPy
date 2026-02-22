@@ -27,26 +27,6 @@ def db_create_albums_table() -> None:
             conn.close()
 
 
-def db_migrate_add_cover_image_column() -> None:
-    """Add cover_image_path column to existing albums table if it doesn't exist"""
-    conn = None
-    try:
-        conn = sqlite3.connect(DATABASE_PATH)
-        cursor = conn.cursor()
-
-        # Check if column exists
-        cursor.execute("PRAGMA table_info(albums)")
-        columns = [column[1] for column in cursor.fetchall()]
-
-        if "cover_image_path" not in columns:
-            cursor.execute("ALTER TABLE albums ADD COLUMN cover_image_path TEXT")
-            conn.commit()
-            print("Added cover_image_path column to albums table")
-    finally:
-        if conn is not None:
-            conn.close()
-
-
 def db_create_album_images_table() -> None:
     conn = None
     try:
