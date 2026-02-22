@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { open } from '@tauri-apps/plugin-dialog';
 import { FolderPlus } from 'lucide-react';
+import logger from '@/utils/logger';
 interface FolderPickerProps {
   setFolderPath: (path: string[]) => void;
   className?: string;
@@ -22,13 +23,13 @@ const AITaggingFolderPicker: React.FC<FolderPickerProps> = ({
       });
       if (selected && Array.isArray(selected) && selected.length > 0) {
         setFolderPath(selected);
-        console.log('Selected folder:', selected);
+        logger.debug('Selected folder:', selected);
         if (handleDeleteCache) {
           handleDeleteCache();
         }
       }
     } catch (error) {
-      console.error('Error picking folder:', error);
+      logger.error('Error picking folder:', error);
     }
   };
   return (

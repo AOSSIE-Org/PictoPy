@@ -1,5 +1,6 @@
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback } from 'react';
+import logger from '@/utils/logger';
 interface UseFolderPickerOptions {
   title?: string;
 }
@@ -30,7 +31,7 @@ export const useFile = (
       }
       return null;
     } catch (error) {
-      console.error('Error picking File:', error);
+      logger.error('Error picking File:', error);
       return null;
     }
   }, [title]);

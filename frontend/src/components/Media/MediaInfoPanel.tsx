@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { open } from '@tauri-apps/plugin-shell';
+import logger from '@/utils/logger';
 import {
   X,
   ImageIcon as ImageLucide,
@@ -53,7 +54,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
       try {
         await open(`https://maps.google.com/?q=${latitude},${longitude}`);
       } catch (error) {
-        console.error('Failed to open map URL:', error);
+        logger.error('Failed to open map URL:', error);
       }
     }
   };

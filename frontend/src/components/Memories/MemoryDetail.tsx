@@ -13,6 +13,7 @@ import { useNavigate, useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
+import logger from '@/utils/logger';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 import {
@@ -146,7 +147,7 @@ export const MemoryDetail = () => {
         // Invalidate Tanstack Query cache to refetch memories
         queryClient.invalidateQueries({ queryKey: ['memories'] });
       } catch (error) {
-        console.error('Failed to toggle favorite:', error);
+        logger.error('Failed to toggle favorite:', error);
         dispatch(
           showInfoDialog({
             title: 'Error',

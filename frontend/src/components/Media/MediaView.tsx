@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
+import logger from '@/utils/logger';
 import { MediaViewProps } from '@/types/Media';
 import { selectCurrentViewIndex } from '@/features/imageSelectors';
 import { setCurrentViewIndex, closeImageView } from '@/features/imageSlice';
@@ -102,7 +103,7 @@ export function MediaView({
     try {
       await revealItemInDir(currentImage.path);
     } catch (err) {
-      console.error('Failed to open folder:', err);
+      logger.error('Failed to open folder:', err);
     }
   };
 
@@ -164,7 +165,7 @@ export function MediaView({
 
   // Safe variables
   const currentImagePath = currentImage.path;
-  // console.log(currentImage);
+
   const currentImageAlt = `image-${currentViewIndex}`;
   return (
     <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-gradient-to-b from-black/95 to-black/98 backdrop-blur-lg">
