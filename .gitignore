@@ -31,3 +31,4 @@ images_cache.txt
 videos_cache.txt
 venv/
 frontend/dist
+env/

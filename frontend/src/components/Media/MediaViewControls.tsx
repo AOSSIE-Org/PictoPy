@@ -1,24 +1,25 @@
 import React from 'react';
-import { Info, Folder, Share2, Heart, Play, Pause, X } from 'lucide-react';
+import { Info, Heart, Play, Pause, X, Folder } from 'lucide-react';
 
 interface MediaViewControlsProps {
   showInfo: boolean;
   onToggleInfo: () => void;
-  onToggleFavorite: () => void;
+  onToggleFavourite: () => void;
   onOpenFolder: () => Promise<void>;
-  isFavorite: boolean;
+  isFavourite: boolean;
   isSlideshowActive: boolean;
   onToggleSlideshow: () => void;
   onClose: () => void;
   type?: string;
 }
 
+/** Control buttons for the full-screen media viewer. */
 export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
   showInfo,
   onToggleInfo,
-  onToggleFavorite,
+  onToggleFavourite,
   onOpenFolder,
-  isFavorite,
+  isFavourite,
   isSlideshowActive,
   onToggleSlideshow,
   onClose,
@@ -47,24 +48,18 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
       </button>
 
       <button
-        className="cursor-pointer rounded-full bg-black/50 p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg"
-        aria-label="Share"
-        title="Share"
-      >
-        <Share2 className="h-5 w-5" />
-      </button>
-
-      <button
-        onClick={onToggleFavorite}
+        onClick={onToggleFavourite}
         className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${
-          isFavorite
+          isFavourite
             ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
             : 'bg-black/50 hover:bg-black/20 hover:text-white hover:shadow-lg'
         }`}
-        aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-        title="Favorites"
+        aria-label={
+          isFavourite ? 'Remove from favourites' : 'Add to favourites'
+        }
+        title="Favourites"
       >
-        <Heart className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`} />
+        <Heart className={`h-5 w-5 ${isFavourite ? 'fill-current' : ''}`} />
       </button>
 
       {type === 'image' && (

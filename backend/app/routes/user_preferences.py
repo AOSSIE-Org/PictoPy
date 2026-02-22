@@ -8,7 +8,6 @@ from app.schemas.user_preferences import (
     ErrorResponse,
 )
 
-
 router = APIRouter()
 
 

@@ -10,7 +10,6 @@ from concurrent.futures import ProcessPoolExecutor
 
 from app.routes.folders import router as folders_router
 
-
 # ##############################
 # Pytest Fixtures
 # ##############################

@@ -1,11 +1,12 @@
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Check, Heart, Share2 } from 'lucide-react';
-import { useState } from 'react';
+import { Check, Heart } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import { Image } from '@/types/Media';
 import { ImageTags } from './ImageTags';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { useToggleFav } from '@/hooks/useToggleFav';
 
 interface ImageCardViewProps {
   image: Image;
@@ -23,12 +24,16 @@ export function ImageCard({
   showTags = true,
   onClick,
 }: ImageCardViewProps) {
-  const [isFavorite, setIsFavorite] = useState(false);
   const [isImageHovered, setIsImageHovered] = useState(false);
-
   // Default to empty array if no tags are provided
   const tags = image.tags || [];
+  const { toggleFavourite } = useToggleFav();
 
+  const handleToggleFavourite = useCallback(() => {
+    if (image?.id) {
+      toggleFavourite(image.id);
+    }
+  }, [image, toggleFavourite]);
   return (
     <div
       className={cn(
@@ -67,32 +72,23 @@ export function ImageCard({
             <Button
               variant="ghost"
               size="icon"
-              className="cursor-pointer rounded-full bg-white/20 text-white hover:!bg-white/40 hover:!text-white"
+              className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${
+                image.isFavourite
+                  ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
+                  : 'bg-white/10 hover:bg-white/20 hover:shadow-lg'
+              }`}
               onClick={(e) => {
+                console.log(image);
                 e.stopPropagation();
-                setIsFavorite(!isFavorite);
+                handleToggleFavourite();
               }}
-              title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-              aria-label="Add to Favorites"
             >
-              <Heart
-                className={cn(
-                  'h-5 w-5',
-                  isFavorite ? 'fill-brand-orange text-brand-orange' : '',
-                )}
-              />
-              <span className="sr-only">Favorite</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="cursor-pointer rounded-full bg-white/20 text-white hover:!bg-white/40 hover:!text-white"
-              onClick={(e) => e.stopPropagation()}
-              title="Share"
-              aria-label="Share"
-            >
-              <Share2 className="h-5 w-5" />
-              <span className="sr-only">Share</span>
+              {image.isFavourite ? (
+                <Heart className="h-5 w-5" fill="currentColor"></Heart>
+              ) : (
+                <Heart className="h-5 w-5" />
+              )}
+              <span className="sr-only">Favourite</span>
             </Button>
           </div>
         </AspectRatio>

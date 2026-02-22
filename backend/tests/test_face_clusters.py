@@ -4,7 +4,6 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from app.routes.face_clusters import router as face_clusters_router
 
-
 app = FastAPI()
 app.include_router(face_clusters_router, prefix="/face_clusters")
 client = TestClient(app)

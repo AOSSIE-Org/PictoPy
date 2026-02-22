@@ -36,6 +36,14 @@ const imageSlice = createSlice({
       state.currentViewIndex = -1;
     },
 
+    updateImageFavoriteStatus(state, action: PayloadAction<string>) {
+      const imageId = action.payload;
+      const image = state.images.find((img) => img.id === imageId);
+      if (image) {
+        image.isFavourite = !image.isFavourite;
+      }
+    },
+
     clearImages(state) {
       state.images = [];
       state.currentViewIndex = -1;
@@ -43,7 +51,12 @@ const imageSlice = createSlice({
   },
 });
 
-export const { setImages, setCurrentViewIndex, closeImageView, clearImages } =
-  imageSlice.actions;
+export const {
+  setImages,
+  setCurrentViewIndex,
+  closeImageView,
+  updateImageFavoriteStatus,
+  clearImages,
+} = imageSlice.actions;
 
 export default imageSlice.reducer;

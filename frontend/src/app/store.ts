@@ -7,6 +7,7 @@ import faceClustersReducer from '@/features/faceClustersSlice';
 import infoDialogReducer from '@/features/infoDialogSlice';
 import folderReducer from '@/features/folderSlice';
 import albumsReducer from '@/features/albumsSlice';
+import memoriesReducer from '@/features/memoriesSlice';
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     folders: folderReducer,
     search: searchReducer,
     albums: albumsReducer,
+    memories: memoriesReducer,
   },
 });
 // Infer the `RootState` and `AppDispatch` types from the store itself

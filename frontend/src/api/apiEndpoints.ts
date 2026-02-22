@@ -1,5 +1,6 @@
 export const imagesEndpoints = {
   getAllImages: '/images/',
+  setFavourite: '/images/toggle-favourite',
 };
 
 export const faceClustersEndpoints = {
@@ -43,4 +44,9 @@ export const albumsEndpoints = {
   removeMultipleImagesFromAlbum: (albumId: string) =>
     `/albums/${albumId}/images`,
   setAlbumCoverImage: (albumId: string) => `/albums/${albumId}/cover`,
+export const memoriesEndpoints = {
+  generate: '/api/memories/generate',
+  timeline: '/api/memories/timeline',
+  onThisDay: '/api/memories/on-this-day',
+  locations: '/api/memories/locations',
 };

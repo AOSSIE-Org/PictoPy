@@ -17,6 +17,7 @@ export interface Image {
   folder_id: string;
   isTagged: boolean;
   metadata?: ImageMetadata;
+  isFavourite?: boolean;
   tags?: string[];
   bboxes?: { x: number; y: number; width: number; height: number }[];
 }
@@ -35,6 +36,7 @@ export interface MediaViewProps {
   onClose?: () => void;
   type?: string;
   images: Image[];
+  onToggleFavorite?: (imageId: string) => void | Promise<void>;
 }
 
 export interface SortingControlsProps {
