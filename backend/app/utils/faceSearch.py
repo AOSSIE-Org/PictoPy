@@ -42,10 +42,13 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
     Returns:
         GetAllImagesResponse: Search result containing matched images.
     """
-    fd = FaceDetector()
-    fn = FaceNet(DEFAULT_FACENET_MODEL)
+    fd = None
+    fn = None
 
     try:
+        fd = FaceDetector()
+        fn = FaceNet(DEFAULT_FACENET_MODEL)
+
         matches = []
         image_id = str(uuid.uuid4())
 
@@ -99,8 +102,15 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
             data=matches,
         )
 
+    except Exception as e:
+        return GetAllImagesResponse(
+            success=False,
+            message=f"Failed to initialize models: {str(e)}",
+            data=[],
+        )
+
     finally:
-        if "fd" in locals() and fd is not None:
+        if fd is not None:
             fd.close()
-        if "fn" in locals() and fn is not None:
+        if fn is not None:
             fn.close()
