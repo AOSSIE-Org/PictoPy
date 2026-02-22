@@ -32,6 +32,7 @@ export function ImageCard({
 
   const handleToggleFavourite = useCallback(() => {
     if (image?.id) {
+      logger.debug('Toggling favourite for image:', image.id);
       toggleFavourite(image.id);
     }
   }, [image, toggleFavourite]);
@@ -79,7 +80,6 @@ export function ImageCard({
                   : 'bg-white/10 hover:bg-white/20 hover:shadow-lg'
               }`}
               onClick={(e) => {
-                logger.debug('Toggling favourite for image:', image.id);
                 e.stopPropagation();
                 handleToggleFavourite();
               }}

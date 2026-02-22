@@ -17,11 +17,45 @@ import { isTauriEnvironment } from '@/utils/tauriUtils';
  * developers can still see output during web-only development.
  */
 
+function safeStringify(obj: unknown): string {
+  const seen = new WeakSet();
+  try {
+    return JSON.stringify(
+      obj,
+      (_key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) return '[Circular]';
+          seen.add(value);
+        }
+        return value;
+      },
+      2,
+    );
+  } catch {
+    return String(obj);
+  }
+}
+
 function stringify(...args: unknown[]): string {
   return args
-    .map((arg) =>
-      typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg),
-    )
+    .map((arg) => {
+      if (arg instanceof Error) {
+        const extras: Record<string, unknown> = {};
+        const errorRecord = arg as unknown as Record<string, unknown>;
+        for (const key of Object.keys(arg)) {
+          extras[key] = errorRecord[key];
+        }
+        return safeStringify({
+          name: arg.name,
+          message: arg.message,
+          stack: arg.stack,
+          ...extras,
+        });
+      }
+      return typeof arg === 'object' && arg !== null
+        ? safeStringify(arg)
+        : String(arg);
+    })
     .join(' ');
 }
 
