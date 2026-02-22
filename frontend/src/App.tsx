@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import QueryClientProviders from '@/config/QueryClientProvider';
 import { GlobalLoader } from './components/Loader/GlobalLoader';
 import { InfoDialog } from './components/Dialog/InfoDialog';
+import ErrorBoundary from './components/ErrorBoundary';
 import { useSelector } from 'react-redux';
 import { RootState } from './app/store';
 const App: React.FC = () => {
@@ -21,7 +22,9 @@ const App: React.FC = () => {
     <ThemeProvider>
       <QueryClientProviders>
         <BrowserRouter>
-          <AppRoutes />
+          <ErrorBoundary>
+            <AppRoutes />
+          </ErrorBoundary>
         </BrowserRouter>
         <GlobalLoader loading={loading} message={message} />
         <InfoDialog

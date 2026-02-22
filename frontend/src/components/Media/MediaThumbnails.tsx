@@ -13,7 +13,7 @@ interface MediaThumbnailsProps {
   type?: string;
 }
 
-export const MediaThumbnails: React.FC<MediaThumbnailsProps> = ({
+export const MediaThumbnails: React.FC<MediaThumbnailsProps> = React.memo(({
   images,
   currentIndex,
   showThumbnails,
@@ -95,9 +95,8 @@ export const MediaThumbnails: React.FC<MediaThumbnailsProps> = ({
     <div className="absolute bottom-0 w-full">
       <div
         ref={scrollContainerRef}
-        className={`flex w-full items-center gap-2 overflow-x-auto bg-black/70 py-3 backdrop-blur-md transition-all duration-300 ${
-          showThumbnails ? 'opacity-100' : 'opacity-0'
-        } px-[calc(50%-3.5rem)]`}
+        className={`flex w-full items-center gap-2 overflow-x-auto bg-black/70 py-3 backdrop-blur-md transition-all duration-300 ${showThumbnails ? 'opacity-100' : 'opacity-0'
+          } px-[calc(50%-3.5rem)]`}
       >
         {images.map((image, index) => (
           <div
@@ -110,11 +109,10 @@ export const MediaThumbnails: React.FC<MediaThumbnailsProps> = ({
               }
             }}
             onClick={() => onThumbnailClick(index)}
-            className={`relative h-20 w-28 flex-shrink-0 overflow-hidden rounded-lg ${
-              index === currentIndex
-                ? 'ring-2 ring-blue-500 ring-offset-1 ring-offset-black'
-                : 'opacity-70 hover:opacity-100'
-            } cursor-pointer transition-all duration-200 hover:scale-105`}
+            className={`relative h-20 w-28 flex-shrink-0 overflow-hidden rounded-lg ${index === currentIndex
+              ? 'ring-2 ring-blue-500 ring-offset-1 ring-offset-black'
+              : 'opacity-70 hover:opacity-100'
+              } cursor-pointer transition-all duration-200 hover:scale-105`}
           >
             <img
               src={convertFileSrc(image.thumbnailPath) || '/placeholder.svg'}
@@ -131,4 +129,4 @@ export const MediaThumbnails: React.FC<MediaThumbnailsProps> = ({
       </div>
     </div>
   );
-};
+});

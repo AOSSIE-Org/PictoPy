@@ -9,7 +9,7 @@ interface ZoomControlsProps {
   showThumbnails: boolean;
 }
 
-export const ZoomControls: React.FC<ZoomControlsProps> = ({
+export const ZoomControls: React.FC<ZoomControlsProps> = React.memo(({
   onZoomIn,
   onZoomOut,
   onRotate,
@@ -18,9 +18,8 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
 }) => {
   return (
     <div
-      className={`absolute ${
-        showThumbnails ? 'bottom-32' : 'bottom-12'
-      } left-1/2 z-10 flex -translate-x-1/2 transform flex-col gap-4 rounded-xl bg-black/50 p-3 backdrop-blur-md transition-all duration-300`}
+      className={`absolute ${showThumbnails ? 'bottom-32' : 'bottom-12'
+        } left-1/2 z-10 flex -translate-x-1/2 transform flex-col gap-4 rounded-xl bg-black/50 p-3 backdrop-blur-md transition-all duration-300`}
     >
       <div className="flex gap-2">
         <button
@@ -60,4 +59,4 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
       </div>
     </div>
   );
-};
+});
