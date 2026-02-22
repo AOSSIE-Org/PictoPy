@@ -6,6 +6,26 @@ import { selectAvatar, selectName } from '@/features/onboardingSelectors';
 import { clearSearch } from '@/features/searchSlice';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/components/ui/tooltip';
+
+/**
+ * Renders the top navigation bar for the application.
+ *
+ * Includes:
+ * - Application logo
+ * - Search bar with query preview
+ * - FaceSearchDialog icon wrapped in a tooltip ("Face Scanner")
+ * - User profile avatar wrapped in a tooltip ("Profile")
+ * - Theme selector
+ *
+ * This update introduces hover tooltips for improved accessibility
+ * and clarifies the purpose of the Face Scanner and Profile icons.
+ */
+
 
 export function Navbar() {
   const userName = useSelector(selectName);
@@ -61,9 +81,17 @@ export function Navbar() {
             className="mr-2 flex-1 border-0 bg-neutral-200"
           />
 
-          {/* FaceSearch Dialog */}
-
-          <FaceSearchDialog />
+          {/* FaceSearch Dialog with Tooltip */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <FaceSearchDialog />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={8}>
+              Face Scanner
+            </TooltipContent>
+          </Tooltip>
 
           <button
             className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
@@ -82,13 +110,21 @@ export function Navbar() {
           <span className="hidden text-sm sm:inline-block">
             Welcome <span className="text-muted-foreground">{userName}</span>
           </span>
-          <a href="/settings" className="p-2">
-            <img
-              src={userAvatar || '/photo1.png'}
-              className="hover:ring-primary/50 h-8 w-8 cursor-pointer rounded-full transition-all hover:ring-2"
-              alt="User avatar"
-            />
-          </a>
+          {/* Profile Avatar with Tooltip */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <a href="/settings" className="p-2">
+                <img
+                  src={userAvatar || '/photo1.png'}
+                  className="hover:ring-primary/50 h-8 w-8 cursor-pointer rounded-full transition-all hover:ring-2"
+                  alt="User avatar"
+                />
+              </a>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={8}>
+              Profile
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>
