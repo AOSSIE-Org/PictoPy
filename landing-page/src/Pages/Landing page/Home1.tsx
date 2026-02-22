@@ -14,7 +14,9 @@ const ShuffleHero = () => {
   };
 
   return (
-    <section className="w-full px-8 py-12 grid grid-cols-1 md:grid-cols-2 items-center gap-8 max-w-6xl mx-auto bg-white dark:bg-black transition-colors duration-300">
+    <>
+      <div className="dotted-background" />
+      <section className="w-full px-8 py-12 grid grid-cols-1 md:grid-cols-2 items-center gap-8 max-w-6xl mx-auto bg-transparent dark:bg-transparent transition-colors duration-300 relative z-10">
       <div className="font-['Inter',_sans-serif]">
         <motion.span 
           initial={{ opacity: 0, y: 10 }}
@@ -74,7 +76,8 @@ const ShuffleHero = () => {
         </div>
       </div>
       <ShuffleGrid />
-    </section>
+      </section>
+    </>
   );
 };
 
