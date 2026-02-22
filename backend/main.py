@@ -116,10 +116,15 @@ def generate_openapi_json():
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=[
+        "http://localhost:1420",   # Tauri dev server
+        "http://localhost:5173",   # Vite dev server
+        "tauri://localhost",       # Tauri production
+        "https://tauri.localhost", # Tauri HTTPS
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Accept", "Authorization"],
 )
 
 
