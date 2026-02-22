@@ -31,7 +31,7 @@ issue_enrichment:
                 - '!no-plan'
 
 reviews:
-    profile: assertive # Options: chill, assertive
+    profile: chill # Options: chill, assertive
 
     auto_review:
         enabled: true
