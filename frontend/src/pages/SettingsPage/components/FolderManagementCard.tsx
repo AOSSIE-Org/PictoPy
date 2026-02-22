@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Folder, Trash2, Check } from 'lucide-react';
 
 import { Switch } from '@/components/ui/switch';
@@ -11,6 +11,7 @@ import FolderPicker from '@/components/FolderPicker/FolderPicker';
 import { useFolderOperations } from '@/hooks/useFolderOperations';
 import { FolderDetails } from '@/types/Folder';
 import SettingsCard from './SettingsCard';
+import DeleteFolderDialog from '@/components/Dialog/DeleteFolderDialog';
 
 /**
  * Component for managing folder operations in settings
@@ -28,6 +29,24 @@ const FolderManagementCard: React.FC = () => {
   const taggingStatus = useSelector(
     (state: RootState) => state.folders.taggingStatus,
   );
+
+  // Dialog state for folder deletion confirmation
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<FolderDetails | null>(
+    null,
+  );
+
+  const handleDeleteClick = (folder: FolderDetails) => {
+    setFolderToDelete(folder);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (folderToDelete) {
+      deleteFolder(folderToDelete.folder_id);
+      setFolderToDelete(null);
+    }
+  };
 
   return (
     <SettingsCard
@@ -68,7 +87,7 @@ const FolderManagementCard: React.FC = () => {
                   </div>
 
                   <Button
-                    onClick={() => deleteFolder(folder.folder_id)}
+                    onClick={() => handleDeleteClick(folder)}
                     variant="outline"
                     size="sm"
                     className="h-8 w-8 cursor-pointer text-gray-500 hover:border-red-300 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
@@ -95,7 +114,7 @@ const FolderManagementCard: React.FC = () => {
                         0) >= 100 && <Check className="h-3 w-3" />}
                       {Math.round(
                         taggingStatus[folder.folder_id]?.tagging_percentage ??
-                          0,
+                        0,
                       )}
                       %
                     </span>
@@ -131,6 +150,14 @@ const FolderManagementCard: React.FC = () => {
       <div className="border-border mt-6 border-t pt-6">
         <FolderPicker />
       </div>
+
+      {/* Delete Folder Confirmation Dialog */}
+      <DeleteFolderDialog
+        isOpen={deleteDialogOpen}
+        setIsOpen={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        folderPath={folderToDelete?.folder_path || ''}
+      />
     </SettingsCard>
   );
 };
