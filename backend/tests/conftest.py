@@ -5,6 +5,7 @@ import os
 from app.database.faces import db_create_faces_table
 from app.database.images import db_create_images_table
 from app.database.face_clusters import db_create_clusters_table
+from app.database.manual_clusters import db_create_manual_clusters_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 from app.database.albums import db_create_albums_table, db_create_album_images_table
 from app.database.folders import db_create_folders_table
@@ -29,6 +30,7 @@ def setup_before_all_tests():
         db_create_album_images_table()
         db_create_images_table()
         db_create_metadata_table()
+        db_create_manual_clusters_table()
         print("All database tables created successfully")
     except Exception as e:
         print(f"Error creating database tables: {e}")

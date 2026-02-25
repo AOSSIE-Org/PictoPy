@@ -15,6 +15,7 @@ from concurrent.futures import ProcessPoolExecutor
 from app.database.faces import db_create_faces_table
 from app.database.images import db_create_images_table
 from app.database.face_clusters import db_create_clusters_table
+from app.database.manual_clusters import db_create_manual_clusters_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 from app.database.albums import db_create_albums_table
 from app.database.albums import db_create_album_images_table
@@ -25,6 +26,7 @@ from app.routes.folders import router as folders_router
 from app.routes.albums import router as albums_router
 from app.routes.images import router as images_router
 from app.routes.face_clusters import router as face_clusters_router
+from app.routes.manual_clusters import router as manual_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
 from app.routes.memories import router as memories_router
 from app.routes.shutdown import router as shutdown_router
@@ -59,6 +61,7 @@ async def lifespan(app: FastAPI):
     db_create_albums_table()
     db_create_album_images_table()
     db_create_metadata_table()
+    db_create_manual_clusters_table()
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor(max_workers=1)
 
@@ -141,6 +144,7 @@ app.include_router(
 app.include_router(
     memories_router
 )  # Memories router (prefix already defined in router)
+app.include_router(manual_clusters_router, prefix="/clusters", tags=["Manual Clusters"])
 app.include_router(shutdown_router, tags=["Shutdown"])
 
 

@@ -37,3 +37,14 @@ export const memoriesEndpoints = {
   onThisDay: '/api/memories/on-this-day',
   locations: '/api/memories/locations',
 };
+
+export const manualClustersEndpoints = {
+  getAll: '/clusters/',
+  create: '/clusters/',
+  getById: (clusterId: string) => `/clusters/${clusterId}`,
+  rename: (clusterId: string) => `/clusters/${clusterId}`,
+  delete: (clusterId: string) => `/clusters/${clusterId}`,
+  assignImages: (clusterId: string) => `/clusters/${clusterId}/images`,
+  removeImage: (clusterId: string, imageId: string) =>
+    `/clusters/${clusterId}/images/${imageId}`,
+};
