@@ -59,7 +59,7 @@ export default function FAQ() {
             Frequently Asked Questions
           </h2>
           <p className="max-w-2xl mx-auto text-lg text-gray-600 dark:text-gray-300">
-            Everything you need to know about PictoCopy's smart photo organization 
+            Everything you need to know about PictoPy's smart photo organization 
             and AI-powered tagging features.
           </p>
         </motion.div>
