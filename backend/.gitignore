@@ -4,6 +4,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.coverage
+.pytest_cache/
 
 # Distribution / packaging
 .Python
