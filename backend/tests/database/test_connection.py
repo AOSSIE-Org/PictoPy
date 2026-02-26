@@ -6,25 +6,6 @@ import pytest
 from app.database.connection import get_db_connection
 
 
-@pytest.fixture
-def temp_db_path(monkeypatch):
-    """
-    Creates a temporary SQLite database file
-    and overrides DATABASE_PATH for isolated testing.
-    """
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    temp_file.close()
-
-    monkeypatch.setattr(
-        "app.database.connection.DATABASE_PATH",
-        temp_file.name
-    )
-
-    yield temp_file.name
-
-    os.unlink(temp_file.name)
-
-
 def test_connection_creation_and_pragmas(temp_db_path):
     """
     Ensure connection is created and PRAGMA settings are enforced.
