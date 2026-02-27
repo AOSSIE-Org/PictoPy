@@ -18,6 +18,15 @@ def setup_before_all_tests():
     # Set test environment
     os.environ["TEST_MODE"] = "true"
 
+    # Skip DB creation when running unit-only tests (e.g. test_images.py) that mock the DB.
+    # Use: PICTOPY_SKIP_DB_SETUP=1 pytest tests/test_images.py
+    if os.environ.get("PICTOPY_SKIP_DB_SETUP") == "1":
+        print("Skipping database setup (PICTOPY_SKIP_DB_SETUP=1).")
+        yield
+        if "TEST_MODE" in os.environ:
+            del os.environ["TEST_MODE"]
+        return
+
     # Create all database tables in the same order as main.py
     print("Creating database tables...")
     try:

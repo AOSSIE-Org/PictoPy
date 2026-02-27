@@ -114,6 +114,8 @@ def toggle_favourite(req: ToggleFavouriteRequest):
             "isFavourite": image.get("isFavourite", False),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"error in /toggle-favourite route: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
