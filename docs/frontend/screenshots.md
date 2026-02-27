@@ -16,6 +16,9 @@ The application includes AI-powered features for intelligent photo organization,
 ![AI Tagging](../assets/screenshots/ai-tagging.png)
 *AI Tagging interface showing face collections, object detection, and intelligent photo organization*
 
+![AI Tagging Advanced](../assets/screenshots/ai-tagging2.png)
+*Advanced AI tagging features with detailed face recognition and clustering capabilities*
+
 ## Settings Panel
 
 The settings panel allows users to configure directories, preferences, and application behavior.
@@ -23,5 +26,12 @@ The settings panel allows users to configure directories, preferences, and appli
 ![Settings](../assets/screenshots/settings.png)
 *Settings panel showing directory configuration and user preferences*
 
+## Development Environment
 
+Screenshots showing the development setup and server configuration.
 
+![Server Running](../assets/screenshots/serverRunning.png)
+*Backend server running successfully with API endpoints active*
+
+![Virtual Environment](../assets/screenshots/virtualEnv.png)
+*Python virtual environment setup for development*
