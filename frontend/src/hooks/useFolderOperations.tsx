@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtension';
 import {
@@ -144,20 +144,20 @@ export const useFolderOperations = () => {
   /**
    * Toggle AI tagging for a folder
    */
-  const toggleAITagging = (folder: FolderDetails) => {
+  const toggleAITagging = useCallback((folder: FolderDetails) => {
     if (folder.AI_Tagging) {
       disableAITaggingMutation.mutate(folder.folder_id);
     } else {
       enableAITaggingMutation.mutate(folder.folder_id);
     }
-  };
+  }, [enableAITaggingMutation, disableAITaggingMutation]);
 
   /**
    * Delete a folder
    */
-  const deleteFolder = (folderId: string) => {
+  const deleteFolder = useCallback((folderId: string) => {
     deleteFolderMutation.mutate(folderId);
-  };
+  }, [deleteFolderMutation]);
 
   return {
     // Data

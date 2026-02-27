@@ -1,6 +1,11 @@
 {
-  "extends": ["react-app", "eslint-config-prettier"],
-  "ignorePatterns": ["src-tauri/target"],
+  "extends": [
+    "react-app",
+    "eslint-config-prettier"
+  ],
+  "ignorePatterns": [
+    "src-tauri/target"
+  ],
   "rules": {
     // Accessibility rules
     "jsx-a11y/click-events-have-key-events": "off",
@@ -11,11 +16,17 @@
     "jsx-a11y/anchor-has-content": "off",
     "jsx-a11y/media-has-caption": "off",
     // React Hook rules
-    "react-hooks/exhaustive-deps": "off",
+    "react-hooks/exhaustive-deps": "warn",
     // Temporarily turn warnings into errors to suppress them
     "no-warning-comments": [
       "error",
-      { "terms": ["todo", "fixme"], "location": "anywhere" }
+      {
+        "terms": [
+          "todo",
+          "fixme"
+        ],
+        "location": "anywhere"
+      }
     ]
   }
 }

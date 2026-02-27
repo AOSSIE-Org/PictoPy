@@ -2,7 +2,7 @@ import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Check, Heart } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Image } from '@/types/Media';
 import { ImageTags } from './ImageTags';
 import { convertFileSrc } from '@tauri-apps/api/core';
@@ -17,7 +17,7 @@ interface ImageCardViewProps {
   imageIndex?: number;
 }
 
-export function ImageCard({
+export const ImageCard = React.memo(function ImageCard({
   image,
   className,
   isSelected = false,
@@ -72,11 +72,10 @@ export function ImageCard({
             <Button
               variant="ghost"
               size="icon"
-              className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${
-                image.isFavourite
+              className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${image.isFavourite
                   ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
                   : 'bg-white/10 hover:bg-white/20 hover:shadow-lg'
-              }`}
+                }`}
               onClick={(e) => {
                 console.log(image);
                 e.stopPropagation();
@@ -102,4 +101,4 @@ export function ImageCard({
       </div>
     </div>
   );
-}
+});

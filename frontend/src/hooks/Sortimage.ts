@@ -42,7 +42,7 @@ function useSortedImages(data: any): Image[] {
     const sortedImages = parseAndSortImageData(data);
 
     setSortedImages(sortedImages);
-  }, []);
+  }, [data]);
 
   return sortedImages;
 }

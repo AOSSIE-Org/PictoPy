@@ -6,7 +6,7 @@ interface NavigationButtonsProps {
   onNext: () => void;
 }
 
-export const NavigationButtons: React.FC<NavigationButtonsProps> = ({
+export const NavigationButtons: React.FC<NavigationButtonsProps> = React.memo(({
   onPrevious,
   onNext,
 }) => {
@@ -33,4 +33,4 @@ export const NavigationButtons: React.FC<NavigationButtonsProps> = ({
       </button>
     </>
   );
-};
+});
