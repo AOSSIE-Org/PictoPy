@@ -1,3 +1,5 @@
+import logger from '@/utils/logger';
+
 const FOLDER_PATHS_KEY = 'folderPaths';
 
 export const FolderService = {
@@ -14,7 +16,7 @@ export const FolderService = {
       localStorage.setItem(FOLDER_PATHS_KEY, JSON.stringify([]));
       return [];
     } catch (error) {
-      console.error(
+      logger.error(
         'Error reading or parsing folder paths from localStorage:',
         error,
       );
@@ -27,7 +29,7 @@ export const FolderService = {
     try {
       localStorage.setItem(FOLDER_PATHS_KEY, JSON.stringify(paths));
     } catch (error) {
-      console.error('Error saving folder paths to localStorage:', error);
+      logger.error('Error saving folder paths to localStorage:', error);
     }
   },
 };

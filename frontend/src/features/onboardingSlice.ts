@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { STEPS } from '@/constants/steps';
+import logger from '@/utils/logger';
 
 const STEP_NAMES = Object.values(STEPS);
 
@@ -38,7 +39,7 @@ const onboardingSlice = createSlice({
       if (stepIndex >= 0 && stepIndex < state.stepStatus.length) {
         state.stepStatus[stepIndex] = true;
       } else {
-        console.warn(
+        logger.warn(
           `Invalid step index: ${stepIndex}. Valid range: 0-${state.stepStatus.length - 1}`,
         );
       }

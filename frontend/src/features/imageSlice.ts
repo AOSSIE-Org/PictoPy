@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Image } from '@/types/Media';
+import logger from '@/utils/logger';
 
 interface ImageState {
   images: Image[];
@@ -25,7 +26,7 @@ const imageSlice = createSlice({
       if (index >= -1 && index < imageList.length) {
         state.currentViewIndex = index;
       } else {
-        console.warn(
+        logger.warn(
           `Invalid image index: ${index}. Valid range: -1 to ${
             imageList.length - 1
           }`,
