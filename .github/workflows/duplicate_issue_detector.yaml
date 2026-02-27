@@ -1,0 +1,179 @@
+name: Smart Duplicate Issue Detector (Semantic)
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  detect-duplicates:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --no-cache-dir sentence-transformers scikit-learn
+
+      - name: Fetch upstream issues (AOSSIE-Org/PictoPy)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const issue = context.payload.issue;
+
+            const upstreamIssues = await github.paginate(
+              github.rest.issues.listForRepo,
+              {
+                owner: "AOSSIE-Org",
+                repo: "PictoPy",
+                state: "all",
+                per_page: 100
+              }
+            );
+
+            const data = {
+              current: {
+                number: issue.number,
+                title: issue.title,
+                body: issue.body || ""
+              },
+              others: upstreamIssues
+                .filter(i => !i.pull_request)
+                .map(i => ({
+                  number: i.number,
+                  title: i.title,
+                  body: i.body || "",
+                  url: i.html_url,
+                  state: i.state
+                }))
+            };
+
+            fs.writeFileSync("issues.json", JSON.stringify(data));
+
+      - name: Run semantic similarity analysis
+        run: |
+          python << 'EOF'
+          import json
+          from sentence_transformers import SentenceTransformer
+          from sklearn.metrics.pairwise import cosine_similarity
+
+          THRESHOLD = 0.82
+          MAX_RESULTS = 3
+
+          with open("issues.json") as f:
+            data = json.load(f)
+
+          model = SentenceTransformer("all-MiniLM-L6-v2")
+
+          def text(issue):
+            return f"{issue['title']} {issue['body']}".strip()
+
+          current_text = text(data["current"])
+          others = data["others"]
+
+          if not others:
+            with open("matches.json", "w") as f:
+              json.dump([], f)
+            exit()
+
+          embeddings = model.encode(
+            [current_text] + [text(i) for i in others],
+            normalize_embeddings=True
+          )
+
+          current_vec = embeddings[0]
+          other_vecs = embeddings[1:]
+
+          sims = cosine_similarity([current_vec], other_vecs)[0]
+
+          matches = []
+          for issue, score in zip(others, sims):
+            if score >= THRESHOLD:
+              matches.append({
+                "number": issue["number"],
+                "title": issue["title"],
+                "url": issue["url"],
+                "state": issue["state"],
+                "score": round(float(score) * 100, 1)
+              })
+
+          matches = sorted(matches, key=lambda x: x["score"], reverse=True)[:MAX_RESULTS]
+
+          with open("matches.json", "w") as f:
+            json.dump(matches, f)
+          EOF
+
+      - name: Comment and soft-label in fork (non-blocking)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const matches = JSON.parse(fs.readFileSync("matches.json", "utf8"));
+
+            if (matches.length === 0) {
+              core.notice("No semantic duplicates found.");
+              return;
+            }
+
+            const list = matches.map(
+              (m, i) =>
+                `${i + 1}. **${m.title}** (#${m.number}, ${m.state})\n` +
+                `   ${m.url}\n` +
+                `   Similarity: ${m.score}%`
+            ).join("\n\n");
+
+            const safe = async (fn) => {
+              try { await fn(); }
+              catch (e) { core.notice(`Skipped write action: ${e.message}`); }
+            };
+
+            await safe(() =>
+              github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                body:
+                  `⚠️ **Potential Duplicate Issue (Semantic Match)**\n\n` +
+                  `This issue appears semantically similar to the following issues in AOSSIE-Org/PictoPy:\n\n` +
+                  `${list}\n\n` +
+                  `Please review before proceeding.`
+              })
+            );
+
+            const labelName = "possible-duplicate";
+
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: labelName
+              });
+            } catch (e) {
+              if (e.status === 404) {
+                await safe(() =>
+                  github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: labelName,
+                    color: "FBCA04",
+                    description: "Potential semantic duplicate (upstream comparison)"
+                  })
+                );
+              }
+            }
+
+            await safe(() =>
+              github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                labels: [labelName]
+              })
+            );
