@@ -11,6 +11,8 @@ import { PersonImages } from '@/pages/PersonImages/PersonImages';
 import { ComingSoon } from '@/pages/ComingSoon/ComingSoon';
 import { MemoriesPage } from '@/components/Memories';
 import { MemoryDetail } from '@/components/Memories/MemoryDetail';
+import { ClusterListPage } from '@/pages/Clusters/ClusterListPage';
+import { ClusterDetailPage } from '@/pages/Clusters/ClusterDetailPage';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -26,6 +28,8 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.MEMORIES} element={<MemoriesPage />} />
         <Route path={ROUTES.MEMORY_DETAIL} element={<MemoryDetail />} />
         <Route path={ROUTES.PERSON} element={<PersonImages />} />
+        <Route path={ROUTES.CLUSTERS} element={<ClusterListPage />} />
+        <Route path={ROUTES.CLUSTER_DETAIL} element={<ClusterDetailPage />} />
       </Route>
     </Routes>
   );

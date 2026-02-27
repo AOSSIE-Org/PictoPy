@@ -16,6 +16,7 @@ import {
   Video,
   BookImage,
   ClockFading,
+  Layers,
 } from 'lucide-react';
 import { useLocation, Link } from 'react-router';
 import { ROUTES } from '@/constants/routes';
@@ -42,7 +43,8 @@ export function AppSidebar() {
       return currentPath === ROUTES.HOME || currentPath === '';
     }
 
-    return currentPath === menuPath;
+    // Prefix match for nested routes (e.g. /clusters/detail-id)
+    return currentPath === menuPath || currentPath.startsWith(menuPath + '/');
   };
 
   const menuItems = [
@@ -52,6 +54,7 @@ export function AppSidebar() {
     { name: 'Videos', path: `/${ROUTES.VIDEOS}`, icon: Video },
     { name: 'Albums', path: `/${ROUTES.ALBUMS}`, icon: BookImage },
     { name: 'Memories', path: `/${ROUTES.MEMORIES}`, icon: ClockFading },
+    { name: 'My Clusters', path: `/${ROUTES.CLUSTERS}`, icon: Layers },
     { name: 'Settings', path: `/${ROUTES.SETTINGS}`, icon: Bolt },
   ];
 
