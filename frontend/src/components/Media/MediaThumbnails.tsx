@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { LazyImage } from "../LazyImage/LazyImage";
 
 interface MediaThumbnailsProps {
   images: Array<{
@@ -116,16 +117,12 @@ export const MediaThumbnails: React.FC<MediaThumbnailsProps> = ({
                 : 'opacity-70 hover:opacity-100'
             } cursor-pointer transition-all duration-200 hover:scale-105`}
           >
-            <img
-              src={convertFileSrc(image.thumbnailPath) || '/placeholder.svg'}
-              alt={`thumbnail-${index}`}
-              className="h-full w-full object-cover"
-              onError={(e) => {
-                const img = e.target as HTMLImageElement;
-                img.onerror = null;
-                img.src = '/placeholder.svg';
-              }}
-            />
+            <LazyImage
+  src={convertFileSrc(image.thumbnailPath) || '/placeholder.svg'}
+  alt={`thumbnail-${index}`}
+  className="h-full w-full object-cover"
+/>
+
           </div>
         ))}
       </div>
