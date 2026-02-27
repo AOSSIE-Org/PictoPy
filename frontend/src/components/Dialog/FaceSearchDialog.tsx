@@ -97,6 +97,7 @@ export function FaceSearchDialog() {
             variant="ghost"
             size="icon"
             className="h-8 w-8 cursor-pointer p-1"
+            title="Search with Face"
           >
             <ScanFace className="h-4 w-4" />
             <span className="sr-only">Face Detection Search</span>
