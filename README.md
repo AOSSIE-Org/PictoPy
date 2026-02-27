@@ -9,6 +9,11 @@ PictoPy is an advanced desktop gallery application that combines the power of Ta
 1. First, join the **[Discord Server](https://discord.gg/hjUhu33uAn) (Go to Projects->PictoPy)** to chat with everyone.
 2. For detailed setup instructions, coding guidelines, and the contribution process, please check out our [CONTRIBUTING.md](./CONTRIBUTING.md) file.
 
+## Recommended Python Version
+
+For local development, it is recommended to use **Python 3.10 or 3.11**.
+Some dependencies may not yet be fully compatible with newer Python versions.
+
 # Architecture
 
 ### Frontend
