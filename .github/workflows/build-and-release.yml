@@ -10,8 +10,32 @@ on:
         type: string
 
 jobs:
-  build-server-windows:
-    runs-on: windows-latest
+  build-server:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            artifact-name: PictoPy-Windows
+            onnx-package: onnxruntime-directml
+            mkdir-cmd: mkdir dist/PictoPy_Server/images
+            copy-cmd: |
+              robocopy app dist\PictoPy_Server\app /e
+              if ($LASTEXITCODE -le 1) { exit 0 }
+            zip-cmd: tar -a -c -f PictoPy-Windows.zip .
+          - platform: ubuntu-22.04
+            artifact-name: PictoPy-Ubuntu
+            onnx-package: onnxruntime-gpu
+            mkdir-cmd: mkdir -p dist/PictoPy_Server/images && mkdir -p dist/PictoPy_Server/app
+            copy-cmd: cp -r app/* dist/PictoPy_Server/app/
+            zip-cmd: zip -r PictoPy-Ubuntu.zip .
+          - platform: macos-latest
+            artifact-name: PictoPy-MacOS
+            onnx-package: ""
+            mkdir-cmd: mkdir -p dist/PictoPy_Server/images && mkdir -p dist/PictoPy_Server/app
+            copy-cmd: cp -r app/* dist/PictoPy_Server/app/
+            zip-cmd: zip -r PictoPy-MacOS.zip .
+    runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,40 +44,65 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.12
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
+        working-directory: backend
+        shell: bash
         run: |
-          cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip uninstall -y onnxruntime
-          pip install onnxruntime-directml
+          if [ -n "${{ matrix.onnx-package }}" ]; then
+            pip uninstall -y onnxruntime
+            pip install ${{ matrix.onnx-package }}
+          fi
 
       - name: Build executable with PyInstaller
+        working-directory: backend
         run: |
-          cd backend
           pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
 
       - name: Copy app folder
+        working-directory: backend
+        shell: ${{ matrix.platform == 'windows-latest' && 'pwsh' || 'bash' }}
         run: |
-          cd backend
-          mkdir dist/PictoPy_Server/images
-          robocopy app dist\PictoPy_Server\app /e
-          if ($LASTEXITCODE -le 1) { exit 0 }
+          ${{ matrix.mkdir-cmd }}
+          ${{ matrix.copy-cmd }}
+
 
       - name: Create ZIP package
+        working-directory: backend/dist/PictoPy_Server
+        shell: bash
         run: |
-          cd backend/dist/PictoPy_Server
-          tar -a -c -f PictoPy-Windows.zip .
+          ${{ matrix.zip-cmd }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PictoPy-Windows
-          path: backend/dist/PictoPy_Server/PictoPy-Windows.zip
+          name: ${{ matrix.artifact-name }}
+          path: backend/dist/PictoPy_Server/${{ matrix.artifact-name }}.zip
 
-  build-server-ubuntu:
-    runs-on: ubuntu-22.04
+  build-sync-microservice:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            artifact-name: PictoPy-Sync-Windows
+            copy-cmd: |
+              robocopy app dist\PictoPy_Sync\app /e
+              if ($LASTEXITCODE -le 1) { exit 0 }
+            zip-cmd: tar -a -c -f PictoPy-Sync-Windows.zip .
+          - platform: ubuntu-22.04
+            artifact-name: PictoPy-Sync-Ubuntu
+            copy-cmd: mkdir -p dist/PictoPy_Sync/app && cp -r app/* dist/PictoPy_Sync/app/
+            zip-cmd: zip -r PictoPy-Sync-Ubuntu.zip .
+          - platform: macos-latest
+            artifact-name: PictoPy-Sync-MacOS
+            copy-cmd: mkdir -p dist/PictoPy_Sync/app && cp -r app/* dist/PictoPy_Sync/app/
+            zip-cmd: zip -r PictoPy-Sync-MacOS.zip .
+    runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,210 +111,44 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.12
+          cache: 'pip'
+          cache-dependency-path: sync-microservice/requirements.txt
 
       - name: Install dependencies
+        working-directory: sync-microservice
         run: |
-          cd backend
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip uninstall -y onnxruntime
-          pip install onnxruntime-gpu
-
-      - name: Build executable with PyInstaller
-        run: |
-          cd backend
-          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
-
-      - name: Copy app folder
-        run: |
-          cd backend
-          mkdir -p dist/PictoPy_Server/images
-          mkdir -p dist/PictoPy_Server/app
-          cp -r app/* dist/PictoPy_Server/app/
-
-      - name: Create ZIP package
-        run: |
-          cd backend/dist/PictoPy_Server
-          zip -r PictoPy-Ubuntu.zip .
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: PictoPy-Ubuntu
-          path: backend/dist/PictoPy_Server/PictoPy-Ubuntu.zip
-
-  build-server-macos:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.12
-
-      - name: Install dependencies
-        run: |
-          cd backend
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Build executable with PyInstaller
-        run: |
-          cd backend
-          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
-
-      - name: Copy app folder
-        run: |
-          cd backend
-          mkdir -p dist/PictoPy_Server/images
-          mkdir -p dist/PictoPy_Server/app
-          cp -r app/* dist/PictoPy_Server/app/
-
-      - name: Create ZIP package
-        run: |
-          cd backend/dist/PictoPy_Server
-          zip -r PictoPy-MacOS.zip .
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: PictoPy-MacOS
-          path: backend/dist/PictoPy_Server/PictoPy-MacOS.zip
-
-  build-sync-microservice-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.12
-
-      - name: Install dependencies
-        run: |
-          cd sync-microservice
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
 
       - name: Build executable with PyInstaller
+        working-directory: sync-microservice
         run: |
-          cd sync-microservice
           pyinstaller main.py --name PictoPy_Sync --onedir --distpath dist
 
       - name: Copy app folder
+        working-directory: sync-microservice
+        shell: ${{ matrix.platform == 'windows-latest' && 'pwsh' || 'bash' }}
         run: |
-          cd sync-microservice
-          robocopy app dist\PictoPy_Sync\app /e
-          if ($LASTEXITCODE -le 1) { exit 0 }
+          ${{ matrix.copy-cmd }}
+
 
       - name: Create ZIP package
+        working-directory: sync-microservice/dist/PictoPy_Sync
+        shell: bash
         run: |
-          cd sync-microservice/dist/PictoPy_Sync
-          tar -a -c -f PictoPy-Sync-Windows.zip .
+          ${{ matrix.zip-cmd }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PictoPy-Sync-Windows
-          path: sync-microservice/dist/PictoPy_Sync/PictoPy-Sync-Windows.zip
-
-  build-sync-microservice-ubuntu:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.12
-
-      - name: Install dependencies
-        run: |
-          cd sync-microservice
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
-
-      - name: Build executable with PyInstaller
-        run: |
-          cd sync-microservice
-          pyinstaller main.py --name PictoPy_Sync --onedir --distpath dist
-
-      - name: Copy app folder
-        run: |
-          cd sync-microservice
-          mkdir -p dist/PictoPy_Sync/app
-          cp -r app/* dist/PictoPy_Sync/app/
-
-      - name: Create ZIP package
-        run: |
-          cd sync-microservice/dist/PictoPy_Sync
-          zip -r PictoPy-Sync-Ubuntu.zip .
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: PictoPy-Sync-Ubuntu
-          path: sync-microservice/dist/PictoPy_Sync/PictoPy-Sync-Ubuntu.zip
-
-  build-sync-microservice-macos:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.12
-
-      - name: Install dependencies
-        run: |
-          cd sync-microservice
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
-
-      - name: Build executable with PyInstaller
-        run: |
-          cd sync-microservice
-          pyinstaller main.py --name PictoPy_Sync --onedir --distpath dist
-
-      - name: Copy app folder
-        run: |
-          cd sync-microservice
-          mkdir -p dist/PictoPy_Sync/app
-          cp -r app/* dist/PictoPy_Sync/app/
-
-      - name: Create ZIP package
-        run: |
-          cd sync-microservice/dist/PictoPy_Sync
-          zip -r PictoPy-Sync-MacOS.zip .
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: PictoPy-Sync-MacOS
-          path: sync-microservice/dist/PictoPy_Sync/PictoPy-Sync-MacOS.zip
+          name: ${{ matrix.artifact-name }}
+          path: sync-microservice/dist/PictoPy_Sync/${{ matrix.artifact-name }}.zip
 
   publish-tauri:
     permissions:
       contents: write
-    needs:
-      [
-        build-server-windows,
-        build-server-ubuntu,
-        build-server-macos,
-        build-sync-microservice-windows,
-        build-sync-microservice-ubuntu,
-        build-sync-microservice-macos,
-      ]
+    needs: [build-server, build-sync-microservice]
     strategy:
       fail-fast: false
       matrix:
@@ -307,16 +190,16 @@ jobs:
 
       - name: Extract server files
         shell: bash
+        working-directory: backend/dist
         run: |
-          cd backend/dist
           unzip -o *.zip
           rm *.zip
           ls -l
 
       - name: Extract sync microservice files
         shell: bash
+        working-directory: sync-microservice/dist
         run: |
-          cd sync-microservice/dist
           unzip -o *.zip
           rm *.zip
           ls -l
@@ -329,11 +212,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/src-tauri
 
       - name: Install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
@@ -342,8 +232,8 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Install frontend dependencies
+        working-directory: frontend
         run: |
-          cd frontend
           npm install
 
       - uses: tauri-apps/tauri-action@v0
