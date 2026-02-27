@@ -112,6 +112,61 @@ if (-not (Test-Command cmake)) {
     Write-Host "CMake is already installed. Version: $(cmake --version)" -ForegroundColor Green
 }
 
+# --------------------------------------------------
+# Miniconda
+# --------------------------------------------------
+$condaRoot = "$env:USERPROFILE\miniconda3"
+$condaExe  = "$condaRoot\Scripts\conda.exe"
+
+if (-not (Test-Path $condaExe)) {
+    Write-Host "Installing Miniconda..." -ForegroundColor Yellow
+    $installer = "$env:TEMP\miniconda.exe"
+    Invoke-WebRequest `
+        -Uri "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe" `
+        -OutFile $installer
+
+    if ($LASTEXITCODE -ne 0 -or !(Test-Path $installer)) {
+        throw "Failed to download Miniconda installer"
+    }
+
+    $installerArgs = "/InstallationType=JustMe /AddToPath=0 /RegisterPython=0 /S /D=$condaRoot"
+    & $installer $installerArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Miniconda installer failed with exit code $LASTEXITCODE"
+    }
+
+    Remove-Item $installer
+
+    # Validate installation
+    if (-not (Test-Path $condaExe)) {
+        throw "Conda executable not found after Miniconda installation"
+    }
+
+    Write-Host "Miniconda installed successfully." -ForegroundColor Green
+}
+else {
+    Write-Host "Miniconda already installed. Skipping installation." -ForegroundColor Green
+}
+
+# Permanently add Conda to USER environment PATH if missing 
+$currentMachinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+if ($currentMachinePath -notlike "*$condaRoot*") {
+    $newMachinePath = "$currentMachinePath;$condaRoot;$condaRoot\Scripts;$condaRoot\condabin"
+    [System.Environment]::SetEnvironmentVariable("Path", $newMachinePath, "Machine")
+    Write-Host "Conda paths added permanently to MACHINE environment variables." -ForegroundColor Green 
+} else {
+     Write-Host "Conda paths already exist in MACHINE environment variables." -ForegroundColor Green 
+}
+
+# --------------------------------------------------
+# Initialize Conda (THIS WAS MISSING BEFORE)
+# --------------------------------------------------
+$env:Path = "$condaRoot;$condaRoot\Scripts;$condaRoot\condabin;$env:Path"
+
+$condaBase = & $condaExe info --base
+& "$condaBase\shell\condabin\conda-hook.ps1"
+
+
 # ---- Set up the frontend ----
 Write-Host "Setting up frontend..." -ForegroundColor Yellow
 try {
@@ -131,19 +186,41 @@ try {
 # ---- Set up the backend using Python 3.12 ----
 Write-Host "Setting up backend..." -ForegroundColor Yellow
 try {
-    Set-Location .\backend\
-    
-    # Create virtual environment
-    python -m venv .env
-    
-    # Activate virtual environment and install dependencies
-    .\.env\Scripts\Activate.ps1
+
+     Set-Location .\backend\
+
+    Write-Host "Setting up backend Conda environment..." -ForegroundColor Cyan
+
+    # Remove existing environment (ignore if it does not exist)
+    conda remove -p .env --all -y
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Environment did not exist or could not be removed, continuing..." -ForegroundColor Yellow
+    }
+
+    # Create fresh environment
+    conda create -p .env python=3.12
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to create Conda environment"
+    }
+
+    conda activate .\.env
+
+    # Upgrade pip inside the environment
     python -m pip install --upgrade pip
-    python -m pip install -r requirements.txt
-    deactivate
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to upgrade pip inside Conda environment"
+    }
+
+    # Install backend dependencies
+    pip install -r requirements.txt
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to install backend dependencies"
+    }
     
+    # Deactivate environment after setup
+    conda deactivate
     Set-Location ..
-    
+
     Write-Host "Backend setup completed successfully." -ForegroundColor Green
 } catch {
     Write-Host "Error setting up backend: $_" -ForegroundColor Red
@@ -155,17 +232,37 @@ Write-Host "Setting up sync-microservice..." -ForegroundColor Yellow
 try {
     Set-Location .\sync-microservice\
     
-    # Create virtual environment
-    python -m venv .sync-env
-    
-    # Activate virtual environment and install dependencies
-    .\.sync-env\Scripts\Activate.ps1
+    Write-Host "Setting up sync-microservice Conda environment..." -ForegroundColor Cyan
+
+    # Remove existing environment (ignore if it does not exist)
+    conda remove -p .sync-env --all -y
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Environment did not exist or could not be removed, continuing..." -ForegroundColor Yellow
+    }
+
+    # Create fresh environment
+    conda create -p .sync-env python=3.12 
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to create Conda environment for sync-microservice"
+    }
+
+    conda activate .\.sync-env
+
+    # Upgrade pip inside the environment
     python -m pip install --upgrade pip
-    python -m pip install -r requirements.txt
-    deactivate
-    
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to upgrade pip in sync_env"
+    }
+
+    # Install dependencies inside the environment
+    pip install -r requirements.txt
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to install sync-microservice dependencies"
+    }
+    # Deactivate environment after setup
+    conda deactivate
     Set-Location ..
-    
+
     Write-Host "Sync-microservice setup completed successfully." -ForegroundColor Green
 } catch {
     Write-Host "Error setting up sync-microservice: $_" -ForegroundColor Red
