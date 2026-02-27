@@ -78,6 +78,18 @@ def db_create_images_table() -> None:
     """
     )
 
+    # Ensure Memories feature columns exist on older databases
+    cursor.execute("PRAGMA table_info(images)")
+    existing_columns = {row[1] for row in cursor.fetchall()}
+
+    for column_name, column_type in [
+        ("latitude", "REAL"),
+        ("longitude", "REAL"),
+        ("captured_at", "DATETIME"),
+    ]:
+        if column_name not in existing_columns:
+            cursor.execute(f"ALTER TABLE images ADD COLUMN {column_name} {column_type}")
+
     # Create indexes for Memories feature queries
     cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_latitude ON images(latitude)")
     cursor.execute(
@@ -245,6 +257,30 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
     except Exception as e:
         logger.error(f"Error getting all images: {e}")
         return []
+    finally:
+        conn.close()
+
+
+def db_get_image_path_by_id(image_id: ImageId) -> Optional[ImagePath]:
+    """
+    Get the filesystem path for a single image by its ID.
+
+    Args:
+        image_id: ID of the image to look up
+
+    Returns:
+        The image path as a string, or None if the image is not found or an error occurs.
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT path FROM images WHERE id = ?", (image_id,))
+        row = cursor.fetchone()
+        return row[0] if row else None
+    except Exception as e:
+        logger.error(f"Error getting image path for id {image_id}: {e}")
+        return None
     finally:
         conn.close()
 

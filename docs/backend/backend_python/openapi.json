@@ -926,6 +926,78 @@
         }
       }
     },
+    "/images/rename-image": {
+      "put": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Rename Image",
+        "description": "Rename an image file on disk based on its image ID.\n\nThe database record is updated separately by the sync microservice.",
+        "operationId": "rename_image_images_rename_image_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameImageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenameImageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/face-clusters/{cluster_id}": {
       "put": {
         "tags": [
@@ -2675,6 +2747,44 @@
           "success"
         ],
         "title": "RenameClusterResponse"
+      },
+      "RenameImageRequest": {
+        "properties": {
+          "image_id": {
+            "type": "string",
+            "title": "Image Id"
+          },
+          "rename": {
+            "type": "string",
+            "title": "Rename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_id",
+          "rename"
+        ],
+        "title": "RenameImageRequest",
+        "description": "Request model for renaming an image."
+      },
+      "RenameImageResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "RenameImageResponse",
+        "description": "Response model for image rename operations."
       },
       "ShutdownResponse": {
         "properties": {

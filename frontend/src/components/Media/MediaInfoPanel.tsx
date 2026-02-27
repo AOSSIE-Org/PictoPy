@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { open } from '@tauri-apps/plugin-shell';
 import {
@@ -11,6 +11,9 @@ import {
   SquareArrowOutUpRight,
 } from 'lucide-react';
 import { Image } from '@/types/Media';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { renameImage as renameImageApi } from '@/api/api-functions';
 
 interface MediaInfoPanelProps {
   show: boolean;
@@ -27,6 +30,21 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
   currentIndex,
   totalImages,
 }) => {
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+   const [renamedName, setRenamedName] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Reset rename state when the current image changes
+    setIsRenaming(false);
+    setNewName('');
+    setError(null);
+    setIsSaving(false);
+    setRenamedName(null);
+  }, [currentImage?.id]);
+
   const getFormattedDate = () => {
     if (currentImage?.metadata?.date_created) {
       return new Date(currentImage.metadata.date_created).toLocaleDateString(
@@ -41,11 +59,29 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
     return 'Date not available';
   };
 
-  const getImageName = () => {
+  const getFileName = useCallback(() => {
     if (!currentImage) return 'Image';
-    // Handle both Unix (/) and Windows (\) path separators
     return currentImage.path?.split(/[/\\]/).pop() || 'Image';
-  };
+  }, [currentImage]);
+
+  const getBaseName = useCallback(() => {
+    const fileName = renamedName || getFileName();
+    const lastDotIndex = fileName.lastIndexOf('.');
+    if (lastDotIndex <= 0) return fileName;
+    return fileName.substring(0, lastDotIndex);
+  }, [getFileName]);
+
+  const getExtension = useCallback(() => {
+    const fileName = renamedName || getFileName();
+    const lastDotIndex = fileName.lastIndexOf('.');
+    if (lastDotIndex === -1 || lastDotIndex === fileName.length - 1) return '';
+    return fileName.substring(lastDotIndex);
+  }, [getFileName]);
+
+  const displayName = useMemo(
+    () => renamedName || getFileName(),
+    [renamedName, getFileName],
+  );
 
   const handleLocationClick = async () => {
     if (currentImage?.metadata?.latitude && currentImage?.metadata?.longitude) {
@@ -55,6 +91,45 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
       } catch (error) {
         console.error('Failed to open map URL:', error);
       }
+    }
+  };
+
+  const startRenaming = () => {
+    setError(null);
+    setNewName(getBaseName());
+    setIsRenaming(true);
+  };
+
+  const cancelRenaming = () => {
+    setIsRenaming(false);
+    setError(null);
+  };
+
+  const handleRenameSubmit = async () => {
+    if (!currentImage || !newName.trim()) {
+      setError('Name cannot be empty.');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError(null);
+      const trimmed = newName.trim();
+      await renameImageApi(currentImage.id, trimmed);
+      const fullName = `${trimmed}${getExtension()}`;
+      setRenamedName(fullName);
+      setIsRenaming(false);
+    } catch (e: unknown) {
+      const maybeAxiosError = e as {
+        response?: { data?: { detail?: { message?: string }; message?: string } };
+      };
+      const message =
+        maybeAxiosError.response?.data?.detail?.message ||
+        maybeAxiosError.response?.data?.message ||
+        (e instanceof Error ? e.message : 'Failed to rename image.');
+      setError(message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -85,13 +160,75 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
                 <ImageLucide className="h-5 w-5 text-blue-400" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-white/50">Name</p>
-                <p
-                  className="truncate font-medium text-white"
-                  title={getImageName()}
-                >
-                  {getImageName()}
-                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-white/50">Name</p>
+                  {!isRenaming && (
+                    <button
+                      type="button"
+                      onClick={startRenaming}
+                      className="text-xs text-blue-300 hover:text-blue-200"
+                    >
+                      Rename
+                    </button>
+                  )}
+                </div>
+                {isRenaming ? (
+                  <div className="mt-1 flex items-center gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1">
+                        <Input
+                          autoFocus
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleRenameSubmit();
+                            } else if (e.key === 'Escape') {
+                              e.preventDefault();
+                              cancelRenaming();
+                            }
+                          }}
+                          className="h-8 text-sm"
+                          placeholder="Enter new name"
+                        />
+                        <span className="text-sm text-white/70">
+                          {getExtension()}
+                        </span>
+                      </div>
+                      {error && (
+                        <p className="mt-1 text-xs text-red-400">{error}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 cursor-pointer px-2 text-xs"
+                        onClick={handleRenameSubmit}
+                        disabled={isSaving}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 cursor-pointer px-2 text-xs text-white/70 hover:text-white"
+                        onClick={cancelRenaming}
+                        disabled={isSaving}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p
+                    className="truncate font-medium text-white"
+                    title={displayName}
+                  >
+                    {displayName}
+                  </p>
+                )}
               </div>
             </div>
 

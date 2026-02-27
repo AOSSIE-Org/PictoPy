@@ -12,3 +12,14 @@ export const fetchAllImages = async (
   );
   return response.data;
 };
+
+export const renameImage = async (
+  imageId: string,
+  newName: string,
+): Promise<{ success: boolean; message: string }> => {
+  const response = await apiClient.put(imagesEndpoints.renameImage, {
+    image_id: imageId,
+    rename: newName,
+  });
+  return response.data;
+};

@@ -132,3 +132,17 @@ class DeleteThumbnailsResponse(BaseModel):
 class GetThumbnailPathResponse(BaseModel):
     success: bool
     thumbnailPath: str
+
+
+class RenameImageRequest(BaseModel):
+    """Request model for renaming an image."""
+
+    image_id: str
+    rename: str
+
+
+class RenameImageResponse(BaseModel):
+    """Response model for image rename operations."""
+
+    success: bool
+    message: str

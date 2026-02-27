@@ -13,6 +13,16 @@ interface KeyboardHandlers {
 export const useKeyboardNavigation = (handlers: KeyboardHandlers) => {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
       switch (e.key) {
         case 'Escape':
           handlers.onClose();
