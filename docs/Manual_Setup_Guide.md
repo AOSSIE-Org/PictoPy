@@ -179,3 +179,30 @@ Before setting up the Python backend and sync-microservice, you need to have **M
     ```
 
     For other systems, consult your distribution's documentation.
+
+ ### ONNX Runtime warning on Windows 11 (safe to ignore)
+
+While running backend tests or starting the PictoPy backend on Windows 11, you may see a warning similar to:
+
+UserWarning: Unsupported Windows version (11).
+ONNX Runtime supports Windows 10 and above.
+
+This warning is **harmless**. If backend tests pass successfully and the application runs as expected, the setup is working correctly.
+
+The warning originates from ONNX Runtime's internal OS version check and does **not** indicate a compatibility issue with PictoPy on Windows 11.
+
+### Jest warning after successful frontend tests
+
+While running frontend tests, you may see the following warning:
+
+Jest did not exit one second after the test run has completed.
+
+
+This warning does **not** indicate a test failure. All tests may still pass successfully.
+
+It is usually caused by open async handles such as timers, watchers, or dev-server-related processes.
+  
+If tests pass and no processes are hanging, the warning can be safely ignored.
+
+For debugging purposes, contributors can optionally run:
+npm test -- --detectOpenHandles
