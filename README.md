@@ -8,6 +8,40 @@ PictoPy is an advanced desktop gallery application that combines the power of Ta
 
 1. First, join the **[Discord Server](https://discord.gg/hjUhu33uAn) (Go to Projects->PictoPy)** to chat with everyone.
 2. For detailed setup instructions, coding guidelines, and the contribution process, please check out our [CONTRIBUTING.md](./CONTRIBUTING.md) file.
+## Quick Start for Beginners 🚀
+
+If you’re new to PictoPy or just starting with Python/Node projects, here’s the simplest way to get things running:
+
+1. **Clone the repository**
+git clone https://github.com/marvan5111/PictoPy.git
+cd PictoPy
+
+2. **Backend setup (Python)**
+- Create a virtual environment:
+  - Windows: `python -m venv venv && venv\Scripts\activate`
+  - Linux/Mac: `python3 -m venv venv && source venv/bin/activate`
+- Install dependencies:
+  ```
+  pip install -r requirements.txt
+  ```
+
+3. **Frontend setup (Node.js)**
+- Navigate to the frontend folder:
+  ```
+  cd frontend
+  ```
+- Install dependencies:
+  ```
+  npm install
+  ```
+
+4. **Run the project**
+- Backend: `python app.py` (or the main backend entry file)
+- Frontend: `npm start`
+
+💡 *Tip:* Beginners can start with just the backend first — it’s easier to test quickly.
+
+
 
 # Architecture
 
