@@ -116,8 +116,9 @@ describe('Settings Page', () => {
     });
   });
 
+// eslint-disable-next-line no-warning-comments
   /**
-   * TODO: System integrations (future scope)
+   * FUTURE: System integrations (future scope)
    * Belongs in E2E tests (Playwright/Cypress) rather than Jest
    * - Full user flows with mocked/real backend
    * - Update preferences API verification

@@ -39,6 +39,12 @@ const customRender = (ui: ReactElement, options?: CustomRenderOptions) => {
   const { store, initialRoutes, preloadedState, ...renderOptions } =
     options || {};
 
+  if (store && preloadedState) {
+    console.warn(
+      'test-utils: Both store and preloadedState were provided. preloadedState will be ignored.',
+    );
+  }
+
   const testStore =
     store ??
     configureStore({
