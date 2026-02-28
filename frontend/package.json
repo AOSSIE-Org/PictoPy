@@ -10,6 +10,7 @@
     "test:watch": "jest --watch",
     "preview": "vite preview",
     "tauri": "tauri",
+    "tauri:dev": "node scripts/tauri-dev-auto-port.js",
     "setup:linux": "cd scripts &&  ./setup_env.sh",
     "lint:check": "eslint --max-warnings 0 --config .eslintrc.json .",
     "lint:fix": "eslint --max-warnings 0 --config .eslintrc.json . --fix",
