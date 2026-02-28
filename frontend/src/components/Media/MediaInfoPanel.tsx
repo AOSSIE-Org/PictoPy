@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { open } from '@tauri-apps/plugin-shell';
 import {
@@ -27,6 +27,22 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
   currentIndex,
   totalImages,
 }) => {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  // CLOSE WHEN CLICKING OUTSIDE PANEL
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!show) return;
+
+      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [show, onClose]);
+
   const getFormattedDate = () => {
     if (currentImage?.metadata?.date_created) {
       return new Date(currentImage.metadata.date_created).toLocaleDateString(
@@ -43,7 +59,6 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
 
   const getImageName = () => {
     if (!currentImage) return 'Image';
-    // Handle both Unix (/) and Windows (\) path separators
     return currentImage.path?.split(/[/\\]/).pop() || 'Image';
   };
 
@@ -62,6 +77,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
     <AnimatePresence>
       {show && (
         <motion.div
+          ref={panelRef}
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
@@ -80,21 +96,20 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           </div>
 
           <div className="space-y-4 text-sm">
+            {/* Name */}
             <div className="flex items-start gap-3">
               <div className="rounded-lg bg-white/10 p-2">
                 <ImageLucide className="h-5 w-5 text-blue-400" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-white/50">Name</p>
-                <p
-                  className="truncate font-medium text-white"
-                  title={getImageName()}
-                >
+                <p className="truncate font-medium text-white" title={getImageName()}>
                   {getImageName()}
                 </p>
               </div>
             </div>
 
+            {/* Date */}
             <div className="flex items-start gap-3">
               <div className="rounded-lg bg-white/10 p-2">
                 <Calendar className="h-5 w-5 text-emerald-400" />
@@ -105,6 +120,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
               </div>
             </div>
 
+            {/* Location */}
             <div className="flex items-start gap-3">
               <div className="rounded-lg bg-white/10 p-2">
                 <MapPin className="h-5 w-5 text-red-400" />
@@ -122,13 +138,12 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
                     <SquareArrowOutUpRight className="ml-1 h-[14px] w-[14px]" />
                   </button>
                 ) : (
-                  <p className="font-medium text-white">
-                    Location not available
-                  </p>
+                  <p className="font-medium text-white">Location not available</p>
                 )}
               </div>
             </div>
 
+            {/* Tags */}
             <div className="flex items-start gap-3">
               <div className="rounded-lg bg-white/10 p-2">
                 <Tag className="h-5 w-5 text-purple-400" />
@@ -152,6 +167,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
               </div>
             </div>
 
+            {/* Position */}
             <div className="flex items-start gap-3">
               <div className="rounded-lg bg-white/10 p-2">
                 <Info className="h-5 w-5 text-amber-400" />
@@ -167,10 +183,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
             <div className="mt-4 border-t border-white/10 pt-3">
               <button
                 className="w-full rounded-lg bg-white/10 py-2 text-white hover:bg-white/20"
-                onClick={(e) => {
-                  e.preventDefault();
-                  // Button disabled - does nothing
-                }}
+                onClick={(e) => e.preventDefault()}
               >
                 Open Original File
               </button>
@@ -181,3 +194,5 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
     </AnimatePresence>
   );
 };
+
+export default MediaInfoPanel;
