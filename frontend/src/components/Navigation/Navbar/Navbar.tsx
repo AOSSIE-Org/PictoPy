@@ -7,6 +7,7 @@ import { clearSearch, startTextSearch, clearTextSearch } from '@/features/search
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
 import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { searchImagesByTags } from '@/api/api-functions/images';
 import { setImages } from '@/features/imageSlice';
 
@@ -21,11 +22,13 @@ export function Navbar() {
 
   const [textQuery, setTextQuery] = useState('');
   const dispatch = useDispatch();
+  const queryClient = useQueryClient();
 
   const handleTextSearch = useCallback(async () => {
     const trimmed = textQuery.trim();
     if (!trimmed) return;
-    const tags = trimmed.split(/[,\s]+/).filter(Boolean);
+    // Split on commas only — preserves multi-word tags like "traffic light"
+    const tags = trimmed.split(',').map((t) => t.trim()).filter(Boolean);
     try {
       const result = await searchImagesByTags(tags);
       if (result?.data) {
@@ -40,7 +43,9 @@ export function Navbar() {
   const handleClearTextSearch = useCallback(() => {
     setTextQuery('');
     dispatch(clearTextSearch());
-  }, [dispatch]);
+    // Invalidate the images query so Home.tsx refetches the full gallery
+    queryClient.invalidateQueries({ queryKey: ['images'] });
+  }, [dispatch, queryClient]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
