@@ -3,9 +3,12 @@ import { ThemeSelector } from '@/components/ThemeToggle';
 import { Search } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
-import { clearSearch } from '@/features/searchSlice';
+import { clearSearch, startTextSearch, clearTextSearch } from '@/features/searchSlice';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
+import { useState, useCallback } from 'react';
+import { searchImagesByTags } from '@/api/api-functions/images';
+import { setImages } from '@/features/imageSlice';
 
 export function Navbar() {
   const userName = useSelector(selectName);
@@ -14,8 +17,39 @@ export function Navbar() {
   const searchState = useSelector((state: any) => state.search);
   const isSearchActive = searchState.active;
   const queryImage = searchState.queryImage;
+  const isTextSearchActive = searchState.textSearchActive;
 
+  const [textQuery, setTextQuery] = useState('');
   const dispatch = useDispatch();
+
+  const handleTextSearch = useCallback(async () => {
+    const trimmed = textQuery.trim();
+    if (!trimmed) return;
+    const tags = trimmed.split(/[,\s]+/).filter(Boolean);
+    try {
+      const result = await searchImagesByTags(tags);
+      if (result?.data) {
+        dispatch(setImages(result.data));
+        dispatch(startTextSearch(trimmed));
+      }
+    } catch (err) {
+      console.error('Tag search failed:', err);
+    }
+  }, [textQuery, dispatch]);
+
+  const handleClearTextSearch = useCallback(() => {
+    setTextQuery('');
+    dispatch(clearTextSearch());
+  }, [dispatch]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') handleTextSearch();
+      if (e.key === 'Escape') handleClearTextSearch();
+    },
+    [handleTextSearch, handleClearTextSearch],
+  );
+
   return (
     <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur">
       {/* Logo */}
@@ -57,18 +91,37 @@ export function Navbar() {
           {/* Input */}
           <Input
             type="search"
-            placeholder="Add to your search"
+            placeholder="Search by tags (e.g. dog, beach)"
             className="mr-2 flex-1 border-0 bg-neutral-200"
+            value={textQuery}
+            onChange={(e) => {
+              setTextQuery(e.target.value);
+              if (e.target.value === '' && isTextSearchActive) {
+                handleClearTextSearch();
+              }
+            }}
+            onKeyDown={handleKeyDown}
           />
 
           {/* FaceSearch Dialog */}
 
           <FaceSearchDialog />
 
+          {isTextSearchActive && (
+            <button
+              onClick={handleClearTextSearch}
+              className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
+              title="Clear text search"
+              aria-label="Clear text search"
+            >
+              ✕
+            </button>
+          )}
           <button
             className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
             title="Search"
             aria-label="Search"
+            onClick={handleTextSearch}
           >
             <Search className="h-4 w-4" />
           </button>

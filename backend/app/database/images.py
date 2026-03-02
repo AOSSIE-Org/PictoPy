@@ -249,6 +249,102 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
         conn.close()
 
 
+def db_search_images_by_tags(tags: List[str]) -> List[dict]:
+    """
+    Search images that contain ANY of the specified tag names (case-insensitive).
+
+    Args:
+        tags: List of tag name strings to search for.
+
+    Returns:
+        List of image dicts (same shape as db_get_all_images) that have at least
+        one matching tag.
+    """
+    if not tags:
+        return []
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        placeholders = ",".join("?" for _ in tags)
+        query = f"""
+            SELECT DISTINCT
+                i.id,
+                i.path,
+                i.folder_id,
+                i.thumbnailPath,
+                i.metadata,
+                i.isTagged,
+                i.isFavourite,
+                i.latitude,
+                i.longitude,
+                i.captured_at,
+                all_tags.name as tag_name
+            FROM images i
+            INNER JOIN image_classes match_ic ON i.id = match_ic.image_id
+            INNER JOIN mappings match_m ON match_ic.class_id = match_m.class_id
+            LEFT JOIN image_classes all_ic ON i.id = all_ic.image_id
+            LEFT JOIN mappings all_tags ON all_ic.class_id = all_tags.class_id
+            WHERE LOWER(match_m.name) IN ({placeholders})
+            ORDER BY i.path, all_tags.name
+        """
+
+        params = [tag.lower() for tag in tags]
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+
+        images_dict = {}
+        for (
+            image_id,
+            path,
+            folder_id,
+            thumbnail_path,
+            metadata,
+            is_tagged,
+            is_favourite,
+            latitude,
+            longitude,
+            captured_at,
+            tag_name,
+        ) in results:
+            if image_id not in images_dict:
+                from app.utils.images import image_util_parse_metadata
+
+                metadata_dict = image_util_parse_metadata(metadata)
+                images_dict[image_id] = {
+                    "id": image_id,
+                    "path": path,
+                    "folder_id": str(folder_id),
+                    "thumbnailPath": thumbnail_path,
+                    "metadata": metadata_dict,
+                    "isTagged": bool(is_tagged),
+                    "isFavourite": bool(is_favourite),
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "captured_at": captured_at if captured_at else None,
+                    "tags": [],
+                }
+
+            if tag_name and tag_name not in images_dict[image_id]["tags"]:
+                images_dict[image_id]["tags"].append(tag_name)
+
+        images = []
+        for image_data in images_dict.values():
+            if not image_data["tags"]:
+                image_data["tags"] = None
+            images.append(image_data)
+
+        images.sort(key=lambda x: x["path"])
+        return images
+
+    except Exception as e:
+        logger.error(f"Error searching images by tags: {e}")
+        return []
+    finally:
+        conn.close()
+
+
 def db_get_untagged_images() -> List[UntaggedImageRecord]:
     """
     Find all images that need AI tagging.
