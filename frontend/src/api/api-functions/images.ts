@@ -12,3 +12,13 @@ export const fetchAllImages = async (
   );
   return response.data;
 };
+
+export const searchImagesByTags = async (
+  tags: string[],
+): Promise<APIResponse> => {
+  const response = await apiClient.get<APIResponse>(
+    imagesEndpoints.searchByTags,
+    { params: { tags: tags.join(',') } },
+  );
+  return response.data;
+};

@@ -1,5 +1,6 @@
 export const imagesEndpoints = {
   getAllImages: '/images/',
+  searchByTags: '/images/search',
   setFavourite: '/images/toggle-favourite',
 };
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, status
 from typing import List, Optional
-from app.database.images import db_get_all_images
+from app.database.images import db_get_all_images, db_search_images_by_tags
 from app.schemas.images import ErrorResponse
 from app.utils.images import image_util_parse_metadata
 from pydantic import BaseModel
@@ -128,3 +128,56 @@ class ImageInfoResponse(BaseModel):
     isTagged: bool
     isFavourite: bool
     tags: Optional[List[str]] = None
+
+
+@router.get(
+    "/search",
+    response_model=GetAllImagesResponse,
+    responses={400: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+)
+def search_images_by_tags(
+    tags: str = Query(
+        ...,
+        description="Comma-separated tag names to search for (e.g. dog,beach,person)",
+    )
+):
+    """Return images whose AI-detected tags contain any of the requested tags."""
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+    if not tag_list:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="Bad request",
+                message="At least one tag must be provided.",
+            ).model_dump(),
+        )
+    try:
+        images = db_search_images_by_tags(tag_list)
+        image_data = [
+            ImageData(
+                id=image["id"],
+                path=image["path"],
+                folder_id=image["folder_id"],
+                thumbnailPath=image["thumbnailPath"],
+                metadata=image_util_parse_metadata(image["metadata"]),
+                isTagged=image["isTagged"],
+                isFavourite=image.get("isFavourite", False),
+                tags=image["tags"],
+            )
+            for image in images
+        ]
+        return GetAllImagesResponse(
+            success=True,
+            message=f"Found {len(image_data)} image(s) matching tags: {', '.join(tag_list)}",
+            data=image_data,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Unable to search images: {str(e)}",
+            ).model_dump(),
+        )
