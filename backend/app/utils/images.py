@@ -550,13 +550,15 @@ def image_util_parse_metadata(db_metadata: Any) -> Mapping[str, Any]:
         return defaults
 
     parsed = {}
+
     if isinstance(db_metadata, str):
         try:
-            parsed = json.loads(db_metadata)
-        except Exception:
-            parsed = {}
+            temp = json.loads(db_metadata)
+            if isinstance(temp, dict):
+                parsed = temp
+        except (json.JSONDecodeError, TypeError):
+            pass
     elif isinstance(db_metadata, dict):
         parsed = db_metadata
-
     # Merge with defaults to ensure all fields exist
     return {**defaults, **parsed}

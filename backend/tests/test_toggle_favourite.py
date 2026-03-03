@@ -8,10 +8,10 @@ client = TestClient(app)
 
 @pytest.fixture
 def dummy_image():
-    # Insert a dummy image into the database
+    # Setup
+    image_id = "test-image-123"
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
-    image_id = "test-image-123"
     # Metadata is empty string here to test the crash
     cursor.execute(
         "INSERT OR REPLACE INTO images (id, path, thumbnailPath, isFavourite, metadata) VALUES (?, ?, ?, ?, ?)",
@@ -19,15 +19,35 @@ def dummy_image():
     )
     conn.commit()
     conn.close()
-    return image_id
+    
+    yield image_id
+    
+    # Teardown: Clean up the dummy image after tests
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM images WHERE id = ?", (image_id,))
+    conn.commit()
+    conn.close()
 
 def test_get_all_images_crash(dummy_image):
     """
-    Test that /images/ doesn't crash if metadata is empty.
+    Test that /images/ doesn't crash if metadata is empty and returns defaults.
     """
     response = client.get("/images/")
     assert response.status_code == 200
-    assert response.json()["success"] is True
+    data = response.json()
+    assert data["success"] is True
+    
+    # Verify metadata defaults are present in our dummy image
+    dummy_img_data = next((img for img in data["data"] if img["id"] == dummy_image), None)
+    assert dummy_img_data is not None
+    
+    metadata = dummy_img_data["metadata"]
+    assert metadata["name"] == "Unknown"
+    assert metadata["width"] == 0
+    assert metadata["height"] == 0
+    assert metadata["file_location"] == "Unknown"
+    assert metadata["item_type"] == "unknown"
 
 def test_toggle_favourite_non_existent_image():
     """
