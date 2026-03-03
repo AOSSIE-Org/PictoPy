@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, status
 from typing import List, Optional
-from app.database.images import db_get_all_images
+from app.database.images import db_get_all_images, db_get_image_by_id
 from app.schemas.images import ErrorResponse
 from app.utils.images import image_util_parse_metadata
 from pydantic import BaseModel
@@ -110,9 +110,7 @@ def toggle_favourite(req: ToggleFavouriteRequest):
                 ).model_dump(),
             )
         # Fetch updated status to return
-        image = next(
-            (img for img in db_get_all_images() if img["id"] == image_id), None
-        )
+        image = db_get_image_by_id(image_id)
         if image is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

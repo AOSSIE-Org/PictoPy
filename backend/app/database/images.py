@@ -249,6 +249,59 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
         conn.close()
 
 
+def db_get_image_by_id(image_id: str) -> Optional[dict]:
+    """
+    Get a single image by its ID, including tags.
+    Does not catch exceptions, allowing them to propagate for proper error handling.
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+            SELECT 
+                i.id, 
+                i.path, 
+                i.folder_id, 
+                i.thumbnailPath, 
+                i.metadata, 
+                i.isTagged,
+                i.isFavourite,
+                i.latitude,
+                i.longitude,
+                i.captured_at,
+                GROUP_CONCAT(m.name, ',') as tags
+            FROM images i
+            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN mappings m ON ic.class_id = m.class_id
+            WHERE i.id = ?
+            GROUP BY i.id
+        """
+        cursor.execute(query, (image_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            return None
+
+        from app.utils.images import image_util_parse_metadata
+
+        return {
+            "id": row[0],
+            "path": row[1],
+            "folder_id": str(row[2]) if row[2] else None,
+            "thumbnailPath": row[3],
+            "metadata": image_util_parse_metadata(row[4]),
+            "isTagged": bool(row[5]),
+            "isFavourite": bool(row[6]),
+            "latitude": row[7],
+            "longitude": row[8],
+            "captured_at": row[9] if row[9] else None,
+            "tags": row[10].split(",") if row[10] else None,
+        }
+    finally:
+        conn.close()
+
+
 def db_get_untagged_images() -> List[UntaggedImageRecord]:
     """
     Find all images that need AI tagging.
