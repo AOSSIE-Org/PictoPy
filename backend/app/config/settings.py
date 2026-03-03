@@ -29,3 +29,18 @@ else:
     DATABASE_PATH = os.path.join(user_data_dir("PictoPy"), "database", "PictoPy.db")
 THUMBNAIL_IMAGES_PATH = os.path.join(user_data_dir("PictoPy"), "thumbnails")
 IMAGES_PATH = "./images"
+
+# ── AI / Semantic Search ──────────────────────────────────────────────────────
+# Directory for AI artefacts (index snapshots, vectoriser state, etc.)
+AI_DATA_PATH: str = os.path.join(user_data_dir("PictoPy"), "ai")
+
+# Maximum number of face-cluster slots encoded in each embedding vector.
+# Raising this value invalidates cached embeddings – they must be rebuilt.
+MAX_FACE_CLUSTERS: int = 64
+
+# Default number of results returned by a semantic search when the caller
+# does not specify a limit.
+SEARCH_DEFAULT_TOP_K: int = 20
+
+# Cosine-similarity threshold below which a result is considered irrelevant.
+SEARCH_MIN_SCORE: float = 0.05
