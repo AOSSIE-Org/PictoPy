@@ -129,8 +129,15 @@ def toggle_favourite(req: ToggleFavouriteRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"error in /toggle-favourite route: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+        logger.exception("Unexpected error in /toggle-favourite route")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "success": False,
+                "error": "Internal Server Error",
+                "message": "An unexpected error occurred while toggling favourite",
+            },
+        )
 
 
 class ImageInfoResponse(BaseModel):
