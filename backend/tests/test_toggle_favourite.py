@@ -12,13 +12,22 @@ def dummy_image():
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     image_id = "test-image-123"
+    # Metadata is empty string here to test the crash
     cursor.execute(
-        "INSERT OR REPLACE INTO images (id, path, isFavourite) VALUES (?, ?, ?)",
-        (image_id, "/tmp/test.jpg", 0)
+        "INSERT OR REPLACE INTO images (id, path, thumbnailPath, isFavourite, metadata) VALUES (?, ?, ?, ?, ?)",
+        (image_id, "/tmp/test.jpg", "/tmp/thumb.jpg", 0, "")
     )
     conn.commit()
     conn.close()
     return image_id
+
+def test_get_all_images_crash(dummy_image):
+    """
+    Test that /images/ doesn't crash if metadata is empty.
+    """
+    response = client.get("/images/")
+    assert response.status_code == 200
+    assert response.json()["success"] is True
 
 def test_toggle_favourite_non_existent_image():
     """
