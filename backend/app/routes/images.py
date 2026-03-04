@@ -99,8 +99,8 @@ class ToggleFavouriteRequest(BaseModel):
 def toggle_favourite(req: ToggleFavouriteRequest):
     image_id = req.image_id
     try:
-        success = db_toggle_image_favourite_status(image_id)
-        if not success:
+        result = db_toggle_image_favourite_status(image_id)
+        if result is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ErrorResponse(

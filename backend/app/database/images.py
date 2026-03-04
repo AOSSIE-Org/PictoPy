@@ -484,13 +484,13 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
         conn.close()
 
 
-def db_toggle_image_favourite_status(image_id: str) -> bool:
+def db_toggle_image_favourite_status(image_id: str) -> Optional[bool]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
         cursor.execute("SELECT id FROM images WHERE id = ?", (image_id,))
         if not cursor.fetchone():
-            return False
+            return None
         cursor.execute(
             """
             UPDATE images
@@ -501,10 +501,10 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         )
         conn.commit()
         return cursor.rowcount > 0
-    except Exception as e:
-        logger.error(f"Database error: {e}")
+    except Exception:
+        logger.exception("Database error while toggling favourite")
         conn.rollback()
-        return False
+        raise
     finally:
         conn.close()
 
