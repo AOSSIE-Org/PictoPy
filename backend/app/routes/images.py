@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, status
 from typing import List, Optional
-from app.database.images import db_get_all_images
+from app.database.images import db_get_all_images, db_get_image_by_id
 from app.schemas.images import ErrorResponse
 from app.utils.images import image_util_parse_metadata
 from pydantic import BaseModel
@@ -99,24 +99,45 @@ class ToggleFavouriteRequest(BaseModel):
 def toggle_favourite(req: ToggleFavouriteRequest):
     image_id = req.image_id
     try:
-        success = db_toggle_image_favourite_status(image_id)
-        if not success:
+        result = db_toggle_image_favourite_status(image_id)
+        if result is None:
             raise HTTPException(
-                status_code=404, detail="Image not found or failed to toggle"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Image Not Found",
+                    message="Image not found or failed to toggle",
+                ).model_dump(),
             )
         # Fetch updated status to return
-        image = next(
-            (img for img in db_get_all_images() if img["id"] == image_id), None
-        )
+        image = db_get_image_by_id(image_id)
+        if image is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Image Not Found",
+                    message="Image not found after toggling",
+                ).model_dump(),
+            )
         return {
             "success": True,
             "image_id": image_id,
             "isFavourite": image.get("isFavourite", False),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"error in /toggle-favourite route: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+        logger.exception("Unexpected error in /toggle-favourite route")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "success": False,
+                "error": "Internal Server Error",
+                "message": "An unexpected error occurred while toggling favourite",
+            },
+        )
 
 
 class ImageInfoResponse(BaseModel):
