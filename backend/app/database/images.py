@@ -18,8 +18,6 @@ ImagePath = str
 FolderId = str
 ClassId = int
 
-from app.database.connection import get_db_connection
-
 class ImageRecord(TypedDict):
     """Represents the full images table structure"""
 
