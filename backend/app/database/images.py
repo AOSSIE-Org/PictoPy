@@ -6,6 +6,7 @@ from typing import Any, List, Mapping, Tuple, TypedDict, Union
 from app.config.settings import (
     DATABASE_PATH,
 )
+from app.database.connection import get_db_connection
 from app.logging.setup_logging import get_logger
 
 # Initialize logger
@@ -17,6 +18,7 @@ ImagePath = str
 FolderId = str
 ClassId = int
 
+from app.database.connection import get_db_connection
 
 class ImageRecord(TypedDict):
     """Represents the full images table structure"""
@@ -212,7 +214,6 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
         return []
     finally:
         conn.close()
-
 
 def db_get_untagged_images() -> List[UntaggedImageRecord]:
     """
@@ -419,3 +420,25 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         return False
     finally:
         conn.close()
+
+def db_get_image_by_id(image_id: str):
+    """
+    Retrieve a single image by its ID.
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT * FROM images
+            WHERE id = ?
+            """,
+            (image_id,)
+        )
+
+        row = cursor.fetchone()
+
+        if row is None:
+            return None
+
+        return dict(row)
