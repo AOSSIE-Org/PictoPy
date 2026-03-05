@@ -531,21 +531,22 @@ def image_util_extract_metadata(image_path: str) -> dict:
         }
 
 
-def image_util_parse_metadata(db_metadata: Any) -> Mapping[str, Any]:
-    """
-    Safely parses metadata from the database, which might be a JSON string or already a dict.
-    """
-    if not db_metadata:
-        return {}
+def image_util_parse_metadata(metadata):
+    if not metadata:
+        return {
+            "name": "unknown",
+            "date_created": "unknown",
+            "width": 0,
+            "height": 0,
+            "file_location": "unknown",
+            "file_size": 0,
+            "item_type": "image"
+        }
 
-    if isinstance(db_metadata, str):
+    if isinstance(metadata, str):
         try:
-            parsed = json.loads(db_metadata)
-            return parsed if isinstance(parsed, dict) else {}
-        except (json.JSONDecodeError, TypeError):
+            return json.loads(metadata)
+        except json.JSONDecodeError:
             return {}
 
-    if isinstance(db_metadata, dict):
-        return db_metadata
-
-    return {}
+    return metadata

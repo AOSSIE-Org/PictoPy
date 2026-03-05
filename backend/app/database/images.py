@@ -7,6 +7,7 @@ from datetime import datetime
 from app.config.settings import (
     DATABASE_PATH,
 )
+from app.database.connection import get_db_connection
 from app.logging.setup_logging import get_logger
 
 # Initialize logger
@@ -18,8 +19,11 @@ ImagePath = str
 FolderId = str
 ClassId = int
 
+optimize-toggle-favourite-query
+class ImageRecord(TypedDict):
 
 class ImageRecord(TypedDict, total=False):
+main
     """Represents the full images table structure"""
 
     id: ImageId
@@ -248,7 +252,6 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
     finally:
         conn.close()
 
-
 def db_get_untagged_images() -> List[UntaggedImageRecord]:
     """
     Find all images that need AI tagging.
@@ -455,6 +458,28 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
     finally:
         conn.close()
 
+optimize-toggle-favourite-query
+def db_get_image_by_id(image_id: str):
+    """
+    Retrieve a single image by its ID.
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT * FROM images
+            WHERE id = ?
+            """,
+            (image_id,)
+        )
+
+        row = cursor.fetchone()
+
+        if row is None:
+            return None
+
+        return dict(row)
 
 # ============================================================================
 # MEMORIES FEATURE - Location and Time-based Queries
@@ -835,3 +860,4 @@ def db_get_all_images_for_memories() -> List[dict]:
         return []
     finally:
         conn.close()
+main
