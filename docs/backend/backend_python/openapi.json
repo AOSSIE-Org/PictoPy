@@ -1533,6 +1533,27 @@
         }
       }
     },
+    "/api/memories/weekly-memories": {
+      "get": {
+        "tags": [
+          "memories"
+        ],
+        "summary": "Get Weekly Memories",
+        "operationId": "get_weekly_memories_api_memories_weekly_memories_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyMemoriesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/shutdown": {
       "post": {
         "tags": [
@@ -3078,6 +3099,32 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WeeklyMemoriesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "weekly_memories": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Weekly Memories"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "weekly_memories"
+        ],
+        "title": "WeeklyMemoriesResponse"
       },
       "app__schemas__face_clusters__ErrorResponse": {
         "properties": {

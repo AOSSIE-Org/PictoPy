@@ -127,3 +127,42 @@ export const getLocations = async (options?: {
   const response = await apiClient.get<APIResponse>(url);
   return response.data;
 };
+
+/**
+ * A single image within a weekend memory cluster
+ */
+export interface WeeklyMemoryImage {
+  id: string;
+  path: string;
+  thumbnailPath: string;
+}
+
+/**
+ * A single weekend memory cluster returned by the backend
+ */
+export interface WeeklyMemory {
+  mem_id: string;
+  images: WeeklyMemoryImage[];
+  start_date: string;
+  end_date: string;
+}
+
+/**
+ * Full response shape from GET /api/memories/weekly-memories
+ */
+export interface WeeklyMemoriesResponse {
+  success: boolean;
+  message: string;
+  weekly_memories: WeeklyMemory[];
+}
+
+/**
+ * Fetch weekend memory clusters from the backend
+ */
+export const getWeeklyMemories = async (): Promise<WeeklyMemoriesResponse> => {
+  const response =
+    await apiClient.get<WeeklyMemoriesResponse>(
+      memoriesEndpoints.weeklyMemories,
+    );
+  return response.data;
+};
