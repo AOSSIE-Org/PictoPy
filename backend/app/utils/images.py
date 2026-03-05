@@ -505,4 +505,10 @@ def image_util_parse_metadata(metadata):
             "item_type": "image"
         }
 
+    if isinstance(metadata, str):
+        try:
+            return json.loads(metadata)
+        except json.JSONDecodeError:
+            return {}
+
     return metadata
