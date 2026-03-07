@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
+  onRetry?: () => void;
 }
 
 interface ErrorBoundaryState {
@@ -39,6 +40,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     this.setState({ errorInfo });
   }
 
+  private detailsPanelId = 'error-details-panel';
+
   handleRetry = (): void => {
     this.setState({ isRetrying: true }, () => {
       setTimeout(() => {
@@ -49,6 +52,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
           isRetrying: false,
           showDetails: false,
         });
+        this.props.onRetry?.();
       }, 500);
     });
   };
@@ -79,6 +83,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               <button
                 type="button"
                 onClick={this.toggleDetails}
+                aria-expanded={this.state.showDetails}
+                aria-controls={this.detailsPanelId}
                 className="text-muted-foreground hover:text-foreground flex w-full items-center justify-center gap-1 text-sm transition-colors"
               >
                 {this.state.showDetails ? (
@@ -93,7 +99,10 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               </button>
 
               {this.state.showDetails && (
-                <div className="bg-muted mt-3 max-h-48 overflow-auto rounded-md p-3 text-left">
+                <div
+                  id={this.detailsPanelId}
+                  className="bg-muted mt-3 max-h-48 overflow-auto rounded-md p-3 text-left"
+                >
                   <p className="text-destructive mb-2 text-sm font-medium">
                     {this.state.error?.name}: {this.state.error?.message}
                   </p>
