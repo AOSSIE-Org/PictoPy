@@ -98,7 +98,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                     {this.state.error?.name}: {this.state.error?.message}
                   </p>
                   {this.state.errorInfo?.componentStack && (
-                    <pre className="text-muted-foreground whitespace-pre-wrap text-xs">
+                    <pre className="text-muted-foreground text-xs whitespace-pre-wrap">
                       {this.state.errorInfo.componentStack}
                     </pre>
                   )}
