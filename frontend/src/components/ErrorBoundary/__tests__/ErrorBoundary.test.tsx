@@ -70,7 +70,10 @@ describe('ErrorBoundary', () => {
     // The details panel should have the matching id
     const panel = document.getElementById('error-details-panel');
     expect(panel).toBeInTheDocument();
-    expect(detailsButton).toHaveAttribute('aria-controls', 'error-details-panel');
+    expect(detailsButton).toHaveAttribute(
+      'aria-controls',
+      'error-details-panel',
+    );
 
     // Click "Hide Details"
     fireEvent.click(detailsButton);
