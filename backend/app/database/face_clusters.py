@@ -6,6 +6,9 @@ from app.config.settings import DATABASE_PATH
 ClusterId = str
 ClusterName = str
 
+# Allowlist of valid column names for face_clusters table (prevents SQL injection)
+ALLOWED_COLUMNS = {"cluster_name", "face_image_base64"}
+
 
 class ClusterData(TypedDict):
     """Represents the full clusters table structure"""
@@ -208,17 +211,28 @@ def db_update_cluster(
 
     try:
         # Build the update query dynamically based on provided parameters
+        # Use allowlist validation to prevent SQL injection
         update_fields = []
         update_values = []
 
         if cluster_name is not None:
-            update_fields.append("cluster_name = ?")
+            # Validate column name against allowlist
+            column = "cluster_name"
+            if column not in ALLOWED_COLUMNS:
+                raise ValueError(f"Invalid column name: {column}")
+            update_fields.append(f"{column} = ?")
             update_values.append(cluster_name)
 
         if not update_fields:
             return False
 
         update_values.append(cluster_id)
+
+        # Additional safety: validate all field names match expected pattern
+        for field in update_fields:
+            field_name = field.split(" = ")[0]
+            if field_name not in ALLOWED_COLUMNS:
+                raise ValueError(f"Invalid column name: {field_name}")
 
         cursor.execute(
             f"UPDATE face_clusters SET {', '.join(update_fields)} WHERE cluster_id = ?",
@@ -229,7 +243,8 @@ def db_update_cluster(
         conn.commit()
         return updated
     finally:
-        conn.close()
+        if own_connection:
+            conn.close()
 
 
 def db_get_all_clusters_with_face_counts() -> (
