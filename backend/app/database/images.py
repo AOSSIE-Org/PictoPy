@@ -398,28 +398,54 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
 
 
 def db_toggle_image_favourite_status(image_id: str) -> bool:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT id FROM images WHERE id = ?", (image_id,))
-        if not cursor.fetchone():
-            return False
-        cursor.execute(
-            """
-            UPDATE images
-            SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
-            WHERE id = ?
-            """,
-            (image_id,),
-        )
-        conn.commit()
-        return cursor.rowcount > 0
-    except Exception as e:
-        logger.error(f"Database error: {e}")
-        conn.rollback()
+    """
+    Toggle the favourite status of an image.
+
+    Args:
+        image_id: ID of the image
+
+    Returns:
+        True if the image was updated successfully, False otherwise
+    """
+
+    if not image_id:
+        logger.warning("toggle favourite called with empty image_id")
         return False
-    finally:
-        conn.close()
+
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Check if image exists
+            cursor.execute(
+                "SELECT id FROM images WHERE id = ?",
+                (image_id,),
+            )
+
+            if cursor.fetchone() is None:
+                logger.warning(f"Image not found for toggle: {image_id}")
+                return False
+
+            # Toggle favourite flag
+            cursor.execute(
+                """
+                UPDATE images
+                SET isFavourite = CASE
+                    WHEN isFavourite = 1 THEN 0
+                    ELSE 1
+                END
+                WHERE id = ?
+                """,
+                (image_id,),
+            )
+
+            conn.commit()
+
+            return cursor.rowcount > 0
+
+    except Exception as e:
+        logger.error(f"Error toggling favourite status for image {image_id}: {e}")
+        return False
 
 def db_get_image_by_id(image_id: str):
     """
