@@ -8,7 +8,7 @@ from app.utils.YOLO import (
     YOLO_util_multiclass_nms,
 )
 from app.utils.memory_monitor import log_memory_usage
-from app.utils.ONNX import ONNX_util_get_execution_providers
+from app.utils.ONNX import create_inference_session_with_fallback
 from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
@@ -20,19 +20,9 @@ class YOLO:
         self.conf_threshold = conf_threshold
         self.iou_threshold = iou_threshold
         # Create ONNX session once and reuse it
-        try:
-            self.session = onnxruntime.InferenceSession(
-                self.model_path, providers=ONNX_util_get_execution_providers()
-            )
-        except Exception as e:
-            logger.warning(f"Failed to initialize InferenceSession with default providers: {e}. Falling back to CPUExecutionProvider.")
-            try:
-                self.session = onnxruntime.InferenceSession(
-                    self.model_path, providers=["CPUExecutionProvider"]
-                )
-            except Exception as cpu_e:
-                logger.error(f"Failed to initialize YOLO InferenceSession with CPUExecutionProvider: {cpu_e}")
-                raise cpu_e
+        self.session = create_inference_session_with_fallback(
+            self.model_path, logger=logger, model_name="YOLO"
+        )
 
         # Initialize model info
         self.get_input_details()

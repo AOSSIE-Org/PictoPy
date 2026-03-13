@@ -2,7 +2,7 @@
 
 import onnxruntime
 from app.utils.FaceNet import FaceNet_util_normalize_embedding
-from app.utils.ONNX import ONNX_util_get_execution_providers
+from app.utils.ONNX import create_inference_session_with_fallback
 from app.logging.setup_logging import get_logger
 
 # Initialize logger
@@ -11,19 +11,9 @@ logger = get_logger(__name__)
 
 class FaceNet:
     def __init__(self, model_path):
-        try:
-            self.session = onnxruntime.InferenceSession(
-                model_path, providers=ONNX_util_get_execution_providers()
-            )
-        except Exception as e:
-            logger.warning(f"Failed to initialize InferenceSession with default providers: {e}. Falling back to CPUExecutionProvider.")
-            try:
-                self.session = onnxruntime.InferenceSession(
-                    model_path, providers=["CPUExecutionProvider"]
-                )
-            except Exception as cpu_e:
-                logger.error(f"Failed to initialize FaceNet InferenceSession with CPUExecutionProvider: {cpu_e}")
-                raise cpu_e
+        self.session = create_inference_session_with_fallback(
+            model_path, logger=logger, model_name="FaceNet"
+        )
         self.input_tensor_name = self.session.get_inputs()[0].name
         self.output_tensor_name = self.session.get_outputs()[0].name
 

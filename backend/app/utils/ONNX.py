@@ -28,3 +28,38 @@ def ONNX_util_get_execution_providers() -> list:
         return onnxruntime.get_available_providers()
     else:
         return ["CPUExecutionProvider"]
+
+
+def create_inference_session_with_fallback(model_path, logger, model_name=""):
+    """
+    Create an ONNX InferenceSession with fallback to CPUExecutionProvider on failure.
+
+    Args:
+        model_path (str): Path to the ONNX model file.
+        logger (logging.Logger): Logger instance.
+        model_name (str): Optional name of the model for logging purposes.
+
+    Returns:
+        onnxruntime.InferenceSession: The initialized inference session.
+
+    Raises:
+        Exception: If initialization fails even with the fallback.
+    """
+    try:
+        return onnxruntime.InferenceSession(
+            model_path, providers=ONNX_util_get_execution_providers()
+        )
+    except Exception as e:
+        logger.warning(
+            f"Failed to initialize InferenceSession with default providers: {e}. Falling back to CPUExecutionProvider."
+        )
+        try:
+            return onnxruntime.InferenceSession(
+                model_path, providers=["CPUExecutionProvider"]
+            )
+        except Exception as cpu_e:
+            model_str = f"{model_name} " if model_name else ""
+            logger.error(
+                f"Failed to initialize {model_str}InferenceSession with CPUExecutionProvider: {cpu_e}"
+            )
+            raise
