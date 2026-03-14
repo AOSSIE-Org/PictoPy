@@ -1,6 +1,5 @@
 # app/facenet/FaceNet.py
 
-import onnxruntime
 from app.utils.FaceNet import FaceNet_util_normalize_embedding
 from app.utils.ONNX import create_inference_session_with_fallback
 from app.logging.setup_logging import get_logger

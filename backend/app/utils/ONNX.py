@@ -1,4 +1,6 @@
 import onnxruntime
+import logging
+from typing import Optional
 
 
 def ONNX_util_get_execution_providers() -> list:
@@ -30,7 +32,11 @@ def ONNX_util_get_execution_providers() -> list:
         return ["CPUExecutionProvider"]
 
 
-def create_inference_session_with_fallback(model_path, logger, model_name=""):
+def create_inference_session_with_fallback(
+    model_path: str,
+    logger: logging.Logger,
+    model_name: str = ""
+) -> onnxruntime.InferenceSession:
     """
     Create an ONNX InferenceSession with fallback to CPUExecutionProvider on failure.
 

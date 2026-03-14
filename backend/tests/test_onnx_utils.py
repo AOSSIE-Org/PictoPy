@@ -33,7 +33,8 @@ def test_create_inference_session_fallback_success():
         mock_logger.error.assert_not_called()
         
         # Second value in side_effect is the success mock
-        assert session is not None
+        # Verify the returned session is the successful CPU fallback mock
+        assert session == mock_session.side_effect[1]
 
 def test_create_inference_session_fallback_failure():
     with patch('app.utils.ONNX.onnxruntime.InferenceSession') as mock_session, \
@@ -52,3 +53,4 @@ def test_create_inference_session_fallback_failure():
         mock_logger.error.assert_called_once()
         assert "TestModel" in mock_logger.error.call_args[0][0]
         assert "CPU failed" in mock_logger.error.call_args[0][0]
+
