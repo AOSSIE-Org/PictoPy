@@ -19,7 +19,8 @@ def test_create_inference_session_fallback_success():
          patch('app.utils.ONNX.ONNX_util_get_execution_providers', return_value=['CUDAExecutionProvider']):
         
         # Make the first call raise an exception, and the second call succeed
-        mock_session.side_effect = [Exception("CUDA failed"), MagicMock()]
+        cpu_success_mock = MagicMock()
+        mock_session.side_effect = [Exception("CUDA failed"), cpu_success_mock]
         
         mock_logger = MagicMock()
         session = create_inference_session_with_fallback('dummy_path', mock_logger)
@@ -34,7 +35,7 @@ def test_create_inference_session_fallback_success():
         
         # Second value in side_effect is the success mock
         # Verify the returned session is the successful CPU fallback mock
-        assert session == mock_session.side_effect[1]
+        assert session == cpu_success_mock
 
 def test_create_inference_session_fallback_failure():
     with patch('app.utils.ONNX.onnxruntime.InferenceSession') as mock_session, \
