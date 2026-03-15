@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import numpy as np
+import logging
 from typing import Optional, List, Dict, Union, TypedDict
 from app.config.settings import DATABASE_PATH
 
@@ -10,6 +11,8 @@ ImageId = str
 ClusterId = int
 BoundingBox = Dict[str, Union[int, float]]
 FaceEmbedding = np.ndarray
+
+logger = logging.getLogger(__name__)
 
 
 class FaceData(TypedDict):
@@ -151,11 +154,11 @@ def get_all_face_embeddings():
             SELECT
                 f.embeddings,
                 f.bbox,
-                i.id, 
-                i.path, 
-                i.folder_id, 
-                i.thumbnailPath, 
-                i.metadata, 
+                i.id,
+                i.path,
+                i.folder_id,
+                i.thumbnailPath,
+                i.metadata,
                 i.isTagged,
                 m.name as tag_name
             FROM faces f
@@ -234,7 +237,6 @@ def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbed
         faces = []
         for row in rows:
             face_id, embeddings_json = row
-            # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
             faces.append({"face_id": face_id, "embeddings": embeddings})
 
@@ -270,7 +272,6 @@ def db_get_all_faces_with_cluster_names() -> (
         faces = []
         for row in rows:
             face_id, embeddings_json, cluster_name = row
-            # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
             faces.append(
                 {
@@ -313,7 +314,6 @@ def db_update_face_cluster_ids_batch(
         cursor = conn.cursor()
 
     try:
-        # Prepare update data as tuples (cluster_id, face_id)
         update_data = []
         for mapping in face_cluster_mapping:
             face_id = mapping.get("face_id")
@@ -322,8 +322,8 @@ def db_update_face_cluster_ids_batch(
 
         cursor.executemany(
             """
-            UPDATE faces 
-            SET cluster_id = ? 
+            UPDATE faces
+            SET cluster_id = ?
             WHERE face_id = ?
             """,
             update_data,
@@ -331,10 +331,10 @@ def db_update_face_cluster_ids_batch(
 
         if own_connection:
             conn.commit()
-    except Exception:
+    except sqlite3.Error as e:
+        logger.error("Failed to update face cluster IDs in batch: %s", e)
         if own_connection:
             conn.rollback()
-        print("Error updating face cluster IDs in batch.")
         raise
     finally:
         if own_connection:
@@ -367,21 +367,17 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
         if not rows:
             return []
 
-        # Group embeddings by cluster_id
         cluster_embeddings = {}
         for row in rows:
             cluster_id, embeddings_json = row
-            # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
 
             if cluster_id not in cluster_embeddings:
                 cluster_embeddings[cluster_id] = []
             cluster_embeddings[cluster_id].append(embeddings)
 
-        # Calculate mean embeddings for each cluster
         cluster_means = []
         for cluster_id, embeddings_list in cluster_embeddings.items():
-            # Stack all embeddings for this cluster and calculate mean
             stacked_embeddings = np.stack(embeddings_list)
             mean_embedding = np.mean(stacked_embeddings, axis=0)
 
