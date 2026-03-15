@@ -1,31 +1,32 @@
 import sqlite3
+import logging
 from contextlib import contextmanager
 from typing import Generator
 from app.config.settings import DATABASE_PATH
 
+logger = logging.getLogger(__name__)
 
 @contextmanager
 def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
     """
     SQLite connection context manager with all integrity constraints enforced.
-
     - Enables all major relational integrity PRAGMAs
     - Works for both single and multi-step transactions
     - Automatically commits on success or rolls back on failure
+    - Catches sqlite3.Error specifically for better debuggability
     """
     conn = sqlite3.connect(DATABASE_PATH)
-
     # --- Strict enforcement of all relational and logical rules ---
-    conn.execute("PRAGMA foreign_keys = ON;")  # Enforce FK constraints
+    conn.execute("PRAGMA foreign_keys = ON;")          # Enforce FK constraints
     conn.execute("PRAGMA ignore_check_constraints = OFF;")  # Enforce CHECK constraints
-    conn.execute("PRAGMA recursive_triggers = ON;")  # Allow nested triggers
-    conn.execute("PRAGMA defer_foreign_keys = OFF;")  # Immediate FK checking
-    conn.execute("PRAGMA case_sensitive_like = ON;")  # Make LIKE case-sensitive
-
+    conn.execute("PRAGMA recursive_triggers = ON;")    # Allow nested triggers
+    conn.execute("PRAGMA defer_foreign_keys = OFF;")   # Immediate FK checking
+    conn.execute("PRAGMA case_sensitive_like = ON;")   # Make LIKE case-sensitive
     try:
         yield conn
         conn.commit()
-    except Exception:
+    except sqlite3.Error as e:
+        logger.error("Database error occurred, rolling back transaction: %s", e)
         conn.rollback()
         raise
     finally:
