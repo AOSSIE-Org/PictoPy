@@ -1,7 +1,7 @@
 import sqlite3
 import json
 import numpy as np
-from typing import Optional, List, Dict, Union, TypedDict
+from typing import Optional, List, Dict, Union, TypedDict, Any
 from app.config.settings import DATABASE_PATH
 
 # Type definitions
@@ -390,5 +390,34 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
             )
 
         return cluster_means
+    finally:
+        conn.close()
+
+
+def db_get_faces_by_image_id(image_id: str) -> List[Dict[str, Any]]:
+    """
+    Return all face rows for the given *image_id*.
+
+    Each dict has keys: ``face_id``, ``cluster_id`` (int | None),
+    ``confidence`` (float | None).
+
+    Used by the semantic search service to resolve which face clusters
+    appear in an image without loading the full embedding blobs.
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT face_id, cluster_id, confidence FROM faces WHERE image_id = ?",
+            (image_id,),
+        )
+        return [
+            {
+                "face_id": row[0],
+                "cluster_id": row[1],
+                "confidence": row[2],
+            }
+            for row in cursor.fetchall()
+        ]
     finally:
         conn.close()

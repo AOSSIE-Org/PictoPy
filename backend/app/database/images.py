@@ -835,3 +835,54 @@ def db_get_all_images_for_memories() -> List[dict]:
         return []
     finally:
         conn.close()
+
+
+def db_get_images_by_ids(image_ids: List[str]) -> List[dict]:
+    """
+    Return minimal image info (id, path, thumbnailPath, tags) for a set of IDs.
+
+    Used by the semantic search service to enrich result objects without
+    fetching the entire image table.
+
+    Parameters
+    ----------
+    image_ids :
+        List of UUID strings.  Returns an empty list if *image_ids* is empty.
+    """
+    if not image_ids:
+        return []
+
+    conn = _connect()
+    try:
+        placeholders = ",".join("?" * len(image_ids))
+        cursor = conn.cursor()
+        cursor.execute(
+            f"""
+            SELECT
+                i.id,
+                i.path,
+                i.thumbnailPath,
+                GROUP_CONCAT(m.name) AS tag_names
+            FROM images i
+            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN mappings m ON ic.class_id = m.class_id
+            WHERE i.id IN ({placeholders})
+            GROUP BY i.id
+            """,
+            image_ids,
+        )
+        rows = cursor.fetchall()
+        return [
+            {
+                "id": row[0],
+                "path": row[1],
+                "thumbnailPath": row[2],
+                "tags": row[3].split(",") if row[3] else [],
+            }
+            for row in rows
+        ]
+    except Exception as e:
+        logger.error("Error in db_get_images_by_ids: %s", e)
+        return []
+    finally:
+        conn.close()
