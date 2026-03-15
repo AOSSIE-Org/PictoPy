@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import numpy as np
+import logging
 from typing import Optional, List, Dict, Union, TypedDict
 from app.config.settings import DATABASE_PATH
 
@@ -10,6 +11,8 @@ ImageId = str
 ClusterId = int
 BoundingBox = Dict[str, Union[int, float]]
 FaceEmbedding = np.ndarray
+
+logger = logging.getLogger(__name__)
 
 
 class FaceData(TypedDict):
@@ -331,10 +334,10 @@ def db_update_face_cluster_ids_batch(
 
         if own_connection:
             conn.commit()
-    except Exception:
+    except sqlite3.Error as e:
+        logger.error("Failed to update face cluster IDs in batch: %s", e)
         if own_connection:
             conn.rollback()
-        print("Error updating face cluster IDs in batch.")
         raise
     finally:
         if own_connection:
