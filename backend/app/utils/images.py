@@ -534,18 +534,31 @@ def image_util_extract_metadata(image_path: str) -> dict:
 def image_util_parse_metadata(db_metadata: Any) -> Mapping[str, Any]:
     """
     Safely parses metadata from the database, which might be a JSON string or already a dict.
+    Ensures all required fields for MetadataModel are present.
     """
+    defaults = {
+        "name": "Unknown",
+        "date_created": None,
+        "width": 0,
+        "height": 0,
+        "file_location": "Unknown",
+        "file_size": 0,
+        "item_type": "unknown",
+    }
+
     if not db_metadata:
-        return {}
+        return defaults
+
+    parsed = {}
 
     if isinstance(db_metadata, str):
         try:
-            parsed = json.loads(db_metadata)
-            return parsed if isinstance(parsed, dict) else {}
+            temp = json.loads(db_metadata)
+            if isinstance(temp, dict):
+                parsed = temp
         except (json.JSONDecodeError, TypeError):
-            return {}
-
-    if isinstance(db_metadata, dict):
-        return db_metadata
-
-    return {}
+            pass
+    elif isinstance(db_metadata, dict):
+        parsed = db_metadata
+    # Merge with defaults to ensure all fields exist
+    return {**defaults, **parsed}
