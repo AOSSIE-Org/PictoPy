@@ -22,6 +22,26 @@ from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
 
+def image_util_remove_duplicate_images(records):
+    """Remove duplicate physical image files using file system identity."""
+    
+    seen = set()
+    unique_records = []
+
+    for record in records:
+        path = record["path"]
+
+        try:
+            stat = os.stat(path)
+            identity = (stat.st_dev, stat.st_ino)
+        except OSError:
+            continue
+
+        if identity not in seen:
+            seen.add(identity)
+            unique_records.append(record)
+
+    return unique_records
 
 # GPS EXIF tag constant
 GPS_INFO_TAG = 34853
