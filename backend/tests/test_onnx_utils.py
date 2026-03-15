@@ -52,3 +52,4 @@ def test_create_inference_session_fallback_failure(onnx_mocks):
     mock_logger.error.assert_called_once()
     assert "TestModel" in mock_logger.error.call_args[0][0]
     assert "CPU failed" in mock_logger.error.call_args[0][0]
+
