@@ -74,6 +74,7 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
 
                 # Step 1: Get all image files from current folder
                 image_files = image_util_get_images_from_folder(folder_path, recursive)
+                image_files = image_util_remove_duplicate_paths(image_files)
 
                 if not image_files:
                     continue  # No images in this folder, continue to next
@@ -96,11 +97,12 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
             image_util_remove_obsolete_images(all_folder_ids)
 
         # Step 5: Bulk insert all new records if any exist
-        if all_image_records:
+         if all_image_records:
           unique_records = image_util_remove_duplicate_images(all_image_records)
         return db_bulk_insert_images(unique_records)
 
-     except Exception as e:
+        return True  # No images to process is not an error
+    except Exception as e:
         logger.error(f"Error processing folders: {e}")
         return False
 
@@ -579,3 +581,22 @@ def image_util_parse_metadata(metadata):
             "file_size": 0,
             "item_type": "image"
         }
+
+def image_util_remove_duplicate_paths(image_paths):
+    """Remove duplicate physical image files before processing."""
+
+    seen = set()
+    unique_paths = []
+
+    for path in image_paths:
+        try:
+            stat = os.stat(path)
+            identity = (stat.st_dev, stat.st_ino)
+        except OSError:
+            continue
+
+        if identity not in seen:
+            seen.add(identity)
+            unique_paths.append(path)
+
+    return unique_paths
