@@ -97,10 +97,10 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
 
         # Step 5: Bulk insert all new records if any exist
         if all_image_records:
-            return db_bulk_insert_images(all_image_records)
+          unique_records = image_util_remove_duplicate_images(all_image_records)
+        return db_bulk_insert_images(unique_records)
 
-        return True  # No images to process is not an error
-    except Exception as e:
+     except Exception as e:
         logger.error(f"Error processing folders: {e}")
         return False
 
