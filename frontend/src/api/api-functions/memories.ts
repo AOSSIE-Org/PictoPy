@@ -38,6 +38,7 @@ export interface Memory {
   thumbnail_image_id: string;
   center_lat: number | null;
   center_lon: number | null;
+  type?: 'location' | 'date';
 }
 
 /**

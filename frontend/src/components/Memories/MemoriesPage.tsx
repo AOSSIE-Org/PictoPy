@@ -221,10 +221,10 @@ export const MemoriesPage: React.FC = () => {
   // Calculate counts (only memories with 2+ images)
   const totalCount = memoriesWithMultipleImages(allMemories).length;
   const locationCount = memoriesWithMultipleImages(allMemories).filter(
-    (m) => m.center_lat != null && m.center_lon != null,
+    (m) => m.type === 'location',
   ).length;
   const dateCount = memoriesWithMultipleImages(allMemories).filter(
-    (m) => m.center_lat == null || m.center_lon == null,
+    (m) => m.type === 'date',
   ).length;
 
   // Simple filter function
@@ -233,14 +233,10 @@ export const MemoriesPage: React.FC = () => {
     const multiImageMemories = memoriesWithMultipleImages(memories);
 
     if (filter === 'location') {
-      return multiImageMemories.filter(
-        (m) => m.center_lat != null && m.center_lon != null,
-      );
+      return multiImageMemories.filter((m) => m.type === 'location');
     }
     if (filter === 'date') {
-      return multiImageMemories.filter(
-        (m) => m.center_lat == null || m.center_lon == null,
-      );
+      return multiImageMemories.filter((m) => m.type === 'date');
     }
     return multiImageMemories; // 'all'
   };

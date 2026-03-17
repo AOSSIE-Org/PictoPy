@@ -217,7 +217,7 @@ export const MemoryDetail = () => {
   }
 
   // Format title matching MemoryCard logic
-  const isDateBased = memory.center_lat == null || memory.center_lon == null;
+  const isDateBased = memory.type === 'date';
   let displayTitle = memory.title || 'Untitled Memory';
   const displayLocation = memory.location_name || '';
 
