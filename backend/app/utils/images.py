@@ -552,9 +552,6 @@ def image_util_extract_metadata(image_path: str) -> dict:
             "item_type": "unknown",
         }
 
-
-import json
-
 def image_util_parse_metadata(metadata):
     if not metadata:
         return {
