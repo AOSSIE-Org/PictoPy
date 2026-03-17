@@ -1,8 +1,11 @@
-# This DB table contains metadata about the application and user preferences.
-import sqlite3
 import json
-from typing import Optional, Dict, Any
+import logging
+import sqlite3
+from typing import Any, Dict, Optional
+
 from app.config.settings import DATABASE_PATH
+
+logger = logging.getLogger(__name__)
 
 
 def db_create_metadata_table() -> None:
@@ -25,6 +28,11 @@ def db_create_metadata_table() -> None:
             cursor.execute("INSERT INTO metadata (metadata) VALUES (?)", ("{}",))
 
         conn.commit()
+    except sqlite3.Error:
+        if conn is not None:
+            conn.rollback()
+        logger.exception("Failed to create metadata table")
+        raise
     finally:
         if conn is not None:
             conn.close()
@@ -37,10 +45,11 @@ def db_get_metadata() -> Optional[Dict[str, Any]]:
     Returns:
         Dictionary containing metadata, or None if not found
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    conn = None
 
     try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
         cursor.execute("SELECT metadata FROM metadata LIMIT 1")
 
         row = cursor.fetchone()
@@ -49,10 +58,15 @@ def db_get_metadata() -> Optional[Dict[str, Any]]:
             try:
                 return json.loads(row[0])
             except json.JSONDecodeError:
+                logger.exception("Failed to decode metadata JSON")
                 return None
         return None
+    except sqlite3.Error:
+        logger.exception("Failed to fetch metadata")
+        raise
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 def db_update_metadata(
@@ -68,6 +82,7 @@ def db_update_metadata(
     Returns:
         True if the metadata was updated, False otherwise
     """
+    conn: Optional[sqlite3.Connection] = None
     own_connection = cursor is None
     if own_connection:
         conn = sqlite3.connect(DATABASE_PATH)
@@ -84,12 +99,11 @@ def db_update_metadata(
         if own_connection:
             conn.commit()
         return success
-    except Exception as e:
-        if own_connection:
+    except sqlite3.Error:
+        if own_connection and conn is not None:
             conn.rollback()
-
-        print(f"Error updating metadata: {e}")
+        logger.exception("Failed to update metadata")
         raise
     finally:
-        if own_connection:
+        if own_connection and conn is not None:
             conn.close()
