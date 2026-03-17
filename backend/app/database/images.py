@@ -296,7 +296,7 @@ def db_get_image_by_id(image_id: ImageId) -> Optional[dict]:
         image = {
             "id": first_row[0],
             "path": first_row[1],
-            "folder_id": str(first_row[2]),
+            "folder_id": str(first_row[2]) if first_row[2] is not None else None,
             "thumbnailPath": first_row[3],
             "metadata": image_util_parse_metadata(first_row[4]),
             "isTagged": bool(first_row[5]),
