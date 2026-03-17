@@ -494,9 +494,8 @@ def db_get_image_by_id(image_id: str):
             SELECT * FROM images
             WHERE id = ?
             """,
-            (image_id,)
+            (image_id,),
         )
-fix-remove-duplicate-images
 
         row = cursor.fetchone()
 
@@ -504,7 +503,6 @@ fix-remove-duplicate-images
             return None
 
         return dict(row)
-
         conn.commit()
         return cursor.rowcount > 0
     except Exception as e:
