@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, status
 from typing import List, Optional
 from app.database.images import db_get_all_images
+from app.database.images import db_get_image_by_id
 from app.schemas.images import ErrorResponse
 from app.utils.images import image_util_parse_metadata
 from pydantic import BaseModel
@@ -105,9 +106,7 @@ def toggle_favourite(req: ToggleFavouriteRequest):
                 status_code=404, detail="Image not found or failed to toggle"
             )
         # Fetch updated status to return
-        image = next(
-            (img for img in db_get_all_images() if img["id"] == image_id), None
-        )
+        image = db_get_image_by_id(image_id)
         return {
             "success": True,
             "image_id": image_id,

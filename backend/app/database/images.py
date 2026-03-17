@@ -249,6 +249,81 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
         conn.close()
 
 
+def db_get_image_by_id(image_id: ImageId) -> Optional[dict]:
+    """
+    Get a single image by ID with its tags.
+
+    Args:
+        image_id: ID of the image to fetch
+
+    Returns:
+        Dictionary containing image data including tags, or None if not found
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT
+                i.id,
+                i.path,
+                i.folder_id,
+                i.thumbnailPath,
+                i.metadata,
+                i.isTagged,
+                i.isFavourite,
+                i.latitude,
+                i.longitude,
+                i.captured_at,
+                m.name as tag_name
+            FROM images i
+            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN mappings m ON ic.class_id = m.class_id
+            WHERE i.id = ?
+            ORDER BY m.name
+            """,
+            (image_id,),
+        )
+
+        results = cursor.fetchall()
+        if not results:
+            return None
+
+        from app.utils.images import image_util_parse_metadata
+
+        first_row = results[0]
+        image = {
+            "id": first_row[0],
+            "path": first_row[1],
+            "folder_id": str(first_row[2]),
+            "thumbnailPath": first_row[3],
+            "metadata": image_util_parse_metadata(first_row[4]),
+            "isTagged": bool(first_row[5]),
+            "isFavourite": bool(first_row[6]),
+            "latitude": first_row[7],
+            "longitude": first_row[8],
+            "captured_at": first_row[9] if first_row[9] else None,
+            "tags": [],
+        }
+
+        for row in results:
+            tag_name = row[10]
+            if tag_name and tag_name not in image["tags"]:
+                image["tags"].append(tag_name)
+
+        if not image["tags"]:
+            image["tags"] = None
+
+        return image
+
+    except Exception as e:
+        logger.error(f"Error getting image by ID: {e}")
+        return None
+    finally:
+        conn.close()
+
+
 def db_get_untagged_images() -> List[UntaggedImageRecord]:
     """
     Find all images that need AI tagging.
