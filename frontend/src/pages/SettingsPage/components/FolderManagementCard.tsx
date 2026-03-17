@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Folder, Trash2, Check } from 'lucide-react';
 
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useSelector } from 'react-redux';
-import { RootState } from '@/app/store';
+import { RootState } from '@/store/store';
+// import { RootState } from '@/app/store';
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
 
 import { useFolderOperations } from '@/hooks/useFolderOperations';
@@ -16,6 +17,10 @@ import SettingsCard from './SettingsCard';
  * Component for managing folder operations in settings
  */
 const FolderManagementCard: React.FC = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  // const [selectedFolder, setSelectedFolder] = useState<any>(null);
+  // const taggingStatus = useSelector((state: any) => state.folders.taggingStatus || {});
   const {
     folders,
     toggleAITagging,
@@ -68,7 +73,11 @@ const FolderManagementCard: React.FC = () => {
                   </div>
 
                   <Button
-                    onClick={() => deleteFolder(folder.folder_id)}
+                    // onClick={() => deleteFolder(folder.folder_id)}
+                    onClick={() => {
+                      setSelectedFolder(folder.folder_id);
+                      setIsModalOpen(true);
+                    }}
                     variant="outline"
                     size="sm"
                     className="h-8 w-8 cursor-pointer text-gray-500 hover:border-red-300 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
@@ -131,6 +140,37 @@ const FolderManagementCard: React.FC = () => {
       <div className="border-border mt-6 border-t pt-6">
         <FolderPicker />
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-800 dark:bg-gray-900">
+            <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
+              Delete Folder?
+            </h3>
+            <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
+              Are you sure? This will remove the folder from the library but not
+              from your computer.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedFolder) deleteFolder(selectedFolder);
+                  setIsModalOpen(false);
+                }}
+                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </SettingsCard>
   );
 };
