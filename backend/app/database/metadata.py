@@ -63,7 +63,7 @@ def db_get_metadata() -> Optional[Dict[str, Any]]:
         return None
     except sqlite3.Error:
         logger.exception("Failed to fetch metadata")
-        raise
+        return None
     finally:
         if conn is not None:
             conn.close()
