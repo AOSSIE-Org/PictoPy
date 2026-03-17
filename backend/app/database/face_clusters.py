@@ -1,6 +1,9 @@
 import sqlite3
+import logging
 from typing import Optional, List, Dict, TypedDict, Union
 from app.config.settings import DATABASE_PATH
+
+logger = logging.getLogger(__name__)
 
 # Type definitions
 ClusterId = str
@@ -9,7 +12,6 @@ ClusterName = str
 
 class ClusterData(TypedDict):
     """Represents the full clusters table structure"""
-
     cluster_id: ClusterId
     cluster_name: Optional[ClusterName]
     face_image_base64: Optional[str]
@@ -34,6 +36,9 @@ def db_create_clusters_table() -> None:
         """
         )
         conn.commit()
+    except sqlite3.Error as e:
+        logger.error("Failed to create face_clusters table: %s", e)
+        raise
     finally:
         if conn is not None:
             conn.close()
@@ -60,10 +65,10 @@ def db_delete_all_clusters(cursor: Optional[sqlite3.Cursor] = None) -> int:
         if own_connection:
             conn.commit()
         return deleted_count
-    except Exception:
+    except sqlite3.Error as e:
+        logger.error("Failed to delete all clusters: %s", e)
         if own_connection:
             conn.rollback()
-        print("Error deleting all clusters.")
         raise
     finally:
         if own_connection:
@@ -114,7 +119,8 @@ def db_insert_clusters_batch(
         if own_connection:
             conn.commit()
         return cluster_ids
-    except Exception:
+    except sqlite3.Error as e:
+        logger.error("Failed to insert clusters batch: %s", e)
         if own_connection:
             conn.rollback()
         raise
@@ -141,14 +147,15 @@ def db_get_cluster_by_id(cluster_id: ClusterId) -> Optional[ClusterData]:
             "SELECT cluster_id, cluster_name, face_image_base64 FROM face_clusters WHERE cluster_id = ?",
             (cluster_id,),
         )
-
         row = cursor.fetchone()
-
         if row:
             return ClusterData(
                 cluster_id=row[0], cluster_name=row[1], face_image_base64=row[2]
             )
         return None
+    except sqlite3.Error as e:
+        logger.error("Failed to fetch cluster '%s': %s", cluster_id, e)
+        raise
     finally:
         conn.close()
 
@@ -167,9 +174,7 @@ def db_get_all_clusters() -> List[ClusterData]:
         cursor.execute(
             "SELECT cluster_id, cluster_name, face_image_base64 FROM face_clusters ORDER BY cluster_id"
         )
-
         rows = cursor.fetchall()
-
         clusters = []
         for row in rows:
             clusters.append(
@@ -177,8 +182,10 @@ def db_get_all_clusters() -> List[ClusterData]:
                     cluster_id=row[0], cluster_name=row[1], face_image_base64=row[2]
                 )
             )
-
         return clusters
+    except sqlite3.Error as e:
+        logger.error("Failed to fetch all clusters: %s", e)
+        raise
     finally:
         conn.close()
 
@@ -199,7 +206,6 @@ def db_update_cluster(
     Returns:
         True if the cluster was updated, False if not found
     """
-    # Use provided connection or create a new one
     own_connection = conn is None
     if own_connection:
         conn = sqlite3.connect(DATABASE_PATH)
@@ -207,7 +213,6 @@ def db_update_cluster(
     cursor = conn.cursor()
 
     try:
-        # Build the update query dynamically based on provided parameters
         update_fields = []
         update_values = []
 
@@ -228,6 +233,9 @@ def db_update_cluster(
         updated = cursor.rowcount > 0
         conn.commit()
         return updated
+    except sqlite3.Error as e:
+        logger.error("Failed to update cluster '%s': %s", cluster_id, e)
+        raise
     finally:
         conn.close()
 
@@ -247,9 +255,9 @@ def db_get_all_clusters_with_face_counts() -> (
     try:
         cursor.execute(
             """
-            SELECT 
-                fc.cluster_id, 
-                fc.cluster_name, 
+            SELECT
+                fc.cluster_id,
+                fc.cluster_name,
                 COUNT(f.face_id) as face_count,
                 fc.face_image_base64
             FROM face_clusters fc
@@ -258,9 +266,7 @@ def db_get_all_clusters_with_face_counts() -> (
             ORDER BY fc.cluster_id
             """
         )
-
         rows = cursor.fetchall()
-
         clusters = []
         for row in rows:
             cluster_id, cluster_name, face_count, face_image_base64 = row
@@ -272,8 +278,10 @@ def db_get_all_clusters_with_face_counts() -> (
                     "face_image_base64": face_image_base64,
                 }
             )
-
         return clusters
+    except sqlite3.Error as e:
+        logger.error("Failed to fetch clusters with face counts: %s", e)
+        raise
     finally:
         conn.close()
 
@@ -296,7 +304,7 @@ def db_get_images_by_cluster_id(
     try:
         cursor.execute(
             """
-            SELECT DISTINCT 
+            SELECT DISTINCT
                 i.id as image_id,
                 i.path as image_path,
                 i.thumbnailPath as thumbnail_path,
@@ -311,9 +319,7 @@ def db_get_images_by_cluster_id(
             """,
             (cluster_id,),
         )
-
         rows = cursor.fetchall()
-
         images = []
         for row in rows:
             (
@@ -327,12 +333,8 @@ def db_get_images_by_cluster_id(
             ) = row
 
             import json
-
             metadata_dict = json.loads(metadata) if metadata else None
-            # Parse bbox JSON if it exists
-            bbox = None
-            if bbox_json:
-                bbox = json.loads(bbox_json)
+            bbox = json.loads(bbox_json) if bbox_json else None
 
             images.append(
                 {
@@ -345,7 +347,9 @@ def db_get_images_by_cluster_id(
                     "bbox": bbox,
                 }
             )
-
         return images
+    except sqlite3.Error as e:
+        logger.error("Failed to fetch images for cluster '%s': %s", cluster_id, e)
+        raise
     finally:
         conn.close()
