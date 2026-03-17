@@ -551,6 +551,8 @@ def image_util_extract_metadata(image_path: str) -> dict:
         }
 
 
+import json
+
 def image_util_parse_metadata(metadata):
     if not metadata:
         return {
@@ -563,4 +565,17 @@ def image_util_parse_metadata(metadata):
             "item_type": "image"
         }
 
-    return metadata
+    try:
+        if isinstance(metadata, str):
+            return json.loads(metadata)
+        return metadata
+    except Exception:
+        return {
+            "name": "unknown",
+            "date_created": "unknown",
+            "width": 0,
+            "height": 0,
+            "file_location": "unknown",
+            "file_size": 0,
+            "item_type": "image"
+        }
