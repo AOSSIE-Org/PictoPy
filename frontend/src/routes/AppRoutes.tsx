@@ -9,7 +9,7 @@ import { MyFav } from '@/pages/Home/MyFav';
 import { AITagging } from '@/pages/AITagging/AITagging';
 import { PersonImages } from '@/pages/PersonImages/PersonImages';
 import { ComingSoon } from '@/pages/ComingSoon/ComingSoon';
-import { MemoriesPage } from '@/components/Memories';
+import Memories from '@/pages/Memories/Memories';
 import { MemoryDetail } from '@/components/Memories/MemoryDetail';
 
 export const AppRoutes: React.FC = () => {
@@ -23,7 +23,7 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.SETTINGS} element={<Settings />} />
         <Route path={ROUTES.AI} element={<AITagging />} />
         <Route path={ROUTES.ALBUMS} element={<ComingSoon />} />
-        <Route path={ROUTES.MEMORIES} element={<MemoriesPage />} />
+        <Route path={ROUTES.MEMORIES} element={<Memories />} />
         <Route path={ROUTES.MEMORY_DETAIL} element={<MemoryDetail />} />
         <Route path={ROUTES.PERSON} element={<PersonImages />} />
       </Route>

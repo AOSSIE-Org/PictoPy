@@ -1,5 +1,7 @@
+import { MemoriesPage } from '@/components/Memories';
+
 const Memories = () => {
-  return <></>;
+  return <MemoriesPage />;
 };
 
 export default Memories;
