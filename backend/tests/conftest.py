@@ -1,6 +1,8 @@
+import sys
+
 import pytest
 import os
-
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 # Import database table creation functions
 from app.database.faces import db_create_faces_table
 from app.database.images import db_create_images_table
