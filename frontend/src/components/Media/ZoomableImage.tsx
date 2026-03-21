@@ -53,11 +53,17 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
     const transformRef = useRef<ReactZoomPanPinchRef>(null);
     const imageRef = useRef<HTMLImageElement>(null);
     const [isOverflowing, setIsOverflowing] = useState(false);
+    const [hasError, setHasError] = useState(false); // NEW: track image load error
     const rotationRef = useRef(rotation);
 
     useEffect(() => {
       rotationRef.current = rotation;
     }, [rotation]);
+
+    // NEW: reset error state when image path changes
+    useEffect(() => {
+      setHasError(false);
+    }, [imagePath]);
 
     const getEffectiveDimensions = useCallback(
       (width: number, height: number) => {
@@ -415,26 +421,54 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
             cursor: isOverflowing ? 'move' : 'default',
           }}
         >
-          <img
-            ref={imageRef}
-            src={convertFileSrc(imagePath) || '/placeholder.svg'}
-            alt={alt}
-            draggable={false}
-            className="select-none"
-            onError={(e) => {
-              const img = e.target as HTMLImageElement;
-              img.onerror = null;
-              img.src = '/placeholder.svg';
-            }}
-            style={{
-              maxWidth: '100vw',
-              maxHeight: '100vh',
-              objectFit: 'contain',
-              zIndex: 50,
-              transform: `rotate(${rotation}deg)`,
-              cursor: isOverflowing ? 'move' : 'default',
-            }}
-          />
+          {/* NEW: show friendly error UI instead of flickering broken image */}
+          {hasError ? (
+            <div
+              className="flex flex-col items-center justify-center gap-4 rounded-lg bg-gray-900 p-12 text-center"
+              style={{ minWidth: '320px', minHeight: '220px' }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-20 w-20 text-gray-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              <p className="text-lg font-medium text-gray-400">
+                Image could not be loaded
+              </p>
+              <p
+                className="max-w-xs truncate text-sm text-gray-600"
+                title={imagePath}
+              >
+                {imagePath}
+              </p>
+            </div>
+          ) : (
+            <img
+              ref={imageRef}
+              src={convertFileSrc(imagePath)}
+              alt={alt}
+              draggable={false}
+              className="select-none"
+              onError={() => setHasError(true)} // NEW: set error state once, no infinite loop
+              style={{
+                maxWidth: '100vw',
+                maxHeight: '100vh',
+                objectFit: 'contain',
+                zIndex: 50,
+                transform: `rotate(${rotation}deg)`,
+                cursor: isOverflowing ? 'move' : 'default',
+              }}
+            />
+          )}
         </TransformComponent>
       </TransformWrapper>
     );
