@@ -22,11 +22,14 @@ def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
     conn.execute("PRAGMA defer_foreign_keys = OFF;")  # Immediate FK checking
     conn.execute("PRAGMA case_sensitive_like = ON;")  # Make LIKE case-sensitive
 
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+import sqlite3
+import logging
+
+logger = logging.getLogger(__name__)
+
+try:
+    # database logic
+except sqlite3.OperationalError as e:
+    logger.error(f"Operational DB error: {e}")
+except sqlite3.DatabaseError as e:
+    logger.error(f"Database error: {e}")
