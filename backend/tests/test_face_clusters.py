@@ -410,3 +410,23 @@ class TestFaceClustersAPI:
         """Test that unsupported HTTP methods return 405."""
         response = client.request(method, endpoint)
         assert response.status_code == 405
+    def test_clustering_with_noise():
+    """
+    Ensure clustering handles noisy embeddings correctly
+    """
+
+    import numpy as np
+    from sklearn.cluster import DBSCAN
+
+    person1 = np.random.normal(loc=0.5, scale=0.05, size=(5, 128))
+    noise = np.random.uniform(low=-1, high=1, size=(3, 128))
+
+    embeddings = np.vstack((person1, noise))
+
+    clustering = DBSCAN(eps=0.3, min_samples=2).fit(embeddings)
+    labels = clustering.labels_
+
+    unique_clusters = set(labels)
+    unique_clusters.discard(-1)
+
+    assert len(unique_clusters) >= 1
