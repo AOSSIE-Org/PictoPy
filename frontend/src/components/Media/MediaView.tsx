@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-// import { revealItemInDir } from '@tauri-apps/plugin-opener';
+import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { MediaViewProps } from '@/types/Media';
 import { selectCurrentViewIndex } from '@/features/imageSelectors';
 import { setCurrentViewIndex, closeImageView } from '@/features/imageSlice';
@@ -26,6 +26,7 @@ export function MediaView({
   onClose,
   type = 'image',
   images = [],
+  onToggleFavorite,
 }: MediaViewProps) {
   const dispatch = useDispatch();
 
@@ -81,20 +82,27 @@ export function MediaView({
   const location = useLocation();
   const { toggleFavourite } = useToggleFav();
 
+  // Loop to first image handler for slideshow
+  const handleLoopToStart = useCallback(() => {
+    dispatch(setCurrentViewIndex(0));
+    handlers.resetZoom();
+  }, [dispatch, handlers]);
+
   // Slideshow functionality
   const { isSlideshowActive, toggleSlideshow } = useSlideshow(
     totalImages,
     handleNextImage,
+    handleLoopToStart,
+    currentViewIndex,
   );
 
-  // Folder Open functionality
+  /** Opens the system file explorer at the current image's location. */
   const handleOpenFolder = async () => {
     if (!currentImage?.path) return;
     try {
-      // await revealItemInDir(currentImage.path);
+      await revealItemInDir(currentImage.path);
     } catch (err) {
-      console.log(err);
-      console.error('Failed to open folder.');
+      console.error('Failed to open folder:', err);
     }
   };
 
@@ -107,11 +115,22 @@ export function MediaView({
   const handleToggleFavourite = useCallback(() => {
     if (currentImage) {
       if (currentImage?.id) {
-        toggleFavourite(currentImage.id);
+        // Use custom handler if provided, otherwise use default
+        if (onToggleFavorite) {
+          onToggleFavorite(currentImage.id);
+        } else {
+          toggleFavourite(currentImage.id);
+        }
       }
       if (location.pathname === ROUTES.FAVOURITES) handleClose();
     }
-  }, [currentImage, toggleFavourite]);
+  }, [
+    currentImage,
+    toggleFavourite,
+    onToggleFavorite,
+    location.pathname,
+    handleClose,
+  ]);
 
   const handleZoomIn = useCallback(() => {
     imageViewerRef.current?.zoomIn();

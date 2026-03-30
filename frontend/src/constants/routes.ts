@@ -8,5 +8,6 @@ export const ROUTES = {
   SETTINGS: 'settings',
   ALBUMS: 'albums',
   MEMORIES: 'memories',
+  MEMORY_DETAIL: 'memories/:memoryId',
   PERSON: 'person/:clusterId',
 };

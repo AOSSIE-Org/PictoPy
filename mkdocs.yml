@@ -10,7 +10,8 @@ theme:
   icon:
     repo: fontawesome/brands/github
   features:
-    - navigation.tabs
+    # Navigation Tabs creating an extra Nav Tab containing single element of Nav List
+    # - navigation.tabs
     - navigation.sections
     - toc.integrate
     - navigation.top
