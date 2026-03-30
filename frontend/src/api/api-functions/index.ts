@@ -6,3 +6,4 @@ export * from './user_preferences';
 export * from './health';
 export * from './celebrity';
 
+export * from './memories';
