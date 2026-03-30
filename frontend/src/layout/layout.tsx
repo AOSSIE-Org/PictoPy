@@ -20,7 +20,7 @@ const Layout: React.FC = () => {
         <Navbar />
         <div className="flex" style={{ height: 'calc(100vh - 56px)' }}>
           <AppSidebar />
-          <div className="m-4 w-full overflow-y-auto">
+          <div className="m-4 w-full">
             <Outlet />
           </div>
         </div>

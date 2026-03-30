@@ -1,3 +1,6 @@
+from platformdirs import user_data_dir
+import os
+
 # Model Exports Path
 MODEL_EXPORTS_PATH = "app/models/ONNX_Exports"
 
@@ -20,6 +23,9 @@ DEFAULT_FACENET_MODEL = f"{MODEL_EXPORTS_PATH}/FaceNet_128D.onnx"
 
 TEST_INPUT_PATH = "tests/inputs"
 TEST_OUTPUT_PATH = "tests/outputs"
-DATABASE_PATH = "app/database/PictoPy.db"
-THUMBNAIL_IMAGES_PATH = "./images/thumbnails"
+if os.getenv("GITHUB_ACTIONS") == "true":
+    DATABASE_PATH = os.path.join(os.getcwd(), "test_db.sqlite3")
+else:
+    DATABASE_PATH = os.path.join(user_data_dir("PictoPy"), "database", "PictoPy.db")
+THUMBNAIL_IMAGES_PATH = os.path.join(user_data_dir("PictoPy"), "thumbnails")
 IMAGES_PATH = "./images"

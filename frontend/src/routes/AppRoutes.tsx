@@ -10,6 +10,8 @@ import { AITagging } from '@/pages/AITagging/AITagging';
 import { PersonImages } from '@/pages/PersonImages/PersonImages';
 import { ComingSoon } from '@/pages/ComingSoon/ComingSoon';
 import { DuplicatePage } from '@/pages/DuplicatePage/DuplicatePage';
+import { MemoriesPage } from '@/components/Memories';
+import { MemoryDetail } from '@/components/Memories/MemoryDetail';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -22,7 +24,8 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.SETTINGS} element={<Settings />} />
         <Route path={ROUTES.AI} element={<AITagging />} />
         <Route path={ROUTES.ALBUMS} element={<ComingSoon />} />
-        <Route path={ROUTES.MEMORIES} element={<ComingSoon />} />
+        <Route path={ROUTES.MEMORIES} element={<MemoriesPage />} />
+        <Route path={ROUTES.MEMORY_DETAIL} element={<MemoryDetail />} />
         <Route path={ROUTES.PERSON} element={<PersonImages />} />
         <Route path={ROUTES.DUPLICATES} element={<DuplicatePage />} />
       </Route>
