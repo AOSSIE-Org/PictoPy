@@ -17,7 +17,7 @@ export function Navbar() {
 
   const dispatch = useDispatch();
   return (
-    <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur">
+    <div className="fixed top-0 left-0 z-50 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur bg-background">
       {/* Logo */}
       <div className="flex w-[256px] items-center justify-center">
         <a href="/" className="flex items-center space-x-2">

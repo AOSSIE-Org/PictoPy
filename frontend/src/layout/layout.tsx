@@ -16,7 +16,7 @@ const Layout: React.FC = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex w-full flex-col">
+      <div className="flex w-full flex-col pt-14">
         <Navbar />
         <div className="flex" style={{ height: 'calc(100vh - 56px)' }}>
           <AppSidebar />
