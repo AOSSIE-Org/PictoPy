@@ -204,7 +204,7 @@ def image_util_prepare_image_records(
                 "thumbnailPath": thumbnail_path,
                 "metadata": metadata_json,
                 "isTagged": False,
-                 # Default video-related fields for image ingestion
+                # Default video-related fields for image ingestion
                 "isFavourite": False,
                 "is_video": False,
                 "duration": None,

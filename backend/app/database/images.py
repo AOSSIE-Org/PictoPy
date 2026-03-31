@@ -34,7 +34,7 @@ class ImageRecord(TypedDict, total=False):
     longitude: Optional[float]
     captured_at: Optional[datetime]
     # New fields for video support
-    is_video: bool
+    is_video: Optional[bool]
     duration: Optional[float]
     codec: Optional[str]
 
@@ -74,6 +74,9 @@ def db_create_images_table() -> None:
             metadata TEXT,
             isTagged BOOLEAN DEFAULT 0,
             isFavourite BOOLEAN DEFAULT 0,
+            is_video BOOLEAN DEFAULT 0,
+            duration REAL,
+            codec TEXT,
             latitude REAL,
             longitude REAL,
             captured_at DATETIME,
