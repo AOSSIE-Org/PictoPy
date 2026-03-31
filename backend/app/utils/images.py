@@ -204,6 +204,11 @@ def image_util_prepare_image_records(
                 "thumbnailPath": thumbnail_path,
                 "metadata": metadata_json,
                 "isTagged": False,
+                 # Default video-related fields for image ingestion
+                "isFavourite": False,
+                "is_video": False,
+                "duration": None,
+                "codec": None,
                 "latitude": latitude,  # Can be None
                 "longitude": longitude,  # Can be None
                 "captured_at": (

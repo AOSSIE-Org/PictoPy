@@ -34,6 +34,9 @@ class ImageData(BaseModel):
     metadata: MetadataModel
     isTagged: bool
     isFavourite: bool
+    isVideo: bool = False
+    duration: Optional[float] = None
+    codec: Optional[str] = None
     tags: Optional[List[str]] = None
 
 
@@ -66,6 +69,9 @@ def get_all_images(
                 metadata=image_util_parse_metadata(image["metadata"]),
                 isTagged=image["isTagged"],
                 isFavourite=image.get("isFavourite", False),
+                isVideo=bool(image.get("is_video", False)),
+                duration=image.get("duration"),
+                codec=image.get("codec"),
                 tags=image["tags"],
             )
             for image in images

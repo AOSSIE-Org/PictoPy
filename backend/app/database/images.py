@@ -33,6 +33,10 @@ class ImageRecord(TypedDict, total=False):
     latitude: Optional[float]
     longitude: Optional[float]
     captured_at: Optional[datetime]
+    # New fields for video support
+    is_video: bool
+    duration: Optional[float]
+    codec: Optional[str]
 
 
 class UntaggedImageRecord(TypedDict):
@@ -103,6 +107,17 @@ def db_create_images_table() -> None:
     """
     )
 
+    # Ensure new video-related columns exist for pre-existing databases
+    cursor.execute("PRAGMA table_info(images)")
+    existing_columns = {row[1] for row in cursor.fetchall()}
+
+    if "is_video" not in existing_columns:
+        cursor.execute("ALTER TABLE images ADD COLUMN is_video BOOLEAN DEFAULT 0")
+    if "duration" not in existing_columns:
+        cursor.execute("ALTER TABLE images ADD COLUMN duration REAL")
+    if "codec" not in existing_columns:
+        cursor.execute("ALTER TABLE images ADD COLUMN codec TEXT")
+
     conn.commit()
     conn.close()
 
@@ -118,8 +133,36 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
     try:
         cursor.executemany(
             """
-            INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged, latitude, longitude, captured_at)
-            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged, :latitude, :longitude, :captured_at)
+            INSERT INTO images (
+                id,
+                path,
+                folder_id,
+                thumbnailPath,
+                metadata,
+                isTagged,
+                isFavourite,
+                is_video,
+                duration,
+                codec,
+                latitude,
+                longitude,
+                captured_at
+            )
+            VALUES (
+                :id,
+                :path,
+                :folder_id,
+                :thumbnailPath,
+                :metadata,
+                :isTagged,
+                COALESCE(:isFavourite, 0),
+                COALESCE(:is_video, 0),
+                :duration,
+                :codec,
+                :latitude,
+                :longitude,
+                :captured_at
+            )
             ON CONFLICT(path) DO UPDATE SET
                 folder_id=excluded.folder_id,
                 thumbnailPath=excluded.thumbnailPath,
@@ -128,6 +171,10 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
                     WHEN excluded.isTagged THEN 1
                     ELSE images.isTagged
                 END,
+                isFavourite=COALESCE(excluded.isFavourite, images.isFavourite),
+                is_video=COALESCE(excluded.is_video, images.is_video),
+                duration=COALESCE(excluded.duration, images.duration),
+                codec=COALESCE(excluded.codec, images.codec),
                 latitude=COALESCE(excluded.latitude, images.latitude),
                 longitude=COALESCE(excluded.longitude, images.longitude),
                 captured_at=COALESCE(excluded.captured_at, images.captured_at)
@@ -169,6 +216,9 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                 i.metadata, 
                 i.isTagged,
                 i.isFavourite,
+                i.is_video,
+                i.duration,
+                i.codec,
                 i.latitude,
                 i.longitude,
                 i.captured_at,
@@ -199,6 +249,9 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
             metadata,
             is_tagged,
             is_favourite,
+            is_video,
+            duration,
+            codec,
             latitude,
             longitude,
             captured_at,
@@ -218,6 +271,9 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                     "metadata": metadata_dict,
                     "isTagged": bool(is_tagged),
                     "isFavourite": bool(is_favourite),
+                    "is_video": bool(is_video),
+                    "duration": duration,
+                    "codec": codec,
                     "latitude": latitude,
                     "longitude": longitude,
                     "captured_at": (
