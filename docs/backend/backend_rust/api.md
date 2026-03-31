@@ -2,10 +2,10 @@
 
 The Rust backend provides the following command that can be invoked from the frontend:
 
-### get_server_path
+### get_resources_folder_path
 
 - **Description**: Retrieves the path to the server resources directory.
-- **Parameters**: *None*
+- **Parameters**: _None_
 - **Returns**: `Result<String, String>`
 
 ## Usage Examples
@@ -15,8 +15,8 @@ The Rust backend provides the following command that can be invoked from the fro
 import { invoke } from "@tauri-apps/api/tauri";
 
 // Example: Get server path
-const serverPath = await invoke("get_server_path");
-console.log("Server path:", serverPath);
+const resourcesFolderPath = await invoke("get_resources_folder_path");
+console.log("Resources folder path:", serverPath);
 ```
 
 ## Cross-Platform Support

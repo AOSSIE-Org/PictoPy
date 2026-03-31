@@ -12,7 +12,9 @@ tauri-build = { version = "2.0.6", features = [] }
 
 [dependencies]
 tauri = { version = "2.9.1", features = ["protocol-asset", "devtools"] }
+reqwest = { version = "0.12", features = ["blocking"] }
 walkdir = "2.3"
+sysinfo = "0.37.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 anyhow = "1.0"
@@ -39,5 +41,6 @@ tauri-plugin-opener = "2.5.2"
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
+ci = []
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]

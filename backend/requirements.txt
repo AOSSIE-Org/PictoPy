@@ -31,7 +31,7 @@ mkdocs-material==9.6.16
 mkdocs-material-extensions==1.3.1
 mkdocs-swagger-ui-tag==0.7.1
 mpmath==1.3.0
-numpy==1.26.4
+numpy==1.26.4  
 onnxruntime==1.17.1
 opencv-python==4.9.0.80
 orjson==3.10.3
@@ -46,7 +46,7 @@ python-dotenv==1.0.1
 python-multipart==0.0.9
 PyYAML==6.0.1
 rich==13.7.1
-scikit-learn==1.5.1
+scikit-learn==1.5.1  
 scipy==1.14.0
 shellingham==1.5.4
 sniffio==1.3.1
@@ -71,3 +71,4 @@ ruff>=0.0.241
 psutil>=5.9.5
 pytest-asyncio>=1.0.0
 setuptools==66.1.1
+platformdirs==4.5.1

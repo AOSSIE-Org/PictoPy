@@ -271,15 +271,16 @@ jobs:
       matrix:
         include:
           - platform: "macos-latest"
-            args: "--target aarch64-apple-darwin"
+            # Enable CI feature so prod() spawns backend + sync in release builds
+            args: "--target aarch64-apple-darwin --features ci"
             server-artifact: "PictoPy-MacOS"
             sync-artifact: "PictoPy-Sync-MacOS"
           - platform: "ubuntu-22.04"
-            args: ""
+            args: "--features ci"
             server-artifact: "PictoPy-Ubuntu"
             sync-artifact: "PictoPy-Sync-Ubuntu"
           - platform: "windows-latest"
-            args: ""
+            args: "--features ci"
             server-artifact: "PictoPy-Windows"
             sync-artifact: "PictoPy-Sync-Windows"
     runs-on: ${{ matrix.platform }}
@@ -319,6 +320,11 @@ jobs:
           unzip -o *.zip
           rm *.zip
           ls -l
+      - name: Copy utils folder
+        shell: bash
+        run: |
+          cp -r utils backend/dist/utils
+          cp -r utils sync-microservice/dist/utils
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
