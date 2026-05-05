@@ -19,45 +19,77 @@ class YOLO:
         self.model_path = path
         self.conf_threshold = conf_threshold
         self.iou_threshold = iou_threshold
-        # Create ONNX session once and reuse it
-        self.session = onnxruntime.InferenceSession(
-            self.model_path, providers=ONNX_util_get_execution_providers()
-        )
+        self._session = None
+        import threading
+        self._lock = threading.Lock()
 
-        # Initialize model info
-        self.get_input_details()
-        self.get_output_details()
+    def get_session(self):
+        session = self._session
+        if session is not None:
+            return session
+
+        with self._lock:
+            if self._session is None:
+                import os
+                from app.models.model_registry import MODEL_REGISTRY
+
+                if not os.path.exists(self.model_path):
+                    model_key = None
+                    for key, spec in MODEL_REGISTRY.items():
+                        if spec["filename"] in self.model_path:
+                            model_key = key
+                            break
+                    model_name = model_key if model_key else os.path.basename(self.model_path)
+                    raise RuntimeError(
+                        f"Model '{model_name}' is not installed. "
+                        "Please install it from Settings → AI Models before using this feature."
+                    )
+
+                self._session = onnxruntime.InferenceSession(
+                    self.model_path, providers=ONNX_util_get_execution_providers()
+                )
+                # Initialize model info once session is created
+                self.get_input_details()
+                self.get_output_details()
+
+            return self._session
 
     def __call__(self, image):
         return self.detect_objects(image)
 
     def close(self):
-        del self.session  # Clean up the ONNX session
+        with self._lock:
+            if self._session is not None:
+                self._session = None
         logger.info("YOLO model session closed.")
 
     @log_memory_usage
     def detect_objects(self, image):
+        session = self.get_session()
         input_tensor = self.prepare_input(image)
-        outputs = self.inference(input_tensor)
+        outputs = self.inference(input_tensor, session=session)
         self.boxes, self.scores, self.class_ids = self.process_output(outputs)
         return self.boxes, self.scores, self.class_ids
 
-    def inference(self, input_tensor):
-        time.perf_counter()
-        outputs = self.session.run(
+    def inference(self, input_tensor, session=None):
+        start = time.perf_counter()
+        if session is None:
+            session = self.get_session()
+        outputs = session.run(
             self.output_names, {self.input_names[0]: input_tensor}
         )
+        logger.debug("Inference completed in %.4fs", time.perf_counter() - start)
         return outputs
 
     def get_input_details(self):
-        model_inputs = self.session.get_inputs()
+        model_inputs = self._session.get_inputs()
         self.input_names = [inp.name for inp in model_inputs]
         self.input_shape = model_inputs[0].shape
         self.input_height = self.input_shape[2]
         self.input_width = self.input_shape[3]
 
     def get_output_details(self):
-        model_outputs = self.session.get_outputs()
+        model_outputs = self._session.get_outputs()
         self.output_names = [out.name for out in model_outputs]
 
     def prepare_input(self, image):
