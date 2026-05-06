@@ -31,33 +31,32 @@ git remote add upstream https://github.com/AOSSIE-Org/PictoPy
 Before setting up the Python backend and sync-microservice, you need to have **Miniconda** installed and set up on your system.
 
 1. **Download and Install Miniconda:**
-
-   - Visit the [Miniconda installation guide](https://www.anaconda.com/docs/getting-started/miniconda/install#quickstart-install-instructions)
-   - Follow the quickstart install instructions for your operating system
-   - Make sure `conda` is available in your terminal after installation
+    - Visit the [Miniconda installation guide](https://www.anaconda.com/docs/getting-started/miniconda/install#quickstart-install-instructions)
+    - Follow the quickstart install instructions for your operating system
+    - Make sure `conda` is available in your terminal after installation
 
 2. **Verify Installation:**
-   ```bash
-   conda --version
-   ```
-   You should see the conda version number if installed correctly.
+    ```bash
+    conda --version
+    ```
+    You should see the conda version number if installed correctly.
 
 ### Tauri Frontend Setup:
 
 1. **Install Tauri prerequisites based on your OS using this** [guide](https://tauri.app/start/prerequisites/).
 
 2. **Navigate to the Frontend Directory:** Open your terminal and use `cd` to change directories:
-   ```
-   cd frontend
-   ```
+    ```
+    cd frontend
+    ```
 3. **Install Dependencies**:
-   ```
-   npm install
-   ```
+    ```
+    npm install
+    ```
 4. **Start the Tauri desktop app in development mode**
-   ```
-   npm run tauri dev
-   ```
+    ```
+    npm run tauri dev
+    ```
 
 ### Python (FastAPI) Backend Setup Steps:
 
@@ -95,8 +94,9 @@ Before setting up the Python backend and sync-microservice, you need to have **M
     pip install -r requirements.txt
     ```
 
-5.  **Running the backend:**: To start the backend in development mode, run this command while being in the backend folder and the conda environment activated:
+    > Local development keeps the CPU-only `onnxruntime` package. GPU acceleration is enabled per-platform in the release workflow, while the model recommendation step uses direct hardware detection (instead of ONNX Runtime providers).
 
+5.  **Running the backend:** To start the backend in development mode, run this command while being in the backend folder and the conda environment activated:
     Bash/Powershell
 
     ```
