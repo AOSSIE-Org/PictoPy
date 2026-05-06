@@ -32,14 +32,7 @@ jobs:
       - name: Build executable with PyInstaller
         run: |
           cd backend
-          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
-
-      - name: Copy app folder
-        run: |
-          cd backend
-          mkdir dist/PictoPy_Server/images
-          robocopy app dist\PictoPy_Server\app /e
-          if ($LASTEXITCODE -le 1) { exit 0 }
+          pyinstaller PictoPy.spec
 
       - name: Create ZIP package
         run: |
@@ -74,14 +67,7 @@ jobs:
       - name: Build executable with PyInstaller
         run: |
           cd backend
-          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
-
-      - name: Copy app folder
-        run: |
-          cd backend
-          mkdir -p dist/PictoPy_Server/images
-          mkdir -p dist/PictoPy_Server/app
-          cp -r app/* dist/PictoPy_Server/app/
+          pyinstaller PictoPy.spec
 
       - name: Create ZIP package
         run: |
@@ -114,14 +100,7 @@ jobs:
       - name: Build executable with PyInstaller
         run: |
           cd backend
-          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
-
-      - name: Copy app folder
-        run: |
-          cd backend
-          mkdir -p dist/PictoPy_Server/images
-          mkdir -p dist/PictoPy_Server/app
-          cp -r app/* dist/PictoPy_Server/app/
+          pyinstaller PictoPy.spec
 
       - name: Create ZIP package
         run: |
