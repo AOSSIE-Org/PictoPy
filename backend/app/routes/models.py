@@ -1,0 +1,255 @@
+import os
+import json
+import uuid
+import asyncio
+from typing import Dict, Optional
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel
+from fastapi.responses import StreamingResponse
+from app.models.model_registry import MODEL_REGISTRY, TIER_MODELS, get_model_path
+from app.utils.hardware_detect import get_hardware_info
+from app.utils.model_downloader import ensure_model
+import logging
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+
+REQUIRED_MODELS = ["facenet"]
+
+# Global dict to track download tasks
+@dataclass
+class DownloadTaskEntry:
+    queue: asyncio.Queue
+    task: asyncio.Task
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+
+download_tasks: Dict[str, DownloadTaskEntry] = {}
+
+async def _cleanup_stale_tasks(max_age_minutes: int = 10):
+    while True:
+        await asyncio.sleep(300)  # run every 5 minutes
+        now = datetime.now(timezone.utc)
+        stale = [
+            tid for tid, entry in download_tasks.items()
+            if (now - entry.created_at).total_seconds() > max_age_minutes * 60
+        ]
+        for tid in stale:
+            entry = download_tasks.pop(tid, None)
+            if entry and not entry.task.done():
+                entry.task.cancel()
+
+class SetupRequest(BaseModel):
+    tier: str
+
+@router.get("/status")
+def get_model_status():
+    """
+    Returns the installation status of all models in the registry.
+    """
+    status_dict = {}
+    for key, spec in MODEL_REGISTRY.items():
+        path = get_model_path(key)
+        is_installed = os.path.exists(path)
+        status_dict[key] = {
+            "name": spec["filename"],
+            "installed": is_installed,
+            "feature": spec["feature"],
+            "tier": spec["tier"],
+            "size_mb": spec["size_mb"]
+        }
+    return {
+        "success": True,
+        "data": status_dict
+    }
+
+@router.get("/hardware")
+def get_hardware_recommendation():
+    """
+    Returns hardware specs and the recommended model tier.
+    """
+    try:
+        hw_info = get_hardware_info()
+        return {
+            "success": True,
+            "data": hw_info
+        }
+    except Exception as e:
+        logger.error(f"Failed to get hardware info: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to detect hardware: {str(e)}"
+        )
+
+@router.delete("/{model_key}")
+def delete_model(model_key: str):
+    """
+    Deletes a specific model from disk.
+    """
+    if model_key not in MODEL_REGISTRY:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Model key '{model_key}' not found in registry."
+        )
+        
+    path = get_model_path(model_key)
+    if os.path.exists(path):
+        try:
+            os.remove(path)
+            return {"success": True, "message": f"Model {model_key} deleted successfully."}
+        except Exception as e:
+            logger.error(f"Failed to delete model {model_key}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to delete model: {str(e)}"
+            )
+    else:
+        return {"success": True, "message": f"Model {model_key} already not present."}
+
+
+@router.post("/setup")
+async def setup_models(request: SetupRequest):
+    """
+    Initializes setup by starting downloads for a specific tier + required models.
+    Returns a single task_id to track overall progress.
+    """
+    if request.tier not in TIER_MODELS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid tier '{request.tier}'. Valid tiers are: {list(TIER_MODELS.keys())}"
+        )
+        
+    models_to_download = (
+        TIER_MODELS[request.tier]
+        if request.tier == "required"
+        else TIER_MODELS[request.tier] + REQUIRED_MODELS
+    )
+    
+    task_id = str(uuid.uuid4())
+    queue = asyncio.Queue()
+
+    async def background_setup():
+        try:
+            total_models = len(models_to_download)
+            for idx, model_key in enumerate(models_to_download):
+                def progress_callback(
+                    percent: float,
+                    downloaded: int,
+                    total: int,
+                    *,
+                    _model_key: str = model_key,
+                    _idx: int = idx,
+                    _total_models: int = total_models,
+                ):
+                    # Send progress update
+                    queue.put_nowait({
+                        "status": "downloading",
+                        "model_key": _model_key,
+                        "model_index": _idx + 1,
+                        "total_models": _total_models,
+                        "percent": percent,
+                        "downloaded": downloaded,
+                        "total": total
+                    })
+                
+                await ensure_model(model_key, progress_callback=progress_callback)
+            
+            queue.put_nowait({"status": "complete"})
+        except Exception as e:
+            logger.error(f"Error during setup download: {e}")
+            queue.put_nowait({"status": "error", "message": str(e)})
+
+    # Start the setup in the background
+    task = asyncio.create_task(background_setup())
+    download_tasks[task_id] = DownloadTaskEntry(queue=queue, task=task)
+
+    return {
+        "success": True, 
+        "task_id": task_id,
+        "message": f"Setup started for tier '{request.tier}'"
+    }
+
+
+@router.post("/download/{model_key}")
+async def start_download_model(model_key: str):
+    """
+    Starts download for a specific model by key. Returns a task_id.
+    """
+    if model_key not in MODEL_REGISTRY:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Model key '{model_key}' not found in registry."
+        )
+
+    task_id = str(uuid.uuid4())
+    queue = asyncio.Queue()
+
+    async def background_download():
+        try:
+            def progress_callback(percent: float, downloaded: int, total: int):
+                queue.put_nowait({
+                    "status": "downloading",
+                    "model_key": model_key,
+                    "percent": percent,
+                    "downloaded": downloaded,
+                    "total": total
+                })
+            
+            await ensure_model(model_key, progress_callback=progress_callback)
+            queue.put_nowait({"status": "complete", "model_key": model_key})
+        except Exception as e:
+            logger.error(f"Error downloading model {model_key}: {e}")
+            queue.put_nowait({"status": "error", "message": str(e)})
+
+    # Start the download in the background
+    task = asyncio.create_task(background_download())
+    download_tasks[task_id] = DownloadTaskEntry(queue=queue, task=task)
+
+    return {
+        "success": True, 
+        "task_id": task_id,
+        "message": f"Download started for {model_key}"
+    }
+
+@router.get("/download/{task_id}/progress")
+async def download_progress(task_id: str):
+    """
+    Streams SSE progress for a given download task_id.
+    """
+    entry = download_tasks.get(task_id)
+    if entry is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task ID not found or already completed."
+        )
+
+    async def event_generator():
+        try:
+            while True:
+                try:
+                    msg = await asyncio.wait_for(entry.queue.get(), timeout=60.0)
+                except asyncio.TimeoutError:
+                    yield "event: heartbeat\ndata: {}\n\n"
+                    continue
+
+                if msg["status"] == "complete":
+                    yield f"data: {json.dumps(msg)}\n\n"
+                    break
+                elif msg["status"] == "error":
+                    yield f"data: {json.dumps(msg)}\n\n"
+                    break
+                else:
+                    yield f"data: {json.dumps(msg)}\n\n"
+        except asyncio.CancelledError:
+            # Client disconnected — cancel the download task too
+            entry.task.cancel()
+            raise  # always re-raise CancelledError
+        finally:
+            # Runs on: normal completion, CancelledError, any other exception
+            download_tasks.pop(task_id, None)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")

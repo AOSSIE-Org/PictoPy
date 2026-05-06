@@ -42,6 +42,8 @@
    npm run setup
    ```
 
+   > The setup script installs the CPU-only `onnxruntime` package for local development. The release workflow swaps in platform-specific GPU providers, and the onboarding recommendation uses hardware detection (rather than ONNX Runtime provider detection).
+
    > **Note:** This step can take a long time depending on your internet connection and system specifications. If the script seems to stop progressing after waiting for more than 10 minutes, press Enter in your terminal window to continue.
 
 7. Start the Backend Server
