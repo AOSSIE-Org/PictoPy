@@ -1,11 +1,13 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { STEPS } from '@/constants/steps';
 
-const STEP_NAMES = Object.values(STEPS);
+export type OnboardingStepName = (typeof STEPS)[keyof typeof STEPS];
+
+const STEP_NAMES = Object.values(STEPS) as OnboardingStepName[];
 
 interface OnboardingState {
   currentStepIndex: number;
-  currentStepName: string;
+  currentStepName: OnboardingStepName;
   stepStatus: boolean[];
   avatar: string | null;
   name: string;
@@ -43,7 +45,7 @@ const onboardingSlice = createSlice({
         );
       }
       state.currentStepIndex = state.stepStatus.findIndex((status) => !status);
-      state.currentStepName = STEP_NAMES[state.currentStepIndex] || '';
+      state.currentStepName = STEP_NAMES[state.currentStepIndex] ?? STEPS.SERVER_CHECK;
     },
     previousStep(state) {
       const lastCompletedIndex = state.stepStatus.lastIndexOf(true);
@@ -51,7 +53,7 @@ const onboardingSlice = createSlice({
         state.stepStatus[lastCompletedIndex] = false;
       }
       state.currentStepIndex = state.stepStatus.findIndex((status) => !status);
-      state.currentStepName = STEP_NAMES[state.currentStepIndex] || '';
+      state.currentStepName = STEP_NAMES[state.currentStepIndex] ?? STEPS.SERVER_CHECK;
     },
   },
 });
