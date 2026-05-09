@@ -46,18 +46,12 @@ This project was announced by [AOSSIE](https://aossie.org/), an umbrella organiz
                     Image Processing
                 </a>
             </li>
-        </ul>
-    </div>
-    <div style="width:25%">
-        <h2>Backend Rust</h2>
-        <ul>
             <li>
                 <a href="./backend/backend_rust/api">
                     API
                 </a>
             </li>
         </ul>
-    </div>
     <div style="width:25%">
         <h2>Frontend</h2>
         <ul>
