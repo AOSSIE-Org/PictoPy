@@ -52,6 +52,7 @@ This project was announced by [AOSSIE](https://aossie.org/), an umbrella organiz
                 </a>
             </li>
         </ul>
+    </div>
     <div style="width:25%">
         <h2>Frontend</h2>
         <ul>
