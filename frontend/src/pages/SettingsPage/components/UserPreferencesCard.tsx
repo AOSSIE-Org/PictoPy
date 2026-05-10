@@ -126,20 +126,20 @@ const UserPreferencesCard: React.FC = () => {
                 ) : null,
               )}
               {loadingTiers && (
-                <DropdownMenuItem disabled>
-                  Loading models...
-                </DropdownMenuItem>
+                <DropdownMenuItem disabled>Loading models...</DropdownMenuItem>
               )}
               {!loadingTiers && tierFetchError && (
                 <DropdownMenuItem disabled>
                   Failed to load models
                 </DropdownMenuItem>
               )}
-              {!loadingTiers && !tierFetchError && installedTiers.length === 0 && (
-                <DropdownMenuItem disabled>
-                  No models installed
-                </DropdownMenuItem>
-              )}
+              {!loadingTiers &&
+                !tierFetchError &&
+                installedTiers.length === 0 && (
+                  <DropdownMenuItem disabled>
+                    No models installed
+                  </DropdownMenuItem>
+                )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

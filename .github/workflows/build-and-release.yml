@@ -34,6 +34,16 @@ jobs:
           cd backend
           pyinstaller PictoPy.spec
 
+      - name: Verify no .onnx artifacts
+        shell: pwsh
+        run: |
+          $onnxFiles = Get-ChildItem -Path "backend/dist/PictoPy_Server" -Recurse -Filter "*.onnx" -File
+          if ($onnxFiles) {
+            Write-Error "Found bundled .onnx artifacts in backend/dist/PictoPy_Server:"
+            $onnxFiles | ForEach-Object { Write-Error $_.FullName }
+            exit 1
+          }
+
       - name: Create ZIP package
         run: |
           cd backend/dist/PictoPy_Server
@@ -69,6 +79,16 @@ jobs:
           cd backend
           pyinstaller PictoPy.spec
 
+      - name: Verify no .onnx artifacts
+        shell: bash
+        run: |
+          onnx_files=$(find backend/dist/PictoPy_Server -type f -name "*.onnx")
+          if [ -n "$onnx_files" ]; then
+            echo "Found bundled .onnx artifacts in backend/dist/PictoPy_Server:"
+            echo "$onnx_files"
+            exit 1
+          fi
+
       - name: Create ZIP package
         run: |
           cd backend/dist/PictoPy_Server
@@ -101,6 +121,16 @@ jobs:
         run: |
           cd backend
           pyinstaller PictoPy.spec
+
+      - name: Verify no .onnx artifacts
+        shell: bash
+        run: |
+          onnx_files=$(find backend/dist/PictoPy_Server -type f -name "*.onnx")
+          if [ -n "$onnx_files" ]; then
+            echo "Found bundled .onnx artifacts in backend/dist/PictoPy_Server:"
+            echo "$onnx_files"
+            exit 1
+          fi
 
       - name: Create ZIP package
         run: |

@@ -185,7 +185,9 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
           }
         } catch (err) {
           console.error('Malformed SSE payload', err);
-          setErrorMsg('Received malformed download progress data. Please try again.');
+          setErrorMsg(
+            'Received malformed download progress data. Please try again.',
+          );
           setViewMode('error');
           source.close();
         }
@@ -229,7 +231,7 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
   return (
     <>
       <Card className="flex max-h-full w-1/2 flex-col gap-2 border p-4">
-        {/* ── Header — identical structure to ThemeSelectionStep ── */}
+        {/* Header */}
         <CardHeader className="p-3">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
@@ -248,7 +250,7 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
         </CardHeader>
 
         <CardContent className="flex-1 space-y-4 p-1 px-2">
-          {/* ── Recommendation view ── */}
+          {/* Recommendation view */}
           {viewMode === 'recommendation' && (
             <>
               {/* Hardware summary pill */}
@@ -329,7 +331,7 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
             </>
           )}
 
-          {/* ── Downloading view ── */}
+          {/* Downloading view */}
           {viewMode === 'downloading' && (
             <div className="flex flex-col items-center justify-center space-y-4 py-6">
               <div className="w-full space-y-2 px-1">
@@ -350,7 +352,7 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
             </div>
           )}
 
-          {/* ── Error view ── */}
+          {/* Error view */}
           {viewMode === 'error' && (
             <div className="flex flex-col items-center justify-center space-y-3 py-6 text-center">
               <div className="bg-destructive/10 rounded-full p-4">
@@ -372,7 +374,7 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
             </div>
           )}
 
-          {/* ── Complete view ── */}
+          {/* Complete view */}
           {viewMode === 'complete' && (
             <div className="flex flex-col items-center justify-center space-y-3 py-6 text-center">
               <div className="rounded-full bg-green-500/10 p-4">
@@ -388,7 +390,7 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
           )}
         </CardContent>
 
-        {/* ── Footer — identical structure to ThemeSelectionStep ── */}
+        {/* Footer */}
         <CardFooter className="flex justify-between p-3">
           <Button
             variant="outline"

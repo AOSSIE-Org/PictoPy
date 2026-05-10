@@ -16,8 +16,6 @@ a = Analysis(
     noarchive=False,
 )
 
-# Filter out models from the build in case any linger in the development directory
-# We ensure the distribution bundle remains lightweight.
 def exclude_models(datas):
     filtered_datas = []
     for data in datas:
