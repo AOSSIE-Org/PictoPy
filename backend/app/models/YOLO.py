@@ -1,7 +1,14 @@
+from __future__ import annotations
+
 import onnxruntime
 import time
 import cv2
 import numpy as np
+from app.models.model_registry import MODEL_REGISTRY, get_model_key_from_path
+from app.models.session_registry import (
+    mark_model_session_active,
+    mark_model_session_inactive,
+)
 from app.utils.YOLO import (
     YOLO_util_xywh2xyxy,
     YOLO_util_draw_detections,
@@ -17,6 +24,8 @@ logger = get_logger(__name__)
 class YOLO:
     def __init__(self, path, conf_threshold=0.7, iou_threshold=0.5):
         self.model_path = path
+        self._model_key = get_model_key_from_path(path)
+        self._session_registered = False
         self.conf_threshold = conf_threshold
         self.iou_threshold = iou_threshold
         self._session = None
@@ -31,7 +40,6 @@ class YOLO:
         with self._lock:
             if self._session is None:
                 import os
-                from app.models.model_registry import MODEL_REGISTRY
 
                 if not os.path.exists(self.model_path):
                     model_key = None
@@ -48,6 +56,9 @@ class YOLO:
                 self._session = onnxruntime.InferenceSession(
                     self.model_path, providers=ONNX_util_get_execution_providers()
                 )
+                if self._model_key is not None and not self._session_registered:
+                    mark_model_session_active(self._model_key)
+                    self._session_registered = True
                 # Initialize model info once session is created
                 self.get_input_details()
                 self.get_output_details()
@@ -61,7 +72,16 @@ class YOLO:
         with self._lock:
             if self._session is not None:
                 self._session = None
+                if self._model_key is not None and self._session_registered:
+                    mark_model_session_inactive(self._model_key)
+                    self._session_registered = False
         logger.info("YOLO model session closed.")
+
+    def __del__(self):
+        try:
+            self.close()
+        except Exception:
+            pass
 
     @log_memory_usage
     def detect_objects(self, image):

@@ -1,7 +1,13 @@
+from __future__ import annotations
+
 import os
 import threading
 import onnxruntime
-from app.models.model_registry import MODEL_REGISTRY
+from app.models.model_registry import MODEL_REGISTRY, get_model_key_from_path
+from app.models.session_registry import (
+    mark_model_session_active,
+    mark_model_session_inactive,
+)
 from app.utils.FaceNet import FaceNet_util_normalize_embedding
 from app.utils.ONNX import ONNX_util_get_execution_providers
 from app.logging.setup_logging import get_logger
@@ -12,14 +18,14 @@ logger = get_logger(__name__)
 class FaceNet:
     def __init__(self, model_path):
         self.model_path = model_path
+        self._model_key = get_model_key_from_path(model_path)
+        self._session_registered = False
         self._session: onnxruntime.InferenceSession | None = None
         self.input_tensor_name: str | None = None
         self.output_tensor_name: str | None = None
         self._lock = threading.Lock()
 
     def get_session(self) -> onnxruntime.InferenceSession:
-        # Fast path: capture reference before returning so close() on another
-        # thread between the check and the return cannot cause a None return.
         session = self._session
         if session is not None:
             return session
@@ -43,11 +49,12 @@ class FaceNet:
                 self._session = onnxruntime.InferenceSession(
                     self.model_path, providers=ONNX_util_get_execution_providers()
                 )
+                if self._model_key is not None and not self._session_registered:
+                    mark_model_session_active(self._model_key)
+                    self._session_registered = True
                 self.input_tensor_name = self._session.get_inputs()[0].name
                 self.output_tensor_name = self._session.get_outputs()[0].name
 
-            # Capture inside the lock before releasing — prevents close() on
-            # another thread from nulling _session between lock release and return.
             session = self._session
 
         return session
@@ -66,4 +73,13 @@ class FaceNet:
                 self._session = None
                 self.input_tensor_name = None
                 self.output_tensor_name = None
+                if self._model_key is not None and self._session_registered:
+                    mark_model_session_inactive(self._model_key)
+                    self._session_registered = False
                 logger.info("FaceNet model session closed.")
+
+    def __del__(self):
+        try:
+            self.close()
+        except Exception:
+            pass

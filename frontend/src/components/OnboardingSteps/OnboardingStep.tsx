@@ -24,9 +24,8 @@ const VISIBLE_STEPS = [
 
 type VisibleStepName = (typeof VISIBLE_STEPS)[number];
 
-const isVisibleStepName = (
-  step: OnboardingStepName,
-): step is VisibleStepName => VISIBLE_STEPS.includes(step as VisibleStepName);
+const isVisibleStepName = (step: OnboardingStepName): step is VisibleStepName =>
+  VISIBLE_STEPS.includes(step as VisibleStepName);
 
 export const OnboardingStep: React.FC<OnboardingStepProps> = ({
   stepIndex,

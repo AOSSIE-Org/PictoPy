@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TypedDict, Literal
 import json
 import os
@@ -105,4 +107,12 @@ def get_model_path(key: str) -> str:
         
     # In development, strictly use the local repo folder
     return os.path.normpath(os.path.join(LOCAL_ONNX_EXPORTS, filename))
+
+
+def get_model_key_from_path(model_path: str) -> str | None:
+    target_filename = os.path.basename(os.path.normpath(model_path)).lower()
+    for key, spec in MODEL_REGISTRY.items():
+        if spec["filename"].lower() == target_filename:
+            return key
+    return None
 

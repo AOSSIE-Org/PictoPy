@@ -89,11 +89,15 @@ export const getInstalledModelTiers = (
   return MODEL_TIERS.filter((tier) => {
     const objectModel = Object.values(models).find(
       (model) =>
-        model.feature === 'object_detection' && model.tier === tier && model.installed,
+        model.feature === 'object_detection' &&
+        model.tier === tier &&
+        model.installed,
     );
     const faceModel = Object.values(models).find(
       (model) =>
-        model.feature === 'face_detection' && model.tier === tier && model.installed,
+        model.feature === 'face_detection' &&
+        model.tier === tier &&
+        model.installed,
     );
 
     return Boolean(objectModel && faceModel);

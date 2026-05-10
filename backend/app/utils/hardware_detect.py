@@ -43,7 +43,6 @@ def detect_hardware_tier() -> str:
     # Check RAM in GB
     ram_gb = psutil.virtual_memory().total / (1024**3)
 
-    # Check for physical GPU hardware directly; this is separate from runtime providers.
     gpu_names = detect_physical_gpu()
 
     if gpu_names or ram_gb >= 8:
