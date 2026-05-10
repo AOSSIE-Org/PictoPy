@@ -13,6 +13,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      - name: Markdown lint
+        uses: DavidAnson/markdownlint-cli2-action@v23
+
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
@@ -87,4 +90,3 @@ jobs:
         run: |
           cd backend
           pytest
-

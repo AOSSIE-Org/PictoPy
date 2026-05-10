@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD033 MD041 -->
 <!-- Don't delete it -->
 <div name="readme-top"></div>
 
@@ -42,16 +43,19 @@ Find out more at [https://pictopy.aossie.org/](https://pictopy.aossie.org/).
 
 ## Features
 
-**AI-powered**
+### AI-powered
+
 * Smart tagging based on detected faces and objects
 * Advanced image analysis with object detection and facial recognition
 * Smart search and retrieval
 
-**Gallery management**
+### Gallery management
+
 * Album management with traditional gallery features
 * Cross-platform compatibility
 
-**Privacy & performance**
+### Privacy & performance
+
 * Privacy-focused design with fully offline functionality
 * Efficient data handling and parallel processing
 
@@ -94,7 +98,7 @@ Find out more at [https://pictopy.aossie.org/](https://pictopy.aossie.org/).
 
 ## Want to Contribute?
 
-<a href="https://discord.gg/hjUhu33uAn"><img src="https://img.shields.io/discord/1022871757289422898?style=flat&logo=discord&logoColor=white&logoSize=auto&label=Discord&labelColor=5865F2&color=57F287" height="30"></a>
+<a href="https://discord.gg/hjUhu33uAn"><img src="https://img.shields.io/discord/1022871757289422898?style=flat&logo=discord&logoColor=white&logoSize=auto&label=Discord&labelColor=5865F2&color=57F287" alt="Discord" height="30"></a>
 
 1. First, join the **[Discord Server](https://discord.gg/hjUhu33uAn) (Go to Projects->PictoPy)** to chat with everyone.
 2. For detailed setup instructions, coding guidelines, and the contribution process, please check out our [CONTRIBUTING.md](./CONTRIBUTING.md) file.
@@ -102,7 +106,6 @@ Find out more at [https://pictopy.aossie.org/](https://pictopy.aossie.org/).
 Don't forget to star this repository if you find it useful! ⭐
 
 Our Code of Conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
-
 
 ## License
 

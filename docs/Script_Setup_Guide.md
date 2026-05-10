@@ -1,20 +1,20 @@
-## Setting Up using Script
+# Setting Up using Script
 
-### Video Setup Guide:
+## Video Setup Guide
 
 - [Windows](https://youtu.be/nNVAE4or280?si=j_y9Xn8Kra6tPHjw)
 - [Ubuntu (Debian)](https://www.youtube.com/watch?v=a7I0ZRE-SHk)
 
 > Note that the Step No. 8 given below is not mentioned in the video, please follow that step also.
 
-### Prerequisites:
+## Prerequisites
 
 - [NodeJS](https://nodejs.org/en) (LTS Version Recommended)
 - [Git](https://git-scm.com/downloads) version control system
 
-### Steps Performed in the Video:
+## Steps Performed in the Video
 
-1. Fork the PictoPy repository: https://github.com/AOSSIE-Org/PictoPy
+1. Fork the PictoPy repository: <https://github.com/AOSSIE-Org/PictoPy>
 
 2. Open your terminal (or Powershell with administrator privileges on Windows)
 
@@ -46,7 +46,7 @@
 
 7. Start the Backend Server
 
-   #### Windows
+   ### Windows
 
    ```powershell
    cd .\backend
@@ -54,7 +54,7 @@
    fastapi dev --port 52123
    ```
 
-   #### Linux
+   ### Linux
 
    ```bash
    cd ./backend
@@ -66,7 +66,7 @@
 
    Open a new terminal window, navigate to the project directory, and run:
 
-   #### Windows
+   ### Windows (Sync-Microservice)
 
    ```powershell
    cd .\sync-microservice
@@ -74,7 +74,7 @@
    fastapi dev --port 52124
    ```
 
-   #### Linux
+   ### Linux (Sync-Microservice)
 
    ```bash
    cd ./sync-microservice

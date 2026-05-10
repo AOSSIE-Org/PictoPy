@@ -1,0 +1,16 @@
+{
+  "config": {
+    "MD013": false,
+    "MD024": {
+      "siblings_only": true
+    }
+  },
+  "globs": [
+    "**/*.md",
+    "!**/node_modules/**",
+    "!**/target/**",
+    "!**/venv/**",
+    "!**/.venv/**",
+    "!LICENSE.md"
+  ]
+}
