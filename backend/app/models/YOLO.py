@@ -30,6 +30,7 @@ class YOLO:
         self.iou_threshold = iou_threshold
         self._session = None
         import threading
+
         self._lock = threading.Lock()
 
     def get_session(self):
@@ -47,7 +48,9 @@ class YOLO:
                         if spec["filename"] in self.model_path:
                             model_key = key
                             break
-                    model_name = model_key if model_key else os.path.basename(self.model_path)
+                    model_name = (
+                        model_key if model_key else os.path.basename(self.model_path)
+                    )
                     raise RuntimeError(
                         f"Model '{model_name}' is not installed. "
                         "Please install it from Settings → AI Models before using this feature."
@@ -57,7 +60,11 @@ class YOLO:
                     self.model_path, providers=ONNX_util_get_execution_providers()
                 )
                 if self._model_key is not None and not self._session_registered:
-                    mark_model_session_active(self._model_key)
+                    try:
+                        mark_model_session_active(self._model_key)
+                    except RuntimeError:
+                        self._session = None
+                        raise
                     self._session_registered = True
                 # Initialize model info once session is created
                 self.get_input_details()
@@ -95,9 +102,7 @@ class YOLO:
         start = time.perf_counter()
         if session is None:
             session = self.get_session()
-        outputs = session.run(
-            self.output_names, {self.input_names[0]: input_tensor}
-        )
+        outputs = session.run(self.output_names, {self.input_names[0]: input_tensor})
         logger.debug("Inference completed in %.4fs", time.perf_counter() - start)
         return outputs
 
