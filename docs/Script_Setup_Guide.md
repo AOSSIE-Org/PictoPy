@@ -5,7 +5,7 @@
 - [Windows](https://youtu.be/nNVAE4or280?si=j_y9Xn8Kra6tPHjw)
 - [Ubuntu (Debian)](https://www.youtube.com/watch?v=a7I0ZRE-SHk)
 
-> Note that Step No. 8 given below is not mentioned in the video, please follow that step also.
+> Note: Step 8 below is not mentioned in the video; please follow it as well.
 
 ## Prerequisites
 
