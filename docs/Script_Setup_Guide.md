@@ -5,7 +5,7 @@
 - [Windows](https://youtu.be/nNVAE4or280?si=j_y9Xn8Kra6tPHjw)
 - [Ubuntu (Debian)](https://www.youtube.com/watch?v=a7I0ZRE-SHk)
 
-> Note that the Step No. 8 given below is not mentioned in the video, please follow that step also.
+> Note that Step No. 8 given below is not mentioned in the video, please follow that step also.
 
 ## Prerequisites
 
@@ -36,15 +36,17 @@
    git remote add upstream https://github.com/AOSSIE-Org/PictoPy
    ```
 
-6. Run the Automatic Setup
+6. Run the Automatic Setup:
 
    ```bash
    npm run setup
    ```
 
+   > The setup script installs the CPU-only `onnxruntime` package for local development. The release workflow swaps in platform-specific GPU providers, and the onboarding recommendation uses hardware detection rather than ONNX Runtime provider detection.
+   >
    > **Note:** This step can take a long time depending on your internet connection and system specifications. If the script seems to stop progressing after waiting for more than 10 minutes, press Enter in your terminal window to continue.
 
-7. Start the Backend Server
+7. Start the Backend Server:
 
    ### Windows
 
@@ -62,7 +64,7 @@
    fastapi dev --port 52123
    ```
 
-8. Start the Sync-Microservice
+8. Start the Sync-Microservice:
 
    Open a new terminal window, navigate to the project directory, and run:
 
@@ -82,7 +84,7 @@
    fastapi dev --port 52124
    ```
 
-9. Start the Frontend Desktop App
+9. Start the Frontend Desktop App:
 
    Open a new terminal window, navigate to the project directory, and run:
 
@@ -91,7 +93,7 @@
    npm run tauri dev
    ```
 
-10. Pre-commit Setup
+10. Pre-commit Setup:
 
     Before running the `git commit` command, ensure you have the following Python packages installed globally:
 
