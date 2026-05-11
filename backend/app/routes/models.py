@@ -2,14 +2,17 @@ import os
 import json
 import uuid
 import asyncio
-from typing import Dict, Optional
+from typing import Dict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 from app.models.model_registry import MODEL_REGISTRY, TIER_MODELS, get_model_path
-from app.models.session_registry import get_active_session_count
+from app.models.session_registry import (
+    try_mark_model_for_deletion,
+    release_model_deletion_mark,
+)
 from app.utils.hardware_detect import get_hardware_info
 from app.utils.model_downloader import ensure_model
 import logging
@@ -113,8 +116,10 @@ async def delete_model(model_key: str):
         )
 
     path = get_model_path(model_key)
-    active_session_count = get_active_session_count(model_key)
-    if active_session_count > 0:
+
+    # Check no sessions are active and reserve the model for deletion.
+    active_session_count = try_mark_model_for_deletion(model_key)
+    if active_session_count is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
@@ -123,21 +128,27 @@ async def delete_model(model_key: str):
             ),
         )
 
-    if os.path.exists(path):
-        try:
-            await asyncio.to_thread(os.remove, path)
+    try:
+        if os.path.exists(path):
+            try:
+                await asyncio.to_thread(os.remove, path)
+                return {
+                    "success": True,
+                    "message": f"Model {model_key} deleted successfully.",
+                }
+            except Exception as e:
+                logger.error(f"Failed to delete model {model_key}: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to delete model: {str(e)}",
+                )
+        else:
             return {
                 "success": True,
-                "message": f"Model {model_key} deleted successfully.",
+                "message": f"Model {model_key} already not present.",
             }
-        except Exception as e:
-            logger.error(f"Failed to delete model {model_key}: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to delete model: {str(e)}",
-            )
-    else:
-        return {"success": True, "message": f"Model {model_key} already not present."}
+    finally:
+        release_model_deletion_mark(model_key)
 
 
 @router.post("/setup")

@@ -25,10 +25,17 @@ class FaceNet:
         self.output_tensor_name: str | None = None
         self._lock = threading.Lock()
 
-    def get_session(self) -> onnxruntime.InferenceSession:
+    def get_session(self) -> tuple[onnxruntime.InferenceSession, str, str]:
         session = self._session
         if session is not None:
-            return session
+            input_name = self.input_tensor_name
+            output_name = self.output_tensor_name
+            if input_name is None or output_name is None:
+                raise RuntimeError(
+                    f"Model session for '{self._model_key}' was closed while "
+                    "get_session() was executing."
+                )
+            return session, input_name, output_name
 
         with self._lock:
             if self._session is None:
@@ -50,19 +57,31 @@ class FaceNet:
                     self.model_path, providers=ONNX_util_get_execution_providers()
                 )
                 if self._model_key is not None and not self._session_registered:
-                    mark_model_session_active(self._model_key)
+                    try:
+                        mark_model_session_active(self._model_key)
+                    except RuntimeError:
+                        self._session = None
+                        raise
                     self._session_registered = True
                 self.input_tensor_name = self._session.get_inputs()[0].name
                 self.output_tensor_name = self._session.get_outputs()[0].name
 
             session = self._session
+            input_name = self.input_tensor_name
+            output_name = self.output_tensor_name
 
-        return session
+            if session is None or input_name is None or output_name is None:
+                raise RuntimeError(
+                    f"Model session for '{self._model_key}' was closed while "
+                    "get_session() was executing."
+                )
+
+        return session, input_name, output_name
 
     def get_embedding(self, preprocessed_image):
-        session = self.get_session()
+        session, input_tensor_name, output_tensor_name = self.get_session()
         result = session.run(
-            [self.output_tensor_name], {self.input_tensor_name: preprocessed_image}
+            [output_tensor_name], {input_tensor_name: preprocessed_image}
         )[0]
         embedding = result[0]
         return FaceNet_util_normalize_embedding(embedding)

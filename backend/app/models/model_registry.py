@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TypedDict, Literal
-import json
 import os
 import sys
 from platformdirs import user_data_dir
@@ -79,10 +78,10 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
 }
 
 TIER_MODELS: dict[str, list[str]] = {
-    "nano":   ["yolo_nano", "yolo_nano_face"],
-    "small":  ["yolo_small", "yolo_small_face"],
+    "nano": ["yolo_nano", "yolo_nano_face"],
+    "small": ["yolo_small", "yolo_small_face"],
     "medium": ["yolo_medium", "yolo_medium_face"],
-    "required": ["facenet"], # Required model; not user-selectable
+    "required": ["facenet"],  # Required model; not user-selectable
 }
 
 USER_DATA_MODELS = os.path.join(user_data_dir("PictoPy"), "models")
@@ -91,7 +90,7 @@ LOCAL_ONNX_EXPORTS = os.path.join(os.path.dirname(__file__), "ONNX_Exports")
 
 def ensure_model_exports_directory() -> None:
     """Create the active model exports directory if it does not exist."""
-    if getattr(sys, 'frozen', False):
+    if getattr(sys, "frozen", False):
         os.makedirs(USER_DATA_MODELS, exist_ok=True)
     else:
         os.makedirs(LOCAL_ONNX_EXPORTS, exist_ok=True)
@@ -100,11 +99,11 @@ def ensure_model_exports_directory() -> None:
 def get_model_path(key: str) -> str:
     filename = MODEL_REGISTRY[key]["filename"]
     ensure_model_exports_directory()
-    
+
     # In production (compiled by PyInstaller), use the platform-appropriate user data directory.
-    if getattr(sys, 'frozen', False):
+    if getattr(sys, "frozen", False):
         return os.path.normpath(os.path.join(USER_DATA_MODELS, filename))
-        
+
     # In development, strictly use the local repo folder
     return os.path.normpath(os.path.join(LOCAL_ONNX_EXPORTS, filename))
 
@@ -115,4 +114,3 @@ def get_model_key_from_path(model_path: str) -> str | None:
         if spec["filename"].lower() == target_filename:
             return key
     return None
-
