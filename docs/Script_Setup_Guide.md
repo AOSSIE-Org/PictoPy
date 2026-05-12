@@ -1,20 +1,20 @@
 ## Setting Up using Script
 
-### Video Setup Guide:
+### Video Setup Guide
 
 - [Windows](https://youtu.be/nNVAE4or280?si=j_y9Xn8Kra6tPHjw)
 - [Ubuntu (Debian)](https://www.youtube.com/watch?v=a7I0ZRE-SHk)
 
 > Note that the Step No. 8 given below is not mentioned in the video, please follow that step also.
 
-### Prerequisites:
+### Prerequisites
 
 - [NodeJS](https://nodejs.org/en) (LTS Version Recommended)
 - [Git](https://git-scm.com/downloads) version control system
 
-### Steps Performed in the Video:
+### Steps Performed in the Video
 
-1. Fork the PictoPy repository: https://github.com/AOSSIE-Org/PictoPy
+1. Fork the PictoPy repository: <https://github.com/AOSSIE-Org/PictoPy>
 
 2. Open your terminal (or Powershell with administrator privileges on Windows)
 
@@ -41,6 +41,8 @@
    ```bash
    npm run setup
    ```
+
+   > The setup script installs the CPU-only `onnxruntime` package for local development. The release workflow swaps in platform-specific GPU providers, and the onboarding recommendation uses hardware detection (rather than ONNX Runtime provider detection).
 
    > **Note:** This step can take a long time depending on your internet connection and system specifications. If the script seems to stop progressing after waiting for more than 10 minutes, press Enter in your terminal window to continue.
 

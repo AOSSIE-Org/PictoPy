@@ -1,8 +1,14 @@
-from platformdirs import user_data_dir
 import os
+import sys
 
-# Model Exports Path
-MODEL_EXPORTS_PATH = "app/models/ONNX_Exports"
+from platformdirs import user_data_dir
+
+if getattr(sys, "frozen", False):
+    MODEL_EXPORTS_PATH = os.path.join(user_data_dir("PictoPy"), "models")
+else:
+    MODEL_EXPORTS_PATH = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), "..", "models", "ONNX_Exports")
+    )
 
 # Microservice URLs
 SYNC_MICROSERVICE_URL = "http://localhost:52124"

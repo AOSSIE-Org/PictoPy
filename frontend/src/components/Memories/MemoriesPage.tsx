@@ -458,6 +458,7 @@ export const MemoriesPage: React.FC = () => {
 
   // Calculate counts (only memories with 2+ images)
   const totalCount = memoriesWithMultipleImages(allMemories).length;
+<<<<<<< HEAD
   const locationCount = memoriesWithMultipleImages(allMemories).filter(
     (m) => m.center_lat != null && m.center_lon != null,
   ).length;
@@ -465,6 +466,13 @@ export const MemoriesPage: React.FC = () => {
     (m) => m.center_lat == null || m.center_lon == null,
   ).length;
   const weekendsCount = weeklyMemories.length;
+=======
+  const locationCount =
+    (allMemoriesQuery.data as any)?.total_location ??
+    memoriesWithMultipleImages(allMemories).filter((m) => m.location_name !== null)
+      .length;
+  const dateCount = totalCount - locationCount;
+>>>>>>> main
 
   // Simple filter function
   const applyFilter = (memories: Memory[]) => {
@@ -472,14 +480,10 @@ export const MemoriesPage: React.FC = () => {
     const multiImageMemories = memoriesWithMultipleImages(memories);
 
     if (filter === 'location') {
-      return multiImageMemories.filter(
-        (m) => m.center_lat != null && m.center_lon != null,
-      );
+      return multiImageMemories.filter((m) => m.location_name !== null);
     }
     if (filter === 'date') {
-      return multiImageMemories.filter(
-        (m) => m.center_lat == null || m.center_lon == null,
-      );
+      return multiImageMemories.filter((m) => m.location_name === null);
     }
     return multiImageMemories; // 'all' and 'weekends' don't filter regular memories
   };
@@ -527,8 +531,13 @@ export const MemoriesPage: React.FC = () => {
               <button
                 onClick={() => setFilter('all')}
                 className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${filter === 'all'
+<<<<<<< HEAD
                   ? 'bg-foreground text-background'
                   : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+=======
+                    ? 'bg-foreground text-background'
+                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+>>>>>>> main
                   }`}
               >
                 All ({totalCount})
@@ -536,8 +545,13 @@ export const MemoriesPage: React.FC = () => {
               <button
                 onClick={() => setFilter('location')}
                 className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${filter === 'location'
+<<<<<<< HEAD
                   ? 'bg-foreground text-background'
                   : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+=======
+                    ? 'bg-foreground text-background'
+                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+>>>>>>> main
                   }`}
               >
                 Location ({locationCount})
@@ -545,8 +559,13 @@ export const MemoriesPage: React.FC = () => {
               <button
                 onClick={() => setFilter('date')}
                 className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${filter === 'date'
+<<<<<<< HEAD
                   ? 'bg-foreground text-background'
                   : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+=======
+                    ? 'bg-foreground text-background'
+                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+>>>>>>> main
                   }`}
               >
                 Date ({dateCount})

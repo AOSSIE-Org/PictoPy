@@ -103,6 +103,14 @@ def find_nearest_city(
 
     return nearest_city
 
+# function to count total memories which has location
+# this can also be done in tsx.
+def find_total_location_memories(data:list) -> int:
+    tlm = 0 # total location memories
+    for memory in data:
+        if memory["location_name"] != None:
+            tlm +=1
+    return tlm 
 
 class MemoryClustering:
     """
@@ -385,7 +393,7 @@ class MemoryClustering:
                     title = date_obj.strftime("%B %Y")
                 else:
                     title = "Undated Photos"
-                location_name = ""
+                location_name = None
                 center_lat = 0
                 center_lon = 0
 

@@ -1,10 +1,10 @@
-# 🌟 Contributing to PictoPy
+# Contributing to PictoPy
 
 Hi there! Thank you for considering contributing to **PictoPy** – we’re excited to collaborate with you. Whether you're fixing a bug, improving documentation, or suggesting a new feature — you're welcome here!
 
 NOTE: Please do not open a PR for the issue which is not yet reviewed and labelled by the maintainer. Wait for the maintainer to give a green light.
 
-# 🛠 Setting Up the Project
+# Setting Up the Project
 
 ## Setup
 

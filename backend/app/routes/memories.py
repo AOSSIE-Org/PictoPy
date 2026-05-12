@@ -25,7 +25,11 @@ from app.database.images import (
     db_get_images_by_date_range,
     db_get_images_by_year_month,
 )
+<<<<<<< HEAD
 from app.utils.memory_clustering import MemoryClustering, generate_clusters_for_weekends
+=======
+from app.utils.memory_clustering import MemoryClustering, find_total_location_memories
+>>>>>>> main
 from app.logging.setup_logging import get_logger
 
 # Initialize router and logger
@@ -168,7 +172,7 @@ def generate_memories(
         )
 
         memories = clustering.cluster_memories(images)
-
+        tlm = find_total_location_memories(memories)
         # Calculate breakdown
         location_count = sum(1 for m in memories if m.get("type") == "location")
         date_count = sum(1 for m in memories if m.get("type") == "date")
@@ -183,6 +187,7 @@ def generate_memories(
                 "image_count": len(images),
                 "memories": memories,
             },
+            "total_location":tlm,
             "success": True,
             "message": f"{len(memories)} memories ({location_count} location, {date_count} date)",
         }
