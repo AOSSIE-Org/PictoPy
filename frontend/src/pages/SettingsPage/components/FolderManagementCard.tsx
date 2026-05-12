@@ -39,9 +39,7 @@ const FolderManagementCard: React.FC = () => {
     if (!status) return true;
 
     const timestamp = folderStatusTimestamps[folderId];
-    if (!timestamp) return true;
-
-    const timeSinceUpdate = Date.now() - timestamp;
+    const timeSinceUpdate = timestamp ? Date.now() - timestamp : Infinity;
 
     if (status.total_images === 0 && timeSinceUpdate < 3000) {
       return true;
@@ -70,7 +68,7 @@ const FolderManagementCard: React.FC = () => {
 
             return (
               <div
-                key={index}
+                key={folder.folder_id || folder.folder_path || index}
                 className="group border-border bg-background/50 relative rounded-lg border p-4 transition-all hover:border-gray-300 hover:shadow-sm dark:hover:border-gray-600"
               >
                 <div className="flex items-center justify-between">
