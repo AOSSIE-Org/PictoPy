@@ -146,9 +146,9 @@ export const MemoriesPage: React.FC = () => {
   const onThisDayImages = (onThisDayQuery.data?.data?.images as any) || [];
   const onThisDayMeta = onThisDayQuery.data?.data
     ? {
-        today: (onThisDayQuery.data.data as any).today,
-        years: (onThisDayQuery.data.data as any).years,
-      }
+      today: (onThisDayQuery.data.data as any).today,
+      years: (onThisDayQuery.data.data as any).years,
+    }
     : null;
 
   // Loading states
@@ -220,12 +220,11 @@ export const MemoriesPage: React.FC = () => {
 
   // Calculate counts (only memories with 2+ images)
   const totalCount = memoriesWithMultipleImages(allMemories).length;
-  const locationCount = memoriesWithMultipleImages(allMemories).filter(
-    (m) => m.center_lat != null && m.center_lon != null,
-  ).length;
-  const dateCount = memoriesWithMultipleImages(allMemories).filter(
-    (m) => m.center_lat == null || m.center_lon == null,
-  ).length;
+  const locationCount =
+    (allMemoriesQuery.data as any)?.total_location ??
+    memoriesWithMultipleImages(allMemories).filter((m) => m.location_name !== null)
+      .length;
+  const dateCount = totalCount - locationCount;
 
   // Simple filter function
   const applyFilter = (memories: Memory[]) => {
@@ -233,14 +232,10 @@ export const MemoriesPage: React.FC = () => {
     const multiImageMemories = memoriesWithMultipleImages(memories);
 
     if (filter === 'location') {
-      return multiImageMemories.filter(
-        (m) => m.center_lat != null && m.center_lon != null,
-      );
+      return multiImageMemories.filter((m) => m.location_name !== null);
     }
     if (filter === 'date') {
-      return multiImageMemories.filter(
-        (m) => m.center_lat == null || m.center_lon == null,
-      );
+      return multiImageMemories.filter((m) => m.location_name === null);
     }
     return multiImageMemories; // 'all'
   };
@@ -275,31 +270,28 @@ export const MemoriesPage: React.FC = () => {
             <div className="mb-6 flex justify-start gap-2">
               <button
                 onClick={() => setFilter('all')}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  filter === 'all'
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${filter === 'all'
                     ? 'bg-foreground text-background'
                     : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                }`}
+                  }`}
               >
                 All ({totalCount})
               </button>
               <button
                 onClick={() => setFilter('location')}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  filter === 'location'
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${filter === 'location'
                     ? 'bg-foreground text-background'
                     : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                }`}
+                  }`}
               >
                 Location ({locationCount})
               </button>
               <button
                 onClick={() => setFilter('date')}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  filter === 'date'
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${filter === 'date'
                     ? 'bg-foreground text-background'
                     : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                }`}
+                  }`}
               >
                 Date ({dateCount})
               </button>
