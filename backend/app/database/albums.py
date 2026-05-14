@@ -190,15 +190,11 @@ def db_add_images_to_album(album_id: str, image_ids: list[str]):
     with get_db_connection() as conn:
         cursor = conn.cursor()
 
-        # Efficient single query with parameterized IN clause
-        if sanitized_ids:
-            # Generate placeholders safely based on list length
-            placeholders = ",".join(["?"] * len(sanitized_ids))
-            query = f"SELECT id FROM images WHERE id IN ({placeholders})"
-            cursor.execute(query, sanitized_ids)  # Pass string IDs directly
-            valid_images = [row[0] for row in cursor.fetchall()]
-        else:
-            valid_images = []
+        # Generate placeholders safely based on list length
+        placeholders = ",".join(["?"] * len(sanitized_ids))
+        query = f"SELECT id FROM images WHERE id IN ({placeholders})"
+        cursor.execute(query, sanitized_ids)  # Pass string IDs directly
+        valid_images = [row[0] for row in cursor.fetchall()]
 
         if not valid_images:
             raise ValueError("None of the provided image IDs exist in the database.")
@@ -210,7 +206,7 @@ def db_add_images_to_album(album_id: str, image_ids: list[str]):
         )
         conn.commit()
 
-        
+
 def db_remove_image_from_album(album_id: str, image_id: str):
     with get_db_connection() as conn:
         cursor = conn.cursor()
