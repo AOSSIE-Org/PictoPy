@@ -357,13 +357,14 @@ jobs:
 
       - uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY}}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        #   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY}}
+        #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           projectPath: ./frontend
           tagName: ${{ github.event.release.tag_name || github.event.inputs.tag }}
-          includeUpdaterJson: true
+          releaseName: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+          includeUpdaterJson: false
           releaseId: ${{ github.event.release.id || '' }}
           releaseDraft: false
           prerelease: false
