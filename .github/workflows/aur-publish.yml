@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
+permissions: 
+  contents: write
 
 jobs:
   update_version:
@@ -26,7 +28,7 @@ jobs:
         run: |
           cd publishing
 
-          LATEST_VERSION=$(curl -s https://api.github.com/repos/AOSSIE-Org/PictoPy/releases/latest \
+          LATEST_VERSION=$(curl -fsSL https://api.github.com/repos/AOSSIE-Org/PictoPy/releases/latest \
             | grep -oP '(?<="tag_name": "v)[^"]+')
           echo "Latest version: $LATEST_VERSION"
 
@@ -47,7 +49,7 @@ jobs:
         run: |
           VERSION=${{ steps.check_version.outputs.latest_version }}
           DEB_URL="https://github.com/AOSSIE-Org/PictoPy/releases/download/v${VERSION}/PictoPy_${VERSION}_amd64.deb"
-          SHA=$(curl -sL "$DEB_URL" | sha256sum | cut -d' ' -f1)
+          SHA=$(curl -fsSLL "$DEB_URL" | sha256sum | cut -d' ' -f1)
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
       - name: Update PKGBUILD
@@ -86,7 +88,7 @@ jobs:
           name: PKGBUILD
 
       - name: Publish to AUR
-        uses: ulises-jeremias/github-actions-aur-publish@v1
+        uses: KSXGitHub/github-actions-deploy-aur@v4.1.3
         with:
           pkgname: pictopy-bin
           pkgbuild: ./PKGBUILD
@@ -94,5 +96,6 @@ jobs:
           commit_email: ${{ secrets.AUR_EMAIL }}
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
           commit_message: v${{ needs.update_version.outputs.latest_version }}
-          ssh_keyscan_types: rsa,ed25519
-          update_pkgver: false
+          ssh_keyscan_types: rsa,ecdsa,ed25519
+          updpkgsums: false
+          allow_empty_commits: false

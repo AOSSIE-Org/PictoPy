@@ -15,5 +15,5 @@ sha256sums=('SKIP')
 package() {
     cd "$srcdir"
     ar x "${pkgname}-${pkgver}.deb"
-    tar xf data.tar.gz -C "$pkgdir"
+    tar xf data.tar.* -C "$pkgdir"
 }
