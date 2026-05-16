@@ -1,0 +1,145 @@
+# Enables IDE autocompletion for this config file
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+# Language for CodeRabbit's review comments
+language: en
+
+# Enable experimental features
+early_access: true
+
+chat:
+    # CodeRabbit will automatically respond to @coderabbitai mentions in PR comments
+    auto_reply: true
+
+issue_enrichment:
+    labeling:
+        auto_apply_labels: true
+        labeling_instructions:
+            - label: bug
+              instructions: Issues reporting bugs, errors, crashes, incorrect behavior, or unexpected results.
+            - label: enhancement
+              instructions: Feature requests, improvements to existing functionality, performance optimizations, refactoring suggestions, UI/UX enhancements.
+            - label: documentation
+              instructions: Documentation updates, additions, corrections, or clarifications needed.
+    planning:
+        enabled: true
+        auto_planning:
+            enabled: true
+            labels:
+                - 'plan-me'
+                - 'feature'
+                - '!no-plan'
+
+reviews:
+    profile: chill # Options: chill, assertive
+
+    auto_review:
+        enabled: true
+        ignore_title_keywords:
+            - 'WIP'
+        drafts: false
+        base_branches:
+            - develop
+
+    high_level_summary: true
+    sequence_diagrams: true
+    poem: true
+    review_status: true
+    collapse_walkthrough: false
+    changed_files_summary: true
+    request_changes_workflow: true
+
+    pre_merge_checks:
+        description:
+            mode: warning
+        docstrings:
+            mode: off
+
+    path_filters:
+        - '!**/node_modules/**'
+        - '!**/dist/**'
+        - '!**/build/**'
+        - '!**/__pycache__/**'
+        - '!**/.venv/**'
+
+    tools:
+        ruff:
+            enabled: true
+        markdownlint:
+            enabled: true
+        github-checks:
+            enabled: true
+            timeout_ms: 90000
+        eslint:
+            enabled: true
+        biome:
+            enabled: true
+        yamllint:
+            enabled: true
+        gitleaks:
+            enabled: true
+        clippy:
+            enabled: true
+
+    labeling_instructions:
+        - label: Python
+          instructions: Apply when the PR/MR contains changes to python source-code
+        - label: TypeScript/JavaScript
+          instructions: Apply when the PR/MR contains changes to javascript or typescript source-code
+        - label: Rust
+          instructions: Apply when the PR/MR contains changes to Rust source-code (Tauri backend)
+        - label: Documentation
+          instructions: Apply whenever project documentation is updated by the PR/MR
+        - label: Linter
+          instructions: Apply when the purpose of the PR/MR is related to fixing the feedback from a linter
+
+    path_instructions:
+        # Catch-all general instructions that apply to all files
+        - path: '**/*'
+          instructions: |
+              - Verify that documentation and comments are free of spelling mistakes
+              - Ensure that test code is automated, comprehensive, and follows testing best practices
+              - Verify that all critical functionality is covered by tests
+              - Confirm that the code meets the project's requirements and objectives
+              - Point out redundant obvious comments that do not add clarity to the code
+              - Look for code duplication
+              - Suggest code completions when seeing a TODO or FIXME comment
+
+        # TypeScript/JavaScript/React files (Vite Frontend)
+        - path: '**/*.{ts,tsx,js,jsx}'
+          instructions: |
+              TypeScript & React:
+              - Avoid 'any', use explicit types.
+              - The code adheres to best practices associated with React and Vite.
+              - Ensure responsive design principles are followed.
+              - Check for proper React hook dependencies and prevent unnecessary re-renders.
+
+        # Rust files (Tauri Backend)
+        - path: '**/src-tauri/**/*.rs'
+          instructions: |
+              Rust (Tauri):
+              - Ensure idiomatic Rust code is written.
+              - Watch out for unnecessary clone() calls or inefficient memory usage.
+              - Ensure errors are handled properly using Result rather than unwrap() or expect().
+              - Ensure Tauri commands are safely exposed to the frontend.
+
+        # Python files (Backend Microservices)
+        - path: '**/*.py'
+          instructions: |
+              Python:
+              - Check for PEP 8 violations and Python best practices.
+              - Check for performance considerations in asynchronous code.
+              - Ensure proper use of type hints.
+
+        # CSS/SCSS files
+        - path: '**/*.{css,scss}'
+          instructions: |
+              CSS & Styling:
+              - The code adheres to best practices associated with CSS.
+              - Look for responsive design issues.
+
+        # Asset files
+        - path: '**/assets/**/*'
+          instructions: |
+              Assets:
+              - Check image optimization and proper formats (WebP, SVG).
