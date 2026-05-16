@@ -1,0 +1,98 @@
+name: Publish to AUR - pictopy-bin
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  update_version:
+    runs-on: ubuntu-latest
+    outputs:
+      need_update: ${{ steps.check_version.outputs.need_update }}
+      latest_version: ${{ steps.check_version.outputs.latest_version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "${GITHUB_ACTOR}"
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+
+      - name: Check if update is needed
+        id: check_version
+        run: |
+          cd publishing
+
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/AOSSIE-Org/PictoPy/releases/latest \
+            | grep -oP '(?<="tag_name": "v)[^"]+')
+          echo "Latest version: $LATEST_VERSION"
+
+          CURRENT_VERSION=$(grep -oP '(?<=pkgver=)[0-9.]+' PKGBUILD)
+          echo "Current version: $CURRENT_VERSION"
+
+          if [ "$LATEST_VERSION" != "$CURRENT_VERSION" ]; then
+            echo "need_update=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "need_update=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "latest_version=$LATEST_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Compute sha256 of new deb
+        if: steps.check_version.outputs.need_update == 'true'
+        id: sha
+        run: |
+          VERSION=${{ steps.check_version.outputs.latest_version }}
+          DEB_URL="https://github.com/AOSSIE-Org/PictoPy/releases/download/v${VERSION}/PictoPy_${VERSION}_amd64.deb"
+          SHA=$(curl -sL "$DEB_URL" | sha256sum | cut -d' ' -f1)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Update PKGBUILD
+        if: steps.check_version.outputs.need_update == 'true'
+        run: |
+          VERSION=${{ steps.check_version.outputs.latest_version }}
+          SHA=${{ steps.sha.outputs.sha }}
+
+          cd publishing
+          sed -i "s/^pkgver=.*/pkgver=$VERSION/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          sed -i "s/sha256sums=.*/sha256sums=('$SHA')/" PKGBUILD
+
+          git add PKGBUILD
+          git commit -m "upgpkg: pictopy-bin $VERSION"
+          git push
+
+      - name: Upload artifacts for publish job
+        if: steps.check_version.outputs.need_update == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PKGBUILD
+          path: |
+            publishing/PKGBUILD
+            publishing/pictopy-bin.install
+
+  publish_aur:
+    runs-on: ubuntu-latest
+    needs: update_version
+    if: needs.update_version.outputs.need_update == 'true'
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: PKGBUILD
+
+      - name: Publish to AUR
+        uses: ulises-jeremias/github-actions-aur-publish@v1
+        with:
+          pkgname: pictopy-bin
+          pkgbuild: ./PKGBUILD
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: v${{ needs.update_version.outputs.latest_version }}
+          ssh_keyscan_types: rsa,ed25519
+          update_pkgver: false
