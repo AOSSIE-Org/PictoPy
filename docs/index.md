@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD033 -->
 # PictoPy
 
 PictoPy is a modern desktop app designed to transform the handling of digital photos. It facilitates efficient gallery management with a robust focus on privacy, offering smart tagging capabilities for photos based on objects, faces, or scenes.
@@ -24,36 +25,31 @@ This project was announced by [AOSSIE](https://aossie.org/), an umbrella organiz
         </ul>
     </div>
     <div style="width:25%">
-        <h2>Backend Python</h2>
+        <h2>Backend</h2>
         <ul>
             <li>
+                <a href="./backend/backend_python/api">
+                    Python Backend API
+                </a>
+            </li>
+            <li>
                 <a href="./backend/backend_python/database">
-                    Database
+                    Python Backend Database
                 </a>
             </li>
             <li>
                 <a href="./backend/backend_python/directory-structure">
-                    Directory Structure
-                </a>
-            </li>
-            <li>
-                <a href="./backend/backend_python/api">
-                    API
+                    Python Backend Directory Structure
                 </a>
             </li>
             <li>
                 <a href="./backend/backend_python/image-processing">
-                    Image Processing
+                    Python Backend Image Processing
                 </a>
             </li>
-        </ul>
-    </div>
-    <div style="width:25%">
-        <h2>Backend Rust</h2>
-        <ul>
             <li>
                 <a href="./backend/backend_rust/api">
-                    API
+                    Rust Backend API
                 </a>
             </li>
         </ul>

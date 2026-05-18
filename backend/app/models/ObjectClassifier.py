@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import cv2
 from app.models.YOLO import YOLO
 from app.utils.YOLO import YOLO_util_get_model_path

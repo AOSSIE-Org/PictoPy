@@ -1299,6 +1299,460 @@
           }
         }
       }
+    },
+    "/api/memories/generate": {
+      "post": {
+        "tags": [
+          "memories"
+        ],
+        "summary": "Generate Memories",
+        "description": "SIMPLIFIED: Generate memories from ALL images.\n- GPS images \u2192 location-based memories\n- Non-GPS images \u2192 monthly date-based memories\n\nReturns simple breakdown: {location_count, date_count, total}",
+        "operationId": "generate_memories_api_memories_generate_post",
+        "parameters": [
+          {
+            "name": "location_radius_km",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 100,
+              "minimum": 0.1,
+              "description": "Location clustering radius in km",
+              "default": 5.0,
+              "title": "Location Radius Km"
+            },
+            "description": "Location clustering radius in km"
+          },
+          {
+            "name": "date_tolerance_days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 30,
+              "minimum": 1,
+              "description": "Date tolerance in days",
+              "default": 3,
+              "title": "Date Tolerance Days"
+            },
+            "description": "Date tolerance in days"
+          },
+          {
+            "name": "min_images",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10,
+              "minimum": 1,
+              "description": "Minimum images per memory",
+              "default": 2,
+              "title": "Min Images"
+            },
+            "description": "Minimum images per memory"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/memories/timeline": {
+      "get": {
+        "tags": [
+          "memories"
+        ],
+        "summary": "Get Timeline",
+        "description": "Get memories from the past N days as a timeline.\n\nThis endpoint:\n1. Calculates date range (today - N days to today)\n2. Fetches images within that date range\n3. Clusters them into memories\n4. Returns timeline of memories\n\nArgs:\n    days: Number of days to look back (default: 365 = 1 year)\n    location_radius_km: Location clustering radius (default: 5km)\n    date_tolerance_days: Date tolerance for temporal clustering (default: 3)\n\nReturns:\n    TimelineResponse with memories ordered by date\n\nRaises:\n    HTTPException: If database query fails",
+        "operationId": "get_timeline_api_memories_timeline_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 3650,
+              "minimum": 1,
+              "description": "Number of days to look back",
+              "default": 365,
+              "title": "Days"
+            },
+            "description": "Number of days to look back"
+          },
+          {
+            "name": "location_radius_km",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 100,
+              "minimum": 0.1,
+              "description": "Location clustering radius in km",
+              "default": 5.0,
+              "title": "Location Radius Km"
+            },
+            "description": "Location clustering radius in km"
+          },
+          {
+            "name": "date_tolerance_days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 30,
+              "minimum": 1,
+              "description": "Date tolerance in days",
+              "default": 3,
+              "title": "Date Tolerance Days"
+            },
+            "description": "Date tolerance in days"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/memories/on-this-day": {
+      "get": {
+        "tags": [
+          "memories"
+        ],
+        "summary": "Get On This Day",
+        "description": "Get photos taken on this date in previous years.\n\nThis endpoint:\n1. Gets current month and day\n2. Searches for images from this month-day in all previous years\n3. Groups by year\n4. Returns images sorted by year (most recent first)\n\nReturns:\n    OnThisDayResponse with images from this date in previous years\n\nRaises:\n    HTTPException: If database query fails",
+        "operationId": "get_on_this_day_api_memories_on_this_day_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/memories/locations": {
+      "get": {
+        "tags": [
+          "memories"
+        ],
+        "summary": "Get Locations",
+        "description": "Get all unique locations where photos were taken.\n\nThis endpoint:\n1. Fetches all images with GPS coordinates\n2. Clusters them by location\n3. Returns location clusters with photo counts\n4. Includes sample images for each location\n\nArgs:\n    location_radius_km: Location clustering radius (default: 5km)\n    max_sample_images: Maximum sample images per location (default: 5)\n\nReturns:\n    LocationsResponse with list of location clusters\n\nRaises:\n    HTTPException: If database query fails",
+        "operationId": "get_locations_api_memories_locations_get",
+        "parameters": [
+          {
+            "name": "location_radius_km",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 100,
+              "minimum": 0.1,
+              "description": "Location clustering radius in km",
+              "default": 5.0,
+              "title": "Location Radius Km"
+            },
+            "description": "Location clustering radius in km"
+          },
+          {
+            "name": "max_sample_images",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "description": "Max sample images per location",
+              "default": 5,
+              "title": "Max Sample Images"
+            },
+            "description": "Max sample images per location"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shutdown": {
+      "post": {
+        "tags": [
+          "Shutdown",
+          "Shutdown"
+        ],
+        "summary": "Shutdown",
+        "description": "Gracefully shutdown the PictoPy backend.\n\nThis endpoint schedules backend server termination after response is sent.\nThe frontend is responsible for shutting down the sync service separately.\n\nReturns:\n    ShutdownResponse with status and message",
+        "operationId": "shutdown_shutdown_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShutdownResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/models/status": {
+      "get": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Get Model Status",
+        "description": "Returns the installation status of all models in the registry.",
+        "operationId": "get_model_status_models_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/models/hardware": {
+      "get": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Get Hardware Recommendation",
+        "description": "Returns hardware specs and the recommended model tier.",
+        "operationId": "get_hardware_recommendation_models_hardware_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/models/{model_key}": {
+      "delete": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Delete Model",
+        "description": "Deletes a specific model from disk.",
+        "operationId": "delete_model_models__model_key__delete",
+        "parameters": [
+          {
+            "name": "model_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Model Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/models/setup": {
+      "post": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Setup Models",
+        "description": "Initializes setup by starting downloads for a specific tier + required models.\nReturns a single task_id to track overall progress.",
+        "operationId": "setup_models_models_setup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/models/download/{model_key}": {
+      "post": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Start Download Model",
+        "description": "Starts download for a specific model by key. Returns a task_id.",
+        "operationId": "start_download_model_models_download__model_key__post",
+        "parameters": [
+          {
+            "name": "model_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Model Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/models/download/{task_id}/progress": {
+      "get": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Download Progress",
+        "description": "Streams SSE progress for a given download task_id.",
+        "operationId": "download_progress_models_download__task_id__progress_get",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2420,6 +2874,38 @@
           "success"
         ],
         "title": "RenameClusterResponse"
+      },
+      "SetupRequest": {
+        "properties": {
+          "tier": {
+            "type": "string",
+            "title": "Tier"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tier"
+        ],
+        "title": "SetupRequest"
+      },
+      "ShutdownResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "message"
+        ],
+        "title": "ShutdownResponse",
+        "description": "Response model for shutdown endpoint."
       },
       "SuccessResponse": {
         "properties": {

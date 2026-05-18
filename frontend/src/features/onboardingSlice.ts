@@ -1,11 +1,22 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { STEPS } from '@/constants/steps';
 
-const STEP_NAMES = Object.values(STEPS);
+export type OnboardingStepName = (typeof STEPS)[keyof typeof STEPS];
+
+const STEP_NAMES = Object.values(STEPS) as OnboardingStepName[];
+
+const TERMINAL_STEP_NAME = STEP_NAMES[STEP_NAMES.length - 1];
+
+function syncCurrentStepFromStatus(state: OnboardingState) {
+  const nextIndex = state.stepStatus.findIndex((status) => !status);
+  state.currentStepIndex = nextIndex;
+  state.currentStepName =
+    nextIndex === -1 ? TERMINAL_STEP_NAME : STEP_NAMES[nextIndex];
+}
 
 interface OnboardingState {
   currentStepIndex: number;
-  currentStepName: string;
+  currentStepName: OnboardingStepName;
   stepStatus: boolean[];
   avatar: string | null;
   name: string;
@@ -42,16 +53,14 @@ const onboardingSlice = createSlice({
           `Invalid step index: ${stepIndex}. Valid range: 0-${state.stepStatus.length - 1}`,
         );
       }
-      state.currentStepIndex = state.stepStatus.findIndex((status) => !status);
-      state.currentStepName = STEP_NAMES[state.currentStepIndex] || '';
+      syncCurrentStepFromStatus(state);
     },
     previousStep(state) {
       const lastCompletedIndex = state.stepStatus.lastIndexOf(true);
       if (lastCompletedIndex !== -1) {
         state.stepStatus[lastCompletedIndex] = false;
       }
-      state.currentStepIndex = state.stepStatus.findIndex((status) => !status);
-      state.currentStepName = STEP_NAMES[state.currentStepIndex] || '';
+      syncCurrentStepFromStatus(state);
     },
   },
 });
