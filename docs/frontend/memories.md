@@ -7,9 +7,11 @@ The Memories feature automatically organizes photos into meaningful collections 
 ## Features
 
 ### 1. On This Day
+
 Shows photos from the same date in previous years with a prominent featured card.
 
 **Display:**
+
 - "On this day last year" for photos from exactly 1 year ago
 - "[X] years ago" for photos from multiple years ago
 - Featured hero image with gradient overlay
@@ -18,7 +20,9 @@ Shows photos from the same date in previous years with a prominent featured card
 ### 2. Memory Types
 
 #### Location-Based Memories
+
 Photos grouped by GPS coordinates using DBSCAN clustering:
+
 - **Radius**: 5km (configurable)
 - **Title Format**: "Trip to [City Name], [Year]"
 - **Example**: "Trip to Jaipur, 2025"
@@ -26,7 +30,9 @@ Photos grouped by GPS coordinates using DBSCAN clustering:
 - **Supported Cities**: 30+ major cities worldwide (Indian, European, American, Asian, etc.)
 
 #### Date-Based Memories
+
 Photos grouped by month for images without GPS:
+
 - **Grouping**: Monthly clusters
 - **Title Format**: "[Month] [Year]"
 - **Flexibility**: Works even without location data
@@ -34,16 +40,19 @@ Photos grouped by month for images without GPS:
 ### 3. Memory Sections
 
 #### Recent Memories
+
 - **Timeframe**: Last 30 days
 - **Use Case**: Recent trips and events
 - **API**: `GET /api/memories/timeline?days=30`
 
 #### This Year
+
 - **Timeframe**: Last 365 days (current year)
 - **Use Case**: Year-in-review
 - **API**: `GET /api/memories/timeline?days=365`
 
 #### All Memories
+
 - **Timeframe**: All time
 - **Use Case**: Complete memory collection
 - **API**: `POST /api/memories/generate`
@@ -51,11 +60,13 @@ Photos grouped by month for images without GPS:
 ### 4. Filtering
 
 **Filter Options:**
+
 - **All**: Shows all memories (default)
 - **Location**: Only memories with GPS coordinates
 - **Date**: Only memories without GPS (date-based)
 
 **Implementation:**
+
 ```typescript
 const applyFilter = (memories: Memory[]) => {
   if (filter === 'location') {
@@ -73,6 +84,7 @@ const applyFilter = (memories: Memory[]) => {
 Full-screen modal for viewing memory photos:
 
 **Features:**
+
 - Image grid with hover effects
 - Click to open MediaView
 - Zoom and pan support
@@ -82,6 +94,7 @@ Full-screen modal for viewing memory photos:
 - Thumbnail strip
 
 **Controls:**
+
 - **Zoom**: Mouse wheel or +/- keys
 - **Navigation**: Arrow keys or buttons
 - **Slideshow**: Play/Pause button or Space key
@@ -91,7 +104,9 @@ Full-screen modal for viewing memory photos:
 ## Components
 
 ### MemoriesPage
+
 Main page component with sections:
+
 - Header with refresh button
 - Filter buttons
 - On This Day section
@@ -100,7 +115,9 @@ Main page component with sections:
 - All Memories grid
 
 ### MemoryCard
+
 Individual memory card display:
+
 - Thumbnail image
 - Memory title (formatted based on type)
 - Date range (relative format)
@@ -109,14 +126,18 @@ Individual memory card display:
 - Type badge (Location/Date)
 
 ### FeaturedMemoryCard
+
 Large featured card for "On This Day":
+
 - Hero image with gradient overlay
 - "On this day last year" text
 - Photo count and year info
 - Additional image previews
 
 ### MemoryViewer
+
 Modal for viewing memory album:
+
 - Conditionally rendered to prevent event bubbling
 - Grid layout of all photos
 - MediaView integration for full-screen viewing
@@ -145,6 +166,7 @@ Using Redux Toolkit with slices:
 ```
 
 **Key Actions:**
+
 - `fetchOnThisDay()` - Get photos from same date
 - `fetchRecentMemories(days)` - Get timeline memories
 - `fetchYearMemories(days)` - Get year memories
@@ -154,9 +176,11 @@ Using Redux Toolkit with slices:
 ## API Endpoints
 
 ### GET `/api/memories/on-this-day`
+
 Returns photos from the same date in previous years.
 
 **Response:**
+
 ```json
 {
   "images": [...],
@@ -166,12 +190,15 @@ Returns photos from the same date in previous years.
 ```
 
 ### GET `/api/memories/timeline?days=30`
+
 Returns timeline-based memories for specified days.
 
 **Parameters:**
+
 - `days` (query): Number of days to look back
 
 **Response:**
+
 ```json
 {
   "memories": [...]
@@ -179,14 +206,17 @@ Returns timeline-based memories for specified days.
 ```
 
 ### POST `/api/memories/generate`
+
 Generates all memories with clustering.
 
 **Parameters (query):**
+
 - `location_radius_km` (default: 5.0)
 - `date_tolerance_days` (default: 3)
 - `min_images` (default: 2)
 
 **Response:**
+
 ```json
 {
   "memories": [...],
@@ -203,6 +233,7 @@ Generates all memories with clustering.
 ### Memory Clustering Algorithm
 
 **Location-based (DBSCAN):**
+
 1. Extract GPS coordinates from images
 2. Convert to radians for haversine distance
 3. Apply DBSCAN clustering (5km radius)
@@ -211,6 +242,7 @@ Generates all memories with clustering.
 6. Generate title with city name and year
 
 **Date-based (Monthly grouping):**
+
 1. Filter images without GPS
 2. Group by year-month
 3. Create monthly memories
@@ -231,6 +263,7 @@ def _reverse_geocode(self, lat: float, lon: float) -> str:
 ```
 
 **Supported Cities:**
+
 - India: Mumbai, Delhi, Bangalore, Hyderabad, Chennai, Kolkata, Pune, Ahmedabad, Jaipur, Lucknow, Kanpur, Nagpur, Visakhapatnam, Bhopal, Patna, Vadodara
 - Europe: London, Paris, Berlin, Madrid, Rome, Amsterdam, Prague, Vienna, Barcelona, Budapest, Lisbon
 - Americas: New York, Los Angeles, Toronto, San Francisco, Chicago, Vancouver
@@ -239,9 +272,11 @@ def _reverse_geocode(self, lat: float, lon: float) -> str:
 ## Bug Fixes & Improvements
 
 ### Event Bubbling Fix
+
 **Problem:** Clicking MediaView controls (slideshow, info) closed the entire viewer.
 
 **Solution:** Conditional rendering of MemoryViewer backdrop:
+
 ```tsx
 {!showMediaView && (
   <div onClick={handleCloseViewer}>
@@ -251,9 +286,11 @@ def _reverse_geocode(self, lat: float, lon: float) -> str:
 ```
 
 ### Image Upload Fix
+
 **Problem:** Images without GPS couldn't be inserted into database.
 
 **Solution:** Always include latitude/longitude fields (set to `None` if not available):
+
 ```python
 image_record = {
     "latitude": latitude,  # Can be None
@@ -263,9 +300,11 @@ image_record = {
 ```
 
 ### Title Display Enhancement
+
 **Problem:** Generic "Location - Nov 2025" titles.
 
 **Solution:** Format as "Trip to [City], [Year]" using reverse geocoding:
+
 ```typescript
 const year = memory.date_start ? new Date(memory.date_start).getFullYear() : '';
 displayTitle = `Trip to ${displayLocation}${year ? `, ${year}` : ''}`;
@@ -274,17 +313,23 @@ displayTitle = `Trip to ${displayLocation}${year ? `, ${year}` : ''}`;
 ## Testing
 
 ### Backend Tests
+
 Located in `backend/tests/`:
+
 - 100 unit tests covering all routes
 - Run with: `pytest tests/`
 
 ### Frontend Tests
+
 Located in `frontend/src/pages/__tests__/`:
+
 - Page rendering tests
 - Run with: `npm test`
 
 ### Manual Testing
+
 Use `backend/test_memories_api.py` for API endpoint testing:
+
 ```bash
 python test_memories_api.py
 ```

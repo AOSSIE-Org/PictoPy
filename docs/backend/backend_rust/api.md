@@ -1,8 +1,8 @@
-## API Documentation
+# API Documentation
 
 The Rust backend provides the following command that can be invoked from the frontend:
 
-### get_resources_folder_path
+## get_resources_folder_path
 
 - **Description**: Retrieves the path to the server resources directory.
 - **Parameters**: _None_
