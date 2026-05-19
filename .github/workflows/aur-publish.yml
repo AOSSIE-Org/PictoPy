@@ -49,7 +49,7 @@ jobs:
         run: |
           VERSION=${{ steps.check_version.outputs.latest_version }}
           DEB_URL="https://github.com/AOSSIE-Org/PictoPy/releases/download/v${VERSION}/PictoPy_${VERSION}_amd64.deb"
-          SHA=$(curl -fsSLL "$DEB_URL" | sha256sum | cut -d' ' -f1)
+          SHA=$(curl -fsSL "$DEB_URL" | sha256sum | cut -d' ' -f1)
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
       - name: Update PKGBUILD
