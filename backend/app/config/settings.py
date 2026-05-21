@@ -35,3 +35,22 @@ else:
     DATABASE_PATH = os.path.join(user_data_dir("PictoPy"), "database", "PictoPy.db")
 THUMBNAIL_IMAGES_PATH = os.path.join(user_data_dir("PictoPy"), "thumbnails")
 IMAGES_PATH = "./images"
+
+# Clustering Configuration
+PICTO_CLUSTERING_EPS = float(os.getenv("PICTO_CLUSTERING_EPS", "0.75"))
+PICTO_CLUSTERING_MIN_SAMPLES = int(os.getenv("PICTO_CLUSTERING_MIN_SAMPLES", "2"))
+PICTO_CLUSTERING_SIMILARITY_THRESHOLD = float(
+    os.getenv("PICTO_CLUSTERING_SIMILARITY_THRESHOLD", "0.85")
+)
+PICTO_CLUSTERING_MERGE_THRESHOLD = float(
+    os.getenv("PICTO_CLUSTERING_MERGE_THRESHOLD", "0.7")
+)
+PICTO_CLUSTERING_CONF_THRESHOLD = float(
+    os.getenv("PICTO_CLUSTERING_CONF_THRESHOLD", "0.45")
+)
+PICTO_CLUSTERING_BLUR_THRESHOLD = float(
+    os.getenv("PICTO_CLUSTERING_BLUR_THRESHOLD", "80.0")
+)
+PICTO_CLUSTERING_MIN_FACE_SIZE = int(
+    os.getenv("PICTO_CLUSTERING_MIN_FACE_SIZE", "1600")
+)

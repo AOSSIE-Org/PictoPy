@@ -26,7 +26,13 @@ from app.database.metadata import (
     db_get_metadata,
     db_update_metadata,
 )
-from app.config.settings import DATABASE_PATH
+from app.config.settings import (
+    DATABASE_PATH,
+    PICTO_CLUSTERING_EPS,
+    PICTO_CLUSTERING_MIN_SAMPLES,
+    PICTO_CLUSTERING_SIMILARITY_THRESHOLD,
+    PICTO_CLUSTERING_MERGE_THRESHOLD,
+)
 from app.logging.setup_logging import get_logger
 
 # Initialize logger
@@ -186,9 +192,9 @@ def _validate_embedding(embedding: NDArray, min_norm: float = 1e-6) -> bool:
 
 
 def cluster_util_cluster_all_face_embeddings(
-    eps: float = 0.75,
-    min_samples: int = 2,
-    similarity_threshold: float = 0.85,
+    eps: float = PICTO_CLUSTERING_EPS,
+    min_samples: int = PICTO_CLUSTERING_MIN_SAMPLES,
+    similarity_threshold: float = PICTO_CLUSTERING_SIMILARITY_THRESHOLD,
     merge_threshold: float = None,
 ) -> List[ClusterResult]:
     """
@@ -307,7 +313,11 @@ def cluster_util_cluster_all_face_embeddings(
 
     # Post-clustering merge: merge similar clusters based on representative faces
     # Use similarity_threshold if merge_threshold not explicitly provided
-    effective_merge_threshold = merge_threshold if merge_threshold is not None else 0.7
+    effective_merge_threshold = (
+        merge_threshold
+        if merge_threshold is not None
+        else PICTO_CLUSTERING_MERGE_THRESHOLD
+    )
     results = _merge_similar_clusters(
         results, merge_threshold=effective_merge_threshold
     )
