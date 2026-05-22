@@ -1,0 +1,19 @@
+pkgbase=pictopy
+pkgname=pictopy-bin
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="A desktop image gallery with a privacy-first approach. It detects objects and clusters faces."
+arch=('x86_64')
+url="https://github.com/AOSSIE-Org/PictoPy"
+license=('GPL-3.0-only')
+depends=('gtk3' 'python' 'hicolor-icon-theme')
+makedepends=('binutils')
+install=pictopy-bin.install
+source=("${pkgname}-${pkgver}.deb::https://github.com/AOSSIE-Org/PictoPy/releases/download/v${pkgver}/PictoPy_${pkgver}_amd64.deb")
+sha256sums=('SKIP')
+
+package() {
+    cd "$srcdir"
+    ar x "${pkgname}-${pkgver}.deb"
+    tar xf data.tar.* -C "$pkgdir"
+}
