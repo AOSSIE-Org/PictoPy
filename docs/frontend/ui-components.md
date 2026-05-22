@@ -15,25 +15,26 @@ These are the base components used across the app:
 |----------------|--------------------------------------------------|
 | `button`       | Buttons with variants (default, outline, ghost)  |
 | `card`         | Card container with header, content, footer      |
-| `dialog`       | Modal dialogs                                   |
-| `input`        | Text inputs                                     |
-| `label`        | Form labels                                     |
-| `textarea`     | Multi-line text input                           |
-| `badge`        | Tags and status badges                          |
-| `alert`        | Inline alerts and messages                      |
-| `avatar`       | User or entity avatars                          |
-| `dropdown-menu`| Dropdown menus                                  |
-| `scroll-area`  | Custom scrollable areas                         |
-| `sidebar`      | App sidebar layout                              |
-| `sheet`        | Slide-out panels                                |
-| `separator`    | Visual dividers                                 |
-| `switch`       | Toggle switches                                 |
-| `radio-group`  | Radio button groups                             |
-| `pagination`   | Pagination controls                             |
-| `progress`     | Progress bars                                   |
-| `skeleton`     | Loading skeletons                               |
-| `tooltip`      | Hover tooltips                                  |
-| `aspect-ratio` | Fixed aspect-ratio wrapper                      |
+| `dialog`       | Modal dialogs                                    |
+| `input`        | Text inputs                                      |
+| `label`        | Form labels                                      |
+| `textarea`     | Multi-line text input                            |
+| `badge`        | Tags and status badges                           |
+| `alert`        | Inline alerts and messages                       |
+| `avatar`       | User or entity avatars                           |
+| `dropdown-menu`| Dropdown menus                                   |
+| `scroll-area`  | Custom scrollable areas                          |
+| `sidebar`      | App sidebar layout                               |
+| `sheet`        | Slide-out panels                                 |
+| `separator`    | Visual dividers                                  |
+| `slider`       | Slider for volume, video-duration, etc.          |
+| `switch`       | Toggle switches                                  |
+| `radio-group`  | Radio button groups                              |
+| `pagination`   | Pagination controls                              |
+| `progress`     | Progress bars                                    |
+| `skeleton`     | Loading skeletons                                |
+| `tooltip`      | Hover tooltips                                   |
+| `aspect-ratio` | Fixed aspect-ratio wrapper                       |
 
 App-specific UI pieces in the same area:
 
