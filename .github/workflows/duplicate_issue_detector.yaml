@@ -45,7 +45,7 @@ jobs:
                 body: issue.body || ""
               },
               others: upstreamIssues
-                .filter(i => !i.pull_request)
+                .filter(i => !i.pull_request && i.number !== issue.number)
                 .map(i => ({
                   number: i.number,
                   title: i.title,
