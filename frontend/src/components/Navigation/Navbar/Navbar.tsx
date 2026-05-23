@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { ThemeSelector } from '@/components/ThemeToggle';
-import { Bell, Search, Snowflake } from 'lucide-react';
+import { Bell, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
@@ -48,7 +48,7 @@ export function Navbar() {
   // Check if query is a face name and redirect
   useEffect(() => {
     console.log('No query provided, redirecting to home');
-    if (data == '') {
+    if (data === '') {
       console.log('done');
       navigate(`/${ROUTES.HOME}`);
     }
