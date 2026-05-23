@@ -32,7 +32,7 @@ const infoDialogSlice = createSlice({
       state.isOpen = false;
       state.title = '';
       state.message = '';
-      state.variant = 'info';
+      state.variant = state.variant || 'info';
       state.showCloseButton = true;
     },
   },

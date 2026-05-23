@@ -1,7 +1,9 @@
-Copyright © 2025 AOSSIE <br />
+# Copyright Notice
+
+Copyright © 2026 AOSSIE
 All rights reserved.
 
-All works in this repository may be used according to the conditions 
+All works in this repository may be used according to the conditions
 stated in the LICENSE.md file available in this repository.
 
 These works are WITHOUT ANY WARRANTY, without even the implied warranty of

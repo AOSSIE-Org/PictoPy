@@ -22,6 +22,3 @@ The settings panel allows users to configure directories, preferences, and appli
 
 ![Settings](../assets/screenshots/settings.png)
 *Settings panel showing directory configuration and user preferences*
-
-
-

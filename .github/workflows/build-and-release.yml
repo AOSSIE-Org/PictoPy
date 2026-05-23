@@ -32,14 +32,17 @@ jobs:
       - name: Build executable with PyInstaller
         run: |
           cd backend
-          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
+          pyinstaller PictoPy.spec
 
-      - name: Copy app folder
+      - name: Verify no .onnx artifacts
+        shell: pwsh
         run: |
-          cd backend
-          mkdir dist/PictoPy_Server/images
-          robocopy app dist\PictoPy_Server\app /e
-          if ($LASTEXITCODE -le 1) { exit 0 }
+          $onnxFiles = Get-ChildItem -Path "backend/dist/PictoPy_Server" -Recurse -Filter "*.onnx" -File
+          if ($onnxFiles) {
+            Write-Error "Found bundled .onnx artifacts in backend/dist/PictoPy_Server:"
+            $onnxFiles | ForEach-Object { Write-Error $_.FullName }
+            exit 1
+          }
 
       - name: Create ZIP package
         run: |
@@ -74,14 +77,17 @@ jobs:
       - name: Build executable with PyInstaller
         run: |
           cd backend
-          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
+          pyinstaller PictoPy.spec
 
-      - name: Copy app folder
+      - name: Verify no .onnx artifacts
+        shell: bash
         run: |
-          cd backend
-          mkdir -p dist/PictoPy_Server/images
-          mkdir -p dist/PictoPy_Server/app
-          cp -r app/* dist/PictoPy_Server/app/
+          onnx_files=$(find backend/dist/PictoPy_Server -type f -name "*.onnx")
+          if [ -n "$onnx_files" ]; then
+            echo "Found bundled .onnx artifacts in backend/dist/PictoPy_Server:"
+            echo "$onnx_files"
+            exit 1
+          fi
 
       - name: Create ZIP package
         run: |
@@ -114,14 +120,17 @@ jobs:
       - name: Build executable with PyInstaller
         run: |
           cd backend
-          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
+          pyinstaller PictoPy.spec
 
-      - name: Copy app folder
+      - name: Verify no .onnx artifacts
+        shell: bash
         run: |
-          cd backend
-          mkdir -p dist/PictoPy_Server/images
-          mkdir -p dist/PictoPy_Server/app
-          cp -r app/* dist/PictoPy_Server/app/
+          onnx_files=$(find backend/dist/PictoPy_Server -type f -name "*.onnx")
+          if [ -n "$onnx_files" ]; then
+            echo "Found bundled .onnx artifacts in backend/dist/PictoPy_Server:"
+            echo "$onnx_files"
+            exit 1
+          fi
 
       - name: Create ZIP package
         run: |
@@ -271,15 +280,16 @@ jobs:
       matrix:
         include:
           - platform: "macos-latest"
-            args: "--target aarch64-apple-darwin"
+            # Enable CI feature so prod() spawns backend + sync in release builds
+            args: "--target aarch64-apple-darwin --features ci"
             server-artifact: "PictoPy-MacOS"
             sync-artifact: "PictoPy-Sync-MacOS"
           - platform: "ubuntu-22.04"
-            args: ""
+            args: "--features ci"
             server-artifact: "PictoPy-Ubuntu"
             sync-artifact: "PictoPy-Sync-Ubuntu"
           - platform: "windows-latest"
-            args: ""
+            args: "--features ci"
             server-artifact: "PictoPy-Windows"
             sync-artifact: "PictoPy-Sync-Windows"
     runs-on: ${{ matrix.platform }}

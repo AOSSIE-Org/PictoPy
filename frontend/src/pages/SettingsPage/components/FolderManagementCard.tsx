@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Folder, Trash2, Check } from 'lucide-react';
 
 import { Switch } from '@/components/ui/switch';
@@ -29,6 +29,12 @@ const FolderManagementCard: React.FC = () => {
     (state: RootState) => state.folders.taggingStatus,
   );
 
+  const [visibleFoldersCount, setVisibleFoldersCount] = useState(6);
+
+  const handleViewMore = () => {
+    setVisibleFoldersCount((prevCount) => prevCount + 5);
+  };
+
   return (
     <SettingsCard
       icon={Folder}
@@ -37,84 +43,86 @@ const FolderManagementCard: React.FC = () => {
     >
       {folders.length > 0 ? (
         <div className="space-y-3">
-          {folders.map((folder: FolderDetails, index: number) => (
-            <div
-              key={index}
-              className="group border-border bg-background/50 relative rounded-lg border p-4 transition-all hover:border-gray-300 hover:shadow-sm dark:hover:border-gray-600"
-            >
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-3">
-                    <Folder className="h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
-                    <span className="text-foreground truncate">
-                      {folder.folder_path}
-                    </span>
+          {folders
+            .slice(0, visibleFoldersCount)
+            .map((folder: FolderDetails) => (
+              <div
+                key={folder.folder_id}
+                className="group border-border bg-background/50 relative rounded-lg border p-4 transition-all hover:border-gray-300 hover:shadow-sm dark:hover:border-gray-600"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-3">
+                      <Folder className="h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
+                      <span className="text-foreground truncate">
+                        {folder.folder_path}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="ml-4 flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-muted-foreground text-sm">
+                        AI Tagging
+                      </span>
+                      <Switch
+                        className="cursor-pointer"
+                        checked={folder.AI_Tagging}
+                        onCheckedChange={() => toggleAITagging(folder)}
+                        disabled={
+                          enableAITaggingPending || disableAITaggingPending
+                        }
+                      />
+                    </div>
+
+                    <Button
+                      onClick={() => deleteFolder(folder.folder_id)}
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 cursor-pointer text-gray-500 hover:border-red-300 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                      disabled={deleteFolderPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
 
-                <div className="ml-4 flex items-center gap-4">
-                  <div className="flex items-center gap-3">
-                    <span className="text-muted-foreground text-sm">
-                      AI Tagging
-                    </span>
-                    <Switch
-                      className="cursor-pointer"
-                      checked={folder.AI_Tagging}
-                      onCheckedChange={() => toggleAITagging(folder)}
-                      disabled={
-                        enableAITaggingPending || disableAITaggingPending
+                {folder.AI_Tagging && (
+                  <div className="mt-3">
+                    <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
+                      <span>AI Tagging Progress</span>
+                      <span
+                        className={
+                          (taggingStatus[folder.folder_id]
+                            ?.tagging_percentage ?? 0) >= 100
+                            ? 'flex items-center gap-1 text-green-500'
+                            : 'text-muted-foreground'
+                        }
+                      >
+                        {(taggingStatus[folder.folder_id]?.tagging_percentage ??
+                          0) >= 100 && <Check className="h-3 w-3" />}
+                        {Math.round(
+                          taggingStatus[folder.folder_id]?.tagging_percentage ??
+                            0,
+                        )}
+                        %
+                      </span>
+                    </div>
+                    <Progress
+                      value={
+                        taggingStatus[folder.folder_id]?.tagging_percentage ?? 0
+                      }
+                      indicatorClassName={
+                        (taggingStatus[folder.folder_id]?.tagging_percentage ??
+                          0) >= 100
+                          ? 'bg-green-500'
+                          : 'bg-blue-500'
                       }
                     />
                   </div>
-
-                  <Button
-                    onClick={() => deleteFolder(folder.folder_id)}
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-8 cursor-pointer text-gray-500 hover:border-red-300 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-                    disabled={deleteFolderPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                )}
               </div>
-
-              {folder.AI_Tagging && (
-                <div className="mt-3">
-                  <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
-                    <span>AI Tagging Progress</span>
-                    <span
-                      className={
-                        (taggingStatus[folder.folder_id]?.tagging_percentage ??
-                          0) >= 100
-                          ? 'flex items-center gap-1 text-green-500'
-                          : 'text-muted-foreground'
-                      }
-                    >
-                      {(taggingStatus[folder.folder_id]?.tagging_percentage ??
-                        0) >= 100 && <Check className="h-3 w-3" />}
-                      {Math.round(
-                        taggingStatus[folder.folder_id]?.tagging_percentage ??
-                          0,
-                      )}
-                      %
-                    </span>
-                  </div>
-                  <Progress
-                    value={
-                      taggingStatus[folder.folder_id]?.tagging_percentage ?? 0
-                    }
-                    indicatorClassName={
-                      (taggingStatus[folder.folder_id]?.tagging_percentage ??
-                        0) >= 100
-                        ? 'bg-green-500'
-                        : 'bg-blue-500'
-                    }
-                  />
-                </div>
-              )}
-            </div>
-          ))}
+            ))}
         </div>
       ) : (
         <div className="py-8 text-center">
@@ -126,6 +134,16 @@ const FolderManagementCard: React.FC = () => {
             Add your first photo library folder to get started
           </p>
         </div>
+      )}
+
+      {folders.length > visibleFoldersCount && (
+        <Button
+          onClick={handleViewMore}
+          variant="outline"
+          className="mt-4 w-full"
+        >
+          View More
+        </Button>
       )}
 
       <div className="border-border mt-6 border-t pt-6">
