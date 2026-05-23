@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import QueryClientProviders from '@/config/QueryClientProvider';
 import { GlobalLoader } from './components/Loader/GlobalLoader';
 import { InfoDialog } from './components/Dialog/InfoDialog';
+import GlobalAlert from './components/GlobalAlert/GlobalAlert';
 import { useSelector } from 'react-redux';
 import { RootState } from './app/store';
 const App: React.FC = () => {
@@ -31,6 +32,7 @@ const App: React.FC = () => {
           variant={variant}
           showCloseButton={showCloseButton}
         />
+        <GlobalAlert />
       </QueryClientProviders>
     </ThemeProvider>
   );
