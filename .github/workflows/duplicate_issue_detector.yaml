@@ -66,6 +66,7 @@ jobs:
 
           THRESHOLD = 0.82
           MAX_RESULTS = 3
+          print(f"Threshold = {THRESHOLD}")
 
           with open("issues.json") as f:
             data = json.load(f)
@@ -77,6 +78,8 @@ jobs:
 
           current_text = text(data["current"])
           others = data["others"]
+          print(f"Current issue: #{data['current']['number']}")
+          print(f"Candidate issues: {len(others)}")
 
           if not others:
             with open("matches.json", "w") as f:
@@ -94,15 +97,22 @@ jobs:
           sims = cosine_similarity([current_vec], other_vecs)[0]
 
           matches = []
+
           for issue, score in zip(others, sims):
-            if score >= THRESHOLD:
-              matches.append({
-                "number": issue["number"],
-                "title": issue["title"],
-                "url": issue["url"],
-                "state": issue["state"],
-                "score": round(float(score) * 100, 1)
-              })
+              print(
+                  f"Issue #{issue['number']} | "
+                  f"Score={score:.4f} | "
+                  f"Title={issue['title']}"
+              )
+
+              if score >= THRESHOLD:
+                  matches.append({
+                      "number": issue["number"],
+                      "title": issue["title"],
+                      "url": issue["url"],
+                      "state": issue["state"],
+                      "score": round(float(score) * 100, 1)
+                  })
 
           matches = sorted(matches, key=lambda x: x["score"], reverse=True)[:MAX_RESULTS]
 
