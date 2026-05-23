@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { ThemeSelector } from '@/components/ThemeToggle';
-import { Bell, Search } from 'lucide-react';
+import { Bell, Search, Snowflake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
@@ -15,6 +15,7 @@ import { setClusters } from '@/features/faceClustersSlice';
 import { useNavigate } from 'react-router';
 import { Cluster } from '@/types/Media';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ROUTES } from '@/constants/routes';
 
 export function Navbar() {
   const navigate = useNavigate();
@@ -44,7 +45,14 @@ export function Navbar() {
     navigate(`/person/${clusterId}`);
     setIsFocused(false);
   };
-
+  // Check if query is a face name and redirect
+  useEffect(() => {
+    console.log('No query provided, redirecting to home');
+    if (data == '') {
+      console.log('done');
+      navigate(`/${ROUTES.HOME}`);
+    }
+  }, [data]);
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsFocused(false);
@@ -141,10 +149,14 @@ export function Navbar() {
         </div>
 
         {/*  Search Bar */}
-        <div className="mx-auto flex max-w-md flex-1 justify-center px-4">
+        <div
+          className={`mx-auto flex flex-1 justify-center px-4 transition-all duration-200 ${
+            isFocused ? 'max-w-[700px]' : 'max-w-md'
+          }`}
+        >
           <div
-            className={`dark:bg-muted/50 flex w-full items-center gap-1 rounded-md bg-neutral-100 px-1 py-1 transition-transform duration-200 ${
-              isFocused ? 'scale-110 ring-2 ring-neutral-400' : ''
+            className={`dark:bg-muted/50 flex w-[90vw] max-w-[700px] items-center gap-1 rounded-md bg-neutral-100 px-1 py-1 transition-all duration-200 ${
+              isFocused ? 'ring-2 ring-neutral-400' : ''
             }`}
           >
             {/* Query Image */}
@@ -158,7 +170,7 @@ export function Navbar() {
                 {isSearchActive && (
                   <button
                     onClick={() => dispatch(clearSearch())}
-                    className="absolute -top-1 -right-1 flex h-3 w-3 cursor-pointer items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white"
+                    className="w-3items-center absolute -top-1 -right-1 flex h-3 cursor-pointer justify-center rounded-full bg-red-600 text-[10px] leading-none text-white"
                   >
                     ✕
                   </button>
@@ -218,7 +230,7 @@ export function Navbar() {
       {isFocused && data === '' && (
         <>
           <div
-            className="animate-in fade-in fixed inset-0 z-30 bg-black/40 backdrop-blur-sm duration-200"
+            className="animate-in fade-in fixed inset-0 z-30 bg-black/40 duration-200"
             onClick={() => setIsFocused(false)}
           />
           <div
