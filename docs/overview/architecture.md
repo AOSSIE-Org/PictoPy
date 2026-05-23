@@ -16,7 +16,7 @@ This combination allows us to leverage web technologies for the UI while benefit
 
 <!-- markdownlint-disable MD033 -->
 <div style="text-align: center;">
-    <img src="../assets/backend-architecture.jpeg" alt="Backend Architecture" style="width: 80%; max-width: 600px; height: auto; display: block; margin: 0 auto;">
+    <img src="../../assets/backend-architecture.jpeg" alt="Backend Architecture" style="width: 80%; max-width: 600px; height: auto; display: block; margin: 0 auto;">
 </div>
 
 <br>
