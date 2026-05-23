@@ -1,0 +1,6 @@
+post_remove() {
+    for home_dir in /home/*; do
+        rm -rf "${home_dir}/.local/share/picto_py"
+        rm -rf "${home_dir}/.cache/picto_py"
+    done
+}
