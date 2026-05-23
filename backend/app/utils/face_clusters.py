@@ -6,12 +6,13 @@ import cv2
 import sqlite3
 from datetime import datetime
 from sklearn.cluster import DBSCAN
+from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics.pairwise import cosine_distances
 from sklearn.metrics.pairwise import cosine_similarity
 
 
 from collections import defaultdict, Counter
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Tuple
 from numpy.typing import NDArray
 from app.database.connection import get_db_connection
 
@@ -108,10 +109,10 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
     metadata = db_get_metadata()
     if force_full_reclustering or cluster_util_is_reclustering_needed(metadata):
         # Perform clustering operation
-        results = cluster_util_cluster_all_face_embeddings()
+        results, total_faces_skipped = cluster_util_cluster_all_face_embeddings()
 
         if not results:
-            return 0
+            return 0, total_faces_skipped
 
         results = [result.to_dict() for result in results]
 
@@ -159,13 +160,15 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
             current_metadata = metadata or {}
             current_metadata["reclustering_time"] = datetime.now().timestamp()
             db_update_metadata(current_metadata, cursor)
-        return len(cluster_list)
+        return len(cluster_list), total_faces_skipped
     else:
-        face_cluster_mappings = cluster_util_assign_cluster_to_faces_without_clusterId()
+        face_cluster_mappings, total_faces_skipped = (
+            cluster_util_assign_cluster_to_faces_without_clusterId()
+        )
         with get_db_connection() as conn:
             cursor = conn.cursor()
             db_update_face_cluster_ids_batch(face_cluster_mappings, cursor)
-        return len(face_cluster_mappings)
+        return len(face_cluster_mappings), total_faces_skipped
 
 
 def _validate_embedding(embedding: NDArray, min_norm: float = 1e-6) -> bool:
@@ -191,12 +194,26 @@ def _validate_embedding(embedding: NDArray, min_norm: float = 1e-6) -> bool:
     return True
 
 
+def estimate_eps(embeddings: np.ndarray, k: int) -> Optional[float]:
+    if len(embeddings) <= k:
+        return None
+
+    nn = NearestNeighbors(n_neighbors=k + 1, metric="cosine")
+    nn.fit(embeddings)
+    distances, _ = nn.kneighbors(embeddings)
+
+    kth_distances = distances[:, -1]
+    kth_distances.sort()
+    estimated_eps = np.percentile(kth_distances, 90)
+    return float(estimated_eps)
+
+
 def cluster_util_cluster_all_face_embeddings(
     eps: float = PICTO_CLUSTERING_EPS,
     min_samples: int = PICTO_CLUSTERING_MIN_SAMPLES,
     similarity_threshold: float = PICTO_CLUSTERING_SIMILARITY_THRESHOLD,
     merge_threshold: float = None,
-) -> List[ClusterResult]:
+) -> Tuple[List[ClusterResult], int]:
     """
     Cluster face embeddings using DBSCAN with similarity validation.
 
@@ -238,9 +255,11 @@ def cluster_util_cluster_all_face_embeddings(
     if invalid_count > 0:
         logger.warning(f"Filtered out {invalid_count} invalid embeddings")
 
+    total_faces_skipped = invalid_count
+
     if not embeddings:
         logger.error("No valid embeddings found after validation")
-        return []
+        return [], total_faces_skipped
 
     logger.info(f"Total valid faces to cluster: {len(face_ids)}")
 
@@ -264,6 +283,15 @@ def cluster_util_cluster_all_face_embeddings(
     logger.info(
         f"Applied similarity threshold: {similarity_threshold} (max_distance: {max_distance:.3f})"
     )
+
+    estimated_eps = estimate_eps(embeddings_array, k=min_samples)
+    if estimated_eps is not None:
+        logger.info(f"Adaptive eps estimated: {estimated_eps:.4f}")
+        eps = estimated_eps
+    else:
+        logger.warning(
+            f"Too few embeddings for eps estimation, using config default: {eps}"
+        )
 
     # Perform DBSCAN clustering with precomputed distances
     dbscan = DBSCAN(
@@ -322,12 +350,12 @@ def cluster_util_cluster_all_face_embeddings(
         results, merge_threshold=effective_merge_threshold
     )
 
-    return results
+    return results, total_faces_skipped
 
 
 def cluster_util_assign_cluster_to_faces_without_clusterId(
     similarity_threshold: float = 0.8,
-) -> List[Dict]:
+) -> Tuple[List[Dict], int]:
     """
     Assign cluster IDs to faces that don't have clusters using nearest mean method with similarity threshold.
 
@@ -349,13 +377,13 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
     # Get faces without cluster assignments
     unassigned_faces = db_get_faces_unassigned_clusters()
     if not unassigned_faces:
-        return []
+        return [], 0
 
     # Get cluster mean embeddings
     cluster_means = db_get_cluster_mean_embeddings()
 
     if not cluster_means:
-        return []
+        return [], 0
 
     # Prepare data for nearest neighbor assignment with validation
     cluster_ids = []
@@ -380,7 +408,7 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
 
     if not mean_embeddings:
         logger.error("No valid cluster means found after validation")
-        return []
+        return [], 0
 
     mean_embeddings_array = np.array(mean_embeddings)
 
@@ -425,7 +453,9 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
             f"Skipped {skipped_invalid} faces with invalid embeddings during assignment"
         )
 
-    return face_cluster_mappings
+    total_faces_skipped = skipped_invalid
+
+    return face_cluster_mappings, total_faces_skipped
 
 
 def _merge_similar_clusters(
