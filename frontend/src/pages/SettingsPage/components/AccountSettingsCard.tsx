@@ -19,6 +19,7 @@ const AccountSettingsCard: React.FC = () => {
     return avatars.includes(stored) ? stored : '';
   });
   const [nameError, setNameError] = useState(false);
+  const [longWordError, setLongWordError] = useState(false);
 
   // The redundant useEffect has been removed.
 
@@ -27,10 +28,15 @@ const AccountSettingsCard: React.FC = () => {
   };
 
   const handleNameChange = (value: string) => {
-    setLocalName(value);
-    if (nameError) {
-      setNameError(false);
+    const words = value.split(' ');
+    const hasLongWord = words.some((word) => word.length > 30);
+    if (hasLongWord) {
+      setLongWordError(true);
+      return;
     }
+    setLongWordError(false);
+    setLocalName(value);
+    if (nameError) setNameError(false);
   };
 
   const handleSave = () => {
@@ -72,12 +78,16 @@ const AccountSettingsCard: React.FC = () => {
               }
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
-              className={`h-10 w-full text-sm placeholder:text-sm ${
-                nameError
-                  ? 'border-red-500 placeholder:text-red-500/80 focus-visible:ring-red-500'
-                  : ''
-              }`}
+              className={`h-10 w-full text-sm placeholder:text-sm ${nameError
+                ? 'border-red-500 placeholder:text-red-500/80 focus-visible:ring-red-500'
+                : ''
+                }`}
             />
+            {longWordError && (
+              <p className="mt-2 text-xs text-red-500">
+                A single word in your name cannot exceed 30 characters.
+              </p>
+            )}
           </div>
 
           {/* Avatar Section */}
@@ -91,18 +101,16 @@ const AccountSettingsCard: React.FC = () => {
                     type="button"
                     key={avatar}
                     onClick={() => handleAvatarSelect(avatar)}
-                    className={`bg-background relative inline-flex h-24 w-24 items-center justify-center rounded-full transition-all duration-300 ${
-                      isSelected
-                        ? 'ring-offset-background scale-90 ring-2 ring-blue-500 ring-offset-4'
-                        : 'hover:ring-4 hover:ring-blue-500 hover:ring-offset-4'
-                    }`}
+                    className={`bg-background relative inline-flex h-24 w-24 items-center justify-center rounded-full transition-all duration-300 ${isSelected
+                      ? 'ring-offset-background scale-90 ring-2 ring-blue-500 ring-offset-4'
+                      : 'hover:ring-4 hover:ring-blue-500 hover:ring-offset-4'
+                      }`}
                   >
                     <img
                       src={avatar}
                       alt="Avatar"
-                      className={`h-24 w-24 rounded-full object-cover transition-all duration-300 ${
-                        isSelected ? 'brightness-110' : ''
-                      }`}
+                      className={`h-24 w-24 rounded-full object-cover transition-all duration-300 ${isSelected ? 'brightness-110' : ''
+                        }`}
                     />
                   </button>
                 );

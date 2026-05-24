@@ -40,6 +40,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
   const isEditing = useSelector(
     (state: RootState) => state.onboarding.isEditing,
   );
+  const [longWordError, setLongWordError] = useState(false);
 
   useEffect(() => {
     if (
@@ -56,6 +57,13 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
   };
 
   const handleNameChange = (value: string) => {
+    const words = value.split(' ');
+    const hasLongWord = words.some((word) => word.length > 30);
+    if (hasLongWord) {
+      setLongWordError(true);
+      return;
+    }
+    setLongWordError(false);
     setLocalName(value);
   };
 
@@ -115,6 +123,11 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
               onChange={(e) => handleNameChange(e.target.value)}
               className="h-8 text-sm placeholder:text-sm"
             />
+            {longWordError && (
+              <p className="mt-2 text-xs text-red-500">
+                A single word in your name cannot exceed 30 characters.
+              </p>
+            )}
           </div>
 
           {/* Avatar Grid */}
@@ -128,18 +141,16 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                     type="button"
                     key={avatar}
                     onClick={() => handleAvatarSelect(avatar)}
-                    className={`bg-background relative inline-flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300 ${
-                      isSelected
+                    className={`bg-background relative inline-flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300 ${isSelected
                         ? 'border-primary ring-primary ring-offset-background ring-2 ring-offset-2'
                         : 'border-muted'
-                    }`}
+                      }`}
                   >
                     <img
                       src={avatar}
                       alt="Avatar"
-                      className={`h-20 w-20 rounded-full object-cover transition-all duration-300 ${
-                        isSelected ? 'scale-105' : ''
-                      }`}
+                      className={`h-20 w-20 rounded-full object-cover transition-all duration-300 ${isSelected ? 'scale-105' : ''
+                        }`}
                     />
                   </button>
                 );
@@ -152,7 +163,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
           <Button
             className="cursor-pointer px-4 py-1 text-sm"
             onClick={handleNextClick}
-            disabled={!name || !selectedAvatar}
+            disabled={!name || !selectedAvatar || longWordError}
           >
             Next
           </Button>
