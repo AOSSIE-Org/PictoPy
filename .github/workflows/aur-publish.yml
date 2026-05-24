@@ -46,6 +46,10 @@ jobs:
           VERSION="${{ steps.check_version.outputs.latest_version }}"
           DEB_URL="https://github.com/AOSSIE-Org/PictoPy/releases/download/${VERSION}/PictoPy_${VERSION}_amd64.deb"
           SHA=$(curl -fsSL "$DEB_URL" | sha256sum | cut -d' ' -f1)
+          if ! echo "$SHA" | grep -qP '^[a-f0-9]{64}$'; then
+            echo "ERROR: Invalid SHA256 — deb download may have failed"
+            exit 1
+          fi
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
       - name: Update PKGBUILD

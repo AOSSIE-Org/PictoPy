@@ -279,7 +279,7 @@ def _reverse_geocode(self, lat: float, lon: float) -> str:
 
 ```tsx
 {
-  !showMediaView && <div onClick={handleCloseViewer}>{/* Grid content */}</div>;
+  !showMediaView && <div onClick={handleCloseViewer}>{/* Grid content */}</div>
 }
 ```
 
