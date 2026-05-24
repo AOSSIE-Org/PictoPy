@@ -1,10 +1,10 @@
-# 🌟 Contributing to PictoPy
+# Contributing to PictoPy
 
 Hi there! Thank you for considering contributing to **PictoPy** – we’re excited to collaborate with you. Whether you're fixing a bug, improving documentation, or suggesting a new feature — you're welcome here!
 
 NOTE: Please do not open a PR for the issue which is not yet reviewed and labelled by the maintainer. Wait for the maintainer to give a green light.
 
-# 🛠 Setting Up the Project
+## Setting Up the Project
 
 ## Setup
 
@@ -20,40 +20,40 @@ To set up and run the docs website on your local machine:
 1. Ensure you have **Python 3** and **pip** installed. Navigate to the `/docs` folder.
 2. Create a virtual environment:
 
-```bash
-python -m venv .docs-env
-```
+   ```bash
+   python -m venv .docs-env
+   ```
 
 3. Activate the virtual environment:
 
-```bash
-# On macOS/Linux:
-source .docs-env/bin/activate
-# On Windows:
-.docs-env\Scripts\activate
-```
+   ```bash
+   # On macOS/Linux:
+   source .docs-env/bin/activate
+   # On Windows:
+   .docs-env\Scripts\activate
+   ```
 
 4. Install the required Python packages:
 
-```bash
-pip install -r requirements.txt
-```
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 5. Start the local MkDocs server:
 
-```bash
-mkdocs serve -f ../mkdocs.yml
-```
+   ```bash
+   mkdocs serve -f ../mkdocs.yml
+   ```
 
-6. Open your browser and navigate to: http://127.0.0.1:8000.
+6. Open your browser and navigate to: <http://127.0.0.1:8000>.
 
 7. Edit Markdown files inside the `docs/` folder. The site will automatically reload when changes are saved.
 
 8. To build the static site for production deployment, run:
 
-```bash
-mkdocs build -f ../mkdocs.yml
-```
+   ```bash
+   mkdocs build -f ../mkdocs.yml
+   ```
 
 ## Testing
 
@@ -67,10 +67,12 @@ npm test
 ### Backend
 
 - FastAPI
+
   ```bash
   cd backend
   pytest
   ```
+
 - Tauri
 
   ```bash

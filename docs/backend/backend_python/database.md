@@ -6,18 +6,10 @@ PictoPy uses several SQLite databases to manage various aspects of the applicati
 
 ## Database Schema
 
-You can view the interactive DB schema below:
-<br>
-<br>
+<!-- markdownlint-disable MD033 -->
+<p align="center">
+  <img src="../../assets/database_architecture.svg" alt="PictoPy Banner" width="100%"/>
+</p>
+<!-- markdownlint-enable MD033 -->
 
-<iframe 
-  src="https://dbdiagram.io/e/685704c4f039ec6d364647e1/68701a53f413ba350850acf9" 
-  width="100%" 
-  height="700px" 
-  style="border: 1px solid #ccc; border-radius: 8px;"
-  loading="lazy"
-  allowfullscreen>
-</iframe>
-<br>
-
-Alternatively, [click here to open the DB diagram in a new tab](https://dbdiagram.io/d/PictoPy-685704c4f039ec6d364647e1).
+Alternatively, [click here to view the interactive DB schema diagram in a new tab](https://dbdiagram.io/d/PictoPy-685704c4f039ec6d364647e1).
