@@ -98,7 +98,7 @@ def sample_folder_details():
             1693526400,  # timestamp
             True,  # AI_Tagging
             False,  # taggingCompleted
-            0, #image_count
+            0,  # image_count
         ),
         (
             "folder-id-2",
