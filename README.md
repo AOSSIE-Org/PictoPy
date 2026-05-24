@@ -63,18 +63,17 @@ Find out more at [https://pictopy.aossie.org/](https://pictopy.aossie.org/).
 
 <p align="center">
   <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest">
-    <img src="https://img.shields.io/badge/Windows-Download-blue?style=for-the-badge&logo=windows" />
+    <img src="https://img.shields.io/badge/Windows-Download-blue?style=for-the-badge&logo=windows"  alt="Windows Download Badge" />
   </a>
   &nbsp;&nbsp;
   <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest">
-    <img src="https://img.shields.io/badge/macOS-Download-black?style=for-the-badge&logo=apple" />
+    <img src="https://img.shields.io/badge/macOS-Download-black?style=for-the-badge&logo=apple"  alt="macOS Download Badge" />
   </a>
   &nbsp;&nbsp;
   <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest">
-    <img src="https://img.shields.io/badge/Linux-Download-yellow?style=for-the-badge&logo=linux&logoColor=black" />
+    <img src="https://img.shields.io/badge/Linux-Download-yellow?style=for-the-badge&logo=linux&logoColor=black" alt="Linux Download Badge" />
   </a>
 </p>
-
 
 ## Demonstration
 
@@ -105,12 +104,10 @@ Find out more at [https://pictopy.aossie.org/](https://pictopy.aossie.org/).
 
 ## High Level Architecture
 
-
 <div align="center">
   <img src="docs/assets/architectual-design-light.svg#gh-light-mode-only" alt="PictoPy architecture diagram"/>
   <img src="docs/assets/architectual-design-dark.svg#gh-dark-mode-only" alt="PictoPy architecture diagram"/>
 </div>
-
 
 ## Want to Contribute?
 
