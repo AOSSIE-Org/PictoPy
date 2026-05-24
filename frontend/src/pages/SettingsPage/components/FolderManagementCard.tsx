@@ -89,7 +89,7 @@ const FolderManagementCard: React.FC = () => {
 
                 {folder.AI_Tagging && (
                   <div className="mt-3">
-                    {folder.image_count === 0 ? (
+                    {!folder.image_count ? (
                       <div className="text-muted-foreground text-sm italic">
                         Folder is empty
                       </div>
