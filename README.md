@@ -3,7 +3,7 @@
 <div name="readme-top"></div>
 
 <p align="center">
-  <img src="docs/assets/banner.png" alt="PictoPy Banner" width="100%"/>
+  <img src="docs/assets/readme-assets/banner.png" alt="PictoPy Banner" width="100%"/>
 </p>
 
 <!-- Organization/Project Social Handles -->
@@ -35,35 +35,20 @@
 
 <p align="center">
   <span style="font-size:18px;font-weight:bold">Download:</span>
-    <span style="display:inline-flex;align-items:center;gap:0.5rem;">
-      <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_x64-setup.exe">
-        <span style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 1rem;background:#017EC6;color:#ffffff;border-radius:6px;font-weight:700;line-height:1;">
-          <span>Windows</span>
-          <svg xmlns="http://www.w3.org/2000/svg" alt="Windows logo" width="18" height="18" fill="currentColor" class="bi bi-microsoft" viewBox="0 0 16 16">
-            <path d="M7.462 0H0v7.19h7.462zM16 0H8.538v7.19H16zM7.462 8.211H0V16h7.462zm8.538 0H8.538V16H16z"/>
-          </svg>
-        </span>
-      </a>
-      <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_aarch64.app.tar.gz">
-        <span style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 1rem;background:#000000;color:#ffffff;border-radius:6px;font-weight:700;line-height:1;">
-          <span>MacOS</span>
-          <img src="https://cdn.simpleicons.org/apple/ffffff" alt="MacOS logo" width="" height="18" />
-        </span>
-      </a>
-      <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_amd64.deb">
-        <span style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 1rem;background:#A81D33;color:#ffffff;border-radius:6px;font-weight:700;line-height:1;">
-          <span>Debian</span>
-          <img src="https://cdn.simpleicons.org/debian/ffffff" alt="Debian logo" width="18" height="18" />
-        </span>
-      </a>
-      <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest">
-        <span style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 1rem;background:#181717;color:#ffffff;border-radius:6px;font-weight:700;line-height:1;">
-          <span>GitHub Releases</span>
-          <img src="https://cdn.simpleicons.org/github/ffffff" alt="GitHub logo" width="18" height="18" />
-        </span>
-      </a>
-    </span>
-  </a>
+  <span style="display:inline-flex;align-items:center;gap:0.5rem;vertical-align:middle;">
+    <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_x64-setup.exe" style="display:inline-flex;align-items:center;">
+      <img src="docs/assets/readme-assets/btn-windows.svg" alt="Windows download button" style="height:34px;width:auto;" />
+    </a>
+    <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_aarch64.app.tar.gz" style="display:inline-flex;align-items:center;">
+      <img src="docs/assets/readme-assets/btn-macos.svg" alt="macOS download button" style="height:34px;width:auto;" />
+    </a>
+    <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_amd64.deb" style="display:inline-flex;align-items:center;">
+      <img src="docs/assets/readme-assets/btn-debian.svg" alt="Debian download button" style="height:34px;width:auto;" />
+    </a>
+    <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest" style="display:inline-flex;align-items:center;">
+      <img src="docs/assets/readme-assets/btn-github.svg" alt="GitHub Releases button" style="height:34px;width:auto;" />
+    </a>
+  </span>
 </p>
 
 # PictoPy
@@ -96,7 +81,7 @@ Find out more at [https://pictopy.aossie.org/](https://pictopy.aossie.org/).
 
 <p align="center">
   <a href="https://youtu.be/RWp-9xT9jow?si=c1vNO5cDgI4GYM6y">
-    <img src="docs/assets/demo.png" alt="PictoPy Demonstration">
+    <img src="docs/assets/readme-assets/demo.png" alt="PictoPy Demonstration">
   </a>
 </p>
 
@@ -122,8 +107,8 @@ Find out more at [https://pictopy.aossie.org/](https://pictopy.aossie.org/).
 ## High Level Architecture
 
 <div align="center">
-  <img src="docs/assets/architectual-design-light.svg#gh-light-mode-only" alt="PictoPy architecture diagram"/>
-  <img src="docs/assets/architectual-design-dark.svg#gh-dark-mode-only" alt="PictoPy architecture diagram"/>
+  <img src="docs/assets/readme-assets/architectual-design-light.svg#gh-light-mode-only" alt="PictoPy architecture diagram"/>
+  <img src="docs/assets/readme-assets/architectual-design-dark.svg#gh-dark-mode-only" alt="PictoPy architecture diagram"/>
 </div>
 
 ## Want to Contribute?
