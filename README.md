@@ -33,6 +33,39 @@
   <img src="https://img.shields.io/youtube/channel/subscribers/UCKVVLbawY7Gej_3o2WKsoiA?style=flat&logo=youtube&logoColor=white%20&logoSize=auto&labelColor=FF0000&color=FF0000" alt="Youtube Badge"></a>
 </p>
 
+<p align="center">
+  <span style="font-size:18px;font-weight:bold">Download:</span>
+    <span style="display:inline-flex;align-items:center;gap:0.5rem;">
+      <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_x64-setup.exe">
+        <span style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 1rem;background:#017EC6;color:#ffffff;border-radius:6px;font-weight:700;line-height:1;">
+          <span>Windows</span>
+          <svg xmlns="http://www.w3.org/2000/svg" alt="Windows logo" width="18" height="18" fill="currentColor" class="bi bi-microsoft" viewBox="0 0 16 16">
+            <path d="M7.462 0H0v7.19h7.462zM16 0H8.538v7.19H16zM7.462 8.211H0V16h7.462zm8.538 0H8.538V16H16z"/>
+          </svg>
+        </span>
+      </a>
+      <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_aarch64.app.tar.gz">
+        <span style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 1rem;background:#000000;color:#ffffff;border-radius:6px;font-weight:700;line-height:1;">
+          <span>MacOS</span>
+          <img src="https://cdn.simpleicons.org/apple/ffffff" alt="MacOS logo" width="" height="18" />
+        </span>
+      </a>
+      <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_amd64.deb">
+        <span style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 1rem;background:#A81D33;color:#ffffff;border-radius:6px;font-weight:700;line-height:1;">
+          <span>Debian</span>
+          <img src="https://cdn.simpleicons.org/debian/ffffff" alt="Debian logo" width="18" height="18" />
+        </span>
+      </a>
+      <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest">
+        <span style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 1rem;background:#181717;color:#ffffff;border-radius:6px;font-weight:700;line-height:1;">
+          <span>GitHub Releases</span>
+          <img src="https://cdn.simpleicons.org/github/ffffff" alt="GitHub logo" width="18" height="18" />
+        </span>
+      </a>
+    </span>
+  </a>
+</p>
+
 # PictoPy
 
 **PictoPy is an open-source, privacy-first AI photo management application built for the desktop - featuring on-device face recognition, object detection, and smart search, with zero data leaving your machine.**
@@ -58,22 +91,6 @@ Find out more at [https://pictopy.aossie.org/](https://pictopy.aossie.org/).
 
 * Privacy-focused design with fully offline functionality
 * Efficient data handling and parallel processing
-
-## Downloads
-
-<p align="center">
-  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest">
-    <img src="https://img.shields.io/badge/Windows-Download-blue?style=for-the-badge&logo=windows"  alt="Windows Download Badge" />
-  </a>
-  &nbsp;&nbsp;
-  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest">
-    <img src="https://img.shields.io/badge/macOS-Download-black?style=for-the-badge&logo=apple"  alt="macOS Download Badge" />
-  </a>
-  &nbsp;&nbsp;
-  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest">
-    <img src="https://img.shields.io/badge/Linux-Download-yellow?style=for-the-badge&logo=linux&logoColor=black" alt="Linux Download Badge" />
-  </a>
-</p>
 
 ## Demonstration
 
