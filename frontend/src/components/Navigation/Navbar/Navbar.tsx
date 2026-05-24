@@ -86,7 +86,7 @@ export function Navbar() {
               className="text-muted-foreground inline-block max-w-[150px] truncate align-bottom"
               title={userName}
             >
-              {userName.split(' ')[0]}
+              {userName?.split(' ')[0] ?? ''}
             </span>
           </span>
           <Link to="/settings#account" className="p-2">

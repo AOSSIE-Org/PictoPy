@@ -78,10 +78,11 @@ const AccountSettingsCard: React.FC = () => {
               }
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
-              className={`h-10 w-full text-sm placeholder:text-sm ${nameError
-                ? 'border-red-500 placeholder:text-red-500/80 focus-visible:ring-red-500'
-                : ''
-                }`}
+              className={`h-10 w-full text-sm placeholder:text-sm ${
+                nameError
+                  ? 'border-red-500 placeholder:text-red-500/80 focus-visible:ring-red-500'
+                  : ''
+              }`}
             />
             {longWordError && (
               <p className="mt-2 text-xs text-red-500">
@@ -101,16 +102,18 @@ const AccountSettingsCard: React.FC = () => {
                     type="button"
                     key={avatar}
                     onClick={() => handleAvatarSelect(avatar)}
-                    className={`bg-background relative inline-flex h-24 w-24 items-center justify-center rounded-full transition-all duration-300 ${isSelected
-                      ? 'ring-offset-background scale-90 ring-2 ring-blue-500 ring-offset-4'
-                      : 'hover:ring-4 hover:ring-blue-500 hover:ring-offset-4'
-                      }`}
+                    className={`bg-background relative inline-flex h-24 w-24 items-center justify-center rounded-full transition-all duration-300 ${
+                      isSelected
+                        ? 'ring-offset-background scale-90 ring-2 ring-blue-500 ring-offset-4'
+                        : 'hover:ring-4 hover:ring-blue-500 hover:ring-offset-4'
+                    }`}
                   >
                     <img
                       src={avatar}
                       alt="Avatar"
-                      className={`h-24 w-24 rounded-full object-cover transition-all duration-300 ${isSelected ? 'brightness-110' : ''
-                        }`}
+                      className={`h-24 w-24 rounded-full object-cover transition-all duration-300 ${
+                        isSelected ? 'brightness-110' : ''
+                      }`}
                     />
                   </button>
                 );
@@ -123,7 +126,7 @@ const AccountSettingsCard: React.FC = () => {
         <Button
           className="mt-4 w-auto bg-blue-500 px-6 py-2 text-sm font-medium text-white hover:bg-blue-600"
           onClick={handleSave}
-          disabled={!selectedAvatar}
+          disabled={!selectedAvatar || longWordError}
         >
           Save Changes
         </Button>
