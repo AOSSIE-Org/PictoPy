@@ -34,21 +34,19 @@
 </p>
 
 <p align="center">
-  <span style="font-size:18px;font-weight:bold">Download:</span>
-  <span style="display:inline-flex;align-items:center;gap:0.5rem;vertical-align:middle;">
-    <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_x64-setup.exe" style="display:inline-flex;align-items:center;">
-      <img src="docs/assets/readme-assets/btn-windows.svg" alt="Windows download button" style="height:34px;width:auto;" />
-    </a>
-    <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_aarch64.app.tar.gz" style="display:inline-flex;align-items:center;">
-      <img src="docs/assets/readme-assets/btn-macos.svg" alt="macOS download button" style="height:34px;width:auto;" />
-    </a>
-    <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_amd64.deb" style="display:inline-flex;align-items:center;">
-      <img src="docs/assets/readme-assets/btn-debian.svg" alt="Debian download button" style="height:34px;width:auto;" />
-    </a>
-    <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest" style="display:inline-flex;align-items:center;">
-      <img src="docs/assets/readme-assets/btn-github.svg" alt="GitHub Releases button" style="height:34px;width:auto;" />
-    </a>
-  </span>
+  <strong>Download:</strong>
+  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_x64-setup.exe" style="display:inline-flex;align-items:center;">
+    <img src="docs/assets/readme-assets/btn-windows.svg" alt="Windows download button" style="height:34px;width:auto;" />
+  </a>
+  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_aarch64.app.tar.gz" style="display:inline-flex;align-items:center;">
+    <img src="docs/assets/readme-assets/btn-macos.svg" alt="macOS download button" style="height:34px;width:auto;" />
+  </a>
+  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_amd64.deb" style="display:inline-flex;align-items:center;">
+    <img src="docs/assets/readme-assets/btn-debian.svg" alt="Debian download button" style="height:34px;width:auto;" />
+  </a>
+  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest" style="display:inline-flex;align-items:center;">
+    <img src="docs/assets/readme-assets/btn-github.svg" alt="GitHub Releases button" style="height:34px;width:auto;" />
+  </a>
 </p>
 
 # PictoPy
