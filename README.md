@@ -3,34 +3,53 @@
 <div name="readme-top"></div>
 
 <p align="center">
-  <img src="docs/assets/banner.png" alt="PictoPy Banner" width="100%"/>
+  <img src="docs/assets/readme-assets/banner.png" alt="PictoPy Banner" width="100%"/>
 </p>
 
 <!-- Organization/Project Social Handles -->
 <p align="center">
-<!-- Telegram -->
-<a href="https://t.me/StabilityNexus">
-<img src="https://img.shields.io/badge/Telegram-black?style=flat&logo=telegram&logoColor=white&logoSize=auto&color=24A1DE" alt="Telegram Badge"/></a>
+<!-- Discord -->
+<a href="https://discord.gg/hjUhu33uAn">
+<img src="https://img.shields.io/discord/1022871757289422898?style=flat&logo=discord&logoColor=white&logoSize=auto&label=Discord&labelColor=5865F2&color=57F287" alt="Discord Badge"/></a>
 &nbsp;&nbsp;
 <!-- X (formerly Twitter) -->
 <a href="https://x.com/aossie_org">
 <img src="https://img.shields.io/twitter/follow/aossie_org" alt="X (formerly Twitter) Badge"/></a>
 &nbsp;&nbsp;
-<!-- Discord -->
-<a href="https://discord.gg/hjUhu33uAn">
-<img src="https://img.shields.io/discord/1022871757289422898?style=flat&logo=discord&logoColor=white&logoSize=auto&label=Discord&labelColor=5865F2&color=57F287" alt="Discord Badge"/></a>
+<!-- LinkedIn -->
+<a href="https://www.linkedin.com/company/aossie/">
+  <img src="https://img.shields.io/badge/LinkedIn-black?style=flat&logo=LinkedIn&logoColor=white&logoSize=auto&color=0A66C2" alt="LinkedIn Badge"></a>
 &nbsp;&nbsp;
 <!-- Medium -->
 <a href="https://news.stability.nexus/">
   <img src="https://img.shields.io/badge/Medium-black?style=flat&logo=medium&logoColor=black&logoSize=auto&color=white" alt="Medium Badge"></a>
 &nbsp;&nbsp;
-<!-- LinkedIn -->
-<a href="https://www.linkedin.com/company/aossie/">
-  <img src="https://img.shields.io/badge/LinkedIn-black?style=flat&logo=LinkedIn&logoColor=white&logoSize=auto&color=0A66C2" alt="LinkedIn Badge"></a>
+<!-- Telegram -->
+<a href="https://t.me/StabilityNexus">
+<img src="https://img.shields.io/badge/Telegram-black?style=flat&logo=telegram&logoColor=white&logoSize=auto&color=24A1DE" alt="Telegram Badge"/></a>
 &nbsp;&nbsp;
 <!-- Youtube -->
 <a href="https://www.youtube.com/@AOSSIE-Org">
   <img src="https://img.shields.io/youtube/channel/subscribers/UCKVVLbawY7Gej_3o2WKsoiA?style=flat&logo=youtube&logoColor=white%20&logoSize=auto&labelColor=FF0000&color=FF0000" alt="Youtube Badge"></a>
+</p>
+
+<p align="center">
+  <strong>Download:</strong>
+  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_x64-setup.exe" >
+    <img src="docs/assets/readme-assets/btn-windows.svg" alt="Windows download button" style="height:34px;width:auto;" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_aarch64.app.tar.gz">
+    <img src="docs/assets/readme-assets/btn-macos.svg" alt="macOS download button" style="height:34px;width:auto;" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_amd64.deb">
+    <img src="docs/assets/readme-assets/btn-debian.svg" alt="Debian download button" style="height:34px;width:auto;" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest">
+    <img src="docs/assets/readme-assets/btn-github.svg" alt="GitHub Releases button" style="height:34px;width:auto;" />
+  </a>
 </p>
 
 # PictoPy
@@ -63,7 +82,7 @@ Find out more at [https://pictopy.aossie.org/](https://pictopy.aossie.org/).
 
 <p align="center">
   <a href="https://youtu.be/RWp-9xT9jow?si=c1vNO5cDgI4GYM6y">
-    <img src="docs/assets/demo.png" alt="PictoPy Demonstration">
+    <img src="docs/assets/readme-assets/demo.png" alt="PictoPy Demonstration">
   </a>
 </p>
 
@@ -89,11 +108,8 @@ Find out more at [https://pictopy.aossie.org/](https://pictopy.aossie.org/).
 ## High Level Architecture
 
 <div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/architectual-design-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/architectual-design-light.svg">
-    <img src="docs/assets/architectual-design-light.svg" alt="PictoPy architecture diagram">
-  </picture>
+  <img src="docs/assets/readme-assets/architectual-design-light.svg#gh-light-mode-only" alt="PictoPy architecture diagram"/>
+  <img src="docs/assets/readme-assets/architectual-design-dark.svg#gh-dark-mode-only" alt="PictoPy architecture diagram"/>
 </div>
 
 ## Want to Contribute?
@@ -114,7 +130,7 @@ See the [LICENSE](LICENSE) file for details.
 
 ## Thanks To All Contributors
 
-Thanks a lot for spending your time helping TODO grow. Keep rocking 🥂
+Thanks a lot for spending your time helping PictoPy grow. Keep rocking 🥂
 
 [![Contributors](https://contrib.rocks/image?repo=AOSSIE-Org/PictoPy)](https://github.com/AOSSIE-Org/PictoPy/graphs/contributors)
 

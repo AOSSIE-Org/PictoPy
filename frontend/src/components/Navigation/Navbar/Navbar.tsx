@@ -12,7 +12,7 @@ import { RootState } from '@/app/store';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllClusters } from '@/api/api-functions';
 import { setClusters } from '@/features/faceClustersSlice';
-import { useNavigate } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import { Cluster } from '@/types/Media';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ROUTES } from '@/constants/routes';
@@ -141,7 +141,7 @@ export function Navbar() {
     <>
       <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur">
         {/* Logo */}
-        <div className="flex w-[256px] items-center justify-center">
+        <div className="flex w-3xs items-center justify-center">
           <a href="/" className="flex items-center space-x-2">
             <img src="/128x128.png" width={32} height={32} alt="PictoPy Logo" />
             <span className="text-xl font-bold">PictoPy</span>
@@ -149,13 +149,9 @@ export function Navbar() {
         </div>
 
         {/*  Search Bar */}
-        <div
-          className={`mx-auto flex flex-1 justify-center px-4 transition-all duration-200 ${
-            isFocused ? 'max-w-[700px]' : 'max-w-md'
-          }`}
-        >
+        <div className="absolute left-1/2 w-full max-w-[700px] -translate-x-1/2 px-4">
           <div
-            className={`dark:bg-muted/50 flex w-[90vw] max-w-[700px] items-center gap-1 rounded-md bg-neutral-100 px-1 py-1 transition-all duration-200 ${
+            className={`dark:bg-muted/50 flex w-full items-center gap-1 rounded-md bg-neutral-100 px-1 py-1 transition-all duration-200 ${
               isFocused ? 'ring-2 ring-neutral-400' : ''
             }`}
           >
@@ -234,7 +230,7 @@ export function Navbar() {
             onClick={() => setIsFocused(false)}
           />
           <div
-            className="animate-in fade-in slide-in-from-top-5 fixed top-16 left-1/2 z-40 max-h-[60vh] w-[90vw] max-w-[700px] -translate-x-1/2 overflow-y-auto rounded-xl bg-white p-6 shadow-2xl transition-all duration-300 dark:bg-neutral-900"
+            className="animate-in fade-in slide-in-from-top-5 fixed top-16 left-1/2 z-40 w-full max-w-[700px] -translate-x-1/2 overflow-y-auto rounded-xl bg-white p-6 shadow-2xl transition-all duration-300 dark:bg-neutral-900"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
@@ -318,7 +314,7 @@ export function Navbar() {
             onClick={() => setIsFocused(false)}
           />
           <div
-            className="animate-in fade-in slide-in-from-top-5 fixed top-16 left-1/2 z-40 max-h-[60vh] w-[90vw] max-w-[700px] -translate-x-1/2 overflow-y-auto rounded-xl bg-white p-6 shadow-2xl transition-all duration-300 dark:bg-neutral-900"
+            className="animate-in fade-in slide-in-from-top-5 fixed top-16 left-1/2 z-40 w-full max-w-[700px] -translate-x-1/2 overflow-y-auto rounded-xl bg-white p-6 px-4 shadow-2xl transition-all duration-300 dark:bg-neutral-900"
             onClick={(e) => e.stopPropagation()}
           >
             {hasPartialMatch ? (

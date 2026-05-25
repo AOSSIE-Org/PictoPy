@@ -1117,9 +1117,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/InputType",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/InputType"
+                }
+              ],
               "description": "Choose input type: 'path' or 'base64'",
-              "default": "path"
+              "default": "path",
+              "title": "Input Type"
             },
             "description": "Choose input type: 'path' or 'base64'"
           }
@@ -1315,7 +1320,7 @@
             "required": false,
             "schema": {
               "type": "number",
-              "maximum": 100,
+              "maximum": 100.0,
               "minimum": 0.1,
               "description": "Location clustering radius in km",
               "default": 5.0,
@@ -1403,7 +1408,7 @@
             "required": false,
             "schema": {
               "type": "number",
-              "maximum": 100,
+              "maximum": 100.0,
               "minimum": 0.1,
               "description": "Location clustering radius in km",
               "default": 5.0,
@@ -1483,7 +1488,7 @@
             "required": false,
             "schema": {
               "type": "number",
-              "maximum": 100,
+              "maximum": 100.0,
               "minimum": 0.1,
               "description": "Location clustering radius in km",
               "default": 5.0,
@@ -2653,7 +2658,6 @@
           "metadata": {
             "anyOf": [
               {
-                "additionalProperties": true,
                 "type": "object"
               },
               {
