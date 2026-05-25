@@ -19,6 +19,7 @@ const AccountSettingsCard: React.FC = () => {
     return avatars.includes(stored) ? stored : '';
   });
   const [nameError, setNameError] = useState(false);
+  const [longWordError, setLongWordError] = useState(false);
 
   // The redundant useEffect has been removed.
 
@@ -27,10 +28,15 @@ const AccountSettingsCard: React.FC = () => {
   };
 
   const handleNameChange = (value: string) => {
-    setLocalName(value);
-    if (nameError) {
-      setNameError(false);
+    const words = value.split(' ');
+    const hasLongWord = words.some((word) => word.length > 30);
+    if (hasLongWord) {
+      setLongWordError(true);
+      return;
     }
+    setLongWordError(false);
+    setLocalName(value);
+    if (nameError) setNameError(false);
   };
 
   const handleSave = () => {
@@ -78,6 +84,11 @@ const AccountSettingsCard: React.FC = () => {
                   : ''
               }`}
             />
+            {longWordError && (
+              <p className="mt-2 text-xs text-red-500">
+                A single word in your name cannot exceed 30 characters.
+              </p>
+            )}
           </div>
 
           {/* Avatar Section */}
@@ -115,7 +126,7 @@ const AccountSettingsCard: React.FC = () => {
         <Button
           className="mt-4 w-auto bg-blue-500 px-6 py-2 text-sm font-medium text-white hover:bg-blue-600"
           onClick={handleSave}
-          disabled={!selectedAvatar}
+          disabled={!selectedAvatar || longWordError}
         >
           Save Changes
         </Button>
