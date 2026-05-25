@@ -12,7 +12,7 @@ import { RootState } from '@/app/store';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllClusters } from '@/api/api-functions';
 import { setClusters } from '@/features/faceClustersSlice';
-import { useNavigate, Link } from 'react-router';
+import { useNavigate } from 'react-router';
 import { Cluster } from '@/types/Media';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ROUTES } from '@/constants/routes';
