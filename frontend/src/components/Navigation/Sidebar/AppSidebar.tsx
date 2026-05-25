@@ -118,6 +118,7 @@ export function AppSidebar() {
                   variant="ghost"
                   size="icon"
                   onClick={toggleSidebar}
+                  aria-label={open ? 'Collapse sidebar' : 'Expand sidebar'}
                   className="hover:bg-accent h-8 w-8 transition-transform duration-300 ease-in-out"
                 >
                   <ChevronLeft
