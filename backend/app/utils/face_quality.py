@@ -25,6 +25,9 @@ def face_passes_quality_gate(
         return False
 
     # 3. Blur check
+    if face_crop.size == 0:
+        return False
+
     if len(face_crop.shape) == 3:
         gray = cv2.cvtColor(face_crop, cv2.COLOR_BGR2GRAY)
     else:

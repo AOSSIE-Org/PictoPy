@@ -611,3 +611,17 @@ class TestFaceClusteringAlgo:
             )
             is False
         )
+
+        # An empty crop should fail
+        empty_crop = np.zeros((0, 0, 3), dtype=np.uint8)
+        assert (
+            face_passes_quality_gate(
+                face_crop=empty_crop,
+                bbox=(0, 0, 0, 0),
+                conf_score=0.9,
+                conf_threshold=0.45,
+                blur_threshold=10.0,
+                min_face_size=400,
+            )
+            is False
+        )
