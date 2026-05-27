@@ -28,7 +28,6 @@ from app.schemas.face_clusters import (
 from app.schemas.images import FaceSearchRequest, InputType
 from app.utils.faceSearch import perform_face_search
 
-
 logger = logging.getLogger(__name__)
 router = APIRouter()
 

@@ -5,6 +5,7 @@ This module contains the main FastAPI application.
 import multiprocessing
 import os
 import json
+import asyncio
 
 from app.config.settings import DATABASE_PATH, THUMBNAIL_IMAGES_PATH
 from uvicorn import Config, Server
@@ -26,7 +27,9 @@ from app.routes.albums import router as albums_router
 from app.routes.images import router as images_router
 from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
+from app.routes.memories import router as memories_router
 from app.routes.shutdown import router as shutdown_router
+from app.routes.models import router as models_router, _cleanup_stale_tasks
 from fastapi.openapi.utils import get_openapi
 from app.logging.setup_logging import (
     configure_uvicorn_logging,
@@ -61,9 +64,14 @@ async def lifespan(app: FastAPI):
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor(max_workers=1)
 
+    # Start the SSE model download cleanup task
+    cleanup_task = asyncio.create_task(_cleanup_stale_tasks())
+
     try:
         yield
     finally:
+        cleanup_task.cancel()
+        await asyncio.gather(cleanup_task, return_exceptions=True)
         app.state.executor.shutdown(wait=True)
 
 
@@ -137,7 +145,11 @@ app.include_router(
 app.include_router(
     user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
 )
+app.include_router(
+    memories_router
+)  # Memories router (prefix already defined in router)
 app.include_router(shutdown_router, tags=["Shutdown"])
+app.include_router(models_router, prefix="/models", tags=["Models"])
 
 
 # Entry point for running with: python3 main.py

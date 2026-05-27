@@ -9,6 +9,7 @@ import { selectAvatar, selectName } from '@/features/onboardingSelectors';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
 import { useRef } from 'react';
+import { Link } from 'react-router';
 
 export function Navbar() {
   const userName = useSelector(selectName);
@@ -37,10 +38,10 @@ export function Navbar() {
     <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur">
       {/* Logo */}
       <div className="flex w-[256px] items-center justify-center">
-        <a href="/" className="flex items-center space-x-2">
+        <Link to="/" className="flex items-center space-x-2">
           <img src="/128x128.png" width={32} height={32} alt="PictoPy Logo" />
           <span className="text-xl font-bold">PictoPy</span>
-        </a>
+        </Link>
       </div>
 
       {/* Search Bar */}
@@ -96,15 +97,21 @@ export function Navbar() {
         <ThemeSelector />
         <div className="flex items-center space-x-2">
           <span className="hidden text-sm sm:inline-block">
-            Welcome <span className="text-muted-foreground">{userName}</span>
+            Welcome{' '}
+            <span
+              className="text-muted-foreground inline-block max-w-[150px] truncate align-bottom"
+              title={userName}
+            >
+              {userName?.split(' ')[0] ?? ''}
+            </span>
           </span>
-          <a href="/settings" className="p-2">
+          <Link to="/settings#account" className="p-2">
             <img
               src={userAvatar || '/photo1.png'}
               className="hover:ring-primary/50 h-8 w-8 cursor-pointer rounded-full transition-all hover:ring-2"
               alt="User avatar"
             />
-          </a>
+          </Link>
         </div>
       </div>
     </div>

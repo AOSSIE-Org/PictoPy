@@ -40,6 +40,7 @@ A file system synchronization microservice for PictoPy that monitors folder chan
    ```
 
 4. **Start the service:**
+
    ```bash
    fastapi dev --port 52124
    ```
@@ -79,7 +80,7 @@ A file system synchronization microservice for PictoPy that monitors folder chan
 
 ## Architecture
 
-```
+```text
 sync-microservice/
 ├── app/
 │   ├── config/
