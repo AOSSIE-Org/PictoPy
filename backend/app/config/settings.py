@@ -115,6 +115,12 @@ PICTO_CLUSTERING_EPS = _get_env_float("PICTO_CLUSTERING_EPS", 0.75, min_value=0.
 PICTO_CLUSTERING_MIN_SAMPLES = _get_env_int(
     "PICTO_CLUSTERING_MIN_SAMPLES", 2, min_value=1
 )
+if PICTO_CLUSTERING_MIN_SAMPLES < 2:
+    logger.warning(
+        f"PICTO_CLUSTERING_MIN_SAMPLES={PICTO_CLUSTERING_MIN_SAMPLES} is invalid "
+        f"(minimum is 2). Resetting to 2 to prevent cluster chaining."
+    )
+    PICTO_CLUSTERING_MIN_SAMPLES = 2
 PICTO_CLUSTERING_SIMILARITY_THRESHOLD = _get_env_float(
     "PICTO_CLUSTERING_SIMILARITY_THRESHOLD", 0.85, min_value=0.0, max_value=1.0
 )

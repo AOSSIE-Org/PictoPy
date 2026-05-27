@@ -617,7 +617,7 @@ class TestFaceClusteringAlgo:
         assert (
             face_passes_quality_gate(
                 face_crop=empty_crop,
-                bbox=(0, 0, 0, 0),
+                bbox=(0, 0, 500, 500),
                 conf_score=0.9,
                 conf_threshold=0.45,
                 blur_threshold=10.0,
