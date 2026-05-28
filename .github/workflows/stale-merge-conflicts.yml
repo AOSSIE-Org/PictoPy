@@ -42,17 +42,17 @@ jobs:
           operations-per-run: 100
 
           stale-pr-message: |
-            ⚠️ **This PR still has merge conflicts and has been inactive for 30 days.**
+            ⚠️ **This PR still has unresolved merge conflicts and has been inactive for the past 30 days.**
 
-            This PR still has the `PR has merge conflicts` label and there has been no recent activity.
+            The `PR has merge conflicts` label is still applied, and there has been no recent activity on this PR.
 
-            Please resolve the merge conflicts or leave a comment if you are still working on this PR.
+            Please resolve the merge conflicts or leave a comment if you are still actively working on it.
 
-            If there is no activity for 5 more days, this PR may be automatically closed to help maintainers keep the pull request backlog manageable.
+            If there is no further activity within the next 5 days, this PR may be automatically closed to help keep the PR backlog manageable.
 
           close-pr-message: |
-            🔒 **Closing this PR due to unresolved merge conflicts and inactivity.**
+            🔒 **Closing this PR due to unresolved merge conflicts and prolonged inactivity.**
 
-            This PR still had merge conflicts and there was no activity for 5 days after the stale warning.
+            This PR still had unresolved merge conflicts, and there was no activity within 5 days of the stale warning being posted.
 
-            You can reopen this PR or create a new one after resolving the merge conflicts.
+            You may reopen this PR or submit a new one after resolving the merge conflicts.
