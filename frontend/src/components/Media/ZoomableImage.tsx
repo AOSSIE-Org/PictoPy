@@ -51,6 +51,7 @@ export interface ZoomableImageRef {
 export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
   ({ imagePath, alt, rotation, resetSignal }, ref) => {
     const transformRef = useRef<ReactZoomPanPinchRef>(null);
+    const wheelAreaRef = useRef<HTMLDivElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
     const [isOverflowing, setIsOverflowing] = useState(false);
     const rotationRef = useRef(rotation);
@@ -94,16 +95,20 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
       [getEffectiveDimensions],
     );
 
+    const getViewportElement = useCallback(
+      () =>
+        transformRef.current?.instance?.wrapperComponent ??
+        wheelAreaRef.current,
+      [],
+    );
+
     const handleReset = useCallback(
       (duration = 200, animationType: AnimationType = 'easeOut') => {
-        if (
-          !transformRef.current?.instance?.wrapperComponent ||
-          !imageRef.current
-        )
+        const viewportElement = getViewportElement();
+        if (!transformRef.current || !viewportElement || !imageRef.current)
           return;
 
-        const wrapperRect =
-          transformRef.current.instance.wrapperComponent.getBoundingClientRect();
+        const wrapperRect = viewportElement.getBoundingClientRect();
         const img = imageRef.current;
 
         const scale = 1;
@@ -137,7 +142,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
         );
         setIsOverflowing(false);
       },
-      [getEffectiveDimensions],
+      [getEffectiveDimensions, getViewportElement],
     );
 
     useImperativeHandle(ref, () => ({
@@ -151,19 +156,16 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
     }, [resetSignal, handleReset]);
 
     useEffect(() => {
-      if (
-        !transformRef.current?.instance?.wrapperComponent ||
-        !imageRef.current
-      )
+      const viewportElement = getViewportElement();
+      if (!transformRef.current || !viewportElement || !imageRef.current)
         return;
 
-      const wrapper = transformRef.current.instance.wrapperComponent;
       const scale = transformRef.current.instance.transformState.scale;
-      const rect = wrapper.getBoundingClientRect();
+      const rect = viewportElement.getBoundingClientRect();
 
       const overflow = getOverflowState(scale, rect.width, rect.height);
       setIsOverflowing(overflow.width || overflow.height);
-    }, [rotation, getOverflowState]);
+    }, [rotation, getOverflowState, getViewportElement]);
 
     useEffect(() => {
       setIsOverflowing(false);
@@ -184,7 +186,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
     }, [imagePath, handleReset]);
 
     useEffect(() => {
-      const wrapperElement = transformRef.current?.instance?.wrapperComponent;
+      const wrapperElement = wheelAreaRef.current;
       if (!wrapperElement) return;
 
       let cachedWrapperRect = wrapperElement.getBoundingClientRect();
@@ -200,6 +202,8 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
 
         const transformState = transformRef.current.instance.transformState;
 
+        cachedWrapperRect = wrapperElement.getBoundingClientRect();
+        const wrapperRect = cachedWrapperRect;
         const imageRect = imageRef.current.getBoundingClientRect();
         const mouseX = e.clientX - imageRect.left;
         const mouseY = e.clientY - imageRect.top;
@@ -222,83 +226,38 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
           Math.min(MAX_SCALE, currentScale + zoomChange),
         );
 
-        const wrapperRect = cachedWrapperRect;
+        const baseW = imageRef.current.clientWidth;
+        const baseH = imageRef.current.clientHeight;
+        const effectiveDims = getEffectiveDimensions(baseW, baseH);
+        const nextW = effectiveDims.width * newScale;
+        const nextH = effectiveDims.height * newScale;
+
         const newOverflow = getOverflowState(
           newScale,
           wrapperRect.width,
           wrapperRect.height,
         );
 
-        if (zoomChange < 0) {
-          e.preventDefault();
-          e.stopPropagation();
+        const centeredX = (wrapperRect.width - nextW) / 2;
+        const centeredY = (wrapperRect.height - nextH) / 2;
+        const ratio = currentScale > 0 ? newScale / currentScale : 1;
+        const mouseViewportX = e.clientX - wrapperRect.left;
+        const mouseViewportY = e.clientY - wrapperRect.top;
+        const anchoredX =
+          mouseViewportX - (mouseViewportX - transformState.positionX) * ratio;
+        const anchoredY =
+          mouseViewportY - (mouseViewportY - transformState.positionY) * ratio;
 
-          setIsOverflowing(newOverflow.width || newOverflow.height);
+        const targetX =
+          isOverImage && newOverflow.width ? anchoredX : centeredX;
+        const targetY =
+          isOverImage && newOverflow.height ? anchoredY : centeredY;
 
-          const baseW = imageRect.width / currentScale;
-          const baseH = imageRect.height / currentScale;
+        e.preventDefault();
+        e.stopPropagation();
 
-          const effectiveDims = getEffectiveDimensions(baseW, baseH);
-          const finalTargetX = (wrapperRect.width - effectiveDims.width) / 2;
-          const finalTargetY = (wrapperRect.height - effectiveDims.height) / 2;
-
-          let targetX = finalTargetX;
-          let targetY = finalTargetY;
-
-          if (currentScale > 1) {
-            const ratio = (newScale - 1) / (currentScale - 1);
-            const safeRatio =
-              isNaN(ratio) || !isFinite(ratio) || ratio < 0 ? 0 : ratio;
-
-            targetX =
-              transformState.positionX * safeRatio +
-              finalTargetX * (1 - safeRatio);
-            targetY =
-              transformState.positionY * safeRatio +
-              finalTargetY * (1 - safeRatio);
-          }
-
-          transformRef.current.setTransform(targetX, targetY, newScale, 0);
-          return;
-        }
-
-        if (!newOverflow.width && !newOverflow.height) {
-          e.preventDefault();
-          e.stopPropagation();
-
-          const baseW = imageRect.width / currentScale;
-          const baseH = imageRect.height / currentScale;
-
-          const effectiveDims = getEffectiveDimensions(baseW, baseH);
-          const nextW = effectiveDims.width * newScale;
-          const nextH = effectiveDims.height * newScale;
-
-          const targetX = (wrapperRect.width - nextW) / 2;
-          const targetY = (wrapperRect.height - nextH) / 2;
-
-          transformRef.current.setTransform(targetX, targetY, newScale, 0);
-          return;
-        }
-
-        if (!isOverImage) {
-          e.preventDefault();
-          e.stopPropagation();
-
-          const centerX = wrapperRect.width / 2;
-          const centerY = wrapperRect.height / 2;
-
-          if (currentScale > 0) {
-            const ratio = newScale / currentScale;
-
-            const targetX =
-              centerX - (centerX - transformState.positionX) * ratio;
-            const targetY =
-              centerY - (centerY - transformState.positionY) * ratio;
-
-            transformRef.current.setTransform(targetX, targetY, newScale, 0);
-          }
-          return;
-        }
+        setIsOverflowing(newOverflow.width || newOverflow.height);
+        transformRef.current.setTransform(targetX, targetY, newScale, 0);
       };
 
       wrapperElement.addEventListener('wheel', handleWheelInterceptor, {
@@ -317,126 +276,134 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
     }, [getEffectiveDimensions, getOverflowState]);
 
     return (
-      <TransformWrapper
-        ref={transformRef}
-        initialScale={MIN_SCALE}
-        minScale={MIN_SCALE}
-        maxScale={MAX_SCALE}
-        centerOnInit
-        limitToBounds={!isOverflowing}
-        centerZoomedOut={true}
-        wheel={{
-          disabled: false,
-          step: 0.1,
-          smoothStep: 0.001,
-        }}
-        panning={{
-          disabled: !isOverflowing,
-          velocityDisabled: true,
-        }}
-        onTransformed={(ref) => {
-          const scale = ref.state.scale;
-          const wrapper = ref.instance.wrapperComponent;
-          if (!wrapper) return;
-
-          const rect = wrapper.getBoundingClientRect();
-          const overflow = getOverflowState(scale, rect.width, rect.height);
-          setIsOverflowing(overflow.width || overflow.height);
-        }}
-        onZoom={(ref) => {
-          const scale = ref.state.scale;
-          const wrapper = ref.instance.wrapperComponent;
-          if (!wrapper) return;
-
-          const rect = wrapper.getBoundingClientRect();
-          const overflow = getOverflowState(scale, rect.width, rect.height);
-          setIsOverflowing(overflow.width || overflow.height);
-        }}
-        onPanning={(ref) => {
-          const scale = ref.state.scale;
-          const wrapper = ref.instance.wrapperComponent;
-          if (!wrapper || !imageRef.current) return;
-
-          const rect = wrapper.getBoundingClientRect();
-          const overflow = getOverflowState(scale, rect.width, rect.height);
-          setIsOverflowing(overflow.width || overflow.height);
-
-          const positionX = ref.state.positionX;
-          const positionY = ref.state.positionY;
-          const viewW = wrapper.clientWidth;
-          const viewH = wrapper.clientHeight;
-          const imgW = imageRef.current.clientWidth;
-          const imgH = imageRef.current.clientHeight;
-
-          const effectiveDims = getEffectiveDimensions(imgW, imgH);
-          const scaledW = effectiveDims.width * scale;
-          const scaledH = effectiveDims.height * scale;
-
-          const limitLeft = -scaledW + PAN_PADDING;
-          const limitRight = viewW - PAN_PADDING;
-          const limitTop = -scaledH + PAN_PADDING;
-          const limitBottom = viewH - PAN_PADDING;
-
-          let finalX = positionX;
-          let finalY = positionY;
-          let clamped = false;
-
-          if (positionX < limitLeft) {
-            finalX = limitLeft;
-            clamped = true;
-          } else if (positionX > limitRight) {
-            finalX = limitRight;
-            clamped = true;
-          }
-
-          if (positionY < limitTop) {
-            finalY = limitTop;
-            clamped = true;
-          } else if (positionY > limitBottom) {
-            finalY = limitBottom;
-            clamped = true;
-          }
-
-          if (clamped) {
-            ref.setTransform(finalX, finalY, scale, 0);
-          }
-        }}
-      >
-        <TransformComponent
-          wrapperStyle={{
-            width: '100%',
-            height: '100%',
-            overflow: 'visible',
-            cursor: isOverflowing ? 'move' : 'default',
+      <div ref={wheelAreaRef} className="h-full w-full">
+        <TransformWrapper
+          ref={transformRef}
+          initialScale={MIN_SCALE}
+          minScale={MIN_SCALE}
+          maxScale={MAX_SCALE}
+          centerOnInit
+          limitToBounds={!isOverflowing}
+          centerZoomedOut={true}
+          wheel={{
+            disabled: true,
           }}
-          contentStyle={{
-            width: 'fit-content',
-            height: 'fit-content',
-            cursor: isOverflowing ? 'move' : 'default',
+          panning={{
+            disabled: !isOverflowing,
+            velocityDisabled: true,
+          }}
+          onTransformed={(ref) => {
+            const scale = ref.state.scale;
+            const wrapper = getViewportElement();
+            if (!wrapper) return;
+
+            const rect = wrapper.getBoundingClientRect();
+            const overflow = getOverflowState(scale, rect.width, rect.height);
+            setIsOverflowing(overflow.width || overflow.height);
+          }}
+          onZoom={(ref) => {
+            const scale = ref.state.scale;
+            const wrapper = getViewportElement();
+            if (!wrapper) return;
+
+            const rect = wrapper.getBoundingClientRect();
+            const overflow = getOverflowState(scale, rect.width, rect.height);
+            setIsOverflowing(overflow.width || overflow.height);
+          }}
+          onPanning={(ref) => {
+            const scale = ref.state.scale;
+            const wrapper = getViewportElement();
+            if (!wrapper || !imageRef.current) return;
+
+            const rect = wrapper.getBoundingClientRect();
+            const overflow = getOverflowState(scale, rect.width, rect.height);
+            setIsOverflowing(overflow.width || overflow.height);
+
+            const positionX = ref.state.positionX;
+            const positionY = ref.state.positionY;
+            const viewW = wrapper.clientWidth;
+            const viewH = wrapper.clientHeight;
+            const imgW = imageRef.current.clientWidth;
+            const imgH = imageRef.current.clientHeight;
+
+            const effectiveDims = getEffectiveDimensions(imgW, imgH);
+            const scaledW = effectiveDims.width * scale;
+            const scaledH = effectiveDims.height * scale;
+
+            const limitLeft = -scaledW + PAN_PADDING;
+            const limitRight = viewW - PAN_PADDING;
+            const limitTop = -scaledH + PAN_PADDING;
+            const limitBottom = viewH - PAN_PADDING;
+            const centeredX = (viewW - scaledW) / 2;
+            const centeredY = (viewH - scaledH) / 2;
+
+            let finalX = overflow.width ? positionX : centeredX;
+            let finalY = overflow.height ? positionY : centeredY;
+            let clamped =
+              (!overflow.width && positionX !== centeredX) ||
+              (!overflow.height && positionY !== centeredY);
+
+            if (overflow.width) {
+              if (positionX < limitLeft) {
+                finalX = limitLeft;
+                clamped = true;
+              } else if (positionX > limitRight) {
+                finalX = limitRight;
+                clamped = true;
+              }
+            }
+
+            if (overflow.height) {
+              if (positionY < limitTop) {
+                finalY = limitTop;
+                clamped = true;
+              } else if (positionY > limitBottom) {
+                finalY = limitBottom;
+                clamped = true;
+              }
+            }
+
+            if (clamped) {
+              ref.setTransform(finalX, finalY, scale, 0);
+            }
           }}
         >
-          <img
-            ref={imageRef}
-            src={convertFileSrc(imagePath) || '/placeholder.svg'}
-            alt={alt}
-            draggable={false}
-            className="select-none"
-            onError={(e) => {
-              const img = e.target as HTMLImageElement;
-              img.onerror = null;
-              img.src = '/placeholder.svg';
-            }}
-            style={{
-              maxWidth: '100vw',
-              maxHeight: '100vh',
-              objectFit: 'contain',
-              zIndex: 50,
-              transform: `rotate(${rotation}deg)`,
+          <TransformComponent
+            wrapperStyle={{
+              width: '100%',
+              height: '100%',
+              overflow: 'visible',
               cursor: isOverflowing ? 'move' : 'default',
             }}
-          />
-        </TransformComponent>
-      </TransformWrapper>
+            contentStyle={{
+              width: 'fit-content',
+              height: 'fit-content',
+              cursor: isOverflowing ? 'move' : 'default',
+            }}
+          >
+            <img
+              ref={imageRef}
+              src={convertFileSrc(imagePath) || '/placeholder.svg'}
+              alt={alt}
+              draggable={false}
+              className="select-none"
+              onError={(e) => {
+                const img = e.target as HTMLImageElement;
+                img.onerror = null;
+                img.src = '/placeholder.svg';
+              }}
+              style={{
+                maxWidth: '100vw',
+                maxHeight: '100vh',
+                objectFit: 'contain',
+                zIndex: 50,
+                transform: `rotate(${rotation}deg)`,
+                cursor: isOverflowing ? 'move' : 'default',
+              }}
+            />
+          </TransformComponent>
+        </TransformWrapper>
+      </div>
     );
   },
 );
