@@ -243,9 +243,14 @@ class InterceptHandler(logging.Handler):
         Args:
             record: The log record to process
         """
-        # Get the appropriate module name
+        # Get the appropriate module name. Uvicorn uses logger names such as
+        # ``uvicorn.error`` for regular server lifecycle messages, so avoid
+        # reducing those names to just ``error`` because that makes INFO logs
+        # look like failures in the formatted output.
         module_name = record.name
-        if "." in module_name:
+        if module_name.startswith("uvicorn"):
+            module_name = "uvicorn"
+        elif "." in module_name:
             module_name = module_name.split(".")[-1]
 
         # Create a message that includes the original module in the format
