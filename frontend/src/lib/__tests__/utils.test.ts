@@ -57,9 +57,7 @@ describe('getErrorMessage', () => {
       message: 'Image does not exist',
     });
 
-    expect(getErrorMessage(axiosErr)).toBe(
-      'Not Found - Image does not exist',
-    );
+    expect(getErrorMessage(axiosErr)).toBe('Not Found - Image does not exist');
   });
 
   test('falls back to code + message when response data is empty', () => {

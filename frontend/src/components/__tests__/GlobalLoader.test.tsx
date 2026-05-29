@@ -24,12 +24,9 @@ describe('GlobalLoader', () => {
     { message: 'Adding folder...' },
   ];
 
-  test.each(loadingMessages)(
-    'displays "$message" correctly',
-    ({ message }) => {
-      render(<GlobalLoader loading={true} message={message} />);
+  test.each(loadingMessages)('displays "$message" correctly', ({ message }) => {
+    render(<GlobalLoader loading={true} message={message} />);
 
-      expect(screen.getByText(message)).toBeInTheDocument();
-    },
-  );
+    expect(screen.getByText(message)).toBeInTheDocument();
+  });
 });

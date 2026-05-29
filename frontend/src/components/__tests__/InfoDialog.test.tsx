@@ -33,9 +33,7 @@ describe('InfoDialog', () => {
     test.each(variantCases)(
       'renders with $label variant without crashing',
       ({ variant }) => {
-        render(
-          <InfoDialog {...defaultProps} variant={variant} />,
-        );
+        render(<InfoDialog {...defaultProps} variant={variant} />);
 
         expect(screen.getByText('Test Title')).toBeInTheDocument();
         expect(screen.getByText('Test message content')).toBeInTheDocument();

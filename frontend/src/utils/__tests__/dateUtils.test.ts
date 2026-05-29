@@ -40,10 +40,7 @@ describe('getTimeAgo', () => {
 /*  groupImagesByYearMonthFromMetadata                                */
 /* ------------------------------------------------------------------ */
 
-const makeImage = (
-  id: string,
-  dateCreated: string | null,
-): Image => ({
+const makeImage = (id: string, dateCreated: string | null): Image => ({
   id,
   path: `/photos/${id}.jpg`,
   thumbnailPath: `/thumbs/${id}.jpg`,
