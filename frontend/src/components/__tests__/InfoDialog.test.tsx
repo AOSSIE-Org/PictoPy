@@ -1,4 +1,4 @@
-import { render, screen } from '@/test-utils';
+import { render, screen, within } from '@/test-utils';
 import userEvent from '@testing-library/user-event';
 import { InfoDialog } from '../Dialog/InfoDialog';
 
@@ -54,15 +54,16 @@ describe('InfoDialog', () => {
       const user = userEvent.setup();
       const { store } = render(<InfoDialog {...defaultProps} />);
 
-      // Target the explicit "Close" action button (data-slot="button"),
-      // not the dialog's built-in X close button (data-slot="dialog-close")
-      const actionButton = screen
-        .getAllByRole('button', { name: /close/i })
-        .find((btn) => btn.getAttribute('data-slot') === 'button')!;
+      // Target the explicit "Close" action button in the footer (without the SVG icon),
+      // not the dialog's built-in X close button
+      const dialog = screen.getByRole('dialog');
+      const actionButton = within(dialog)
+        .getAllByRole('button', { name: /^close$/i })
+        .find((btn) => !btn.querySelector('svg'))!;
       await user.click(actionButton);
 
       // verify store updated - dialog should be closed
-      const state = (store.getState() as any).infoDialog;
+      const state = store.getState().infoDialog;
       expect(state.isOpen).toBe(false);
     });
   });

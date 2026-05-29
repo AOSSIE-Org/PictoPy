@@ -4,12 +4,14 @@ import { Provider } from 'react-redux';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, EnhancedStore, UnknownAction } from '@reduxjs/toolkit';
 import { rootReducer, RootState } from '@/app/store';
+
+type TestStore = EnhancedStore<RootState, UnknownAction>;
 
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   preloadedState?: Partial<RootState>;
-  store?: ReturnType<typeof configureStore>;
+  store?: TestStore;
   initialRoutes?: string[];
 }
 
@@ -20,7 +22,7 @@ const AllTheProviders = ({
   initialRoutes = ['/'],
 }: {
   children: React.ReactNode;
-  store: ReturnType<typeof configureStore>;
+  store: TestStore;
   queryClient: QueryClient;
   initialRoutes?: string[];
 }) => {
@@ -45,7 +47,7 @@ const customRender = (ui: ReactElement, options?: CustomRenderOptions) => {
     );
   }
 
-  const testStore =
+  const testStore: TestStore =
     store ??
     configureStore({
       reducer: rootReducer,
