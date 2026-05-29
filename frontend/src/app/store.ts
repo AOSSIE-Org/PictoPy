@@ -6,6 +6,7 @@ import imageReducer from '@/features/imageSlice';
 import faceClustersReducer from '@/features/faceClustersSlice';
 import infoDialogReducer from '@/features/infoDialogSlice';
 import folderReducer from '@/features/folderSlice';
+import memoriesReducer from '@/features/memoriesSlice';
 
 export const rootReducer = combineReducers({
   loader: loaderReducer,
@@ -15,6 +16,7 @@ export const rootReducer = combineReducers({
   infoDialog: infoDialogReducer,
   folders: folderReducer,
   search: searchReducer,
+  memories: memoriesReducer,
 });
 
 export const store = configureStore({

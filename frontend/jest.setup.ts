@@ -117,3 +117,80 @@ jest.mock('axios', () => {
     ...mockAxiosInstance,
   };
 });
+
+// Mock Global Fetch
+const mockModelStatus = {
+  success: true,
+  data: {
+    object_detection_nano: {
+      feature: 'object_detection',
+      tier: 'nano',
+      installed: true,
+    },
+    face_detection_nano: {
+      feature: 'face_detection',
+      tier: 'nano',
+      installed: true,
+    },
+    object_detection_small: {
+      feature: 'object_detection',
+      tier: 'small',
+      installed: true,
+    },
+    face_detection_small: {
+      feature: 'face_detection',
+      tier: 'small',
+      installed: true,
+    },
+    object_detection_medium: {
+      feature: 'object_detection',
+      tier: 'medium',
+      installed: true,
+    },
+    face_detection_medium: {
+      feature: 'face_detection',
+      tier: 'medium',
+      installed: true,
+    },
+  },
+};
+
+const mockHardwareInfo = {
+  success: true,
+  data: {
+    ram_gb: 16,
+    gpu_detected: true,
+    gpu_names: ['NVIDIA GeForce RTX 4070'],
+    available_providers: ['CUDAExecutionProvider', 'CPUExecutionProvider'],
+    recommended_tier: 'small',
+  },
+};
+
+global.fetch = jest.fn().mockImplementation((url: string) => {
+  if (url.includes('/models/status')) {
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(mockModelStatus),
+    });
+  }
+  if (url.includes('/models/hardware')) {
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(mockHardwareInfo),
+    });
+  }
+  if (url.includes('/models/setup')) {
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ success: true }),
+    });
+  }
+  return Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({}),
+  });
+});

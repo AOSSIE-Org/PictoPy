@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '@/test-utils';
 import { EmptyGalleryState } from '../EmptyStates/EmptyGalleryState';
 import { EmptyAITaggingState } from '../EmptyStates/EmptyAITaggingState';
 
@@ -15,7 +15,11 @@ describe('EmptyGalleryState', () => {
     render(<EmptyGalleryState />);
 
     expect(
-      screen.getByText(/go to settings to add folders/i),
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'SPAN' &&
+          element?.textContent === 'Go to Settings to add folders.',
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/supports png, jpg, jpeg image formats/i),
