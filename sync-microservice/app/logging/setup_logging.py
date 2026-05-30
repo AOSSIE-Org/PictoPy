@@ -245,7 +245,9 @@ class InterceptHandler(logging.Handler):
         """
         # Get the appropriate module name
         module_name = record.name
-        if "." in module_name:
+        if module_name.startswith("uvicorn"):
+            module_name = "uvicorn"
+        elif "." in module_name:
             module_name = module_name.split(".")[-1]
 
         # Create a message that includes the original module in the format
