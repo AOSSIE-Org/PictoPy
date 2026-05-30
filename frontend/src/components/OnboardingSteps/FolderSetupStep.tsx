@@ -58,7 +58,9 @@ export function FolderSetupStep({
 
   const handleNext = () => {
     localStorage.setItem('folderChosen', 'true');
-    addFolderMutate(folder);
+    if (folder) {
+      addFolderMutate(folder);
+    }
     dispatch(markCompleted(stepIndex));
   };
 
