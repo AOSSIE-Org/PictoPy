@@ -150,6 +150,8 @@ describe('ZoomableImage wheel behavior', () => {
     mockSetTransform.mockClear();
     mockZoomIn.mockClear();
     mockZoomOut.mockClear();
+    // Keep the internal wrapper unavailable by default so tests cover the
+    // production fallback path where the wheel area owns scroll handling.
     mockWrapperComponent = null;
     mockTransformState.scale = 1;
     mockTransformState.positionX = 0;
