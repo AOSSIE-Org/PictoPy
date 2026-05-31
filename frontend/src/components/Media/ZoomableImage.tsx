@@ -262,7 +262,12 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
         const transform = transformRef.current;
         const contentElement = transform?.instance?.contentComponent;
         const viewportElement = getViewportElement();
-        if (!transform || !contentElement || !viewportElement || !imageRef.current)
+        if (
+          !transform ||
+          !contentElement ||
+          !viewportElement ||
+          !imageRef.current
+        )
           return false;
 
         const wrapperRect = viewportElement.getBoundingClientRect();
