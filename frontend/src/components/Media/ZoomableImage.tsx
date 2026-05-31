@@ -17,7 +17,16 @@ const ZOOM_FACTOR = 0.001;
 const LINE_HEIGHT_MULTIPLIER = 33;
 const MAX_SCALE = 8;
 const MIN_SCALE = 1;
-const PAN_PADDING = 20;
+
+type Size = {
+  width: number;
+  height: number;
+};
+
+type OverflowState = {
+  width: boolean;
+  height: boolean;
+};
 
 type AnimationType =
   | 'easeOut'
@@ -48,6 +57,36 @@ export interface ZoomableImageRef {
   reset: () => void;
 }
 
+const getCenteredAxisPosition = (viewportSize: number, scaledSize: number) =>
+  (viewportSize - scaledSize) / 2;
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+
+const clampOverflowAxisPosition = (
+  position: number,
+  viewportSize: number,
+  scaledSize: number,
+) => {
+  const minPosition = viewportSize - scaledSize;
+  const maxPosition = 0;
+
+  return clamp(position, minPosition, maxPosition);
+};
+
+const getAxisPosition = (
+  anchoredPosition: number,
+  viewportSize: number,
+  scaledSize: number,
+  isOverflowingAxis: boolean,
+) => {
+  const centeredPosition = getCenteredAxisPosition(viewportSize, scaledSize);
+
+  return isOverflowingAxis
+    ? clampOverflowAxisPosition(anchoredPosition, viewportSize, scaledSize)
+    : centeredPosition;
+};
+
 export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
   ({ imagePath, alt, rotation, resetSignal }, ref) => {
     const transformRef = useRef<ReactZoomPanPinchRef>(null);
@@ -72,27 +111,44 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
       [],
     );
 
-    const getOverflowState = useCallback(
-      (scale: number, viewportWidth: number, viewportHeight: number) => {
-        if (!imageRef.current) return { width: false, height: false };
+    const getScaledDimensions = useCallback(
+      (scale: number): Size | null => {
+        if (!imageRef.current) return null;
 
-        const imgElement = imageRef.current;
-        const renderedWidth = imgElement.clientWidth;
-        const renderedHeight = imgElement.clientHeight;
+        const renderedWidth = imageRef.current.clientWidth;
+        const renderedHeight = imageRef.current.clientHeight;
+
+        if (!renderedWidth || !renderedHeight) return null;
 
         const effectiveDims = getEffectiveDimensions(
           renderedWidth,
           renderedHeight,
         );
-        const scaledWidth = effectiveDims.width * scale;
-        const scaledHeight = effectiveDims.height * scale;
 
         return {
-          width: scaledWidth > viewportWidth,
-          height: scaledHeight > viewportHeight,
+          width: effectiveDims.width * scale,
+          height: effectiveDims.height * scale,
         };
       },
       [getEffectiveDimensions],
+    );
+
+    const getOverflowState = useCallback(
+      (
+        scale: number,
+        viewportWidth: number,
+        viewportHeight: number,
+      ): OverflowState => {
+        const scaledDimensions = getScaledDimensions(scale);
+
+        if (!scaledDimensions) return { width: false, height: false };
+
+        return {
+          width: scaledDimensions.width > viewportWidth,
+          height: scaledDimensions.height > viewportHeight,
+        };
+      },
+      [getScaledDimensions],
     );
 
     const getViewportElement = useCallback(
@@ -130,8 +186,8 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
           renderedW = renderedH * imgAspect;
         }
 
-        const centerX = (wrapperRect.width - renderedW) / 2;
-        const centerY = (wrapperRect.height - renderedH) / 2;
+        const centerX = getCenteredAxisPosition(wrapperRect.width, renderedW);
+        const centerY = getCenteredAxisPosition(wrapperRect.height, renderedH);
 
         transformRef.current.setTransform(
           centerX,
@@ -186,24 +242,33 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
     }, [imagePath, handleReset]);
 
     useEffect(() => {
-      const wrapperElement = wheelAreaRef.current;
-      if (!wrapperElement) return;
+      const wheelElement = wheelAreaRef.current;
+      if (!wheelElement) return;
 
-      let cachedWrapperRect = wrapperElement.getBoundingClientRect();
+      let cachedViewportRect =
+        getViewportElement()?.getBoundingClientRect() ??
+        wheelElement.getBoundingClientRect();
 
       const resizeObserver = new ResizeObserver(() => {
-        cachedWrapperRect = wrapperElement.getBoundingClientRect();
+        cachedViewportRect =
+          getViewportElement()?.getBoundingClientRect() ??
+          wheelElement.getBoundingClientRect();
       });
 
-      resizeObserver.observe(wrapperElement);
+      resizeObserver.observe(wheelElement);
 
       const handleWheelInterceptor = (e: WheelEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
         if (!imageRef.current || !transformRef.current) return;
 
         const transformState = transformRef.current.instance.transformState;
+        const viewportElement = getViewportElement() ?? wheelElement;
 
-        cachedWrapperRect = wrapperElement.getBoundingClientRect();
-        const wrapperRect = cachedWrapperRect;
+        cachedViewportRect = viewportElement.getBoundingClientRect();
+        const viewportRect = cachedViewportRect;
         const imageRect = imageRef.current.getBoundingClientRect();
         const mouseX = e.clientX - imageRect.left;
         const mouseY = e.clientY - imageRect.top;
@@ -226,54 +291,65 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
           Math.min(MAX_SCALE, currentScale + zoomChange),
         );
 
-        const baseW = imageRef.current.clientWidth;
-        const baseH = imageRef.current.clientHeight;
-        const effectiveDims = getEffectiveDimensions(baseW, baseH);
-        const nextW = effectiveDims.width * newScale;
-        const nextH = effectiveDims.height * newScale;
+        const scaledDimensions = getScaledDimensions(newScale);
+        if (!scaledDimensions) return;
 
         const newOverflow = getOverflowState(
           newScale,
-          wrapperRect.width,
-          wrapperRect.height,
+          viewportRect.width,
+          viewportRect.height,
         );
 
-        const centeredX = (wrapperRect.width - nextW) / 2;
-        const centeredY = (wrapperRect.height - nextH) / 2;
+        const shouldRecenter =
+          newScale === MIN_SCALE || (!newOverflow.width && !newOverflow.height);
+
+        const centeredX = getCenteredAxisPosition(
+          viewportRect.width,
+          scaledDimensions.width,
+        );
+        const centeredY = getCenteredAxisPosition(
+          viewportRect.height,
+          scaledDimensions.height,
+        );
         const ratio = currentScale > 0 ? newScale / currentScale : 1;
-        const mouseViewportX = e.clientX - wrapperRect.left;
-        const mouseViewportY = e.clientY - wrapperRect.top;
+        const mouseViewportX = e.clientX - viewportRect.left;
+        const mouseViewportY = e.clientY - viewportRect.top;
         const anchoredX =
           mouseViewportX - (mouseViewportX - transformState.positionX) * ratio;
         const anchoredY =
           mouseViewportY - (mouseViewportY - transformState.positionY) * ratio;
 
-        const targetX =
-          isOverImage && newOverflow.width ? anchoredX : centeredX;
-        const targetY =
-          isOverImage && newOverflow.height ? anchoredY : centeredY;
-
-        e.preventDefault();
-        e.stopPropagation();
+        const targetX = shouldRecenter
+          ? centeredX
+          : getAxisPosition(
+              isOverImage ? anchoredX : centeredX,
+              viewportRect.width,
+              scaledDimensions.width,
+              newOverflow.width,
+            );
+        const targetY = shouldRecenter
+          ? centeredY
+          : getAxisPosition(
+              isOverImage ? anchoredY : centeredY,
+              viewportRect.height,
+              scaledDimensions.height,
+              newOverflow.height,
+            );
 
         setIsOverflowing(newOverflow.width || newOverflow.height);
         transformRef.current.setTransform(targetX, targetY, newScale, 0);
       };
 
-      wrapperElement.addEventListener('wheel', handleWheelInterceptor, {
+      wheelElement.addEventListener('wheel', handleWheelInterceptor, {
         passive: false,
         capture: true,
       });
 
       return () => {
         resizeObserver.disconnect();
-        wrapperElement.removeEventListener(
-          'wheel',
-          handleWheelInterceptor,
-          true,
-        );
+        wheelElement.removeEventListener('wheel', handleWheelInterceptor, true);
       };
-    }, [getEffectiveDimensions, getOverflowState]);
+    }, [getOverflowState, getScaledDimensions, getViewportElement]);
 
     return (
       <div ref={wheelAreaRef} className="h-full w-full">
@@ -330,38 +406,19 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
             const scaledW = effectiveDims.width * scale;
             const scaledH = effectiveDims.height * scale;
 
-            const limitLeft = -scaledW + PAN_PADDING;
-            const limitRight = viewW - PAN_PADDING;
-            const limitTop = -scaledH + PAN_PADDING;
-            const limitBottom = viewH - PAN_PADDING;
-            const centeredX = (viewW - scaledW) / 2;
-            const centeredY = (viewH - scaledH) / 2;
-
-            let finalX = overflow.width ? positionX : centeredX;
-            let finalY = overflow.height ? positionY : centeredY;
-            let clamped =
-              (!overflow.width && positionX !== centeredX) ||
-              (!overflow.height && positionY !== centeredY);
-
-            if (overflow.width) {
-              if (positionX < limitLeft) {
-                finalX = limitLeft;
-                clamped = true;
-              } else if (positionX > limitRight) {
-                finalX = limitRight;
-                clamped = true;
-              }
-            }
-
-            if (overflow.height) {
-              if (positionY < limitTop) {
-                finalY = limitTop;
-                clamped = true;
-              } else if (positionY > limitBottom) {
-                finalY = limitBottom;
-                clamped = true;
-              }
-            }
+            const finalX = getAxisPosition(
+              positionX,
+              viewW,
+              scaledW,
+              overflow.width,
+            );
+            const finalY = getAxisPosition(
+              positionY,
+              viewH,
+              scaledH,
+              overflow.height,
+            );
+            const clamped = positionX !== finalX || positionY !== finalY;
 
             if (clamped) {
               ref.setTransform(finalX, finalY, scale, 0);
