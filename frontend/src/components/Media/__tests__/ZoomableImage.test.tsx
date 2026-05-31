@@ -182,7 +182,7 @@ describe('ZoomableImage wheel behavior', () => {
     expectLatestTransform(290, 245, 1.1);
   });
 
-  test('anchors horizontally and keeps the vertical axis centered when only width overflows', () => {
+  test('centers and stops at the viewport edge before mouse anchoring begins', () => {
     const { wheelArea } = setupWheelScene({
       wrapperSize: { width: 800, height: 600 },
       imageSize: { width: 760, height: 300 },
@@ -194,10 +194,33 @@ describe('ZoomableImage wheel behavior', () => {
       clientY: 300,
     });
 
-    expectLatestTransform(-36, 135, 1.1);
+    expectLatestTransform(0, 142.10526315789474, 1.0526315789473684);
   });
 
-  test('anchors vertically and keeps the horizontal axis centered when only height overflows', () => {
+  test('anchors horizontally after the width has reached the viewport edge', () => {
+    mockTransformState.scale = 1.1;
+    mockTransformState.positionX = -18;
+    mockTransformState.positionY = 135;
+
+    const { wheelArea } = setupWheelScene({
+      wrapperSize: { width: 800, height: 600 },
+      imageSize: { width: 760, height: 300 },
+    });
+
+    fireEvent.wheel(wheelArea, {
+      deltaY: -100,
+      clientX: 750,
+      clientY: 300,
+    });
+
+    expectLatestTransform(-87.81818181818176, 120, 1.2000000000000002);
+  });
+
+  test('anchors vertically after the height has reached the viewport edge', () => {
+    mockTransformState.scale = 1.1;
+    mockTransformState.positionX = 235;
+    mockTransformState.positionY = -8;
+
     const { wheelArea } = setupWheelScene({
       wrapperSize: { width: 800, height: 600 },
       imageSize: { width: 300, height: 560 },
@@ -209,7 +232,7 @@ describe('ZoomableImage wheel behavior', () => {
       clientY: 550,
     });
 
-    expectLatestTransform(235, -16, 1.1);
+    expectLatestTransform(220, -58.72727272727275, 1.2000000000000002);
   });
 
   test('anchors both axes when width and height overflow', () => {

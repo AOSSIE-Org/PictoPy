@@ -17,6 +17,7 @@ const ZOOM_FACTOR = 0.001;
 const LINE_HEIGHT_MULTIPLIER = 33;
 const MAX_SCALE = 8;
 const MIN_SCALE = 1;
+const SCALE_EPSILON = 0.0001;
 
 type Size = {
   width: number;
@@ -87,6 +88,23 @@ const getAxisPosition = (
     : centeredPosition;
 };
 
+const axisTouchesViewport = (scaledSize: number, viewportSize: number) =>
+  scaledSize >= viewportSize - SCALE_EPSILON;
+
+const getFirstViewportEdgeScale = (
+  baseDimensions: Size,
+  viewportWidth: number,
+  viewportHeight: number,
+) =>
+  Math.max(
+    MIN_SCALE,
+    Math.min(
+      MAX_SCALE,
+      viewportWidth / baseDimensions.width,
+      viewportHeight / baseDimensions.height,
+    ),
+  );
+
 export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
   ({ imagePath, alt, rotation, resetSignal }, ref) => {
     const transformRef = useRef<ReactZoomPanPinchRef>(null);
@@ -111,26 +129,29 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
       [],
     );
 
+    const getBaseDimensions = useCallback((): Size | null => {
+      if (!imageRef.current) return null;
+
+      const renderedWidth = imageRef.current.clientWidth;
+      const renderedHeight = imageRef.current.clientHeight;
+
+      if (!renderedWidth || !renderedHeight) return null;
+
+      return getEffectiveDimensions(renderedWidth, renderedHeight);
+    }, [getEffectiveDimensions]);
+
     const getScaledDimensions = useCallback(
       (scale: number): Size | null => {
-        if (!imageRef.current) return null;
+        const baseDimensions = getBaseDimensions();
 
-        const renderedWidth = imageRef.current.clientWidth;
-        const renderedHeight = imageRef.current.clientHeight;
-
-        if (!renderedWidth || !renderedHeight) return null;
-
-        const effectiveDims = getEffectiveDimensions(
-          renderedWidth,
-          renderedHeight,
-        );
+        if (!baseDimensions) return null;
 
         return {
-          width: effectiveDims.width * scale,
-          height: effectiveDims.height * scale,
+          width: baseDimensions.width * scale,
+          height: baseDimensions.height * scale,
         };
       },
-      [getEffectiveDimensions],
+      [getBaseDimensions],
     );
 
     const getOverflowState = useCallback(
@@ -286,10 +307,42 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
         const zoomChange = -e.deltaY * multiplier * factor;
 
         const currentScale = transformState.scale;
-        const newScale = Math.max(
+        const desiredScale = Math.max(
           MIN_SCALE,
           Math.min(MAX_SCALE, currentScale + zoomChange),
         );
+        const baseDimensions = getBaseDimensions();
+        if (!baseDimensions) return;
+
+        const currentDimensions = {
+          width: baseDimensions.width * currentScale,
+          height: baseDimensions.height * currentScale,
+        };
+        const currentTouchesViewport = {
+          width: axisTouchesViewport(
+            currentDimensions.width,
+            viewportRect.width,
+          ),
+          height: axisTouchesViewport(
+            currentDimensions.height,
+            viewportRect.height,
+          ),
+        };
+        const isZoomingIn = desiredScale > currentScale;
+
+        const shouldFitFirst =
+          isZoomingIn &&
+          !currentTouchesViewport.width &&
+          !currentTouchesViewport.height;
+        const firstViewportEdgeScale = getFirstViewportEdgeScale(
+          baseDimensions,
+          viewportRect.width,
+          viewportRect.height,
+        );
+        const newScale =
+          shouldFitFirst && desiredScale > firstViewportEdgeScale
+            ? firstViewportEdgeScale
+            : desiredScale;
 
         const scaledDimensions = getScaledDimensions(newScale);
         if (!scaledDimensions) return;
@@ -318,11 +371,15 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
           mouseViewportX - (mouseViewportX - transformState.positionX) * ratio;
         const anchoredY =
           mouseViewportY - (mouseViewportY - transformState.positionY) * ratio;
+        const shouldAnchorX =
+          isOverImage && currentTouchesViewport.width && newOverflow.width;
+        const shouldAnchorY =
+          isOverImage && currentTouchesViewport.height && newOverflow.height;
 
         const targetX = shouldRecenter
           ? centeredX
           : getAxisPosition(
-              isOverImage ? anchoredX : centeredX,
+              shouldAnchorX ? anchoredX : centeredX,
               viewportRect.width,
               scaledDimensions.width,
               newOverflow.width,
@@ -330,7 +387,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
         const targetY = shouldRecenter
           ? centeredY
           : getAxisPosition(
-              isOverImage ? anchoredY : centeredY,
+              shouldAnchorY ? anchoredY : centeredY,
               viewportRect.height,
               scaledDimensions.height,
               newOverflow.height,
@@ -349,7 +406,12 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
         resizeObserver.disconnect();
         wheelElement.removeEventListener('wheel', handleWheelInterceptor, true);
       };
-    }, [getOverflowState, getScaledDimensions, getViewportElement]);
+    }, [
+      getBaseDimensions,
+      getOverflowState,
+      getScaledDimensions,
+      getViewportElement,
+    ]);
 
     return (
       <div ref={wheelAreaRef} className="h-full w-full">
