@@ -293,6 +293,25 @@ describe('ZoomableImage wheel behavior', () => {
     expectLatestTransform(0, 0, 0.5);
   });
 
+  test('starts a production first wheel from fit-to-view when transform state is stale', () => {
+    mockTransformState.scale = 1;
+    mockTransformState.positionX = 0;
+    mockTransformState.positionY = 0;
+
+    const { wheelArea } = setupWheelScene({
+      wrapperSize: { width: 500, height: 400 },
+      imageSize: { width: 1000, height: 800 },
+    });
+
+    fireEvent.wheel(wheelArea, {
+      deltaY: -100,
+      clientX: 450,
+      clientY: 350,
+    });
+
+    expectLatestTransform(-90, -70, 0.6);
+  });
+
   test('clamps wheel zoom targets so the image cannot be pulled offscreen', () => {
     mockTransformState.scale = 2;
     mockTransformState.positionX = 2000;
