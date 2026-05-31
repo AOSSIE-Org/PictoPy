@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode, Ref } from 'react';
 import { ZoomableImage } from '../ZoomableImage';
 
@@ -17,6 +17,8 @@ const mockSetTransform = jest.fn(
   },
 );
 let mockWrapperComponent: HTMLDivElement | null = null;
+let mockContentComponent: HTMLDivElement | null = null;
+let mockShouldExposeContentComponent = true;
 
 jest.mock('@tauri-apps/api/core', () => ({
   convertFileSrc: (path: string) => path,
@@ -31,6 +33,11 @@ jest.mock('react-zoom-pan-pinch', () => {
         instance: {
           get wrapperComponent() {
             return mockWrapperComponent;
+          },
+          get contentComponent() {
+            return mockShouldExposeContentComponent
+              ? mockContentComponent
+              : null;
           },
           transformState: mockTransformState,
         },
@@ -48,7 +55,16 @@ jest.mock('react-zoom-pan-pinch', () => {
   );
 
   const TransformComponent = ({ children }: { children: ReactNode }) =>
-    React.createElement('div', null, children);
+    React.createElement(
+      'div',
+      {
+        'data-testid': 'transform-content',
+        ref: (node: HTMLDivElement | null) => {
+          mockContentComponent = node;
+        },
+      },
+      children,
+    );
 
   return {
     TransformWrapper,
@@ -122,9 +138,11 @@ const setupWheelScene = ({
   const { container } = renderZoomableImage();
   const wheelArea = container.firstElementChild as HTMLElement;
   const transformWrapper = screen.getByTestId('transform-wrapper');
+  const transformContent = screen.getByTestId('transform-content');
   const image = screen.getByAltText('test image');
 
   mockWrapperComponent = transformWrapper as HTMLDivElement;
+  mockContentComponent = transformContent as HTMLDivElement;
 
   mockElementRect(
     wheelArea,
@@ -180,6 +198,8 @@ describe('ZoomableImage wheel behavior', () => {
     // Keep the internal wrapper unavailable by default so tests cover the
     // production fallback path where the wheel area owns scroll handling.
     mockWrapperComponent = null;
+    mockContentComponent = null;
+    mockShouldExposeContentComponent = true;
     mockTransformState.scale = 1;
     mockTransformState.positionX = 0;
     mockTransformState.positionY = 0;
@@ -343,6 +363,52 @@ describe('ZoomableImage wheel behavior', () => {
     });
 
     expectLatestTransform(-90, -70, 0.6);
+  });
+
+  test('retries initial fit until the transform content is ready', () => {
+    jest.useFakeTimers();
+    mockShouldExposeContentComponent = false;
+
+    const { container } = renderZoomableImage();
+
+    const wheelArea = container.firstElementChild as HTMLElement;
+    const transformWrapper = screen.getByTestId('transform-wrapper');
+    const transformContent = screen.getByTestId('transform-content');
+    const image = screen.getByAltText('test image');
+
+    mockWrapperComponent = transformWrapper as HTMLDivElement;
+    mockElementRect(
+      wheelArea,
+      { width: 500, height: 400, left: 0, top: 0 },
+      { clientWidth: 500, clientHeight: 400 },
+    );
+    mockElementRect(
+      transformWrapper,
+      { width: 500, height: 400, left: 0, top: 0 },
+      { clientWidth: 500, clientHeight: 400 },
+    );
+    mockElementRect(
+      image,
+      { width: 1000, height: 800, left: 0, top: 0 },
+      { clientWidth: 1000, clientHeight: 800 },
+    );
+
+    fireEvent.load(image);
+
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+    expect(mockSetTransform).not.toHaveBeenCalled();
+
+    mockShouldExposeContentComponent = true;
+    mockContentComponent = transformContent as HTMLDivElement;
+
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+
+    expectLatestTransform(0, 0, 0.5);
+    jest.useRealTimers();
   });
 
   test('starts from the new image fit transform after switching images', () => {

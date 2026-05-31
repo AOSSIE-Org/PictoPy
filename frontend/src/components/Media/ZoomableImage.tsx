@@ -18,6 +18,7 @@ const LINE_HEIGHT_MULTIPLIER = 33;
 const MAX_SCALE = 8;
 const MIN_SCALE = 1;
 const SCALE_EPSILON = 0.0001;
+const MAX_FIT_RETRY_FRAMES = 12;
 
 type Size = {
   width: number;
@@ -162,6 +163,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
     const hasPendingFitRef = useRef(true);
     const fitTransformRef = useRef<FitTransform | null>(null);
     const fitFrameRef = useRef<number | null>(null);
+    const fitRetryCountRef = useRef(0);
     const [isOverflowing, setIsOverflowing] = useState(false);
     const [minScale, setMinScale] = useState(MIN_SCALE);
     const rotationRef = useRef(rotation);
@@ -252,18 +254,23 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
       hasUserInteractedRef.current = false;
       hasPendingFitRef.current = true;
       fitTransformRef.current = null;
+      fitRetryCountRef.current = 0;
     }, []);
 
     const applyFitTransform = useCallback(
       (duration = 200, animationType: AnimationType = 'easeOut') => {
+        const transform = transformRef.current;
+        const contentElement = transform?.instance?.contentComponent;
         const viewportElement = getViewportElement();
-        if (!transformRef.current || !viewportElement || !imageRef.current)
-          return;
+        if (!transform || !contentElement || !viewportElement || !imageRef.current)
+          return false;
 
         const wrapperRect = viewportElement.getBoundingClientRect();
+        if (!wrapperRect.width || !wrapperRect.height) return false;
+
         const baseDimensions = getBaseDimensions();
 
-        if (!baseDimensions) return;
+        if (!baseDimensions) return false;
 
         const fitTransform = getFitTransform(
           baseDimensions,
@@ -271,14 +278,15 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
           wrapperRect.height,
         );
 
-        if (!fitTransform) return;
+        if (!fitTransform) return false;
 
         fitTransformRef.current = fitTransform;
         isFitInitializedRef.current = true;
         hasUserInteractedRef.current = false;
         hasPendingFitRef.current = false;
+        fitRetryCountRef.current = 0;
         setMinimumScale(fitTransform.scale);
-        transformRef.current.setTransform(
+        transform.setTransform(
           fitTransform.positionX,
           fitTransform.positionY,
           fitTransform.scale,
@@ -286,6 +294,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
           animationType,
         );
         setIsOverflowing(false);
+        return true;
       },
       [getBaseDimensions, getViewportElement, setMinimumScale],
     );
@@ -302,7 +311,16 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
 
         fitFrameRef.current = scheduleFrame(() => {
           fitFrameRef.current = null;
-          applyFitTransform(duration, animationType);
+          const applied = applyFitTransform(duration, animationType);
+
+          if (
+            !applied &&
+            hasPendingFitRef.current &&
+            fitRetryCountRef.current < MAX_FIT_RETRY_FRAMES
+          ) {
+            fitRetryCountRef.current += 1;
+            scheduleFitTransform(duration, animationType);
+          }
         });
       },
       [applyFitTransform, clearScheduledFit],
@@ -418,9 +436,14 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-        clearScheduledFit();
 
         if (!imageRef.current || !transformRef.current) return;
+        if (!transformRef.current.instance.contentComponent) {
+          scheduleFitTransform(0);
+          return;
+        }
+
+        clearScheduledFit();
 
         const transformState = transformRef.current.instance.transformState;
         const viewportElement = getViewportElement() ?? wheelElement;
