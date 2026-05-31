@@ -159,6 +159,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
     const imageRef = useRef<HTMLImageElement>(null);
     const isFitInitializedRef = useRef(false);
     const hasUserInteractedRef = useRef(false);
+    const hasPendingFitRef = useRef(true);
     const fitTransformRef = useRef<FitTransform | null>(null);
     const fitFrameRef = useRef<number | null>(null);
     const [isOverflowing, setIsOverflowing] = useState(false);
@@ -246,6 +247,13 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
       fitFrameRef.current = null;
     }, []);
 
+    const markFitPending = useCallback(() => {
+      isFitInitializedRef.current = false;
+      hasUserInteractedRef.current = false;
+      hasPendingFitRef.current = true;
+      fitTransformRef.current = null;
+    }, []);
+
     const applyFitTransform = useCallback(
       (duration = 200, animationType: AnimationType = 'easeOut') => {
         const viewportElement = getViewportElement();
@@ -268,6 +276,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
         fitTransformRef.current = fitTransform;
         isFitInitializedRef.current = true;
         hasUserInteractedRef.current = false;
+        hasPendingFitRef.current = false;
         setMinimumScale(fitTransform.scale);
         transformRef.current.setTransform(
           fitTransform.positionX,
@@ -301,11 +310,10 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
 
     const handleReset = useCallback(
       (duration = 200, animationType: AnimationType = 'easeOut') => {
-        isFitInitializedRef.current = false;
-        hasUserInteractedRef.current = false;
+        markFitPending();
         scheduleFitTransform(duration, animationType);
       },
-      [scheduleFitTransform],
+      [markFitPending, scheduleFitTransform],
     );
 
     useImperativeHandle(ref, () => ({
@@ -326,10 +334,9 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
 
     useEffect(() => {
       rotationRef.current = rotation;
-      isFitInitializedRef.current = false;
-      hasUserInteractedRef.current = false;
+      markFitPending();
       scheduleFitTransform(0);
-    }, [rotation, scheduleFitTransform]);
+    }, [rotation, markFitPending, scheduleFitTransform]);
 
     useEffect(() => {
       const viewportElement = getViewportElement();
@@ -358,24 +365,20 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
 
     useEffect(() => {
       setIsOverflowing(false);
-      isFitInitializedRef.current = false;
-      hasUserInteractedRef.current = false;
-      fitTransformRef.current = null;
+      markFitPending();
 
       const img = imageRef.current;
       if (!img) return;
 
-      const handleImageLoad = () => {
-        scheduleFitTransform(0);
-      };
-
       if (img.complete && img.naturalWidth > 0) {
-        handleImageLoad();
-      } else {
-        img.addEventListener('load', handleImageLoad);
-        return () => img.removeEventListener('load', handleImageLoad);
+        scheduleFitTransform(0);
       }
-    }, [imagePath, scheduleFitTransform]);
+    }, [imagePath, markFitPending, scheduleFitTransform]);
+
+    const handleImageLoad = useCallback(() => {
+      markFitPending();
+      scheduleFitTransform(0);
+    }, [markFitPending, scheduleFitTransform]);
 
     useEffect(() => {
       const wheelElement = wheelAreaRef.current;
@@ -458,11 +461,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
         fitTransformRef.current = fitTransform;
 
         const shouldUseFitTransform =
-          !isFitInitializedRef.current &&
-          fitTransform.scale < MIN_SCALE - SCALE_EPSILON &&
-          transformState.scale > fitTransform.scale + SCALE_EPSILON &&
-          Math.abs(transformState.positionX) < SCALE_EPSILON &&
-          Math.abs(transformState.positionY) < SCALE_EPSILON;
+          hasPendingFitRef.current || !isFitInitializedRef.current;
         const currentScale = shouldUseFitTransform
           ? fitTransform.scale
           : transformState.scale;
@@ -560,6 +559,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
 
         setIsOverflowing(newOverflow.width || newOverflow.height);
         isFitInitializedRef.current = true;
+        hasPendingFitRef.current = false;
         hasUserInteractedRef.current = true;
         transformRef.current.setTransform(targetX, targetY, newScale, 0);
       };
@@ -587,6 +587,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
     return (
       <div ref={wheelAreaRef} className="h-full w-full">
         <TransformWrapper
+          key={imagePath}
           ref={transformRef}
           initialScale={minScale}
           minScale={minScale}
@@ -673,11 +674,13 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
             }}
           >
             <img
+              key={imagePath}
               ref={imageRef}
               src={convertFileSrc(imagePath) || '/placeholder.svg'}
               alt={alt}
               draggable={false}
               className="select-none"
+              onLoad={handleImageLoad}
               onError={(e) => {
                 const img = e.target as HTMLImageElement;
                 img.onerror = null;

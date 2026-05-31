@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode, Ref } from 'react';
 import { ZoomableImage } from '../ZoomableImage';
 
-const mockSetTransform = jest.fn();
 const mockZoomIn = jest.fn();
 const mockZoomOut = jest.fn();
 const mockTransformState = {
@@ -10,6 +9,13 @@ const mockTransformState = {
   positionX: 0,
   positionY: 0,
 };
+const mockSetTransform = jest.fn(
+  (positionX: number, positionY: number, scale: number, _duration?: number) => {
+    mockTransformState.positionX = positionX;
+    mockTransformState.positionY = positionY;
+    mockTransformState.scale = scale;
+  },
+);
 let mockWrapperComponent: HTMLDivElement | null = null;
 
 jest.mock('@tauri-apps/api/core', () => ({
@@ -87,9 +93,21 @@ const mockElementRect = (
   }
 };
 
-const renderZoomableImage = () =>
+const renderZoomableImage = (
+  props: Partial<{
+    imagePath: string;
+    alt: string;
+    rotation: number;
+    resetSignal: number;
+  }> = {},
+) =>
   render(
-    <ZoomableImage imagePath="/tmp/photo.jpg" alt="test image" rotation={0} />,
+    <ZoomableImage
+      imagePath="/tmp/photo.jpg"
+      alt="test image"
+      rotation={0}
+      {...props}
+    />,
   );
 
 const setupWheelScene = ({
@@ -129,6 +147,15 @@ const setupWheelScene = ({
   );
 
   return { wheelArea, image };
+};
+
+const markSceneInitialized = (wheelArea: HTMLElement) => {
+  fireEvent.wheel(wheelArea, {
+    deltaY: 0,
+    clientX: 0,
+    clientY: 0,
+  });
+  mockSetTransform.mockClear();
 };
 
 const expectLatestTransform = (
@@ -200,14 +227,15 @@ describe('ZoomableImage wheel behavior', () => {
   });
 
   test('anchors horizontally after the width has reached the viewport edge', () => {
-    mockTransformState.scale = 1.1;
-    mockTransformState.positionX = -18;
-    mockTransformState.positionY = 135;
-
     const { wheelArea } = setupWheelScene({
       wrapperSize: { width: 800, height: 600 },
       imageSize: { width: 760, height: 300 },
     });
+
+    markSceneInitialized(wheelArea);
+    mockTransformState.scale = 1.1;
+    mockTransformState.positionX = -18;
+    mockTransformState.positionY = 135;
 
     fireEvent.wheel(wheelArea, {
       deltaY: -100,
@@ -219,14 +247,15 @@ describe('ZoomableImage wheel behavior', () => {
   });
 
   test('anchors vertically after the height has reached the viewport edge', () => {
-    mockTransformState.scale = 1.1;
-    mockTransformState.positionX = 235;
-    mockTransformState.positionY = -8;
-
     const { wheelArea } = setupWheelScene({
       wrapperSize: { width: 800, height: 600 },
       imageSize: { width: 300, height: 560 },
     });
+
+    markSceneInitialized(wheelArea);
+    mockTransformState.scale = 1.1;
+    mockTransformState.positionX = 235;
+    mockTransformState.positionY = -8;
 
     fireEvent.wheel(wheelArea, {
       deltaY: -100,
@@ -238,13 +267,15 @@ describe('ZoomableImage wheel behavior', () => {
   });
 
   test('anchors both axes when width and height overflow', () => {
-    mockTransformState.positionX = -50;
-    mockTransformState.positionY = -40;
-
     const { wheelArea } = setupWheelScene({
       wrapperSize: { width: 800, height: 600 },
       imageSize: { width: 900, height: 700 },
     });
+
+    markSceneInitialized(wheelArea);
+    mockTransformState.scale = 1;
+    mockTransformState.positionX = -50;
+    mockTransformState.positionY = -40;
 
     fireEvent.wheel(wheelArea, {
       deltaY: -100,
@@ -256,14 +287,15 @@ describe('ZoomableImage wheel behavior', () => {
   });
 
   test('recenters the image when zooming back to minimum scale', () => {
-    mockTransformState.scale = 1.05;
-    mockTransformState.positionX = -200;
-    mockTransformState.positionY = -150;
-
     const { wheelArea } = setupWheelScene({
       wrapperSize: { width: 800, height: 600 },
       imageSize: { width: 400, height: 300 },
     });
+
+    markSceneInitialized(wheelArea);
+    mockTransformState.scale = 1.05;
+    mockTransformState.positionX = -200;
+    mockTransformState.positionY = -150;
 
     fireEvent.wheel(wheelArea, {
       deltaY: 100,
@@ -275,14 +307,15 @@ describe('ZoomableImage wheel behavior', () => {
   });
 
   test('uses a fit-to-view minimum scale when the image is larger than the measured viewer', () => {
-    mockTransformState.scale = 0.55;
-    mockTransformState.positionX = -80;
-    mockTransformState.positionY = -60;
-
     const { wheelArea } = setupWheelScene({
       wrapperSize: { width: 500, height: 400 },
       imageSize: { width: 1000, height: 800 },
     });
+
+    markSceneInitialized(wheelArea);
+    mockTransformState.scale = 0.55;
+    mockTransformState.positionX = -80;
+    mockTransformState.positionY = -60;
 
     fireEvent.wheel(wheelArea, {
       deltaY: 100,
@@ -312,15 +345,80 @@ describe('ZoomableImage wheel behavior', () => {
     expectLatestTransform(-90, -70, 0.6);
   });
 
-  test('clamps wheel zoom targets so the image cannot be pulled offscreen', () => {
-    mockTransformState.scale = 2;
-    mockTransformState.positionX = 2000;
-    mockTransformState.positionY = 2000;
+  test('starts from the new image fit transform after switching images', () => {
+    const { container, rerender } = renderZoomableImage({
+      imagePath: '/tmp/photo-a.jpg',
+    });
 
+    const wheelArea = container.firstElementChild as HTMLElement;
+    let transformWrapper = screen.getByTestId('transform-wrapper');
+    let image = screen.getByAltText('test image');
+
+    mockWrapperComponent = transformWrapper as HTMLDivElement;
+    mockElementRect(
+      wheelArea,
+      { width: 500, height: 400, left: 0, top: 0 },
+      { clientWidth: 500, clientHeight: 400 },
+    );
+    mockElementRect(
+      transformWrapper,
+      { width: 500, height: 400, left: 0, top: 0 },
+      { clientWidth: 500, clientHeight: 400 },
+    );
+    mockElementRect(
+      image,
+      { width: 1000, height: 800, left: 0, top: 0 },
+      { clientWidth: 1000, clientHeight: 800 },
+    );
+
+    mockTransformState.scale = 2;
+    mockTransformState.positionX = -300;
+    mockTransformState.positionY = -250;
+
+    rerender(
+      <ZoomableImage
+        imagePath="/tmp/photo-b.jpg"
+        alt="test image"
+        rotation={0}
+      />,
+    );
+
+    transformWrapper = screen.getByTestId('transform-wrapper');
+    image = screen.getByAltText('test image');
+    mockWrapperComponent = transformWrapper as HTMLDivElement;
+    mockElementRect(
+      transformWrapper,
+      { width: 500, height: 400, left: 0, top: 0 },
+      { clientWidth: 500, clientHeight: 400 },
+    );
+    mockElementRect(
+      image,
+      { width: 1000, height: 800, left: 0, top: 0 },
+      { clientWidth: 1000, clientHeight: 800 },
+    );
+
+    fireEvent.load(image);
+    mockSetTransform.mockClear();
+
+    fireEvent.wheel(wheelArea, {
+      deltaY: -100,
+      clientX: 450,
+      clientY: 350,
+    });
+
+    expectLatestTransform(-90, -70, 0.6);
+  });
+
+  test('clamps wheel zoom targets so the image cannot be pulled offscreen', () => {
     const { wheelArea } = setupWheelScene({
       wrapperSize: { width: 800, height: 600 },
       imageSize: { width: 1000, height: 800 },
     });
+
+    markSceneInitialized(wheelArea);
+    mockTransformState.scale = 2;
+    mockTransformState.positionX = 2000;
+    mockTransformState.positionY = 2000;
 
     fireEvent.wheel(wheelArea, {
       deltaY: -100,
