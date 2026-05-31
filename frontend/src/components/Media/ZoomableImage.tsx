@@ -91,17 +91,40 @@ const getAxisPosition = (
 const axisTouchesViewport = (scaledSize: number, viewportSize: number) =>
   scaledSize >= viewportSize - SCALE_EPSILON;
 
+const getMinimumScale = (
+  baseDimensions: Size,
+  viewportWidth: number,
+  viewportHeight: number,
+) => {
+  if (
+    !baseDimensions.width ||
+    !baseDimensions.height ||
+    !viewportWidth ||
+    !viewportHeight
+  ) {
+    return MIN_SCALE;
+  }
+
+  return Math.min(
+    MIN_SCALE,
+    viewportWidth / baseDimensions.width,
+    viewportHeight / baseDimensions.height,
+  );
+};
+
 const getFirstViewportEdgeScale = (
   baseDimensions: Size,
   viewportWidth: number,
   viewportHeight: number,
 ) =>
-  Math.max(
-    MIN_SCALE,
-    Math.min(
-      MAX_SCALE,
-      viewportWidth / baseDimensions.width,
-      viewportHeight / baseDimensions.height,
+  Math.min(
+    MAX_SCALE,
+    Math.max(
+      getMinimumScale(baseDimensions, viewportWidth, viewportHeight),
+      Math.min(
+        viewportWidth / baseDimensions.width,
+        viewportHeight / baseDimensions.height,
+      ),
     ),
   );
 
@@ -111,7 +134,14 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
     const wheelAreaRef = useRef<HTMLDivElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
     const [isOverflowing, setIsOverflowing] = useState(false);
+    const [minScale, setMinScale] = useState(MIN_SCALE);
     const rotationRef = useRef(rotation);
+
+    const setMinimumScale = useCallback((scale: number) => {
+      setMinScale((currentScale) =>
+        Math.abs(currentScale - scale) < SCALE_EPSILON ? currentScale : scale,
+      );
+    }, []);
 
     useEffect(() => {
       rotationRef.current = rotation;
@@ -132,8 +162,10 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
     const getBaseDimensions = useCallback((): Size | null => {
       if (!imageRef.current) return null;
 
-      const renderedWidth = imageRef.current.clientWidth;
-      const renderedHeight = imageRef.current.clientHeight;
+      const renderedWidth =
+        imageRef.current.naturalWidth || imageRef.current.clientWidth;
+      const renderedHeight =
+        imageRef.current.naturalHeight || imageRef.current.clientHeight;
 
       if (!renderedWidth || !renderedHeight) return null;
 
@@ -186,30 +218,21 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
           return;
 
         const wrapperRect = viewportElement.getBoundingClientRect();
-        const img = imageRef.current;
+        const baseDimensions = getBaseDimensions();
 
-        const scale = 1;
-        const baseW = img.naturalWidth || img.clientWidth;
-        const baseH = img.naturalHeight || img.clientHeight;
+        if (!baseDimensions) return;
 
-        if (!baseW || !baseH) return;
-
-        const effectiveDims = getEffectiveDimensions(baseW, baseH);
-        const imgAspect = effectiveDims.width / effectiveDims.height;
-        const viewAspect = wrapperRect.width / wrapperRect.height;
-
-        let renderedW, renderedH;
-        if (imgAspect > viewAspect) {
-          renderedW = Math.min(effectiveDims.width, wrapperRect.width);
-          renderedH = renderedW / imgAspect;
-        } else {
-          renderedH = Math.min(effectiveDims.height, wrapperRect.height);
-          renderedW = renderedH * imgAspect;
-        }
-
+        const scale = getMinimumScale(
+          baseDimensions,
+          wrapperRect.width,
+          wrapperRect.height,
+        );
+        const renderedW = baseDimensions.width * scale;
+        const renderedH = baseDimensions.height * scale;
         const centerX = getCenteredAxisPosition(wrapperRect.width, renderedW);
         const centerY = getCenteredAxisPosition(wrapperRect.height, renderedH);
 
+        setMinimumScale(scale);
         transformRef.current.setTransform(
           centerX,
           centerY,
@@ -219,7 +242,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
         );
         setIsOverflowing(false);
       },
-      [getEffectiveDimensions, getViewportElement],
+      [getBaseDimensions, getViewportElement, setMinimumScale],
     );
 
     useImperativeHandle(ref, () => ({
@@ -239,10 +262,23 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
 
       const scale = transformRef.current.instance.transformState.scale;
       const rect = viewportElement.getBoundingClientRect();
+      const baseDimensions = getBaseDimensions();
+
+      if (baseDimensions) {
+        setMinimumScale(
+          getMinimumScale(baseDimensions, rect.width, rect.height),
+        );
+      }
 
       const overflow = getOverflowState(scale, rect.width, rect.height);
       setIsOverflowing(overflow.width || overflow.height);
-    }, [rotation, getOverflowState, getViewportElement]);
+    }, [
+      rotation,
+      getBaseDimensions,
+      getOverflowState,
+      getViewportElement,
+      setMinimumScale,
+    ]);
 
     useEffect(() => {
       setIsOverflowing(false);
@@ -271,9 +307,20 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
         wheelElement.getBoundingClientRect();
 
       const resizeObserver = new ResizeObserver(() => {
-        cachedViewportRect =
-          getViewportElement()?.getBoundingClientRect() ??
-          wheelElement.getBoundingClientRect();
+        const viewportElement = getViewportElement() ?? wheelElement;
+
+        cachedViewportRect = viewportElement.getBoundingClientRect();
+
+        const baseDimensions = getBaseDimensions();
+        if (baseDimensions) {
+          setMinimumScale(
+            getMinimumScale(
+              baseDimensions,
+              cachedViewportRect.width,
+              cachedViewportRect.height,
+            ),
+          );
+        }
       });
 
       resizeObserver.observe(wheelElement);
@@ -306,13 +353,20 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
 
         const zoomChange = -e.deltaY * multiplier * factor;
 
-        const currentScale = transformState.scale;
-        const desiredScale = Math.max(
-          MIN_SCALE,
-          Math.min(MAX_SCALE, currentScale + zoomChange),
-        );
         const baseDimensions = getBaseDimensions();
         if (!baseDimensions) return;
+
+        const minimumScale = getMinimumScale(
+          baseDimensions,
+          viewportRect.width,
+          viewportRect.height,
+        );
+        const currentScale = transformState.scale;
+        const desiredScale = Math.max(
+          minimumScale,
+          Math.min(MAX_SCALE, currentScale + zoomChange),
+        );
+        setMinimumScale(minimumScale);
 
         const currentDimensions = {
           width: baseDimensions.width * currentScale,
@@ -354,7 +408,8 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
         );
 
         const shouldRecenter =
-          newScale === MIN_SCALE || (!newOverflow.width && !newOverflow.height);
+          newScale <= minimumScale + SCALE_EPSILON ||
+          (!newOverflow.width && !newOverflow.height);
 
         const centeredX = getCenteredAxisPosition(
           viewportRect.width,
@@ -411,14 +466,15 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
       getOverflowState,
       getScaledDimensions,
       getViewportElement,
+      setMinimumScale,
     ]);
 
     return (
       <div ref={wheelAreaRef} className="h-full w-full">
         <TransformWrapper
           ref={transformRef}
-          initialScale={MIN_SCALE}
-          minScale={MIN_SCALE}
+          initialScale={minScale}
+          minScale={minScale}
           maxScale={MAX_SCALE}
           centerOnInit
           limitToBounds={!isOverflowing}
@@ -461,12 +517,12 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
             const positionY = ref.state.positionY;
             const viewW = wrapper.clientWidth;
             const viewH = wrapper.clientHeight;
-            const imgW = imageRef.current.clientWidth;
-            const imgH = imageRef.current.clientHeight;
+            const baseDimensions = getBaseDimensions();
 
-            const effectiveDims = getEffectiveDimensions(imgW, imgH);
-            const scaledW = effectiveDims.width * scale;
-            const scaledH = effectiveDims.height * scale;
+            if (!baseDimensions) return;
+
+            const scaledW = baseDimensions.width * scale;
+            const scaledH = baseDimensions.height * scale;
 
             const finalX = getAxisPosition(
               positionX,
@@ -512,8 +568,8 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
                 img.src = '/placeholder.svg';
               }}
               style={{
-                maxWidth: '100vw',
-                maxHeight: '100vh',
+                maxWidth: 'none',
+                maxHeight: 'none',
                 objectFit: 'contain',
                 zIndex: 50,
                 transform: `rotate(${rotation}deg)`,
