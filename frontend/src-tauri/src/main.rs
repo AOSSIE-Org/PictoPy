@@ -9,7 +9,6 @@ use tauri::path::BaseDirectory;
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, Window, WindowEvent};
 use tauri_plugin_autostart::ManagerExt;
-use tauri_plugin_shell::ShellExt;
 
 const ENDPOINTS: [(&str, &str, &str); 2] = [
     (
@@ -137,6 +136,7 @@ fn prod(app: &tauri::AppHandle, resource_path: &std::path::Path) -> Result<(), S
     println!("Sync spawned with PID {}", sync_child.pid());
 
     use tauri_plugin_shell::process::CommandEvent;
+    use tauri_plugin_shell::ShellExt;
     tauri::async_runtime::spawn(async move {
         while let Some(event) = backend_rx.recv().await {
             match event {
@@ -240,9 +240,14 @@ fn main() {
             let menu = Menu::with_items(app, &[&show_item, &separator, &quit_item])?;
 
             TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(
+                    app.default_window_icon()
+                        .ok_or("no default window icon")?
+                        .clone(),
+                )
                 .tooltip("PictoPy")
                 .menu(&menu)
+                .menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => {
                         if let Some(w) = app.get_webview_window("main") {
