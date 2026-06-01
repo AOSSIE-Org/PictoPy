@@ -4,8 +4,11 @@
 mod services;
 
 use sysinfo::System;
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::path::BaseDirectory;
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, Window, WindowEvent};
+use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_shell::ShellExt;
 
 const ENDPOINTS: [(&str, &str, &str); 2] = [
@@ -43,13 +46,13 @@ fn is_process_alive() -> bool {
     true
 }
 
+// Hide the window instead of exiting so the app lives in the system tray.
+// The user can quit via the tray context menu's "Quit" item.
 fn on_window_event(window: &Window, event: &WindowEvent) {
-    if !matches!(event, WindowEvent::CloseRequested { .. }) {
-        return;
+    if let WindowEvent::CloseRequested { api, .. } = event {
+        api.prevent_close();
+        let _ = window.hide();
     }
-
-    let _ = kill_process_tree();
-    window.app_handle().exit(0);
 }
 
 #[cfg(unix)]
@@ -188,8 +191,28 @@ fn prod(_app: &tauri::AppHandle, _resource_path: &std::path::Path) -> Result<(),
     Ok(())
 }
 
+#[tauri::command]
+fn enable_autostart(app: tauri::AppHandle) -> Result<(), String> {
+    app.autolaunch().enable().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn disable_autostart(app: tauri::AppHandle) -> Result<(), String> {
+    app.autolaunch().disable().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn is_autostart_enabled(app: tauri::AppHandle) -> Result<bool, String> {
+    app.autolaunch().is_enabled().map_err(|e| e.to_string())
+}
+
 fn main() {
     tauri::Builder::default()
+        // Auto-start: pass --minimized so the window starts hidden when launched at boot
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]),
+        ))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
@@ -202,10 +225,61 @@ fn main() {
             println!("Resource path: {:?}", resource_path);
 
             prod(app.handle(), &resource_path)?;
+
+            // When auto-started at boot (--minimized flag), keep the window hidden
+            if std::env::args().any(|a| a == "--minimized") {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+            }
+
+            // System tray: context menu with Show / Quit
+            let show_item = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
+            let separator = PredefinedMenuItem::separator(app)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_item, &separator, &quit_item])?;
+
+            TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("PictoPy")
+                .menu(&menu)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "show" => {
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
+                        }
+                    }
+                    "quit" => {
+                        let _ = kill_process_tree();
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                // Left-click on the tray icon also shows the window
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             services::get_resources_folder_path,
+            enable_autostart,
+            disable_autostart,
+            is_autostart_enabled,
         ])
         .on_window_event(on_window_event)
         .run(tauri::generate_context!())
