@@ -9,7 +9,8 @@ from app.database.face_clusters import (
     db_get_cluster_by_id,
     db_update_cluster,
     db_get_all_clusters_with_face_counts,
-    db_get_images_by_cluster_id,  # Add this import
+    db_get_images_by_cluster_id,
+    db_get_images_by_face_clusters,
 )
 from app.schemas.face_clusters import (
     RenameClusterRequest,
@@ -24,6 +25,10 @@ from app.schemas.face_clusters import (
     GetClusterImagesResponse,
     GetClusterImagesData,
     ImageInCluster,
+    MultiPersonSearchRequest,
+    MultiPersonSearchResponse,
+    MultiPersonSearchData,
+    MultiPersonSearchImage,
 )
 from app.schemas.images import FaceSearchRequest, InputType
 from app.utils.faceSearch import perform_face_search
@@ -341,5 +346,67 @@ def trigger_global_reclustering():
                 success=False,
                 error="Internal server error",
                 message=f"Global reclustering failed: {str(e)}",
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/multi-search",
+    response_model=MultiPersonSearchResponse,
+    responses={code: {"model": ErrorResponse} for code in [400, 404, 500]},
+)
+def search_images_by_multiple_faces(body: MultiPersonSearchRequest):
+    """Search for images containing multiple face identities, ranked by match count."""
+    try:
+        if not body.cluster_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Validation Error",
+                    message="cluster_ids cannot be empty.",
+                ).model_dump(),
+            )
+        if body.match_mode not in ("match_any", "match_all"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Validation Error",
+                    message="match_mode must be 'match_any' or 'match_all'.",
+                ).model_dump(),
+            )
+
+        rows = db_get_images_by_face_clusters(body.cluster_ids, body.match_mode)
+
+        images = [
+            MultiPersonSearchImage(
+                id=row["image_id"],
+                path=row["image_path"],
+                thumbnailPath=row["thumbnail_path"],
+                metadata=row["metadata"],
+                match_count=row["match_count"],
+            )
+            for row in rows
+        ]
+
+        return MultiPersonSearchResponse(
+            success=True,
+            message=f"Found {len(images)} image(s) matching the selected people.",
+            data=MultiPersonSearchData(
+                images=images,
+                total=len(images),
+                match_mode=body.match_mode,
+            ),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Multi-person search failed: {str(e)}",
             ).model_dump(),
         )

@@ -893,6 +893,7 @@
           "Images"
         ],
         "summary": "Toggle Favourite",
+        "description": "Toggle the favorite status of an image.",
         "operationId": "toggle_favourite_images_toggle_favourite_post",
         "requestBody": {
           "content": {
@@ -1206,6 +1207,78 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/face-clusters/multi-search": {
+      "post": {
+        "tags": [
+          "Face Clusters"
+        ],
+        "summary": "Search Images By Multiple Faces",
+        "description": "Search for images containing multiple face identities, ranked by match count.",
+        "operationId": "search_images_by_multiple_faces_face_clusters_multi_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MultiPersonSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiPersonSearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -2807,6 +2880,143 @@
           "item_type"
         ],
         "title": "MetadataModel"
+      },
+      "MultiPersonSearchData": {
+        "properties": {
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/MultiPersonSearchImage"
+            },
+            "type": "array",
+            "title": "Images"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "match_mode": {
+            "type": "string",
+            "title": "Match Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "images",
+          "total",
+          "match_mode"
+        ],
+        "title": "MultiPersonSearchData"
+      },
+      "MultiPersonSearchImage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "thumbnailPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnailpath"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "match_count": {
+            "type": "integer",
+            "title": "Match Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "match_count"
+        ],
+        "title": "MultiPersonSearchImage"
+      },
+      "MultiPersonSearchRequest": {
+        "properties": {
+          "cluster_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cluster Ids"
+          },
+          "match_mode": {
+            "type": "string",
+            "title": "Match Mode",
+            "default": "match_any"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cluster_ids"
+        ],
+        "title": "MultiPersonSearchRequest"
+      },
+      "MultiPersonSearchResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MultiPersonSearchData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "MultiPersonSearchResponse"
       },
       "RenameClusterData": {
         "properties": {

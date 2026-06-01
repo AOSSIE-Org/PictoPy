@@ -83,3 +83,29 @@ class GlobalReclusterResponse(BaseModel):
     message: Optional[str] = None
     error: Optional[str] = None
     data: Optional[GlobalReclusterData] = None
+
+
+class MultiPersonSearchRequest(BaseModel):
+    cluster_ids: List[str]
+    match_mode: str = "match_any"
+
+
+class MultiPersonSearchImage(BaseModel):
+    id: str
+    path: str
+    thumbnailPath: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+    match_count: int
+
+
+class MultiPersonSearchData(BaseModel):
+    images: List[MultiPersonSearchImage]
+    total: int
+    match_mode: str
+
+
+class MultiPersonSearchResponse(BaseModel):
+    success: bool
+    message: Optional[str] = None
+    error: Optional[str] = None
+    data: Optional[MultiPersonSearchData] = None

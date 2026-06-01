@@ -457,6 +457,7 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
     finally:
         conn.close()
 
+
 def db_get_image_by_id(image_id: str) -> Optional[dict]:
     """
     Get a single image by ID with its favorite status.
@@ -464,11 +465,14 @@ def db_get_image_by_id(image_id: str) -> Optional[dict]:
     conn = _connect()
     cursor = conn.cursor()
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT id, path, folder_id, thumbnailPath, metadata, isTagged, isFavourite
             FROM images
             WHERE id = ?
-        """, (image_id,))
+        """,
+            (image_id,),
+        )
         row = cursor.fetchone()
         if not row:
             return None
@@ -487,6 +491,7 @@ def db_get_image_by_id(image_id: str) -> Optional[dict]:
         }
     finally:
         conn.close()
+
 
 # ============================================================================
 # MEMORIES FEATURE - Location and Time-based Queries
