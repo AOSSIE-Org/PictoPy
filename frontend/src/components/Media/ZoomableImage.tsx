@@ -85,6 +85,47 @@ const getAxisPosition = (
     : centeredPosition;
 };
 
+const getOverflowRatio = (viewportSize: number, scaledSize: number) => {
+  if (!viewportSize || scaledSize <= viewportSize) return 0;
+
+  return clamp((scaledSize - viewportSize) / viewportSize, 0, 1);
+};
+
+const interpolate = (from: number, to: number, ratio: number) =>
+  from + (to - from) * ratio;
+
+const getSmoothedWheelAxisPosition = ({
+  anchoredPosition,
+  viewportSize,
+  scaledSize,
+  isOverflowingAxis,
+  shouldAnchor,
+  isZoomingOut,
+}: {
+  anchoredPosition: number;
+  viewportSize: number;
+  scaledSize: number;
+  isOverflowingAxis: boolean;
+  shouldAnchor: boolean;
+  isZoomingOut: boolean;
+}) => {
+  const centeredPosition = getCenteredAxisPosition(viewportSize, scaledSize);
+
+  if (!isOverflowingAxis || !shouldAnchor) return centeredPosition;
+
+  const clampedAnchor = clampOverflowAxisPosition(
+    anchoredPosition,
+    viewportSize,
+    scaledSize,
+  );
+
+  if (!isZoomingOut) return clampedAnchor;
+
+  const anchorRatio = getOverflowRatio(viewportSize, scaledSize);
+
+  return interpolate(centeredPosition, clampedAnchor, anchorRatio);
+};
+
 const axisTouchesViewport = (scaledSize: number, viewportSize: number) =>
   scaledSize >= viewportSize - SCALE_EPSILON;
 
@@ -463,23 +504,30 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
         const anchoredY =
           mouseViewportY -
           (mouseViewportY - currentTransform.positionY) * ratio;
-        const centeredX = getCenteredAxisPosition(
-          geometry.viewportWidth,
-          scaledDimensions.width,
-        );
-        const centeredY = getCenteredAxisPosition(
-          geometry.viewportHeight,
-          scaledDimensions.height,
-        );
         const shouldAnchorX =
           isOverImage && currentTouchesViewport.width && newOverflow.width;
         const shouldAnchorY =
           isOverImage && currentTouchesViewport.height && newOverflow.height;
+        const isZoomingOut = scale < currentTransform.scale;
 
         const didApply = applyTransform(
           {
-            positionX: shouldAnchorX ? anchoredX : centeredX,
-            positionY: shouldAnchorY ? anchoredY : centeredY,
+            positionX: getSmoothedWheelAxisPosition({
+              anchoredPosition: anchoredX,
+              viewportSize: geometry.viewportWidth,
+              scaledSize: scaledDimensions.width,
+              isOverflowingAxis: newOverflow.width,
+              shouldAnchor: shouldAnchorX,
+              isZoomingOut,
+            }),
+            positionY: getSmoothedWheelAxisPosition({
+              anchoredPosition: anchoredY,
+              viewportSize: geometry.viewportHeight,
+              scaledSize: scaledDimensions.height,
+              isOverflowingAxis: newOverflow.height,
+              shouldAnchor: shouldAnchorY,
+              isZoomingOut,
+            }),
             scale,
           },
           geometry,

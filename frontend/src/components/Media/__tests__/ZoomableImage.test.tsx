@@ -305,6 +305,26 @@ describe('ZoomableImage controlled transform behavior', () => {
     expectCurrentTransform(200, 150, 1);
   });
 
+  test('blends overflowing axes back toward center while zooming out', () => {
+    const { viewport } = setupScene({
+      viewportSize: { width: 800, height: 600 },
+      imageSize: { width: 1600, height: 1200 },
+    });
+
+    fireEvent.wheel(viewport, {
+      deltaY: -100,
+      clientX: 700,
+      clientY: 500,
+    });
+    fireEvent.wheel(viewport, {
+      deltaY: 50,
+      clientX: 700,
+      clientY: 500,
+    });
+
+    expectCurrentTransform(-43, -32, 0.55);
+  });
+
   test('panning clamps overflowing axes and keeps fitting axes centered', () => {
     const { viewport } = setupScene({
       viewportSize: { width: 800, height: 600 },
