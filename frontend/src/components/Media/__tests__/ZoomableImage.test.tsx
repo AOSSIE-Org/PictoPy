@@ -50,7 +50,7 @@ const mockElementRect = (
 
 const mockImageDimensions = (
   image: HTMLElement,
-  dimensions: { width: number; height: number },
+  dimensions: { width: number; height: number; complete?: boolean },
 ) => {
   Object.defineProperty(image, 'naturalWidth', {
     configurable: true,
@@ -67,6 +67,10 @@ const mockImageDimensions = (
   Object.defineProperty(image, 'clientHeight', {
     configurable: true,
     value: dimensions.height,
+  });
+  Object.defineProperty(image, 'complete', {
+    configurable: true,
+    value: dimensions.complete ?? true,
   });
 };
 
@@ -146,6 +150,23 @@ const expectCurrentTransform = (
   expect(transform.positionX).toBeCloseTo(expectedX);
   expect(transform.positionY).toBeCloseTo(expectedY);
   expect(transform.scale).toBeCloseTo(expectedScale);
+};
+
+const firePointerEvent = (
+  element: Element,
+  type: string,
+  properties: Record<string, number | string> = {},
+) => {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+
+  Object.entries(properties).forEach(([key, value]) => {
+    Object.defineProperty(event, key, {
+      configurable: true,
+      value,
+    });
+  });
+
+  fireEvent(element, event);
 };
 
 describe('ZoomableImage controlled transform behavior', () => {
@@ -341,21 +362,89 @@ describe('ZoomableImage controlled transform behavior', () => {
       clientX: 750,
       clientY: 300,
     });
-    fireEvent.mouseDown(viewport, {
+    firePointerEvent(viewport, 'pointerdown', {
       button: 0,
+      buttons: 1,
+      pointerId: 1,
       clientX: 300,
       clientY: 300,
     });
-    fireEvent.mouseMove(viewport, {
+    firePointerEvent(viewport, 'pointermove', {
+      pointerId: 1,
       clientX: 1000,
       clientY: 1000,
     });
-    fireEvent.mouseUp(viewport, {
+    firePointerEvent(viewport, 'pointerup', {
+      pointerId: 1,
       clientX: 1000,
       clientY: 1000,
     });
 
     expectCurrentTransform(0, 127.10526315789474, 1.1526315789473685);
+  });
+
+  test('cleans up panning on pointer leave when pointer capture is unavailable', () => {
+    const { viewport } = setupScene({
+      viewportSize: { width: 800, height: 600 },
+      imageSize: { width: 900, height: 700 },
+    });
+
+    fireEvent.wheel(viewport, {
+      deltaY: -100,
+      clientX: 700,
+      clientY: 500,
+    });
+    firePointerEvent(viewport, 'pointerdown', {
+      button: 0,
+      buttons: 1,
+      pointerId: 5,
+      clientX: 300,
+      clientY: 300,
+    });
+
+    expect(viewport).toHaveStyle({ cursor: 'grabbing' });
+
+    firePointerEvent(viewport, 'pointerout', {
+      pointerId: 5,
+      clientX: 900,
+      clientY: 700,
+    });
+
+    expect(viewport).not.toHaveStyle({ cursor: 'grabbing' });
+  });
+
+  test('does not use client dimensions before the image natural size is ready', () => {
+    renderZoomableImage();
+
+    const viewport = screen.getByTestId('zoom-viewport');
+    const content = screen.getByTestId('zoom-content');
+    const image = screen.getByAltText('test image');
+
+    mockElementRect(
+      viewport,
+      { width: 500, height: 400, left: 0, top: 0 },
+      { clientWidth: 500, clientHeight: 400 },
+    );
+    mockImageDimensions(image, {
+      width: 0,
+      height: 0,
+      complete: false,
+    });
+    Object.defineProperty(image, 'clientWidth', {
+      configurable: true,
+      value: 1000,
+    });
+    Object.defineProperty(image, 'clientHeight', {
+      configurable: true,
+      value: 800,
+    });
+
+    fireEvent.load(image);
+
+    expect(content.style.width).not.toBe('1000px');
+    expect(content.style.height).not.toBe('800px');
+    expect(image.style.width).toBe('');
+    expect(image.style.height).toBe('');
   });
 
   test('starts from the new image fit transform after switching images', () => {

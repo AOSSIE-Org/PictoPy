@@ -35,3 +35,5 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
     );
   },
 );
+
+ImageViewer.displayName = 'ImageViewer';
