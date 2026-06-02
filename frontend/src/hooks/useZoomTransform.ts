@@ -39,6 +39,7 @@ type DragState = {
   startClientX: number;
   startClientY: number;
   startTransform: TransformState;
+  geometry: Geometry;
 };
 
 export const useZoomTransform = ({
@@ -375,6 +376,7 @@ export const useZoomTransform = ({
         startClientX: clientX,
         startClientY: clientY,
         startTransform: transformStateRef.current,
+        geometry,
       };
       hasUserInteractedRef.current = true;
       setIsPanning(true);
@@ -391,11 +393,14 @@ export const useZoomTransform = ({
       const deltaX = clientX - dragState.startClientX;
       const deltaY = clientY - dragState.startClientY;
 
-      applyTransform({
-        positionX: dragState.startTransform.positionX + deltaX,
-        positionY: dragState.startTransform.positionY + deltaY,
-        scale: dragState.startTransform.scale,
-      });
+      applyTransform(
+        {
+          positionX: dragState.startTransform.positionX + deltaX,
+          positionY: dragState.startTransform.positionY + deltaY,
+          scale: dragState.startTransform.scale,
+        },
+        dragState.geometry,
+      );
       return true;
     },
     [applyTransform],
@@ -460,6 +465,12 @@ export const useZoomTransform = ({
     [endDrag],
   );
 
+  const zoomIn = useCallback(() => zoomBy(CONTROL_BUTTON_ZOOM_STEP), [zoomBy]);
+  const zoomOut = useCallback(
+    () => zoomBy(-CONTROL_BUTTON_ZOOM_STEP),
+    [zoomBy],
+  );
+
   const contentDimensions = rawDimensions
     ? getEffectiveDimensions(
         rawDimensions.width,
@@ -489,8 +500,8 @@ export const useZoomTransform = ({
     handlePointerMove,
     handlePointerEnd,
     handlePointerLeave,
-    zoomIn: () => zoomBy(CONTROL_BUTTON_ZOOM_STEP),
-    zoomOut: () => zoomBy(-CONTROL_BUTTON_ZOOM_STEP),
+    zoomIn,
+    zoomOut,
     reset: resetToFit,
   };
 };

@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { createRef } from 'react';
 import { ZoomableImage, ZoomableImageRef } from '../ZoomableImage';
+import { MAX_FIT_RETRY_FRAMES } from '@/utils/zoomUtils';
 
 jest.mock('@tauri-apps/api/core', () => ({
   convertFileSrc: (path: string) => path,
@@ -167,6 +168,82 @@ const firePointerEvent = (
   });
 
   fireEvent(element, event);
+};
+
+const installPointerCaptureMocks = (element: Element) => {
+  const capturedPointers = new Set<number>();
+
+  Object.defineProperty(element, 'setPointerCapture', {
+    configurable: true,
+    value: jest.fn((pointerId: number) => {
+      capturedPointers.add(pointerId);
+    }),
+  });
+  Object.defineProperty(element, 'releasePointerCapture', {
+    configurable: true,
+    value: jest.fn((pointerId: number) => {
+      capturedPointers.delete(pointerId);
+    }),
+  });
+  Object.defineProperty(element, 'hasPointerCapture', {
+    configurable: true,
+    value: jest.fn((pointerId: number) => capturedPointers.has(pointerId)),
+  });
+};
+
+const zoomToOverflow = (viewport: Element) => {
+  fireEvent.wheel(viewport, {
+    deltaY: -100,
+    clientX: 700,
+    clientY: 500,
+  });
+};
+
+const startPan = (viewport: Element, pointerId = 5) => {
+  firePointerEvent(viewport, 'pointerdown', {
+    button: 0,
+    buttons: 1,
+    pointerId,
+    clientX: 300,
+    clientY: 300,
+  });
+};
+
+type ManualAnimationFrames = {
+  frames: Map<number, FrameRequestCallback>;
+  flushNextFrame: () => void;
+};
+
+// Replaces the synchronous rAF/cAF mocks (installed in beforeEach) with a manual
+// queue so a single generation of scheduled fit attempts can be flushed at a
+// time. This makes the fit-retry loop deterministic to assert against.
+const setupManualAnimationFrames = (): ManualAnimationFrames => {
+  const frames = new Map<number, FrameRequestCallback>();
+  let nextFrameId = 1;
+
+  (window.requestAnimationFrame as unknown as jest.Mock).mockImplementation(
+    (callback: FrameRequestCallback) => {
+      const id = nextFrameId;
+      nextFrameId += 1;
+      frames.set(id, callback);
+      return id;
+    },
+  );
+  (window.cancelAnimationFrame as unknown as jest.Mock).mockImplementation(
+    (id: number) => {
+      frames.delete(id);
+    },
+  );
+
+  const flushNextFrame = () => {
+    const callbacks = Array.from(frames.values());
+    frames.clear();
+    act(() => {
+      callbacks.forEach((callback) => callback(0));
+    });
+  };
+
+  return { frames, flushNextFrame };
 };
 
 describe('ZoomableImage controlled transform behavior', () => {
@@ -383,24 +460,58 @@ describe('ZoomableImage controlled transform behavior', () => {
     expectCurrentTransform(0, 127.10526315789474, 1.1526315789473685);
   });
 
+  test('reuses the drag-start geometry while panning', () => {
+    const { viewport } = setupScene({
+      viewportSize: { width: 800, height: 600 },
+      imageSize: { width: 900, height: 700 },
+    });
+    const getBoundingClientRect = jest.fn(
+      () =>
+        ({
+          left: 0,
+          top: 0,
+          right: 800,
+          bottom: 600,
+          x: 0,
+          y: 0,
+          width: 800,
+          height: 600,
+          toJSON: () => undefined,
+        }) as DOMRect,
+    );
+
+    Object.defineProperty(viewport, 'getBoundingClientRect', {
+      configurable: true,
+      value: getBoundingClientRect,
+    });
+
+    zoomToOverflow(viewport);
+    startPan(viewport, 1);
+
+    const callsAfterDragStart = getBoundingClientRect.mock.calls.length;
+
+    firePointerEvent(viewport, 'pointermove', {
+      pointerId: 1,
+      clientX: 350,
+      clientY: 350,
+    });
+    firePointerEvent(viewport, 'pointermove', {
+      pointerId: 1,
+      clientX: 400,
+      clientY: 400,
+    });
+
+    expect(getBoundingClientRect).toHaveBeenCalledTimes(callsAfterDragStart);
+  });
+
   test('cleans up panning on pointer leave when pointer capture is unavailable', () => {
     const { viewport } = setupScene({
       viewportSize: { width: 800, height: 600 },
       imageSize: { width: 900, height: 700 },
     });
 
-    fireEvent.wheel(viewport, {
-      deltaY: -100,
-      clientX: 700,
-      clientY: 500,
-    });
-    firePointerEvent(viewport, 'pointerdown', {
-      button: 0,
-      buttons: 1,
-      pointerId: 5,
-      clientX: 300,
-      clientY: 300,
-    });
+    zoomToOverflow(viewport);
+    startPan(viewport);
 
     expect(viewport).toHaveStyle({ cursor: 'grabbing' });
 
@@ -408,6 +519,129 @@ describe('ZoomableImage controlled transform behavior', () => {
       pointerId: 5,
       clientX: 900,
       clientY: 700,
+    });
+
+    expect(viewport).not.toHaveStyle({ cursor: 'grabbing' });
+  });
+
+  test('keeps panning when the pointer leaves while capture is held', () => {
+    const { viewport } = setupScene({
+      viewportSize: { width: 800, height: 600 },
+      imageSize: { width: 900, height: 700 },
+    });
+    installPointerCaptureMocks(viewport);
+
+    zoomToOverflow(viewport);
+    startPan(viewport);
+
+    expect(viewport).toHaveStyle({ cursor: 'grabbing' });
+
+    firePointerEvent(viewport, 'pointerout', {
+      pointerId: 5,
+      clientX: 900,
+      clientY: 700,
+    });
+
+    expect(viewport).toHaveStyle({ cursor: 'grabbing' });
+
+    firePointerEvent(viewport, 'pointerup', {
+      pointerId: 5,
+      clientX: 900,
+      clientY: 700,
+    });
+
+    expect(viewport).not.toHaveStyle({ cursor: 'grabbing' });
+  });
+
+  test('cleans up panning on pointer cancel', () => {
+    const { viewport } = setupScene({
+      viewportSize: { width: 800, height: 600 },
+      imageSize: { width: 900, height: 700 },
+    });
+
+    zoomToOverflow(viewport);
+    startPan(viewport);
+
+    expect(viewport).toHaveStyle({ cursor: 'grabbing' });
+
+    firePointerEvent(viewport, 'pointercancel', {
+      pointerId: 5,
+      clientX: 300,
+      clientY: 300,
+    });
+
+    expect(viewport).not.toHaveStyle({ cursor: 'grabbing' });
+  });
+
+  test('cleans up panning when pointer capture is lost', () => {
+    const { viewport } = setupScene({
+      viewportSize: { width: 800, height: 600 },
+      imageSize: { width: 900, height: 700 },
+    });
+
+    zoomToOverflow(viewport);
+    startPan(viewport);
+
+    expect(viewport).toHaveStyle({ cursor: 'grabbing' });
+
+    firePointerEvent(viewport, 'lostpointercapture', {
+      pointerId: 5,
+      clientX: 300,
+      clientY: 300,
+    });
+
+    expect(viewport).not.toHaveStyle({ cursor: 'grabbing' });
+  });
+
+  test('cleans up panning on pointer up after pointer capture succeeds', () => {
+    const { viewport } = setupScene({
+      viewportSize: { width: 800, height: 600 },
+      imageSize: { width: 900, height: 700 },
+    });
+    installPointerCaptureMocks(viewport);
+
+    zoomToOverflow(viewport);
+    startPan(viewport);
+
+    expect(viewport).toHaveStyle({ cursor: 'grabbing' });
+    expect(viewport.setPointerCapture).toHaveBeenCalledWith(5);
+    expect(viewport.hasPointerCapture(5)).toBe(true);
+
+    firePointerEvent(viewport, 'pointerup', {
+      pointerId: 5,
+      clientX: 300,
+      clientY: 300,
+    });
+
+    expect(viewport.releasePointerCapture).toHaveBeenCalledWith(5);
+    expect(viewport.hasPointerCapture(5)).toBe(false);
+    expect(viewport).not.toHaveStyle({ cursor: 'grabbing' });
+  });
+
+  test('does not replace an active drag with a second pointer', () => {
+    const { viewport } = setupScene({
+      viewportSize: { width: 800, height: 600 },
+      imageSize: { width: 900, height: 700 },
+    });
+
+    zoomToOverflow(viewport);
+    startPan(viewport, 1);
+    startPan(viewport, 2);
+
+    expect(viewport).toHaveStyle({ cursor: 'grabbing' });
+
+    firePointerEvent(viewport, 'pointerup', {
+      pointerId: 2,
+      clientX: 300,
+      clientY: 300,
+    });
+
+    expect(viewport).toHaveStyle({ cursor: 'grabbing' });
+
+    firePointerEvent(viewport, 'pointerup', {
+      pointerId: 1,
+      clientX: 300,
+      clientY: 300,
     });
 
     expect(viewport).not.toHaveStyle({ cursor: 'grabbing' });
@@ -525,6 +759,101 @@ describe('ZoomableImage controlled transform behavior', () => {
       imageRef.current?.zoomIn();
       imageRef.current?.reset();
     });
+
+    expectCurrentTransform(0, 0, 0.5);
+  });
+
+  test('applies the line-height multiplier for line-mode wheel events', () => {
+    const { viewport } = setupScene({
+      viewportSize: { width: 800, height: 600 },
+      imageSize: { width: 200, height: 100 },
+    });
+
+    // A line-mode wheel (deltaMode === 1) reports scroll in lines, not pixels.
+    // It must be normalized by LINE_HEIGHT_MULTIPLIER (33), so a 3-line notch
+    // zooms by 3 * 33 * ZOOM_FACTOR(0.001) = 0.099 -> scale 1.099, identical to
+    // a 99px pixel-mode notch. Without the multiplier it would be only 0.003.
+    fireEvent.wheel(viewport, {
+      deltaY: -3,
+      deltaMode: 1,
+      clientX: 400,
+      clientY: 300,
+    });
+
+    expectCurrentTransform(290.1, 245.05, 1.099);
+  });
+
+  test('retries the fit until the viewport can be measured', () => {
+    const { flushNextFrame } = setupManualAnimationFrames();
+
+    renderZoomableImage();
+    const viewport = screen.getByTestId('zoom-viewport');
+    const image = screen.getByAltText('test image');
+
+    // The image dimensions are known, but the viewport cannot be measured yet.
+    mockElementRect(
+      viewport,
+      { width: 0, height: 0, left: 0, top: 0 },
+      { clientWidth: 0, clientHeight: 0 },
+    );
+    mockImageDimensions(image, { width: 1000, height: 800 });
+    fireEvent.load(image);
+
+    // Fit attempts run but cannot succeed while the viewport has no size, so
+    // the transform stays at its initial (unfitted) value.
+    flushNextFrame();
+    flushNextFrame();
+    expectCurrentTransform(0, 0, 1);
+
+    // Once the viewport reports a size, the next retry fits the image.
+    mockElementRect(
+      viewport,
+      { width: 500, height: 400, left: 0, top: 0 },
+      { clientWidth: 500, clientHeight: 400 },
+    );
+    flushNextFrame();
+
+    expectCurrentTransform(0, 0, 0.5);
+  });
+
+  test('stops retrying after the maximum number of frames and recovers on resize', () => {
+    const { frames, flushNextFrame } = setupManualAnimationFrames();
+
+    renderZoomableImage();
+    const viewport = screen.getByTestId('zoom-viewport');
+    const image = screen.getByAltText('test image');
+
+    mockElementRect(
+      viewport,
+      { width: 0, height: 0, left: 0, top: 0 },
+      { clientWidth: 0, clientHeight: 0 },
+    );
+    mockImageDimensions(image, { width: 1000, height: 800 });
+    fireEvent.load(image);
+
+    // Exhaust every retry while the viewport stays unmeasurable.
+    for (let i = 0; i < MAX_FIT_RETRY_FRAMES + 2; i += 1) {
+      flushNextFrame();
+    }
+
+    // The retry loop has given up: nothing is scheduled and no fit happened.
+    expect(frames.size).toBe(0);
+    expectCurrentTransform(0, 0, 1);
+
+    // A now-measurable viewport alone does not revive the abandoned loop.
+    mockElementRect(
+      viewport,
+      { width: 500, height: 400, left: 0, top: 0 },
+      { clientWidth: 500, clientHeight: 400 },
+    );
+    flushNextFrame();
+    expectCurrentTransform(0, 0, 1);
+
+    // A fresh fit cycle (resize) resets the retry count and fits the image.
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+    flushNextFrame();
 
     expectCurrentTransform(0, 0, 0.5);
   });

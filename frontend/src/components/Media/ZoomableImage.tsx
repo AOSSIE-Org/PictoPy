@@ -1,6 +1,10 @@
 import { useImperativeHandle, forwardRef } from 'react';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { useZoomTransform } from '@/hooks/useZoomTransform';
+import {
+  PLACEHOLDER_IMAGE_SRC,
+  handlePlaceholderImageError,
+} from '@/utils/imageFallback';
 
 interface ZoomableImageProps {
   imagePath: string;
@@ -35,11 +39,15 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
       reset,
     } = useZoomTransform({ imagePath, rotation, resetSignal });
 
-    useImperativeHandle(ref, () => ({
-      zoomIn,
-      zoomOut,
-      reset,
-    }));
+    useImperativeHandle(
+      ref,
+      () => ({
+        zoomIn,
+        zoomOut,
+        reset,
+      }),
+      [zoomIn, zoomOut, reset],
+    );
 
     return (
       <div
@@ -75,26 +83,22 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
           <img
             key={imagePath}
             ref={imageRef}
-            src={convertFileSrc(imagePath) || '/placeholder.svg'}
+            src={convertFileSrc(imagePath) || PLACEHOLDER_IMAGE_SRC}
             alt={alt}
             draggable={false}
-            className="select-none"
             onLoad={handleImageLoad}
-            onError={(e) => {
-              const img = e.target as HTMLImageElement;
-              img.onerror = null;
-              img.src = '/placeholder.svg';
-            }}
+            onError={handlePlaceholderImageError}
             style={{
               position: contentDimensions ? 'absolute' : 'relative',
               left: `${imageOffset.left}px`,
               top: `${imageOffset.top}px`,
               width: rawDimensions ? `${rawDimensions.width}px` : undefined,
               height: rawDimensions ? `${rawDimensions.height}px` : undefined,
+              // Override the framework's `img { max-width: 100% }` reset so the
+              // image can scale beyond the viewport while zoomed.
               maxWidth: 'none',
               maxHeight: 'none',
               objectFit: 'contain',
-              zIndex: 50,
               transform: `rotate(${rotation}deg)`,
               transformOrigin: 'center center',
               pointerEvents: 'none',
