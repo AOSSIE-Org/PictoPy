@@ -10,6 +10,7 @@ describe('Settings Page', () => {
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
+    await screen.findByRole('switch', { name: /launch at startup/i });
     return { user };
   };
 
@@ -33,7 +34,7 @@ describe('Settings Page', () => {
       test('GPU Acceleration toggle changes state on click', async () => {
         const { user } = await setupTest();
 
-        const gpuSwitch = screen.getByRole('switch');
+        const gpuSwitch = screen.getByRole('switch', { name: /gpu acceleration/i });
         expect(gpuSwitch).toHaveAttribute('aria-checked', 'false');
 
         await user.click(gpuSwitch);
@@ -107,7 +108,7 @@ describe('Settings Page', () => {
       test('toggle cycles through ON/OFF states', async () => {
         const { user } = await setupTest();
 
-        const gpuSwitch = screen.getByRole('switch');
+        const gpuSwitch = screen.getByRole('switch', { name: /gpu acceleration/i });
         expect(gpuSwitch).toHaveAttribute('aria-checked', 'false');
 
         await user.click(gpuSwitch);
