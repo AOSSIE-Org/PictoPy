@@ -7,7 +7,6 @@ from pydantic import BaseModel
 from app.database.images import db_toggle_image_favourite_status, db_get_image_by_id
 from app.logging.setup_logging import get_logger
 
-
 # Initialize logger
 logger = get_logger(__name__)
 router = APIRouter()
@@ -106,15 +105,15 @@ def toggle_favourite(req: ToggleFavouriteRequest):
         success = db_toggle_image_favourite_status(image_id)
         if not success:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, 
-                detail="Image not found or failed to toggle"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Image not found or failed to toggle",
             )
         # Fetch updated status to return
         image = db_get_image_by_id(image_id)
         if not image:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, 
-                detail="Image not found after toggle"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Image not found after toggle",
             )
         return {
             "success": True,
@@ -126,9 +125,10 @@ def toggle_favourite(req: ToggleFavouriteRequest):
     except Exception as e:
         logger.error(f"error in /toggle-favourite route: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail=f"Internal server error: {e}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {e}",
         )
+
 
 class ImageInfoResponse(BaseModel):
     id: str
