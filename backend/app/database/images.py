@@ -62,7 +62,8 @@ def db_create_images_table() -> None:
     cursor = conn.cursor()
 
     # Create new images table with merged fields including Memories feature columns
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS images (
             id TEXT PRIMARY KEY,
             path VARCHAR UNIQUE,
@@ -76,7 +77,8 @@ def db_create_images_table() -> None:
             captured_at DATETIME,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
-    """)
+    """
+    )
 
     # Create indexes for Memories feature queries
     cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_latitude ON images(latitude)")
@@ -91,7 +93,8 @@ def db_create_images_table() -> None:
     )
 
     # Create new image_classes junction table
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS image_classes (
             image_id TEXT,
             class_id INTEGER,
@@ -99,7 +102,8 @@ def db_create_images_table() -> None:
             FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
             FOREIGN KEY (class_id) REFERENCES mappings(class_id) ON DELETE CASCADE
         )
-    """)
+    """
+    )
 
     conn.commit()
     conn.close()
@@ -261,13 +265,15 @@ def db_get_untagged_images() -> List[UntaggedImageRecord]:
     cursor = conn.cursor()
 
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT i.id, i.path, i.folder_id, i.thumbnailPath, i.metadata
             FROM images i
             JOIN folders f ON i.folder_id = f.folder_id
             WHERE f.AI_Tagging = TRUE
             AND i.isTagged = FALSE
-            """)
+            """
+        )
 
         results = cursor.fetchall()
 
@@ -748,7 +754,8 @@ def db_get_images_with_location() -> List[dict]:
     cursor = conn.cursor()
 
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT 
                 i.id, 
                 i.path, 
@@ -768,7 +775,8 @@ def db_get_images_with_location() -> List[dict]:
               AND i.longitude IS NOT NULL
             GROUP BY i.id
             ORDER BY i.captured_at DESC
-        """)
+        """
+        )
 
         results = cursor.fetchall()
 
@@ -813,7 +821,8 @@ def db_get_all_images_for_memories() -> List[dict]:
     cursor = conn.cursor()
 
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT 
                 i.id, 
                 i.path, 
@@ -831,7 +840,8 @@ def db_get_all_images_for_memories() -> List[dict]:
             LEFT JOIN mappings m ON ic.class_id = m.class_id
             GROUP BY i.id
             ORDER BY i.captured_at DESC
-        """)
+        """
+        )
 
         results = cursor.fetchall()
 
