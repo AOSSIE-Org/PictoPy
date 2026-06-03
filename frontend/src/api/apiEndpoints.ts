@@ -10,6 +10,7 @@ export const faceClustersEndpoints = {
   renameCluster: (clusterId: string) => `/face-clusters/${clusterId}`,
   getClusterImages: (clusterId: string) => `/face-clusters/${clusterId}/images`,
   globalRecluster: '/face-clusters/global-recluster',
+  multiPersonSearch: '/face-clusters/multi-search',
 };
 
 export const foldersEndpoints = {
