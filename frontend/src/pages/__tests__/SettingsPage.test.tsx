@@ -1,4 +1,5 @@
 import { render, screen, act } from '@/test-utils';
+import { invoke } from '@tauri-apps/api/core';
 import userEvent from '@testing-library/user-event';
 import Settings from '../SettingsPage/Settings';
 
@@ -34,12 +35,28 @@ describe('Settings Page', () => {
       test('GPU Acceleration toggle changes state on click', async () => {
         const { user } = await setupTest();
 
-        const gpuSwitch = screen.getByRole('switch', { name: /gpu acceleration/i });
+        const gpuSwitch = screen.getByRole('switch', {
+          name: /gpu acceleration/i,
+        });
         expect(gpuSwitch).toHaveAttribute('aria-checked', 'false');
 
         await user.click(gpuSwitch);
 
         expect(gpuSwitch).toHaveAttribute('aria-checked', 'true');
+      });
+
+      test('launch at startup switch enables autostart', async () => {
+        const { user } = await setupTest();
+        const mockedInvoke = invoke as jest.MockedFunction<typeof invoke>;
+        mockedInvoke.mockClear();
+
+        const autostartSwitch = screen.getByRole('switch', {
+          name: /launch at startup/i,
+        });
+
+        await user.click(autostartSwitch);
+
+        expect(mockedInvoke).toHaveBeenCalledWith('enable_autostart');
       });
     });
 
@@ -108,7 +125,9 @@ describe('Settings Page', () => {
       test('toggle cycles through ON/OFF states', async () => {
         const { user } = await setupTest();
 
-        const gpuSwitch = screen.getByRole('switch', { name: /gpu acceleration/i });
+        const gpuSwitch = screen.getByRole('switch', {
+          name: /gpu acceleration/i,
+        });
         expect(gpuSwitch).toHaveAttribute('aria-checked', 'false');
 
         await user.click(gpuSwitch);
