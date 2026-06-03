@@ -8,7 +8,7 @@ const ERROR_MSG = 'A single word in your name cannot exceed 30 characters.';
 
 beforeEach(() => localStorage.clear());
 
-// ─── AvatarSelectionStep ───────────────────────────────────────────────────
+//AvatarSelectionStep
 
 describe('Name validation - AvatarSelectionStep', () => {
   const setup = () => {
@@ -55,7 +55,7 @@ describe('Name validation - AvatarSelectionStep', () => {
   });
 });
 
-// ─── AccountSettingsCard ───────────────────────────────────────────────────
+//AccountSettingsCard
 
 describe('Name validation - AccountSettingsCard', () => {
   const setup = () => {
@@ -69,14 +69,18 @@ describe('Name validation - AccountSettingsCard', () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: VALID_30 } });
     expect(screen.queryByText(ERROR_MSG)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /save changes/i })).not.toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /save changes/i }),
+    ).not.toBeDisabled();
   });
 
   test('31 character word shows error and disables Save Changes button', () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: INVALID_31 } });
     expect(screen.getByText(ERROR_MSG)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /save changes/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /save changes/i }),
+    ).toBeDisabled();
   });
 
   test('multi-space input is handled gracefully - no error', () => {
@@ -89,9 +93,13 @@ describe('Name validation - AccountSettingsCard', () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: INVALID_31 } });
     expect(screen.getByText(ERROR_MSG)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /save changes/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /save changes/i }),
+    ).toBeDisabled();
     fireEvent.change(input, { target: { value: 'John' } });
     expect(screen.queryByText(ERROR_MSG)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /save changes/i })).not.toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /save changes/i }),
+    ).not.toBeDisabled();
   });
 });
