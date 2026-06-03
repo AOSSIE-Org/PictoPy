@@ -13,11 +13,18 @@ import {
 } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 import { EmptyAITaggingState } from '@/components/EmptyStates/EmptyAITaggingState';
+import { X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 export const AITagging = () => {
   const dispatch = useDispatch();
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
+  const [searchState, setSearchState] = useState<{
+    active: boolean;
+    peopleNames: string[];
+  }>({ active: false, peopleNames: [] });
   const taggedImages = useSelector(selectImages);
   const {
     data: imagesData,
@@ -41,6 +48,24 @@ export const AITagging = () => {
     }
   }, [imagesData, imagesSuccess, imagesError, imagesLoading, dispatch]);
 
+  const handleSearchActivated = (names: string[]) => {
+    setSearchState({ active: true, peopleNames: names });
+  };
+
+  const handleResetSearch = () => {
+    setSearchState({ active: false, peopleNames: [] });
+    const images = imagesData?.data as Image[] | undefined;
+    if (images) {
+      dispatch(setImages(images));
+    }
+  };
+
+  const formatSearchTitle = (names: string[]): string => {
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return `${names[0]} & ${names[1]}`;
+    return `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
+  };
+
   return (
     <div className="relative flex h-full flex-col pr-6">
       <div
@@ -51,8 +76,32 @@ export const AITagging = () => {
 
         {/* Face Collections Section */}
         <div className="mb-8">
-          <FaceCollections />
+          <FaceCollections onSearchActivated={handleSearchActivated} />
         </div>
+
+        {searchState.active && (
+          <div className="border-primary/20 bg-primary/5 mb-4 flex items-center justify-between rounded-lg border px-4 py-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-muted-foreground text-sm">
+                Filtered by:
+              </span>
+              {searchState.peopleNames.map((name) => (
+                <Badge key={name} variant="secondary" className="text-xs">
+                  {name}
+                </Badge>
+              ))}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetSearch}
+              className="h-7 shrink-0 gap-1.5 text-xs"
+            >
+              <X className="h-3 w-3" />
+              View all images
+            </Button>
+          </div>
+        )}
 
         {/* Gallery Section */}
         <div className="flex-1">
@@ -60,7 +109,11 @@ export const AITagging = () => {
             <ChronologicalGallery
               images={taggedImages}
               showTitle={true}
-              title="All Images"
+              title={
+                searchState.active
+                  ? formatSearchTitle(searchState.peopleNames)
+                  : 'All Images'
+              }
               onMonthOffsetsChange={setMonthMarkers}
               scrollContainerRef={scrollableRef}
             />

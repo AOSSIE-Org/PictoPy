@@ -29,11 +29,13 @@ import type { Image, Cluster } from '@/types/Media';
 interface MultiPersonSearchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSearchActivated?: (peopleNames: string[]) => void;
 }
 
 export function MultiPersonSearchDialog({
   open,
   onOpenChange,
+  onSearchActivated,
 }: MultiPersonSearchDialogProps) {
   const dispatch = useDispatch();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -70,7 +72,15 @@ export function MultiPersonSearchDialog({
         isTagged: true,
       })) as Image[];
 
+      const selectedNames = [...selectedIds]
+        .map((id) => {
+          const cluster = clusters.find((c) => c.cluster_id === id);
+          return cluster ? getPersonName(cluster) : null;
+        })
+        .filter((name): name is string => name !== null);
+
       dispatch(setImages(mappedImages));
+      onSearchActivated?.(selectedNames);
       onOpenChange(false);
     },
     onError: () => {

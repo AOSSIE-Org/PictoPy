@@ -13,7 +13,11 @@ import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllClusters } from '@/api/api-functions';
 import { Cluster } from '@/types/Media';
 
-export function FaceCollections() {
+interface FaceCollectionsProps {
+  onSearchActivated?: (names: string[]) => void;
+}
+
+export function FaceCollections({ onSearchActivated }: FaceCollectionsProps) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
@@ -93,6 +97,7 @@ export function FaceCollections() {
         <MultiPersonSearchDialog
           open={isSearchDialogOpen}
           onOpenChange={setIsSearchDialogOpen}
+          onSearchActivated={onSearchActivated}
         />
       </CardContent>
     </Card>
