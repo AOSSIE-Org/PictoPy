@@ -14,8 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PersonAvatar } from '@/components/PersonAvatar';
 import { getPersonName, getPhotoCountText } from '@/utils/personUtils';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
 import {
   fetchMultiPersonSearch,
@@ -24,12 +23,15 @@ import {
 import { setImages } from '@/features/imageSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
-import type { Image, Cluster } from '@/types/Media';
+import type { Image } from '@/types/Media';
 
 interface MultiPersonSearchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSearchActivated?: (peopleNames: string[]) => void;
+  onSearchActivated?: (
+    peopleNames: string[],
+    matchMode: 'match_any' | 'match_all',
+  ) => void;
 }
 
 export function MultiPersonSearchDialog({
@@ -80,7 +82,7 @@ export function MultiPersonSearchDialog({
         .filter((name): name is string => name !== null);
 
       dispatch(setImages(mappedImages));
-      onSearchActivated?.(selectedNames);
+      onSearchActivated?.(selectedNames, matchMode);
       onOpenChange(false);
     },
     onError: () => {
@@ -111,28 +113,44 @@ export function MultiPersonSearchDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-center gap-4">
-          <span className="text-muted-foreground text-sm">
-            Show photos with:
-          </span>
-          <RadioGroup
-            value={matchMode}
-            onValueChange={(v) => setMatchMode(v as typeof matchMode)}
-            className="flex gap-4"
-          >
+        <div className="bg-muted/30 rounded-lg border px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Match exact combination</span>
             <div className="flex items-center gap-2">
-              <RadioGroupItem value="match_any" id="match_any" />
-              <Label htmlFor="match_any" className="cursor-pointer text-sm">
-                Any selected person
-              </Label>
+              <span
+                className={cn(
+                  'text-xs transition-colors',
+                  matchMode === 'match_any'
+                    ? 'text-foreground font-medium'
+                    : 'text-muted-foreground',
+                )}
+              >
+                Any
+              </span>
+              <Switch
+                checked={matchMode === 'match_all'}
+                onCheckedChange={(checked) =>
+                  setMatchMode(checked ? 'match_all' : 'match_any')
+                }
+                aria-label="Toggle match mode between any and all"
+              />
+              <span
+                className={cn(
+                  'text-xs transition-colors',
+                  matchMode === 'match_all'
+                    ? 'text-foreground font-medium'
+                    : 'text-muted-foreground',
+                )}
+              >
+                All
+              </span>
             </div>
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="match_all" id="match_all" />
-              <Label htmlFor="match_all" className="cursor-pointer text-sm">
-                All selected people
-              </Label>
-            </div>
-          </RadioGroup>
+          </div>
+          <p className="text-muted-foreground mt-1.5 text-xs">
+            {matchMode === 'match_any'
+              ? 'Photos containing ANY of the selected people'
+              : 'Photos containing ALL of the selected people'}
+          </p>
         </div>
 
         {selectedIds.size > 0 && (

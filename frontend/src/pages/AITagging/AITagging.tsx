@@ -16,6 +16,7 @@ import { EmptyAITaggingState } from '@/components/EmptyStates/EmptyAITaggingStat
 import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { formatPeopleTitle } from '@/utils/personUtils';
 
 export const AITagging = () => {
   const dispatch = useDispatch();
@@ -24,7 +25,8 @@ export const AITagging = () => {
   const [searchState, setSearchState] = useState<{
     active: boolean;
     peopleNames: string[];
-  }>({ active: false, peopleNames: [] });
+    matchMode: 'match_any' | 'match_all';
+  }>({ active: false, peopleNames: [], matchMode: 'match_any' });
   const taggedImages = useSelector(selectImages);
   const {
     data: imagesData,
@@ -48,22 +50,19 @@ export const AITagging = () => {
     }
   }, [imagesData, imagesSuccess, imagesError, imagesLoading, dispatch]);
 
-  const handleSearchActivated = (names: string[]) => {
-    setSearchState({ active: true, peopleNames: names });
+  const handleSearchActivated = (
+    names: string[],
+    matchMode: 'match_any' | 'match_all',
+  ) => {
+    setSearchState({ active: true, peopleNames: names, matchMode });
   };
 
   const handleResetSearch = () => {
-    setSearchState({ active: false, peopleNames: [] });
+    setSearchState({ active: false, peopleNames: [], matchMode: 'match_any' });
     const images = imagesData?.data as Image[] | undefined;
     if (images) {
       dispatch(setImages(images));
     }
-  };
-
-  const formatSearchTitle = (names: string[]): string => {
-    if (names.length === 1) return names[0];
-    if (names.length === 2) return `${names[0]} & ${names[1]}`;
-    return `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
   };
 
   return (
@@ -83,7 +82,9 @@ export const AITagging = () => {
           <div className="border-primary/20 bg-primary/5 mb-4 flex items-center justify-between rounded-lg border px-4 py-2.5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-muted-foreground text-sm">
-                Filtered by:
+                {searchState.matchMode === 'match_any'
+                  ? 'Filter by (Any):'
+                  : 'Filter by (All):'}
               </span>
               {searchState.peopleNames.map((name) => (
                 <Badge key={name} variant="secondary" className="text-xs">
@@ -111,7 +112,10 @@ export const AITagging = () => {
               showTitle={true}
               title={
                 searchState.active
-                  ? formatSearchTitle(searchState.peopleNames)
+                  ? formatPeopleTitle(
+                      searchState.peopleNames,
+                      searchState.matchMode,
+                    )
                   : 'All Images'
               }
               onMonthOffsetsChange={setMonthMarkers}

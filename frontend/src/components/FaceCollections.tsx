@@ -14,7 +14,10 @@ import { fetchAllClusters } from '@/api/api-functions';
 import { Cluster } from '@/types/Media';
 
 interface FaceCollectionsProps {
-  onSearchActivated?: (names: string[]) => void;
+  onSearchActivated?: (
+    names: string[],
+    matchMode: 'match_any' | 'match_all',
+  ) => void;
 }
 
 export function FaceCollections({ onSearchActivated }: FaceCollectionsProps) {
