@@ -151,7 +151,6 @@ app.include_router(
 app.include_router(shutdown_router, tags=["Shutdown"])
 app.include_router(models_router, prefix="/models", tags=["Models"])
 
-
 # Entry point for running with: python3 main.py
 if __name__ == "__main__":
     multiprocessing.freeze_support()  # Required for Windows
