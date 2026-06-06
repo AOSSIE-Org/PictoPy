@@ -857,7 +857,7 @@
       "post": {
         "tags": ["Images"],
         "summary": "Toggle Favourite",
-        "description": "Toggle the favorite status of an image.",
+        "description": "Toggle the favourite status of an image.",
         "operationId": "toggle_favourite_images_toggle_favourite_post",
         "requestBody": {
           "content": {
