@@ -3,5 +3,6 @@ export const STEPS = {
   AVATAR_SELECTION_STEP: 'avatarSelection',
   FOLDER_SETUP_STEP: 'folderSetup',
   THEME_SELECTION_STEP: 'themeSelection',
+  MODEL_SETUP_STEP: 'modelSetup',
   UPDATE_STEP: 'updates',
-};
+} as const;

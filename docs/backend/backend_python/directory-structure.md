@@ -2,7 +2,7 @@
 
 The entry point for the backend is in `main.py`, which initializes the databases and handles the startup and shutdown for the FastAPI server.
 
-The code for the application mainly lies in the `app/` directory the heirarchy of which looks like this:
+The code for the application mainly lies in the `app/` directory the hierarchy of which looks like this:
 
 ```bash
 .
@@ -21,7 +21,7 @@ We will discuss what each of these directories do and the relevant files they co
 
 ## config
 
-Related to variables used accross the application.
+Related to variables used across the application.
 
 | Name          | Description                                                                                                         |
 | ------------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -29,7 +29,7 @@ Related to variables used accross the application.
 
 ## database
 
-This directory contains files related to database operations, including table creation, query handeling and some helper functions on the tables.
+This directory contains files related to database operations, including table creation, query handling and some helper functions on the tables.
 These files are the places where most of the SQL queries are written. By default, on startup this directory is where the databases (`.db` files) is
 created.
 

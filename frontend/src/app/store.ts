@@ -1,4 +1,4 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import loaderReducer from '@/features/loaderSlice';
 import onboardingReducer from '@/features/onboardingSlice';
 import searchReducer from '@/features/searchSlice';
@@ -9,20 +9,22 @@ import folderReducer from '@/features/folderSlice';
 import albumsReducer from '@/features/albumsSlice';
 import memoriesReducer from '@/features/memoriesSlice';
 
+export const rootReducer = combineReducers({
+  loader: loaderReducer,
+  onboarding: onboardingReducer,
+  images: imageReducer,
+  faceClusters: faceClustersReducer,
+  infoDialog: infoDialogReducer,
+  folders: folderReducer,
+  search: searchReducer,
+  albums: albumsReducer,
+  memories: memoriesReducer,
+});
+
 export const store = configureStore({
-  reducer: {
-    loader: loaderReducer,
-    onboarding: onboardingReducer,
-    images: imageReducer,
-    faceClusters: faceClustersReducer,
-    infoDialog: infoDialogReducer,
-    folders: folderReducer,
-    search: searchReducer,
-    albums: albumsReducer,
-    memories: memoriesReducer,
-  },
+  reducer: rootReducer,
 });
 // Infer the `RootState` and `AppDispatch` types from the store itself
 export type RootState = ReturnType<typeof store.getState>;
-// Inferred type: {posts: PostsState, comments: CommentsState, users: UsersState}
+// Inferred type: {loader: LoaderState, onboarding: OnboardingState, images: ImageState, ...}
 export type AppDispatch = typeof store.dispatch;

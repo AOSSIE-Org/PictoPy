@@ -56,6 +56,19 @@ class GetAlbumImagesRequest(BaseModel):
 class ImageIdsRequest(BaseModel):
     image_ids: List[str]
 
+    @field_validator("image_ids")
+    def validate_image_ids(cls, value: List[str]) -> List[str]:
+        if not value:
+            raise ValueError("image_ids cannot be empty")
+
+        cleaned = []
+        for img_id in value:
+            if not img_id or not img_id.strip():
+                raise ValueError("image_ids must not contain empty values")
+            cleaned.append(img_id.strip())
+
+        return cleaned
+
 
 class SetCoverImageRequest(BaseModel):
     image_id: str = Field(..., min_length=1)
