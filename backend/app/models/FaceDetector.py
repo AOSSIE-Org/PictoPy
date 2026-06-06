@@ -1,6 +1,7 @@
 # app/detectors/FaceDetector.py
 
 import cv2
+import numpy as np
 from app.models.FaceNet import FaceNet
 from app.utils.FaceNet import FaceNet_util_preprocess_image, FaceNet_util_get_model_path
 from app.utils.YOLO import YOLO_util_get_model_path
@@ -41,8 +42,6 @@ class FaceDetector:
 
                 # Create bounding box dictionary in JSON format
                 bbox = {"x": x1, "y": y1, "width": x2 - x1, "height": y2 - y1}
-                bboxes.append(bbox)
-                confidences.append(float(score))
 
                 padding = 20
                 face_img = img[
@@ -50,10 +49,25 @@ class FaceDetector:
                     max(0, x1 - padding) : min(img.shape[1], x2 + padding),
                 ]
                 processed_face = FaceNet_util_preprocess_image(face_img)
-                processed_faces.append(processed_face)
 
                 embedding = self.facenet.get_embedding(processed_face)
+                
+                # Validate embedding before storing to prevent NaN/Inf values in database
+                # This guards against corrupted/empty face crops that produce invalid embeddings
+                # Using threshold 1e-10 to catch near-zero norms that could cause numerical issues
+                embedding_norm = np.linalg.norm(embedding)
+                if not np.isfinite(embedding).all() or embedding_norm < 1e-10:
+                    logger.warning(
+                        f"Invalid embedding detected for face in image {image_id} "
+                        f"(bbox: {bbox}, norm: {embedding_norm}). Skipping this face to prevent database corruption."
+                    )
+                    continue
+                
+                # Only add to lists if embedding is valid
                 embeddings.append(embedding)
+                bboxes.append(bbox)
+                confidences.append(float(score))
+                processed_faces.append(processed_face)
 
         if not forSearch and embeddings:
             db_insert_face_embeddings_by_image_id(
@@ -65,6 +79,7 @@ class FaceDetector:
             "processed_faces": processed_faces,
             "num_faces": len(embeddings),
         }
+
 
     def close(self):
         """
