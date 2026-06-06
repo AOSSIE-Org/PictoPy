@@ -1,5 +1,7 @@
 import os
 import sys
+import secrets
+import tempfile
 
 from platformdirs import user_data_dir
 
@@ -35,3 +37,17 @@ else:
     DATABASE_PATH = os.path.join(user_data_dir("PictoPy"), "database", "PictoPy.db")
 THUMBNAIL_IMAGES_PATH = os.path.join(user_data_dir("PictoPy"), "thumbnails")
 IMAGES_PATH = "./images"
+
+# Generate a fresh cryptographic token on every backend startup.
+# This token is written to a temporary file so that only the local Tauri
+# frontend — which reads the same file — can authenticate shutdown requests.
+# Any other process on the machine will not know the token and will be
+# rejected with 403 Forbidden.
+SHUTDOWN_TOKEN: str = secrets.token_hex(32)
+SHUTDOWN_TOKEN_FILE: str = os.path.join(tempfile.gettempdir(), "pictopy_shutdown.token")
+
+# Write with owner-only permissions (0o600) so other local users on
+# multi-user systems cannot read the token and trigger a shutdown.
+_fd = os.open(SHUTDOWN_TOKEN_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+with os.fdopen(_fd, "w") as _f:
+    _f.write(SHUTDOWN_TOKEN)
