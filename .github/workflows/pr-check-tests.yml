@@ -4,7 +4,8 @@ on:
   pull_request:
     branches:
       - main
-
+      
+    
 jobs:
   linting:
     runs-on: ubuntu-latest
@@ -12,6 +13,11 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+
+      - name: Markdown lint
+        uses: DavidAnson/markdownlint-cli2-action@v23
+        with:
+          config: .github/.markdownlint-cli2.jsonc
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -87,4 +93,3 @@ jobs:
         run: |
           cd backend
           pytest
-

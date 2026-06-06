@@ -88,50 +88,6 @@
     "shell:default",
     "dialog:default",
     "dialog:default",
-    {
-      "identifier": "shell:allow-spawn",
-      "allow": [
-        {
-          "name": "StartServerUnix",
-          "cmd": "bash",
-          "args": ["-c", "./PictoPy_Server"],
-          "sidecar": false
-        }
-      ]
-    },
-    {
-      "identifier": "shell:allow-spawn",
-      "allow": [
-        {
-          "name": "StartServerWindows",
-          "cmd": "powershell",
-          "args": ["./PictoPy_Server"],
-          "sidecar": false
-        }
-      ]
-    },
-    {
-      "identifier": "shell:allow-execute",
-      "allow": [
-        {
-          "name": "killProcessUnix",
-          "cmd": "bash",
-          "args": ["-c", "pkill -f PictoPy_Server"],
-          "sidecar": false
-        }
-      ]
-    },
-    {
-      "identifier": "shell:allow-execute",
-      "allow": [
-        {
-          "name": "killProcessWindows",
-          "cmd": "powershell",
-          "args": ["taskkill /t /f /im PictoPy_Server.exe"],
-          "sidecar": false
-        }
-      ]
-    },
     "shell:default",
     "fs:default",
     "dialog:default",

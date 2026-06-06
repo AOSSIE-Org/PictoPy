@@ -43,6 +43,7 @@ from app.utils.images import (
     image_util_process_untagged_images,
 )
 from app.utils.videos import video_util_process_folder_videos
+from app.utils.model_bootstrap import ensure_ai_tagging_models
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.utils.API import API_util_restart_sync_microservice_watcher
 
@@ -90,6 +91,7 @@ def post_AI_tagging_enabled_sequence():
     It processes untagged images in the database.
     """
     try:
+        ensure_ai_tagging_models()
         image_util_process_untagged_images()
         cluster_util_face_clusters_sync()
     except Exception as e:
@@ -452,6 +454,7 @@ def get_all_folders():
                 last_modified_time,
                 ai_tagging,
                 tagging_completed,
+                image_count,
             ) = folder_data
             folders.append(
                 FolderDetails(
@@ -461,6 +464,7 @@ def get_all_folders():
                     last_modified_time=last_modified_time,
                     AI_Tagging=ai_tagging,
                     taggingCompleted=tagging_completed,
+                    image_count=image_count,
                 )
             )
 

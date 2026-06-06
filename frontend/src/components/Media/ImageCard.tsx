@@ -1,7 +1,7 @@
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Check, Heart, Share2 } from 'lucide-react';
+import { Check, Heart } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { Image } from '@/types/Media';
 import { ImageTags } from './ImageTags';
@@ -89,18 +89,6 @@ export function ImageCard({
                 <Heart className="h-5 w-5" />
               )}
               <span className="sr-only">Favourite</span>
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="cursor-pointer rounded-full bg-white/20 text-white hover:!bg-white/40 hover:!text-white"
-              onClick={(e) => e.stopPropagation()}
-              title="Share"
-              aria-label="Share"
-            >
-              <Share2 className="h-5 w-5" />
-              <span className="sr-only">Share</span>
             </Button>
           </div>
         </AspectRatio>

@@ -24,45 +24,6 @@ if [ -f "/etc/debian_version" ]; then
         libayatana-appindicator3-dev \
         librsvg2-dev
 
-elif [[ "$(uname)" == "Darwin" ]]; then
-    echo -e "\e[33mDetected macOS. Installing dependencies using Homebrew...\e[0m"
-
-    if ! command -v brew &> /dev/null; then
-        echo -e "\e[31mHomebrew is not installed. Please install it from https://brew.sh\e[0m"
-        exit 1
-    fi
-
-    brew update
-    brew install \
-        curl \
-        git \
-        cmake \
-        pkg-config \
-        gtk+3 \
-        webkit2gtk \
-        libappindicator3 \
-        wget \
-        xz \
-        openssl@3 \
-        glib \
-        gobject-introspection \
-        gtk-mac-integration \
-        javascriptcoregtk \
-        webkit2gtk-4.1 \
-        libsoup \
-        librsvg \
-        gcc
-
-    # Install Rust
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-    source "$HOME/.cargo/env"
-
-    # Install Xcode Command Line Tools
-    xcode-select --install
-
-    # Install XQuartz (for GUI applications)
-    brew install --cask xquartz
-
 else
     echo -e "\e[31mUnsupported OS: $(uname). Please install system dependencies manually.\e[0m"
     exit 1
@@ -133,6 +94,16 @@ echo -e "${YELLOW}Setting up backend...${NC}"
 cd ../backend
 python -m venv .env
 source .env/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+deactivate
+cd ..
+
+# ---- Set up the sync-microservice ----
+echo -e "${YELLOW}Setting up sync-microservice...${NC}"
+cd sync-microservice
+python -m venv .sync-env
+source .sync-env/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 deactivate

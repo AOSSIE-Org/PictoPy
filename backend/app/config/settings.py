@@ -1,8 +1,17 @@
-# Model Exports Path
-MODEL_EXPORTS_PATH = "app/models/ONNX_Exports"
+import os
+import sys
+
+from platformdirs import user_data_dir
+
+if getattr(sys, "frozen", False):
+    MODEL_EXPORTS_PATH = os.path.join(user_data_dir("PictoPy"), "models")
+else:
+    MODEL_EXPORTS_PATH = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), "..", "models", "ONNX_Exports")
+    )
 
 # Microservice URLs
-SYNC_MICROSERVICE_URL = "http://localhost:8001/api/v1"
+SYNC_MICROSERVICE_URL = "http://localhost:52124"
 
 CONFIDENCE_PERCENT = 0.6
 # Object Detection Models:
@@ -20,8 +29,11 @@ DEFAULT_FACENET_MODEL = f"{MODEL_EXPORTS_PATH}/FaceNet_128D.onnx"
 
 TEST_INPUT_PATH = "tests/inputs"
 TEST_OUTPUT_PATH = "tests/outputs"
-DATABASE_PATH = "app/database/PictoPy.db"
-THUMBNAIL_IMAGES_PATH = "./images/thumbnails"
+if os.getenv("GITHUB_ACTIONS") == "true":
+    DATABASE_PATH = os.path.join(os.getcwd(), "test_db.sqlite3")
+else:
+    DATABASE_PATH = os.path.join(user_data_dir("PictoPy"), "database", "PictoPy.db")
+THUMBNAIL_IMAGES_PATH = os.path.join(user_data_dir("PictoPy"), "thumbnails")
 IMAGES_PATH = "./images"
 
 # Videos storage

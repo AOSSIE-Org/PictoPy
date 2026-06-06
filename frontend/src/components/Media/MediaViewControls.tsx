@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info, Folder, Share2, Heart, Play, Pause, X } from 'lucide-react';
+import { Info, Heart, Play, Pause, X, Folder } from 'lucide-react';
 
 interface MediaViewControlsProps {
   showInfo: boolean;
@@ -13,6 +13,7 @@ interface MediaViewControlsProps {
   type?: string;
 }
 
+/** Control buttons for the full-screen media viewer. */
 export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
   showInfo,
   onToggleInfo,
@@ -44,14 +45,6 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
         title="Open Folder"
       >
         <Folder className="h-5 w-5" />
-      </button>
-
-      <button
-        className="cursor-pointer rounded-full bg-black/50 p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg"
-        aria-label="Share"
-        title="Share"
-      >
-        <Share2 className="h-5 w-5" />
       </button>
 
       <button

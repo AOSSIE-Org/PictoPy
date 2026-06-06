@@ -16,18 +16,31 @@ if (os.platform() === 'win32') {
   // On Windows, use PowerShell
   command = 'powershell.exe';
   args = ['-ExecutionPolicy', 'Bypass', '-File', psScript];
-} else {
-  // On Linux/macOS, use the bash script
-  command = bashScript;
-  args = [];
+} else if (os.platform() === 'linux') {
+  // Check if it's Debian-based Linux
+  const debianVersionPath = '/etc/debian_version';
+  if (fs.existsSync(debianVersionPath)) {
+    // On Debian-based Linux, use the bash script
+    command = bashScript;
+    args = [];
 
-  // Ensure the bash script is executable; if not, set the execute permission.
-  try {
-    fs.accessSync(bashScript, fs.constants.X_OK);
-  } catch (err) {
-    console.log(`File ${bashScript} is not executable. Setting execute permission...`);
-    fs.chmodSync(bashScript, 0o755);
+    // Ensure the bash script is executable; if not, set the execute permission.
+    try {
+      fs.accessSync(bashScript, fs.constants.X_OK);
+    } catch (err) {
+      console.log(`File ${bashScript} is not executable. Setting execute permission...`);
+      fs.chmodSync(bashScript, 0o755);
+    }
+  } else {
+    console.error('Unsupported Linux distribution. This setup script only supports Debian-based Linux distributions.');
+    console.error('Please install system dependencies manually and run the individual setup commands.');
+    process.exit(1);
   }
+} else {
+  console.error(`Unsupported operating system: ${os.platform()}`);
+  console.error('This setup script only supports Windows and Debian-based Linux distributions.');
+  console.error('Please install system dependencies manually and run the individual setup commands.');
+  process.exit(1);
 }
 
 const proc = spawn(command, args, { stdio: 'inherit' });
