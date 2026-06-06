@@ -877,4 +877,205 @@ describe('ZoomableImage controlled transform behavior', () => {
 
     expectCurrentTransform(0, 0, 0.5);
   });
+
+  describe('control button zoom animation', () => {
+    // jsdom has no TransitionEvent constructor, and fireEvent.transitionEnd does
+    // not deliver `propertyName` to React's synthetic event. Build the event
+    // manually (mirroring firePointerEvent) so the handler's property filter
+    // sees a real value.
+    const fireTransitionEnd = (element: Element, propertyName: string) => {
+      const event = new Event('transitionend', {
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(event, 'propertyName', {
+        configurable: true,
+        value: propertyName,
+      });
+      fireEvent(element, event);
+    };
+
+    const setupSceneWithRef = (
+      viewportSize: { width: number; height: number },
+      imageSize: { width: number; height: number },
+    ) => {
+      const imageRef = createRef<ZoomableImageRef>();
+
+      render(
+        <ZoomableImage
+          ref={imageRef}
+          imagePath="/tmp/photo.jpg"
+          alt="test image"
+          rotation={0}
+        />,
+      );
+
+      const viewport = screen.getByTestId('zoom-viewport');
+      const content = screen.getByTestId('zoom-content');
+      const image = screen.getByAltText('test image');
+
+      mockElementRect(
+        viewport,
+        { ...viewportSize, left: 0, top: 0 },
+        { clientWidth: viewportSize.width, clientHeight: viewportSize.height },
+      );
+      mockImageDimensions(image, imageSize);
+      fireEvent.load(image);
+
+      return { imageRef, viewport, content, image };
+    };
+
+    test('enables a smooth transition for a button zoom that changes scale', () => {
+      const { imageRef, content } = setupSceneWithRef(
+        { width: 800, height: 600 },
+        { width: 400, height: 300 },
+      );
+
+      act(() => {
+        imageRef.current?.zoomIn();
+      });
+
+      expect(content.style.transition).toBe('transform 250ms ease-out');
+      expect(getCurrentTransform().scale).toBeCloseTo(1.5);
+    });
+
+    test('switching to the wheel cancels the in-flight button transition', () => {
+      const { imageRef, viewport, content } = setupSceneWithRef(
+        { width: 800, height: 600 },
+        { width: 400, height: 300 },
+      );
+
+      act(() => {
+        imageRef.current?.zoomIn();
+      });
+      expect(content.style.transition).toBe('transform 250ms ease-out');
+
+      fireEvent.wheel(viewport, { deltaY: -100, clientX: 400, clientY: 300 });
+
+      // Wheel zoom must stay instant: the transition is cleared immediately.
+      expect(content.style.transition).toBe('');
+    });
+
+    test('transitionend ends the animation so later transforms are instant', () => {
+      const { imageRef, content } = setupSceneWithRef(
+        { width: 800, height: 600 },
+        { width: 400, height: 300 },
+      );
+
+      act(() => {
+        imageRef.current?.zoomIn();
+      });
+      expect(content.style.transition).toBe('transform 250ms ease-out');
+
+      act(() => {
+        fireTransitionEnd(content, 'transform');
+      });
+
+      expect(content.style.transition).toBe('');
+    });
+
+    test('ignores unrelated transitionend events', () => {
+      const { imageRef, content } = setupSceneWithRef(
+        { width: 800, height: 600 },
+        { width: 400, height: 300 },
+      );
+
+      act(() => {
+        imageRef.current?.zoomIn();
+      });
+
+      // A bubbled, non-transform transitionend must not clear the animation.
+      act(() => {
+        fireTransitionEnd(content, 'opacity');
+      });
+
+      expect(content.style.transition).toBe('transform 250ms ease-out');
+    });
+
+    test('does not animate a button zoom that is clamped at maximum scale', () => {
+      const { imageRef, content } = setupSceneWithRef(
+        { width: 800, height: 600 },
+        { width: 800, height: 600 },
+      );
+
+      // Saturate at MAX_SCALE; well past the 1.5^n needed to reach 8.
+      for (let i = 0; i < 12; i += 1) {
+        act(() => {
+          imageRef.current?.zoomIn();
+        });
+      }
+
+      expect(getCurrentTransform().scale).toBeCloseTo(8);
+      // The final click could not change the transform, so no transition runs.
+      expect(content.style.transition).toBe('');
+    });
+
+    test('does not animate a button zoom that is clamped at minimum scale', () => {
+      const { imageRef, content } = setupSceneWithRef(
+        { width: 800, height: 600 },
+        { width: 400, height: 300 },
+      );
+
+      // The image already fits at minimum scale; zooming out is a no-op.
+      act(() => {
+        imageRef.current?.zoomOut();
+      });
+
+      expect(getCurrentTransform().scale).toBeCloseTo(1);
+      expect(content.style.transition).toBe('');
+    });
+
+    test('ignores a transform transitionend bubbled from a child element', () => {
+      const { imageRef, content, image } = setupSceneWithRef(
+        { width: 800, height: 600 },
+        { width: 400, height: 300 },
+      );
+
+      act(() => {
+        imageRef.current?.zoomIn();
+      });
+      expect(content.style.transition).toBe('transform 250ms ease-out');
+
+      // A transform transitionend from the child <img> bubbles to the content
+      // handler, but must be ignored (target !== currentTarget).
+      act(() => {
+        fireTransitionEnd(image, 'transform');
+      });
+
+      expect(content.style.transition).toBe('transform 250ms ease-out');
+    });
+
+    test('skips the transition when reduced motion is preferred', () => {
+      const matchMediaSpy = jest.spyOn(window, 'matchMedia').mockImplementation(
+        (query: string) =>
+          ({
+            matches: query.includes('prefers-reduced-motion'),
+            media: query,
+            onchange: null,
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            dispatchEvent: jest.fn(),
+          }) as unknown as MediaQueryList,
+      );
+
+      try {
+        const { imageRef, content } = setupSceneWithRef(
+          { width: 800, height: 600 },
+          { width: 400, height: 300 },
+        );
+
+        act(() => {
+          imageRef.current?.zoomIn();
+        });
+
+        // The zoom still applies, but without the CSS transition.
+        expect(getCurrentTransform().scale).toBeCloseTo(1.5);
+        expect(content.style.transition).toBe('');
+      } finally {
+        matchMediaSpy.mockRestore();
+      }
+    });
+  });
 });

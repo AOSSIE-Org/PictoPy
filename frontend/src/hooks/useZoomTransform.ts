@@ -60,6 +60,9 @@ export const useZoomTransform = ({
   const fitFrameRef = useRef<number | null>(null);
   const fitRetryCountRef = useRef(0);
   const dragStateRef = useRef<DragState | null>(null);
+  const buttonZoomTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const rotationRef = useRef(rotation);
   const [transformState, setTransformState] = useState<TransformState>(
     transformStateRef.current,
@@ -236,12 +239,21 @@ export const useZoomTransform = ({
     [applyFitTransform, clearScheduledFit],
   );
 
+  const clearButtonZoomAnimation = useCallback(() => {
+    setIsButtonZoom(false);
+    if (buttonZoomTimeoutRef.current !== null) {
+      clearTimeout(buttonZoomTimeoutRef.current);
+      buttonZoomTimeoutRef.current = null;
+    }
+  }, []);
+
   const resetToFit = useCallback(() => {
+    clearButtonZoomAnimation();
     isFitInitializedRef.current = false;
     hasUserInteractedRef.current = false;
     fitRetryCountRef.current = 0;
     scheduleFitTransform(false);
-  }, [scheduleFitTransform]);
+  }, [clearButtonZoomAnimation, scheduleFitTransform]);
 
   const zoomBy = useCallback(
     (zoomRatio: number, clientX?: number, clientY?: number) => {
@@ -294,6 +306,7 @@ export const useZoomTransform = ({
 
     const handleResize = () => {
       if (hasUserInteractedRef.current) {
+        clearButtonZoomAnimation();
         applyTransform(transformStateRef.current);
       } else {
         resetToFit();
@@ -313,7 +326,7 @@ export const useZoomTransform = ({
       resizeObserver?.disconnect();
       window.removeEventListener('resize', handleResize);
     };
-  }, [applyTransform, resetToFit]);
+  }, [applyTransform, clearButtonZoomAnimation, resetToFit]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -324,7 +337,7 @@ export const useZoomTransform = ({
       e.stopPropagation();
       e.stopImmediatePropagation();
 
-      setIsButtonZoom(false);
+      clearButtonZoomAnimation();
 
       const isLineMode = e.deltaMode === 1;
       const multiplier = isLineMode ? LINE_HEIGHT_MULTIPLIER : 1;
@@ -342,11 +355,14 @@ export const useZoomTransform = ({
     return () => {
       viewport.removeEventListener('wheel', handleWheel, true);
     };
-  }, [zoomBy]);
+  }, [clearButtonZoomAnimation, zoomBy]);
 
   useEffect(
     () => () => {
       clearScheduledFit();
+      if (buttonZoomTimeoutRef.current !== null) {
+        clearTimeout(buttonZoomTimeoutRef.current);
+      }
     },
     [clearScheduledFit],
   );
@@ -375,6 +391,8 @@ export const useZoomTransform = ({
 
       if (!overflow.width && !overflow.height) return false;
 
+      clearButtonZoomAnimation();
+
       dragStateRef.current = {
         pointerId,
         startClientX: clientX,
@@ -386,7 +404,7 @@ export const useZoomTransform = ({
       setIsPanning(true);
       return true;
     },
-    [getGeometry],
+    [clearButtonZoomAnimation, getGeometry],
   );
 
   const updateDrag = useCallback(
@@ -469,17 +487,40 @@ export const useZoomTransform = ({
     [endDrag],
   );
 
-  const zoomIn = useCallback(() => {
-    setIsButtonZoom(true);
-    zoomBy(CONTROL_BUTTON_ZOOM_RATIO);
-  }, [zoomBy]);
-  const zoomOut = useCallback(() => {
-    setIsButtonZoom(true);
-    zoomBy(1 / CONTROL_BUTTON_ZOOM_RATIO);
-  }, [zoomBy]);
-  const handleZoomTransitionEnd = useCallback(() => {
-    setIsButtonZoom(false);
-  }, []);
+  const startButtonZoom = useCallback(
+    (ratio: number) => {
+      clearButtonZoomAnimation();
+
+      const before = transformStateRef.current;
+      const didApply = zoomBy(ratio);
+      const after = transformStateRef.current;
+      const didChange =
+        didApply &&
+        (Math.abs(after.scale - before.scale) > SCALE_EPSILON ||
+          Math.abs(after.positionX - before.positionX) > SCALE_EPSILON ||
+          Math.abs(after.positionY - before.positionY) > SCALE_EPSILON);
+
+      if (!didChange) return;
+      if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
+        return;
+
+      setIsButtonZoom(true);
+      buttonZoomTimeoutRef.current = setTimeout(() => {
+        setIsButtonZoom(false);
+        buttonZoomTimeoutRef.current = null;
+      }, 300);
+    },
+    [clearButtonZoomAnimation, zoomBy],
+  );
+  const zoomIn = useCallback(
+    () => startButtonZoom(CONTROL_BUTTON_ZOOM_RATIO),
+    [startButtonZoom],
+  );
+  const zoomOut = useCallback(
+    () => startButtonZoom(1 / CONTROL_BUTTON_ZOOM_RATIO),
+    [startButtonZoom],
+  );
+  const handleZoomTransitionEnd = clearButtonZoomAnimation;
 
   const contentDimensions = rawDimensions
     ? getEffectiveDimensions(

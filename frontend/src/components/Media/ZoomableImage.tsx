@@ -69,7 +69,14 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
       >
         <div
           data-testid="zoom-content"
-          onTransitionEnd={handleZoomTransitionEnd}
+          onTransitionEnd={(e) => {
+            if (
+              e.target === e.currentTarget &&
+              e.propertyName === 'transform'
+            ) {
+              handleZoomTransitionEnd();
+            }
+          }}
           style={{
             position: 'relative',
             width: contentDimensions
