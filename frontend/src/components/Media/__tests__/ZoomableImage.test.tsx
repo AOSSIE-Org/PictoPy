@@ -286,7 +286,11 @@ describe('ZoomableImage controlled transform behavior', () => {
       clientY: 550,
     });
 
-    expectCurrentTransform(290, 245, 1.1);
+    expectCurrentTransform(
+      289.4829081924352,
+      244.7414540962176,
+      1.1051709180756477,
+    );
   });
 
   test('stops at the first viewport edge before mouse anchoring begins', () => {
@@ -336,7 +340,11 @@ describe('ZoomableImage controlled transform behavior', () => {
       clientY: 300,
     });
 
-    expectCurrentTransform(-71.25, 127.10526315789474, 1.1526315789473685);
+    expectCurrentTransform(
+      -78.87818855673584,
+      125.49932872489774,
+      1.1633378085006818,
+    );
   });
 
   test('anchors vertically only after height has reached the viewport edge', () => {
@@ -357,9 +365,9 @@ describe('ZoomableImage controlled transform behavior', () => {
     });
 
     expectCurrentTransform(
-      224.28571428571428,
-      -51.33333333333337,
-      1.1714285714285715,
+      222.3832453092709,
+      -57.84400494160627,
+      1.184111697938194,
     );
   });
 
@@ -380,7 +388,11 @@ describe('ZoomableImage controlled transform behavior', () => {
       clientY: 500,
     });
 
-    expectCurrentTransform(-78.75, -76.85185185185185, 0.9888888888888888);
+    expectCurrentTransform(
+      -73.61964265295342,
+      -73.05158715033576,
+      0.9823741494005757,
+    );
   });
 
   test('recenters when zooming back to minimum scale', () => {
@@ -420,7 +432,11 @@ describe('ZoomableImage controlled transform behavior', () => {
       clientY: 500,
     });
 
-    expectCurrentTransform(-43, -32, 0.55);
+    expectCurrentTransform(
+      -21.29705614748953,
+      -15.90707397752716,
+      0.5256355481880121,
+    );
   });
 
   test('panning clamps overflowing axes and keeps fitting axes centered', () => {
@@ -457,7 +473,7 @@ describe('ZoomableImage controlled transform behavior', () => {
       clientY: 1000,
     });
 
-    expectCurrentTransform(0, 127.10526315789474, 1.1526315789473685);
+    expectCurrentTransform(0, 125.49932872489774, 1.1633378085006818);
   });
 
   test('reuses the drag-start geometry while panning', () => {
@@ -771,8 +787,8 @@ describe('ZoomableImage controlled transform behavior', () => {
 
     // A line-mode wheel (deltaMode === 1) reports scroll in lines, not pixels.
     // It must be normalized by LINE_HEIGHT_MULTIPLIER (33), so a 3-line notch
-    // zooms by 3 * 33 * ZOOM_FACTOR(0.001) = 0.099 -> scale 1.099, identical to
-    // a 99px pixel-mode notch. Without the multiplier it would be only 0.003.
+    // produces the same zoomRatio as a 99px pixel-mode notch: exp(99 * 0.001).
+    // Without the multiplier, a 3-line notch would produce exp(3 * 0.001) instead.
     fireEvent.wheel(viewport, {
       deltaY: -3,
       deltaMode: 1,
@@ -780,7 +796,11 @@ describe('ZoomableImage controlled transform behavior', () => {
       clientY: 300,
     });
 
-    expectCurrentTransform(290.1, 245.05, 1.099);
+    expectCurrentTransform(
+      289.5933700441118,
+      244.7966850220559,
+      1.104066299558882,
+    );
   });
 
   test('retries the fit until the viewport can be measured', () => {

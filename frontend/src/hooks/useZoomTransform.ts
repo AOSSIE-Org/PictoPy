@@ -6,13 +6,13 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import {
-  CONTROL_BUTTON_ZOOM_STEP,
+  CONTROL_BUTTON_ZOOM_RATIO,
   LINE_HEIGHT_MULTIPLIER,
   MAX_FIT_RETRY_FRAMES,
   MAX_SCALE,
   MIN_SCALE,
   SCALE_EPSILON,
-  ZOOM_FACTOR,
+  WHEEL_ZOOM_SENSITIVITY,
   clamp,
   computeZoomTransform,
   getAxisPosition,
@@ -67,6 +67,7 @@ export const useZoomTransform = ({
   const [rawDimensions, setRawDimensions] = useState<Size | null>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
+  const [isButtonZoom, setIsButtonZoom] = useState(false);
 
   const setRawImageDimensions = useCallback((dimensions: Size | null) => {
     rawDimensionsRef.current = dimensions;
@@ -243,7 +244,7 @@ export const useZoomTransform = ({
   }, [scheduleFitTransform]);
 
   const zoomBy = useCallback(
-    (zoomChange: number, clientX?: number, clientY?: number) => {
+    (zoomRatio: number, clientX?: number, clientY?: number) => {
       const geometry = getGeometry();
 
       if (!geometry) return false;
@@ -255,7 +256,7 @@ export const useZoomTransform = ({
         computeZoomTransform({
           geometry,
           currentTransform,
-          zoomChange,
+          zoomRatio,
           clientX,
           clientY,
         }),
@@ -323,11 +324,14 @@ export const useZoomTransform = ({
       e.stopPropagation();
       e.stopImmediatePropagation();
 
+      setIsButtonZoom(false);
+
       const isLineMode = e.deltaMode === 1;
       const multiplier = isLineMode ? LINE_HEIGHT_MULTIPLIER : 1;
-      const zoomChange = -e.deltaY * multiplier * ZOOM_FACTOR;
+      const normalizedDelta = -e.deltaY * multiplier;
+      const zoomRatio = Math.exp(normalizedDelta * WHEEL_ZOOM_SENSITIVITY);
 
-      zoomBy(zoomChange, e.clientX, e.clientY);
+      zoomBy(zoomRatio, e.clientX, e.clientY);
     };
 
     viewport.addEventListener('wheel', handleWheel, {
@@ -465,11 +469,17 @@ export const useZoomTransform = ({
     [endDrag],
   );
 
-  const zoomIn = useCallback(() => zoomBy(CONTROL_BUTTON_ZOOM_STEP), [zoomBy]);
-  const zoomOut = useCallback(
-    () => zoomBy(-CONTROL_BUTTON_ZOOM_STEP),
-    [zoomBy],
-  );
+  const zoomIn = useCallback(() => {
+    setIsButtonZoom(true);
+    zoomBy(CONTROL_BUTTON_ZOOM_RATIO);
+  }, [zoomBy]);
+  const zoomOut = useCallback(() => {
+    setIsButtonZoom(true);
+    zoomBy(1 / CONTROL_BUTTON_ZOOM_RATIO);
+  }, [zoomBy]);
+  const handleZoomTransitionEnd = useCallback(() => {
+    setIsButtonZoom(false);
+  }, []);
 
   const contentDimensions = rawDimensions
     ? getEffectiveDimensions(
@@ -495,11 +505,13 @@ export const useZoomTransform = ({
     contentDimensions,
     imageOffset,
     cursor,
+    isButtonZoom,
     handleImageLoad,
     handlePointerDown,
     handlePointerMove,
     handlePointerEnd,
     handlePointerLeave,
+    handleZoomTransitionEnd,
     zoomIn,
     zoomOut,
     reset: resetToFit,

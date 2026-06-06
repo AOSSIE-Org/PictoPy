@@ -1,12 +1,15 @@
-export const ZOOM_FACTOR = 0.001;
 // Browser line-mode wheel events report lines, not pixels. This normalizes one
 // line-scroll notch to the commonly used 33px pixel delta.
 export const LINE_HEIGHT_MULTIPLIER = 33;
+// Sensitivity for exponential wheel zoom: ratio = exp(normalizedDelta * sensitivity).
+// A mouse notch (~100px delta) becomes ~10.5% scale change; trackpad stays smooth.
+export const WHEEL_ZOOM_SENSITIVITY = 0.001;
 export const MAX_SCALE = 8;
 export const MIN_SCALE = 1;
 export const SCALE_EPSILON = 0.0001;
 export const MAX_FIT_RETRY_FRAMES = 12;
-export const CONTROL_BUTTON_ZOOM_STEP = 0.5;
+// Multiplicative zoom ratio for the zoom-in/out buttons (50% per click).
+export const CONTROL_BUTTON_ZOOM_RATIO = 1.5;
 
 export type Size = {
   width: number;
@@ -37,7 +40,7 @@ export type Geometry = {
 type ComputeZoomTransformOptions = {
   geometry: Geometry;
   currentTransform: TransformState;
-  zoomChange: number;
+  zoomRatio: number;
   clientX?: number;
   clientY?: number;
 };
@@ -231,12 +234,12 @@ export const getElementSize = (element: HTMLElement) => {
 export const computeZoomTransform = ({
   geometry,
   currentTransform,
-  zoomChange,
+  zoomRatio,
   clientX,
   clientY,
 }: ComputeZoomTransformOptions): TransformState => {
   const desiredScale = clamp(
-    currentTransform.scale + zoomChange,
+    currentTransform.scale * zoomRatio,
     geometry.minScale,
     MAX_SCALE,
   );

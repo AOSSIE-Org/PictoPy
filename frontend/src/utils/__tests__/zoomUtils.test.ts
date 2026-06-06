@@ -56,7 +56,7 @@ describe('zoomUtils', () => {
     const next = computeZoomTransform({
       geometry,
       currentTransform: { positionX: 300, positionY: 250, scale: 1 },
-      zoomChange: 0.1,
+      zoomRatio: 1.1,
       clientX: 770,
       clientY: 560,
     });
@@ -78,7 +78,7 @@ describe('zoomUtils', () => {
     const next = computeZoomTransform({
       geometry,
       currentTransform: { positionX: 20, positionY: 150, scale: 1 },
-      zoomChange: 0.1,
+      zoomRatio: 1.1,
       clientX: 750,
       clientY: 300,
     });
@@ -100,14 +100,14 @@ describe('zoomUtils', () => {
     const next = computeZoomTransform({
       geometry,
       currentTransform: { positionX: -80, positionY: 135, scale: 1.1 },
-      zoomChange: 0.1,
+      zoomRatio: 1.1,
       clientX: 700,
       clientY: 50,
     });
 
-    expect(next.positionX).toBeCloseTo(-150.90909090909088);
-    expect(next.positionY).toBeCloseTo(120);
-    expect(next.scale).toBeCloseTo(1.2);
+    expect(next.positionX).toBeCloseTo(-158);
+    expect(next.positionY).toBeCloseTo(118.5);
+    expect(next.scale).toBeCloseTo(1.21);
   });
 
   test('blends overflowing axes back toward center while zooming out', () => {
@@ -122,21 +122,21 @@ describe('zoomUtils', () => {
     const zoomedIn = computeZoomTransform({
       geometry,
       currentTransform: getFitTransform(geometry),
-      zoomChange: 0.1,
+      zoomRatio: 1.1,
       clientX: 700,
       clientY: 500,
     });
     const zoomedOut = computeZoomTransform({
       geometry,
       currentTransform: zoomedIn,
-      zoomChange: -0.05,
+      zoomRatio: 0.95,
       clientX: 700,
       clientY: 500,
     });
 
-    expect(zoomedOut.positionX).toBeCloseTo(-43);
-    expect(zoomedOut.positionY).toBeCloseTo(-32);
-    expect(zoomedOut.scale).toBeCloseTo(0.55);
+    expect(zoomedOut.positionX).toBeCloseTo(-18.6075);
+    expect(zoomedOut.positionY).toBeCloseTo(-13.905);
+    expect(zoomedOut.scale).toBeCloseTo(0.5225);
   });
 
   test('anchors one axis or both axes according to overflow state', () => {
@@ -151,20 +151,20 @@ describe('zoomUtils', () => {
     const widthAtEdge = computeZoomTransform({
       geometry: widthOnlyGeometry,
       currentTransform: { positionX: 20, positionY: 150, scale: 1 },
-      zoomChange: 0.1,
+      zoomRatio: 1.1,
       clientX: 750,
       clientY: 300,
     });
     const widthAnchored = computeZoomTransform({
       geometry: widthOnlyGeometry,
       currentTransform: widthAtEdge,
-      zoomChange: 0.1,
+      zoomRatio: 1.1,
       clientX: 750,
       clientY: 300,
     });
 
-    expect(widthAnchored.positionX).toBeCloseTo(-71.25);
-    expect(widthAnchored.positionY).toBeCloseTo(127.10526315789474);
+    expect(widthAnchored.positionX).toBeCloseTo(-75);
+    expect(widthAnchored.positionY).toBeCloseTo(126.31578947368419);
 
     const bothAxisGeometry = makeGeometry({
       viewportWidth: 800,
@@ -177,19 +177,19 @@ describe('zoomUtils', () => {
     const bothAtEdge = computeZoomTransform({
       geometry: bothAxisGeometry,
       currentTransform: getFitTransform(bothAxisGeometry),
-      zoomChange: 0.1,
+      zoomRatio: 1.1,
       clientX: 700,
       clientY: 500,
     });
     const bothAnchored = computeZoomTransform({
       geometry: bothAxisGeometry,
       currentTransform: bothAtEdge,
-      zoomChange: 0.1,
+      zoomRatio: 1.1,
       clientX: 700,
       clientY: 500,
     });
 
-    expect(bothAnchored.positionX).toBeCloseTo(-78.75);
-    expect(bothAnchored.positionY).toBeCloseTo(-76.85185185185185);
+    expect(bothAnchored.positionX).toBeCloseTo(-70);
+    expect(bothAnchored.positionY).toBeCloseTo(-70.37037037037032);
   });
 });

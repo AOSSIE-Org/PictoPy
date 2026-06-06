@@ -29,11 +29,13 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
       contentDimensions,
       imageOffset,
       cursor,
+      isButtonZoom,
       handleImageLoad,
       handlePointerDown,
       handlePointerMove,
       handlePointerEnd,
       handlePointerLeave,
+      handleZoomTransitionEnd,
       zoomIn,
       zoomOut,
       reset,
@@ -67,6 +69,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
       >
         <div
           data-testid="zoom-content"
+          onTransitionEnd={handleZoomTransitionEnd}
           style={{
             position: 'relative',
             width: contentDimensions
@@ -78,6 +81,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
             transform: `translate3d(${transformState.positionX}px, ${transformState.positionY}px, 0) scale(${transformState.scale})`,
             transformOrigin: '0 0',
             willChange: 'transform',
+            transition: isButtonZoom ? 'transform 250ms ease-out' : undefined,
           }}
         >
           <img
