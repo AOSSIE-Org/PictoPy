@@ -2504,6 +2504,17 @@
               }
             ],
             "title": "Clusters Created"
+          },
+          "faces_skipped": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Faces Skipped"
           }
         },
         "type": "object",
