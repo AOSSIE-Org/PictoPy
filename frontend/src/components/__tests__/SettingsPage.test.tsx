@@ -1,6 +1,6 @@
 import { render, screen } from '@/test-utils';
 import userEvent from '@testing-library/user-event';
-import Settings from '../SettingsPage/Settings';
+import Settings from '@/pages/SettingsPage/Settings';
 
 describe('Settings Page', () => {
   // shared setup for all tests

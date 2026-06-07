@@ -24,6 +24,7 @@ export interface HardwareInfo {
   ram_gb: number;
   gpu_detected: boolean;
   gpu_names: string[];
+  apple_silicon: string | null;
   available_providers: string[];
   recommended_tier: ModelTier;
 }
