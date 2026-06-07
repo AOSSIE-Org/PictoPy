@@ -7,6 +7,7 @@ import { Image } from '@/types/Media';
 import { ImageTags } from './ImageTags';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { useToggleFav } from '@/hooks/useToggleFav';
+import logger from '@/utils/logger';
 
 interface ImageCardViewProps {
   image: Image;
@@ -31,6 +32,7 @@ export function ImageCard({
 
   const handleToggleFavourite = useCallback(() => {
     if (image?.id) {
+      logger.debug('Toggling favourite for image:', image.id);
       toggleFavourite(image.id);
     }
   }, [image, toggleFavourite]);
@@ -78,7 +80,6 @@ export function ImageCard({
                   : 'bg-white/10 hover:bg-white/20 hover:shadow-lg'
               }`}
               onClick={(e) => {
-                console.log(image);
                 e.stopPropagation();
                 handleToggleFavourite();
               }}

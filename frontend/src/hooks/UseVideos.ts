@@ -2,6 +2,7 @@
 
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { useState, useEffect } from 'react';
+import logger from '@/utils/logger';
 
 interface VideoData {
   original: string;
@@ -35,7 +36,7 @@ export const useVideos = (folderPaths: string[]) => {
 
         // Ensure response is in the expected format
         if (!response || typeof response !== 'object') {
-          console.error('Invalid response format:', response);
+          logger.error('Invalid response format:', response);
           setLoading(false);
           return;
         }
@@ -92,7 +93,7 @@ export const useVideos = (folderPaths: string[]) => {
         }
         setVideos(videoUrls);
       } catch (error) {
-        console.error('Error fetching videos:', error);
+        logger.error('Error fetching videos:', error);
       } finally {
         setLoading(false);
       }

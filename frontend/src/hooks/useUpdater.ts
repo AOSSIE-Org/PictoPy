@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Update, check } from '@tauri-apps/plugin-updater';
 import { isTauriEnvironment } from '@/utils/tauriUtils';
+import logger from '@/utils/logger';
 
 interface DownloadProgress {
   downloaded: number;
@@ -35,28 +36,28 @@ export const useUpdater = (): UseUpdaterReturn => {
 
     // Skip update check in browser mode (though this shouldn't happen with BrowserWarning)
     if (!isTauriEnvironment()) {
-      console.log('Skipping update check in browser mode');
+      logger.info('Skipping update check in browser mode');
       return false;
     }
 
     try {
-      console.log('Checking for updates...');
+      logger.info('Checking for updates...');
       const update = await check();
 
       if (update) {
-        console.log(
+        logger.info(
           `Found update ${update.version} from ${update.date} with notes ${update.body}`,
         );
         setUpdateAvailable(update);
         return true;
       } else {
-        console.log('No updates available');
+        logger.info('No updates available');
         return false;
       }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to check for updates';
-      console.error('Error checking for updates:', err);
+      logger.error('Error checking for updates:', err);
       setError(errorMessage);
       return false;
     }
@@ -64,12 +65,12 @@ export const useUpdater = (): UseUpdaterReturn => {
 
   const downloadAndInstall = useCallback(async (): Promise<void> => {
     if (!updateAvailable) {
-      console.warn('No update available to download');
+      logger.warn('No update available to download');
       return;
     }
 
     if (!isTauriEnvironment()) {
-      console.warn('Update download is not available in browser mode');
+      logger.warn('Update download is not available in browser mode');
       return;
     }
 
@@ -83,7 +84,7 @@ export const useUpdater = (): UseUpdaterReturn => {
           case 'Started':
             const contentLength = event.data.contentLength || 0;
             setDownloadProgress((prev) => ({ ...prev, total: contentLength }));
-            console.log(`Started downloading ${contentLength} bytes`);
+            logger.info(`Started downloading ${contentLength} bytes`);
             break;
           case 'Progress':
             setDownloadProgress((prev) => ({
@@ -92,17 +93,17 @@ export const useUpdater = (): UseUpdaterReturn => {
             }));
             break;
           case 'Finished':
-            console.log('Download finished');
+            logger.info('Download finished');
             break;
         }
       });
 
-      console.log('Update installed successfully');
+      logger.info('Update installed successfully');
       // The app will restart automatically after installation
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to download update';
-      console.error('Error downloading update:', err);
+      logger.error('Error downloading update:', err);
       setError(errorMessage);
       setIsDownloading(false);
     }

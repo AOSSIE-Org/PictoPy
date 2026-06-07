@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, RefObject } from 'react';
+import logger from '@/utils/logger';
 import {
   useScroll,
   useWheel,
@@ -246,7 +247,7 @@ export default function TimelineScrollbar({
         handleScroll(e.clientY);
         updateDragTooltip(e.clientY);
       } catch (error) {
-        console.error('Error during drag:', error);
+        logger.error('Error during drag:', error);
         handleMouseUp();
       }
     };

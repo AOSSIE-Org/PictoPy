@@ -13,6 +13,7 @@ import {
   clearSelectedMemory,
 } from '@/features/memoriesSlice';
 import { setCurrentViewIndex, setImages } from '@/features/imageSlice';
+import logger from '@/utils/logger';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { MediaView } from '@/components/Media/MediaView';
 import {
@@ -58,7 +59,7 @@ export const MemoryViewer: React.FC = () => {
             variant: 'error',
           }),
         );
-        console.error('Failed to toggle favorite:', error);
+        logger.error('Failed to toggle favorite:', error);
       }
     },
     [dispatch, queryClient],

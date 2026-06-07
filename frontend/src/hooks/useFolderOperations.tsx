@@ -12,6 +12,7 @@ import { setFolders, setTaggingStatus } from '@/features/folderSlice';
 import { FolderDetails } from '@/types/Folder';
 import { useMutationFeedback } from './useMutationFeedback';
 import { getFoldersTaggingStatus } from '@/api/api-functions/folders';
+import logger from '@/utils/logger';
 
 /**
  * Custom hook for folder operations
@@ -76,13 +77,12 @@ export const useFolderOperations = () => {
 
   useEffect(() => {
     if (taggingStatusQuery.isError) {
-      console.error(
+      const errorMessage = taggingStatusQuery.errorMessage || 'Unknown error';
+      logger.error(
         'Failed to fetch tagging status:',
+        errorMessage,
         taggingStatusQuery.error,
       );
-
-      const errorMessage = taggingStatusQuery.errorMessage || 'Unknown error';
-      console.warn(`Tagging status query failed: ${errorMessage}`);
     }
   }, [
     taggingStatusQuery.isError,

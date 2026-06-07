@@ -2,6 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { usePictoMutation } from './useQueryExtension';
 import { addFolder } from '@/api/api-functions';
+import logger from '@/utils/logger';
 interface UseFolderPickerOptions {
   title?: string;
 }
@@ -27,11 +28,11 @@ export const useFolder = (
 
   useEffect(() => {
     if (addFolderPending) {
-      console.log('Adding folder...');
+      logger.info('Adding folder...');
     } else if (addFolderSuccess) {
-      console.log('Folder added successfully');
+      logger.info('Folder added successfully');
     } else if (addFolderError) {
-      console.error('Error adding folder');
+      logger.error('Error adding folder');
     }
   }, [addFolderSuccess, addFolderError, addFolderPending]);
 
@@ -48,7 +49,7 @@ export const useFolder = (
       }
       return null;
     } catch (error) {
-      console.error('Error picking folder:', error);
+      logger.error('Error picking folder:', error);
       return null;
     }
   }, [title]);
