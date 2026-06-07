@@ -6,6 +6,7 @@
   "scripts": {
     "linux-dev": "bash ./scripts/linux-dev.sh",
     "win-dev": "cd scripts && win-dev.bat",
+    "version:bump": "node scripts/bump-version.mjs",
     "prepare": "husky",
     "lint:check": "cd frontend && eslint --max-warnings 0 --config .eslintrc.json .",
     "lint:fix": "cd frontend && eslint --max-warnings 0 --config .eslintrc.json . --fix",

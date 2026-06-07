@@ -104,6 +104,39 @@ TAURI_SIGNING_PRIVATE_KEY_PASSWORD=pass
 npm run tauri build
 ```
 
+## Release Management
+
+PictoPy maintains version strings in three manifest files that must always stay in sync:
+
+- `package.json` (root)
+- `frontend/package.json`
+- `frontend/src-tauri/Cargo.toml`
+
+> **Note:** `frontend/src-tauri/tauri.conf.json` does not hold a version field in Tauri v2 - it inherits the version directly from `Cargo.toml` automatically.
+
+A version bump script at `scripts/bump-version.mjs` acts as the single source of truth. To bump the version across all three files at once, run from the repository root:
+
+```bash
+npm run version:bump -- <version>
+```
+
+For example:
+
+```bash
+npm run version:bump -- 1.2.0
+```
+
+The version must follow the `X.Y.Z` format (digits only, no `v` prefix). The script will validate the format, read and verify all three files before writing anything, then print a summary of each file updated.
+
+After running the script, regenerate the Cargo lock file:
+
+```bash
+cd frontend/src-tauri
+cargo check
+```
+
+> **Note:** The `--` separator between `version:bump` and the version number is required by npm to forward the argument to the underlying script.
+
 ## Additional Resources
 
 - [Tauri Documentation](https://tauri.app/start/)
