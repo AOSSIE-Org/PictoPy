@@ -63,14 +63,14 @@ export function FaceCollections({ onSearchActivated }: FaceCollectionsProps) {
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Face Collections</h2>
           <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 cursor-pointer p-1"
+            variant="outline"
+            size="sm"
+            className="cursor-pointer"
             onClick={() => setIsSearchDialogOpen(true)}
-            title="Search by multiple people"
+            title="Search multiple people at once"
           >
-            <Users className="h-4 w-4" />
-            <span className="sr-only">Search by multiple people</span>
+            <Users className="mr-2 h-4 w-4" />
+            Search multiple people
           </Button>
         </div>
         <p className="text-muted-foreground mb-6">

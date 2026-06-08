@@ -17,11 +17,14 @@ import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatPeopleTitle } from '@/utils/personUtils';
+import { RankedGallery } from '@/components/Media/RankedGallery';
+import { GallerySortDropdown } from '@/components/GallerySortDropdown';
 
 export const AITagging = () => {
   const dispatch = useDispatch();
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
+  const [sortMode, setSortMode] = useState<'best_match' | 'date'>('best_match');
   const [searchState, setSearchState] = useState<{
     active: boolean;
     peopleNames: string[];
@@ -58,6 +61,7 @@ export const AITagging = () => {
   };
 
   const handleResetSearch = () => {
+    setSortMode('best_match');
     setSearchState({ active: false, peopleNames: [], matchMode: 'match_any' });
     const images = imagesData?.data as Image[] | undefined;
     if (images) {
@@ -107,32 +111,57 @@ export const AITagging = () => {
         {/* Gallery Section */}
         <div className="flex-1">
           {taggedImages.length > 0 ? (
-            <ChronologicalGallery
-              images={taggedImages}
-              showTitle={true}
-              title={
-                searchState.active
-                  ? formatPeopleTitle(
-                      searchState.peopleNames,
-                      searchState.matchMode,
-                    )
-                  : 'All Images'
-              }
-              onMonthOffsetsChange={setMonthMarkers}
-              scrollContainerRef={scrollableRef}
-            />
+            searchState.active && sortMode === 'best_match' ? (
+              <RankedGallery
+                images={taggedImages}
+                title={formatPeopleTitle(
+                  searchState.peopleNames,
+                  searchState.matchMode,
+                )}
+                titleRight={
+                  <GallerySortDropdown
+                    value={sortMode}
+                    onValueChange={setSortMode}
+                  />
+                }
+              />
+            ) : (
+              <ChronologicalGallery
+                images={taggedImages}
+                showTitle={true}
+                title={
+                  searchState.active
+                    ? formatPeopleTitle(
+                        searchState.peopleNames,
+                        searchState.matchMode,
+                      )
+                    : 'All Images'
+                }
+                titleRight={
+                  searchState.active ? (
+                    <GallerySortDropdown
+                      value={sortMode}
+                      onValueChange={setSortMode}
+                    />
+                  ) : undefined
+                }
+                onMonthOffsetsChange={setMonthMarkers}
+                scrollContainerRef={scrollableRef}
+              />
+            )
           ) : (
             <EmptyAITaggingState />
           )}
         </div>
       </div>
-      {monthMarkers.length > 0 && (
-        <TimelineScrollbar
-          scrollableRef={scrollableRef}
-          monthMarkers={monthMarkers}
-          className="absolute top-0 right-0 h-full w-4"
-        />
-      )}
+      {monthMarkers.length > 0 &&
+        !(searchState.active && sortMode === 'best_match') && (
+          <TimelineScrollbar
+            scrollableRef={scrollableRef}
+            monthMarkers={monthMarkers}
+            className="absolute top-0 right-0 h-full w-4"
+          />
+        )}
     </div>
   );
 };
