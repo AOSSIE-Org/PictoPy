@@ -51,20 +51,25 @@ export function MediaView({
 
   // Custom hooks
   const { viewState, handlers } = useImageViewControls();
+  const resetViewerState = useCallback(() => {
+    handlers.resetZoom();
+    setResetSignal((s) => s + 1);
+  }, [handlers]);
+
   // Navigation handlers
   const handleNextImage = useCallback(() => {
     if (currentViewIndex < images.length - 1) {
       dispatch(setCurrentViewIndex(currentViewIndex + 1));
-      handlers.resetZoom();
+      resetViewerState();
     }
-  }, [dispatch, handlers, currentViewIndex, images.length]);
+  }, [dispatch, resetViewerState, currentViewIndex, images.length]);
 
   const handlePreviousImage = useCallback(() => {
     if (currentViewIndex > 0) {
       dispatch(setCurrentViewIndex(currentViewIndex - 1));
-      handlers.resetZoom();
+      resetViewerState();
     }
-  }, [dispatch, handlers, currentViewIndex]);
+  }, [dispatch, resetViewerState, currentViewIndex]);
 
   const handleClose = useCallback(() => {
     dispatch(closeImageView());
@@ -74,9 +79,9 @@ export function MediaView({
   const handleThumbnailClick = useCallback(
     (index: number) => {
       dispatch(setCurrentViewIndex(index));
-      handlers.resetZoom();
+      resetViewerState();
     },
-    [dispatch, handlers],
+    [dispatch, resetViewerState],
   );
 
   const location = useLocation();
@@ -85,8 +90,8 @@ export function MediaView({
   // Loop to first image handler for slideshow
   const handleLoopToStart = useCallback(() => {
     dispatch(setCurrentViewIndex(0));
-    handlers.resetZoom();
-  }, [dispatch, handlers]);
+    resetViewerState();
+  }, [dispatch, resetViewerState]);
 
   // Slideshow functionality
   const { isSlideshowActive, toggleSlideshow } = useSlideshow(
@@ -142,9 +147,8 @@ export function MediaView({
 
   const handleResetZoom = useCallback(() => {
     imageViewerRef.current?.reset();
-    handlers.resetZoom();
-    setResetSignal((s) => s + 1);
-  }, [handlers]);
+    resetViewerState();
+  }, [resetViewerState]);
 
   // Keyboard navigation
   useKeyboardNavigation({
@@ -164,6 +168,7 @@ export function MediaView({
 
   // Safe variables
   const currentImagePath = currentImage.path;
+  const currentImageKey = currentImage.id || currentImage.path;
   // console.log(currentImage);
   const currentImageAlt = `image-${currentViewIndex}`;
   return (
@@ -190,6 +195,7 @@ export function MediaView({
       >
         {type === 'image' && (
           <ImageViewer
+            key={currentImageKey}
             ref={imageViewerRef}
             imagePath={currentImagePath}
             alt={currentImageAlt}
