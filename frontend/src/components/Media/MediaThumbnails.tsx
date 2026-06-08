@@ -1,5 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import {
+  PLACEHOLDER_IMAGE_SRC,
+  handlePlaceholderImageError,
+} from '@/utils/imageFallback';
 
 interface MediaThumbnailsProps {
   images: Array<{
@@ -117,14 +121,10 @@ export const MediaThumbnails: React.FC<MediaThumbnailsProps> = ({
             } cursor-pointer transition-all duration-200 hover:scale-105`}
           >
             <img
-              src={convertFileSrc(image.thumbnailPath) || '/placeholder.svg'}
+              src={convertFileSrc(image.thumbnailPath) || PLACEHOLDER_IMAGE_SRC}
               alt={`thumbnail-${index}`}
               className="h-full w-full object-cover"
-              onError={(e) => {
-                const img = e.target as HTMLImageElement;
-                img.onerror = null;
-                img.src = '/placeholder.svg';
-              }}
+              onError={handlePlaceholderImageError}
             />
           </div>
         ))}
