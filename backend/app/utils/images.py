@@ -106,10 +106,11 @@ def image_util_process_untagged_images() -> bool:
 
 def image_util_classify_and_face_detect_images(
     untagged_images: List[Dict[str, str]],
-) -> None:
+) -> int:
     """Classify untagged images and detect faces if applicable."""
     object_classifier = ObjectClassifier()
     face_detector = FaceDetector()
+    total_faces_skipped = 0
     try:
         for image in untagged_images:
             image_path = image["path"]
@@ -129,7 +130,9 @@ def image_util_classify_and_face_detect_images(
 
             # Step 3: Detect faces if "person" class is present
             if classes and 0 in classes and 0 < classes.count(0) < 7:
-                face_detector.detect_faces(image_id, image_path)
+                result = face_detector.detect_faces(image_id, image_path)
+                if result:
+                    total_faces_skipped += result.get("faces_skipped", 0)
 
             # Step 4: Update the image status in the database
             db_update_image_tagged_status(image_id, True)
@@ -137,6 +140,8 @@ def image_util_classify_and_face_detect_images(
         # Ensure resources are cleaned up
         object_classifier.close()
         face_detector.close()
+
+    return total_faces_skipped
 
 
 def image_util_prepare_image_records(

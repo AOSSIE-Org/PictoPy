@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - "frontend/**"
+  
+    
 
 jobs:
   tauri-build-check:

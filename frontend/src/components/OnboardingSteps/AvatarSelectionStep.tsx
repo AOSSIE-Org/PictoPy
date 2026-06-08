@@ -40,6 +40,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
   const isEditing = useSelector(
     (state: RootState) => state.onboarding.isEditing,
   );
+  const [longWordError, setLongWordError] = useState(false);
 
   useEffect(() => {
     if (
@@ -56,6 +57,13 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
   };
 
   const handleNameChange = (value: string) => {
+    const words = value.split(' ');
+    const hasLongWord = words.some((word) => word.length > 30);
+    if (hasLongWord) {
+      setLongWordError(true);
+      return;
+    }
+    setLongWordError(false);
     setLocalName(value);
   };
 
@@ -115,6 +123,11 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
               onChange={(e) => handleNameChange(e.target.value)}
               className="h-8 text-sm placeholder:text-sm"
             />
+            {longWordError && (
+              <p className="mt-2 text-xs text-red-500">
+                A single word in your name cannot exceed 30 characters.
+              </p>
+            )}
           </div>
 
           {/* Avatar Grid */}
@@ -152,7 +165,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
           <Button
             className="cursor-pointer px-4 py-1 text-sm"
             onClick={handleNextClick}
-            disabled={!name || !selectedAvatar}
+            disabled={!name || !selectedAvatar || longWordError}
           >
             Next
           </Button>
