@@ -53,7 +53,8 @@ const SystemSettingsCard: React.FC = () => {
   const isDisabled = loading || pending || autostart === null;
   const isChecked = autostart === true;
 
-  const closeToTrayDisabled = loading || pendingCloseToTray || closeToTray === null;
+  const closeToTrayDisabled =
+    loading || pendingCloseToTray || closeToTray === null;
   const closeToTrayChecked = closeToTray === true;
 
   return (
@@ -105,7 +106,10 @@ const SystemSettingsCard: React.FC = () => {
           <div id="close-to-tray-label" className="font-medium">
             Close to tray
           </div>
-          <div id="close-to-tray-desc" className="text-muted-foreground text-sm">
+          <div
+            id="close-to-tray-desc"
+            className="text-muted-foreground text-sm"
+          >
             When enabled, closing the window hides the app to the system tray
             instead of exiting.
           </div>
