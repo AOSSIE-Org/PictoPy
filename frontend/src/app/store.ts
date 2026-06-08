@@ -5,6 +5,7 @@ import searchReducer from '@/features/searchSlice';
 import imageReducer from '@/features/imageSlice';
 import faceClustersReducer from '@/features/faceClustersSlice';
 import infoDialogReducer from '@/features/infoDialogSlice';
+import globalAlertReducer from '@/features/globalAlertSlice';
 import folderReducer from '@/features/folderSlice';
 import memoriesReducer from '@/features/memoriesSlice';
 
@@ -14,6 +15,7 @@ export const rootReducer = combineReducers({
   images: imageReducer,
   faceClusters: faceClustersReducer,
   infoDialog: infoDialogReducer,
+  globalAlert: globalAlertReducer,
   folders: folderReducer,
   search: searchReducer,
   memories: memoriesReducer,
