@@ -108,27 +108,64 @@ const updatedCargoTomlContent = cargoTomlContent.replace(
   `version = "${newVersion}"`,
 );
 
-// 4. Write files
-try {
-  fs.writeFileSync(rootPackageJsonPath, updatedRootJsonContent, "utf8");
-} catch (err) {
-  console.error(`Error writing to root package.json: ${err.message}`);
-  process.exit(1);
+// 4. Write files with rollback capability
+const writes = [
+  {
+    path: rootPackageJsonPath,
+    content: updatedRootJsonContent,
+    original: rootPackageJsonContent,
+    label: "root package.json",
+  },
+  {
+    path: frontendPackageJsonPath,
+    content: updatedFrontendJsonContent,
+    original: frontendPackageJsonContent,
+    label: "frontend/package.json",
+  },
+  {
+    path: cargoTomlPath,
+    content: updatedCargoTomlContent,
+    original: cargoTomlContent,
+    label: "frontend/src-tauri/Cargo.toml",
+  },
+];
+
+const completed = [];
+for (const write of writes) {
+  try {
+    fs.writeFileSync(write.path, write.content, "utf8");
+    completed.push(write);
+  } catch (err) {
+    console.error(`\nError writing to ${write.label}: ${err.message}`);
+    console.error("Initiating rollback...");
+
+    const rollbackFailures = [];
+    for (const completedWrite of completed) {
+      try {
+        fs.writeFileSync(completedWrite.path, completedWrite.original, "utf8");
+        console.log(`Rolled back changes in ${completedWrite.label}`);
+      } catch (rollbackErr) {
+        console.error(
+          `Critical Error: Failed to rollback ${completedWrite.label}: ${rollbackErr.message}`,
+        );
+        rollbackFailures.push(completedWrite);
+      }
+    }
+
+    if (rollbackFailures.length > 0) {
+      console.error(
+        "\nWARNING: Manual inspection is required. Some files could not be restored to their original state:",
+      );
+      for (const failed of rollbackFailures) {
+        console.error(`- ${failed.label} (${failed.path})`);
+      }
+    } else {
+      console.log("All completed writes successfully rolled back.");
+    }
+    process.exit(1);
+  }
 }
 
-try {
-  fs.writeFileSync(frontendPackageJsonPath, updatedFrontendJsonContent, "utf8");
-} catch (err) {
-  console.error(`Error writing to frontend package.json: ${err.message}`);
-  process.exit(1);
-}
-
-try {
-  fs.writeFileSync(cargoTomlPath, updatedCargoTomlContent, "utf8");
-} catch (err) {
-  console.error(`Error writing to Cargo.toml: ${err.message}`);
-  process.exit(1);
-}
 
 // 5. Print summary
 console.log("\nVersion bump successful!");
