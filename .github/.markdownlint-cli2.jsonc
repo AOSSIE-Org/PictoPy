@@ -2,8 +2,8 @@
   "config": {
     "MD013": false,
     "MD024": {
-      "siblings_only": true
-    }
+      "siblings_only": true,
+    },
   },
   "globs": [
     "**/*.md",
@@ -11,6 +11,6 @@
     "!**/target/**",
     "!**/venv/**",
     "!**/.venv/**",
-    "!LICENSE.md"
-  ]
+    "!LICENSE.md",
+  ],
 }

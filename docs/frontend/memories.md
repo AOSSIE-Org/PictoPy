@@ -69,11 +69,11 @@ Photos grouped by month for images without GPS:
 
 ```typescript
 const applyFilter = (memories: Memory[]) => {
-  if (filter === 'location') {
-    return memories.filter(m => m.center_lat !== 0 || m.center_lon !== 0);
+  if (filter === "location") {
+    return memories.filter((m) => m.center_lat !== 0 || m.center_lon !== 0);
   }
-  if (filter === 'date') {
-    return memories.filter(m => m.center_lat === 0 && m.center_lon === 0);
+  if (filter === "date") {
+    return memories.filter((m) => m.center_lat === 0 && m.center_lon === 0);
   }
   return memories; // 'all'
 };
@@ -278,11 +278,9 @@ def _reverse_geocode(self, lat: float, lon: float) -> str:
 **Solution:** Conditional rendering of MemoryViewer backdrop:
 
 ```tsx
-{!showMediaView && (
-  <div onClick={handleCloseViewer}>
-    {/* Grid content */}
-  </div>
-)}
+{
+  !showMediaView && <div onClick={handleCloseViewer}>{/* Grid content */}</div>
+}
 ```
 
 ### Image Upload Fix
@@ -306,8 +304,8 @@ image_record = {
 **Solution:** Format as "Trip to [City], [Year]" using reverse geocoding:
 
 ```typescript
-const year = memory.date_start ? new Date(memory.date_start).getFullYear() : '';
-displayTitle = `Trip to ${displayLocation}${year ? `, ${year}` : ''}`;
+const year = memory.date_start ? new Date(memory.date_start).getFullYear() : "";
+displayTitle = `Trip to ${displayLocation}${year ? `, ${year}` : ""}`;
 ```
 
 ## Testing
