@@ -9,6 +9,10 @@ use tauri::path::BaseDirectory;
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, Window, WindowEvent};
 use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_store::StoreExt;
+
+const STORE_PATH: &str = "settings.json";
+const CLOSE_TO_TRAY_KEY: &str = "close_to_tray";
 
 const ENDPOINTS: [(&str, &str, &str); 2] = [
     (
@@ -45,12 +49,25 @@ fn is_process_alive() -> bool {
     true
 }
 
-// Hide the window instead of exiting so the app lives in the system tray.
-// The user can quit via the tray context menu's "Quit" item.
 fn on_window_event(window: &Window, event: &WindowEvent) {
     if let WindowEvent::CloseRequested { api, .. } = event {
+        // Always take control of the close event.
         api.prevent_close();
-        let _ = window.hide();
+
+        let app = window.app_handle().clone();
+        let close_to_tray = app
+            .store(STORE_PATH)
+            .ok()
+            .and_then(|s| s.get(CLOSE_TO_TRAY_KEY))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true); // default: hide to tray
+
+        if close_to_tray {
+            let _ = window.hide();
+        } else {
+            let _ = kill_process_tree();
+            app.exit(0);
+        }
     }
 }
 
@@ -206,6 +223,22 @@ fn is_autostart_enabled(app: tauri::AppHandle) -> Result<bool, String> {
     app.autolaunch().is_enabled().map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn get_close_to_tray(app: tauri::AppHandle) -> Result<bool, String> {
+    let store = app.store(STORE_PATH).map_err(|e| e.to_string())?;
+    Ok(store
+        .get(CLOSE_TO_TRAY_KEY)
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true))
+}
+
+#[tauri::command]
+fn set_close_to_tray(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
+    let store = app.store(STORE_PATH).map_err(|e| e.to_string())?;
+    store.set(CLOSE_TO_TRAY_KEY, enabled);
+    store.save().map_err(|e| e.to_string())
+}
+
 fn main() {
     tauri::Builder::default()
         // Auto-start: pass --minimized so the window starts hidden when launched at boot
@@ -285,6 +318,8 @@ fn main() {
             enable_autostart,
             disable_autostart,
             is_autostart_enabled,
+            get_close_to_tray,
+            set_close_to_tray,
         ])
         .on_window_event(on_window_event)
         .run(tauri::generate_context!())

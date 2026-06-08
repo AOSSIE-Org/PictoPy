@@ -6,14 +6,20 @@ import SettingsCard from './SettingsCard';
 const SystemSettingsCard: React.FC = () => {
   // null = unknown / error reading state
   const [autostart, setAutostart] = useState<boolean | null>(null);
+  const [closeToTray, setCloseToTray] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
+  const [pendingCloseToTray, setPendingCloseToTray] = useState(false);
 
   useEffect(() => {
-    invoke<boolean>('is_autostart_enabled')
-      .then(setAutostart)
-      .catch(() => setAutostart(null))
-      .finally(() => setLoading(false));
+    Promise.all([
+      invoke<boolean>('is_autostart_enabled')
+        .then(setAutostart)
+        .catch(() => setAutostart(null)),
+      invoke<boolean>('get_close_to_tray')
+        .then(setCloseToTray)
+        .catch(() => setCloseToTray(null)),
+    ]).finally(() => setLoading(false));
   }, []);
 
   const handleToggle = async () => {
@@ -30,8 +36,25 @@ const SystemSettingsCard: React.FC = () => {
     }
   };
 
+  const handleCloseToTrayToggle = async () => {
+    if (closeToTray === null) return;
+    const next = !closeToTray;
+    setPendingCloseToTray(true);
+    try {
+      await invoke('set_close_to_tray', { enabled: next });
+      setCloseToTray(next);
+    } catch (err) {
+      console.error('Failed to toggle close-to-tray:', err);
+    } finally {
+      setPendingCloseToTray(false);
+    }
+  };
+
   const isDisabled = loading || pending || autostart === null;
   const isChecked = autostart === true;
+
+  const closeToTrayDisabled = loading || pendingCloseToTray || closeToTray === null;
+  const closeToTrayChecked = closeToTray === true;
 
   return (
     <SettingsCard
@@ -72,6 +95,44 @@ const SystemSettingsCard: React.FC = () => {
               'inline-block h-4 w-4 rounded-full bg-white shadow-md',
               'transition-transform duration-200 ease-in-out',
               isChecked ? 'translate-x-6' : 'translate-x-1',
+            ].join(' ')}
+          />
+        </button>
+      </div>
+
+      <div className="flex items-center justify-between py-1">
+        <div>
+          <div id="close-to-tray-label" className="font-medium">
+            Close to tray
+          </div>
+          <div id="close-to-tray-desc" className="text-muted-foreground text-sm">
+            When enabled, closing the window hides the app to the system tray
+            instead of exiting.
+          </div>
+        </div>
+
+        <button
+          role="switch"
+          aria-checked={closeToTrayChecked}
+          aria-labelledby="close-to-tray-label"
+          aria-describedby="close-to-tray-desc"
+          disabled={closeToTrayDisabled}
+          onClick={handleCloseToTrayToggle}
+          className={[
+            'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full',
+            'transition-colors duration-200 ease-in-out',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+            'disabled:cursor-not-allowed disabled:opacity-50',
+            closeToTrayChecked
+              ? 'bg-primary focus-visible:ring-primary'
+              : 'bg-gray-200 focus-visible:ring-gray-500 dark:bg-gray-700',
+          ].join(' ')}
+        >
+          <span
+            className={[
+              'inline-block h-4 w-4 rounded-full bg-white shadow-md',
+              'transition-transform duration-200 ease-in-out',
+              closeToTrayChecked ? 'translate-x-6' : 'translate-x-1',
             ].join(' ')}
           />
         </button>
