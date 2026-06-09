@@ -77,6 +77,8 @@ nav:
       - Rust Backend API: backend/backend_rust/api.md
 
   - Frontend:
+      - Gallery View: frontend/gallery-view.md
+      - UI Components: frontend/ui-components.md
       - State Management: frontend/state-management.md
       - Memories: frontend/memories.md
       - Screenshots: frontend/screenshots.md

@@ -186,7 +186,7 @@ import { showLoader, hideLoader } from "../features/loaderSlice";
 const ImageViewer = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { images, currentViewIndex } = useSelector(
-    (state: RootState) => state.images
+    (state: RootState) => state.images,
   );
   const { loading, message } = useSelector((state: RootState) => state.loader);
 
@@ -230,7 +230,7 @@ Example selector usage:
 import { getFolderById } from "@/features/folderSelectors";
 
 const folder = useSelector((state: RootState) =>
-  getFolderById(state, folderId)
+  getFolderById(state, folderId),
 );
 ```
 

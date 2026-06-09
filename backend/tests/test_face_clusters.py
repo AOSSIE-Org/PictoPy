@@ -1,6 +1,12 @@
 import pytest
+import numpy as np
 from unittest.mock import patch
 from fastapi import FastAPI
+from app.utils.face_clusters import (
+    cluster_util_cluster_all_face_embeddings,
+    estimate_eps,
+)
+from app.utils.face_quality import face_passes_quality_gate
 from fastapi.testclient import TestClient
 from app.routes.face_clusters import router as face_clusters_router
 
@@ -410,3 +416,212 @@ class TestFaceClustersAPI:
         """Test that unsupported HTTP methods return 405."""
         response = client.request(method, endpoint)
         assert response.status_code == 405
+
+
+# ============================================================================
+# Algorithmic Logic Tests
+# ============================================================================
+
+
+def generate_synthetic_embeddings(
+    num_identities=2, points_per_identity=10, dim=512, noise_std=0.005
+):
+    """Helper to generate tight clusters of embeddings."""
+    embeddings = []
+    labels = []
+
+    np.random.seed(42)  # For reproducibility
+
+    for i in range(num_identities):
+        # Random unit vector as center
+        center = np.random.randn(dim)
+        center = center / np.linalg.norm(center)
+
+        # Add points around center
+        for _ in range(points_per_identity):
+            noise = np.random.randn(dim) * noise_std
+            point = center + noise
+            # Re-normalize as cosine distance works best with unit vectors
+            point = point / np.linalg.norm(point)
+            embeddings.append(point)
+            labels.append(i)
+
+    return np.array(embeddings), np.array(labels)
+
+
+def generate_noise_embeddings(num_points=80, dim=512):
+    """Helper to generate random noise embeddings."""
+    np.random.seed(43)
+    noise = np.random.randn(num_points, dim)
+    norms = np.linalg.norm(noise, axis=1, keepdims=True)
+    return noise / norms
+
+
+def mock_faces_data(embeddings):
+    """Format embeddings into the expected database return format."""
+    return [
+        {"face_id": i, "embeddings": emb, "cluster_name": None}
+        for i, emb in enumerate(embeddings)
+    ]
+
+
+class TestFaceClusteringAlgo:
+    @patch("app.utils.face_clusters.db_get_all_faces_with_cluster_names")
+    def test_folder_size_regression(self, mock_db_get):
+        """Test 1: Folder-size regression (the original bug)"""
+        # Generate 20 embeddings (2 identities, 10 points each)
+        identity_embs, identity_labels = generate_synthetic_embeddings(
+            num_identities=2, points_per_identity=10
+        )
+
+        # --- Run 1: Isolated run ---
+        mock_db_get.return_value = mock_faces_data(identity_embs)
+
+        # Run clustering with eps estimation disabled (by using fixed eps, though estimate_eps runs internally)
+        # and strict similarity threshold.
+        results_isolated, _ = cluster_util_cluster_all_face_embeddings(
+            eps=0.75, min_samples=2, similarity_threshold=0.85
+        )
+
+        # Count clusters in isolated run
+        isolated_clusters = set(r.cluster_uuid for r in results_isolated)
+        assert (
+            len(isolated_clusters) == 2
+        ), f"The folder-size bug is present: expected 2 clusters, got {len(isolated_clusters)} in isolated run"
+
+        # Verify points were assigned correctly (10 points per cluster)
+        cluster_counts = {}
+        for r in results_isolated:
+            cluster_counts[r.cluster_uuid] = cluster_counts.get(r.cluster_uuid, 0) + 1
+
+        for count in cluster_counts.values():
+            assert (
+                count >= 8
+            ), f"Identity cluster should contain majority of points, got {count}"
+
+        # --- Run 2: With noise ---
+        noise_embs = generate_noise_embeddings(num_points=80)
+        all_embs = np.vstack([identity_embs, noise_embs])
+
+        mock_db_get.return_value = mock_faces_data(all_embs)
+
+        results_noise, _ = cluster_util_cluster_all_face_embeddings(
+            eps=0.75, min_samples=2, similarity_threshold=0.85
+        )
+
+        # We need to find the clusters containing the original identity points (face_ids 0 to 19)
+        identity_results = [r for r in results_noise if r.face_id < 20]
+
+        noise_run_identity_clusters = set(r.cluster_uuid for r in identity_results)
+        assert (
+            len(noise_run_identity_clusters) == 2
+        ), f"Expected 2 clusters for identity points with noise, got {len(noise_run_identity_clusters)}"
+
+    def test_adaptive_eps_stability(self):
+        """Test 2: Adaptive eps stability"""
+        identity_embs, _ = generate_synthetic_embeddings(
+            num_identities=2, points_per_identity=10
+        )
+
+        sizes = [20, 50, 100]
+
+        for size in sizes:
+            num_noise = size - len(identity_embs)
+            if num_noise > 0:
+                noise_embs = generate_noise_embeddings(num_points=num_noise)
+                test_embs = np.vstack([identity_embs, noise_embs])
+            else:
+                test_embs = identity_embs
+
+            eps = estimate_eps(test_embs, k=2)
+
+            assert eps is not None
+            assert (
+                0.0 < eps < 1.0
+            ), f"eps value {eps} out of expected bounds for size {size}"
+
+    def test_estimate_eps_fallback(self):
+        """Test 3: estimate_eps() fallback"""
+        # Empty array
+        assert estimate_eps(np.array([]), k=2) is None
+
+        # 1 element
+        assert estimate_eps(np.random.randn(1, 512), k=2) is None
+
+        # 2 elements
+        assert estimate_eps(np.random.randn(2, 512), k=2) is None
+
+    def test_quality_gate(self):
+        """Test 4: Quality gate unit tests"""
+        # A sharp, large face crop should pass
+        # Random noise image has high variance (sharp)
+        np.random.seed(42)
+        sharp_crop = np.random.randint(0, 256, (100, 100, 3), dtype=np.uint8)
+
+        assert (
+            face_passes_quality_gate(
+                face_crop=sharp_crop,
+                bbox=(0, 0, 100, 100),
+                conf_score=0.9,
+                conf_threshold=0.45,
+                blur_threshold=10.0,  # Random noise will be well above this
+                min_face_size=400,
+            )
+            is True
+        )
+
+        # A blurred crop should fail
+        # Flat image has zero variance
+        blurred_crop = np.ones((100, 100, 3), dtype=np.uint8) * 128
+
+        assert (
+            face_passes_quality_gate(
+                face_crop=blurred_crop,
+                bbox=(0, 0, 100, 100),
+                conf_score=0.9,
+                conf_threshold=0.45,
+                blur_threshold=10.0,
+                min_face_size=400,
+            )
+            is False
+        )
+
+        # A small bbox should fail
+        assert (
+            face_passes_quality_gate(
+                face_crop=sharp_crop,
+                bbox=(0, 0, 10, 10),  # area = 100
+                conf_score=0.9,
+                conf_threshold=0.45,
+                blur_threshold=10.0,
+                min_face_size=400,
+            )
+            is False
+        )
+
+        # A low confidence score should fail
+        assert (
+            face_passes_quality_gate(
+                face_crop=sharp_crop,
+                bbox=(0, 0, 100, 100),
+                conf_score=0.4,  # < 0.45
+                conf_threshold=0.45,
+                blur_threshold=10.0,
+                min_face_size=400,
+            )
+            is False
+        )
+
+        # An empty crop should fail
+        empty_crop = np.zeros((0, 0, 3), dtype=np.uint8)
+        assert (
+            face_passes_quality_gate(
+                face_crop=empty_crop,
+                bbox=(0, 0, 500, 500),
+                conf_score=0.9,
+                conf_threshold=0.45,
+                blur_threshold=10.0,
+                min_face_size=400,
+            )
+            is False
+        )

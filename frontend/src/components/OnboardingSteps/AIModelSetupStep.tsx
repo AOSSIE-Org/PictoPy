@@ -262,9 +262,11 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
                   </span>
                   <span className="bg-muted/60 text-muted-foreground inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium">
                     <Cpu className="h-3 w-3" />
-                    {hardwareSpecs.gpu_names?.length
-                      ? hardwareSpecs.gpu_names.join(', ')
-                      : 'No dedicated GPU'}
+                    {hardwareSpecs.apple_silicon
+                      ? hardwareSpecs.apple_silicon
+                      : hardwareSpecs.gpu_names?.length
+                        ? hardwareSpecs.gpu_names.join(', ')
+                        : 'No dedicated GPU'}
                   </span>
                 </div>
               )}
