@@ -152,7 +152,7 @@ Before setting up the Python backend and sync-microservice, you need to have **M
     sudo apt install -y libglib2.0-dev libgl1-mesa-glx
     ```
 
-    **Fedora:**
+    **Fedora/RedHat:**
 
     ```bash
     sudo dnf install -y glib2-devel mesa-libGL
@@ -168,7 +168,7 @@ Before setting up the Python backend and sync-microservice, you need to have **M
     sudo apt install -y libglib2.0-dev pkg-config
     ```
 
-    **Fedora:**
+    **Fedora/RedHat:**
 
     ```bash
     sudo dnf install -y glib2-devel pkgconf-pkg-config

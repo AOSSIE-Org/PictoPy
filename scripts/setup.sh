@@ -111,7 +111,7 @@ fi
 
 # ---- Set up the backend ----
 echo -e "${YELLOW}Setting up backend...${NC}"
-cd "$REPO_ROOT/backend"
+cd "$REPO_ROOT/backend" || { echo -e "${RED}backend directory not found${NC}"; exit 1; }
 rm -rf .env
 python -m venv .env
 source .env/bin/activate
@@ -121,7 +121,7 @@ deactivate
 
 # ---- Set up the sync-microservice ----
 echo -e "${YELLOW}Setting up sync-microservice...${NC}"
-cd "$REPO_ROOT/sync-microservice"
+cd "$REPO_ROOT/sync-microservice" || { echo -e "${RED}sync-microservice directory not found${NC}"; exit 1; }
 rm -rf .sync-env
 python -m venv .sync-env
 source .sync-env/bin/activate
@@ -131,7 +131,7 @@ deactivate
 
 # ---- Set up the frontend ----
 echo -e "${YELLOW}Setting up frontend...${NC}"
-cd "$REPO_ROOT/frontend"
+cd "$REPO_ROOT/frontend" || { echo -e "${RED}frontend directory not found${NC}"; exit 1; }
 npm install
 cd "$REPO_ROOT/frontend/src-tauri" || { echo -e "${RED}src-tauri directory not found${NC}"; exit 1; }
 cargo build || { echo -e "${RED}Cargo build failed in src-tauri. Please check your Tauri setup.${NC}"; exit 1; }
