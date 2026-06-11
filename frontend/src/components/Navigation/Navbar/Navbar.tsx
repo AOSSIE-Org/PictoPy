@@ -150,15 +150,16 @@ export function Navbar() {
                 <Separator />
 
                 {/* FavoritesRow */}
-                <div
-                  className="hover:bg-accent flex cursor-pointer items-center justify-between px-4 py-3 transition-colors"
+                <button
+                  type="button"
+                  className="hover:bg-accent flex w-full cursor-pointer items-center justify-between px-4 py-3 transition-colors"
                   onClick={() => handleNavigate(`/${ROUTES.FAVOURITES}`)}
                 >
                   <div className="flex items-center gap-2">
                     <Heart className="h-4 w-4" />
                     <span className="text-sm font-medium">Favourites</span>
                   </div>
-                </div>
+                </button>
 
                 <Separator />
 
@@ -166,7 +167,8 @@ export function Navbar() {
                 {clusters && clusters.length > 0 && (
                   <div className="flex flex-row flex-nowrap justify-between overflow-hidden px-4">
                     {clusters.slice(0, 6).map((cluster: Cluster) => (
-                      <div
+                      <button
+                        type="button"
                         key={cluster.cluster_id}
                         className="hover:bg-accent flex cursor-pointer flex-col items-center gap-1 px-1 py-2 transition-opacity"
                         onClick={() =>
@@ -191,7 +193,7 @@ export function Navbar() {
                           {cluster.cluster_name ||
                             `Person ${cluster.cluster_id.slice(-4)}`}
                         </span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -199,13 +201,14 @@ export function Navbar() {
                 <Separator />
 
                 {/* SeeAllPeopleButton */}
-                <div
+                <button
+                  type="button"
                   className="text-muted-foreground hover:text-foreground hover:bg-accent flex w-full cursor-pointer items-center justify-center gap-1 px-4 py-2 text-sm transition-colors"
                   onClick={() => handleNavigate(`/${ROUTES.AI}`)}
                 >
                   <ArrowRight className="h-4 w-4" />
                   <span>See all people</span>
-                </div>
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
