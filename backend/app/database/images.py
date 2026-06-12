@@ -493,6 +493,94 @@ def db_get_image_by_id(image_id: str) -> Optional[dict]:
         conn.close()
 
 
+def db_search_images_by_tag(tag_name: str) -> List[dict]:
+    """
+    Get all images that match a specific tag name, returning their full tag list.
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+            SELECT 
+                i.id, 
+                i.path, 
+                i.folder_id, 
+                i.thumbnailPath, 
+                i.metadata, 
+                i.isTagged,
+                i.isFavourite,
+                i.latitude,
+                i.longitude,
+                i.captured_at,
+                m.name as tag_name
+            FROM images i
+            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN mappings m ON ic.class_id = m.class_id
+            WHERE i.id IN (
+                SELECT ic2.image_id FROM image_classes ic2
+                JOIN mappings m2 ON ic2.class_id = m2.class_id
+                WHERE LOWER(m2.name) = LOWER(?)
+            )
+            ORDER BY i.path, m.name
+        """
+
+        cursor.execute(query, [tag_name])
+        results = cursor.fetchall()
+
+        # Group results by image ID
+        images_dict = {}
+        for (
+            image_id,
+            path,
+            folder_id,
+            thumbnail_path,
+            metadata,
+            is_tagged,
+            is_favourite,
+            latitude,
+            longitude,
+            captured_at,
+            tag_name_result,
+        ) in results:
+            if image_id not in images_dict:
+                from app.utils.images import image_util_parse_metadata
+
+                metadata_dict = image_util_parse_metadata(metadata)
+
+                images_dict[image_id] = {
+                    "id": image_id,
+                    "path": path,
+                    "folder_id": str(folder_id) if folder_id is not None else None,
+                    "thumbnailPath": thumbnail_path,
+                    "metadata": metadata_dict,
+                    "isTagged": bool(is_tagged),
+                    "isFavourite": bool(is_favourite),
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "captured_at": captured_at if captured_at else None,
+                    "tags": [],
+                }
+
+            if tag_name_result and tag_name_result not in images_dict[image_id]["tags"]:
+                images_dict[image_id]["tags"].append(tag_name_result)
+
+        images = []
+        for image_data in images_dict.values():
+            if not image_data["tags"]:
+                image_data["tags"] = None
+            images.append(image_data)
+
+        images.sort(key=lambda x: x["path"])
+        return images
+
+    except sqlite3.Error as e:
+        logger.error(f"Error searching images by tag: {e}")
+        return []
+    finally:
+        conn.close()
+
+
 # ============================================================================
 # MEMORIES FEATURE - Location and Time-based Queries
 # ============================================================================
