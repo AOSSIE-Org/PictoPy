@@ -51,7 +51,7 @@ def db_insert_folders_batch(folders_data: List[FolderData]) -> None:
             folders_data,
         )
         conn.commit()
-    except Exception as e:
+    except sqlite3.Error as e:
         conn.rollback()
         raise e
     finally:
@@ -180,7 +180,7 @@ def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
         deleted_count = cursor.rowcount
         conn.commit()
         return deleted_count
-    except Exception as e:
+    except sqlite3.Error as e:
         conn.rollback()
         raise e
     finally:
@@ -309,7 +309,7 @@ def db_update_ai_tagging_batch(
         updated_count = cursor.rowcount
         conn.commit()
         return updated_count
-    except Exception as e:
+    except sqlite3.Error as e:
         conn.rollback()
         raise e
     finally:

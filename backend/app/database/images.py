@@ -138,7 +138,7 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
         )
         conn.commit()
         return True
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error inserting image records: {e}")
         conn.rollback()
         return False
@@ -244,7 +244,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
 
         return images
 
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error getting all images: {e}")
         return []
     finally:
@@ -319,7 +319,7 @@ def db_update_image_tagged_status(image_id: ImageId, is_tagged: bool = True) -> 
         )
         conn.commit()
         return cursor.rowcount > 0
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error updating image tagged status: {e}")
         conn.rollback()
         return False
@@ -353,7 +353,7 @@ def db_insert_image_classes_batch(image_class_pairs: List[ImageClassPair]) -> bo
         )
         conn.commit()
         return True
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error inserting image classes: {e}")
         conn.rollback()
         return False
@@ -391,7 +391,7 @@ def db_get_images_by_folder_ids(
             folder_ids,
         )
         return cursor.fetchall()
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error getting images by folder IDs: {e}")
         return []
     finally:
@@ -425,7 +425,7 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
         conn.commit()
         logger.info(f"Deleted {cursor.rowcount} obsolete image(s) from database")
         return True
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error deleting images: {e}")
         conn.rollback()
         return False
@@ -450,7 +450,7 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         )
         conn.commit()
         return cursor.rowcount > 0
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Database error: {e}")
         conn.rollback()
         return False
@@ -565,7 +565,7 @@ def db_get_images_by_date_range(
 
         return images
 
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error getting images by date range: {e}")
         return []
     finally:
@@ -659,7 +659,7 @@ def db_get_images_near_location(
 
         return images
 
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error getting images near location: {e}")
         return []
     finally:
@@ -730,7 +730,7 @@ def db_get_images_by_year_month(year: int, month: int) -> List[dict]:
 
         return images
 
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error getting images by year/month: {e}")
         return []
     finally:
@@ -797,7 +797,7 @@ def db_get_images_with_location() -> List[dict]:
 
         return images
 
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error fetching images with location: {e}")
         return []
     finally:
@@ -862,7 +862,7 @@ def db_get_all_images_for_memories() -> List[dict]:
 
         return images
 
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error getting images from database: {e}")
         return []
     finally:
