@@ -65,9 +65,7 @@ fn kill_process(_process: &sysinfo::Process) -> Result<(), String> {
     use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
     use std::str::FromStr;
 
-    // Read the per-session shutdown token written by the backend at startup.
-    // This guarantees that only the PictoPy frontend — which runs alongside
-    // the backend — can authenticate the shutdown request.
+    // Read per-session shutdown token written by backend.
     let token_path = std::env::temp_dir().join("pictopy_shutdown.token");
     let token = match std::fs::read_to_string(&token_path) {
         Ok(t) => {

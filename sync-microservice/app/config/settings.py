@@ -31,9 +31,6 @@ else:
 THUMBNAIL_IMAGES_PATH = "./images/thumbnails"
 IMAGES_PATH = "./images"
 
-# The backend writes a fresh cryptographic token to this temp file on every
-# startup.  The sync microservice reads the same file so both services share
-# a single token without any additional coordination.
-# The token is loaded during the FastAPI lifespan startup hook.
+# Shared session token file for authenticated shutdown.
 SHUTDOWN_TOKEN_FILE: str = os.path.join(tempfile.gettempdir(), "pictopy_shutdown.token")
 SHUTDOWN_TOKEN: str = ""
