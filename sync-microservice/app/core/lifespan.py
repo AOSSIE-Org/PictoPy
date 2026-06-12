@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+import asyncio
 import time
 import app.config.settings as settings
 from app.database.folders import (
@@ -43,7 +44,7 @@ async def lifespan(app: FastAPI):
                 pass
             except Exception as e:
                 logger.error(f"Error reading shutdown token file: {e}")
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
 
         if not settings.SHUTDOWN_TOKEN:
             logger.error(f"pictopy_shutdown.token not found at {settings.SHUTDOWN_TOKEN_FILE} after 5 seconds")
@@ -77,7 +78,7 @@ async def lifespan(app: FastAPI):
             logger.warning(
                 f"Database connection attempt {attempt} failed. Retrying in {retry_interval} seconds... ({elapsed_time:.1f}s elapsed)"
             )
-            time.sleep(retry_interval)
+            await asyncio.sleep(retry_interval)
 
         watcher_started = watcher_util_start_folder_watcher()
 

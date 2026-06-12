@@ -6,7 +6,7 @@ import signal
 from typing import Optional
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
-from app.config.settings import SHUTDOWN_TOKEN
+from app.config import settings
 from app.utils.watcher import watcher_util_stop_folder_watcher
 from app.logging.setup_logging import get_sync_logger
 
@@ -72,7 +72,7 @@ async def shutdown(x_shutdown_token: Optional[str] = Header(default=None)):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     # Use constant-time comparison to prevent timing-based token guessing
-    if not hmac.compare_digest(x_shutdown_token, SHUTDOWN_TOKEN):
+    if not hmac.compare_digest(x_shutdown_token, settings.SHUTDOWN_TOKEN):
         logger.warning("Shutdown attempt rejected: invalid token")
         raise HTTPException(status_code=403, detail="Forbidden")
 
