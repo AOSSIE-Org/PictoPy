@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import time
+import app.config.settings as settings
 from app.database.folders import (
     db_check_database_connection,
 )
@@ -28,7 +29,6 @@ async def lifespan(app: FastAPI):
         logger.info("Starting PictoPy Sync Microservice...")
 
         # Wait for shutdown token from backend (up to 5 seconds)
-        import app.config.settings as settings
         logger.info("Waiting for shutdown token from backend...")
         deadline = time.monotonic() + 5.0
         while time.monotonic() < deadline:
@@ -41,6 +41,8 @@ async def lifespan(app: FastAPI):
                     break
             except FileNotFoundError:
                 pass
+            except Exception as e:
+                logger.error(f"Error reading shutdown token file: {e}")
             time.sleep(0.1)
 
         if not settings.SHUTDOWN_TOKEN:
