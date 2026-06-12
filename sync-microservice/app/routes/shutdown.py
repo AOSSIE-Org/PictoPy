@@ -33,9 +33,8 @@ async def _delayed_shutdown(delay: float = 0.1):
     logger.info("Exiting sync microservice...")
 
     # Clean up token file
-    from app.config.settings import SHUTDOWN_TOKEN_FILE
     try:
-        os.remove(SHUTDOWN_TOKEN_FILE)
+        os.remove(settings.SHUTDOWN_TOKEN_FILE)
         logger.info("Shutdown token file removed")
     except OSError as e:
         logger.warning(f"Could not remove shutdown token file: {e}")
