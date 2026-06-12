@@ -3,6 +3,7 @@ import hmac
 import os
 import platform
 import signal
+from typing import Optional
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 from app.config.settings import SHUTDOWN_TOKEN
@@ -31,6 +32,14 @@ async def _delayed_shutdown(delay: float = 0.1):
     await asyncio.sleep(delay)
     logger.info("Exiting sync microservice...")
 
+    # Clean up token file
+    from app.config.settings import SHUTDOWN_TOKEN_FILE
+    try:
+        os.remove(SHUTDOWN_TOKEN_FILE)
+        logger.info("Shutdown token file removed")
+    except OSError as e:
+        logger.warning(f"Could not remove shutdown token file: {e}")
+
     if platform.system() == "Windows":
         # Windows: SIGTERM doesn't work reliably with uvicorn subprocesses
         os._exit(0)
@@ -40,7 +49,7 @@ async def _delayed_shutdown(delay: float = 0.1):
 
 
 @router.post("/shutdown", response_model=ShutdownResponse)
-async def shutdown(x_shutdown_token: str = Header(...)):
+async def shutdown(x_shutdown_token: Optional[str] = Header(default=None)):
     """
     Gracefully shutdown the sync microservice.
 
@@ -58,6 +67,10 @@ async def shutdown(x_shutdown_token: str = Header(...)):
     Returns:
         ShutdownResponse with status and message
     """
+    if x_shutdown_token is None:
+        logger.warning("Shutdown attempt rejected: missing token")
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
     # Use constant-time comparison to prevent timing-based token guessing
     if not hmac.compare_digest(x_shutdown_token, SHUTDOWN_TOKEN):
         logger.warning("Shutdown attempt rejected: invalid token")

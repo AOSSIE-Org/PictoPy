@@ -54,9 +54,16 @@ SHUTDOWN_TOKEN_FILE: str = os.path.join(tempfile.gettempdir(), "pictopy_shutdown
 
 # Write with owner-only permissions (0o600) so other local users on
 # multi-user systems cannot read the token and trigger a shutdown.
-_fd = os.open(SHUTDOWN_TOKEN_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-with os.fdopen(_fd, "w") as _f:
-    _f.write(SHUTDOWN_TOKEN)
+try:
+    _fd = os.open(SHUTDOWN_TOKEN_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(_fd, "w") as _f:
+        _f.write(SHUTDOWN_TOKEN)
+    # Enforce permissions even if file pre-existed with looser permissions
+    os.chmod(SHUTDOWN_TOKEN_FILE, 0o600)
+except OSError as e:
+    logger.fatal(f"Failed to write shutdown token to {SHUTDOWN_TOKEN_FILE}: {e}")
+    logger.fatal("Cannot start backend securely. Exiting.")
+    sys.exit(1)
 
 def _get_env_float(
     name: str,

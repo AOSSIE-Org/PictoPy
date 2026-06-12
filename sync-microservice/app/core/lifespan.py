@@ -27,6 +27,27 @@ async def lifespan(app: FastAPI):
         # Startup
         logger.info("Starting PictoPy Sync Microservice...")
 
+        # Wait for shutdown token from backend (up to 5 seconds)
+        import app.config.settings as settings
+        logger.info("Waiting for shutdown token from backend...")
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline:
+            try:
+                with open(settings.SHUTDOWN_TOKEN_FILE) as f:
+                    token = f.read().strip()
+                if token:
+                    settings.SHUTDOWN_TOKEN = token
+                    logger.info("Shutdown token loaded successfully")
+                    break
+            except FileNotFoundError:
+                pass
+            time.sleep(0.1)
+
+        if not settings.SHUTDOWN_TOKEN:
+            logger.error(f"pictopy_shutdown.token not found at {settings.SHUTDOWN_TOKEN_FILE} after 5 seconds")
+            logger.error("Ensure the backend starts before the sync service.")
+            raise RuntimeError("Backend shutdown token not found")
+
         # Check database connection
         logger.info("Checking database connection...")
         connection_timeout = 60

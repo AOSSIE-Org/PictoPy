@@ -53,13 +53,14 @@ fn on_window_event(window: &Window, event: &WindowEvent) {
 }
 
 #[cfg(unix)]
-fn kill_process(process: &sysinfo::Process) {
+fn kill_process(process: &sysinfo::Process) -> Result<(), String> {
     use sysinfo::Signal;
     let _ = process.kill_with(Signal::Term);
+    Ok(())
 }
 
 #[cfg(windows)]
-pub fn kill_process(_process: &sysinfo::Process) -> Result<(), String> {
+fn kill_process(_process: &sysinfo::Process) -> Result<(), String> {
     use reqwest::blocking::Client;
     use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
     use std::str::FromStr;
@@ -103,7 +104,12 @@ pub fn kill_process(_process: &sysinfo::Process) -> Result<(), String> {
                     println!("[{}] Shutdown OK ({})", name, status);
                 }
             }
-            Err(_err) => {}
+            Err(_err) => {
+                eprintln!(
+                    "[{}] Failed to send shutdown request to {}: {}",
+                    name, url, _err
+                );
+            }
         }
     }
 
@@ -125,7 +131,12 @@ fn kill_process_tree() -> Result<(), String> {
         let name = process.name().to_string_lossy();
 
         if target_names.iter().any(|t| name.eq_ignore_ascii_case(t)) {
-            let _ = kill_process(process);
+            if let Err(e) = kill_process(process) {
+                eprintln!(
+                    "[PictoPy] Failed to send shutdown signal to process {}: {}",
+                    name, e
+                );
+            }
         }
     }
 
