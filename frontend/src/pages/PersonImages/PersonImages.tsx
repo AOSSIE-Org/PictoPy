@@ -22,6 +22,11 @@ export const PersonImages = () => {
   const images = useSelector(selectImages);
   const [clusterName, setClusterName] = useState<string>('random_name');
   const [isEditing, setIsEditing] = useState<boolean>(false);
+  // Which cluster the shared `images` slice currently holds. Keyed on clusterId
+  // (not `isLoading`) so it also covers person A -> person B when B is cached.
+  const [loadedClusterId, setLoadedClusterId] = useState<string | undefined>(
+    undefined,
+  );
   const { data, isLoading, isSuccess, isError } = usePictoQuery({
     queryKey: ['person-images', clusterId],
     queryFn: async () => fetchClusterImages({ clusterId: clusterId || '' }),
@@ -42,9 +47,18 @@ export const PersonImages = () => {
       const images = (res?.images || []) as Image[];
       dispatch(setImages(images));
       setClusterName(res?.cluster_name || 'random_name');
+      setLoadedClusterId(clusterId);
       dispatch(hideLoader());
     }
-  }, [data, isSuccess, isError, isLoading, dispatch]);
+  }, [data, isSuccess, isError, isLoading, dispatch, clusterId]);
+
+  // Until the slice is synced for this cluster it still holds the previous
+  // page's images (issue #1315). Fall back to the cluster-scoped query data for
+  // that window; read the slice once synced so favourite toggles still work.
+  const personImages =
+    loadedClusterId === clusterId
+      ? images
+      : (((data?.data as any)?.images as Image[]) ?? []);
 
   const handleEditName = () => {
     setClusterName(clusterName);
@@ -109,7 +123,7 @@ export const PersonImages = () => {
       </div>
       <h1 className="mb-6 text-2xl font-bold">{clusterName}</h1>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {images.map((image, index) => (
+        {personImages.map((image, index) => (
           <ImageCard
             key={image.id}
             image={image}
@@ -121,7 +135,7 @@ export const PersonImages = () => {
       </div>
 
       {/* Media Viewer Modal */}
-      {isImageViewOpen && <MediaView images={images} />}
+      {isImageViewOpen && <MediaView images={personImages} />}
     </div>
   );
 };
