@@ -35,7 +35,7 @@ export const AITagging = () => {
     } else if (imagesError) {
       dispatch(hideLoader());
     } else if (imagesSuccess) {
-      const images = imagesData?.data as Image[];
+      const images = (imagesData?.data ?? []) as Image[];
       dispatch(setImages(images));
       dispatch(hideLoader());
     }

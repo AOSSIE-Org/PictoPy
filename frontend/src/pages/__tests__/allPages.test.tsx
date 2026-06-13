@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import { AITagging } from '@/pages/AITagging/AITagging';
 import Album from '../Album/Album';
 import { Home } from '@/pages/Home/Home';
@@ -23,7 +23,7 @@ const pages = [
 
 describe('Page rendering tests', () => {
   pages.forEach(({ path, Component }) => {
-    test(`renders ${path} without crashing`, () => {
+    test(`renders ${path} without crashing`, async () => {
       render(
         <Provider store={store}>
           <ThemeProvider>
@@ -35,6 +35,9 @@ describe('Page rendering tests', () => {
           </ThemeProvider>
         </Provider>,
       );
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
     });
   });
 });
