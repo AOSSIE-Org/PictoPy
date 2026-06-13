@@ -56,9 +56,9 @@ export const PersonImages = () => {
   // page's images (issue #1315). Fall back to the cluster-scoped query data for
   // that window; read the slice once synced so favourite toggles still work.
   const personImages =
-    loadedClusterId === clusterId
+    clusterId !== undefined && loadedClusterId === clusterId
       ? images
-      : (((data?.data as any)?.images as Image[]) ?? []);
+      : ((data?.data as { images?: Image[] })?.images ?? []);
 
   const handleEditName = () => {
     setClusterName(clusterName);
