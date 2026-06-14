@@ -53,6 +53,9 @@ async def shutdown(x_shutdown_token: Optional[str] = Header(default=None)):
         logger.warning("Shutdown attempt rejected: missing token")
         raise HTTPException(status_code=401, detail="Unauthorized")
 
+    if not settings.SHUTDOWN_TOKEN:
+        raise HTTPException(status_code=503, detail="Service not ready")
+
     # Prevent timing-based token guessing
     if not hmac.compare_digest(x_shutdown_token, settings.SHUTDOWN_TOKEN):
         logger.warning("Shutdown attempt rejected: invalid token")
