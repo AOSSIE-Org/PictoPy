@@ -76,6 +76,7 @@ class GetClusterImagesResponse(BaseModel):
 
 class GlobalReclusterData(BaseModel):
     clusters_created: Optional[int] = None
+    faces_skipped: Optional[int] = None
 
 
 class GlobalReclusterResponse(BaseModel):

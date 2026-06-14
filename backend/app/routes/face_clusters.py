@@ -9,8 +9,9 @@ from app.database.face_clusters import (
     db_get_cluster_by_id,
     db_update_cluster,
     db_get_all_clusters_with_face_counts,
-    db_get_images_by_cluster_id,  # Add this import
+    db_get_images_by_cluster_id,
 )
+from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.schemas.face_clusters import (
     RenameClusterRequest,
     RenameClusterResponse,
@@ -313,16 +314,17 @@ def trigger_global_reclustering():
     try:
         logger.info("Starting manual global face reclustering...")
 
-        # Use the smart clustering function with force flag set to True
-        from app.utils.face_clusters import cluster_util_face_clusters_sync
-
-        result = cluster_util_face_clusters_sync(force_full_reclustering=True)
+        result, total_faces_skipped = cluster_util_face_clusters_sync(
+            force_full_reclustering=True
+        )
 
         if result == 0:
             return GlobalReclusterResponse(
                 success=True,
                 message="No faces found to cluster",
-                data=GlobalReclusterData(clusters_created=0),
+                data=GlobalReclusterData(
+                    clusters_created=0, faces_skipped=total_faces_skipped
+                ),
             )
 
         logger.info("Global reclustering completed successfully")
@@ -330,7 +332,9 @@ def trigger_global_reclustering():
         return GlobalReclusterResponse(
             success=True,
             message="Global reclustering completed successfully.",
-            data=GlobalReclusterData(clusters_created=result),
+            data=GlobalReclusterData(
+                clusters_created=result, faces_skipped=total_faces_skipped
+            ),
         )
 
     except Exception as e:
