@@ -22,7 +22,7 @@ export const PersonImages = () => {
   const images = useSelector(selectImages);
   const [clusterName, setClusterName] = useState<string>('random_name');
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  
+
   const [loadedClusterId, setLoadedClusterId] = useState<string | undefined>(
     undefined,
   );
@@ -56,6 +56,11 @@ export const PersonImages = () => {
     clusterId !== undefined && loadedClusterId === clusterId
       ? images
       : ((data?.data as { images?: Image[] })?.images ?? []);
+  const displayName =
+    clusterId !== undefined && loadedClusterId === clusterId
+      ? clusterName
+      : ((data?.data as { cluster_name?: string })?.cluster_name ??
+        'random_name');
 
   const handleEditName = () => {
     setClusterName(clusterName);
@@ -118,7 +123,7 @@ export const PersonImages = () => {
           </Button>
         )}
       </div>
-      <h1 className="mb-6 text-2xl font-bold">{clusterName}</h1>
+      <h1 className="mb-6 text-2xl font-bold">{displayName}</h1>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {personImages.map((image, index) => (
           <ImageCard
