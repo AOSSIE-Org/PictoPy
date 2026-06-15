@@ -158,7 +158,54 @@ def error_task_response(error_task_id):
         headers={"Accept": "text/event-stream"}
     )
 
+@pytest.fixture
+def mock_tier_models():
+    return {
+        "nano": ["yolo_nano", "yolo_nano_face"],
+        "small": ["yolo_small", "yolo_small_face"],
+        "medium": ["yolo_medium", "yolo_medium_face"],
+        "required": ["facenet"],
+    }
 
+
+@pytest.fixture
+def setup_nano_response(mock_tier_models):
+    with patch("app.routes.models.TIER_MODELS", mock_tier_models), \
+         patch("app.routes.models.ensure_model", return_value=None):
+        return client.post("/models/setup", json={"tier": "nano"})
+
+
+@pytest.fixture
+def setup_required_response(mock_tier_models):
+    with patch("app.routes.models.TIER_MODELS", mock_tier_models), \
+         patch("app.routes.models.ensure_model", return_value=None):
+        return client.post("/models/setup", json={"tier": "required"})
+    
+@pytest.fixture
+def download_facenet_response(mock_model_registry):
+    with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
+         patch("app.routes.models.ensure_model", return_value=None):
+        return client.post("/models/download/facenet")
+
+@pytest.fixture
+def delete_installed_model_response(mock_model_registry):
+    with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
+         patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
+         patch("app.routes.models.try_mark_model_for_deletion", return_value=None), \
+         patch("app.routes.models.release_model_deletion_mark"), \
+         patch("app.routes.models.os.path.exists", return_value=True), \
+         patch("app.routes.models.os.remove"):
+        return client.delete("/models/yolo_nano")
+
+
+@pytest.fixture
+def delete_missing_model_response(mock_model_registry):
+    with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
+         patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
+         patch("app.routes.models.try_mark_model_for_deletion", return_value=None), \
+         patch("app.routes.models.release_model_deletion_mark"), \
+         patch("app.routes.models.os.path.exists", return_value=False):
+        return client.delete("/models/yolo_nano")
 
 # ##############################
 # Test Classes
@@ -558,3 +605,246 @@ class TestDownloadProgress:
                 if parsed["status"] == "error":
                     message = parsed["message"]
                     assert isinstance(message, str)
+
+class TestSetupModels:
+    """Tests for POST /models/setup"""
+
+    # --- Valid tiers ---
+
+    def test_nano_tier_returns_200(self, setup_nano_response):
+        assert setup_nano_response.status_code == 200
+
+    def test_small_tier_returns_200(self, mock_tier_models):
+        with patch("app.routes.models.TIER_MODELS", mock_tier_models), \
+             patch("app.routes.models.ensure_model", return_value=None):
+            response = client.post("/models/setup", json={"tier": "small"})
+            assert response.status_code == 200
+
+    def test_medium_tier_returns_200(self, mock_tier_models):
+        with patch("app.routes.models.TIER_MODELS", mock_tier_models), \
+             patch("app.routes.models.ensure_model", return_value=None):
+            response = client.post("/models/setup", json={"tier": "medium"})
+            assert response.status_code == 200
+
+    def test_required_tier_returns_200(self, setup_required_response):
+        assert setup_required_response.status_code == 200
+
+    # --- Response structure ---
+
+    def test_success_is_true(self, setup_nano_response):
+        json_response = setup_nano_response.json()
+        assert json_response["success"] is True
+
+    def test_response_has_task_id(self, setup_nano_response):
+        json_response = setup_nano_response.json()
+        assert "task_id" in json_response
+
+    def test_task_id_is_valid_uuid(self, setup_nano_response):
+        json_response = setup_nano_response.json()
+        task_id = json_response["task_id"]
+        uuid.UUID(task_id)
+
+    def test_response_has_message(self, setup_nano_response):
+        json_response = setup_nano_response.json()
+        assert "message" in json_response
+
+    def test_message_contains_tier_name(self, setup_nano_response):
+        json_response = setup_nano_response.json()
+        message = json_response["message"]
+        assert "nano" in message
+
+    def test_each_call_gets_unique_task_id(self, mock_tier_models):
+        with patch("app.routes.models.TIER_MODELS", mock_tier_models), \
+             patch("app.routes.models.ensure_model", return_value=None):
+            response_1 = client.post("/models/setup", json={"tier": "nano"})
+            response_2 = client.post("/models/setup", json={"tier": "nano"})
+            task_id_1 = response_1.json()["task_id"]
+            task_id_2 = response_2.json()["task_id"]
+            assert task_id_1 != task_id_2
+
+    # --- Invalid inputs ---
+
+    def test_invalid_tier_returns_400(self, mock_tier_models):
+        with patch("app.routes.models.TIER_MODELS", mock_tier_models):
+            response = client.post("/models/setup", json={"tier": "ultra"})
+            assert response.status_code == 400
+
+    def test_invalid_tier_detail_mentions_value(self, mock_tier_models):
+        with patch("app.routes.models.TIER_MODELS", mock_tier_models):
+            response = client.post("/models/setup", json={"tier": "ultra"})
+            json_response = response.json()
+            detail = json_response["detail"]
+            assert "ultra" in detail
+
+    def test_missing_tier_returns_422(self):
+        response = client.post("/models/setup", json={})
+        assert response.status_code == 422
+
+    def test_wrong_type_returns_422(self):
+        response = client.post("/models/setup", json={"tier": 123})
+        assert response.status_code == 422
+
+    def test_empty_body_returns_422(self):
+        response = client.post("/models/setup")
+        assert response.status_code == 422
+
+class TestStartDownloadModel:
+    """Tests for POST /models/download/{model_key}"""
+
+    # --- Status code tests ---
+
+    def test_valid_model_key_returns_200(self, download_facenet_response):
+        assert download_facenet_response.status_code == 200
+
+    def test_unknown_model_key_returns_404(self, mock_model_registry):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry):
+            response = client.post("/models/download/doesnotexist")
+            assert response.status_code == 404
+
+    def test_unknown_model_key_detail_mentions_key(self, mock_model_registry):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry):
+            response = client.post("/models/download/doesnotexist")
+            json_response = response.json()
+            detail = json_response["detail"]
+            assert "doesnotexist" in detail
+
+    # --- Response structure ---
+
+    def test_success_is_true(self, download_facenet_response):
+        json_response = download_facenet_response.json()
+        assert json_response["success"] is True
+
+    def test_response_has_task_id(self, download_facenet_response):
+        json_response = download_facenet_response.json()
+        assert "task_id" in json_response
+
+    def test_task_id_is_valid_uuid(self, download_facenet_response):
+        json_response = download_facenet_response.json()
+        task_id = json_response["task_id"]
+        uuid.UUID(task_id)
+
+    def test_response_has_message(self, download_facenet_response):
+        json_response = download_facenet_response.json()
+        assert "message" in json_response
+
+    def test_message_contains_model_key(self, download_facenet_response):
+        json_response = download_facenet_response.json()
+        message = json_response["message"]
+        assert "facenet" in message
+
+    def test_each_call_gets_unique_task_id(self, mock_model_registry):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
+             patch("app.routes.models.ensure_model", return_value=None):
+            response_1 = client.post("/models/download/facenet")
+            response_2 = client.post("/models/download/facenet")
+            task_id_1 = response_1.json()["task_id"]
+            task_id_2 = response_2.json()["task_id"]
+            assert task_id_1 != task_id_2
+
+    # --- All valid model keys ---
+
+    @pytest.mark.parametrize("model_key", [
+        "yolo_nano", "yolo_nano_face",
+        "yolo_small", "yolo_small_face",
+        "yolo_medium", "yolo_medium_face",
+        "facenet",
+    ])
+    def test_all_valid_model_keys_return_200(self, model_key, mock_model_registry):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
+             patch("app.routes.models.ensure_model", return_value=None):
+            response = client.post(f"/models/download/{model_key}")
+            assert response.status_code == 200
+
+class TestDeleteModel:
+    """Tests for DELETE /models/{model_key}"""
+
+    # --- 404 unknown key ---
+
+    def test_unknown_model_key_returns_404(self, mock_model_registry):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry):
+            response = client.delete("/models/doesnotexist")
+            assert response.status_code == 404
+
+    def test_unknown_model_key_detail_mentions_key(self, mock_model_registry):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry):
+            response = client.delete("/models/doesnotexist")
+            json_response = response.json()
+            detail = json_response["detail"]
+            assert "doesnotexist" in detail
+
+    # --- 409 model in use ---
+
+    def test_model_in_use_returns_409(self, mock_model_registry):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
+             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
+             patch("app.routes.models.try_mark_model_for_deletion", return_value=2), \
+             patch("app.routes.models.release_model_deletion_mark"):
+            response = client.delete("/models/yolo_nano")
+            assert response.status_code == 409
+
+    def test_model_in_use_detail_mentions_session_count(self, mock_model_registry):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
+             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
+             patch("app.routes.models.try_mark_model_for_deletion", return_value=2), \
+             patch("app.routes.models.release_model_deletion_mark"):
+            response = client.delete("/models/yolo_nano")
+            json_response = response.json()
+            detail = json_response["detail"]
+            assert "2" in detail
+
+    # --- 200 file exists and deleted ---
+
+    def test_delete_installed_model_returns_200(self, delete_installed_model_response):
+        assert delete_installed_model_response.status_code == 200
+
+    def test_delete_installed_model_success_is_true(self, delete_installed_model_response):
+        json_response = delete_installed_model_response.json()
+        assert json_response["success"] is True
+
+    def test_delete_installed_model_message_contains_key(self, delete_installed_model_response):
+        json_response = delete_installed_model_response.json()
+        message = json_response["message"]
+        assert "yolo_nano" in message
+
+    def test_delete_installed_model_message_contains_deleted(self, delete_installed_model_response):
+        json_response = delete_installed_model_response.json()
+        message = json_response["message"]
+        assert "deleted" in message
+
+    # --- 200 file already not present ---
+
+    def test_delete_missing_model_returns_200(self, delete_missing_model_response):
+        assert delete_missing_model_response.status_code == 200
+
+    def test_delete_missing_model_success_is_true(self, delete_missing_model_response):
+        json_response = delete_missing_model_response.json()
+        assert json_response["success"] is True
+
+    def test_delete_missing_model_message_contains_already(self, delete_missing_model_response):
+        json_response = delete_missing_model_response.json()
+        message = json_response["message"]
+        assert "already" in message
+
+    # --- 500 deletion fails ---
+
+    def test_os_error_on_delete_returns_500(self, mock_model_registry):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
+             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
+             patch("app.routes.models.try_mark_model_for_deletion", return_value=None), \
+             patch("app.routes.models.release_model_deletion_mark"), \
+             patch("app.routes.models.os.path.exists", return_value=True), \
+             patch("app.routes.models.os.remove", side_effect=OSError("Permission denied")):
+            response = client.delete("/models/yolo_nano")
+            assert response.status_code == 500
+
+    def test_os_error_detail_mentions_failure(self, mock_model_registry):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
+             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
+             patch("app.routes.models.try_mark_model_for_deletion", return_value=None), \
+             patch("app.routes.models.release_model_deletion_mark"), \
+             patch("app.routes.models.os.path.exists", return_value=True), \
+             patch("app.routes.models.os.remove", side_effect=OSError("Permission denied")):
+            response = client.delete("/models/yolo_nano")
+            json_response = response.json()
+            detail = json_response["detail"]
+            assert "Permission denied" in detail
