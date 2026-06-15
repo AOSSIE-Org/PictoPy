@@ -1,0 +1,12 @@
+name: Local Development server
+variables:
+  - name: baseUrl
+    value: http://localhost:52123
+  - name: taskId
+    value: 6e0221a1-5d2b-4e6b-bfa3-f28cc58c8eb9
+  - name: albumId
+    value: ""
+  - name: clusterId
+    value: ""
+  - name: folderId
+    value: ""

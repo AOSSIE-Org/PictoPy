@@ -1,0 +1,7 @@
+info:
+  name: Albums
+  type: folder
+  seq: 1
+
+request:
+  auth: inherit

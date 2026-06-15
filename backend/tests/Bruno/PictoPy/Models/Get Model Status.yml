@@ -1,0 +1,97 @@
+info:
+  name: Get Model Status
+  type: http
+  seq: 1
+  tags:
+    - Models
+
+http:
+  method: GET
+  url: "{{baseUrl}}/models/status"
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("returns 200", function() {
+          expect(res.status).to.equal(200);
+        });
+
+        test("success is true", function() {
+          expect(res.body.success).to.equal(true);
+        });
+
+        test("data object exists", function() {
+          expect(res.body.data).to.be.an("object");
+        });
+
+        test("all 7 models are present", function() {
+          const expected = [
+            "yolo_nano", "yolo_nano_face",
+            "yolo_small", "yolo_small_face",
+            "yolo_medium", "yolo_medium_face",
+            "facenet"
+          ];
+          expected.forEach(key => {
+            expect(res.body.data).to.have.property(key);
+          });
+        });
+
+        test("each model has required fields", function() {
+          Object.values(res.body.data).forEach(model => {
+            expect(model).to.have.property("name");
+            expect(model).to.have.property("installed");
+            expect(model).to.have.property("feature");
+            expect(model).to.have.property("tier");
+            expect(model).to.have.property("size_mb");
+          });
+        });
+
+        test("installed field is always boolean", function() {
+          Object.values(res.body.data).forEach(model => {
+            expect(model.installed).to.be.a("boolean");
+          });
+        });
+
+        test("tier values are valid", function() {
+          const validTiers = ["nano", "small", "medium", "required"];
+          Object.values(res.body.data).forEach(model => {
+            expect(validTiers).to.include(model.tier);
+          });
+        });
+
+        test("facenet tier is required", function() {
+          expect(res.body.data.facenet.tier).to.equal("required");
+        });
+
+        test("size_mb is a positive number", function() {
+          Object.values(res.body.data).forEach(model => {
+            expect(model.size_mb).to.be.a("number");
+            expect(model.size_mb).to.be.above(0);
+          });
+        });
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 Response
+    description: Successful Response
+    request:
+      url: "{{baseUrl}}/models/status"
+      method: GET
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: ""
+
+docs: Returns the installation status of all models in the registry.

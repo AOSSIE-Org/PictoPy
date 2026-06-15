@@ -1,0 +1,102 @@
+info:
+  name: Generate Memories
+  type: http
+  seq: 1
+  tags:
+    - memories
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/memories/generate"
+  params:
+    - name: location_radius_km
+      value: "5"
+      type: query
+      description: Location clustering radius in km
+    - name: date_tolerance_days
+      value: "3"
+      type: query
+      description: Date tolerance in days
+    - name: min_images
+      value: "2"
+      type: query
+      description: Minimum images per memory
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 Response
+    description: Successful Response
+    request:
+      url: "{{baseUrl}}/api/memories/generate"
+      method: POST
+      params:
+        - name: location_radius_km
+          value: "5"
+          type: query
+          description: Location clustering radius in km
+        - name: date_tolerance_days
+          value: "3"
+          type: query
+          description: Date tolerance in days
+        - name: min_images
+          value: "2"
+          type: query
+          description: Minimum images per memory
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: ""
+  - name: 422 Response
+    description: Validation Error
+    request:
+      url: "{{baseUrl}}/api/memories/generate"
+      method: POST
+      params:
+        - name: location_radius_km
+          value: "5"
+          type: query
+          description: Location clustering radius in km
+        - name: date_tolerance_days
+          value: "3"
+          type: query
+          description: Date tolerance in days
+        - name: min_images
+          value: "2"
+          type: query
+          description: Minimum images per memory
+    response:
+      status: 422
+      statusText: Unprocessable Entity
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "detail": [
+              {
+                "loc": [],
+                "msg": "",
+                "type": ""
+              }
+            ]
+          }
+
+docs: |-
+  SIMPLIFIED: Generate memories from ALL images.
+  - GPS images → location-based memories
+  - Non-GPS images → monthly date-based memories
+
+  Returns simple breakdown: {location_count, date_count, total}

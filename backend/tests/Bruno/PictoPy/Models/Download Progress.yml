@@ -1,0 +1,70 @@
+info:
+  name: Download Progress
+  type: http
+  seq: 6
+  tags:
+    - Models
+
+http:
+  method: GET
+  url: "{{baseUrl}}/models/download/:task_id/progress"
+  params:
+    - name: task_id
+      value: 6e0221a1-5d2b-4e6b-bfa3-f28cc58c8eb9
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 Response
+    description: Successful Response
+    request:
+      url: "{{baseUrl}}/models/download/:task_id/progress"
+      method: GET
+      params:
+        - name: task_id
+          value: ""
+          type: path
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: ""
+  - name: 422 Response
+    description: Validation Error
+    request:
+      url: "{{baseUrl}}/models/download/:task_id/progress"
+      method: GET
+      params:
+        - name: task_id
+          value: ""
+          type: path
+    response:
+      status: 422
+      statusText: Unprocessable Entity
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "detail": [
+              {
+                "loc": [],
+                "msg": "",
+                "type": ""
+              }
+            ]
+          }
+
+docs: Streams SSE progress for a given download task_id.

@@ -1,0 +1,7 @@
+info:
+  name: User_Preferences
+  type: folder
+  seq: 1
+
+request:
+  auth: inherit
