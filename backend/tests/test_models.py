@@ -1,14 +1,17 @@
-import sys
 import os
+import asyncio
+import sys
+import json
+import uuid
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from unittest.mock import patch
-import uuid
+from unittest.mock import patch, MagicMock
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.routes.models import router as models_router
+from app.routes.models import router as models_router, DownloadTaskEntry
+import app.routes.models as models_module
 
 app = FastAPI()
 app.include_router(models_router, prefix="/models", tags=["models"])
@@ -68,9 +71,93 @@ def mock_model_registry():
             "size_mb": 87.0,
         },
     }
+
 @pytest.fixture
-def hardware_response():
-    return client.get("/models/hardware")
+def mock_hardware_info():
+    return {
+        "ram_gb": 15.32,
+        "gpu_detected": True,
+        "gpu_names": ["NVIDIA GeForce RTX 3050 6GB Laptop GPU"],
+        "apple_silicon": None,
+        "available_providers": ["AzureExecutionProvider", "CPUExecutionProvider"],
+        "recommended_tier": "medium",
+    }
+
+@pytest.fixture
+def hardware_response(mock_hardware_info):
+    with patch("app.routes.models.get_hardware_info", return_value=mock_hardware_info):
+        return client.get("/models/hardware")
+
+@pytest.fixture(autouse=True)
+def clear_download_tasks():
+    # Runs before every test ensures no leftover task IDs bleed between tests
+    models_module.download_tasks.clear()
+    yield
+    models_module.download_tasks.clear()
+
+
+@pytest.fixture
+def completed_task_id():
+    task_id = str(uuid.uuid4())
+    queue = asyncio.Queue()
+    queue.put_nowait({"status": "complete", "model_key": "facenet"})
+
+    mock_task = MagicMock()
+    mock_task.done.return_value = True
+
+    models_module.download_tasks[task_id] = DownloadTaskEntry(
+        queue=queue,
+        task=mock_task,
+    )
+    return task_id
+
+
+@pytest.fixture
+def error_task_id():
+    task_id = str(uuid.uuid4())
+    queue = asyncio.Queue()
+    queue.put_nowait({"status": "error", "message": "download failed"})
+
+    mock_task = MagicMock()
+    mock_task.done.return_value = True
+
+    models_module.download_tasks[task_id] = DownloadTaskEntry(
+        queue=queue,
+        task=mock_task,
+    )
+    return task_id
+
+
+@pytest.fixture
+def active_listener_task_id():
+    task_id = str(uuid.uuid4())
+    queue = asyncio.Queue()
+
+    mock_task = MagicMock()
+    mock_task.done.return_value = False
+
+    entry = DownloadTaskEntry(queue=queue, task=mock_task)
+    entry.active_listeners = 1  # simulate an existing listener
+
+    models_module.download_tasks[task_id] = entry
+    return task_id
+
+
+@pytest.fixture
+def completed_task_response(completed_task_id):
+    return client.get(
+        f"/models/download/{completed_task_id}/progress",
+        headers={"Accept": "text/event-stream"}
+    )
+
+
+@pytest.fixture
+def error_task_response(error_task_id):
+    return client.get(
+        f"/models/download/{error_task_id}/progress",
+        headers={"Accept": "text/event-stream"}
+    )
+
 
 
 # ##############################
@@ -193,25 +280,17 @@ class TestHardwareInformation:
 
     def test_returns_200(self, hardware_response):
         assert hardware_response.status_code == 200
-    
-    def test_returns_error_when_hardware_detection_fails(self):
-        with patch(
-            "app.routes.models.get_hardware_info",
-            side_effect=Exception("hardware error")
-        ):
-            response = client.get("/models/hardware")
-
-            assert response.status_code == 500
 
     def test_success_is_true(self, hardware_response):
         json_response = hardware_response.json()
 
         assert json_response["success"] is True
-    
+
     def test_data_is_object(self, hardware_response):
         json_response = hardware_response.json()
+        data = json_response["data"]
 
-        assert isinstance(json_response["data"], dict)
+        assert isinstance(data, dict)
 
     def test_data_has_required_fields(self, hardware_response):
         json_response = hardware_response.json()
@@ -223,62 +302,49 @@ class TestHardwareInformation:
         assert "apple_silicon" in data
         assert "available_providers" in data
         assert "recommended_tier" in data
-    
-    def test_ram_is_positive_number(self,hardware_response):
-        json_response=hardware_response.json()
-        ram=json_response["data"]["ram_gb"]
-        
-        assert isinstance(ram,(int,float)) 
+
+    def test_ram_is_positive_number(self, hardware_response):
+        json_response = hardware_response.json()
+        ram = json_response["data"]["ram_gb"]
+
+        assert isinstance(ram, (int, float))
         assert ram > 0
-    
-    def test_gpu_is_boolean(self,hardware_response):
-        json_response=hardware_response.json()
-        gpu_bool=json_response["data"]["gpu_detected"]
 
-        assert isinstance(gpu_bool,bool)
-    
-    def test_gpu_names_is_array(self,hardware_response):
-        json_response=hardware_response.json()
-        gpu_names=json_response["data"]["gpu_names"]
+    def test_ram_gb_is_realistic(self, hardware_response):
+        json_response = hardware_response.json()
+        ram = json_response["data"]["ram_gb"]
 
-        assert isinstance(gpu_names,list)
-    
-    def test_gpu_names_contains_strings(self, hardware_response):
+        assert 0.5 <= ram <= 2048
+
+    def test_gpu_is_boolean(self, hardware_response):
+        json_response = hardware_response.json()
+        gpu_detected = json_response["data"]["gpu_detected"]
+
+        assert isinstance(gpu_detected, bool)
+
+    def test_gpu_names_is_array(self, hardware_response):
         json_response = hardware_response.json()
         gpu_names = json_response["data"]["gpu_names"]
 
+        assert isinstance(gpu_names, list)
+
+    def test_gpu_names_contains_strings(self, hardware_response):
+        json_response = hardware_response.json()
+        gpu_names = json_response["data"]["gpu_names"]
         for gpu in gpu_names:
             assert isinstance(gpu, str)
-    
+
     def test_apple_silicon_type(self, hardware_response):
         json_response = hardware_response.json()
         apple_silicon = json_response["data"]["apple_silicon"]
 
-        assert (
-            apple_silicon is None
-            or isinstance(apple_silicon, bool)
-        )
+        assert apple_silicon is None or isinstance(apple_silicon, bool)
 
-    def test_no_gpu_returns_empty_gpu_names(self):
-        mock_hw_info = {
-            "ram_gb": 8.0,
-            "gpu_detected": False,
-            "gpu_names": [],
-            "apple_silicon": None,
-            "available_providers": ["CPUExecutionProvider"],
-            "recommended_tier": "small",
-        }
+    def test_cpu_provider_always_present(self, hardware_response):
+        json_response = hardware_response.json()
+        providers = json_response["data"]["available_providers"]
 
-        with patch(
-            "app.routes.models.get_hardware_info",
-            return_value=mock_hw_info,
-        ):
-            response = client.get("/models/hardware")
-
-            data = response.json()["data"]
-
-            assert data["gpu_detected"] is False
-            assert data["gpu_names"] == []
+        assert "CPUExecutionProvider" in providers
 
     def test_available_providers_is_non_empty_array(self, hardware_response):
         json_response = hardware_response.json()
@@ -290,21 +356,205 @@ class TestHardwareInformation:
     def test_available_providers_contains_strings(self, hardware_response):
         json_response = hardware_response.json()
         providers = json_response["data"]["available_providers"]
-
         for provider in providers:
             assert isinstance(provider, str)
-    
-    def test_recommended_tier_is_valid(self,hardware_response):
-        valid_tiers=["nano","small","medium"]
-        json_response=hardware_response.json()
-        recommended_tier=json_response["data"]["recommended_tier"]
 
-        assert recommended_tier in valid_tiers
-    
+    def test_recommended_tier_is_valid(self, hardware_response):
+        json_response = hardware_response.json()
+        recommended_tier = json_response["data"]["recommended_tier"]
+
+        assert recommended_tier in ["nano", "small", "medium"]
+
     def test_recommended_tier_is_string(self, hardware_response):
-        json_response = hardware_response.json()    
-        recommended_tiers=json_response["data"]["recommended_tier"]
+        json_response = hardware_response.json()
+        recommended_tier = json_response["data"]["recommended_tier"]
 
-        assert isinstance(recommended_tiers,str)
+        assert isinstance(recommended_tier, str)
+
+    def test_gpu_detected_true_means_names_not_empty(self, hardware_response):
+        json_response = hardware_response.json()
+        data = json_response["data"]
+        gpu_detected = data["gpu_detected"]
+        gpu_names = data["gpu_names"]
+        if gpu_detected is True:
+            assert len(gpu_names) > 0
+
+    def test_apple_silicon_and_gpu_mutually_exclusive(self, hardware_response):
+        json_response = hardware_response.json()
+        data = json_response["data"]
+        apple_silicon = data["apple_silicon"]
+        gpu_detected = data["gpu_detected"]
+        if apple_silicon is True:
+            assert gpu_detected is False
+
+    def test_post_method_not_allowed(self):
+        response = client.post("/models/hardware")
+
+        assert response.status_code == 405
 
 
+    def test_returns_500_when_hardware_detection_fails(self):
+        with patch(
+            "app.routes.models.get_hardware_info",
+            side_effect=Exception("hardware error")
+        ):
+            response = client.get("/models/hardware")
+
+            assert response.status_code == 500
+
+
+    def test_no_gpu_returns_empty_gpu_names(self):
+        mock_no_gpu = {
+            "ram_gb": 8.0,
+            "gpu_detected": False,
+            "gpu_names": [],
+            "apple_silicon": None,
+            "available_providers": ["CPUExecutionProvider"],
+            "recommended_tier": "small",
+        }
+        with patch("app.routes.models.get_hardware_info", return_value=mock_no_gpu):
+            response = client.get("/models/hardware")
+            json_response = response.json()
+            data = json_response["data"]
+            gpu_detected = data["gpu_detected"]
+            gpu_names = data["gpu_names"]
+
+            assert gpu_detected is False
+            assert gpu_names == []
+    
+class TestDownloadProgress:
+    """Tests for GET /models/download/{task_id}/progress"""
+
+    # --- Status code tests ---
+
+    def test_returns_200_for_valid_task(self, completed_task_response):
+        assert completed_task_response.status_code == 200
+
+    def test_returns_404_for_unknown_task_id(self):
+        fake_id = str(uuid.uuid4())
+        response = client.get(f"/models/download/{fake_id}/progress")
+
+        assert response.status_code == 404
+
+    def test_returns_404_error_message(self):
+        fake_id = str(uuid.uuid4())
+        response = client.get(f"/models/download/{fake_id}/progress")
+        json_response = response.json()
+        detail = json_response["detail"]
+        assert "not found" in detail.lower()
+
+    def test_returns_409_when_listener_already_active(self, active_listener_task_id):
+        response = client.get(f"/models/download/{active_listener_task_id}/progress")
+
+        assert response.status_code == 409
+
+    # --- Content type tests ---
+
+    def test_content_type_is_event_stream(self, completed_task_response):
+        content_type = completed_task_response.headers["content-type"]
+
+        assert "text/event-stream" in content_type
+
+    # --- Response body tests ---
+
+    def test_response_body_is_not_empty(self, completed_task_response):
+        raw = completed_task_response.text
+
+        assert isinstance(raw, str)
+        assert len(raw) > 0
+
+    def test_response_starts_with_data_prefix(self, completed_task_response):
+        raw = completed_task_response.text
+
+        assert "data:" in raw
+
+    def test_stream_data_is_valid_json(self, completed_task_response):
+        raw = completed_task_response.text
+
+        for line in raw.strip().split("\n"):
+            if line.startswith("data:"):
+                json_part = line[len("data:"):].strip()
+                parsed = json.loads(json_part)
+                assert isinstance(parsed, dict)
+
+    def test_stream_data_has_status_field(self, completed_task_response):
+        raw = completed_task_response.text
+
+        for line in raw.strip().split("\n"):
+            if line.startswith("data:"):
+                json_part = line[len("data:"):].strip()
+                parsed = json.loads(json_part)
+                assert "status" in parsed
+
+    def test_status_is_valid_value(self, completed_task_response):
+        valid_statuses = ["downloading", "complete", "error"]
+        raw = completed_task_response.text
+
+        for line in raw.strip().split("\n"):
+            if line.startswith("data:"):
+                json_part = line[len("data:"):].strip()
+                parsed = json.loads(json_part)
+                status = parsed["status"]
+                assert status in valid_statuses
+
+    # --- Completed task specific tests ---
+
+    def test_completed_stream_has_model_key(self, completed_task_response):
+        raw = completed_task_response.text
+
+        for line in raw.strip().split("\n"):
+            if line.startswith("data:"):
+                json_part = line[len("data:"):].strip()
+                parsed = json.loads(json_part)
+                if parsed["status"] == "complete":
+                    assert "model_key" in parsed
+
+    def test_completed_stream_model_key_is_string(self, completed_task_response):
+        raw = completed_task_response.text
+
+        for line in raw.strip().split("\n"):
+            if line.startswith("data:"):
+                json_part = line[len("data:"):].strip()
+                parsed = json.loads(json_part)
+                if parsed["status"] == "complete":
+                    model_key = parsed["model_key"]
+                    assert isinstance(model_key, str)
+
+    def test_completed_stream_model_key_value(self, completed_task_response):
+        raw = completed_task_response.text
+
+        for line in raw.strip().split("\n"):
+            if line.startswith("data:"):
+                json_part = line[len("data:"):].strip()
+                parsed = json.loads(json_part)
+                if parsed["status"] == "complete":
+                    model_key = parsed["model_key"]
+                    assert model_key == "facenet"
+
+    # --- Error task specific tests ---
+
+    def test_error_stream_contains_error_status(self, error_task_response):
+        raw = error_task_response.text
+
+        assert "error" in raw
+
+    def test_error_stream_has_message_field(self, error_task_response):
+        raw = error_task_response.text
+
+        for line in raw.strip().split("\n"):
+            if line.startswith("data:"):
+                json_part = line[len("data:"):].strip()
+                parsed = json.loads(json_part)
+                if parsed["status"] == "error":
+                    assert "message" in parsed
+
+    def test_error_stream_message_is_string(self, error_task_response):
+        raw = error_task_response.text
+        
+        for line in raw.strip().split("\n"):
+            if line.startswith("data:"):
+                json_part = line[len("data:"):].strip()
+                parsed = json.loads(json_part)
+                if parsed["status"] == "error":
+                    message = parsed["message"]
+                    assert isinstance(message, str)
