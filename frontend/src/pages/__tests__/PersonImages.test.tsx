@@ -4,8 +4,6 @@ import { PersonImages } from '@/pages/PersonImages/PersonImages';
 import type { Image } from '@/types/Media';
 import * as apiFunctions from '@/api/api-functions';
 
-// ImageCard resolves thumbnails through Tauri's convertFileSrc; return the path
-// unchanged so we can assert which person's images are in the DOM by their src.
 jest.mock('@tauri-apps/api/core', () => ({
   invoke: jest.fn().mockResolvedValue(null),
   convertFileSrc: (path: string) => path,
@@ -28,8 +26,6 @@ const makeImage = (id: string, path: string): Image => ({
   tags: [],
 });
 
-// "Person A" stands in for whatever the previous page (e.g. the Home gallery)
-// left in the shared `images` slice; "Person B" is the cluster we navigate to.
 const personAImages = [
   makeImage('a1', '/personA/1.jpg'),
   makeImage('a2', '/personA/2.jpg'),
@@ -45,8 +41,6 @@ const renderPerson = (clusterId: string) =>
       <Route path="/person/:clusterId" element={<PersonImages />} />
     </Routes>,
     {
-      // Pre-seed the shared slice with the previous page's images. This is the
-      // exact condition that produced the flash described in issue #1315.
       preloadedState: {
         images: { images: personAImages, currentViewIndex: -1 },
       },
@@ -79,9 +73,6 @@ describe('PersonImages (issue #1315: no flash of the previous page)', () => {
   test('never paints the stale slice images, on the first frame or after', async () => {
     const { container } = renderPerson('B');
 
-    // First frame: before the cluster query resolves, the shared slice still
-    // holds Person A's images. The grid must not paint them, otherwise the user
-    // sees the flash. (This assertion fails against the pre-fix code.)
     expect(hasPersonA(container)).toBe(false);
 
     // Let the query resolve, then confirm Person A never appears at any point.

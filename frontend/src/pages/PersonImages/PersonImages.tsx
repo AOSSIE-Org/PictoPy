@@ -22,8 +22,7 @@ export const PersonImages = () => {
   const images = useSelector(selectImages);
   const [clusterName, setClusterName] = useState<string>('random_name');
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  // Which cluster the shared `images` slice currently holds. Keyed on clusterId
-  // (not `isLoading`) so it also covers person A -> person B when B is cached.
+  
   const [loadedClusterId, setLoadedClusterId] = useState<string | undefined>(
     undefined,
   );
@@ -52,9 +51,7 @@ export const PersonImages = () => {
     }
   }, [data, isSuccess, isError, isLoading, dispatch, clusterId]);
 
-  // Until the slice is synced for this cluster it still holds the previous
-  // page's images (issue #1315). Fall back to the cluster-scoped query data for
-  // that window; read the slice once synced so favourite toggles still work.
+  // Fallback to query data until Redux slice syncs for this cluster (#1315)
   const personImages =
     clusterId !== undefined && loadedClusterId === clusterId
       ? images
