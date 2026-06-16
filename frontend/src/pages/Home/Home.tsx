@@ -22,7 +22,7 @@ export const Home = () => {
   const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
 
-  const { data, isLoading, isSuccess, isError, error } = usePictoQuery({
+  const { successData, isLoading, isSuccess, isError, error } = usePictoQuery({
     queryKey: ['images'],
     queryFn: () => fetchAllImages(),
     enabled: !isSearchActive,
@@ -40,10 +40,9 @@ export const Home = () => {
 
   useEffect(() => {
     if (!isSearchActive && isSuccess) {
-      const images = data?.data as Image[];
-      dispatch(setImages(images));
+      dispatch(setImages(successData ?? []));
     }
-  }, [data, isSuccess, dispatch, isSearchActive]);
+  }, [successData, isSuccess, dispatch, isSearchActive]);
 
   const title =
     isSearchActive && images.length > 0
