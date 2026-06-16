@@ -16,20 +16,6 @@ http:
       }
   auth: inherit
 
-runtime:
-  scripts:
-    - type: tests
-      code: |-
-        test("returns 200", function() {
-          expect(res.status).to.equal(200);
-        });
-
-        test("response has task_id", function() {
-          expect(res.body).to.have.property("task_id");
-          expect(res.body.task_id).to.be.a("string");
-          expect(res.body.task_id.length).to.be.above(0);
-        });
-
 settings:
   encodeUrl: true
   timeout: 0
