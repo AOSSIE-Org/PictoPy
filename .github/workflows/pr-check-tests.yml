@@ -4,8 +4,7 @@ on:
   pull_request:
     branches:
       - main
-      
-    
+
 jobs:
   linting:
     runs-on: ubuntu-latest

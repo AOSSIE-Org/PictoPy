@@ -855,9 +855,7 @@
     },
     "/images/search": {
       "get": {
-        "tags": [
-          "Images"
-        ],
+        "tags": ["Images"],
         "summary": "Search Images",
         "description": "Search images by:\n- AI tags (YOLO detected classes)\n- Metadata (location, path, etc.)\n- Filename (image path)\n\nNote:\nFace cluster search is not supported because the current database schema\ndoes not include face_clusters.",
         "operationId": "search_images_images_search_get",
@@ -3290,10 +3288,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "message",
-          "error"
-        ],
+        "required": ["message", "error"],
         "title": "ErrorResponse"
       },
       "app__schemas__user_preferences__ErrorResponse": {
@@ -3312,11 +3307,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "success",
-          "error",
-          "message"
-        ],
+        "required": ["success", "error", "message"],
         "title": "ErrorResponse",
         "description": "Error response model"
       }
