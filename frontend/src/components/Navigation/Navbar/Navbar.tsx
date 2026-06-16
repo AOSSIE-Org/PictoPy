@@ -5,12 +5,11 @@ import { startTextSearch, clearSearch } from '@/features/searchSlice';
 import { Input } from '@/components/ui/input';
 import { ThemeSelector } from '@/components/ThemeToggle';
 import { Search, Heart, ArrowRight } from 'lucide-react';
-import { useDispatch, useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
 import { Link, useNavigate } from 'react-router';
-import { useState, useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ROUTES } from '@/constants/routes';
 import { Separator } from '@/components/ui/separator';
@@ -26,7 +25,7 @@ export function Navbar() {
   const userAvatar = useSelector(selectAvatar);
   const queryImage = useSelector((state: any) => state.search.queryImage);
   const dispatch = useDispatch();
-  const [searchInput, setSearchInput] = useState('');
+  const [searchInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Debounce search
@@ -44,7 +43,6 @@ export function Navbar() {
     return () => clearTimeout(timer);
   }, [searchInput, dispatch]);
 
-  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const [isExpanded, setIsExpanded] = useState(false);
