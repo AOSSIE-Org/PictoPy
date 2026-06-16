@@ -83,8 +83,8 @@ export const PersonImages = () => {
     }
   };
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
+    <div>
+      <div className="my-6 flex items-center justify-between">
         <Button
           variant="outline"
           onClick={() => navigate(`/${ROUTES.AI}`)}
@@ -124,15 +124,16 @@ export const PersonImages = () => {
         )}
       </div>
       <h1 className="mb-6 text-2xl font-bold">{displayName}</h1>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {personImages.map((image, index) => (
-          <ImageCard
-            key={image.id}
-            image={image}
-            imageIndex={index}
-            className="w-full"
-            onClick={() => dispatch(setCurrentViewIndex(index))}
-          />
+          <div key={image.id} className="group relative">
+            <ImageCard
+              image={image}
+              imageIndex={index}
+              className="w-full transition-transform duration-200 group-hover:scale-105"
+              onClick={() => dispatch(setCurrentViewIndex(index))}
+            />
+          </div>
         ))}
       </div>
 
