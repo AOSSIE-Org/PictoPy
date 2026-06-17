@@ -191,6 +191,6 @@ global.fetch = jest.fn().mockImplementation((url: string) => {
   return Promise.resolve({
     ok: true,
     status: 200,
-    json: () => Promise.resolve({}),
+    json: () => Promise.resolve({ success: true, data: [] }),
   });
 });
