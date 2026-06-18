@@ -11,7 +11,6 @@ import { fetchClusterImages, renameCluster } from '@/api/api-functions';
 import { useNavigate, useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ROUTES } from '@/constants/routes';
 import { Check, Pencil, ArrowLeft } from 'lucide-react';
 
 export const PersonImages = () => {
