@@ -11,7 +11,6 @@ import { fetchClusterImages, renameCluster } from '@/api/api-functions';
 import { useNavigate, useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ROUTES } from '@/constants/routes';
 import { Check, Pencil, ArrowLeft } from 'lucide-react';
 
 export const PersonImages = () => {
@@ -87,11 +86,11 @@ export const PersonImages = () => {
       <div className="my-6 flex items-center justify-between">
         <Button
           variant="outline"
-          onClick={() => navigate(`/${ROUTES.AI}`)}
+          onClick={() => navigate(-1)} //Navigate 1 page back
           className="flex cursor-pointer items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to AI Tagging
+          Back
         </Button>
 
         {isEditing ? (
