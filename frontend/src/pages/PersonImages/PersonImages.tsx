@@ -87,7 +87,7 @@ export const PersonImages = () => {
       <div className="my-6 flex items-center justify-between">
         <Button
           variant="outline"
-          onClick={() => navigate(-1)} //Navigate 1 page back 
+          onClick={() => navigate(-1)} //Navigate 1 page back
           className="flex cursor-pointer items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
