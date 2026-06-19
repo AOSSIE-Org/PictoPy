@@ -60,6 +60,7 @@ except OSError as e:
     logger.fatal("Cannot start backend securely. Exiting.")
     sys.exit(1)
 
+
 def _get_env_float(
     name: str,
     default: float,

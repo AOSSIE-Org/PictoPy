@@ -7,7 +7,6 @@ from pydantic import BaseModel
 from app.database.images import db_toggle_image_favourite_status, db_get_image_by_id
 from app.logging.setup_logging import get_logger
 
-
 # Initialize logger
 logger = get_logger(__name__)
 router = APIRouter()

@@ -47,7 +47,9 @@ async def lifespan(app: FastAPI):
             await asyncio.sleep(0.1)
 
         if not settings.SHUTDOWN_TOKEN:
-            logger.error(f"pictopy_shutdown.token not found at {settings.SHUTDOWN_TOKEN_FILE} after 5 seconds")
+            logger.error(
+                f"pictopy_shutdown.token not found at {settings.SHUTDOWN_TOKEN_FILE} after 5 seconds"
+            )
             logger.error("Ensure the backend starts before the sync service.")
             raise RuntimeError("Backend shutdown token not found")
 

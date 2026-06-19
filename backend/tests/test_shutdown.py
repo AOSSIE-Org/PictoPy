@@ -1,24 +1,29 @@
 import os
 import asyncio
-import hmac
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app as main_app
-from app.config import settings
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from main import app as main_app
 
 VALID_TOKEN = "a" * 64
+
 
 @pytest.fixture
 def app():
     return main_app
 
+
 @pytest.fixture
 def client():
-    with patch("app.config.settings.SHUTDOWN_TOKEN", VALID_TOKEN), \
-         patch("app.routes.shutdown.asyncio.create_task"):
+    with patch("app.config.settings.SHUTDOWN_TOKEN", VALID_TOKEN), patch(
+        "app.routes.shutdown.asyncio.create_task"
+    ):
         with TestClient(main_app, raise_server_exceptions=False) as c:
             yield c
 
@@ -26,6 +31,7 @@ def client():
 # ---------------------------------------------------------------------------
 # Header matrix tests
 # ---------------------------------------------------------------------------
+
 
 class TestShutdownHeaderMatrix:
     """Cover all four header scenarios on the /shutdown endpoint."""
@@ -66,6 +72,7 @@ class TestShutdownHeaderMatrix:
 # Token rotation / restart simulation
 # ---------------------------------------------------------------------------
 
+
 class TestTokenRotation:
     """Verify per-session token semantics."""
 
@@ -74,16 +81,18 @@ class TestTokenRotation:
         old_token = "c" * 64
         new_token = "d" * 64
 
-        with patch("app.config.settings.SHUTDOWN_TOKEN", new_token), \
-             patch("app.routes.shutdown.asyncio.create_task"):
+        with patch("app.config.settings.SHUTDOWN_TOKEN", new_token), patch(
+            "app.routes.shutdown.asyncio.create_task"
+        ):
             with TestClient(app, raise_server_exceptions=False) as c:
                 resp = c.post("/shutdown", headers={"X-Shutdown-Token": old_token})
                 assert resp.status_code == 403
 
     def test_new_token_accepted_after_rotation(self, app):
         new_token = "e" * 64
-        with patch("app.config.settings.SHUTDOWN_TOKEN", new_token), \
-             patch("app.routes.shutdown.asyncio.create_task"):
+        with patch("app.config.settings.SHUTDOWN_TOKEN", new_token), patch(
+            "app.routes.shutdown.asyncio.create_task"
+        ):
             with TestClient(app, raise_server_exceptions=False) as c:
                 resp = c.post("/shutdown", headers={"X-Shutdown-Token": new_token})
                 assert resp.status_code == 200
@@ -92,6 +101,7 @@ class TestTokenRotation:
 # ---------------------------------------------------------------------------
 # Token file cleanup
 # ---------------------------------------------------------------------------
+
 
 class TestTokenFileCleanup:
     """_delayed_shutdown should attempt to remove the token file."""
@@ -102,12 +112,12 @@ class TestTokenFileCleanup:
         token_file_obj.write(VALID_TOKEN)
         token_file_obj.close()
 
-        with patch("app.config.settings.SHUTDOWN_TOKEN", VALID_TOKEN), \
-             patch("app.config.settings.SHUTDOWN_TOKEN_FILE", token_file), \
-             patch("app.routes.shutdown.os.kill"), \
-             patch("app.routes.shutdown.os._exit"):
+        with patch("app.config.settings.SHUTDOWN_TOKEN", VALID_TOKEN), patch(
+            "app.config.settings.SHUTDOWN_TOKEN_FILE", token_file
+        ), patch("app.routes.shutdown.os.kill"), patch("app.routes.shutdown.os._exit"):
 
             from app.routes.shutdown import _delayed_shutdown
+
             asyncio.get_event_loop().run_until_complete(_delayed_shutdown(delay=0))
 
         assert not os.path.exists(token_file)
@@ -116,11 +126,12 @@ class TestTokenFileCleanup:
         """If file was already deleted, _delayed_shutdown must not propagate the error."""
         token_file = str(tmp_path / "nonexistent.token")
 
-        with patch("app.config.settings.SHUTDOWN_TOKEN_FILE", token_file), \
-             patch("app.routes.shutdown.os.kill"), \
-             patch("app.routes.shutdown.os._exit"):
+        with patch("app.config.settings.SHUTDOWN_TOKEN_FILE", token_file), patch(
+            "app.routes.shutdown.os.kill"
+        ), patch("app.routes.shutdown.os._exit"):
 
             from app.routes.shutdown import _delayed_shutdown
+
             # Should complete without raising
             asyncio.get_event_loop().run_until_complete(_delayed_shutdown(delay=0))
 
@@ -128,6 +139,7 @@ class TestTokenFileCleanup:
 # ---------------------------------------------------------------------------
 # Concurrent invalid requests
 # ---------------------------------------------------------------------------
+
 
 class TestConcurrentInvalidRequests:
     """Concurrent bad requests must not block a legitimate shutdown."""
@@ -147,18 +159,21 @@ class TestConcurrentInvalidRequests:
 # Corrupted / invalid token content loaded by sync service
 # ---------------------------------------------------------------------------
 
+
 class TestCorruptedTokenContent:
     """If the token file had garbage, hmac.compare_digest must still return False."""
 
     def test_corrupted_token_always_rejects(self, app):
         corrupted = "\x00\xff partial"
-        with patch("app.config.settings.SHUTDOWN_TOKEN", corrupted), \
-             patch("app.routes.shutdown.asyncio.create_task"):
+        with patch("app.config.settings.SHUTDOWN_TOKEN", corrupted), patch(
+            "app.routes.shutdown.asyncio.create_task"
+        ):
             with TestClient(app, raise_server_exceptions=False) as c:
                 # Even sending the corrupted string must not crash the endpoint
                 resp = c.post("/shutdown", headers={"X-Shutdown-Token": corrupted})
                 # hmac.compare_digest may raise TypeError for non-str/bytes — document behavior
                 assert resp.status_code in (200, 400, 403, 500)
+
 
 class TestEmptyTokenContent:
     def test_empty_settings_token_always_rejects(self, app):
@@ -178,8 +193,14 @@ class TestEmptyTokenContent:
     def test_long_token_header_rejected(self, app):
         """Extremely long token header should be rejected."""
         long_token = "a" * 1024 * 1024  # 1MB
-        with patch("app.config.settings.SHUTDOWN_TOKEN", VALID_TOKEN), \
-             patch("app.routes.shutdown.asyncio.create_task"):
+        with patch("app.config.settings.SHUTDOWN_TOKEN", VALID_TOKEN), patch(
+            "app.routes.shutdown.asyncio.create_task"
+        ):
             with TestClient(app, raise_server_exceptions=False) as c:
                 resp = c.post("/shutdown", headers={"X-Shutdown-Token": long_token})
-                assert resp.status_code in (400, 403, 413, 431) # Payload too large, forbidden, or header fields too large
+                assert resp.status_code in (
+                    400,
+                    403,
+                    413,
+                    431,
+                )  # Payload too large, forbidden, or header fields too large
