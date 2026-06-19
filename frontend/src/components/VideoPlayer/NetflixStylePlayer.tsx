@@ -11,6 +11,7 @@ import {
   VolumeX,
 } from 'lucide-react';
 import { Slider } from '../../components/ui/Slider';
+import { convertFileSrc } from '@tauri-apps/api/core';
 
 interface NetflixStylePlayerProps {
   videoSrc: string;
@@ -38,22 +39,31 @@ export default function NetflixStylePlayer({
       timeout = setTimeout(() => setShowControls(false), 3000);
     };
 
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === containerRef.current);
+    };
+
     const container = containerRef.current;
     if (container) {
       container.addEventListener('mousemove', showControlsTemporarily);
       container.addEventListener('mouseenter', showControlsTemporarily);
     }
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     return () => {
       if (container) {
         container.removeEventListener('mousemove', showControlsTemporarily);
         container.removeEventListener('mouseenter', showControlsTemporarily);
       }
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
       clearTimeout(timeout);
     };
   }, []);
 
   const formatTime = (timeInSeconds: number) => {
+    if (isNaN(timeInSeconds) || !isFinite(timeInSeconds)) {
+      return '0:00';
+    }
     const hours = Math.floor(timeInSeconds / 3600);
     const minutes = Math.floor((timeInSeconds % 3600) / 60);
     const seconds = Math.floor(timeInSeconds % 60);
@@ -95,7 +105,6 @@ export default function NetflixStylePlayer({
     } else {
       document.exitFullscreen();
     }
-    setIsFullscreen(!isFullscreen);
   };
 
   const skipTime = (seconds: number) => {
@@ -108,6 +117,7 @@ export default function NetflixStylePlayer({
     if (videoRef.current) {
       const volumeValue = newVolume[0];
       videoRef.current.volume = volumeValue;
+      videoRef.current.muted = volumeValue === 0;
       setVolume(volumeValue);
       setIsMuted(volumeValue === 0);
     }
@@ -130,9 +140,11 @@ export default function NetflixStylePlayer({
       >
         <video
           ref={videoRef}
-          src={videoSrc}
+          src={convertFileSrc(videoSrc)}
           className="h-full w-full"
           onTimeUpdate={handleProgress}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
           preload="auto"
         />
       </div>
