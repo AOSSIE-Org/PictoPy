@@ -3,7 +3,7 @@ import { ThemeSelector } from '@/components/ThemeToggle';
 import { Search, Heart, ArrowRight } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
-import { clearSearch } from '@/features/searchSlice';
+import { clearSearch, setTagSearchQuery, clearTagSearchQuery } from '@/features/searchSlice';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
 import { Link, useNavigate } from 'react-router';
@@ -25,6 +25,7 @@ export function Navbar() {
   const searchState = useSelector((state: any) => state.search);
   const isSearchActive = searchState.active;
   const queryImage = searchState.queryImage;
+  const tagQuery = searchState.tagQuery;
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -107,7 +108,9 @@ export function Navbar() {
               />
               {isSearchActive && (
                 <button
-                  onClick={() => dispatch(clearSearch())}
+                  onClick={() => {
+                    dispatch(clearSearch());
+                    dispatch(clearTagSearchQuery());}}
                   className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white"
                   title="Close"
                   aria-label="Close"
@@ -122,7 +125,9 @@ export function Navbar() {
           <Input
             type="search"
             placeholder="Add to your search"
+            value={tagQuery}
             className="mr-2 flex-1 border-0 bg-neutral-200"
+            onChange={(e) => dispatch(setTagSearchQuery(e.target.value))}
             onFocus={() => setIsExpanded(true)}
             onClick={() => setIsExpanded(true)}
           />

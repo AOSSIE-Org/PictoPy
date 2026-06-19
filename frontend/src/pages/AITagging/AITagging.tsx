@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState,useMemo } from 'react';
+import { RootState } from '@/app/store';
 import { useDispatch, useSelector } from 'react-redux';
 import { FaceCollections } from '@/components/FaceCollections';
 import { Image } from '@/types/Media';
@@ -19,6 +20,18 @@ export const AITagging = () => {
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
   const taggedImages = useSelector(selectImages);
+  const tagQuery = useSelector(
+    (state: RootState) => state.search.tagQuery
+  );
+  const filteredImages = useMemo(() => {
+    if (!tagQuery.trim()) return taggedImages;
+
+    const q = tagQuery.toLowerCase();
+    
+    return taggedImages.filter((img) =>
+      img.tags?.some((tag) => tag.toLowerCase().includes(q))
+  );
+}, [taggedImages, tagQuery]);
   const {
     data: imagesData,
     isLoading: imagesLoading,
@@ -56,18 +69,26 @@ export const AITagging = () => {
 
         {/* Gallery Section */}
         <div className="flex-1">
-          {taggedImages.length > 0 ? (
-            <ChronologicalGallery
-              images={taggedImages}
-              showTitle={true}
-              title="All Images"
-              onMonthOffsetsChange={setMonthMarkers}
-              scrollContainerRef={scrollableRef}
-            />
-          ) : (
+          {taggedImages.length === 0 ? (
             <EmptyAITaggingState />
-          )}
-        </div>
+          ) : filteredImages.length === 0 ? (
+          <div className="flex h-40 items-center justify-center text-muted-foreground">
+            No images match "{tagQuery}"
+            </div>
+            ) : (
+            <ChronologicalGallery
+            images={filteredImages}
+            showTitle={true}
+            title={
+              tagQuery
+              ? `Tag Search Results (${filteredImages.length} found)`
+              : 'All Images'
+            }
+            onMonthOffsetsChange={setMonthMarkers}
+            scrollContainerRef={scrollableRef}
+            />
+            )}
+            </div>
       </div>
       {monthMarkers.length > 0 && (
         <TimelineScrollbar
