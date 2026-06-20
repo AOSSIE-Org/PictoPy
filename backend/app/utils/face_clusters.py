@@ -286,8 +286,16 @@ def cluster_util_cluster_all_face_embeddings(
 
     estimated_eps = estimate_eps(embeddings_array, k=min_samples)
     if estimated_eps is not None:
-        logger.info(f"Adaptive eps estimated: {estimated_eps:.4f}")
-        eps = estimated_eps
+        clamped_eps = min(estimated_eps, max_distance)
+        if clamped_eps < estimated_eps:
+            logger.warning(
+                f"Adaptive eps {estimated_eps:.4f} exceeded max_distance "
+                f"{max_distance:.4f} (similarity_threshold={similarity_threshold}); "
+                f"clamping to {clamped_eps:.4f}"
+            )
+        else:
+            logger.info(f"Adaptive eps estimated: {clamped_eps:.4f}")
+        eps = clamped_eps
     else:
         logger.warning(
             f"Too few embeddings for eps estimation, using config default: {eps}"
