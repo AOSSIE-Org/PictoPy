@@ -10,6 +10,25 @@ on:
         type: string
 
 jobs:
+  validate-changelog:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check CHANGELOG entry exists for this release
+        run: |
+          RAW_TAG="${{ github.event.release.tag_name || github.event.inputs.tag }}"
+          VERSION="${RAW_TAG#v}"
+          if ! grep -q "## \[${VERSION}\]" CHANGELOG.md; then
+            echo "Error: No entry found for version [${VERSION}] in CHANGELOG.md"
+            echo "Add a '## [${VERSION}]' section to CHANGELOG.md before releasing."
+            exit 1
+          fi
+          echo "CHANGELOG.md entry for [${VERSION}] verified."
+
   build-server-windows:
     runs-on: windows-latest
     steps:
@@ -268,6 +287,7 @@ jobs:
       contents: write
     needs:
       [
+        validate-changelog,
         build-server-windows,
         build-server-ubuntu,
         build-server-macos,
