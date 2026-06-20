@@ -97,7 +97,8 @@ if ! command -v node &> /dev/null; then
             curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
             sudo apt-get install -y nodejs
         elif [ -f "/etc/fedora-release" ] || [ -f "/etc/redhat-release" ]; then
-            sudo dnf install -y nodejs npm
+            curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo -E bash -
+            sudo dnf install -y nodejs
         fi
     elif [ "$OS_TYPE" = "Darwin" ]; then
         brew install node
