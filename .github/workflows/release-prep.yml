@@ -72,24 +72,24 @@ jobs:
           # Build section
           SECTION="## [$VERSION] - $DATE
 
-<!-- Auto-generated draft. Review and edit before merging. -->"
+          <!-- Auto-generated draft. Review and edit before merging. -->"
 
           [ -n "$ADDED" ]   && SECTION="$SECTION
 
-### Added
-$ADDED"
+          ### Added
+          $ADDED"
           [ -n "$FIXED" ]   && SECTION="$SECTION
 
-### Fixed
-$FIXED"
+          ### Fixed
+          $FIXED"
           [ -n "$CHANGED" ] && SECTION="$SECTION
 
-### Changed
-$CHANGED"
+          ### Changed
+          $CHANGED"
           [ -n "$OTHER" ]   && SECTION="$SECTION
 
-### Other
-$OTHER"
+          ### Other
+          $OTHER"
 
           echo "$SECTION" > /tmp/section.md
 
