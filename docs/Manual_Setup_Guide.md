@@ -152,12 +152,26 @@ Before setting up the Python backend and sync-microservice, you need to have **M
    sudo apt install -y libglib2.0-dev libgl1-mesa-glx
    ```
 
-   **Other Systems:** Consult your distribution's documentation for installation instructions.
+    **Fedora/RedHat:**
+
+    ```bash
+    sudo dnf install -y glib2-devel mesa-libGL
+    ```
+
+    **Other Systems:** Consult your distribution's documentation for installation instructions.
 
 2. **`gobject-2.0` Not Found Error:** Resolve this error by installing `libglib2.0-dev` on Debian/Ubuntu:
 
-   ```bash
-   sudo apt install -y libglib2.0-dev pkg-config
-   ```
+    **Debian/Ubuntu:**
 
-   For other systems, consult your distribution's documentation.
+    ```bash
+    sudo apt install -y libglib2.0-dev pkg-config
+    ```
+
+    **Fedora/RedHat:**
+
+    ```bash
+    sudo dnf install -y glib2-devel pkgconf-pkg-config
+    ```
+
+    For other systems, consult your distribution's documentation.

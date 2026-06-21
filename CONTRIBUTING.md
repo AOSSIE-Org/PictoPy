@@ -8,7 +8,7 @@ NOTE: Please do not open a PR for the issue which is not yet reviewed and labell
 
 ## Setup
 
-1. Setup Using Script (Recommended only for Windows and Debian-based OS like Ubuntu): [Guide](docs/Script_Setup_Guide.md)
+1. Setup Using Script (Recommended for Windows, Debian-based OS like Ubuntu, and Fedora/RedHat-based OS): [Guide](docs/Script_Setup_Guide.md)
 2. Setup Manually(Recommended for other OSes): [Guide](docs/Manual_Setup_Guide.md)
 
 ## Docs Website Setup
