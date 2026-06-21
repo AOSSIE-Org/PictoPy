@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
@@ -76,6 +76,11 @@ export const useMutationFeedback = (
     onError,
   } = options;
 
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+  onSuccessRef.current = onSuccess;
+  onErrorRef.current = onError;
+
   const { isPending, isSuccess, isError, error } = mutationState;
 
   // Handle loading state
@@ -98,18 +103,11 @@ export const useMutationFeedback = (
         }),
       );
 
-      if (onSuccess) {
-        onSuccess();
+      if (onSuccessRef.current) {
+        onSuccessRef.current();
       }
     }
-  }, [
-    isSuccess,
-    showSuccess,
-    successTitle,
-    successMessage,
-    dispatch,
-    onSuccess,
-  ]);
+  }, [isSuccess, showSuccess, successTitle, successMessage, dispatch]);
 
   // Handle error state
   useEffect(() => {
@@ -124,11 +122,11 @@ export const useMutationFeedback = (
         }),
       );
 
-      if (onError) {
-        onError(error);
+      if (onErrorRef.current) {
+        onErrorRef.current(error);
       }
     }
-  }, [isError, showError, errorTitle, errorMessage, error, dispatch, onError]);
+  }, [isError, showError, errorTitle, errorMessage, error, dispatch]);
 
   // Return original state for convenience
   return mutationState;

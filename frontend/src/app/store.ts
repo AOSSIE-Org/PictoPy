@@ -7,6 +7,7 @@ import faceClustersReducer from '@/features/faceClustersSlice';
 import infoDialogReducer from '@/features/infoDialogSlice';
 import globalAlertReducer from '@/features/globalAlertSlice';
 import folderReducer from '@/features/folderSlice';
+import albumsReducer from '@/features/albumsSlice';
 import memoriesReducer from '@/features/memoriesSlice';
 
 export const rootReducer = combineReducers({
@@ -18,6 +19,7 @@ export const rootReducer = combineReducers({
   globalAlert: globalAlertReducer,
   folders: folderReducer,
   search: searchReducer,
+  albums: albumsReducer,
   memories: memoriesReducer,
 });
 
