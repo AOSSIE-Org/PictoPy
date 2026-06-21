@@ -3,6 +3,9 @@ import json
 import numpy as np
 from typing import Optional, List, Dict, Union, TypedDict
 from app.config.settings import DATABASE_PATH
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
 
 # Type definitions
 FaceId = int
@@ -331,10 +334,10 @@ def db_update_face_cluster_ids_batch(
 
         if own_connection:
             conn.commit()
-    except Exception:
+    except sqlite3.Error as e:
         if own_connection:
             conn.rollback()
-        print("Error updating face cluster IDs in batch.")
+        logger.error(f"Error updating face cluster IDs in batch: {e}")
         raise
     finally:
         if own_connection:

@@ -3,6 +3,9 @@ import sqlite3
 import json
 from typing import Optional, Dict, Any
 from app.config.settings import DATABASE_PATH
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def db_create_metadata_table() -> None:
@@ -84,11 +87,11 @@ def db_update_metadata(
         if own_connection:
             conn.commit()
         return success
-    except Exception as e:
+    except sqlite3.Error as e:
         if own_connection:
             conn.rollback()
 
-        print(f"Error updating metadata: {e}")
+        logger.error(f"Error updating metadata: {e}")
         raise
     finally:
         if own_connection:
