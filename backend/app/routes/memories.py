@@ -25,7 +25,11 @@ from app.database.images import (
     db_get_images_by_date_range,
     db_get_images_by_year_month,
 )
-from app.utils.memory_clustering import MemoryClustering
+from app.utils.memory_clustering import (
+    MemoryClustering,
+    find_total_location_memories,
+    generate_clusters_for_weekends,
+)
 from app.logging.setup_logging import get_logger
 
 # Initialize router and logger
@@ -112,6 +116,12 @@ class LocationsResponse(BaseModel):
     locations: List[LocationCluster]
 
 
+class WeeklyMemoriesResponse(BaseModel):
+    success: bool
+    message: str
+    weekly_memories: List[Dict]
+
+
 # API Endpoints
 
 
@@ -163,7 +173,7 @@ def generate_memories(
         )
 
         memories = clustering.cluster_memories(images)
-
+        tlm = find_total_location_memories(memories)
         # Calculate breakdown
         location_count = sum(1 for m in memories if m.get("type") == "location")
         date_count = sum(1 for m in memories if m.get("type") == "date")
@@ -177,6 +187,7 @@ def generate_memories(
                 "memory_count": len(memories),
                 "image_count": len(images),
                 "memories": memories,
+                "total_location": tlm,
             },
             "success": True,
             "message": f"{len(memories)} memories ({location_count} location, {date_count} date)",
@@ -466,3 +477,24 @@ def get_locations(
     except Exception:
         logger.error("Error getting locations", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to get locations")
+
+
+@router.get("/weekly-memories", response_model=WeeklyMemoriesResponse)
+def get_weekly_memories():
+    try:
+        weekly_clusters = generate_clusters_for_weekends()
+        if weekly_clusters:
+            return WeeklyMemoriesResponse(
+                success=True,
+                message="Weekly cluster created.",
+                weekly_memories=weekly_clusters,
+            )
+        else:
+            return WeeklyMemoriesResponse(
+                success=True,
+                message="Please add images.",
+                weekly_memories=weekly_clusters,
+            )
+    except Exception:
+        logger.error("Failed to create weekly memories", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create weekly memories")

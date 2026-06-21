@@ -39,8 +39,8 @@ export const MemoryCard = React.memo<MemoryCardProps>(({ memory }) => {
       : '/photo.png'; // Default placeholder
 
   // Determine memory type
-  // Backend uses 0,0 as sentinel for date-based memories (no GPS data)
-  const isDateBased = memory.center_lat == null || memory.center_lon == null;
+  // Use location_name to distinguish between location-based and date-based memories
+  const isDateBased = memory.location_name === null;
 
   // Format title based on memory type
   let displayTitle = memory.title || 'Untitled Memory';
