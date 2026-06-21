@@ -3,6 +3,7 @@ import {
   generateMemories,
   getTimeline,
   getOnThisDay,
+  getWeeklyMemories,
 } from '@/api/api-functions/memories';
 
 /**
@@ -46,5 +47,16 @@ export const useOnThisDay = () => {
     queryKey: ['memories', 'onThisDay'],
     queryFn: () => getOnThisDay(),
     staleTime: 60 * 60 * 1000, // 1 hour (this data is date-specific)
+  });
+};
+
+/**
+ * Custom hook for fetching weekend memory clusters
+ */
+export const useWeeklyMemories = () => {
+  return usePictoQuery({
+    queryKey: ['memories', 'weekends'],
+    queryFn: () => getWeeklyMemories(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };

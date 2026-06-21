@@ -30,7 +30,7 @@ export interface Memory {
   memory_id: string;
   title: string;
   description: string;
-  location_name: string;
+  location_name: string | null;
   date_start: string | null;
   date_end: string | null;
   image_count: number;
@@ -44,7 +44,7 @@ export interface Memory {
  * Location cluster with sample images
  */
 export interface LocationCluster {
-  location_name: string;
+  location_name: string | null;
   center_lat: number;
   center_lon: number;
   image_count: number;
@@ -125,5 +125,43 @@ export const getLocations = async (options?: {
 
   const url = `${memoriesEndpoints.locations}${params.toString() ? '?' + params.toString() : ''}`;
   const response = await apiClient.get<APIResponse>(url);
+  return response.data;
+};
+
+/**
+ * A single image within a weekend memory cluster
+ */
+export interface WeeklyMemoryImage {
+  id: string;
+  path: string;
+  thumbnailPath: string;
+}
+
+/**
+ * A single weekend memory cluster returned by the backend
+ */
+export interface WeeklyMemory {
+  mem_id: string;
+  images: WeeklyMemoryImage[];
+  start_date: string;
+  end_date: string;
+}
+
+/**
+ * Full response shape from GET /api/memories/weekly-memories
+ */
+export interface WeeklyMemoriesResponse {
+  success: boolean;
+  message: string;
+  weekly_memories: WeeklyMemory[];
+}
+
+/**
+ * Fetch weekend memory clusters from the backend
+ */
+export const getWeeklyMemories = async (): Promise<WeeklyMemoriesResponse> => {
+  const response = await apiClient.get<WeeklyMemoriesResponse>(
+    memoriesEndpoints.weeklyMemories,
+  );
   return response.data;
 };

@@ -37,4 +37,5 @@ export const memoriesEndpoints = {
   timeline: '/api/memories/timeline',
   onThisDay: '/api/memories/on-this-day',
   locations: '/api/memories/locations',
+  weeklyMemories: '/api/memories/weekly-memories',
 };
