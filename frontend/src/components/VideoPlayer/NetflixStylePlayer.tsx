@@ -28,6 +28,8 @@ export default function NetflixStylePlayer({
   const [isMuted, setIsMuted] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -83,9 +85,24 @@ export default function NetflixStylePlayer({
 
   const handleProgress = () => {
     if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime);
       setProgress(
-        (videoRef.current.currentTime / videoRef.current.duration) * 100,
+        videoRef.current.duration
+          ? (videoRef.current.currentTime / videoRef.current.duration) * 100
+          : 0,
       );
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration);
+    }
+  };
+
+  const handleDurationChange = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration);
     }
   };
 
@@ -95,7 +112,9 @@ export default function NetflixStylePlayer({
       const clickPosition =
         (e.clientX - progressBar.getBoundingClientRect().left) /
         progressBar.offsetWidth;
-      videoRef.current.currentTime = clickPosition * videoRef.current.duration;
+      const newTime = clickPosition * videoRef.current.duration;
+      videoRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
     }
   };
 
@@ -109,7 +128,9 @@ export default function NetflixStylePlayer({
 
   const skipTime = (seconds: number) => {
     if (videoRef.current) {
-      videoRef.current.currentTime += seconds;
+      const newTime = videoRef.current.currentTime + seconds;
+      videoRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
     }
   };
 
@@ -143,8 +164,11 @@ export default function NetflixStylePlayer({
           src={convertFileSrc(videoSrc)}
           className="h-full w-full"
           onTimeUpdate={handleProgress}
+          onLoadedMetadata={handleLoadedMetadata}
+          onDurationChange={handleDurationChange}
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
+          onEnded={() => setIsPlaying(false)}
           preload="auto"
         />
       </div>
@@ -179,9 +203,9 @@ export default function NetflixStylePlayer({
             <FastForward size={24} />
           </button>
           <div className="text-white">
-            {formatTime(videoRef.current?.currentTime ?? 0) +
+            {formatTime(currentTime) +
               ' / ' +
-              formatTime(videoRef.current?.duration ?? 0)}
+              formatTime(duration)}
           </div>
         </div>
 
