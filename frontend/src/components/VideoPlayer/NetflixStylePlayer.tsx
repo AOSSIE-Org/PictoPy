@@ -112,7 +112,11 @@ export default function NetflixStylePlayer({
       const clickPosition =
         (e.clientX - progressBar.getBoundingClientRect().left) /
         progressBar.offsetWidth;
-      const newTime = clickPosition * videoRef.current.duration;
+      const rawTime = clickPosition * videoRef.current.duration;
+      const maxTime = Number.isFinite(videoRef.current.duration)
+        ? videoRef.current.duration
+        : 0;
+      const newTime = Math.min(Math.max(rawTime, 0), maxTime);
       videoRef.current.currentTime = newTime;
       setCurrentTime(newTime);
     }
@@ -128,7 +132,11 @@ export default function NetflixStylePlayer({
 
   const skipTime = (seconds: number) => {
     if (videoRef.current) {
-      const newTime = videoRef.current.currentTime + seconds;
+      const rawTime = videoRef.current.currentTime + seconds;
+      const maxTime = Number.isFinite(videoRef.current.duration)
+        ? videoRef.current.duration
+        : 0;
+      const newTime = Math.min(Math.max(rawTime, 0), maxTime);
       videoRef.current.currentTime = newTime;
       setCurrentTime(newTime);
     }

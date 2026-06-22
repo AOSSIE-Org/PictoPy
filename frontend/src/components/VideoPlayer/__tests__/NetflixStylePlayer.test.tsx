@@ -8,7 +8,19 @@ jest.mock('@tauri-apps/api/core', () => ({
 
 // Mock Slider component to use simple range input for testing
 jest.mock('../../ui/Slider', () => ({
-  Slider: ({ onValueChange, value, min, max, step }: any) => (
+  Slider: ({
+    onValueChange,
+    value = [0],
+    min,
+    max,
+    step,
+  }: {
+    onValueChange?: (value: number[]) => void;
+    value?: number[];
+    min?: number;
+    max?: number;
+    step?: number;
+  }) => (
     <input
       data-testid="volume-slider"
       type="range"
@@ -16,7 +28,7 @@ jest.mock('../../ui/Slider', () => ({
       max={max}
       step={step}
       value={value[0]}
-      onChange={(e) => onValueChange([parseFloat(e.target.value)])}
+      onChange={(e) => onValueChange?.([Number.parseFloat(e.target.value)])}
     />
   ),
 }));
