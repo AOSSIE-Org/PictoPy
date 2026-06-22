@@ -203,9 +203,7 @@ export default function NetflixStylePlayer({
             <FastForward size={24} />
           </button>
           <div className="text-white">
-            {formatTime(currentTime) +
-              ' / ' +
-              formatTime(duration)}
+            {formatTime(currentTime) + ' / ' + formatTime(duration)}
           </div>
         </div>
 

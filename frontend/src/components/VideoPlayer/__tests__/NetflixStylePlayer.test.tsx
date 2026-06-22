@@ -39,16 +39,20 @@ describe('NetflixStylePlayer', () => {
 
   beforeEach(() => {
     // Mock HTMLMediaElement play and pause
-    window.HTMLMediaElement.prototype.play = jest.fn().mockImplementation(function (this: HTMLVideoElement) {
-      const playEvent = new Event('play');
-      this.dispatchEvent(playEvent);
-      return Promise.resolve();
-    });
+    window.HTMLMediaElement.prototype.play = jest
+      .fn()
+      .mockImplementation(function (this: HTMLVideoElement) {
+        const playEvent = new Event('play');
+        this.dispatchEvent(playEvent);
+        return Promise.resolve();
+      });
 
-    window.HTMLMediaElement.prototype.pause = jest.fn().mockImplementation(function (this: HTMLVideoElement) {
-      const pauseEvent = new Event('pause');
-      this.dispatchEvent(pauseEvent);
-    });
+    window.HTMLMediaElement.prototype.pause = jest
+      .fn()
+      .mockImplementation(function (this: HTMLVideoElement) {
+        const pauseEvent = new Event('pause');
+        this.dispatchEvent(pauseEvent);
+      });
 
     requestFullscreenMock = jest.fn();
     exitFullscreenMock = jest.fn();
@@ -68,14 +72,26 @@ describe('NetflixStylePlayer', () => {
   });
 
   test('converts video source using convertFileSrc for Tauri support', () => {
-    render(<NetflixStylePlayer videoSrc="local-path/video.mp4" title="Test" description="Desc" />);
+    render(
+      <NetflixStylePlayer
+        videoSrc="local-path/video.mp4"
+        title="Test"
+        description="Desc"
+      />,
+    );
     const video = document.querySelector('video') as HTMLVideoElement;
     expect(video).toBeInTheDocument();
     expect(video.src).toBe('tauri-converted://local-path/video.mp4');
   });
 
   test('updates isFullscreen state on fullscreenchange event', () => {
-    const { container } = render(<NetflixStylePlayer videoSrc="test-video.mp4" title="Test" description="Desc" />);
+    const { container } = render(
+      <NetflixStylePlayer
+        videoSrc="test-video.mp4"
+        title="Test"
+        description="Desc"
+      />,
+    );
 
     expect(screen.queryByTestId('icon-minimize')).not.toBeInTheDocument();
     expect(screen.getByTestId('icon-maximize')).toBeInTheDocument();
@@ -108,7 +124,13 @@ describe('NetflixStylePlayer', () => {
   });
 
   test('renders 0:00 before video metadata is loaded and updates on loadedmetadata', () => {
-    render(<NetflixStylePlayer videoSrc="video.mp4" title="Test" description="Desc" />);
+    render(
+      <NetflixStylePlayer
+        videoSrc="video.mp4"
+        title="Test"
+        description="Desc"
+      />,
+    );
 
     expect(screen.getByText('0:00 / 0:00')).toBeInTheDocument();
 
@@ -127,7 +149,13 @@ describe('NetflixStylePlayer', () => {
   });
 
   test('volume slider updates volume and unmutes video', () => {
-    render(<NetflixStylePlayer videoSrc="video.mp4" title="Test" description="Desc" />);
+    render(
+      <NetflixStylePlayer
+        videoSrc="video.mp4"
+        title="Test"
+        description="Desc"
+      />,
+    );
     const video = document.querySelector('video') as HTMLVideoElement;
 
     let setMutedVal = false;
@@ -168,7 +196,13 @@ describe('NetflixStylePlayer', () => {
   });
 
   test('play/pause button updates when video ends', () => {
-    render(<NetflixStylePlayer videoSrc="video.mp4" title="Test" description="Desc" />);
+    render(
+      <NetflixStylePlayer
+        videoSrc="video.mp4"
+        title="Test"
+        description="Desc"
+      />,
+    );
 
     const playBtn = screen.getByTestId('icon-play').closest('button');
     expect(playBtn).toBeInTheDocument();
