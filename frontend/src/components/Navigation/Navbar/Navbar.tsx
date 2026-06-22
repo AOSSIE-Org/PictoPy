@@ -60,7 +60,11 @@ export function Navbar() {
 
   const { clusters } = useSelector((state: RootState) => state.faceClusters);
 
-  const { data: clustersData, isSuccess: clustersSuccess } = usePictoQuery({
+  const {
+    data: clustersData,
+    isSuccess: clustersSuccess,
+    isLoading: isClustersLoading,
+  } = usePictoQuery({
     queryKey: ['clusters'],
     queryFn: fetchAllClusters,
     enabled: isExpanded && (!clusters || clusters.length === 0),
@@ -74,6 +78,7 @@ export function Navbar() {
   }, [clustersData, clustersSuccess, dispatch]);
 
   const handleSearchSubmit = () => {
+    if (isClustersLoading) return;
     const trimmed = searchQuery.trim();
     if (!trimmed) return;
 

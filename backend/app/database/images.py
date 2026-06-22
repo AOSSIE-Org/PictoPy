@@ -547,7 +547,7 @@ def db_search_images_by_tag(tag_name: str) -> List[dict]:
                 images_dict[image_id] = {
                     "id": image_id,
                     "path": path,
-                    "folder_id": str(folder_id) if folder_id is not None else None,
+                    "folder_id": str(folder_id) if folder_id is not None else "",
                     "thumbnailPath": thumbnail_path,
                     "metadata": metadata,
                     "isTagged": bool(is_tagged),
@@ -572,7 +572,7 @@ def db_search_images_by_tag(tag_name: str) -> List[dict]:
 
     except sqlite3.Error as e:
         logger.error(f"Error searching images by tag: {e}")
-        return []
+        raise
     finally:
         conn.close()
 

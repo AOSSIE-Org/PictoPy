@@ -123,12 +123,13 @@ def search_images_by_tag(tag: str = Query(..., description="Tag name to search f
         )
 
     except Exception as e:
+        logger.error(f"Error searching images: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
-                message=f"Unable to search images: {str(e)}",
+                message="Unable to search images due to an internal error",
             ).model_dump(),
         )
 

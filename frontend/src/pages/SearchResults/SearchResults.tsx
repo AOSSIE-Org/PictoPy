@@ -35,6 +35,10 @@ export const SearchResults = () => {
       dispatch(setImages(fetchedImages));
       dispatch(hideLoader());
     }
+
+    return () => {
+      dispatch(hideLoader());
+    };
   }, [data, isSuccess, isError, isLoading, dispatch]);
 
   return (
