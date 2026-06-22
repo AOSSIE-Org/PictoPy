@@ -544,16 +544,12 @@ def db_search_images_by_tag(tag_name: str) -> List[dict]:
             tag_name_result,
         ) in results:
             if image_id not in images_dict:
-                from app.utils.images import image_util_parse_metadata
-
-                metadata_dict = image_util_parse_metadata(metadata)
-
                 images_dict[image_id] = {
                     "id": image_id,
                     "path": path,
                     "folder_id": str(folder_id) if folder_id is not None else None,
                     "thumbnailPath": thumbnail_path,
-                    "metadata": metadata_dict,
+                    "metadata": metadata,
                     "isTagged": bool(is_tagged),
                     "isFavourite": bool(is_favourite),
                     "latitude": latitude,

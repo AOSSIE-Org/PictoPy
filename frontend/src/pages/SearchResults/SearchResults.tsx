@@ -5,9 +5,9 @@ import { MediaView } from '@/components/Media/MediaView';
 import { Image } from '@/types/Media';
 import { setCurrentViewIndex, setImages } from '@/features/imageSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
-import { selectIsImageViewOpen } from '@/features/imageSelectors';
+import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
-import { searchImagesByTag } from '@/api/api-functions/images';
+import { searchImagesByTag } from '@/api/api-functions';
 import { useNavigate, useSearchParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -18,6 +18,7 @@ export const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('value') || '';
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
+  const displayImages = useSelector(selectImages);
 
   const { data, isLoading, isSuccess, isError } = usePictoQuery({
     queryKey: ['search-results', query],
@@ -35,8 +36,6 @@ export const SearchResults = () => {
       dispatch(hideLoader());
     }
   }, [data, isSuccess, isError, isLoading, dispatch]);
-
-  const displayImages = (data?.data as Image[]) || [];
 
   return (
     <div>

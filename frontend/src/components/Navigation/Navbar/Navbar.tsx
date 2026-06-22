@@ -82,9 +82,11 @@ export function Navbar() {
     );
 
     if (match) {
-      navigate(`/person/${match.cluster_id}`);
+      navigate(
+        `/${ROUTES.PERSON.replace(':clusterId', String(match.cluster_id))}`,
+      );
     } else {
-      navigate(`/search?value=${encodeURIComponent(trimmed)}`);
+      navigate(`/${ROUTES.SEARCH}?value=${encodeURIComponent(trimmed)}`);
     }
 
     setIsExpanded(false);
