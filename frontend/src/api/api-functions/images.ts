@@ -12,3 +12,16 @@ export const fetchAllImages = async (
   );
   return response.data;
 };
+
+export interface SearchImagesByTagRequest {
+  tag: string;
+}
+
+export const searchImagesByTag = async (
+  request: SearchImagesByTagRequest,
+): Promise<APIResponse> => {
+  const response = await apiClient.get<APIResponse>(
+    imagesEndpoints.searchByTag(request.tag),
+  );
+  return response.data;
+};
