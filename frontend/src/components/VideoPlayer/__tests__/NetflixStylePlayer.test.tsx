@@ -1,4 +1,6 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
+import fs from 'fs';
+import path from 'path';
 import NetflixStylePlayer from '../NetflixStylePlayer';
 
 // Mock Tauri convertFileSrc API
@@ -232,5 +234,26 @@ describe('NetflixStylePlayer', () => {
     });
 
     expect(screen.getByTestId('icon-play')).toBeInTheDocument();
+  });
+
+  describe('Tauri CSP Policy Configuration', () => {
+    test('tauri.conf.json whitelists asset: and http://asset.localhost in media-src CSP', () => {
+      const configPath = path.resolve(
+        __dirname,
+        '../../../../src-tauri/tauri.conf.json',
+      );
+      const configRaw = fs.readFileSync(configPath, 'utf8');
+      const config = JSON.parse(configRaw);
+
+      const csp = config.app?.security?.csp;
+      expect(csp).toBeDefined();
+
+      const mediaSrcMatch = csp.match(/media-src\s+([^;]+)/);
+      expect(mediaSrcMatch).toBeTruthy();
+
+      const mediaSrcDirective = mediaSrcMatch[1];
+      expect(mediaSrcDirective).toContain('asset:');
+      expect(mediaSrcDirective).toContain('http://asset.localhost');
+    });
   });
 });
