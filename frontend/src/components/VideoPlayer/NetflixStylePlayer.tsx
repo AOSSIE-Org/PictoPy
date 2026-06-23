@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Play,
   Pause,
@@ -33,6 +33,8 @@ export default function NetflixStylePlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const resolvedSrc = useMemo(() => convertFileSrc(videoSrc), [videoSrc]);
+
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     const showControlsTemporarily = () => {
@@ -41,29 +43,34 @@ export default function NetflixStylePlayer({
       timeout = setTimeout(() => setShowControls(false), 3000);
     };
 
-    const handleFullscreenChange = () => {
-      setIsFullscreen(document.fullscreenElement === containerRef.current);
-    };
-
     const container = containerRef.current;
     if (container) {
       container.addEventListener('mousemove', showControlsTemporarily);
       container.addEventListener('mouseenter', showControlsTemporarily);
     }
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     return () => {
       if (container) {
         container.removeEventListener('mousemove', showControlsTemporarily);
         container.removeEventListener('mouseenter', showControlsTemporarily);
       }
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
       clearTimeout(timeout);
     };
   }, []);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === containerRef.current);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   const formatTime = (timeInSeconds: number) => {
-    if (isNaN(timeInSeconds) || !isFinite(timeInSeconds)) {
+    if (!Number.isFinite(timeInSeconds)) {
       return '0:00';
     }
     const hours = Math.floor(timeInSeconds / 3600);
@@ -77,9 +84,12 @@ export default function NetflixStylePlayer({
   };
 
   const togglePlay = () => {
-    if (videoRef.current) {
-      isPlaying ? videoRef.current.pause() : videoRef.current.play();
-      setIsPlaying(!isPlaying);
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
     }
   };
 
@@ -169,7 +179,7 @@ export default function NetflixStylePlayer({
       >
         <video
           ref={videoRef}
-          src={convertFileSrc(videoSrc)}
+          src={resolvedSrc}
           className="h-full w-full"
           onTimeUpdate={handleProgress}
           onLoadedMetadata={handleLoadedMetadata}
