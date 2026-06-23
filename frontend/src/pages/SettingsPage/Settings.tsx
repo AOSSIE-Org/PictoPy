@@ -6,6 +6,7 @@ import FolderManagementCard from './components/FolderManagementCard';
 import UserPreferencesCard from './components/UserPreferencesCard';
 import ApplicationControlsCard from './components/ApplicationControlsCard';
 import AccountSettingsCard from './components/AccountSettingsCard';
+import SystemSettingsCard from './components/SystemSettingsCard';
 
 /**
  * Settings page component
@@ -70,6 +71,7 @@ const Settings: React.FC = () => {
                 <FolderManagementCard />
                 <UserPreferencesCard />
                 <ApplicationControlsCard />
+                <SystemSettingsCard />
               </>
             )}
 
