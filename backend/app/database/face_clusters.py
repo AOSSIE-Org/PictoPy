@@ -24,15 +24,13 @@ def db_create_clusters_table() -> None:
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS face_clusters (
                 cluster_id TEXT PRIMARY KEY,
                 cluster_name TEXT,
                 face_image_base64 TEXT
             )
-        """
-        )
+        """)
         conn.commit()
     finally:
         if conn is not None:
@@ -245,8 +243,7 @@ def db_get_all_clusters_with_face_counts() -> (
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT 
                 fc.cluster_id, 
                 fc.cluster_name, 
@@ -256,8 +253,7 @@ def db_get_all_clusters_with_face_counts() -> (
             LEFT JOIN faces f ON fc.cluster_id = f.cluster_id
             GROUP BY fc.cluster_id, fc.cluster_name, fc.face_image_base64
             ORDER BY fc.cluster_id
-            """
-        )
+            """)
 
         rows = cursor.fetchall()
 

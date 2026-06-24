@@ -53,19 +53,48 @@ fn on_window_event(window: &Window, event: &WindowEvent) {
 }
 
 #[cfg(unix)]
-fn kill_process(process: &sysinfo::Process) {
+fn kill_process(process: &sysinfo::Process) -> Result<(), String> {
     use sysinfo::Signal;
     let _ = process.kill_with(Signal::Term);
+    Ok(())
 }
 
 #[cfg(windows)]
-pub fn kill_process(_process: &sysinfo::Process) -> Result<(), String> {
+fn kill_process(_process: &sysinfo::Process) -> Result<(), String> {
     use reqwest::blocking::Client;
+    use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+    use std::str::FromStr;
+
+    // Read per-session shutdown token written by backend.
+    let token_path = std::env::temp_dir().join("pictopy_shutdown.token");
+    let token = match std::fs::read_to_string(&token_path) {
+        Ok(t) => {
+            let trimmed = t.trim().to_string();
+            if trimmed.is_empty() {
+                eprintln!("[PictoPy] Warning: shutdown token file is empty — shutdown request will be rejected by the backend.");
+            }
+            trimmed
+        }
+        Err(e) => {
+            eprintln!("[PictoPy] Warning: could not read shutdown token file ({token_path:?}): {e} — shutdown request will be rejected by the backend.");
+            String::new()
+        }
+    };
+
+    let mut headers = HeaderMap::new();
+    if !token.is_empty() {
+        if let (Ok(name), Ok(value)) = (
+            HeaderName::from_str("x-shutdown-token"),
+            HeaderValue::from_str(&token),
+        ) {
+            headers.insert(name, value);
+        }
+    }
 
     let client = Client::builder().build().map_err(|e| e.to_string())?;
 
     for (name, url, _) in &ENDPOINTS {
-        match client.post(*url).send() {
+        match client.post(*url).headers(headers.clone()).send() {
             Ok(resp) => {
                 let status = resp.status();
 
@@ -73,7 +102,12 @@ pub fn kill_process(_process: &sysinfo::Process) -> Result<(), String> {
                     println!("[{}] Shutdown OK ({})", name, status);
                 }
             }
-            Err(_err) => {}
+            Err(_err) => {
+                eprintln!(
+                    "[{}] Failed to send shutdown request to {}: {}",
+                    name, url, _err
+                );
+            }
         }
     }
 
@@ -95,7 +129,12 @@ fn kill_process_tree() -> Result<(), String> {
         let name = process.name().to_string_lossy();
 
         if target_names.iter().any(|t| name.eq_ignore_ascii_case(t)) {
-            let _ = kill_process(process);
+            if let Err(e) = kill_process(process) {
+                eprintln!(
+                    "[PictoPy] Failed to send shutdown signal to process {}: {}",
+                    name, e
+                );
+            }
         }
     }
 
