@@ -71,14 +71,22 @@ def db_update_metadata(
     Returns:
         True if the metadata was updated, False otherwise
     """
+    # 1. Prepare/serialize data outside the DB transaction.
+    # json.dumps can raise TypeError/ValueError for non-serializable objects;
+    # these are not sqlite3 errors and must be caught separately.
+    try:
+        metadata_json = json.dumps(metadata)
+    except (TypeError, ValueError) as e:
+        logger.error(f"Failed to serialize metadata: {e}")
+        raise
+
     own_connection = cursor is None
     if own_connection:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
 
+    # 2. Database transaction — only pure DB operations here, so sqlite3.Error is safe.
     try:
-        metadata_json = json.dumps(metadata)
-
         # Delete all existing rows and insert new one
         cursor.execute("DELETE FROM metadata")
         cursor.execute("INSERT INTO metadata (metadata) VALUES (?)", (metadata_json,))
@@ -90,7 +98,6 @@ def db_update_metadata(
     except sqlite3.Error as e:
         if own_connection:
             conn.rollback()
-
         logger.error(f"Error updating metadata: {e}")
         raise
     finally:
