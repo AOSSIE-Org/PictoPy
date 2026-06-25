@@ -7,9 +7,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { invoke } from '@tauri-apps/api/core';
 
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import SettingsCard from './SettingsCard';
@@ -140,6 +142,15 @@ const UserPreferencesCard: React.FC = () => {
                     No models installed
                   </DropdownMenuItem>
                 )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="hover:text-secondary cursor-pointer font-medium"
+                onSelect={() => {
+                  invoke('open_model_manager').catch(console.error);
+                }}
+              >
+                Configure...
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
