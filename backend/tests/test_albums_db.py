@@ -47,7 +47,16 @@ class TestDbCreateAlbumImagesTable:
             db_create_album_images_table()
             mock_conn.cursor.return_value.execute.assert_called_once()
             mock_conn.commit.assert_called_once()
-
+    
+    # Tests that connection is closed even if an error occurs during table creation
+def test_create_album_images_table_closes_connection_on_error(self):
+    with patch("app.database.albums.sqlite3.connect") as mock_connect:
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value.execute.side_effect = sqlite3.Error("fail")
+        mock_connect.return_value = mock_conn
+        with pytest.raises(sqlite3.Error):
+            db_create_album_images_table()
+        mock_conn.close.assert_called_once()
 
 class TestDbGetAllAlbums:
     # Tests that all visible albums are returned when show_hidden is False

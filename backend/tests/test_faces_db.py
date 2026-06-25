@@ -109,7 +109,7 @@ class TestDbGetFacesUnassignedClusters:
             mock_connect.return_value = mock_conn
             result = db_get_faces_unassigned_clusters()
             assert result == []
-
+        mock_conn.close.assert_called_once()
 
 class TestDbGetAllFacesWithClusterNames:
     # Tests that faces are returned with their cluster names
@@ -151,7 +151,7 @@ class TestDbGetAllFacesWithClusterNames:
             mock_connect.return_value = mock_conn
             result = db_get_all_faces_with_cluster_names()
             assert result == []
-
+        mock_conn.close.assert_called_once()
 
 class TestDbUpdateFaceClusterIdsBatch:
     # Tests that batch update runs without error for valid mapping list
@@ -183,7 +183,7 @@ class TestDbUpdateFaceClusterIdsBatch:
             db_update_face_cluster_ids_batch(mapping)
             call_args = mock_cursor.executemany.call_args[0][1]
             assert call_args[0] == (None, 1)
-
+        mock_conn.close.assert_called_once()
 
 class TestDbGetClusterMeanEmbeddings:
     # Tests that mean embeddings are calculated correctly per cluster
@@ -218,3 +218,4 @@ class TestDbGetClusterMeanEmbeddings:
             mock_connect.return_value = mock_conn
             result = db_get_cluster_mean_embeddings()
             assert result == []
+            mock_conn.close.assert_called_once()
