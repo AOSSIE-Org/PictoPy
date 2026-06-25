@@ -1,4 +1,6 @@
 import sqlite3
+import uuid
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -739,6 +741,34 @@ class TestFoldersUnit:
 
         assert rows == [("folder-id-1",), ("folder-id-2",)]
 
+    @patch("app.database.folders.sqlite3.connect")
+    def test_db_insert_folders_batch_error(self, mock_connect):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+
+        mock_connect.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.executemany.side_effect = sqlite3.Error("Database connection failed")
+
+        with pytest.raises(sqlite3.Error):
+            db_insert_folders_batch([
+                ("folder-id-1", "/tmp/photos", None, 1693526400, True, False)
+            ])
+
+        mock_conn.rollback.assert_called_once()
+        mock_conn.close.assert_called_once()
+
+    def test_db_insert_folder_generates_uuid_when_folder_id_none(self, test_db, tmp_path):
+        folder = tmp_path / "photos"
+        folder.mkdir()
+        fake_uuid = uuid.UUID("12345678-1234-5678-1234-567812345678")
+        with patch("app.database.folders.DATABASE_PATH", test_db), \
+                patch("app.database.folders.uuid.uuid4", return_value=fake_uuid):
+            create_folders_table_for_test(test_db)
+            result = db_insert_folder(str(folder), folder_id=None)
+        assert result == str(fake_uuid)
+
     def test_db_insert_folder_success(self, test_db, tmp_path):
         create_folders_table_for_test(test_db)
 
@@ -816,9 +846,20 @@ class TestFoldersUnit:
 
         assert set(result) == {"folder-id-1", "folder-id-2"}
 
+    @patch("app.database.folders.sqlite3.connect")
+    def test_db_delete_folders_batch_error(self, mock_connect):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.execute.side_effect = sqlite3.Error("Database connection failed")
+        with pytest.raises(sqlite3.Error):
+            db_delete_folders_batch(["folder-id-1"])
+        mock_conn.rollback.assert_called_once()
+        mock_conn.close.assert_called_once()
+
     def test_db_delete_folders_batch_empty_list(self, test_db):
         result = db_delete_folders_batch([])
-
         assert result == 0
 
     def test_db_delete_folders_batch_success(self, test_db):
@@ -891,6 +932,10 @@ class TestFoldersUnit:
         assert db_folder_exists(str(folder)) is True
         assert db_folder_exists(str(tmp_path / "missing")) is False
 
+    def test_db_find_parent_folder_id_root_returns_none(self):
+        result = db_find_parent_folder_id("/")
+        assert result is None
+
     def test_db_find_parent_folder_id_found(self, test_db):
         conn = sqlite3.connect(test_db)
         cursor = conn.cursor()
@@ -906,7 +951,6 @@ class TestFoldersUnit:
 
     def test_db_find_parent_folder_id_not_found(self, test_db):
         conn = sqlite3.connect(test_db)
-        cursor = conn.cursor()
         create_folders_table_for_test(test_db)
         conn.commit()
         conn.close()
@@ -1073,9 +1117,9 @@ class TestFoldersUnit:
             ("child_2", "/root/child2"),
         }
 
-        # ============================================================================
-    # Integration & Workflow Tests
-    # ============================================================================
+# ============================================================================
+# Integration & Workflow Tests
+# ============================================================================
 class TestFoldersIntegration:
     @patch("app.routes.folders.folder_util_add_folder_tree")
     @patch("app.routes.folders.db_update_parent_ids_for_subtree")

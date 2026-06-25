@@ -45,9 +45,6 @@ def test_get_db_connection_rolls_back_on_exception(tmp_path):
         conn = sqlite3.connect(db_path)
         result = conn.execute("SELECT name FROM test").fetchone()
         conn.close()
-
-    assert result is None
-    # CREATE TABLE was rolled back too
     assert result is None
 
 def test_get_db_connection_enables_pragmas(tmp_path):
@@ -58,7 +55,6 @@ def test_get_db_connection_enables_pragmas(tmp_path):
             foreign_keys = conn.execute("PRAGMA foreign_keys").fetchone()[0]
             ignore_check = conn.execute("PRAGMA ignore_check_constraints").fetchone()[0]
             recursive_triggers = conn.execute("PRAGMA recursive_triggers").fetchone()[0]
-            case_sensitive_like = conn.execute("PRAGMA case_sensitive_like").fetchone()
 
     assert foreign_keys == 1
     assert ignore_check == 0
