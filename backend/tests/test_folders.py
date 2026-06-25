@@ -1,3 +1,4 @@
+import sqlite3
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -10,26 +11,26 @@ from concurrent.futures import ProcessPoolExecutor
 
 from app.routes.folders import router as folders_router
 
+from app.database.folders import db_disable_ai_tagging_batch, db_enable_ai_tagging_batch, db_update_ai_tagging_batch, \
+    db_get_folder_ids_by_path_prefix, db_get_folder_ids_by_paths, db_get_all_folder_details, \
+    db_get_direct_child_folders, db_get_folder_path_from_id, db_insert_folders_batch, db_insert_folder, \
+    db_get_folder_id_from_path, db_delete_folder, db_update_parent_ids_for_subtree, db_folder_exists, \
+    db_delete_folders_batch, db_get_all_folder_ids, db_get_all_folders, db_find_parent_folder_id
+
+
 # ##############################
 # Pytest Fixtures
 # ##############################
 
 
-@pytest.fixture(scope="function")
-def test_db():
-    """Create a temporary test database for each test."""
-    db_fd, db_path = tempfile.mkstemp()
-
-    import app.config.settings
-
-    original_db_path = app.config.settings.DATABASE_PATH
-    app.config.settings.DATABASE_PATH = db_path
-
-    yield db_path
-
-    app.config.settings.DATABASE_PATH = original_db_path
-    os.close(db_fd)
-    os.unlink(db_path)
+@pytest.fixture
+def test_db(tmp_path, monkeypatch):
+    db_path = tmp_path / "test.db"
+    monkeypatch.setattr(
+        "app.database.folders.DATABASE_PATH",
+        str(db_path)
+    )
+    return str(db_path)
 
 
 @pytest.fixture
@@ -688,10 +689,394 @@ class TestFoldersAPI:
         assert data["success"] is True
         assert data["data"]["updated_count"] == 0
 
+
     # ============================================================================
-    # Integration & Workflow Tests
+    # Unit Tests
     # ============================================================================
 
+
+def create_folders_table_for_test(db_path):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    conn.execute("DROP TABLE IF EXISTS folders")
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS folders
+                   (
+                       folder_id
+                       TEXT
+                       PRIMARY
+                       KEY,
+                       folder_path
+                       TEXT
+                       UNIQUE,
+                       parent_folder_id
+                       TEXT,
+                       last_modified_time
+                       INTEGER,
+                       AI_Tagging
+                       BOOLEAN,
+                       taggingCompleted
+                       BOOLEAN
+                   )
+                   """)
+    conn.commit()
+    conn.close()
+
+
+class TestFoldersUnit:
+
+    def test_db_insert_folders_batch(self, test_db):
+        create_folders_table_for_test(test_db)
+
+        db_insert_folders_batch([
+            ("folder-id-1", "/tmp/photos", None, 1693526400, True, False),
+            ("folder-id-2", "/tmp/docs", None, 1693526500, False, True),
+        ])
+
+        conn = sqlite3.connect(test_db)
+        rows = conn.execute("SELECT folder_id FROM folders ORDER BY folder_id").fetchall()
+        conn.close()
+
+        assert rows == [("folder-id-1",), ("folder-id-2",)]
+
+    def test_db_insert_folder_success(self, test_db, tmp_path):
+        create_folders_table_for_test(test_db)
+
+        folder = tmp_path / "photos"
+        folder.mkdir()
+
+        result = db_insert_folder(str(folder), folder_id="folder-id-1")
+
+        assert result == "folder-id-1"
+        assert db_folder_exists(str(folder)) is True
+
+    def test_db_insert_folder_existing_returns_existing_id(self, test_db, tmp_path):
+        create_folders_table_for_test(test_db)
+
+        folder = tmp_path / "photos"
+        folder.mkdir()
+
+        first_id = db_insert_folder(str(folder), folder_id="folder-id-1")
+        second_id = db_insert_folder(str(folder), folder_id="folder-id-2")
+
+        assert first_id == "folder-id-1"
+        assert second_id == "folder-id-1"
+
+    def test_db_insert_folder_invalid_directory(self, test_db):
+        create_folders_table_for_test(test_db)
+
+        with pytest.raises(ValueError):
+            db_insert_folder("/path/does/not/exist")
+
+    def test_db_get_folder_id_from_path(self, test_db, tmp_path):
+        create_folders_table_for_test(test_db)
+
+        folder = tmp_path / "docs"
+        folder.mkdir()
+
+        db_insert_folder(str(folder), folder_id="folder-id-1")
+
+        result = db_get_folder_id_from_path(str(folder))
+
+        assert result == "folder-id-1"
+
+    def test_db_get_folder_path_from_id(self, test_db, tmp_path):
+        create_folders_table_for_test(test_db)
+
+        folder = tmp_path / "docs"
+        folder.mkdir()
+
+        db_insert_folder(str(folder), folder_id="folder-id-1")
+
+        result = db_get_folder_path_from_id("folder-id-1")
+
+        assert result == os.path.abspath(str(folder))
+
+    def test_db_get_all_folders(self, test_db):
+        create_folders_table_for_test(test_db)
+
+        db_insert_folders_batch([
+            ("folder-id-1", "/tmp/photos", None, 1693526400, True, False),
+            ("folder-id-2", "/tmp/docs", None, 1693526500, False, True),
+        ])
+
+        result = db_get_all_folders()
+
+        assert set(result) == {"/tmp/photos", "/tmp/docs"}
+
+    def test_db_get_all_folder_ids(self, test_db):
+        create_folders_table_for_test(test_db)
+
+        db_insert_folders_batch([
+            ("folder-id-1", "/tmp/photos", None, 1693526400, True, False),
+            ("folder-id-2", "/tmp/docs", None, 1693526500, False, True),
+        ])
+
+        result = db_get_all_folder_ids()
+
+        assert set(result) == {"folder-id-1", "folder-id-2"}
+
+    def test_db_delete_folders_batch_empty_list(self, test_db):
+        result = db_delete_folders_batch([])
+
+        assert result == 0
+
+    def test_db_delete_folders_batch_success(self, test_db):
+        create_folders_table_for_test(test_db)
+
+        db_insert_folders_batch([
+            ("folder-id-1", "/tmp/photos", None, 1693526400, True, False),
+            ("folder-id-2", "/tmp/docs", None, 1693526500, False, True),
+        ])
+
+        result = db_delete_folders_batch(["folder-id-1"])
+
+        assert result == 1
+        assert db_get_folder_path_from_id("folder-id-1") is None
+        assert db_get_folder_path_from_id("folder-id-2") == "/tmp/docs"
+
+    def test_db_delete_folder_success(self, test_db, tmp_path):
+        create_folders_table_for_test(test_db)
+
+        folder = tmp_path / "photos"
+        folder.mkdir()
+
+        db_insert_folder(str(folder), folder_id="folder-id-1")
+        db_delete_folder(str(folder))
+
+        assert db_folder_exists(str(folder)) is False
+
+    def test_db_delete_folder_not_exists(self, test_db, tmp_path):
+        create_folders_table_for_test(test_db)
+
+        folder = tmp_path / "missing"
+        folder.mkdir()
+
+        with pytest.raises(ValueError):
+            db_delete_folder(str(folder))
+
+    def test_db_update_parent_ids_for_subtree(self, test_db):
+        create_folders_table_for_test(test_db)
+
+        db_insert_folders_batch([
+            ("root-id", "/tmp/root", None, 1693526400, True, False),
+            ("child-id", "/tmp/root/child", None, 1693526500, True, False),
+        ])
+
+        db_update_parent_ids_for_subtree(
+            "/tmp/root",
+            {
+                "/tmp/root": ("root-id", None),
+                "/tmp/root/child": ("child-id", "root-id"),
+            },
+        )
+
+        conn = sqlite3.connect(test_db)
+        parent_id = conn.execute(
+            "SELECT parent_folder_id FROM folders WHERE folder_id = ?",
+            ("child-id",),
+        ).fetchone()[0]
+        conn.close()
+
+        assert parent_id == "root-id"
+
+    def test_db_folder_exists_true_false(self, test_db, tmp_path):
+        create_folders_table_for_test(test_db)
+
+        folder = tmp_path / "photos"
+        folder.mkdir()
+
+        db_insert_folder(str(folder), folder_id="folder-id-1")
+
+        assert db_folder_exists(str(folder)) is True
+        assert db_folder_exists(str(tmp_path / "missing")) is False
+
+    def test_db_find_parent_folder_id_found(self, test_db):
+        conn = sqlite3.connect(test_db)
+        cursor = conn.cursor()
+        create_folders_table_for_test(test_db)
+        cursor.execute(
+            "INSERT INTO folders (folder_id, folder_path) VALUES (?, ?)",
+            ("parent-id", "/tmp/photos")
+        )
+        conn.commit()
+        conn.close()
+        result = db_find_parent_folder_id("/tmp/photos/2024")
+        assert result == "parent-id"
+
+    def test_db_find_parent_folder_id_not_found(self, test_db):
+        conn = sqlite3.connect(test_db)
+        cursor = conn.cursor()
+        create_folders_table_for_test(test_db)
+        conn.commit()
+        conn.close()
+        result = db_find_parent_folder_id("/tmp/photos/2024")
+        assert result is None
+
+    def test_db_update_ai_tagging_batch(self, test_db):
+        conn = sqlite3.connect(test_db)
+        cursor = conn.cursor()
+        create_folders_table_for_test(test_db)
+        cursor.execute(
+            "INSERT INTO folders (folder_id, folder_path, AI_Tagging) VALUES (?, ?, ?)",
+            ("tmp", "/tmp", False)
+        )
+        conn.commit()
+        conn.close()
+        result = db_update_ai_tagging_batch(["tmp"], True)
+        assert result == 1
+        result = db_update_ai_tagging_batch([], True)
+        assert result == 0
+
+    @patch("app.database.folders.sqlite3.connect")
+    def test_db_update_ai_tagging_batch_sqlite_error(self, mock_connect):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+
+        mock_connect.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.execute.side_effect = sqlite3.Error("fake db error")
+
+        with pytest.raises(sqlite3.Error):
+            db_update_ai_tagging_batch(["folder-id-1"], False)
+
+        mock_conn.rollback.assert_called_once()
+        mock_conn.close.assert_called_once()
+
+    @patch("app.database.folders.db_update_ai_tagging_batch")
+    def test_db_enable_ai_tagging_batch(self, mock_update_batch):
+        mock_update_batch.return_value = 1
+        result = db_enable_ai_tagging_batch(["tmp"])
+        assert result == 1
+        mock_update_batch.assert_called_once_with(["tmp"], True)
+
+    @patch("app.database.folders.db_update_ai_tagging_batch")
+    def test_db_disable_ai_tagging_batch(self, mock_update_batch):
+        mock_update_batch.return_value = 1
+        result = db_disable_ai_tagging_batch(["tmp"])
+        assert result == 1
+        mock_update_batch.assert_called_once_with(["tmp"], False)
+
+    def test_db_get_folder_ids_by_path_prefix(self,test_db):
+        conn = sqlite3.connect(test_db)
+        cursor = conn.cursor()
+        create_folders_table_for_test(test_db)
+        cursor.executemany(
+            "INSERT INTO folders (folder_id, folder_path) VALUES (?, ?)",
+            [
+                ("folder-id-1", "/tmp/photos"),
+                ("folder-id-2", "/tmp/photos/2024"),
+                ("folder-id-3", "/other/documents"),
+            ],
+        )
+        conn.commit()
+        conn.close()
+        result = db_get_folder_ids_by_path_prefix("/tmp")
+        assert result == [
+            ("folder-id-1", "/tmp/photos"),
+            ("folder-id-2", "/tmp/photos/2024"),
+        ]
+
+    def test_db_get_folder_ids_by_paths(self,test_db):
+        conn = sqlite3.connect(test_db)
+        create_folders_table_for_test(test_db)
+        folder1 = os.path.abspath("test_folder_1")
+        folder2 = os.path.abspath("test_folder_2")
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path) VALUES (?, ?)",
+            ("id_1", folder1),
+        )
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path) VALUES (?, ?)",
+            ("id_2", folder2),
+        )
+        conn.commit()
+        conn.close()
+        result = db_get_folder_ids_by_paths([
+            "test_folder_1",
+            "test_folder_2",
+        ])
+        assert result == {
+            folder1: "id_1",
+            folder2: "id_2",
+        }
+
+    def test_db_get_folder_ids_by_paths_empty(self):
+        result = db_get_folder_ids_by_paths([])
+        assert result == {}
+
+    def test_db_get_all_folder_details(self, test_db):
+        conn = sqlite3.connect(test_db)
+        cursor = conn.cursor()
+        create_folders_table_for_test(test_db)
+        cursor.execute("""
+                       CREATE TABLE images
+                       (
+                           id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                           folder_id TEXT
+                       )
+                       """)
+        cursor.execute("""
+                       INSERT INTO folders VALUES (?, ?, ?, ?, ?, ?)
+                       """, (
+                           "folder-id-1","/home/user/photos",None,1693526400,True,False,
+                       ))
+        cursor.execute("""
+                       INSERT INTO images (folder_id)
+                       VALUES (?)
+                       """, ("folder-id-1",))
+
+        cursor.execute("""
+                       INSERT INTO images (folder_id)
+                       VALUES (?)
+                       """, ("folder-id-1",))
+        conn.commit()
+        conn.close()
+        result = db_get_all_folder_details()
+        assert result == [
+            (
+                "folder-id-1",
+                "/home/user/photos",
+                None,
+                1693526400,
+                1,
+                0,
+                2,
+            )
+        ]
+
+    def test_db_get_direct_child_folders(self,test_db):
+        conn = sqlite3.connect(test_db)
+        create_folders_table_for_test(test_db)
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path, parent_folder_id) VALUES (?, ?, ?)",
+            ("root", "/root", None),
+        )
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path, parent_folder_id) VALUES (?, ?, ?)",
+            ("child_1", "/root/child1", "root"),
+        )
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path, parent_folder_id) VALUES (?, ?, ?)",
+            ("child_2", "/root/child2", "root"),
+        )
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path, parent_folder_id) VALUES (?, ?, ?)",
+            ("grandchild", "/root/child1/grandchild", "child_1"),
+        )
+        conn.commit()
+        conn.close()
+        result = db_get_direct_child_folders("root")
+        assert set(result) == {
+            ("child_1", "/root/child1"),
+            ("child_2", "/root/child2"),
+        }
+
+        # ============================================================================
+    # Integration & Workflow Tests
+    # ============================================================================
+class TestFoldersIntegration:
     @patch("app.routes.folders.folder_util_add_folder_tree")
     @patch("app.routes.folders.db_update_parent_ids_for_subtree")
     @patch("app.routes.folders.db_find_parent_folder_id")
