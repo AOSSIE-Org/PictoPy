@@ -182,10 +182,10 @@ def get_cluster_images(cluster_id: str):
             """Parse metadata if stored as JSON string."""
             if isinstance(metadata, str):
                 try:
-                    return json.loads(metadata)
+                    metadata = json.loads(metadata)
                 except json.JSONDecodeError:
                     return None
-            return metadata
+            return metadata if isinstance(metadata, dict) else None
 
         images = [
             ImageInCluster(
