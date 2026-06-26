@@ -56,31 +56,31 @@ export const useUserPreferences = () => {
   /**
    * Update a specific preference
    */
-  const updatePreference = (updatedPreferences: UserPreferencesData) => {
+  const updatePreference = async (updatedPreferences: UserPreferencesData) => {
     setPreferences(updatedPreferences);
-    updatePreferencesMutation.mutate(updatedPreferences);
+    return updatePreferencesMutation.mutateAsync(updatedPreferences);
   };
 
   /**
    * Update YOLO model size
    */
-  const updateYoloModelSize = (size: 'nano' | 'small' | 'medium') => {
+  const updateYoloModelSize = async (size: 'nano' | 'small' | 'medium') => {
     const updatedPreferences = {
       ...preferences,
       YOLO_model_size: size,
     };
-    updatePreference(updatedPreferences);
+    return updatePreference(updatedPreferences);
   };
 
   /**
    * Toggle GPU acceleration
    */
-  const toggleGpuAcceleration = () => {
+  const toggleGpuAcceleration = async () => {
     const updatedPreferences = {
       ...preferences,
       GPU_Acceleration: !preferences.GPU_Acceleration,
     };
-    updatePreference(updatedPreferences);
+    return updatePreference(updatedPreferences);
   };
 
   return {
