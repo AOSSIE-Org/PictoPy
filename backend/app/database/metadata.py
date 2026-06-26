@@ -81,12 +81,14 @@ def db_update_metadata(
         raise
 
     own_connection = cursor is None
-    if own_connection:
-        conn = sqlite3.connect(DATABASE_PATH)
-        cursor = conn.cursor()
+    conn = None
 
-    # 2. Database transaction — only pure DB operations here, so sqlite3.Error is safe.
+    # 2. Database transaction / owned connection setup.
     try:
+        if own_connection:
+            conn = sqlite3.connect(DATABASE_PATH)
+            cursor = conn.cursor()
+
         # Delete all existing rows and insert new one
         cursor.execute("DELETE FROM metadata")
         cursor.execute("INSERT INTO metadata (metadata) VALUES (?)", (metadata_json,))
@@ -97,9 +99,10 @@ def db_update_metadata(
         return success
     except sqlite3.Error as e:
         if own_connection:
-            conn.rollback()
+            if conn is not None:
+                conn.rollback()
         logger.error(f"Error updating metadata: {e}")
         raise
     finally:
-        if own_connection:
+        if own_connection and conn is not None:
             conn.close()
