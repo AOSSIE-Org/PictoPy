@@ -21,7 +21,9 @@ if [[ $1 == "--test" ]]; then
         sleep 3
     done
 else
-    # print the value of the WORKERS environment variable
-    echo "WORKERS: ${WORKERS:-1}"
-    hypercorn main:app --workers ${WORKERS:-1} --bind 0.0.0.0:8000
+    # Model-download and global-reclustering job tracking is in-memory and
+    # per-worker, so the server must run with a single worker; a job started in
+    # one worker would be invisible to others (missed status polls, duplicate
+    # jobs). Do not raise the worker count above 1.
+    hypercorn main:app --workers 1 --bind 0.0.0.0:8000
 fi
