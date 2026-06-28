@@ -69,11 +69,6 @@ export const fetchSearchedFacesBase64 = async (
   return response.data;
 };
 
-export interface GlobalReclusterData {
-  clusters_created: number | null;
-  faces_skipped: number | null;
-}
-
 export interface GlobalReclusterStartData {
   task_id: string;
 }

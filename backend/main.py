@@ -46,8 +46,6 @@ setup_logging("backend")
 # Configure Uvicorn logging to use our custom formatter
 configure_uvicorn_logging("backend")
 
-logger = get_logger("backend")
-
 path = os.path.dirname(DATABASE_PATH)
 os.makedirs(path, exist_ok=True)
 
