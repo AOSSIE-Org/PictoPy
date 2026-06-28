@@ -46,6 +46,8 @@ setup_logging("backend")
 # Configure Uvicorn logging to use our custom formatter
 configure_uvicorn_logging("backend")
 
+logger = get_logger("backend")
+
 path = os.path.dirname(DATABASE_PATH)
 os.makedirs(path, exist_ok=True)
 
@@ -64,6 +66,22 @@ async def lifespan(app: FastAPI):
     db_create_albums_table()
     db_create_album_images_table()
     db_create_metadata_table()
+    # Model-download and global-reclustering job tracking is in-memory and
+    # per-worker. With more than one worker, a job started in one worker is
+    # invisible to the others, so status polls can miss it and duplicate jobs
+    # can start. Warn loudly so deployments keep a single worker (WORKERS=1).
+    try:
+        worker_count = int(os.environ.get("WORKERS", "1"))
+    except ValueError:
+        worker_count = 1
+    if worker_count > 1:
+        logger.warning(
+            "WORKERS=%s: model-download and global-reclustering job tracking is "
+            "in-memory and per-worker. Run with a single worker (WORKERS=1) to "
+            "avoid duplicate jobs and missed status polls.",
+            worker_count,
+        )
+
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor(max_workers=1)
 
