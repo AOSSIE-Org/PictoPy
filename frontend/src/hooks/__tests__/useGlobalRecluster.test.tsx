@@ -126,6 +126,29 @@ describe('useGlobalRecluster', () => {
     expect(mockStatus).not.toHaveBeenCalled();
   });
 
+  test('sets an error when the status request itself rejects (e.g. 404 for an aged-out task)', async () => {
+    mockStart.mockResolvedValue(startOk);
+    const notFound = {
+      isAxiosError: true,
+      message: 'Request failed with status code 404',
+      code: 'ERR_BAD_REQUEST',
+      response: { status: 404, data: {} },
+    };
+    mockStatus.mockRejectedValue(notFound);
+
+    const { result, invalidateSpy } = setup();
+    act(() => {
+      result.current.trigger();
+    });
+    await flush();
+
+    expect(result.current.isError).toBe(true);
+    expect(result.current.errorMessage).toBe(
+      'ERR_BAD_REQUEST: Request failed with status code 404',
+    );
+    expect(invalidateSpy).not.toHaveBeenCalled();
+  });
+
   test('stops polling after unmount', async () => {
     mockStart.mockResolvedValue(startOk);
     mockStatus.mockResolvedValue(running);
