@@ -176,7 +176,7 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
           } else if (msg.status === 'complete') {
             setOverallPercent(100);
             setViewMode('complete');
-            updateYoloModelSize(selectedTier);
+            updateYoloModelSize(selectedTier).catch(console.warn);
             source.close();
           } else if (msg.status === 'error') {
             setErrorMsg(msg.message || 'Download failed');
