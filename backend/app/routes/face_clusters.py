@@ -54,6 +54,7 @@ class ReclusterTask:
     faces_skipped: Optional[int] = None
     message: Optional[str] = None
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    finished_at: Optional[datetime] = None
     task: Optional[asyncio.Task] = None
 
 
@@ -66,9 +67,10 @@ recluster_tasks: Dict[str, ReclusterTask] = {}
 # with no await between check-and-set.
 _active_recluster_task_id: Optional[str] = None
 
-# How long a finished task's result is retained for polling before the cleanup
-# loop reaps it. Running tasks are never reaped (they are bounded to one by the
-# concurrency guard above).
+# How long a finished task's result is retained for polling, measured from when
+# it finished (not when it started) so a long-running job's result isn't reaped
+# almost immediately after completion. Running tasks are never reaped (they are
+# bounded to one by the concurrency guard above).
 RECLUSTER_TASK_TTL_MINUTES = 15
 
 
@@ -94,8 +96,10 @@ async def _run_global_recluster(task_id: str):
         entry.status = "error"
         entry.message = f"Global reclustering failed: {str(e)}"
     finally:
-        # Release the concurrency guard so a new job can be started, while the
-        # finished result stays in recluster_tasks for the client to poll.
+        # Stamp completion time so cleanup ages the result from when it finished,
+        # and release the concurrency guard so a new job can be started, while
+        # the finished result stays in recluster_tasks for the client to poll.
+        entry.finished_at = datetime.now(timezone.utc)
         if _active_recluster_task_id == task_id:
             _active_recluster_task_id = None
 
@@ -113,7 +117,8 @@ async def _cleanup_stale_recluster_tasks():
             tid
             for tid, entry in recluster_tasks.items()
             if entry.status != "running"
-            and (now - entry.created_at).total_seconds()
+            and entry.finished_at is not None
+            and (now - entry.finished_at).total_seconds()
             > RECLUSTER_TASK_TTL_MINUTES * 60
         ]
         for tid in stale:

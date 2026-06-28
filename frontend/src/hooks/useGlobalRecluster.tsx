@@ -39,34 +39,54 @@ const idleState: ReclusterState = {
  */
 export function useGlobalRecluster() {
   const queryClient = useQueryClient();
-  const pollHandleRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Identifies the latest trigger() call. Every async callback captures the id
+  // it started with and bails if a newer trigger (or unmount) has since bumped
+  // it, so stale runs can't update state or keep polling.
+  const runIdRef = useRef(0);
   const [state, setState] = useState<ReclusterState>(idleState);
 
   const stopPolling = useCallback(() => {
-    if (pollHandleRef.current) {
-      clearInterval(pollHandleRef.current);
-      pollHandleRef.current = null;
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+      pollTimeoutRef.current = null;
     }
   }, []);
 
-  useEffect(() => stopPolling, [stopPolling]);
+  // On unmount, invalidate any in-flight run and stop polling.
+  useEffect(() => {
+    return () => {
+      runIdRef.current += 1;
+      stopPolling();
+    };
+  }, [stopPolling]);
 
   const trigger = useCallback(() => {
+    const runId = runIdRef.current + 1;
+    runIdRef.current = runId;
+    const isActive = () => runId === runIdRef.current;
+
     stopPolling();
     setState({ ...idleState, isPending: true });
 
     startGlobalReclustering()
       .then((startRes) => {
+        if (!isActive()) return;
+
         const taskId = startRes.data?.task_id;
         if (!taskId) {
           throw new Error('Backend did not return a task_id for reclustering.');
         }
 
-        pollHandleRef.current = setInterval(async () => {
+        // Self-scheduling poll: the next tick is only queued after the current
+        // request resolves, so requests can't stack up or overlap.
+        const poll = async () => {
           try {
             const statusRes = await getGlobalReclusterStatus(taskId);
+            if (!isActive()) return;
 
             if (statusRes.data?.status === 'running') {
+              pollTimeoutRef.current = setTimeout(poll, POLL_INTERVAL_MS);
               return;
             }
 
@@ -92,6 +112,7 @@ export function useGlobalRecluster() {
               successMessage: statusRes.message,
             });
           } catch (err) {
+            if (!isActive()) return;
             stopPolling();
             setState({
               ...idleState,
@@ -100,9 +121,12 @@ export function useGlobalRecluster() {
               errorMessage: getErrorMessage(err),
             });
           }
-        }, POLL_INTERVAL_MS);
+        };
+
+        poll();
       })
       .catch((err) => {
+        if (!isActive()) return;
         setState({
           ...idleState,
           isError: true,
