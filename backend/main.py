@@ -25,7 +25,10 @@ from app.database.metadata import db_create_metadata_table
 from app.routes.folders import router as folders_router
 from app.routes.albums import router as albums_router
 from app.routes.images import router as images_router
-from app.routes.face_clusters import router as face_clusters_router
+from app.routes.face_clusters import (
+    router as face_clusters_router,
+    _cleanup_stale_recluster_tasks,
+)
 from app.routes.user_preferences import router as user_preferences_router
 from app.routes.memories import router as memories_router
 from app.routes.shutdown import router as shutdown_router
@@ -62,16 +65,25 @@ async def lifespan(app: FastAPI):
     db_create_album_images_table()
     db_create_metadata_table()
     # Create ProcessPoolExecutor and attach it to app.state
+    # NOTE: model-download and global-reclustering job tracking is in-memory and
+    # per-worker, so the server is launched with a single worker (see run.sh /
+    # run-server.ps1). Keep it that way unless that state is moved to a shared
+    # store.
     app.state.executor = ProcessPoolExecutor(max_workers=1)
 
     # Start the SSE model download cleanup task
     cleanup_task = asyncio.create_task(_cleanup_stale_tasks())
+    # Start the global-reclustering finished-task cleanup loop
+    recluster_cleanup_task = asyncio.create_task(_cleanup_stale_recluster_tasks())
 
     try:
         yield
     finally:
         cleanup_task.cancel()
-        await asyncio.gather(cleanup_task, return_exceptions=True)
+        recluster_cleanup_task.cancel()
+        await asyncio.gather(
+            cleanup_task, recluster_cleanup_task, return_exceptions=True
+        )
         app.state.executor.shutdown(wait=True)
 
 
