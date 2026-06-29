@@ -1,80 +1,66 @@
 # PictoPy Dev Setup Guide
 
-This guide covers how to set up and run PictoPy locally for development on **Windows** and **Linux/macOS**.
-
----
-
-## Prerequisites
-
-| Tool | Version | Purpose |
-|------|---------|---------|
-| Node.js | 18+ | Frontend build |
-| Rust + Cargo | latest stable | Tauri desktop framework |
-| Python | 3.12 | Backend + sync microservice |
-| Conda (Miniconda) | any | Python environment management |
+This guide covers how to get the PictoPy development environment running on your machine — either automatically with a single script, or manually step by step.
 
 ---
 
 ## Quick Start (Recommended)
 
-Both scripts handle all prerequisite installation, environment setup, and launch all three services automatically.
-
 ### Windows
 
-Open **PowerShell** in the PictoPy root directory and run:
-
 ```powershell
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+# One-time: allow script execution for this session only
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+
+# Run the setup script
 .\dev-setup.ps1
 ```
 
-> If prompted by Windows Defender, choose "Run anyway".
-
 ### Linux / macOS
 
-Open a terminal in the PictoPy root directory and run:
-
 ```bash
-bash dev-setup.sh
+chmod +x dev-setup.sh
+./dev-setup.sh
 ```
 
-> On macOS, Homebrew must be installed first: https://brew.sh
+The script handles everything: installs prerequisites, creates conda environments, installs dependencies, launches all 3 services, and runs a health check. On re-runs it skips anything already installed.
 
 ---
 
-## What the Scripts Do
+## What the Script Does
 
-Both scripts run the same four phases:
+**Phase 1 — Prerequisites:** Detects your OS and installs Node.js, Rust/Cargo, Miniconda, and platform-specific Tauri dependencies (webkit2gtk on Linux, VS C++ Build Tools + WebView2 on Windows) if missing.
 
-**Phase 1 — Prerequisites**
-- Installs Node.js if missing
-- Installs Rust + Cargo via rustup if missing
-- Installs Visual Studio C++ Build Tools (Windows) or system libs (Linux) required by Tauri
-- Installs Miniconda if missing
+**Phase 2 — Service Setup:** Creates conda environments for the backend (`.env`) and sync microservice (`.sync-env`), installs pip dependencies, and runs `npm install` for the frontend.
 
-**Phase 2 — Service Setup**
-- Installs frontend npm dependencies (`frontend/node_modules`)
-- Creates conda environment for the backend (`backend/.env`) and installs Python packages
-- Creates conda environment for the sync microservice (`sync-microservice/.sync-env`) and installs Python packages
+**Phase 3 — Launch:** Starts all 3 services in a single terminal with color-coded log prefixes `[BACKEND]`, `[SYNC]`, `[FRONTEND]`. Press `Ctrl+C` to stop all services cleanly.
 
-**Phase 3 — Launch**
-- Starts the Python backend on port `52123`
-- Starts the sync microservice on port `52124`
-- Starts the Tauri frontend (React + Rust)
-
-**Phase 4 — Health Check**
-- Verifies backend and sync microservice are reachable
-- Streams logs from all three services with colour-coded prefixes (`[BACKEND]`, `[SYNC]`, `[FRONTEND]`)
-
-Press **Ctrl+C** to stop all services.
+**Phase 4 — Health Check:** Pings both Python servers after 10 seconds to confirm they started successfully.
 
 ---
 
-## Manual Setup (Alternative)
+## Services & Ports
 
-If you prefer to set up each service individually:
+| Service           | Port  | Start Command                          |
+|-------------------|-------|----------------------------------------|
+| Python Backend    | 52123 | `fastapi dev --port 52123`             |
+| Sync Microservice | 52124 | `fastapi dev --port 52124`             |
+| Tauri Frontend    | —     | `npm run tauri dev`                    |
 
-### 1. Frontend
+---
+
+## Manual Setup
+
+If you prefer to set up manually or the script doesn't work on your OS:
+
+### Prerequisites
+
+- [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install)
+- [Node.js](https://nodejs.org) (v20+)
+- [Rust](https://rustup.rs)
+- Tauri system dependencies — see [tauri.app/start/prerequisites](https://tauri.app/start/prerequisites/)
+
+### Step 1 — Frontend
 
 ```bash
 cd frontend
@@ -82,81 +68,55 @@ npm install
 npm run tauri dev
 ```
 
-> **Windows only:** Rust requires Visual Studio C++ Build Tools (`link.exe`).
-> Install via: `winget install Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"`
-
-### 2. Backend
+### Step 2 — Backend
 
 ```bash
 cd backend
 conda create -p .env python=3.12 -y
-conda run -p .env pip install -r requirements.txt
-conda run -p .env python main.py
+conda activate ./.env
+pip install -r requirements.txt
+fastapi dev --port 52123
 ```
 
-Backend runs at: `http://localhost:52123`
-
-### 3. Sync Microservice
+### Step 3 — Sync Microservice
 
 ```bash
 cd sync-microservice
 conda create -p .sync-env python=3.12 -y
-conda run -p .sync-env pip install -r requirements.txt
-conda run -p .sync-env fastapi dev --port 52124
+conda activate ./.sync-env
+pip install -r requirements.txt
+fastapi dev --port 52124
 ```
 
-Sync microservice runs at: `http://localhost:52124`
-
----
-
-## Services Overview
-
-| Service | Port | Description |
-|---------|------|-------------|
-| Backend (Python/FastAPI) | 52123 | Image processing, face recognition, albums |
-| Sync Microservice (Python/FastAPI) | 52124 | File sync and watching |
-| Frontend (Tauri/React) | — | Desktop app window (not a browser port) |
-
-All three must be running for the app to work correctly.
+Run each in a separate terminal.
 
 ---
 
 ## Troubleshooting
 
-### `cargo` not found after installing Rust
-Close and reopen your terminal — Rust adds itself to PATH only for new sessions.
-
-### `link.exe` not found (Windows)
-Visual Studio C++ Build Tools are missing. Run:
-```powershell
-winget install Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-```
-Then reopen your terminal and retry.
-
-### `chmod` not recognized (Windows)
-`chmod` is a Linux command. On Windows, skip it — just run `.\dev-setup.ps1` directly.
-
-### App window opens but shows a blank page
-The Python backend is not running. Start it manually:
+**Missing `libGL.so.1` (OpenCV error on Linux)**
 ```bash
-cd backend
-conda run -p .env python main.py
+sudo apt install -y libglib2.0-dev libgl1-mesa-glx
 ```
 
-### Script fails on emoji / encoding error (Windows PowerShell)
-Your PowerShell version may not support Unicode. Upgrade to PowerShell 7+:
-```powershell
-winget install Microsoft.PowerShell
-```
-
-### Port already in use
-Kill the process occupying the port:
-```powershell
-# Windows
-netstat -ano | findstr :52123
-taskkill /PID <pid> /F
-```
+**`gobject-2.0` not found**
 ```bash
-# Linux/macOS
-lsof -ti:52123 | xargs kill
+sudo apt install -y libglib2.0-dev pkg-config
 ```
+
+**Port already in use**
+
+Find and kill the process holding the port:
+```bash
+# Safe form — only kills if a process is found
+lsof -ti :52123 | xargs -r kill -9
+lsof -ti :52124 | xargs -r kill -9
+```
+
+**conda not found after fresh install**
+
+Restart your terminal. Conda adds itself to PATH in `.bashrc`/`.zshrc` but the change only takes effect in a new session.
+
+**Rust/cargo not found after fresh install (Windows)**
+
+Restart PowerShell after rustup installs, then re-run `dev-setup.ps1`.
