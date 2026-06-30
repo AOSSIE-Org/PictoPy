@@ -185,6 +185,11 @@ fn prod(app: &tauri::AppHandle, resource_path: &std::path::Path) -> Result<(), S
 
 #[cfg(not(feature = "bundled-sidecars"))]
 fn prod(_app: &tauri::AppHandle, _resource_path: &std::path::Path) -> Result<(), String> {
+    prod_without_bundled_sidecars()
+}
+
+#[cfg(not(feature = "bundled-sidecars"))]
+fn prod_without_bundled_sidecars() -> Result<(), String> {
     // `cargo tauri dev` intentionally omits this feature; the backend/sync
     // services are run separately during local development.
     if cfg!(debug_assertions) {
@@ -199,6 +204,22 @@ fn prod(_app: &tauri::AppHandle, _resource_path: &std::path::Path) -> Result<(),
         `--features bundled-sidecars`."
             .to_string(),
     )
+}
+
+#[cfg(all(test, not(feature = "bundled-sidecars")))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_op_in_debug_builds_fails_loudly_in_release_builds() {
+        let result = prod_without_bundled_sidecars();
+
+        if cfg!(debug_assertions) {
+            assert_eq!(result, Ok(()));
+        } else {
+            assert!(result.is_err());
+        }
+    }
 }
 
 fn main() {
