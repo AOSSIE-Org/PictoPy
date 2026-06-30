@@ -851,11 +851,13 @@ class TestFolderPathPrefixMatching:
         from app.database import folders as folders_module
 
         db_fd, db_path = tempfile.mkstemp()
-        with patch.object(folders_module, "DATABASE_PATH", db_path):
-            folders_module.db_create_folders_table()
-            yield folders_module
-        os.close(db_fd)
-        os.unlink(db_path)
+        try:
+            with patch.object(folders_module, "DATABASE_PATH", db_path):
+                folders_module.db_create_folders_table()
+                yield folders_module
+        finally:
+            os.close(db_fd)
+            os.unlink(db_path)
 
     def test_prefix_match_is_case_insensitive(self, folders_db):
         """A lower-case prefix must match folders stored with mixed case."""
