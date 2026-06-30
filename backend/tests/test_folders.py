@@ -834,3 +834,56 @@ class TestFoldersAPI:
 
         mock_enable_batch.assert_called_once_with(folder_ids)
         mock_delete_batch.assert_called_once_with(folder_ids)
+
+
+class TestFolderPathPrefixMatching:
+    """Regression tests for case-insensitive folder prefix matching.
+
+    Guards against reintroducing ``PRAGMA case_sensitive_like = ON`` (see
+    issue #1346): the prefix query must keep using SQLite's default
+    case-insensitive ``LIKE`` so subfolders are still found on
+    case-insensitive filesystems (macOS/Windows).
+    """
+
+    @pytest.fixture
+    def folders_db(self):
+        """Temporary database with the folders table created."""
+        from app.database import folders as folders_module
+
+        db_fd, db_path = tempfile.mkstemp()
+        with patch.object(folders_module, "DATABASE_PATH", db_path):
+            folders_module.db_create_folders_table()
+            yield folders_module
+        os.close(db_fd)
+        os.unlink(db_path)
+
+    def test_prefix_match_is_case_insensitive(self, folders_db):
+        """A lower-case prefix must match folders stored with mixed case."""
+        # folders_data tuples: (folder_id, folder_path, parent_folder_id,
+        #                       last_modified_time, AI_Tagging, taggingCompleted)
+        folders_db.db_insert_folders_batch(
+            [
+                ("id-root", "/Users/Foo/Pics", None, 0, False, False),
+                ("id-sub", "/Users/Foo/Pics/Sub", "id-root", 0, False, False),
+                ("id-other", "/Other", None, 0, False, False),
+            ]
+        )
+
+        matched = folders_db.db_get_folder_ids_by_path_prefix("/users/foo/pics")
+        matched_paths = sorted(path for _id, path in matched)
+
+        assert matched_paths == ["/Users/Foo/Pics", "/Users/Foo/Pics/Sub"]
+
+    def test_prefix_match_excludes_non_matching_paths(self, folders_db):
+        """Folders outside the prefix must not be returned."""
+        folders_db.db_insert_folders_batch(
+            [
+                ("id-a", "/home/user/photos", None, 0, False, False),
+                ("id-b", "/home/user/documents", None, 0, False, False),
+            ]
+        )
+
+        matched = folders_db.db_get_folder_ids_by_path_prefix("/home/user/photos")
+        matched_paths = [path for _id, path in matched]
+
+        assert matched_paths == ["/home/user/photos"]
