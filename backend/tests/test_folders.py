@@ -887,3 +887,34 @@ class TestFolderPathPrefixMatching:
         matched_paths = [path for _id, path in matched]
 
         assert matched_paths == ["/home/user/photos"]
+
+
+class TestSharedConnectionLikeCaseSensitivity:
+    """Regression test for issue #1346 covering the shared connection helper.
+
+    ``db_get_folder_ids_by_path_prefix`` opens SQLite directly, so it never
+    exercises ``get_db_connection()``. No production query currently runs
+    ``LIKE`` through that shared helper, but this guards it directly so a
+    future ``PRAGMA case_sensitive_like = ON`` reintroduced there would be
+    caught even before any query starts relying on it.
+    """
+
+    def test_like_is_case_insensitive_through_shared_connection(self):
+        from app.database import connection as connection_module
+
+        db_fd, db_path = tempfile.mkstemp()
+        try:
+            with patch.object(connection_module, "DATABASE_PATH", db_path):
+                with connection_module.get_db_connection() as conn:
+                    conn.execute("CREATE TABLE t (value TEXT)")
+                    conn.execute("INSERT INTO t (value) VALUES ('CamelCase')")
+
+                with connection_module.get_db_connection() as conn:
+                    rows = conn.execute(
+                        "SELECT value FROM t WHERE value LIKE ?", ("camelcase",)
+                    ).fetchall()
+        finally:
+            os.close(db_fd)
+            os.unlink(db_path)
+
+        assert [row[0] for row in rows] == ["CamelCase"]
