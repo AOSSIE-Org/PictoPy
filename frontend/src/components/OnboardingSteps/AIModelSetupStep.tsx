@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/app/store';
 import {
@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { BACKEND_URL } from '@/config/Backend';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { useModelDownloadProgress } from '@/hooks/useModelDownloadProgress';
 
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
 import {
@@ -43,7 +44,6 @@ import {
   normalizeModelTier,
   type HardwareInfo,
   type HardwareResponse,
-  type ModelDownloadProgressMessage,
   type ModelStatusResponse,
   type ModelTier,
 } from '@/types/models';
@@ -72,12 +72,26 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
   const [recommendedTier, setRecommendedTier] = useState<ModelTier>('small');
   const [hardwareSpecs, setHardwareSpecs] = useState<HardwareInfo | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>('');
+  const [taskId, setTaskId] = useState<string | null>(null);
 
-  // Progress tracking
-  const [overallPercent, setOverallPercent] = useState<number>(0);
-  const [currentModel, setCurrentModel] = useState<string>('');
+  const {
+    status: downloadStatus,
+    percent: overallPercent,
+    modelKey: currentModel,
+    errorMsg: downloadErrorMsg,
+  } = useModelDownloadProgress(taskId);
 
-  const eventSourceRef = useRef<EventSource | null>(null);
+  useEffect(() => {
+    if (downloadStatus === 'complete') {
+      setViewMode('complete');
+      updateYoloModelSize(selectedTier).catch(console.warn);
+      setTaskId(null);
+    } else if (downloadStatus === 'error') {
+      setViewMode('error');
+      setErrorMsg(downloadErrorMsg);
+      setTaskId(null);
+    }
+  }, [downloadStatus, downloadErrorMsg, selectedTier, updateYoloModelSize]);
 
   const [isCheckingStatus, setIsCheckingStatus] = useState<boolean>(true);
 
@@ -127,18 +141,12 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
           setSelectedTier('small');
         });
     }
-
-    return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-      }
-    };
   }, [viewMode]);
 
   const handleStartDownload = async () => {
     setViewMode('downloading');
-    setOverallPercent(0);
     setErrorMsg('');
+    setTaskId(null);
 
     try {
       const response = await fetch(`${BACKEND_URL}/models/setup`, {
@@ -153,52 +161,7 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
         throw new Error(data.detail || 'Failed to start setup');
       }
 
-      const taskId = data.task_id;
-
-      const source = new EventSource(
-        `${BACKEND_URL}/models/download/${taskId}/progress`,
-      );
-      eventSourceRef.current = source;
-
-      source.onmessage = (event) => {
-        try {
-          const msg: ModelDownloadProgressMessage = JSON.parse(event.data);
-
-          if (msg.status === 'downloading') {
-            const percentPerModel = 100 / msg.total_models;
-            const basePercent = (msg.model_index - 1) * percentPerModel;
-            const currentModelPercent = (msg.percent / 100) * percentPerModel;
-
-            setOverallPercent(
-              Math.min(100, Math.round(basePercent + currentModelPercent)),
-            );
-            setCurrentModel(msg.model_key);
-          } else if (msg.status === 'complete') {
-            setOverallPercent(100);
-            setViewMode('complete');
-            updateYoloModelSize(selectedTier).catch(console.warn);
-            source.close();
-          } else if (msg.status === 'error') {
-            setErrorMsg(msg.message || 'Download failed');
-            setViewMode('error');
-            source.close();
-          }
-        } catch (err) {
-          console.error('Malformed SSE payload', err);
-          setErrorMsg(
-            'Received malformed download progress data. Please try again.',
-          );
-          setViewMode('error');
-          source.close();
-        }
-      };
-
-      source.onerror = (err) => {
-        console.error('SSE Error', err);
-        setErrorMsg('Connection lost during download. Please try again.');
-        setViewMode('error');
-        source.close();
-      };
+      setTaskId(data.task_id);
     } catch (err) {
       setErrorMsg(
         err instanceof Error ? err.message : 'Failed to connect to backend',
