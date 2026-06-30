@@ -41,6 +41,9 @@ tauri-plugin-opener = "2.5.2"
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
-ci = []
+# Enables spawning the bundled Python backend/sync sidecars. Required for
+# release builds (see frontend/src-tauri/src/main.rs); without it `prod()`
+# fails loudly in release builds instead of silently launching a backend-less app.
+bundled-sidecars = []
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]

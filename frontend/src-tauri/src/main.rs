@@ -21,7 +21,7 @@ const ENDPOINTS: [(&str, &str, &str); 2] = [
     ),
 ];
 
-#[cfg(feature = "ci")]
+#[cfg(feature = "bundled-sidecars")]
 fn is_process_alive() -> bool {
     use reqwest::blocking::Client;
 
@@ -102,9 +102,9 @@ fn kill_process_tree() -> Result<(), String> {
     Ok(())
 }
 
-#[cfg(feature = "ci")]
+#[cfg(feature = "bundled-sidecars")]
 fn prod(app: &tauri::AppHandle, resource_path: &std::path::Path) -> Result<(), String> {
-    println!("`ci` feature enabled");
+    println!("`bundled-sidecars` feature enabled");
     let backend_path = resource_path.join("backend");
     let backend_executable = backend_path.join("PictoPy_Server");
 
@@ -183,9 +183,22 @@ fn prod(app: &tauri::AppHandle, resource_path: &std::path::Path) -> Result<(), S
     Ok(())
 }
 
-#[cfg(not(feature = "ci"))]
+#[cfg(not(feature = "bundled-sidecars"))]
 fn prod(_app: &tauri::AppHandle, _resource_path: &std::path::Path) -> Result<(), String> {
-    Ok(())
+    // `cargo tauri dev` intentionally omits this feature; the backend/sync
+    // services are run separately during local development.
+    if cfg!(debug_assertions) {
+        return Ok(());
+    }
+
+    // A release build without this feature would otherwise launch with no
+    // backend and no indication anything is wrong (see issue #1347).
+    Err(
+        "Release build is missing the `bundled-sidecars` feature: the bundled \
+        backend/sync services will never be started. Rebuild with \
+        `--features bundled-sidecars`."
+            .to_string(),
+    )
 }
 
 fn main() {
