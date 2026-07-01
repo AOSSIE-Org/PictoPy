@@ -3,19 +3,28 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useDispatch } from 'react-redux';
 import { Trash2, CheckCircle2, ShieldCheck, Loader2 } from 'lucide-react';
 
-import { usePictoQuery } from '@/hooks/useQueryExtension';
-import { fetchModelStatus, deleteModel } from '@/api/api-functions';
+import { deleteModel } from '@/api/api-functions';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { formatTierLabel, getErrorMessage } from '@/lib/utils';
 import { showGlobalAlert } from '@/features/globalAlertSlice';
 import { ConfirmDialog } from '@/components/ConfirmDialog/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ModelTier } from '@/types/models';
+import { ModelTier, ModelStatusResponse } from '@/types/models';
+
+export interface InstalledTabProps {
+  statusData?: ModelStatusResponse;
+  isLoading: boolean;
+  isError: boolean;
+}
 
 const TIER_ORDER: ModelTier[] = ['nano', 'small', 'medium'];
 
-export const InstalledTab: React.FC = () => {
+export const InstalledTab: React.FC<InstalledTabProps> = ({
+  statusData,
+  isLoading,
+  isError,
+}) => {
   const queryClient = useQueryClient();
   const dispatch = useDispatch();
   const { preferences, updateYoloModelSize } = useUserPreferences();
@@ -29,11 +38,6 @@ export const InstalledTab: React.FC = () => {
 
   const [activatingTier, setActivatingTier] = useState<string | null>(null);
   const [isUninstalling, setIsUninstalling] = useState(false);
-
-  const { data, isLoading, isError } = usePictoQuery({
-    queryKey: ['models', 'status'],
-    queryFn: fetchModelStatus,
-  });
 
   const handleSetActive = async (tier: ModelTier) => {
     setActivatingTier(tier);
@@ -114,7 +118,7 @@ export const InstalledTab: React.FC = () => {
     );
   }
 
-  if (isError || !data?.data) {
+  if (isError || !statusData?.data) {
     return (
       <div className="text-destructive flex h-64 items-center justify-center">
         Failed to load installed models.
@@ -122,7 +126,7 @@ export const InstalledTab: React.FC = () => {
     );
   }
 
-  const models = data.data;
+  const models = statusData.data;
 
   // Group standard tiers
   const standardTiers = TIER_ORDER.map((tier) => {
