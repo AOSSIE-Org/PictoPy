@@ -52,7 +52,17 @@ Object.defineProperty(window, 'matchMedia', {
 
 // Mock the module imports
 jest.mock('@tauri-apps/api/core', () => ({
-  invoke: jest.fn().mockResolvedValue(null),
+  invoke: jest.fn().mockImplementation((cmd: string) => {
+    switch (cmd) {
+      case 'is_autostart_enabled':
+        return Promise.resolve(false);
+      case 'enable_autostart':
+      case 'disable_autostart':
+        return Promise.resolve(undefined);
+      default:
+        return Promise.resolve(null);
+    }
+  }),
 }));
 
 jest.mock('@tauri-apps/api/app', () => ({
