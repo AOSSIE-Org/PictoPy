@@ -30,6 +30,7 @@ export function Navbar() {
   const navigate = useNavigate();
 
   const [isExpanded, setIsExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,7 +60,11 @@ export function Navbar() {
 
   const { clusters } = useSelector((state: RootState) => state.faceClusters);
 
-  const { data: clustersData, isSuccess: clustersSuccess } = usePictoQuery({
+  const {
+    data: clustersData,
+    isSuccess: clustersSuccess,
+    isLoading: isClustersLoading,
+  } = usePictoQuery({
     queryKey: ['clusters'],
     queryFn: fetchAllClusters,
     enabled: isExpanded && (!clusters || clusters.length === 0),
@@ -71,6 +76,27 @@ export function Navbar() {
       dispatch(setClusters(fetchedClusters));
     }
   }, [clustersData, clustersSuccess, dispatch]);
+
+  const handleSearchSubmit = () => {
+    if (isClustersLoading) return;
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return;
+
+    const match = clusters?.find(
+      (c: Cluster) => c.cluster_name?.toLowerCase() === trimmed.toLowerCase(),
+    );
+
+    if (match) {
+      navigate(
+        `/${ROUTES.PERSON.replace(':clusterId', String(match.cluster_id))}`,
+      );
+    } else {
+      navigate(`/${ROUTES.SEARCH}?value=${encodeURIComponent(trimmed)}`);
+    }
+
+    setIsExpanded(false);
+    setSearchQuery('');
+  };
 
   const handleNavigate = (path: string) => {
     navigate(path);
@@ -125,6 +151,11 @@ export function Navbar() {
             className="mr-2 flex-1 border-0 bg-neutral-200"
             onFocus={() => setIsExpanded(true)}
             onClick={() => setIsExpanded(true)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSearchSubmit();
+            }}
           />
 
           {/* FaceSearch Dialog */}
@@ -134,6 +165,7 @@ export function Navbar() {
             className="text-muted-foreground hover:bg-accent dark:hover:bg-accent/50 hover:text-foreground mx-1 cursor-pointer rounded-sm p-2"
             title="Search"
             aria-label="Search"
+            onClick={handleSearchSubmit}
           >
             <Search className="h-4 w-4" />
           </button>
