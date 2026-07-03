@@ -47,6 +47,40 @@ jest.mock('lucide-react', () => ({
   Minimize2: () => <span data-testid="icon-minimize">Minimize</span>,
 }));
 
+const mockVideoProperties = (video: HTMLVideoElement) => {
+  const state = {
+    muted: false,
+    volume: 1,
+    currentTime: 0,
+  };
+
+  Object.defineProperty(video, 'muted', {
+    get: () => state.muted,
+    set: (val) => {
+      state.muted = val;
+    },
+    configurable: true,
+  });
+
+  Object.defineProperty(video, 'volume', {
+    get: () => state.volume,
+    set: (val) => {
+      state.volume = val;
+    },
+    configurable: true,
+  });
+
+  Object.defineProperty(video, 'currentTime', {
+    get: () => state.currentTime,
+    set: (val) => {
+      state.currentTime = val;
+    },
+    configurable: true,
+  });
+
+  return state;
+};
+
 describe('NetflixStylePlayer', () => {
   let requestFullscreenMock: jest.Mock;
   let exitFullscreenMock: jest.Mock;
@@ -172,22 +206,7 @@ describe('NetflixStylePlayer', () => {
     );
     const video = document.querySelector('video') as HTMLVideoElement;
 
-    let setMutedVal = false;
-    let setVolumeVal = 1;
-    Object.defineProperty(video, 'muted', {
-      get: () => setMutedVal,
-      set: (val) => {
-        setMutedVal = val;
-      },
-      configurable: true,
-    });
-    Object.defineProperty(video, 'volume', {
-      get: () => setVolumeVal,
-      set: (val) => {
-        setVolumeVal = val;
-      },
-      configurable: true,
-    });
+    const videoMockState = mockVideoProperties(video);
 
     const muteBtn = screen.getByTestId('icon-volume').closest('button');
     expect(muteBtn).toBeInTheDocument();
@@ -196,7 +215,7 @@ describe('NetflixStylePlayer', () => {
       fireEvent.click(muteBtn!);
     });
 
-    expect(setMutedVal).toBe(true);
+    expect(videoMockState.muted).toBe(true);
     expect(screen.getByTestId('icon-mute')).toBeInTheDocument();
 
     const slider = screen.getByTestId('volume-slider');
@@ -204,8 +223,8 @@ describe('NetflixStylePlayer', () => {
       fireEvent.change(slider, { target: { value: '0.5' } });
     });
 
-    expect(setVolumeVal).toBe(0.5);
-    expect(setMutedVal).toBe(false);
+    expect(videoMockState.volume).toBe(0.5);
+    expect(videoMockState.muted).toBe(false);
     expect(screen.getByTestId('icon-volume')).toBeInTheDocument();
   });
 
@@ -247,30 +266,7 @@ describe('NetflixStylePlayer', () => {
 
     const video = document.querySelector('video') as HTMLVideoElement;
 
-    let setMutedVal = false;
-    let setVolumeVal = 1;
-    let setTimeVal = 0;
-    Object.defineProperty(video, 'muted', {
-      get: () => setMutedVal,
-      set: (val) => {
-        setMutedVal = val;
-      },
-      configurable: true,
-    });
-    Object.defineProperty(video, 'volume', {
-      get: () => setVolumeVal,
-      set: (val) => {
-        setVolumeVal = val;
-      },
-      configurable: true,
-    });
-    Object.defineProperty(video, 'currentTime', {
-      get: () => setTimeVal,
-      set: (val) => {
-        setTimeVal = val;
-      },
-      configurable: true,
-    });
+    const videoMockState = mockVideoProperties(video);
     Object.defineProperty(video, 'duration', {
       value: 120,
       writable: true,
@@ -287,19 +283,19 @@ describe('NetflixStylePlayer', () => {
     act(() => {
       fireEvent.keyDown(document, { key: 'm' });
     });
-    expect(setMutedVal).toBe(true);
+    expect(videoMockState.muted).toBe(true);
     expect(screen.getByTestId('icon-mute')).toBeInTheDocument();
 
-    expect(setTimeVal).toBe(0);
+    expect(videoMockState.currentTime).toBe(0);
     act(() => {
       fireEvent.keyDown(document, { key: 'ArrowRight' });
     });
-    expect(setTimeVal).toBe(10);
+    expect(videoMockState.currentTime).toBe(10);
 
     act(() => {
       fireEvent.keyDown(document, { key: 'ArrowLeft' });
     });
-    expect(setTimeVal).toBe(0);
+    expect(videoMockState.currentTime).toBe(0);
 
     expect(requestFullscreenMock).not.toHaveBeenCalled();
     act(() => {
@@ -311,12 +307,14 @@ describe('NetflixStylePlayer', () => {
     document.body.appendChild(input);
     input.focus();
 
-    act(() => {
-      fireEvent.keyDown(input, { key: ' ' });
-    });
-    expect(screen.getByTestId('icon-pause')).toBeInTheDocument();
-
-    document.body.removeChild(input);
+    try {
+      act(() => {
+        fireEvent.keyDown(input, { key: ' ' });
+      });
+      expect(screen.getByTestId('icon-pause')).toBeInTheDocument();
+    } finally {
+      document.body.removeChild(input);
+    }
   });
 
   describe('Tauri CSP Policy Configuration', () => {
