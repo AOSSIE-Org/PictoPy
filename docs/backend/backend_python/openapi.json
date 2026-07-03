@@ -1378,6 +1378,14 @@
         }
       }
     },
+    "/duplicates/": {
+      "get": {
+        "tags": [
+          "Duplicates"
+        ],
+        "summary": "Get Duplicates",
+        "description": "Get groups of duplicate images.\nReturns a list of groups, where each group contains:\n- images: List of image objects\n- best_shot_id: ID of the best shot",
+        "operationId": "get_duplicates_duplicates__get",
     "/api/memories/generate": {
       "post": {
         "tags": [
@@ -1509,6 +1517,41 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response Get Duplicates Duplicates  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/duplicates/delete": {
+      "post": {
+        "tags": [
+          "Duplicates"
+        ],
+        "summary": "Delete Duplicates",
+        "description": "Delete specified duplicate images from DB and filesystem.",
+        "operationId": "delete_duplicates_duplicates_delete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "title": "Image Ids"
+              }
+            }
+          },
+          "required": true
+        },
                 "schema": {}
               }
             }
@@ -1589,6 +1632,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "type": "object",
+                  "title": "Response Delete Duplicates Duplicates Delete Post"
+                }
                 "schema": {}
               }
             }

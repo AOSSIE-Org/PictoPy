@@ -27,6 +27,7 @@ from app.routes.albums import router as albums_router
 from app.routes.images import router as images_router
 from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
+from app.routes.duplicates import router as duplicates_router
 from app.routes.memories import router as memories_router
 from app.routes.shutdown import router as shutdown_router
 from app.routes.models import router as models_router, _cleanup_stale_tasks
@@ -145,6 +146,7 @@ app.include_router(
 app.include_router(
     user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
 )
+app.include_router(duplicates_router, prefix="/duplicates", tags=["Duplicates"])
 app.include_router(
     memories_router
 )  # Memories router (prefix already defined in router)

@@ -30,6 +30,7 @@ class ImageRecord(TypedDict, total=False):
     thumbnailPath: str
     metadata: Union[Mapping[str, Any], str]
     isTagged: bool
+    phash: Union[str, None]
     isFavourite: bool
     # New fields for Memories feature
     latitude: Optional[float]
@@ -72,6 +73,7 @@ def db_create_images_table() -> None:
             metadata TEXT,
             isTagged BOOLEAN DEFAULT 0,
             isFavourite BOOLEAN DEFAULT 0,
+            phash TEXT,
             latitude REAL,
             longitude REAL,
             captured_at DATETIME,
@@ -120,12 +122,13 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
     try:
         cursor.executemany(
             """
-            INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged, latitude, longitude, captured_at)
-            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged, :latitude, :longitude, :captured_at)
+            INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged, phash, latitude, longitude, captured_at)
+            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged, :phash, :latitude, :longitude, :captured_at)
             ON CONFLICT(path) DO UPDATE SET
                 folder_id=excluded.folder_id,
                 thumbnailPath=excluded.thumbnailPath,
                 metadata=excluded.metadata,
+                phash=excluded.phash,
                 isTagged=CASE
                     WHEN excluded.isTagged THEN 1
                     ELSE images.isTagged
@@ -454,6 +457,54 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         logger.error(f"Database error: {e}")
         conn.rollback()
         return False
+
+def db_get_all_images_with_phash() -> List[dict]:
+    """
+    Get all images that have a phash.
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            SELECT id, path, folder_id, thumbnailPath, metadata, isTagged, isFavourite, phash
+            FROM images
+            WHERE phash IS NOT NULL
+        """)
+        
+        images = []
+        for row in cursor.fetchall():
+            images.append({
+                "id": row[0],
+                "path": row[1],
+                "folder_id": row[2],
+                "thumbnailPath": row[3],
+                "metadata": row[4],
+                "isTagged": bool(row[5]),
+                "isFavourite": bool(row[6]),
+                "phash": row[7]
+            })
+            
+        return images
+        
+    except Exception as e:
+        logger.error(f"Error getting images with phash: {e}")
+        return []
+    finally:
+        conn.close()
+
+def db_get_images_by_ids(image_ids: List[str]) -> List[dict]:
+    if not image_ids:
+        return []
+    conn = _connect()
+    cursor = conn.cursor()
+    try:
+        placeholders = ','.join(['?'] * len(image_ids))
+        cursor.execute(f"SELECT id, path, thumbnailPath FROM images WHERE id IN ({placeholders})", image_ids)
+        return [{"id": row[0], "path": row[1], "thumbnailPath": row[2]} for row in cursor.fetchall()]
+    except Exception as e:
+        logger.error(f"Error getting images by ids: {e}")
+        return []
     finally:
         conn.close()
 

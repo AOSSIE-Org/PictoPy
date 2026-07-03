@@ -10,4 +10,5 @@ export const ROUTES = {
   MEMORIES: 'memories',
   MEMORY_DETAIL: 'memories/:memoryId',
   PERSON: 'person/:clusterId',
+  DUPLICATES: 'duplicates',
 };

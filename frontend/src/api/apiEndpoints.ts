@@ -32,6 +32,9 @@ export const healthEndpoints = {
   healthCheck: '/health',
 };
 
+export const duplicatesEndpoints = {
+  getDuplicates: '/duplicates/',
+  deleteDuplicates: '/duplicates/delete',
 export const memoriesEndpoints = {
   generate: '/api/memories/generate',
   timeline: '/api/memories/timeline',
