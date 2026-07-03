@@ -49,11 +49,58 @@ export default function NetflixStylePlayer({
       container.addEventListener('mouseenter', showControlsTemporarily);
     }
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          activeEl.getAttribute('contenteditable') === 'true')
+      ) {
+        return;
+      }
+
+      switch (e.key) {
+        case ' ':
+          e.preventDefault();
+          togglePlay();
+          showControlsTemporarily();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          skipTime(-10);
+          showControlsTemporarily();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          skipTime(10);
+          showControlsTemporarily();
+          break;
+        case 'm':
+        case 'M':
+          e.preventDefault();
+          toggleMute();
+          showControlsTemporarily();
+          break;
+        case 'f':
+        case 'F':
+          e.preventDefault();
+          toggleFullScreen();
+          showControlsTemporarily();
+          break;
+        default:
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
     return () => {
       if (container) {
         container.removeEventListener('mousemove', showControlsTemporarily);
         container.removeEventListener('mouseenter', showControlsTemporarily);
       }
+      document.removeEventListener('keydown', handleKeyDown);
       clearTimeout(timeout);
     };
   }, []);
@@ -164,7 +211,7 @@ export default function NetflixStylePlayer({
 
   const toggleMute = () => {
     if (videoRef.current) {
-      const newMuteState = !isMuted;
+      const newMuteState = !videoRef.current.muted;
       videoRef.current.muted = newMuteState;
       setIsMuted(newMuteState);
     }
