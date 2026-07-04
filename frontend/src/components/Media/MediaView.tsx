@@ -94,7 +94,7 @@ export function MediaView({
   }, [dispatch, resetViewerState]);
 
   // Slideshow functionality
-  const { isSlideshowActive, toggleSlideshow } = useSlideshow(
+  const { isSlideshowActive, toggleSlideshow, duration, setDuration } = useSlideshow(
     totalImages,
     handleNextImage,
     handleLoopToStart,
@@ -175,15 +175,17 @@ export function MediaView({
     <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-gradient-to-b from-black/95 to-black/98 backdrop-blur-lg">
       {/* Controls */}
       <MediaViewControls
-        showInfo={showInfo}
-        onToggleInfo={toggleInfo}
-        onToggleFavourite={handleToggleFavourite}
-        isFavourite={currentImage.isFavourite || false}
-        onOpenFolder={handleOpenFolder}
-        isSlideshowActive={isSlideshowActive}
-        onToggleSlideshow={toggleSlideshow}
-        onClose={handleClose}
-        type={type}
+      showInfo={showInfo}
+      onToggleInfo={toggleInfo}
+      onToggleFavourite={handleToggleFavourite}
+      isFavourite={currentImage.isFavourite || false}
+      onOpenFolder={handleOpenFolder}
+      isSlideshowActive={isSlideshowActive}
+      onToggleSlideshow={toggleSlideshow}
+      onClose={handleClose}
+      type={type}
+      duration={duration}
+      onDurationChange={setDuration}
       />
 
       {/* Main viewer area */}
