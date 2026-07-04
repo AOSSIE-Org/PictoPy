@@ -15,8 +15,6 @@ import { ModelManager } from '@/pages/ModelManager/ModelManager';
 
 import { SearchResults } from '@/pages/SearchResults/SearchResults';
 
-import { SearchResults } from '@/pages/SearchResults/SearchResults';
-
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
