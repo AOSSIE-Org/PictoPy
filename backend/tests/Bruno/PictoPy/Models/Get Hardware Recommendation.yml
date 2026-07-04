@@ -1,0 +1,92 @@
+info:
+  name: Get Hardware Recommendation
+  type: http
+  seq: 2
+  tags:
+    - Models
+
+http:
+  method: GET
+  url: "{{baseUrl}}/models/hardware"
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        // test("returns 200", function() {
+        //   expect(res.status).to.equal(200);
+        // });
+
+        // test("success is true", function() {
+        //   expect(res.body.success).to.equal(true);
+        // });
+
+        // test("data has required fields", function() {
+        //   const data = res.body.data;
+        //   expect(data).to.have.property("ram_gb");
+        //   expect(data).to.have.property("gpu_detected");
+        //   expect(data).to.have.property("gpu_names");
+        //   expect(data).to.have.property("available_providers");
+        //   expect(data).to.have.property("recommended_tier");
+        // });
+
+        // test("ram_gb is a positive number", function() {
+        //   expect(res.body.data.ram_gb).to.be.a("number");
+        //   expect(res.body.data.ram_gb).to.be.above(0);
+        // });
+
+        // test("gpu_detected is boolean", function() {
+        //   expect(res.body.data.gpu_detected).to.be.a("boolean");
+        // });
+
+        // test("gpu_names is an array", function() {
+        //   expect(res.body.data.gpu_names).to.be.an("array");
+        // });
+
+        // test("available_providers is a non-empty array", function() {
+        //   expect(res.body.data.available_providers).to.be.an("array");
+        //   expect(res.body.data.available_providers.length).to.be.above(0);
+        // });
+
+        // test("recommended_tier is valid", function() {
+        //   const validTiers = ["nano", "small", "medium"];
+        //   expect(validTiers).to.include(res.body.data.recommended_tier);
+        // });
+
+        // // Parity test — recommendation must match a real tier in the model registry
+        // test("recommended_tier matches a real tier in model registry", function() {
+        //   const validTiers = ["nano", "small", "medium"];
+        //   expect(validTiers).to.include(res.body.data.recommended_tier);
+        // });
+        test("no GPU returns no GPU names", function() {
+          const data = res.body.data;
+
+          if (data.gpu_detected === false) {
+            expect(data.gpu_names).to.deep.equal([]);
+          }
+        });
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 Response
+    description: Successful Response
+    request:
+      url: "{{baseUrl}}/models/hardware"
+      method: GET
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: ""
+
+docs: Returns hardware specs and the recommended model tier.

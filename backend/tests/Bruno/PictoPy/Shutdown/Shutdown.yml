@@ -1,0 +1,46 @@
+info:
+  name: Shutdown
+  type: http
+  seq: 1
+  tags:
+    - Shutdown
+
+http:
+  method: POST
+  url: "{{baseUrl}}/shutdown"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 Response
+    description: Successful Response
+    request:
+      url: "{{baseUrl}}/shutdown"
+      method: POST
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": "",
+            "message": ""
+          }
+
+docs: |-
+  Gracefully shutdown the PictoPy backend.
+
+  This endpoint schedules backend server termination after response is sent.
+  The frontend is responsible for shutting down the sync service separately.
+
+  Returns:
+      ShutdownResponse with status and message

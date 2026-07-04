@@ -1,0 +1,90 @@
+info:
+  name: Remove Images From Album
+  type: http
+  seq: 8
+  tags:
+    - Albums
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/albums/:album_id/images"
+  params:
+    - name: album_id
+      value: ""
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "image_ids": []
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 Response
+    description: Successful Response
+    request:
+      url: "{{baseUrl}}/albums/:album_id/images"
+      method: DELETE
+      params:
+        - name: album_id
+          value: ""
+          type: path
+      body:
+        type: json
+        data: |-
+          {
+            "image_ids": []
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "success": false,
+            "msg": ""
+          }
+  - name: 422 Response
+    description: Validation Error
+    request:
+      url: "{{baseUrl}}/albums/:album_id/images"
+      method: DELETE
+      params:
+        - name: album_id
+          value: ""
+          type: path
+      body:
+        type: json
+        data: |-
+          {
+            "image_ids": []
+          }
+    response:
+      status: 422
+      statusText: Unprocessable Entity
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "detail": [
+              {
+                "loc": [],
+                "msg": "",
+                "type": ""
+              }
+            ]
+          }

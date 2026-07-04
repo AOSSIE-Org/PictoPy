@@ -1,0 +1,128 @@
+info:
+  name: Get All Images
+  type: http
+  seq: 1
+  tags:
+    - Images
+
+http:
+  method: GET
+  url: "{{baseUrl}}/images/"
+  params:
+    - name: tagged
+      value: ""
+      type: query
+      description: Filter images by tagged status
+      disabled: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 Response
+    description: Successful Response
+    request:
+      url: "{{baseUrl}}/images/"
+      method: GET
+      params:
+        - name: tagged
+          value: ""
+          type: query
+          description: Filter images by tagged status
+          disabled: true
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "success": false,
+            "message": "",
+            "data": [
+              {
+                "id": "",
+                "path": "",
+                "folder_id": "",
+                "thumbnailPath": "",
+                "metadata": {
+                  "name": "",
+                  "date_created": "",
+                  "width": 0,
+                  "height": 0,
+                  "file_location": "",
+                  "file_size": 0,
+                  "item_type": "",
+                  "latitude": "",
+                  "longitude": "",
+                  "location": ""
+                },
+                "isTagged": false,
+                "isFavourite": false,
+                "tags": ""
+              }
+            ]
+          }
+  - name: 422 Response
+    description: Validation Error
+    request:
+      url: "{{baseUrl}}/images/"
+      method: GET
+      params:
+        - name: tagged
+          value: ""
+          type: query
+          description: Filter images by tagged status
+          disabled: true
+    response:
+      status: 422
+      statusText: Unprocessable Entity
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "detail": [
+              {
+                "loc": [],
+                "msg": "",
+                "type": ""
+              }
+            ]
+          }
+  - name: 500 Response
+    description: Internal Server Error
+    request:
+      url: "{{baseUrl}}/images/"
+      method: GET
+      params:
+        - name: tagged
+          value: ""
+          type: query
+          description: Filter images by tagged status
+          disabled: true
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "success": false,
+            "message": "",
+            "error": ""
+          }
+
+docs: Get all images from the database.

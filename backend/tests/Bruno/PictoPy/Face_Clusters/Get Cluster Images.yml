@@ -1,0 +1,122 @@
+info:
+  name: Get Cluster Images
+  type: http
+  seq: 3
+  tags:
+    - Face_Clusters
+
+http:
+  method: GET
+  url: "{{baseUrl}}/face-clusters/:cluster_id/images"
+  params:
+    - name: cluster_id
+      value: ""
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 Response
+    description: Successful Response
+    request:
+      url: "{{baseUrl}}/face-clusters/:cluster_id/images"
+      method: GET
+      params:
+        - name: cluster_id
+          value: ""
+          type: path
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "success": false,
+            "message": "",
+            "error": "",
+            "data": ""
+          }
+  - name: 404 Response
+    description: Not Found
+    request:
+      url: "{{baseUrl}}/face-clusters/:cluster_id/images"
+      method: GET
+      params:
+        - name: cluster_id
+          value: ""
+          type: path
+    response:
+      status: 404
+      statusText: Not Found
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "success": false,
+            "message": "",
+            "error": ""
+          }
+  - name: 422 Response
+    description: Validation Error
+    request:
+      url: "{{baseUrl}}/face-clusters/:cluster_id/images"
+      method: GET
+      params:
+        - name: cluster_id
+          value: ""
+          type: path
+    response:
+      status: 422
+      statusText: Unprocessable Entity
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "detail": [
+              {
+                "loc": [],
+                "msg": "",
+                "type": ""
+              }
+            ]
+          }
+  - name: 500 Response
+    description: Internal Server Error
+    request:
+      url: "{{baseUrl}}/face-clusters/:cluster_id/images"
+      method: GET
+      params:
+        - name: cluster_id
+          value: ""
+          type: path
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "success": false,
+            "message": "",
+            "error": ""
+          }
+
+docs: Get all images that contain faces belonging to a specific cluster.

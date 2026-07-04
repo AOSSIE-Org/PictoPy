@@ -1,0 +1,87 @@
+info:
+  name: Create Album
+  type: http
+  seq: 2
+  tags:
+    - Albums
+
+http:
+  method: POST
+  url: "{{baseUrl}}/albums/"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "",
+        "description": "",
+        "is_hidden": false,
+        "password": ""
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 Response
+    description: Successful Response
+    request:
+      url: "{{baseUrl}}/albums/"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "name": "",
+            "description": "",
+            "is_hidden": false,
+            "password": ""
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "success": false,
+            "album_id": ""
+          }
+  - name: 422 Response
+    description: Validation Error
+    request:
+      url: "{{baseUrl}}/albums/"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "name": "",
+            "description": "",
+            "is_hidden": false,
+            "password": ""
+          }
+    response:
+      status: 422
+      statusText: Unprocessable Entity
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "detail": [
+              {
+                "loc": [],
+                "msg": "",
+                "type": ""
+              }
+            ]
+          }

@@ -1,0 +1,48 @@
+info:
+  name: Get On This Day
+  type: http
+  seq: 3
+  tags:
+    - memories
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/memories/on-this-day"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 Response
+    description: Successful Response
+    request:
+      url: "{{baseUrl}}/api/memories/on-this-day"
+      method: GET
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: ""
+
+docs: |-
+  Get photos taken on this date in previous years.
+
+  This endpoint:
+  1. Gets current month and day
+  2. Searches for images from this month-day in all previous years
+  3. Groups by year
+  4. Returns images sorted by year (most recent first)
+
+  Returns:
+      OnThisDayResponse with images from this date in previous years
+
+  Raises:
+      HTTPException: If database query fails

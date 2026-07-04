@@ -1,0 +1,62 @@
+info:
+  name: Get User Preferences
+  type: http
+  seq: 1
+  tags:
+    - User_Preferences
+
+http:
+  method: GET
+  url: "{{baseUrl}}/user-preferences/"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 Response
+    description: Successful Response
+    request:
+      url: "{{baseUrl}}/user-preferences/"
+      method: GET
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "success": false,
+            "message": "",
+            "user_preferences": {
+              "YOLO_model_size": "nano",
+              "GPU_Acceleration": false
+            }
+          }
+  - name: 500 Response
+    description: Internal Server Error
+    request:
+      url: "{{baseUrl}}/user-preferences/"
+      method: GET
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "success": false,
+            "error": "",
+            "message": ""
+          }
+
+docs: Get user preferences from metadata.
