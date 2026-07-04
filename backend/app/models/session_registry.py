@@ -4,7 +4,7 @@ import threading
 
 _active_sessions: dict[str, int] = {}
 _models_pending_deletion: set[str] = set()
-_registry_lock = threading.Lock()
+_registry_lock = threading.RLock()
 
 
 def mark_model_session_active(model_key: str) -> None:

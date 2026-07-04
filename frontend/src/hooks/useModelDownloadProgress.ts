@@ -61,7 +61,7 @@ export function useModelDownloadProgress(
 
         if (msg.status === 'downloading') {
           setStatus('downloading');
-          const pPerModel = 100 / msg.total_models;
+          const pPerModel = msg.total_models > 0 ? 100 / msg.total_models : 100;
           const basePercent = (msg.model_index - 1) * pPerModel;
           const cModelPercent = (msg.percent / 100) * pPerModel;
 

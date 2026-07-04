@@ -57,8 +57,14 @@ export const useUserPreferences = () => {
    * Update a specific preference
    */
   const updatePreference = async (updatedPreferences: UserPreferencesData) => {
+    const previousPreferences = preferences;
     setPreferences(updatedPreferences);
-    return updatePreferencesMutation.mutateAsync(updatedPreferences);
+    try {
+      return await updatePreferencesMutation.mutateAsync(updatedPreferences);
+    } catch (err) {
+      setPreferences(previousPreferences);
+      throw err;
+    }
   };
 
   /**

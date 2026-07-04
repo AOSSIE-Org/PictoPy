@@ -81,17 +81,29 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
     errorMsg: downloadErrorMsg,
   } = useModelDownloadProgress(taskId);
 
+  const processedTaskRef = React.useRef<string | null>(null);
+
   useEffect(() => {
+    if (!taskId || taskId === processedTaskRef.current) return;
+
     if (downloadStatus === 'complete') {
+      processedTaskRef.current = taskId;
       setViewMode('complete');
       updateYoloModelSize(selectedTier).catch(console.warn);
       setTaskId(null);
     } else if (downloadStatus === 'error') {
+      processedTaskRef.current = taskId;
       setViewMode('error');
       setErrorMsg(downloadErrorMsg);
       setTaskId(null);
     }
-  }, [downloadStatus, downloadErrorMsg, selectedTier, updateYoloModelSize]);
+  }, [
+    downloadStatus,
+    downloadErrorMsg,
+    selectedTier,
+    updateYoloModelSize,
+    taskId,
+  ]);
 
   const [isCheckingStatus, setIsCheckingStatus] = useState<boolean>(true);
 

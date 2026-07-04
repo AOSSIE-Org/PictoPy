@@ -198,9 +198,15 @@ export const AvailableTab: React.FC<AvailableTabProps> = ({
     }
   };
 
-  const handleComplete = (tier: ModelTier) => {
-    setInstalledJustNow((prev) => new Set(prev).add(tier));
-  };
+  const handleComplete = React.useCallback(
+    (tier: ModelTier) => {
+      setInstalledJustNow((prev) => {
+        if (prev.has(tier)) return prev;
+        return new Set(prev).add(tier);
+      });
+    },
+    [setInstalledJustNow],
+  );
 
   if (isLoading) {
     return (

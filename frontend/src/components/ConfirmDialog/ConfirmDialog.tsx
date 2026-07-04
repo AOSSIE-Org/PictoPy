@@ -17,7 +17,7 @@ export interface ConfirmDialogProps {
   description: string;
   confirmLabel: string;
   cancelLabel?: string;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   destructive?: boolean;
 }
 
@@ -52,8 +52,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             {cancelLabel}
           </Button>
           <Button
-            onClick={() => {
-              onConfirm();
+            onClick={async () => {
+              await onConfirm();
               onOpenChange(false);
             }}
             variant={destructive ? 'destructive' : 'default'}
