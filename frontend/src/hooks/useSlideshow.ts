@@ -7,7 +7,7 @@ export const useSlideshow = (
   currentIndex?: number,
 ) => {
   const [isSlideshowActive, setIsSlideshowActive] = useState(false);
-  const [duration, setDuration] = useState(3000); // default 3s, now changeable
+  const [duration, setDuration] = useState(2000); // default 2s
 
   useEffect(() => {
     let slideshowInterval: NodeJS.Timeout | null = null;

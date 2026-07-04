@@ -83,6 +83,8 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
           className="relative"
           onMouseEnter={() => setShowSettings(true)}
           onMouseLeave={() => setShowSettings(false)}
+          onFocus={() => setShowSettings(true)}
+          onBlur={() => setShowSettings(false)}
         >
           <button
             onClick={onToggleSlideshow}
@@ -114,6 +116,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
                   step={1}
                   value={sliderValue}
                   onChange={handleSliderChange}
+                  aria-label="Slideshow duration"
                   className="w-full cursor-pointer accent-indigo-500 h-1.5 rounded-lg appearance-none"
                   style={{
                     background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${(sliderValue / 2) * 100}%, rgba(255,255,255,0.2) ${(sliderValue / 2) * 100}%, rgba(255,255,255,0.2) 100%)`,
