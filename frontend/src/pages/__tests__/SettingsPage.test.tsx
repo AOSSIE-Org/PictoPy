@@ -24,10 +24,11 @@ describe('Settings Page', () => {
         await user.click(dropdownTrigger);
 
         const menuItems = screen.getAllByRole('menuitem');
-        expect(menuItems).toHaveLength(3);
+        expect(menuItems).toHaveLength(4);
         expect(menuItems[0]).toHaveTextContent('Nano');
         expect(menuItems[1]).toHaveTextContent('Small');
         expect(menuItems[2]).toHaveTextContent('Medium');
+        expect(menuItems[3]).toHaveTextContent('Configure...');
       });
 
       test('GPU Acceleration toggle changes state on click', async () => {
@@ -99,7 +100,7 @@ describe('Settings Page', () => {
 
         // reopen and verify options still available
         await user.click(dropdownTrigger);
-        expect(screen.getAllByRole('menuitem')).toHaveLength(3);
+        expect(screen.getAllByRole('menuitem')).toHaveLength(4);
       });
     });
 
