@@ -220,7 +220,7 @@ def cluster_util_cluster_all_face_embeddings(
     Args:
         eps: DBSCAN epsilon parameter for maximum distance between samples (default: 0.75)
         min_samples: DBSCAN minimum samples parameter for core points (default: 2)
-        similarity_threshold: Minimum similarity to consider same person (default: 0.85, range: 0.75-0.90)
+        similarity_threshold: Minimum similarity to consider same person (default: 0.65, range: 0.65-0.90)
         merge_threshold: Similarity threshold for post-clustering merge (default: None, uses similarity_threshold)
 
     Returns:
@@ -286,8 +286,18 @@ def cluster_util_cluster_all_face_embeddings(
 
     estimated_eps = estimate_eps(embeddings_array, k=min_samples)
     if estimated_eps is not None:
-        logger.info(f"Adaptive eps estimated: {estimated_eps:.4f}")
-        eps = estimated_eps
+        clamped_eps = min(estimated_eps, max_distance)
+        # DBSCAN requires eps to be strictly positive
+        clamped_eps = max(clamped_eps, 1e-6)
+        if clamped_eps < estimated_eps:
+            logger.warning(
+                f"Adaptive eps {estimated_eps:.4f} exceeded max_distance "
+                f"{max_distance:.4f} (similarity_threshold={similarity_threshold}); "
+                f"clamping to {clamped_eps:.4f}"
+            )
+        else:
+            logger.info(f"Adaptive eps estimated: {clamped_eps:.4f}")
+        eps = clamped_eps
     else:
         logger.warning(
             f"Too few embeddings for eps estimation, using config default: {eps}"

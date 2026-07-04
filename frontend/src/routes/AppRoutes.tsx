@@ -13,6 +13,8 @@ import { MemoriesPage } from '@/components/Memories';
 import { MemoryDetail } from '@/components/Memories/MemoryDetail';
 import { ModelManager } from '@/pages/ModelManager/ModelManager';
 
+import { SearchResults } from '@/pages/SearchResults/SearchResults';
+
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
@@ -28,6 +30,7 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.MEMORIES} element={<MemoriesPage />} />
         <Route path={ROUTES.MEMORY_DETAIL} element={<MemoryDetail />} />
         <Route path={ROUTES.PERSON} element={<PersonImages />} />
+        <Route path={ROUTES.SEARCH} element={<SearchResults />} />
       </Route>
     </Routes>
   );

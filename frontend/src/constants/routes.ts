@@ -11,4 +11,5 @@ export const ROUTES = {
   MEMORY_DETAIL: 'memories/:memoryId',
   PERSON: 'person/:clusterId',
   MODEL_MANAGER: 'model-manager',
+  SEARCH: 'search',
 };

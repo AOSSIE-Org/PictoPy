@@ -4,7 +4,11 @@ from app.database.images import db_get_all_images
 from app.schemas.images import ErrorResponse
 from app.utils.images import image_util_parse_metadata
 from pydantic import BaseModel
-from app.database.images import db_toggle_image_favourite_status, db_get_image_by_id
+from app.database.images import (
+    db_toggle_image_favourite_status,
+    db_get_image_by_id,
+    db_search_images_by_tag,
+)
 from app.logging.setup_logging import get_logger
 
 # Initialize logger
@@ -84,6 +88,48 @@ def get_all_images(
                 success=False,
                 error="Internal server error",
                 message=f"Unable to retrieve images: {str(e)}",
+            ).model_dump(),
+        )
+
+
+@router.get(
+    "/search",
+    response_model=GetAllImagesResponse,
+    responses={code: {"model": ErrorResponse} for code in [400, 404, 500]},
+)
+def search_images_by_tag(tag: str = Query(..., description="Tag name to search for")):
+    """Search images by tag name."""
+    try:
+        images = db_search_images_by_tag(tag)
+
+        image_data = [
+            ImageData(
+                id=image["id"],
+                path=image["path"],
+                folder_id=image["folder_id"],
+                thumbnailPath=image["thumbnailPath"],
+                metadata=image_util_parse_metadata(image["metadata"]),
+                isTagged=image["isTagged"],
+                isFavourite=image.get("isFavourite", False),
+                tags=image["tags"],
+            )
+            for image in images
+        ]
+
+        return GetAllImagesResponse(
+            success=True,
+            message=f"Successfully retrieved {len(image_data)} images for tag '{tag}'",
+            data=image_data,
+        )
+
+    except Exception as e:
+        logger.error(f"Error searching images: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message="Unable to search images due to an internal error",
             ).model_dump(),
         )
 
