@@ -1,6 +1,7 @@
 import { render, screen, act } from '@/test-utils';
 import userEvent from '@testing-library/user-event';
 import Settings from '../SettingsPage/Settings';
+import { invoke } from '@tauri-apps/api/core';
 
 describe('Settings Page', () => {
   // shared setup for all tests
@@ -101,6 +102,20 @@ describe('Settings Page', () => {
         // reopen and verify options still available
         await user.click(dropdownTrigger);
         expect(screen.getAllByRole('menuitem')).toHaveLength(4);
+      });
+
+      test('clicking Configure... invokes open_model_manager Tauri command', async () => {
+        const { user } = await setupTest();
+
+        const dropdownTrigger = screen.getByRole('button', { name: /nano/i });
+        await user.click(dropdownTrigger);
+
+        const configureOption = screen.getByRole('menuitem', {
+          name: /configure/i,
+        });
+        await user.click(configureOption);
+
+        expect(invoke).toHaveBeenCalledWith('open_model_manager');
       });
     });
 
