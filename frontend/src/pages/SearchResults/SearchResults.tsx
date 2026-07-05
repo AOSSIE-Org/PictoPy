@@ -22,7 +22,7 @@ export const SearchResults = () => {
 
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  const { data, isLoading, isSuccess, isError, error } = usePictoQuery({
+  const { data, isLoading, isSuccess, isError, errorMessage } = usePictoQuery({
     queryKey: ['search-results', query],
     queryFn: async () => searchImagesByTag({ tag: query }),
     enabled: !!query,
@@ -33,7 +33,7 @@ export const SearchResults = () => {
       setSearchError(null);
       dispatch(showLoader('Searching images'));
     } else if (isError) {
-      setSearchError(error?.message || 'Failed to search images');
+      setSearchError(errorMessage || 'Failed to search images');
       dispatch(hideLoader());
     } else if (isSuccess) {
       setSearchError(null);
@@ -45,7 +45,7 @@ export const SearchResults = () => {
     return () => {
       dispatch(hideLoader());
     };
-  }, [data, isSuccess, isError, isLoading, dispatch]);
+  }, [data, isSuccess, isError, isLoading, errorMessage, dispatch]);
 
   return (
     <div>
