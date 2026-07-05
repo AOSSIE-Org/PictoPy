@@ -12,9 +12,11 @@ from app.models.model_registry import MODEL_REGISTRY, TIER_MODELS, get_model_pat
 from app.models.session_registry import (
     try_mark_model_for_deletion,
     release_model_deletion_mark,
+    _registry_lock,
 )
 from app.utils.hardware_detect import get_hardware_info
 from app.utils.model_downloader import ensure_model
+from app.database.metadata import db_get_metadata
 import logging
 
 logger = logging.getLogger(__name__)
@@ -115,18 +117,41 @@ async def delete_model(model_key: str):
             detail=f"Model key '{model_key}' not found in registry.",
         )
 
-    path = get_model_path(model_key)
+    spec = MODEL_REGISTRY[model_key]
 
-    # Check no sessions are active and reserve the model for deletion.
-    active_session_count = try_mark_model_for_deletion(model_key)
-    if active_session_count is not None:
+    # Guard 1: Prevent deletion of required models
+    if spec.get("tier") == "required":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Model {model_key} is currently in use by {active_session_count} active session(s). "
-                "Close active model sessions before deleting."
-            ),
+            detail="Cannot delete a required model. No fallback exists for this slot.",
         )
+
+    with _registry_lock:
+        # Guard 2: Prevent deletion of the currently active tier
+        metadata = db_get_metadata()
+        active_tier = "small"  # Default model size if no preferences found
+        if metadata and "user_preferences" in metadata:
+            user_prefs = metadata["user_preferences"]
+            active_tier = user_prefs.get("YOLO_model_size", "small")
+
+        if spec.get("tier") == active_tier:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Cannot delete model '{model_key}' because its tier '{spec.get('tier')}' is currently active. Switch to a different tier before deleting.",
+            )
+
+        # Check no sessions are active and reserve the model for deletion.
+        active_session_count = try_mark_model_for_deletion(model_key)
+        if active_session_count is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Model {model_key} is currently in use by {active_session_count} active session(s). "
+                    "Close active model sessions before deleting."
+                ),
+            )
+
+    path = get_model_path(model_key)
 
     try:
         if os.path.exists(path):

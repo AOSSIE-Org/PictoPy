@@ -7,12 +7,15 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { invoke } from '@tauri-apps/api/core';
 
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import SettingsCard from './SettingsCard';
+import { formatTierLabel } from '@/lib/utils';
 import { BACKEND_URL } from '@/config/Backend';
 import {
   getInstalledModelTiers,
@@ -79,9 +82,6 @@ const UserPreferencesCard: React.FC = () => {
     };
   }, []);
 
-  const formatTierLabel = (tier: ModelTier) =>
-    tier.charAt(0).toUpperCase() + tier.slice(1);
-
   return (
     <SettingsCard
       icon={Cpu}
@@ -119,7 +119,9 @@ const UserPreferencesCard: React.FC = () => {
                   <DropdownMenuItem
                     key={tier}
                     className="cursor-pointer"
-                    onClick={() => updateYoloModelSize(tier)}
+                    onClick={() =>
+                      updateYoloModelSize(tier).catch(console.warn)
+                    }
                   >
                     {formatTierLabel(tier)}
                   </DropdownMenuItem>
@@ -140,6 +142,15 @@ const UserPreferencesCard: React.FC = () => {
                     No models installed
                   </DropdownMenuItem>
                 )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="hover:text-secondary cursor-pointer font-medium"
+                onSelect={() => {
+                  invoke('open_model_manager').catch(console.error);
+                }}
+              >
+                Configure...
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -164,7 +175,9 @@ const UserPreferencesCard: React.FC = () => {
               className="cursor-pointer"
               id="gpu-acceleration"
               checked={preferences.GPU_Acceleration}
-              onCheckedChange={() => toggleGpuAcceleration()}
+              onCheckedChange={() =>
+                toggleGpuAcceleration().catch(console.warn)
+              }
             />
           </div>
         </div>

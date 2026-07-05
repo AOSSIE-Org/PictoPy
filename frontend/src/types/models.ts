@@ -60,9 +60,9 @@ export type ModelDownloadProgressMessage =
   | ModelDownloadProgressErrorMessage;
 
 export const MODEL_TIER_LABELS: Record<ModelTier, string> = {
-  nano: 'Nano (~21 MB)',
-  small: 'Small (~75.7 MB)',
-  medium: 'Medium (~161 MB)',
+  nano: 'Nano (~20 MB)',
+  small: 'Small (~72 MB)',
+  medium: 'Medium (~154 MB)',
 };
 
 export const MODEL_TIER_DESCRIPTIONS: Record<ModelTier, string> = {
