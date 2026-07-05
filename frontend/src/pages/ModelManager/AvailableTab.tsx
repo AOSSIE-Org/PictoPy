@@ -17,7 +17,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
-import { ModelTier, ModelStatusResponse } from '@/types/models';
+import {
+  ModelTier,
+  ModelStatusResponse,
+  getModelTierDescription,
+} from '@/types/models';
 import { useModelDownloadProgress } from '@/hooks/useModelDownloadProgress';
 
 const TIER_ORDER: ModelTier[] = ['nano', 'small', 'medium'];
@@ -94,7 +98,10 @@ const TierCard: React.FC<TierCardProps> = ({
             </Badge>
           )}
         </div>
-        <p className="text-muted-foreground mb-4 text-sm">
+        <p className="text-muted-foreground mt-1 mb-2 text-sm leading-relaxed">
+          {getModelTierDescription(tier)}
+        </p>
+        <p className="text-muted-foreground mb-4 text-xs">
           ~{Math.round(combinedSize)} MB total size
         </p>
       </div>

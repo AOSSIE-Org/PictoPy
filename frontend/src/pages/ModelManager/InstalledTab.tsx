@@ -10,7 +10,11 @@ import { showGlobalAlert } from '@/features/globalAlertSlice';
 import { ConfirmDialog } from '@/components/ConfirmDialog/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ModelTier, ModelStatusResponse } from '@/types/models';
+import {
+  ModelTier,
+  ModelStatusResponse,
+  getModelTierDescription,
+} from '@/types/models';
 
 export interface InstalledTabProps {
   statusData?: ModelStatusResponse;
@@ -202,7 +206,10 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
                           </Badge>
                         )}
                       </div>
-                      <p className="text-muted-foreground mb-4 text-sm">
+                      <p className="text-muted-foreground mt-1 mb-2 text-sm leading-relaxed">
+                        {getModelTierDescription(tier)}
+                      </p>
+                      <p className="text-muted-foreground mb-4 text-xs">
                         ~{Math.round(combinedSize)} MB total size
                       </p>
                     </div>
@@ -249,25 +256,40 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
         <section>
           <h2 className="mb-4 text-lg font-semibold">Always Installed</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {requiredModels.map(({ key, name, size_mb }) => (
-              <div
-                key={key}
-                className="bg-card flex flex-col rounded-xl border p-5 opacity-80 shadow-sm"
-              >
-                <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-lg font-medium">{name || key}</h3>
-                  <ShieldCheck className="text-primary h-4 w-4" />
+            {requiredModels.map(({ key, name, size_mb }) => {
+              const isFaceNet =
+                key.includes('facenet') ||
+                (name && name.toLowerCase().includes('facenet'));
+              const displayName = isFaceNet
+                ? 'Face Recognition (FaceNet)'
+                : name || key;
+              const description = isFaceNet
+                ? 'Core model used for analyzing and grouping faces across all photos.'
+                : 'System dependency required for core functionality.';
+
+              return (
+                <div
+                  key={key}
+                  className="bg-card flex flex-col rounded-xl border p-5 opacity-80 shadow-sm"
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-lg font-medium">{displayName}</h3>
+                    <ShieldCheck className="text-primary h-4 w-4" />
+                  </div>
+                  <p className="text-muted-foreground mt-1 mb-2 text-sm leading-relaxed">
+                    {description}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {size_mb
+                      ? `~${Math.round(size_mb)} MB`
+                      : 'Required core model'}
+                  </p>
+                  <div className="border-border/50 text-muted-foreground mt-4 border-t pt-4 text-xs">
+                    System dependency (cannot be removed)
+                  </div>
                 </div>
-                <p className="text-muted-foreground text-sm">
-                  {size_mb
-                    ? `~${Math.round(size_mb)} MB`
-                    : 'Required core model'}
-                </p>
-                <div className="border-border/50 text-muted-foreground mt-4 border-t pt-4 text-xs">
-                  System dependency (cannot be removed)
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
