@@ -31,6 +31,7 @@ class ImageRecord(TypedDict, total=False):
     metadata: Union[Mapping[str, Any], str]
     isTagged: bool
     isFavourite: bool
+    isEmbedded: bool
     # New fields for Memories feature
     latitude: Optional[float]
     longitude: Optional[float]
@@ -72,6 +73,7 @@ def db_create_images_table() -> None:
             metadata TEXT,
             isTagged BOOLEAN DEFAULT 0,
             isFavourite BOOLEAN DEFAULT 0,
+            isEmbedded BOOLEAN DEFAULT 0,
             latitude REAL,
             longitude REAL,
             captured_at DATETIME,
@@ -120,8 +122,8 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
     try:
         cursor.executemany(
             """
-            INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged, latitude, longitude, captured_at)
-            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged, :latitude, :longitude, :captured_at)
+            INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged, isEmbedded, latitude, longitude, captured_at)
+            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged, COALESCE(:isEmbedded, 0), :latitude, :longitude, :captured_at)
             ON CONFLICT(path) DO UPDATE SET
                 folder_id=excluded.folder_id,
                 thumbnailPath=excluded.thumbnailPath,
@@ -129,6 +131,10 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
                 isTagged=CASE
                     WHEN excluded.isTagged THEN 1
                     ELSE images.isTagged
+                END,
+                isEmbedded=CASE
+                    WHEN excluded.isEmbedded THEN 1
+                    ELSE images.isEmbedded
                 END,
                 latitude=COALESCE(excluded.latitude, images.latitude),
                 longitude=COALESCE(excluded.longitude, images.longitude),
@@ -956,3 +962,27 @@ def db_get_all_images_for_memories() -> List[dict]:
         return []
     finally:
         conn.close()
+
+
+def db_mark_images_embedded(image_ids: List[str]) -> bool:
+    """Mark a batch of images as embedded in the database."""
+    if not image_ids:
+        return True
+
+    conn = None
+    try:
+        conn = _connect()
+        cursor = conn.cursor()
+
+        placeholders = ",".join(["?"] * len(image_ids))
+        query = f"UPDATE images SET isEmbedded = 1 WHERE id IN ({placeholders})"
+
+        cursor.execute(query, image_ids)
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Error marking images as embedded: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
