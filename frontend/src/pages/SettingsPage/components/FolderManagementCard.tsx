@@ -76,7 +76,15 @@ const FolderManagementCard: React.FC = () => {
                     </div>
 
                     <Button
-                      onClick={() => deleteFolder(folder.folder_id)}
+                      onClick={() => {
+                        const confirmed = window.confirm(
+                          'Are you sure you want to delete this folder? This action cannot be undone.',
+                        );
+
+                        if (confirmed) {
+                          deleteFolder(folder.folder_id);
+                        }
+                      }}
                       variant="outline"
                       size="sm"
                       className="h-8 w-8 cursor-pointer text-gray-500 hover:border-red-300 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
