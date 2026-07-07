@@ -71,6 +71,10 @@ graph TD
     ONNX --> FaceNet
 ```
 
+
+
+The diagram above illustrates the interaction between the frontend, Tauri bridge, Rust backend, Python backend, database, and AI models.
+
 ## Backend rust (via Tauri)
 
 The Rust backend, integrated through Tauri, is a core component of our application. It leverages Rust's performance and safety features to handle file system operations, provide a secure bridge between the frontend and the local system, and manage OS-level interactions. This backend efficiently manages tasks such as reading and writing image files, extracting metadata, and ensuring secure access to system resources. It communicates with the React frontend through an IPC mechanism, allowing for seamless integration of low-level functionalities with the user interface. This architecture enables high-performance, secure operations on the local system while maintaining a smooth user experience.
@@ -97,3 +101,4 @@ sequenceDiagram
     Rust-->>Frontend: Processed Results
     Frontend-->>User: Display Results
 ```
+This workflow shows how images are processed, analyzed, and stored before results are presented to the user.
