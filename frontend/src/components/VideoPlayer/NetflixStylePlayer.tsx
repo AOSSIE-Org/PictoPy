@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Play,
   Pause,
@@ -11,6 +11,7 @@ import {
   VolumeX,
 } from 'lucide-react';
 import { Slider } from '../../components/ui/Slider';
+import { convertFileSrc } from '@tauri-apps/api/core';
 
 interface NetflixStylePlayerProps {
   videoSrc: string;
@@ -27,8 +28,12 @@ export default function NetflixStylePlayer({
   const [isMuted, setIsMuted] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const resolvedSrc = useMemo(() => convertFileSrc(videoSrc), [videoSrc]);
 
   useEffect(() => {
     let timeout: NodeJS.Timeout;
@@ -44,16 +49,77 @@ export default function NetflixStylePlayer({
       container.addEventListener('mouseenter', showControlsTemporarily);
     }
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          activeEl.getAttribute('contenteditable') === 'true')
+      ) {
+        return;
+      }
+
+      switch (e.key) {
+        case ' ':
+          e.preventDefault();
+          togglePlay();
+          showControlsTemporarily();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          skipTime(-10);
+          showControlsTemporarily();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          skipTime(10);
+          showControlsTemporarily();
+          break;
+        case 'm':
+        case 'M':
+          e.preventDefault();
+          toggleMute();
+          showControlsTemporarily();
+          break;
+        case 'f':
+        case 'F':
+          e.preventDefault();
+          toggleFullScreen();
+          showControlsTemporarily();
+          break;
+        default:
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
     return () => {
       if (container) {
         container.removeEventListener('mousemove', showControlsTemporarily);
         container.removeEventListener('mouseenter', showControlsTemporarily);
       }
+      document.removeEventListener('keydown', handleKeyDown);
       clearTimeout(timeout);
     };
   }, []);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === containerRef.current);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   const formatTime = (timeInSeconds: number) => {
+    if (!Number.isFinite(timeInSeconds)) {
+      return '0:00';
+    }
     const hours = Math.floor(timeInSeconds / 3600);
     const minutes = Math.floor((timeInSeconds % 3600) / 60);
     const seconds = Math.floor(timeInSeconds % 60);
@@ -65,17 +131,35 @@ export default function NetflixStylePlayer({
   };
 
   const togglePlay = () => {
-    if (videoRef.current) {
-      isPlaying ? videoRef.current.pause() : videoRef.current.play();
-      setIsPlaying(!isPlaying);
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
     }
   };
 
   const handleProgress = () => {
     if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime);
       setProgress(
-        (videoRef.current.currentTime / videoRef.current.duration) * 100,
+        videoRef.current.duration
+          ? (videoRef.current.currentTime / videoRef.current.duration) * 100
+          : 0,
       );
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration);
+    }
+  };
+
+  const handleDurationChange = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration);
     }
   };
 
@@ -85,7 +169,13 @@ export default function NetflixStylePlayer({
       const clickPosition =
         (e.clientX - progressBar.getBoundingClientRect().left) /
         progressBar.offsetWidth;
-      videoRef.current.currentTime = clickPosition * videoRef.current.duration;
+      const rawTime = clickPosition * videoRef.current.duration;
+      const maxTime = Number.isFinite(videoRef.current.duration)
+        ? videoRef.current.duration
+        : 0;
+      const newTime = Math.min(Math.max(rawTime, 0), maxTime);
+      videoRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
     }
   };
 
@@ -95,12 +185,17 @@ export default function NetflixStylePlayer({
     } else {
       document.exitFullscreen();
     }
-    setIsFullscreen(!isFullscreen);
   };
 
   const skipTime = (seconds: number) => {
     if (videoRef.current) {
-      videoRef.current.currentTime += seconds;
+      const rawTime = videoRef.current.currentTime + seconds;
+      const maxTime = Number.isFinite(videoRef.current.duration)
+        ? videoRef.current.duration
+        : 0;
+      const newTime = Math.min(Math.max(rawTime, 0), maxTime);
+      videoRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
     }
   };
 
@@ -108,6 +203,7 @@ export default function NetflixStylePlayer({
     if (videoRef.current) {
       const volumeValue = newVolume[0];
       videoRef.current.volume = volumeValue;
+      videoRef.current.muted = volumeValue === 0;
       setVolume(volumeValue);
       setIsMuted(volumeValue === 0);
     }
@@ -115,7 +211,7 @@ export default function NetflixStylePlayer({
 
   const toggleMute = () => {
     if (videoRef.current) {
-      const newMuteState = !isMuted;
+      const newMuteState = !videoRef.current.muted;
       videoRef.current.muted = newMuteState;
       setIsMuted(newMuteState);
     }
@@ -130,9 +226,14 @@ export default function NetflixStylePlayer({
       >
         <video
           ref={videoRef}
-          src={videoSrc}
+          src={resolvedSrc}
           className="h-full w-full"
           onTimeUpdate={handleProgress}
+          onLoadedMetadata={handleLoadedMetadata}
+          onDurationChange={handleDurationChange}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onEnded={() => setIsPlaying(false)}
           preload="auto"
         />
       </div>
@@ -167,9 +268,7 @@ export default function NetflixStylePlayer({
             <FastForward size={24} />
           </button>
           <div className="text-white">
-            {formatTime(videoRef.current?.currentTime ?? 0) +
-              ' / ' +
-              formatTime(videoRef.current?.duration ?? 0)}
+            {formatTime(currentTime) + ' / ' + formatTime(duration)}
           </div>
         </div>
 
