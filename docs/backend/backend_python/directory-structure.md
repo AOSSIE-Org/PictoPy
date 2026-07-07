@@ -58,16 +58,16 @@ This directory contains pre-trained machine learning models used in the applicat
 
 This directory contains API route definitions for different functionalities of the application.
 
-| Name                  | Description                                                                                                                         |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `albums.py`           | Handles API routes for album-related operations (create, delete, add/remove photos, view albums).                                   |
-| `face_clusters.py`    | Rename clusters, list clusters, and fetch cluster images.                                                                           |
-| `folders.py`          | Add, sync, update AI tagging, delete, and list folders, managing folder hierarchy and image processing asynchronously.              |
-| `images.py`           | Deals with image-related operations (adding, deleting, retrieving images and their metadata).                                       |
-| `memories.py`         | Provides endpoints to generate photo memories grouped by location and time, retrieve a timeline, and fetch on-this-day recollections.|
-| `models.py`           | Exposes routes to check model download status, get hardware recommendations, download, delete, and set up AI models.                |
-| `shutdown.py`         | Provides a single endpoint to gracefully terminate the PictoPy backend process on all platforms.                                    |
-| `user_preferences.py` | Get and update user preferences stored in the metadata database.                                                                    |
+| Name                  | Description                                                                                                                            |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `albums.py`           | Handles API routes for album-related operations (create, delete, add/remove photos, view albums).                                      |
+| `face_clusters.py`    | Rename clusters, list clusters, and fetch cluster images.                                                                              |
+| `folders.py`          | Add, sync, update AI tagging, delete, and list folders, managing folder hierarchy and image processing asynchronously.                 |
+| `images.py`           | Deals with image-related operations (adding, deleting, retrieving images and their metadata).                                          |
+| `memories.py`         | Provides endpoints to generate photo memories grouped by location and time, retrieve a timeline, and fetch on-this-day recollections.  |
+| `models.py`           | Exposes routes to check model download status, get hardware recommendations, download, delete, and set up AI models.                   |
+| `shutdown.py`         | Provides a single endpoint to gracefully terminate the PictoPy backend process on all platforms.                                       |
+| `user_preferences.py` | Get and update user preferences stored in the metadata database.                                                                       |
 
 ## schemas
 
