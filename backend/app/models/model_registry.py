@@ -5,8 +5,14 @@ import os
 import sys
 from platformdirs import user_data_dir
 
-FeatureType = Literal["object_detection", "face_detection", "face_embedding"]
-TierType = Literal["nano", "small", "medium", "required"]
+FeatureType = Literal[
+    "object_detection",
+    "face_detection",
+    "face_embedding",
+    "semantic_vision",
+    "semantic_text",
+]
+TierType = Literal["nano", "small", "medium", "required", "manual"]
 
 
 class ModelSpec(TypedDict):
@@ -75,6 +81,54 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
         feature="face_embedding",
         tier="required",
     ),
+    "siglip2_base_vision": ModelSpec(
+        filename="SigLIP2_Base_Vision.onnx",
+        url="PLACEHOLDER_URL",  # TODO
+        sha256="PLACEHOLDER_SHA256",  # TODO
+        size_mb=0,  # TODO
+        feature="semantic_vision",
+        tier="small",
+    ),
+    "siglip2_base_text": ModelSpec(
+        filename="SigLIP2_Base_Text.onnx",
+        url="PLACEHOLDER_URL",  # TODO
+        sha256="PLACEHOLDER_SHA256",  # TODO
+        size_mb=0,  # TODO
+        feature="semantic_text",
+        tier="small",
+    ),
+    "siglip2_large_vision": ModelSpec(
+        filename="SigLIP2_Large_Vision.onnx",
+        url="PLACEHOLDER_URL",  # TODO
+        sha256="PLACEHOLDER_SHA256",  # TODO
+        size_mb=0,  # TODO
+        feature="semantic_vision",
+        tier="medium",
+    ),
+    "siglip2_large_text": ModelSpec(
+        filename="SigLIP2_Large_Text.onnx",
+        url="PLACEHOLDER_URL",  # TODO
+        sha256="PLACEHOLDER_SHA256",  # TODO
+        size_mb=0,  # TODO
+        feature="semantic_text",
+        tier="medium",
+    ),
+    "siglip2_so400m_vision": ModelSpec(
+        filename="SigLIP2_SO400M_Vision.onnx",
+        url="PLACEHOLDER_URL",  # TODO
+        sha256="PLACEHOLDER_SHA256",  # TODO
+        size_mb=0,  # TODO
+        feature="semantic_vision",
+        tier="manual",
+    ),
+    "siglip2_so400m_text": ModelSpec(
+        filename="SigLIP2_SO400M_Text.onnx",
+        url="PLACEHOLDER_URL",  # TODO
+        sha256="PLACEHOLDER_SHA256",  # TODO
+        size_mb=0,  # TODO
+        feature="semantic_text",
+        tier="manual",
+    ),
 }
 
 TIER_MODELS: dict[str, list[str]] = {
@@ -82,6 +136,7 @@ TIER_MODELS: dict[str, list[str]] = {
     "small": ["yolo_small", "yolo_small_face"],
     "medium": ["yolo_medium", "yolo_medium_face"],
     "required": ["facenet"],  # Required model; not user-selectable
+    "manual": [],
 }
 
 USER_DATA_MODELS = os.path.join(user_data_dir("PictoPy"), "models")
