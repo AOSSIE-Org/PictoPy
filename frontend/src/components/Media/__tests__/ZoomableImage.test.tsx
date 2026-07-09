@@ -697,6 +697,28 @@ describe('ZoomableImage controlled transform behavior', () => {
     expect(image.style.height).toBe('');
   });
 
+  test('keeps the image hidden until the fit transform is ready, then fades it in', () => {
+    renderZoomableImage();
+
+    const viewport = screen.getByTestId('zoom-viewport');
+    const image = screen.getByAltText('test image');
+
+    expect(image.style.opacity).toBe('0');
+    expect(image.style.transition).toBe('none');
+
+    mockElementRect(
+      viewport,
+      { width: 500, height: 400, left: 0, top: 0 },
+      { clientWidth: 500, clientHeight: 400 },
+    );
+    mockImageDimensions(image, { width: 1000, height: 800 });
+
+    fireEvent.load(image);
+
+    expect(image.style.opacity).toBe('1');
+    expect(image.style.transition).toBe('opacity 120ms ease-out');
+  });
+
   test('starts from the new image fit transform after switching images', () => {
     const { viewport, rerender } = setupScene({
       viewportSize: { width: 500, height: 400 },
