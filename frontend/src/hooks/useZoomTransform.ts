@@ -71,6 +71,7 @@ export const useZoomTransform = ({
   const [isOverflowing, setIsOverflowing] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [isButtonZoom, setIsButtonZoom] = useState(false);
+  const [isFitReady, setIsFitReady] = useState(false);
 
   const setRawImageDimensions = useCallback((dimensions: Size | null) => {
     rawDimensionsRef.current = dimensions;
@@ -196,6 +197,7 @@ export const useZoomTransform = ({
       isFitInitializedRef.current = true;
       hasUserInteractedRef.current = false;
       fitRetryCountRef.current = 0;
+      setIsFitReady(true);
     }
 
     return didApply;
@@ -297,6 +299,7 @@ export const useZoomTransform = ({
   useEffect(() => {
     setIsOverflowing(false);
     setRawImageDimensions(null);
+    setIsFitReady(false);
     resetToFit();
   }, [imagePath, resetToFit, setRawImageDimensions]);
 
@@ -556,5 +559,6 @@ export const useZoomTransform = ({
     zoomIn,
     zoomOut,
     reset: resetToFit,
+    isFitReady,
   };
 };
