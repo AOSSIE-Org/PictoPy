@@ -11,7 +11,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+
+
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+
 
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import SettingsCard from './SettingsCard';
@@ -28,7 +32,7 @@ import {
  * Component for managing user preferences in settings
  */
 const UserPreferencesCard: React.FC = () => {
-  const { preferences, updateYoloModelSize, toggleGpuAcceleration } =
+  const { preferences, updateYoloModelSize, toggleGpuAcceleration, refetch } =
     useUserPreferences();
   const [installedTiers, setInstalledTiers] = useState<ModelTier[]>([]);
   const [loadingTiers, setLoadingTiers] = useState(true);
@@ -81,6 +85,36 @@ const UserPreferencesCard: React.FC = () => {
       controller.abort();
     };
   }, []);
+
+
+
+  // ISSUE - 1369: Model Manager runs in its own Tauri window and doesn't share state with
+  // Settings. It emits 'models-updated' when it closes; refresh both the
+  // installed-tiers list and the active preference here in response.
+  useEffect(() => {
+    const unlistenPromise = listen('models-updated', async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/models/status`);
+        if (res.ok) {
+          const data: ModelStatusResponse = await res.json();
+          if (data.success && data.data) {
+            setInstalledTiers(getInstalledModelTiers(data.data));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to refresh model status', err);
+      }
+      refetch();
+    });
+
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, [refetch]);
+
+
+
+
 
   return (
     <SettingsCard

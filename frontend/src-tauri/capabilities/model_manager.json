@@ -1,5 +1,9 @@
 {
   "identifier": "model-manager-capabilities",
   "windows": ["model-manager"],
-  "permissions": ["core:window:default", "core:app:allow-version"]
+  "permissions": ["core:window:default",
+   "core:app:allow-version",
+    "core:event:default",
+     "core:window:allow-close",
+     "core:window:allow-destroy"]
 }

@@ -99,6 +99,13 @@ export const useUserPreferences = () => {
     updateYoloModelSize,
     toggleGpuAcceleration,
 
+
+    // ISSUE - 1369: Exposed so other Tauri windows (e.g. Model Manager) can access it and 
+    // refresh the preferences after making changes inside Model-Manager Window.
+    refetch: preferencesQuery.refetch,
+    
+
+
     // Mutation state (for use in UI, e.g., disabling buttons)
     isUpdating: updatePreferencesMutation.isPending,
   };

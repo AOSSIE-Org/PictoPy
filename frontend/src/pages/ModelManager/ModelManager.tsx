@@ -7,6 +7,10 @@ import { Download, Cloud } from 'lucide-react';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchModelStatus } from '@/api/api-functions';
 
+// ISSUE - 1369: Importing emit and getCurrentWindow for the connection between settings and model manager.
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { emit } from '@tauri-apps/api/event';
+
 const TABS: TabConfig[] = [
   { id: 'Installed', label: 'Installed', icon: Download },
   { id: 'Available', label: 'Available', icon: Cloud },
@@ -62,6 +66,27 @@ export const ModelManager: React.FC = () => {
       }
     }
   }, [statusData, downloadingTiers, installedJustNow]);
+
+
+// ISSUE - 1369: Model Manager runs in its own Tauri window, separate from the Settings.
+  // They don't share React/query state. When the Model Manager closes, 
+  // it emits 'models-updated' so Settings can get notified..
+  useEffect(() => {
+  const unlistenPromise = getCurrentWindow().onCloseRequested(async () => {
+    try {
+      await emit('models-updated');
+    } catch (err) {
+      console.error('Failed to emit models-updated', err);
+    }
+    
+  });
+
+  return () => {
+    unlistenPromise.then((unlisten) => unlisten());
+  };
+}, []);
+
+
 
   const handleTabChange = (newTab: string) => {
     if (activeTab === 'Available' && newTab !== 'Available') {
