@@ -72,12 +72,14 @@ export const ModelManager: React.FC = () => {
   // They don't share React/query state. When the Model Manager closes, 
   // it emits 'models-updated' so Settings can get notified..
   useEffect(() => {
-  const unlistenPromise = getCurrentWindow().onCloseRequested(async () => {
+  const unlistenPromise = getCurrentWindow().onCloseRequested(async (event) => {
+    event.preventDefault(); 
     try {
       await emit('models-updated');
     } catch (err) {
       console.error('Failed to emit models-updated', err);
     }
+    await getCurrentWindow().destroy();
     
   });
 

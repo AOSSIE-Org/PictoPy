@@ -104,7 +104,7 @@ const UserPreferencesCard: React.FC = () => {
       } catch (err) {
         console.error('Failed to refresh model status', err);
       }
-      refetch();
+      refetch().catch(console.error);
     });
 
     return () => {
