@@ -698,6 +698,8 @@ describe('ZoomableImage controlled transform behavior', () => {
   });
 
   test('keeps the image hidden until the fit transform is ready, then fades it in', () => {
+    const { flushNextFrame } = setupManualAnimationFrames();
+
     renderZoomableImage();
 
     const viewport = screen.getByTestId('zoom-viewport');
@@ -714,6 +716,7 @@ describe('ZoomableImage controlled transform behavior', () => {
     mockImageDimensions(image, { width: 1000, height: 800 });
 
     fireEvent.load(image);
+    flushNextFrame();
 
     expect(image.style.opacity).toBe('1');
     expect(image.style.transition).toBe('opacity 120ms ease-out');

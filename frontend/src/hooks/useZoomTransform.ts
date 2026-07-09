@@ -235,6 +235,8 @@ export const useZoomTransform = ({
         if (!applied && fitRetryCountRef.current < MAX_FIT_RETRY_FRAMES) {
           fitRetryCountRef.current += 1;
           scheduleFitTransform(false);
+        } else {
+          setIsFitReady(true);
         }
       });
     },
