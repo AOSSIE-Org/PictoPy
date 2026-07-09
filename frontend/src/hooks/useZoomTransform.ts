@@ -232,11 +232,13 @@ export const useZoomTransform = ({
         fitFrameRef.current = null;
         const applied = applyFitTransform();
 
-        if (!applied && fitRetryCountRef.current < MAX_FIT_RETRY_FRAMES) {
-          fitRetryCountRef.current += 1;
-          scheduleFitTransform(false);
-        } else {
-          setIsFitReady(true);
+        if (!applied) {
+          if (fitRetryCountRef.current < MAX_FIT_RETRY_FRAMES) {
+            fitRetryCountRef.current += 1;
+            scheduleFitTransform(false);
+          } else {
+            setIsFitReady(true);
+          }
         }
       });
     },
