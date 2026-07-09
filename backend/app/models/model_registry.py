@@ -83,17 +83,17 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
     ),
     "siglip2_base_vision": ModelSpec(
         filename="SigLIP2_Base_Vision.onnx",
-        url="PLACEHOLDER_URL",  # TODO
-        sha256="PLACEHOLDER_SHA256",  # TODO
-        size_mb=0,  # TODO
+        url="https://github.com/AOSSIE-Org/PictoPy/releases/download/models-v1.0/SigLIP2_Base_Vision.onnx",
+        sha256="c5efd0fcbe0e700bd457f2ce4dde5c85b0ea8bb2b2b48948439d1b25c749845d",
+        size_mb=355,
         feature="semantic_vision",
         tier="small",
     ),
     "siglip2_base_text": ModelSpec(
         filename="SigLIP2_Base_Text.onnx",
-        url="PLACEHOLDER_URL",  # TODO
-        sha256="PLACEHOLDER_SHA256",  # TODO
-        size_mb=0,  # TODO
+        url="https://github.com/AOSSIE-Org/PictoPy/releases/download/models-v1.0/SigLIP2_Base_Text.onnx",
+        sha256="d9d3d199aea7584f215955074afae2aa0f79a618d8eb8b561c5fe6599fc9df35",
+        size_mb=1078,
         feature="semantic_text",
         tier="small",
     ),

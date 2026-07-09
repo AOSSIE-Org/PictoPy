@@ -78,6 +78,10 @@ def get_model_status():
     """
     status_dict = {}
     for key, spec in MODEL_REGISTRY.items():
+        # Hide placeholder models that aren't actually ready/uploaded yet
+        if spec["url"] == "PLACEHOLDER_URL" or spec["sha256"] == "PLACEHOLDER_SHA256":
+            continue
+
         path = get_model_path(key)
         is_installed = os.path.exists(path)
         status_dict[key] = {
