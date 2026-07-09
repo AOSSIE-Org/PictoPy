@@ -76,6 +76,34 @@ def _get_env_float(
     return value
 
 
+def _get_env_str(name: str, default: str) -> str:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw
+
+
+# SigLIP2 Configuration
+SIGLIP2_ACTIVE_CHECKPOINT = _get_env_str("SIGLIP2_ACTIVE_CHECKPOINT", "base")
+SIGLIP2_SCORING_METADATA = {
+    "base": {
+        "logit_scale": None,  # TODO: Fill in from export run
+        "logit_bias": None,  # TODO: Fill in from export run
+        "model_version": "siglip2-base-patch16-224",
+    },
+    "large": {
+        "logit_scale": None,  # TODO: Fill in from export run
+        "logit_bias": None,  # TODO: Fill in from export run
+        "model_version": "siglip2-large-patch16-384",
+    },
+    "so400m": {
+        "logit_scale": None,  # TODO: Fill in from export run
+        "logit_bias": None,  # TODO: Fill in from export run
+        "model_version": "siglip2-so400m-patch14-384",
+    },
+}
+
+
 def _get_env_int(
     name: str,
     default: int,
