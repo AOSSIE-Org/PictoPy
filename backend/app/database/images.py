@@ -304,6 +304,53 @@ def db_get_untagged_images() -> List[UntaggedImageRecord]:
         conn.close()
 
 
+def db_get_unembedded_images() -> List[UntaggedImageRecord]:
+    """
+    Find all images that need SigLIP2 embedding.
+    Returns images where:
+    - The image's folder has AI_Tagging enabled (True)
+    - The image has isEmbedded set to False
+
+    Returns:
+        List of dictionaries containing image data: id, path, folder_id, thumbnailPath, metadata
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT i.id, i.path, i.folder_id, i.thumbnailPath, i.metadata
+            FROM images i
+            JOIN folders f ON i.folder_id = f.folder_id
+            WHERE f.AI_Tagging = TRUE
+            AND i.isEmbedded = FALSE
+            """
+        )
+
+        results = cursor.fetchall()
+
+        unembedded_images = []
+        for image_id, path, folder_id, thumbnail_path, metadata in results:
+            from app.utils.images import image_util_parse_metadata
+
+            md = image_util_parse_metadata(metadata)
+            unembedded_images.append(
+                {
+                    "id": image_id,
+                    "path": path,
+                    "folder_id": str(folder_id) if folder_id is not None else None,
+                    "thumbnailPath": thumbnail_path,
+                    "metadata": md,
+                }
+            )
+
+        return unembedded_images
+
+    finally:
+        conn.close()
+
+
 def db_update_image_tagged_status(image_id: ImageId, is_tagged: bool = True) -> bool:
     """
     Update the isTagged status for a specific image.
@@ -578,6 +625,105 @@ def db_search_images_by_tag(tag_name: str) -> List[dict]:
 
     except sqlite3.Error as e:
         logger.error(f"Error searching images by tag: {e}")
+        raise
+    finally:
+        conn.close()
+
+
+def db_get_images_by_ids(image_ids: List[str]) -> List[dict]:
+    """
+    Get a list of images by their IDs, returning their full tag list.
+    """
+    if not image_ids:
+        return []
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        images_dict = {}
+        chunk_size = 500
+
+        for i in range(0, len(image_ids), chunk_size):
+            chunk = image_ids[i : i + chunk_size]
+            placeholders = ",".join("?" for _ in chunk)
+            query = f"""
+                SELECT 
+                    i.id, 
+                    i.path, 
+                    i.folder_id, 
+                    i.thumbnailPath, 
+                    i.metadata, 
+                    i.isTagged,
+                    i.isFavourite,
+                    i.latitude,
+                    i.longitude,
+                    i.captured_at,
+                    m.name as tag_name
+                FROM images i
+                LEFT JOIN image_classes ic ON i.id = ic.image_id
+                LEFT JOIN mappings m ON ic.class_id = m.class_id
+                WHERE i.id IN ({placeholders})
+                ORDER BY i.path, m.name
+            """
+
+            cursor.execute(query, chunk)
+            results = cursor.fetchall()
+
+            # Group results by image ID
+            for (
+                image_id,
+                path,
+                folder_id,
+                thumbnail_path,
+                metadata,
+                is_tagged,
+                is_favourite,
+                latitude,
+                longitude,
+                captured_at,
+                tag_name_result,
+            ) in results:
+                if image_id not in images_dict:
+                    images_dict[image_id] = {
+                        "id": image_id,
+                        "path": path,
+                        "folder_id": str(folder_id) if folder_id is not None else "",
+                        "thumbnailPath": thumbnail_path,
+                        "metadata": metadata,
+                        "isTagged": bool(is_tagged),
+                        "isFavourite": bool(is_favourite),
+                        "latitude": latitude,
+                        "longitude": longitude,
+                        "captured_at": captured_at if captured_at else None,
+                        "tags": [],
+                    }
+
+                if (
+                    tag_name_result
+                    and tag_name_result not in images_dict[image_id]["tags"]
+                ):
+                    images_dict[image_id]["tags"].append(tag_name_result)
+
+        images = []
+        for image_data in images_dict.values():
+            if not image_data["tags"]:
+                image_data["tags"] = None
+            images.append(image_data)
+
+        # Preserve the original order from image_ids
+        # Create a lookup for fast indexing
+        image_lookup = {img["id"]: img for img in images}
+
+        ordered_images = []
+        for img_id in image_ids:
+            if img_id in image_lookup:
+                ordered_images.append(image_lookup[img_id])
+
+        return ordered_images
+
+    except sqlite3.Error as e:
+        logger.error(f"Error getting images by IDs: {e}")
         raise
     finally:
         conn.close()
