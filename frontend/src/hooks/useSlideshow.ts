@@ -45,7 +45,7 @@ export const useSlideshow = (
   return {
     isSlideshowActive,
     toggleSlideshow,
-    duration,        // <-- exposing current duration
-    setDuration,      // <-- exposing the setter so other files can change it
+    duration, // <-- exposing current duration
+    setDuration, // <-- exposing the setter so other files can change it
   };
 };

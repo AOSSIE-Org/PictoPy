@@ -103,7 +103,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
           </button>
 
           {showSettings && (
-            <div className="absolute right-0 top-full pt-2">
+            <div className="absolute top-full right-0 pt-2">
               <div className="w-48 rounded-xl bg-black/80 p-4 shadow-lg">
                 <div className="mb-2 flex justify-between text-xs text-white/70">
                   <span>2s</span>
@@ -117,7 +117,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
                   value={sliderValue}
                   onChange={handleSliderChange}
                   aria-label="Slideshow duration"
-                  className="w-full cursor-pointer accent-indigo-500 h-1.5 rounded-lg appearance-none"
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-lg accent-indigo-500"
                   style={{
                     background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${(sliderValue / 2) * 100}%, rgba(255,255,255,0.2) ${(sliderValue / 2) * 100}%, rgba(255,255,255,0.2) 100%)`,
                   }}
