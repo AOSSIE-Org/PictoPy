@@ -1,6 +1,9 @@
 import sqlite3
 from typing import Optional, List, Dict, TypedDict, Union
 from app.config.settings import DATABASE_PATH
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
 
 # Type definitions
 ClusterId = str
@@ -60,10 +63,10 @@ def db_delete_all_clusters(cursor: Optional[sqlite3.Cursor] = None) -> int:
         if own_connection:
             conn.commit()
         return deleted_count
-    except Exception:
+    except sqlite3.Error as e:
         if own_connection:
             conn.rollback()
-        print("Error deleting all clusters.")
+        logger.error(f"Error deleting all clusters: {e}")
         raise
     finally:
         if own_connection:
@@ -114,9 +117,10 @@ def db_insert_clusters_batch(
         if own_connection:
             conn.commit()
         return cluster_ids
-    except Exception:
+    except sqlite3.Error as e:
         if own_connection:
             conn.rollback()
+        logger.error(f"Error inserting clusters batch: {e}")
         raise
     finally:
         if own_connection:
