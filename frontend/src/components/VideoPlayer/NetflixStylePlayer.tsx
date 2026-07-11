@@ -34,6 +34,7 @@ export default function NetflixStylePlayer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isFocusWithin, setIsFocusWithin] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hideControlsTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -41,9 +42,10 @@ export default function NetflixStylePlayer({
   const resolvedSrc = useMemo(() => convertFileSrc(videoSrc), [videoSrc]);
 
   // Netflix-style behaviour: controls always show while paused; while
-  // playing they're only shown temporarily (hover/touch/focus) and hidden
-  // controls must not remain interactive (pointer-events must follow).
-  const controlsVisible = !isPlaying || showControls;
+  // playing they're only shown temporarily (hover/touch) and stay visible
+  // as long as keyboard focus remains inside the player. Hidden controls
+  // must not remain interactive (pointer-events must follow).
+  const controlsVisible = !isPlaying || showControls || isFocusWithin;
 
   const revealControlsTemporarily = useCallback(() => {
     setShowControls(true);
@@ -65,12 +67,15 @@ export default function NetflixStylePlayer({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore global shortcuts while an interactive control is focused,
+      // otherwise Space/arrows would both activate the control natively
+      // and fire the shortcut (e.g. Space on Play toggling playback twice).
       const activeEl = document.activeElement;
       if (
-        activeEl &&
-        (activeEl.tagName === 'INPUT' ||
-          activeEl.tagName === 'TEXTAREA' ||
-          activeEl.getAttribute('contenteditable') === 'true')
+        activeEl instanceof HTMLElement &&
+        activeEl.closest(
+          'button, input, textarea, select, a[href], [contenteditable="true"], [role="slider"]',
+        )
       ) {
         return;
       }
@@ -264,7 +269,17 @@ export default function NetflixStylePlayer({
       onMouseEnter={revealControlsTemporarily}
       onMouseLeave={() => isPlaying && hideControlsNow()}
       onTouchStart={revealControlsTemporarily}
-      onFocus={revealControlsTemporarily}
+      onFocus={() => {
+        setIsFocusWithin(true);
+        revealControlsTemporarily();
+      }}
+      onBlur={(e) => {
+        // Only clear when focus leaves the player entirely, not when it
+        // moves between controls inside it.
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setIsFocusWithin(false);
+        }
+      }}
     >
       {/* Clickable play/pause area above progress bar */}
       <div
@@ -323,7 +338,6 @@ export default function NetflixStylePlayer({
           className="h-1 w-full cursor-pointer bg-gray-600 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-hidden"
           onClick={handleProgressBarClick}
           onKeyDown={handleSeekBarKeyDown}
-          onFocus={revealControlsTemporarily}
         >
           <div
             className="h-full bg-red-600"
