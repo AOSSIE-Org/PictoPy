@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   Play,
   Pause,
@@ -19,8 +19,12 @@ interface NetflixStylePlayerProps {
   description: string;
 }
 
+const CONTROLS_HIDE_DELAY_MS = 3000;
+
 export default function NetflixStylePlayer({
   videoSrc,
+  title,
+  description,
 }: NetflixStylePlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -32,23 +36,34 @@ export default function NetflixStylePlayer({
   const [duration, setDuration] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hideControlsTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const resolvedSrc = useMemo(() => convertFileSrc(videoSrc), [videoSrc]);
 
+  // Netflix-style behaviour: controls always show while paused; while
+  // playing they're only shown temporarily (hover/touch/focus) and hidden
+  // controls must not remain interactive (pointer-events must follow).
+  const controlsVisible = !isPlaying || showControls;
+
+  const revealControlsTemporarily = useCallback(() => {
+    setShowControls(true);
+    clearTimeout(hideControlsTimeoutRef.current);
+    hideControlsTimeoutRef.current = setTimeout(
+      () => setShowControls(false),
+      CONTROLS_HIDE_DELAY_MS,
+    );
+  }, []);
+
+  const hideControlsNow = useCallback(() => {
+    clearTimeout(hideControlsTimeoutRef.current);
+    setShowControls(false);
+  }, []);
+
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
-    const showControlsTemporarily = () => {
-      setShowControls(true);
-      clearTimeout(timeout);
-      timeout = setTimeout(() => setShowControls(false), 3000);
-    };
+    return () => clearTimeout(hideControlsTimeoutRef.current);
+  }, []);
 
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener('mousemove', showControlsTemporarily);
-      container.addEventListener('mouseenter', showControlsTemporarily);
-    }
-
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeEl = document.activeElement;
       if (
@@ -64,29 +79,29 @@ export default function NetflixStylePlayer({
         case ' ':
           e.preventDefault();
           togglePlay();
-          showControlsTemporarily();
+          revealControlsTemporarily();
           break;
         case 'ArrowLeft':
           e.preventDefault();
           skipTime(-10);
-          showControlsTemporarily();
+          revealControlsTemporarily();
           break;
         case 'ArrowRight':
           e.preventDefault();
           skipTime(10);
-          showControlsTemporarily();
+          revealControlsTemporarily();
           break;
         case 'm':
         case 'M':
           e.preventDefault();
           toggleMute();
-          showControlsTemporarily();
+          revealControlsTemporarily();
           break;
         case 'f':
         case 'F':
           e.preventDefault();
           toggleFullScreen();
-          showControlsTemporarily();
+          revealControlsTemporarily();
           break;
         default:
           break;
@@ -96,12 +111,7 @@ export default function NetflixStylePlayer({
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      if (container) {
-        container.removeEventListener('mousemove', showControlsTemporarily);
-        container.removeEventListener('mouseenter', showControlsTemporarily);
-      }
       document.removeEventListener('keydown', handleKeyDown);
-      clearTimeout(timeout);
     };
   }, []);
 
@@ -217,8 +227,45 @@ export default function NetflixStylePlayer({
     }
   };
 
+  const handleSeekBarKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const video = videoRef.current;
+    if (!video) return;
+    const maxTime = Number.isFinite(video.duration) ? video.duration : 0;
+
+    switch (e.key) {
+      case 'ArrowLeft':
+      case 'ArrowRight':
+        e.preventDefault();
+        e.stopPropagation();
+        skipTime(e.key === 'ArrowLeft' ? -5 : 5);
+        break;
+      case 'Home':
+        e.preventDefault();
+        e.stopPropagation();
+        video.currentTime = 0;
+        setCurrentTime(0);
+        break;
+      case 'End':
+        e.preventDefault();
+        e.stopPropagation();
+        video.currentTime = maxTime;
+        setCurrentTime(maxTime);
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
-    <div ref={containerRef} className="relative aspect-video w-full bg-black">
+    <div
+      ref={containerRef}
+      className="relative aspect-video w-full bg-black"
+      onMouseMove={revealControlsTemporarily}
+      onMouseEnter={revealControlsTemporarily}
+      onMouseLeave={() => isPlaying && hideControlsNow()}
+      onTouchStart={revealControlsTemporarily}
+      onFocus={revealControlsTemporarily}
+    >
       {/* Clickable play/pause area above progress bar */}
       <div
         className="absolute inset-0 flex items-center justify-center"
@@ -238,13 +285,45 @@ export default function NetflixStylePlayer({
         />
       </div>
 
+      {/* Title / description overlay. Non-interactive (pointer-events-none)
+          so it never steals clicks from the play/pause area beneath it. */}
+      {(title || description) && (
+        <div
+          className={`pointer-events-none absolute top-0 right-0 left-0 bg-gradient-to-b from-black/80 to-transparent px-6 pt-6 pb-16 transition-opacity ${
+            controlsVisible ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          {title && (
+            <h2 className="text-xl font-semibold text-white">{title}</h2>
+          )}
+          {description && (
+            <p className="mt-1 max-w-2xl text-sm text-gray-300">
+              {description}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Progress Bar */}
       <div
-        className={`absolute right-0 bottom-16 left-0 px-4 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute right-0 bottom-16 left-0 px-4 transition-opacity ${
+          controlsVisible
+            ? 'pointer-events-auto opacity-100'
+            : 'pointer-events-none opacity-0'
+        }`}
       >
         <div
-          className="h-1 w-full cursor-pointer bg-gray-600"
+          role="slider"
+          tabIndex={0}
+          aria-label="Seek"
+          aria-valuemin={0}
+          aria-valuemax={Number.isFinite(duration) ? duration : 0}
+          aria-valuenow={currentTime}
+          aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
+          className="h-1 w-full cursor-pointer bg-gray-600 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-hidden"
           onClick={handleProgressBarClick}
+          onKeyDown={handleSeekBarKeyDown}
+          onFocus={revealControlsTemporarily}
         >
           <div
             className="h-full bg-red-600"
@@ -255,16 +334,32 @@ export default function NetflixStylePlayer({
 
       {/* Controls */}
       <div
-        className={`absolute right-0 bottom-4 left-0 flex items-center justify-between px-4 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute right-0 bottom-4 left-0 flex items-center justify-between px-4 transition-opacity ${
+          controlsVisible
+            ? 'pointer-events-auto opacity-100'
+            : 'pointer-events-none opacity-0'
+        }`}
       >
         <div className="flex items-center space-x-4">
-          <button onClick={() => skipTime(-10)} className="p-2 text-white">
+          <button
+            onClick={() => skipTime(-10)}
+            className="p-2 text-white"
+            aria-label="Rewind 10 seconds"
+          >
             <Rewind size={24} />
           </button>
-          <button onClick={togglePlay} className="p-2 text-white">
+          <button
+            onClick={togglePlay}
+            className="p-2 text-white"
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+          >
             {isPlaying ? <Pause size={24} /> : <Play size={24} />}
           </button>
-          <button onClick={() => skipTime(10)} className="p-2 text-white">
+          <button
+            onClick={() => skipTime(10)}
+            className="p-2 text-white"
+            aria-label="Fast forward 10 seconds"
+          >
             <FastForward size={24} />
           </button>
           <div className="text-white">
@@ -274,7 +369,11 @@ export default function NetflixStylePlayer({
 
         {/* Volume and Fullscreen */}
         <div className="flex items-center space-x-4">
-          <button onClick={toggleMute} className="text-white">
+          <button
+            onClick={toggleMute}
+            className="text-white"
+            aria-label={isMuted ? 'Unmute' : 'Mute'}
+          >
             {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
           </button>
           <Slider
@@ -284,8 +383,13 @@ export default function NetflixStylePlayer({
             value={[isMuted ? 0 : volume]}
             onValueChange={handleVolumeChange}
             className="w-24"
+            aria-label="Volume"
           />
-          <button onClick={toggleFullScreen} className="text-white">
+          <button
+            onClick={toggleFullScreen}
+            className="text-white"
+            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          >
             {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
           </button>
         </div>

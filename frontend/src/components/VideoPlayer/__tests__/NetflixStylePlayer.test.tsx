@@ -317,6 +317,105 @@ describe('NetflixStylePlayer', () => {
     }
   });
 
+  test('renders title and description overlay', () => {
+    render(
+      <NetflixStylePlayer
+        videoSrc="video.mp4"
+        title="My Great Video"
+        description="A description of the video"
+      />,
+    );
+
+    expect(screen.getByText('My Great Video')).toBeInTheDocument();
+    expect(screen.getByText('A description of the video')).toBeInTheDocument();
+  });
+
+  test('exposes the progress bar as an accessible slider', () => {
+    render(
+      <NetflixStylePlayer videoSrc="video.mp4" title="Test" description="" />,
+    );
+
+    const seekBar = screen.getByRole('slider', { name: 'Seek' });
+    expect(seekBar).toHaveAttribute('aria-valuemin', '0');
+    expect(seekBar).toHaveAttribute('tabindex', '0');
+
+    const video = document.querySelector('video') as HTMLVideoElement;
+    const videoMockState = mockVideoProperties(video);
+    Object.defineProperty(video, 'duration', {
+      value: 100,
+      writable: true,
+      configurable: true,
+    });
+
+    act(() => {
+      seekBar.focus();
+      fireEvent.keyDown(seekBar, { key: 'ArrowRight' });
+    });
+    expect(videoMockState.currentTime).toBe(5);
+
+    act(() => {
+      fireEvent.keyDown(seekBar, { key: 'End' });
+    });
+    expect(videoMockState.currentTime).toBe(100);
+
+    act(() => {
+      fireEvent.keyDown(seekBar, { key: 'Home' });
+    });
+    expect(videoMockState.currentTime).toBe(0);
+  });
+
+  test('control buttons have descriptive, state-aware aria-labels', () => {
+    render(
+      <NetflixStylePlayer videoSrc="video.mp4" title="Test" description="" />,
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Rewind 10 seconds' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Fast forward 10 seconds' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mute' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Enter fullscreen' }),
+    ).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    });
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
+  });
+
+  test('controls are visible by default while paused and hide only while playing', () => {
+    const { container } = render(
+      <NetflixStylePlayer videoSrc="video.mp4" title="Test" description="" />,
+    );
+
+    const controls = container.querySelector(
+      '.absolute.right-0.bottom-4',
+    ) as HTMLElement;
+    expect(controls.className).toContain('opacity-100');
+    expect(controls.className).toContain('pointer-events-auto');
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    });
+    expect(controls.className).toContain('opacity-0');
+    expect(controls.className).toContain('pointer-events-none');
+
+    const player = container.firstChild as HTMLElement;
+    act(() => {
+      fireEvent.mouseEnter(player);
+    });
+    expect(controls.className).toContain('opacity-100');
+
+    act(() => {
+      fireEvent.mouseLeave(player);
+    });
+    expect(controls.className).toContain('opacity-0');
+  });
+
   describe('Tauri CSP Policy Configuration', () => {
     test('tauri.conf.json whitelists asset: and http://asset.localhost in media-src CSP', () => {
       const configPath = path.resolve(
