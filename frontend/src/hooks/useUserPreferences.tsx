@@ -100,8 +100,7 @@ export const useUserPreferences = () => {
     toggleGpuAcceleration,
 
 
-    // ISSUE - 1369: Exposed so other Tauri windows (e.g. Model Manager) can access it and 
-    // refresh the preferences after making changes inside Model-Manager Window.
+    // For refetching preferences after external events (e.g., Model Manager window closing)
     refetch: preferencesQuery.refetch,
     
 

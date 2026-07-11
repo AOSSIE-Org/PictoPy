@@ -7,7 +7,6 @@ import { Download, Cloud } from 'lucide-react';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchModelStatus } from '@/api/api-functions';
 
-// ISSUE - 1369: Importing emit and getCurrentWindow for the connection between settings and model manager.
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { emit } from '@tauri-apps/api/event';
 
@@ -68,9 +67,7 @@ export const ModelManager: React.FC = () => {
   }, [statusData, downloadingTiers, installedJustNow]);
 
 
-// ISSUE - 1369: Model Manager runs in its own Tauri window, separate from the Settings.
-  // They don't share React/query state. When the Model Manager closes, 
-  // it emits 'models-updated' so Settings can get notified..
+// ISSUE - 1369: Tauri windows don't share state, so Model Manager emits 'models-updated' on close to notify Settings.
   useEffect(() => {
   const unlistenPromise = getCurrentWindow().onCloseRequested(async (event) => {
     event.preventDefault(); 
