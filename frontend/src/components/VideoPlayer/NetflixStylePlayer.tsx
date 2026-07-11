@@ -41,10 +41,7 @@ export default function NetflixStylePlayer({
 
   const resolvedSrc = useMemo(() => convertFileSrc(videoSrc), [videoSrc]);
 
-  // Netflix-style behaviour: controls always show while paused; while
-  // playing they're only shown temporarily (hover/touch) and stay visible
-  // as long as keyboard focus remains inside the player. Hidden controls
-  // must not remain interactive (pointer-events must follow).
+  // Always visible while paused; while playing, visible on hover/touch/focus only.
   const controlsVisible = !isPlaying || showControls || isFocusWithin;
 
   const revealControlsTemporarily = useCallback(() => {
@@ -67,9 +64,7 @@ export default function NetflixStylePlayer({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore global shortcuts while an interactive control is focused,
-      // otherwise Space/arrows would both activate the control natively
-      // and fire the shortcut (e.g. Space on Play toggling playback twice).
+      // Ignore shortcuts while a control is focused, to avoid double-firing.
       const activeEl = document.activeElement;
       if (
         activeEl instanceof HTMLElement &&
@@ -274,8 +269,7 @@ export default function NetflixStylePlayer({
         revealControlsTemporarily();
       }}
       onBlur={(e) => {
-        // Only clear when focus leaves the player entirely, not when it
-        // moves between controls inside it.
+        // Only clear when focus leaves the player, not between controls.
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
           setIsFocusWithin(false);
         }
@@ -300,8 +294,7 @@ export default function NetflixStylePlayer({
         />
       </div>
 
-      {/* Title / description overlay. Non-interactive (pointer-events-none)
-          so it never steals clicks from the play/pause area beneath it. */}
+      {/* pointer-events-none so it never steals play/pause clicks */}
       {(title || description) && (
         <div
           className={`pointer-events-none absolute top-0 right-0 left-0 bg-gradient-to-b from-black/80 to-transparent px-6 pt-6 pb-16 transition-opacity ${
