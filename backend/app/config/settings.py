@@ -85,21 +85,27 @@ def _get_env_str(name: str, default: str) -> str:
 
 # SigLIP2 Configuration
 SIGLIP2_ACTIVE_CHECKPOINT = _get_env_str("SIGLIP2_ACTIVE_CHECKPOINT", "base")
+SIGLIP2_QUERY_TEMPLATE = _get_env_str(
+    "SIGLIP2_QUERY_TEMPLATE", "This is a photo of {query}."
+)
 SIGLIP2_SCORING_METADATA = {
     "base": {
         "logit_scale": 4.724453449249268,
         "logit_bias": -16.771724700927734,
         "model_version": "siglip2-base-patch16-224",
+        "input_resolution": 224,
     },
     "large": {
         "logit_scale": 4.6823530197143555,
         "logit_bias": -16.347614288330078,
         "model_version": "siglip2-large-patch16-384",
+        "input_resolution": 384,
     },
     "so400m": {
         "logit_scale": 4.699519157409668,
         "logit_bias": -15.932647705078125,
         "model_version": "siglip2-so400m-patch14-384",
+        "input_resolution": 384,
     },
 }
 
@@ -137,6 +143,12 @@ def _get_env_int(
         return default
     return value
 
+
+SIGLIP2_EMBED_BATCH_SIZE = _get_env_int("SIGLIP2_EMBED_BATCH_SIZE", 8)
+SIGLIP2_TEXT_MAX_LENGTH = 64
+SIGLIP2_TOKENIZER_PAD_ID = 0
+SIGLIP2_TOKENIZER_PAD_TOKEN = "<pad>"
+SIGLIP2_MATCH_THRESHOLD = _get_env_float("SIGLIP2_MATCH_THRESHOLD", 0.02, min_value=0.0)
 
 # Clustering Configuration
 PICTO_CLUSTERING_EPS = _get_env_float("PICTO_CLUSTERING_EPS", 0.75, min_value=0.0)

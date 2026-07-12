@@ -77,14 +77,16 @@ class SigLIP2Vision:
         return session, input_name, output_name
 
     def get_embedding(self, pixel_values: np.ndarray) -> np.ndarray:
-        """pixel_values: preprocessed [1, 3, H, W] float32 array.
-        Returns an L2-normalized embedding -- normalized once here so
-        downstream scoring never needs to renormalize."""
+        """pixel_values: preprocessed [N, 3, H, W] float32 array.
+        Returns [N, D] float32, each row L2-normalized -- normalized
+        once here so downstream scoring never renormalizes the image
+        side. Stored embeddings in image_embeddings are therefore
+        unit-norm."""
         session, input_name, output_name = self.get_session()
         result = session.run([output_name], {input_name: pixel_values})[0]
-        embedding = result[0]
-        norm = np.linalg.norm(embedding)
-        return embedding / norm if norm > 0 else embedding
+        norms = np.linalg.norm(result, axis=1, keepdims=True)
+        norms = np.where(norms > 0, norms, 1.0)
+        return (result / norms).astype(np.float32)
 
     def close(self):
         with self._lock:

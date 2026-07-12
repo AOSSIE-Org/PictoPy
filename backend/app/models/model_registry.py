@@ -97,6 +97,14 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
         feature="semantic_text",
         tier="small",
     ),
+    "siglip2_base_tokenizer": ModelSpec(
+        filename="SigLIP2_Base_Tokenizer.json",
+        url="https://github.com/AOSSIE-Org/PictoPy/releases/download/models-v1.0/SigLIP2_Base_Tokenizer.json",
+        sha256="caefd63119539a63be2d55ef3e05023fbb793948c4bda5bc0c366b42a382f903",
+        size_mb=32.8,
+        feature="semantic_text",
+        tier="small",
+    ),
     "siglip2_large_vision": ModelSpec(
         filename="SigLIP2_Large_Vision.onnx",
         url="PLACEHOLDER_URL",  # TODO
@@ -169,3 +177,22 @@ def get_model_key_from_path(model_path: str) -> str | None:
         if spec["filename"].lower() == target_filename:
             return key
     return None
+
+
+def get_siglip2_registry_keys(checkpoint: str) -> tuple[str, str]:
+    """Map a SIGLIP2_ACTIVE_CHECKPOINT value ('base'|'large'|'so400m')
+    to its (vision_key, text_key) MODEL_REGISTRY entries."""
+    vision_key = f"siglip2_{checkpoint}_vision"
+    text_key = f"siglip2_{checkpoint}_text"
+    if vision_key not in MODEL_REGISTRY or text_key not in MODEL_REGISTRY:
+        raise ValueError(
+            f"Unknown SigLIP2 checkpoint keys for checkpoint: {checkpoint}"
+        )
+    return vision_key, text_key
+
+
+def get_siglip2_tokenizer_key(checkpoint: str) -> str:
+    key = f"siglip2_{checkpoint}_tokenizer"
+    if key not in MODEL_REGISTRY:
+        raise ValueError(f"Unknown SigLIP2 tokenizer key for checkpoint: {checkpoint}")
+    return key
