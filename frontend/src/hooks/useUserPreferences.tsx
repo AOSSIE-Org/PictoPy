@@ -99,11 +99,8 @@ export const useUserPreferences = () => {
     updateYoloModelSize,
     toggleGpuAcceleration,
 
-
     // For refetching preferences after external events (e.g., Model Manager window closing)
     refetch: preferencesQuery.refetch,
-    
-
 
     // Mutation state (for use in UI, e.g., disabling buttons)
     isUpdating: updatePreferencesMutation.isPending,

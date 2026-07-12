@@ -12,10 +12,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 
-
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-
 
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import SettingsCard from './SettingsCard';
@@ -107,10 +105,6 @@ const UserPreferencesCard: React.FC = () => {
       unlistenPromise.then((unlisten) => unlisten());
     };
   }, [refetch]);
-
-
-
-
 
   return (
     <SettingsCard

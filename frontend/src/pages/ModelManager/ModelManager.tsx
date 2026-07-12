@@ -66,26 +66,24 @@ export const ModelManager: React.FC = () => {
     }
   }, [statusData, downloadingTiers, installedJustNow]);
 
-
-// ISSUE - 1369: Tauri windows don't share state, so Model Manager emits 'models-updated' on close to notify Settings.
+  // ISSUE - 1369: Tauri windows don't share state, so Model Manager emits 'models-updated' on close to notify Settings.
   useEffect(() => {
-  const unlistenPromise = getCurrentWindow().onCloseRequested(async (event) => {
-    event.preventDefault(); 
-    try {
-      await emit('models-updated');
-    } catch (err) {
-      console.error('Failed to emit models-updated', err);
-    }
-    await getCurrentWindow().destroy();
-    
-  });
+    const unlistenPromise = getCurrentWindow().onCloseRequested(
+      async (event) => {
+        event.preventDefault();
+        try {
+          await emit('models-updated');
+        } catch (err) {
+          console.error('Failed to emit models-updated', err);
+        }
+        await getCurrentWindow().destroy();
+      },
+    );
 
-  return () => {
-    unlistenPromise.then((unlisten) => unlisten());
-  };
-}, []);
-
-
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
 
   const handleTabChange = (newTab: string) => {
     if (activeTab === 'Available' && newTab !== 'Available') {
