@@ -84,7 +84,7 @@ const UserPreferencesCard: React.FC = () => {
     };
   }, []);
 
-  // ISSUE - 1369: Model Manager (isolated Tauri window) emits 'models-updated' on close; use it here to refresh installed-tiers and active preference.
+  // Model Manager emits 'models-updated' on close to refresh installed-tiers and active preference.
   useEffect(() => {
     const unlistenPromise = listen('models-updated', async () => {
       try {

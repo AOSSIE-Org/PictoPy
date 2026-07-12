@@ -66,7 +66,7 @@ export const ModelManager: React.FC = () => {
     }
   }, [statusData, downloadingTiers, installedJustNow]);
 
-  // ISSUE - 1369: Tauri windows don't share state, so Model Manager emits 'models-updated' on close to notify Settings.
+  // Model Manager emits 'models-updated' on close to notify Settings.
   useEffect(() => {
     const unlistenPromise = getCurrentWindow().onCloseRequested(
       async (event) => {
