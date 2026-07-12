@@ -60,6 +60,15 @@ jest.mock('@tauri-apps/api/event', () => ({
   emit: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('@tauri-apps/api/window', () => ({
+  getCurrentWindow: jest.fn(() => ({
+    onFocusChanged: jest.fn().mockResolvedValue(() => {}),
+    onCloseRequested: jest.fn().mockResolvedValue(() => {}),
+    close: jest.fn().mockResolvedValue(undefined),
+    destroy: jest.fn().mockResolvedValue(undefined),
+  })),
+}));
+
 jest.mock('@tauri-apps/api/app', () => ({
   getVersion: jest.fn().mockResolvedValue('1.0.0'),
   getName: jest.fn().mockResolvedValue('PictoPy'),

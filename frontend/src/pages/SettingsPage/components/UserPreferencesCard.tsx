@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { Cpu, ChevronDown, Zap } from 'lucide-react';
 
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import SettingsCard from './SettingsCard';
@@ -85,26 +86,39 @@ const UserPreferencesCard: React.FC = () => {
   }, []);
 
   // Model Manager emits 'models-updated' on close to refresh installed-tiers and active preference.
-  useEffect(() => {
-    const unlistenPromise = listen('models-updated', async () => {
-      try {
-        const res = await fetch(`${BACKEND_URL}/models/status`);
-        if (res.ok) {
-          const data: ModelStatusResponse = await res.json();
-          if (data.success && data.data) {
-            setInstalledTiers(getInstalledModelTiers(data.data));
-          }
+  const refreshAfterModelManager = useCallback(async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/models/status`);
+      if (res.ok) {
+        const data: ModelStatusResponse = await res.json();
+        if (data.success && data.data) {
+          setInstalledTiers(getInstalledModelTiers(data.data));
         }
-      } catch (err) {
-        console.error('Failed to refresh model status', err);
       }
-      refetch().catch(console.error);
-    });
+    } catch (err) {
+      console.error('Failed to refresh model status', err);
+    }
+    refetch().catch(console.error);
+  }, [refetch]);
+
+  useEffect(() => {
+    const unlistenModelsPromise = listen(
+      'models-updated',
+      refreshAfterModelManager,
+    );
+    const unlistenFocusPromise = getCurrentWindow().onFocusChanged(
+      ({ payload: focused }) => {
+        if (focused) {
+          refreshAfterModelManager();
+        }
+      },
+    );
 
     return () => {
-      unlistenPromise.then((unlisten) => unlisten());
+      unlistenModelsPromise.then((unlisten) => unlisten());
+      unlistenFocusPromise.then((unlisten) => unlisten());
     };
-  }, [refetch]);
+  }, [refreshAfterModelManager]);
 
   return (
     <SettingsCard
