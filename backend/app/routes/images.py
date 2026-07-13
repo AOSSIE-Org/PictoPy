@@ -217,8 +217,20 @@ def semantic_search_images(
 
         from app.utils.SigLIP import siglip_util_tokenize_query
 
+        normalized = query.strip().lower()
+        if not normalized:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Bad Request",
+                    message="Query cannot be empty",
+                ).model_dump(),
+            )
+
+        # tokenizer is case-sensitive; lowercase matches the calibration-validated regime.
         # calibration parity with validated scoring
-        templated = SIGLIP2_QUERY_TEMPLATE.format(query=query)
+        templated = SIGLIP2_QUERY_TEMPLATE.format(query=normalized)
         input_ids, attention_mask = siglip_util_tokenize_query(templated)
 
         from app.models.SigLIP2Text import SigLIP2Text

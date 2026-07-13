@@ -25,3 +25,16 @@ export const searchImagesByTag = async (
   );
   return response.data;
 };
+
+export interface SemanticSearchImagesRequest {
+  query: string;
+}
+
+export const semanticSearchImages = async (
+  request: SemanticSearchImagesRequest,
+): Promise<APIResponse> => {
+  const response = await apiClient.get<APIResponse>(
+    `/images/semantic-search?query=${encodeURIComponent(request.query)}`,
+  );
+  return response.data;
+};
