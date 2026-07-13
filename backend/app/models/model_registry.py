@@ -12,7 +12,7 @@ FeatureType = Literal[
     "semantic_vision",
     "semantic_text",
 ]
-TierType = Literal["nano", "small", "medium", "required", "manual"]
+TierType = Literal["nano", "small", "medium", "required", "manual", "semantic"]
 
 
 class ModelSpec(TypedDict):
@@ -87,7 +87,7 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
         sha256="c5efd0fcbe0e700bd457f2ce4dde5c85b0ea8bb2b2b48948439d1b25c749845d",
         size_mb=355,
         feature="semantic_vision",
-        tier="small",
+        tier="semantic",
     ),
     "siglip2_base_text": ModelSpec(
         filename="SigLIP2_Base_Text.onnx",
@@ -95,7 +95,7 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
         sha256="d9d3d199aea7584f215955074afae2aa0f79a618d8eb8b561c5fe6599fc9df35",
         size_mb=1078,
         feature="semantic_text",
-        tier="small",
+        tier="semantic",
     ),
     "siglip2_base_tokenizer": ModelSpec(
         filename="SigLIP2_Base_Tokenizer.json",
@@ -103,7 +103,7 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
         sha256="caefd63119539a63be2d55ef3e05023fbb793948c4bda5bc0c366b42a382f903",
         size_mb=32.8,
         feature="semantic_text",
-        tier="small",
+        tier="semantic",
     ),
     "siglip2_large_vision": ModelSpec(
         filename="SigLIP2_Large_Vision.onnx",
@@ -145,6 +145,11 @@ TIER_MODELS: dict[str, list[str]] = {
     "medium": ["yolo_medium", "yolo_medium_face"],
     "required": ["facenet"],  # Required model; not user-selectable
     "manual": [],
+    "semantic": [
+        "siglip2_base_vision",
+        "siglip2_base_text",
+        "siglip2_base_tokenizer",
+    ],
 }
 
 USER_DATA_MODELS = os.path.join(user_data_dir("PictoPy"), "models")

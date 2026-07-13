@@ -5,7 +5,9 @@ export type ModelTier = (typeof MODEL_TIERS)[number];
 export type ModelFeature =
   | 'object_detection'
   | 'face_detection'
-  | 'face_embedding';
+  | 'face_embedding'
+  | 'semantic_vision'
+  | 'semantic_text';
 
 export interface ModelEntry {
   feature: ModelFeature;
@@ -71,6 +73,10 @@ export const MODEL_TIER_DESCRIPTIONS: Record<ModelTier, string> = {
   medium: 'Best accuracy recommended for modern hardware',
 };
 
+export const SEMANTIC_BUNDLE_LABEL = 'Semantic Search (~1.5 GB)';
+export const SEMANTIC_BUNDLE_DESCRIPTION =
+  'Search photos by describing them in your own words. Downloads three model files; runs fully on-device.';
+
 export const getModelTierLabel = (tier: ModelTier) => MODEL_TIER_LABELS[tier];
 
 export const getModelTierDescription = (tier: ModelTier) =>
@@ -103,4 +109,14 @@ export const getInstalledModelTiers = (
 
     return Boolean(objectModel && faceModel);
   });
+};
+
+export const isSemanticSearchAvailable = (
+  models: Record<string, ModelEntry>,
+): boolean => {
+  const semanticTextModels = Object.values(models).filter(
+    (model) => model.feature === 'semantic_text',
+  );
+  if (semanticTextModels.length === 0) return false;
+  return semanticTextModels.every((model) => model.installed === true);
 };

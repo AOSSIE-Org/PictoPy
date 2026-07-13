@@ -14,6 +14,8 @@ import {
   ModelTier,
   ModelStatusResponse,
   getModelTierDescription,
+  SEMANTIC_BUNDLE_LABEL,
+  SEMANTIC_BUNDLE_DESCRIPTION,
 } from '@/types/models';
 
 export interface InstalledTabProps {
@@ -34,10 +36,10 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
   const { preferences, updateYoloModelSize } = useUserPreferences();
 
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [uninstallingTier, setUninstallingTier] = useState<{
-    tier: ModelTier;
-    objectKey: string;
-    faceKey: string;
+  const [uninstallingTarget, setUninstallingTarget] = useState<{
+    id: string;
+    name: string;
+    keys: string[];
   } | null>(null);
 
   const [activatingTier, setActivatingTier] = useState<string | null>(null);
@@ -60,56 +62,45 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
   };
 
   const handleUninstallConfirm = async () => {
-    if (!uninstallingTier) return;
+    if (!uninstallingTarget) return;
     setIsUninstalling(true);
 
     try {
-      const [objOutcome, faceOutcome] = await Promise.allSettled([
-        deleteModel(uninstallingTier.objectKey),
-        deleteModel(uninstallingTier.faceKey),
-      ]);
+      const outcomes = await Promise.allSettled(
+        uninstallingTarget.keys.map((k) => deleteModel(k)),
+      );
 
-      const objFailed = objOutcome.status === 'rejected';
-      const faceFailed = faceOutcome.status === 'rejected';
+      const failedOutcomes = outcomes.filter((o) => o.status === 'rejected');
 
-      if (!objFailed && !faceFailed) {
-        // Both succeeded
+      if (failedOutcomes.length === 0) {
+        // All succeeded
         await queryClient.invalidateQueries({ queryKey: ['models', 'status'] });
-      } else if (objFailed && faceFailed) {
-        // Both failed
+      } else if (failedOutcomes.length === outcomes.length) {
+        // All failed
         dispatch(
           showGlobalAlert({
             title: 'Uninstall Failed',
             message: getErrorMessage(
-              (objOutcome as PromiseRejectedResult).reason,
-            ), // Show first error
+              (failedOutcomes[0] as PromiseRejectedResult).reason,
+            ),
           }),
         );
       } else {
-        // Split outcome
-        const successHalf = !objFailed
-          ? 'Object detection model'
-          : 'Face detection model';
-        const failedHalf = objFailed
-          ? 'Object detection model'
-          : 'Face detection model';
+        // Partial success
         const errorDetails = getErrorMessage(
-          objFailed
-            ? (objOutcome as PromiseRejectedResult).reason
-            : (faceOutcome as PromiseRejectedResult).reason,
+          (failedOutcomes[0] as PromiseRejectedResult).reason,
         );
-
         dispatch(
           showGlobalAlert({
             title: 'Partial Uninstall',
-            message: `${successHalf} was removed, but ${failedHalf} failed: ${errorDetails}`,
+            message: `Some models were removed, but ${failedOutcomes.length} failed. First error: ${errorDetails}`,
           }),
         );
         await queryClient.invalidateQueries({ queryKey: ['models', 'status'] });
       }
     } finally {
       setIsUninstalling(false);
-      setUninstallingTier(null);
+      setUninstallingTarget(null);
       setConfirmOpen(false);
     }
   };
@@ -170,6 +161,23 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
   const requiredModels = Object.entries(models)
     .filter(([_, model]) => model.tier === 'required' && model.installed)
     .map(([key, model]) => ({ key, ...model }));
+
+  // Group semantic models
+  const semanticKeys = [
+    'siglip2_base_vision',
+    'siglip2_base_text',
+    'siglip2_base_tokenizer',
+  ];
+  const semanticModels = semanticKeys.map((k) => models[k]).filter(Boolean);
+  const semanticInstalledCount = semanticModels.filter(
+    (m) => m.installed,
+  ).length;
+  const semanticSize = semanticModels.reduce(
+    (acc, m) => acc + (m.size_mb || 0),
+    0,
+  );
+  const hasSemanticBundle =
+    semanticModels.length === 3 && semanticInstalledCount === 3;
 
   return (
     <div className="space-y-8">
@@ -232,10 +240,10 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
                         size="icon"
                         disabled={isUninstalling}
                         onClick={() => {
-                          setUninstallingTier({
-                            tier,
-                            objectKey: objectModelKey,
-                            faceKey: faceModelKey,
+                          setUninstallingTarget({
+                            id: tier,
+                            name: formatTierLabel(tier),
+                            keys: [objectModelKey, faceModelKey],
                           });
                           setConfirmOpen(true);
                         }}
@@ -250,6 +258,46 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
           </div>
         )}
       </section>
+
+      {hasSemanticBundle && (
+        <section>
+          <h2 className="mb-4 text-lg font-semibold">Additional Features</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="bg-card flex flex-col justify-between rounded-xl border p-5 shadow-sm">
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-lg font-medium">
+                    {SEMANTIC_BUNDLE_LABEL.split(' (')[0]}
+                  </h3>
+                </div>
+                <p className="text-muted-foreground mt-1 mb-2 text-sm leading-relaxed">
+                  {SEMANTIC_BUNDLE_DESCRIPTION}
+                </p>
+                <p className="text-muted-foreground mb-4 text-xs">
+                  ~{Math.round(semanticSize)} MB total size
+                </p>
+              </div>
+              <div className="mt-4 flex items-center justify-end">
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  disabled={isUninstalling}
+                  onClick={() => {
+                    setUninstallingTarget({
+                      id: 'semantic',
+                      name: 'Semantic Search',
+                      keys: semanticKeys,
+                    });
+                    setConfirmOpen(true);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Required Tiers */}
       {requiredModels.length > 0 && (
@@ -297,8 +345,12 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title={`Uninstall ${uninstallingTier ? formatTierLabel(uninstallingTier.tier) : ''} Tier?`}
-        description="This will remove both the object detection and face detection models for this size. You can re-download them later from the Available tab."
+        title={`Uninstall ${uninstallingTarget?.name}?`}
+        description={
+          uninstallingTarget?.id === 'semantic'
+            ? 'This will remove the semantic search models. You can re-download them later from the Available tab.'
+            : 'This will remove both the object detection and face detection models for this size. You can re-download them later from the Available tab.'
+        }
         confirmLabel={isUninstalling ? 'Uninstalling...' : 'Uninstall'}
         onConfirm={handleUninstallConfirm}
       />
