@@ -148,7 +148,8 @@ SIGLIP2_EMBED_BATCH_SIZE = _get_env_int("SIGLIP2_EMBED_BATCH_SIZE", 8)
 SIGLIP2_TEXT_MAX_LENGTH = 64
 SIGLIP2_TOKENIZER_PAD_ID = 0
 SIGLIP2_TOKENIZER_PAD_TOKEN = "<pad>"
-SIGLIP2_MATCH_THRESHOLD = _get_env_float("SIGLIP2_MATCH_THRESHOLD", 0.02, min_value=0.0)
+# bare-noun queries score low in absolute terms; 0.02 measured to cut true positives.
+SIGLIP2_MATCH_THRESHOLD = _get_env_float("SIGLIP2_MATCH_THRESHOLD", 0.01, min_value=0.0)
 
 # Clustering Configuration
 PICTO_CLUSTERING_EPS = _get_env_float("PICTO_CLUSTERING_EPS", 0.75, min_value=0.0)
