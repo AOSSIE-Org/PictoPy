@@ -173,6 +173,11 @@ def image_util_process_unembedded_images() -> None:
                     embedded_count += len(good_arrays)
 
                 if all_ids:
+                    # Corrupt images (preprocessed=None) are marked embedded too,
+                    # not just good_ids -- mirrors the YOLO/face pipeline's
+                    # mark-processed-regardless-of-outcome convention. A permanently
+                    # corrupt file will never preprocess successfully, so leaving it
+                    # isEmbedded=False would retry it on every future pass forever.
                     db_mark_images_embedded(all_ids)
 
             elapsed = time.time() - start_time

@@ -109,6 +109,15 @@ SIGLIP2_SCORING_METADATA = {
     },
 }
 
+if SIGLIP2_ACTIVE_CHECKPOINT not in SIGLIP2_SCORING_METADATA:
+    logger.warning(
+        "Unknown SIGLIP2_ACTIVE_CHECKPOINT %r (expected one of %s); using default %s",
+        SIGLIP2_ACTIVE_CHECKPOINT,
+        list(SIGLIP2_SCORING_METADATA.keys()),
+        "base",
+    )
+    SIGLIP2_ACTIVE_CHECKPOINT = "base"
+
 
 def _get_env_int(
     name: str,
@@ -144,7 +153,7 @@ def _get_env_int(
     return value
 
 
-SIGLIP2_EMBED_BATCH_SIZE = _get_env_int("SIGLIP2_EMBED_BATCH_SIZE", 8)
+SIGLIP2_EMBED_BATCH_SIZE = _get_env_int("SIGLIP2_EMBED_BATCH_SIZE", 8, min_value=1)
 SIGLIP2_TEXT_MAX_LENGTH = 64
 SIGLIP2_TOKENIZER_PAD_ID = 0
 SIGLIP2_TOKENIZER_PAD_TOKEN = "<pad>"

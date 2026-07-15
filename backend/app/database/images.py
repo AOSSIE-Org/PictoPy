@@ -1,6 +1,6 @@
 # Standard library imports
 import sqlite3
-from typing import Any, List, Mapping, Tuple, TypedDict, Union, Optional
+from typing import Any, Dict, List, Mapping, Tuple, TypedDict, Union, Optional
 import json
 
 from datetime import datetime
@@ -546,6 +546,58 @@ def db_get_image_by_id(image_id: str) -> Optional[dict]:
         conn.close()
 
 
+def _group_image_rows_with_tags(
+    rows: List[Tuple], images_dict: Dict[str, dict]
+) -> None:
+    """
+    Group flat image+tag join rows (the shared 11-column SELECT shape used by
+    db_search_images_by_tag and db_get_images_by_ids) into images_dict, keyed
+    by image_id, aggregating tag_name into a deduplicated "tags" list.
+    Mutates images_dict in place so callers can accumulate across chunks.
+    """
+    for (
+        image_id,
+        path,
+        folder_id,
+        thumbnail_path,
+        metadata,
+        is_tagged,
+        is_favourite,
+        latitude,
+        longitude,
+        captured_at,
+        tag_name_result,
+    ) in rows:
+        if image_id not in images_dict:
+            images_dict[image_id] = {
+                "id": image_id,
+                "path": path,
+                "folder_id": str(folder_id) if folder_id is not None else "",
+                "thumbnailPath": thumbnail_path,
+                "metadata": metadata,
+                "isTagged": bool(is_tagged),
+                "isFavourite": bool(is_favourite),
+                "latitude": latitude,
+                "longitude": longitude,
+                "captured_at": captured_at if captured_at else None,
+                "tags": [],
+            }
+
+        if tag_name_result and tag_name_result not in images_dict[image_id]["tags"]:
+            images_dict[image_id]["tags"].append(tag_name_result)
+
+
+def _finalize_grouped_images(images_dict: Dict[str, dict]) -> List[dict]:
+    """Convert an images_dict from _group_image_rows_with_tags into a list,
+    normalizing an empty "tags" list to None."""
+    images = []
+    for image_data in images_dict.values():
+        if not image_data["tags"]:
+            image_data["tags"] = None
+        images.append(image_data)
+    return images
+
+
 def db_search_images_by_tag(tag_name: str) -> List[dict]:
     """
     Get all images that match a specific tag name, returning their full tag list.
@@ -555,12 +607,12 @@ def db_search_images_by_tag(tag_name: str) -> List[dict]:
 
     try:
         query = """
-            SELECT 
-                i.id, 
-                i.path, 
-                i.folder_id, 
-                i.thumbnailPath, 
-                i.metadata, 
+            SELECT
+                i.id,
+                i.path,
+                i.folder_id,
+                i.thumbnailPath,
+                i.metadata,
                 i.isTagged,
                 i.isFavourite,
                 i.latitude,
@@ -581,44 +633,9 @@ def db_search_images_by_tag(tag_name: str) -> List[dict]:
         cursor.execute(query, [tag_name])
         results = cursor.fetchall()
 
-        # Group results by image ID
-        images_dict = {}
-        for (
-            image_id,
-            path,
-            folder_id,
-            thumbnail_path,
-            metadata,
-            is_tagged,
-            is_favourite,
-            latitude,
-            longitude,
-            captured_at,
-            tag_name_result,
-        ) in results:
-            if image_id not in images_dict:
-                images_dict[image_id] = {
-                    "id": image_id,
-                    "path": path,
-                    "folder_id": str(folder_id) if folder_id is not None else "",
-                    "thumbnailPath": thumbnail_path,
-                    "metadata": metadata,
-                    "isTagged": bool(is_tagged),
-                    "isFavourite": bool(is_favourite),
-                    "latitude": latitude,
-                    "longitude": longitude,
-                    "captured_at": captured_at if captured_at else None,
-                    "tags": [],
-                }
-
-            if tag_name_result and tag_name_result not in images_dict[image_id]["tags"]:
-                images_dict[image_id]["tags"].append(tag_name_result)
-
-        images = []
-        for image_data in images_dict.values():
-            if not image_data["tags"]:
-                image_data["tags"] = None
-            images.append(image_data)
+        images_dict: Dict[str, dict] = {}
+        _group_image_rows_with_tags(results, images_dict)
+        images = _finalize_grouped_images(images_dict)
 
         images.sort(key=lambda x: x["path"])
         return images
@@ -641,19 +658,19 @@ def db_get_images_by_ids(image_ids: List[str]) -> List[dict]:
     cursor = conn.cursor()
 
     try:
-        images_dict = {}
+        images_dict: Dict[str, dict] = {}
         chunk_size = 500
 
         for i in range(0, len(image_ids), chunk_size):
             chunk = image_ids[i : i + chunk_size]
             placeholders = ",".join("?" for _ in chunk)
             query = f"""
-                SELECT 
-                    i.id, 
-                    i.path, 
-                    i.folder_id, 
-                    i.thumbnailPath, 
-                    i.metadata, 
+                SELECT
+                    i.id,
+                    i.path,
+                    i.folder_id,
+                    i.thumbnailPath,
+                    i.metadata,
                     i.isTagged,
                     i.isFavourite,
                     i.latitude,
@@ -669,47 +686,9 @@ def db_get_images_by_ids(image_ids: List[str]) -> List[dict]:
 
             cursor.execute(query, chunk)
             results = cursor.fetchall()
+            _group_image_rows_with_tags(results, images_dict)
 
-            # Group results by image ID
-            for (
-                image_id,
-                path,
-                folder_id,
-                thumbnail_path,
-                metadata,
-                is_tagged,
-                is_favourite,
-                latitude,
-                longitude,
-                captured_at,
-                tag_name_result,
-            ) in results:
-                if image_id not in images_dict:
-                    images_dict[image_id] = {
-                        "id": image_id,
-                        "path": path,
-                        "folder_id": str(folder_id) if folder_id is not None else "",
-                        "thumbnailPath": thumbnail_path,
-                        "metadata": metadata,
-                        "isTagged": bool(is_tagged),
-                        "isFavourite": bool(is_favourite),
-                        "latitude": latitude,
-                        "longitude": longitude,
-                        "captured_at": captured_at if captured_at else None,
-                        "tags": [],
-                    }
-
-                if (
-                    tag_name_result
-                    and tag_name_result not in images_dict[image_id]["tags"]
-                ):
-                    images_dict[image_id]["tags"].append(tag_name_result)
-
-        images = []
-        for image_data in images_dict.values():
-            if not image_data["tags"]:
-                image_data["tags"] = None
-            images.append(image_data)
+        images = _finalize_grouped_images(images_dict)
 
         # Preserve the original order from image_ids
         # Create a lookup for fast indexing
@@ -1120,14 +1099,21 @@ def db_mark_images_embedded(image_ids: List[str]) -> bool:
         conn = _connect()
         cursor = conn.cursor()
 
-        placeholders = ",".join(["?"] * len(image_ids))
-        query = f"UPDATE images SET isEmbedded = 1 WHERE id IN ({placeholders})"
+        # Chunk by 500 to stay under SQLite's 999-variable limit per statement,
+        # matching db_get_images_by_ids's convention.
+        chunk_size = 500
+        for i in range(0, len(image_ids), chunk_size):
+            chunk = image_ids[i : i + chunk_size]
+            placeholders = ",".join(["?"] * len(chunk))
+            query = f"UPDATE images SET isEmbedded = 1 WHERE id IN ({placeholders})"
+            cursor.execute(query, chunk)
 
-        cursor.execute(query, image_ids)
         conn.commit()
         return True
     except sqlite3.Error as e:
         logger.error(f"Error marking images as embedded: {e}")
+        if conn:
+            conn.rollback()
         return False
     finally:
         if conn:

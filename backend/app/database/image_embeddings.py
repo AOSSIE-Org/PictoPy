@@ -19,6 +19,10 @@ def db_create_image_embeddings_table():
             )
             """
         )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS ix_image_embeddings_model_version "
+            "ON image_embeddings(model_version)"
+        )
         conn.commit()
     finally:
         if conn:
