@@ -1,6 +1,7 @@
 import { imagesEndpoints } from '../apiEndpoints';
 import { apiClient } from '../axiosConfig';
 import { APIResponse } from '@/types/API';
+import { ScoredImage } from '@/types/Media';
 
 export const fetchAllImages = async (
   tagged?: boolean,
@@ -30,11 +31,18 @@ export interface SemanticSearchImagesRequest {
   query: string;
 }
 
+export interface SemanticSearchAPIResponse extends APIResponse {
+  data?: {
+    images: ScoredImage[];
+    total: number;
+  };
+}
+
 export const semanticSearchImages = async (
   request: SemanticSearchImagesRequest,
-): Promise<APIResponse> => {
-  const response = await apiClient.get<APIResponse>(
-    `/images/semantic-search?query=${encodeURIComponent(request.query)}`,
+): Promise<SemanticSearchAPIResponse> => {
+  const response = await apiClient.get<SemanticSearchAPIResponse>(
+    imagesEndpoints.semanticSearch(request.query),
   );
   return response.data;
 };

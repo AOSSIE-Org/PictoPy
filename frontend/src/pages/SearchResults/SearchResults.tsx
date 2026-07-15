@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { AxiosError } from 'axios';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 import { Image, ScoredImage } from '@/types/Media';
@@ -12,13 +13,30 @@ import {
   searchImagesByTag,
   semanticSearchImages,
   fetchModelStatus,
+  SemanticSearchAPIResponse,
 } from '@/api/api-functions';
+import { APIResponse } from '@/types/API';
 import { getErrorMessage } from '@/lib/utils';
 import { isSemanticSearchAvailable } from '@/types/models';
 import { useNavigate, useSearchParams } from 'react-router';
 import { ROUTES } from '@/constants/routes';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
+
+interface TagSearchResult extends APIResponse {
+  resultType: 'tag';
+}
+
+interface SemanticSearchResult extends SemanticSearchAPIResponse {
+  resultType: 'semantic';
+}
+
+type SearchQueryResult = TagSearchResult | SemanticSearchResult;
+
+const getHttpStatus = (error: unknown): number | undefined => {
+  const axiosErr = error as AxiosError;
+  return axiosErr?.isAxiosError ? axiosErr.response?.status : undefined;
+};
 
 export const SearchResults = () => {
   const dispatch = useDispatch();
@@ -44,23 +62,20 @@ export const SearchResults = () => {
   const { data, isLoading, isSuccess, isError, errorMessage, error } =
     usePictoQuery({
       queryKey: ['search-results', query, mode],
-      queryFn: async () => {
+      queryFn: async (): Promise<SearchQueryResult> => {
         if (mode === 'semantic') {
           const res = await semanticSearchImages({ query });
-          (res as any)._resultType = 'semantic';
-          return res;
+          return { ...res, resultType: 'semantic' };
         }
         if (mode === 'tag') {
           const res = await searchImagesByTag({ tag: query });
-          (res as any)._resultType = 'tag';
-          return res;
+          return { ...res, resultType: 'tag' };
         }
 
         // auto mode
         const tagResponse = await searchImagesByTag({ tag: query });
         if (tagResponse.data && tagResponse.data.length > 0) {
-          (tagResponse as any)._resultType = 'tag';
-          return tagResponse;
+          return { ...tagResponse, resultType: 'tag' };
         }
 
         const statusRes = await fetchModelStatus();
@@ -72,17 +87,15 @@ export const SearchResults = () => {
         if (semAvailable) {
           dispatch(showLoader('Searching by meaning...'));
           const semResponse = await semanticSearchImages({ query });
-          (semResponse as any)._resultType = 'semantic';
-          return semResponse;
+          return { ...semResponse, resultType: 'semantic' };
         }
 
-        (tagResponse as any)._resultType = 'tag';
-        return tagResponse;
+        return { ...tagResponse, resultType: 'tag' };
       },
       enabled: !!query,
     });
 
-  const effectiveMode = (data as any)?._resultType || mode;
+  const effectiveMode = data?.resultType || mode;
 
   useEffect(() => {
     if (isLoading) {
@@ -90,10 +103,8 @@ export const SearchResults = () => {
       dispatch(showLoader('Searching images'));
     } else if (isError) {
       const errorMsg = getErrorMessage(error, errorMessage);
-      if (
-        (mode === 'semantic' || mode === 'auto') &&
-        errorMsg.includes('Not Found')
-      ) {
+      const httpStatus = getHttpStatus(error);
+      if ((mode === 'semantic' || mode === 'auto') && httpStatus === 404) {
         dispatch(
           showInfoDialog({
             title: 'Semantic Search Unavailable',
@@ -107,12 +118,11 @@ export const SearchResults = () => {
     } else if (isSuccess && data) {
       setSearchError(null);
       let fetchedImages: Image[] = [];
-      const resultType = (data as any)._resultType || mode;
 
-      if (resultType === 'semantic') {
-        fetchedImages = (data?.data?.images ?? []) as ScoredImage[];
+      if (data.resultType === 'semantic') {
+        fetchedImages = (data.data?.images ?? []) as ScoredImage[];
       } else {
-        fetchedImages = (data?.data ?? []) as Image[];
+        fetchedImages = (data.data ?? []) as Image[];
       }
       dispatch(setImages(fetchedImages));
       dispatch(hideLoader());
