@@ -233,20 +233,20 @@ def semantic_search_images(
         templated = SIGLIP2_QUERY_TEMPLATE.format(query=normalized)
         input_ids, attention_mask = siglip_util_tokenize_query(templated)
 
-        from app.models.SigLIP2Text import SigLIP2Text
+        from app.utils.SigLIP import siglip_util_get_text_model
 
-        text_model = SigLIP2Text(text_model_path)
-        try:
-            text_vec = text_model.get_embedding(input_ids, attention_mask)
-            # Flatten to 1D vector. (Report shows what shape the method actually returns below)
-            text_vec = np.array(text_vec, dtype=np.float32).flatten()
+        # Cached across requests -- the ~1GB text tower is expensive to
+        # reload on every call. See siglip_util_get_text_model/
+        # siglip_util_invalidate_text_model for the uninstall interaction.
+        text_model = siglip_util_get_text_model(text_model_path, text_key)
+        text_vec = text_model.get_embedding(input_ids, attention_mask)
+        # Flatten to 1D vector. (Report shows what shape the method actually returns below)
+        text_vec = np.array(text_vec, dtype=np.float32).flatten()
 
-            # scores = 1/(1+np.exp(-(matrix @ text_vec * np.exp(logit_scale) + logit_bias)))
-            dot_products = matrix @ text_vec
-            scaled_logits = dot_products * np.exp(logit_scale) + logit_bias
-            scores = 1 / (1 + np.exp(-scaled_logits))
-        finally:
-            text_model.close()
+        # scores = 1/(1+np.exp(-(matrix @ text_vec * np.exp(logit_scale) + logit_bias)))
+        dot_products = matrix @ text_vec
+        scaled_logits = dot_products * np.exp(logit_scale) + logit_bias
+        scores = 1 / (1 + np.exp(-scaled_logits))
 
         match_threshold = SIGLIP2_MATCH_THRESHOLD
 

@@ -144,6 +144,14 @@ async def delete_model(model_key: str):
                 detail=f"Cannot delete model '{model_key}' because its tier '{spec.get('tier')}' is currently active. Switch to a different tier before deleting.",
             )
 
+        # The SigLIP2 text model is kept in a persistent cross-request cache
+        # (see siglip_util_get_text_model) whose session would otherwise stay
+        # registered as "active" forever, permanently blocking the guard below.
+        if spec.get("feature") == "semantic_text":
+            from app.utils.SigLIP import siglip_util_invalidate_text_model
+
+            siglip_util_invalidate_text_model(model_key)
+
         # Check no sessions are active and reserve the model for deletion.
         active_session_count = try_mark_model_for_deletion(model_key)
         if active_session_count is not None:
