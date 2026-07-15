@@ -135,12 +135,16 @@ class TestSemanticSearchEndpoint:
         mock_get_path.return_value = "/models/text.onnx"
         mock_exists.return_value = True
 
-        # img_high's embedding is aligned with the query vector (dot=1),
-        # img_low's is orthogonal (dot=0) -- only img_high should clear the
-        # match threshold once run through the calibrated sigmoid scoring.
+        # Two embeddings that both clear SIGLIP2_MATCH_THRESHOLD (0.01) with
+        # clearly distinct scores after 4dp rounding (dot=0.16 -> ~0.7782,
+        # dot=0.13 -> ~0.1067 -- realistic dot-product magnitudes per the
+        # calibrated scoring, not the near-1.0/near-0.0 saturation you'd get
+        # from naive orthogonal/aligned toy vectors). img_high has the
+        # *lower* score despite being listed first in db_get_all_embeddings,
+        # so a broken sort would put it first in the response too.
         mock_get_all_embeddings.return_value = (
-            ["img_high", "img_low"],
-            np.array([[1.0, 0.0], [0.0, 1.0]], dtype=np.float32),
+            ["img_high", "img_highest"],
+            np.array([[0.13, 0.0], [0.16, 0.0]], dtype=np.float32),
         )
         mock_tokenize.return_value = (
             np.zeros((1, 64), dtype=np.int64),
@@ -153,7 +157,15 @@ class TestSemanticSearchEndpoint:
         )
         mock_get_text_model.return_value = mock_text_model
 
-        mock_get_images_by_ids.return_value = [_image_row("img_high", "/p/high.jpg")]
+        # db_get_images_by_ids preserves caller-supplied ID order in the
+        # real implementation (verified in test_image_embeddings.py's
+        # sibling tests) -- mirror that contract here rather than asserting
+        # the route re-sorts independently. It doesn't: matched_pairs is
+        # sorted once, and everything downstream (matched_ids, the DB call,
+        # the response) just follows that order through.
+        mock_get_images_by_ids.side_effect = lambda ids: [
+            _image_row(img_id, f"/p/{img_id}.jpg") for img_id in ids
+        ]
 
         with patch(
             "app.config.settings.SIGLIP2_SCORING_METADATA", BASE_METADATA
@@ -169,14 +181,18 @@ class TestSemanticSearchEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert data["data"]["total"] == 1
-        assert data["data"]["images"][0]["id"] == "img_high"
-        assert data["data"]["images"][0]["score"] > 0.9
+        assert data["data"]["total"] == 2
+        assert data["data"]["images"][0]["id"] == "img_highest"
+        assert data["data"]["images"][1]["id"] == "img_high"
+        assert data["data"]["images"][0]["score"] > data["data"]["images"][1]["score"]
 
         # Query must be stripped + lowercased before templating, so casing/
         # whitespace differences hit the calibration-validated regime.
         mock_tokenize.assert_called_once_with("This is a photo of beach.")
-        mock_get_images_by_ids.assert_called_once_with(["img_high"])
+        # The definitive proof of correct sorting: matched_ids (built from
+        # matched_pairs.sort(..., reverse=True)) must already be in
+        # descending-score order by the time it reaches this call.
+        mock_get_images_by_ids.assert_called_once_with(["img_highest", "img_high"])
 
     @patch("app.database.image_embeddings.db_get_all_embeddings")
     @patch("app.models.model_registry.get_model_path")

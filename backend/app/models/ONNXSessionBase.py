@@ -61,12 +61,20 @@ class ONNXSessionBase:
 
     def close(self) -> None:
         with self._lock:
-            if self._session is not None:
-                self._session = None
-                self._clear_tensor_names()
-                if self._model_key is not None and self._session_registered:
-                    mark_model_session_inactive(self._model_key)
-                    self._session_registered = False
+            # Registration cleanup must not be gated on self._session being
+            # non-None: get_session() can null self._session on a validation
+            # failure (e.g. missing expected tensor names) while
+            # _session_registered stays True from the earlier
+            # mark_model_session_active() call. If cleanup were gated on
+            # self._session, that registration would never be released,
+            # permanently blocking this model from being uninstalled.
+            was_active = self._session is not None or self._session_registered
+            self._session = None
+            self._clear_tensor_names()
+            if self._model_key is not None and self._session_registered:
+                mark_model_session_inactive(self._model_key)
+                self._session_registered = False
+            if was_active:
                 logger.info(f"{type(self).__name__} model session closed.")
 
     def __del__(self):
