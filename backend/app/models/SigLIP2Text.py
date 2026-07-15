@@ -1,75 +1,40 @@
 from __future__ import annotations
-import os
-import threading
 import numpy as np
 import onnxruntime
-from app.models.model_registry import MODEL_REGISTRY, get_model_key_from_path
-from app.models.session_registry import (
-    mark_model_session_active,
-    mark_model_session_inactive,
-)
-from app.utils.ONNX import ONNX_util_get_execution_providers
-from app.logging.setup_logging import get_logger
 
-logger = get_logger(__name__)
+from app.models.ONNXSessionBase import ONNXSessionBase
 
 
-class SigLIP2Text:
+class SigLIP2Text(ONNXSessionBase):
     def __init__(self, model_path: str):
-        self.model_path = model_path
-        self._model_key = get_model_key_from_path(model_path)
-        self._session_registered = False
-        self._session: onnxruntime.InferenceSession | None = None
+        super().__init__(model_path)
         self.input_ids_name: str | None = None
         self.attention_mask_name: str | None = None
         self.output_tensor_name: str | None = None
-        self._lock = threading.Lock()
+
+    def _clear_tensor_names(self) -> None:
+        self.input_ids_name = None
+        self.attention_mask_name = None
+        self.output_tensor_name = None
 
     def get_session(self) -> tuple[onnxruntime.InferenceSession, str, str, str]:
+        # Snapshot into locals up front and use only the locals from here on --
+        # never re-read self.* after this point (see ONNXSessionBase docstring).
         session = self._session
+        input_ids_name = self.input_ids_name
+        attention_mask_name = self.attention_mask_name
+        output_tensor_name = self.output_tensor_name
         if session is not None:
-            if None in (
-                self.input_ids_name,
-                self.attention_mask_name,
-                self.output_tensor_name,
-            ):
+            if None in (input_ids_name, attention_mask_name, output_tensor_name):
                 raise RuntimeError(
                     f"Model session for '{self._model_key}' was closed while "
                     "get_session() was executing."
                 )
-            return (
-                session,
-                self.input_ids_name,
-                self.attention_mask_name,
-                self.output_tensor_name,
-            )
+            return session, input_ids_name, attention_mask_name, output_tensor_name
 
         with self._lock:
             if self._session is None:
-                if not os.path.exists(self.model_path):
-                    model_key = None
-                    for key, spec in MODEL_REGISTRY.items():
-                        if spec["filename"] in self.model_path:
-                            model_key = key
-                            break
-                    model_name = (
-                        model_key if model_key else os.path.basename(self.model_path)
-                    )
-                    raise RuntimeError(
-                        f"Model '{model_name}' is not installed. "
-                        "Please install it from Settings → AI Models before using this feature."
-                    )
-
-                self._session = onnxruntime.InferenceSession(
-                    self.model_path, providers=ONNX_util_get_execution_providers()
-                )
-                if self._model_key is not None and not self._session_registered:
-                    try:
-                        mark_model_session_active(self._model_key)
-                    except RuntimeError:
-                        self._session = None
-                        raise
-                    self._session_registered = True
+                self._session = self._create_session()
 
                 input_names = {inp.name for inp in self._session.get_inputs()}
                 self.input_ids_name = (
@@ -86,23 +51,23 @@ class SigLIP2Text:
                     )
                 self.output_tensor_name = self._session.get_outputs()[0].name
 
+            # Re-snapshot into locals while still holding the lock, then
+            # return those locals -- not self.* -- after the lock releases.
             session = self._session
+            input_ids_name = self.input_ids_name
+            attention_mask_name = self.attention_mask_name
+            output_tensor_name = self.output_tensor_name
             if session is None or None in (
-                self.input_ids_name,
-                self.attention_mask_name,
-                self.output_tensor_name,
+                input_ids_name,
+                attention_mask_name,
+                output_tensor_name,
             ):
                 raise RuntimeError(
                     f"Model session for '{self._model_key}' was closed while "
                     "get_session() was executing."
                 )
 
-        return (
-            session,
-            self.input_ids_name,
-            self.attention_mask_name,
-            self.output_tensor_name,
-        )
+        return session, input_ids_name, attention_mask_name, output_tensor_name
 
     def get_embedding(
         self, input_ids: np.ndarray, attention_mask: np.ndarray
@@ -118,21 +83,3 @@ class SigLIP2Text:
         embedding = result[0]
         norm = np.linalg.norm(embedding)
         return embedding / norm if norm > 0 else embedding
-
-    def close(self):
-        with self._lock:
-            if self._session is not None:
-                self._session = None
-                self.input_ids_name = None
-                self.attention_mask_name = None
-                self.output_tensor_name = None
-                if self._model_key is not None and self._session_registered:
-                    mark_model_session_inactive(self._model_key)
-                    self._session_registered = False
-                logger.info("SigLIP2Text model session closed.")
-
-    def __del__(self):
-        try:
-            self.close()
-        except Exception:
-            pass
