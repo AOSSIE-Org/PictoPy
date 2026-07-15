@@ -34,7 +34,7 @@ def delete_db_files():
 
     deleted_any = False
     for db_file in unique_db_files:
-        if os.path.exists(db_file):
+        if os.path.isfile(db_file):
             try:
                 os.remove(db_file)
                 print(f"Deleted: {db_file}")
