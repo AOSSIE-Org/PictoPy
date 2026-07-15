@@ -14,7 +14,8 @@ import {
   ModelTier,
   ModelStatusResponse,
   getModelTierDescription,
-  SEMANTIC_BUNDLE_LABEL,
+  SEMANTIC_BUNDLE_KEYS,
+  SEMANTIC_BUNDLE_TITLE,
   SEMANTIC_BUNDLE_DESCRIPTION,
 } from '@/types/models';
 
@@ -163,12 +164,9 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
     .map(([key, model]) => ({ key, ...model }));
 
   // Group semantic models
-  const semanticKeys = [
-    'siglip2_base_vision',
-    'siglip2_base_text',
-    'siglip2_base_tokenizer',
-  ];
-  const semanticModels = semanticKeys.map((k) => models[k]).filter(Boolean);
+  const semanticModels = SEMANTIC_BUNDLE_KEYS.map((k) => models[k]).filter(
+    Boolean,
+  );
   const semanticInstalledCount = semanticModels.filter(
     (m) => m.installed,
   ).length;
@@ -267,7 +265,7 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-lg font-medium">
-                    {SEMANTIC_BUNDLE_LABEL.split(' (')[0]}
+                    {SEMANTIC_BUNDLE_TITLE}
                   </h3>
                 </div>
                 <p className="text-muted-foreground mt-1 mb-2 text-sm leading-relaxed">
@@ -285,8 +283,8 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
                   onClick={() => {
                     setUninstallingTarget({
                       id: 'semantic',
-                      name: 'Semantic Search',
-                      keys: semanticKeys,
+                      name: SEMANTIC_BUNDLE_TITLE,
+                      keys: [...SEMANTIC_BUNDLE_KEYS],
                     });
                     setConfirmOpen(true);
                   }}

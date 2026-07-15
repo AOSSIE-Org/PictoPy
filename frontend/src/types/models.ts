@@ -73,6 +73,13 @@ export const MODEL_TIER_DESCRIPTIONS: Record<ModelTier, string> = {
   medium: 'Best accuracy recommended for modern hardware',
 };
 
+export const SEMANTIC_BUNDLE_KEYS = [
+  'siglip2_base_vision',
+  'siglip2_base_text',
+  'siglip2_base_tokenizer',
+] as const;
+
+export const SEMANTIC_BUNDLE_TITLE = 'Semantic Search';
 export const SEMANTIC_BUNDLE_LABEL = 'Semantic Search (~1.5 GB)';
 export const SEMANTIC_BUNDLE_DESCRIPTION =
   'Search photos by describing them in your own words. Downloads three model files; runs fully on-device.';

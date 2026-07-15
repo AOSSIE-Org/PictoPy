@@ -21,6 +21,9 @@ import {
   ModelTier,
   ModelStatusResponse,
   getModelTierDescription,
+  SEMANTIC_BUNDLE_KEYS,
+  SEMANTIC_BUNDLE_LABEL,
+  SEMANTIC_BUNDLE_DESCRIPTION,
 } from '@/types/models';
 import { useModelDownloadProgress } from '@/hooks/useModelDownloadProgress';
 
@@ -274,12 +277,9 @@ export const AvailableTab: React.FC<AvailableTabProps> = ({
     isInstalledJustNow: boolean;
   }>;
 
-  const semanticKeys = [
-    'siglip2_base_vision',
-    'siglip2_base_text',
-    'siglip2_base_tokenizer',
-  ];
-  const semanticModels = semanticKeys.map((k) => models[k]).filter(Boolean);
+  const semanticModels = SEMANTIC_BUNDLE_KEYS.map((k) => models[k]).filter(
+    Boolean,
+  );
   const semanticInstalledCount = semanticModels.filter(
     (m) => m.installed,
   ).length;
@@ -371,8 +371,8 @@ export const AvailableTab: React.FC<AvailableTabProps> = ({
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             <TierCard
               tier={semanticBundle.tier}
-              title="Semantic Search (~1.5 GB)"
-              description="Search photos by describing them in your own words. Downloads three model files; runs fully on-device."
+              title={SEMANTIC_BUNDLE_LABEL}
+              description={SEMANTIC_BUNDLE_DESCRIPTION}
               isPartial={semanticBundle.isPartial}
               combinedSize={semanticBundle.combinedSize}
               taskId={downloadingTiers.get('semantic') || null}
