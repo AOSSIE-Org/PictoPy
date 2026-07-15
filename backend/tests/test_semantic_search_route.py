@@ -62,6 +62,28 @@ class TestSemanticSearchEndpoint:
         assert response.status_code == 404
         assert "not installed" in response.json()["detail"]["message"]
 
+    @patch("app.models.model_registry.get_model_path")
+    @patch("app.models.model_registry.get_siglip2_tokenizer_key")
+    @patch("app.models.model_registry.get_siglip2_registry_keys")
+    @patch("os.path.exists")
+    def test_tokenizer_not_installed_returns_404(
+        self, mock_exists, mock_registry_keys, mock_tok_key, mock_get_path
+    ):
+        # Text model IS present, but the tokenizer is missing -- this must
+        # be checked and reported independently of the text model check.
+        mock_registry_keys.return_value = ("siglip2_base_vision", "siglip2_base_text")
+        mock_tok_key.return_value = "siglip2_base_tokenizer"
+        mock_get_path.side_effect = lambda key: {
+            "siglip2_base_text": "/models/text.onnx",
+            "siglip2_base_tokenizer": "/models/tokenizer.json",
+        }[key]
+        mock_exists.side_effect = lambda path: path == "/models/text.onnx"
+
+        response = client.get("/images/semantic-search", params={"query": "beach"})
+
+        assert response.status_code == 404
+        assert "tokenizer" in response.json()["detail"]["message"].lower()
+
     @patch("app.database.image_embeddings.db_get_all_embeddings")
     @patch("app.models.model_registry.get_model_path")
     @patch("app.models.model_registry.get_siglip2_tokenizer_key")

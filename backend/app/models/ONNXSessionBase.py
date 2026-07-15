@@ -4,7 +4,7 @@ import os
 import threading
 import onnxruntime
 
-from app.models.model_registry import MODEL_REGISTRY, get_model_key_from_path
+from app.models.model_registry import get_model_key_from_path
 from app.models.session_registry import (
     mark_model_session_active,
     mark_model_session_inactive,
@@ -41,12 +41,7 @@ class ONNXSessionBase:
         successfully, so a registration failure never leaves a
         half-initialized session in place."""
         if not os.path.exists(self.model_path):
-            model_key = None
-            for key, spec in MODEL_REGISTRY.items():
-                if spec["filename"] in self.model_path:
-                    model_key = key
-                    break
-            model_name = model_key if model_key else os.path.basename(self.model_path)
+            model_name = self._model_key or os.path.basename(self.model_path)
             raise RuntimeError(
                 f"Model '{model_name}' is not installed. "
                 "Please install it from Settings → AI Models before using this feature."

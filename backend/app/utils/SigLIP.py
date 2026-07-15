@@ -60,9 +60,11 @@ def siglip_util_tokenize_query(query: str) -> tuple[np.ndarray, np.ndarray]:
 
     current_key = get_siglip2_tokenizer_key(SIGLIP2_ACTIVE_CHECKPOINT)
 
-    # Lock around the check-load-assign sequence: without it, two threads
-    # racing on a cold/stale cache could both load a tokenizer and interleave
-    # their _tokenizer/_tokenizer_key assignments, leaving the pair mismatched.
+    # Lock around the check-load-assign sequence only: without it, two
+    # threads racing on a cold/stale cache could both load a tokenizer and
+    # interleave their _tokenizer/_tokenizer_key assignments, leaving the
+    # pair mismatched. encode() itself doesn't touch the cache, so it runs
+    # outside the lock on a captured local -- no need to serialize it.
     with _tokenizer_lock:
         if _tokenizer is None or _tokenizer_key != current_key:
             tokenizer_path = get_model_path(current_key)
@@ -76,7 +78,9 @@ def siglip_util_tokenize_query(query: str) -> tuple[np.ndarray, np.ndarray]:
             _tokenizer = tokenizer
             _tokenizer_key = current_key
 
-        encoding = _tokenizer.encode(query)
+        tokenizer = _tokenizer
+
+    encoding = tokenizer.encode(query)
     input_ids = np.array(encoding.ids, dtype=np.int64).reshape(
         1, SIGLIP2_TEXT_MAX_LENGTH
     )
