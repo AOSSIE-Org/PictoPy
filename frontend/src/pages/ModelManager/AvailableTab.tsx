@@ -41,6 +41,13 @@ export interface AvailableTabProps {
   setInstalledJustNow: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
+interface SemanticBundleInfo {
+  tier: 'semantic';
+  isPartial: boolean;
+  combinedSize: number;
+  isInstalledJustNow: boolean;
+}
+
 interface TierCardProps {
   tier: string;
   title?: string;
@@ -289,7 +296,7 @@ export const AvailableTab: React.FC<AvailableTabProps> = ({
   );
   const semanticInstalledJustNow = installedJustNow.has('semantic');
 
-  let semanticBundle: any = null;
+  let semanticBundle: SemanticBundleInfo | null = null;
   if (
     semanticModels.length === 3 &&
     (semanticInstalledCount < 3 || semanticInstalledJustNow)
