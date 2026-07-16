@@ -1,0 +1,5 @@
+{
+  "identifier": "model-manager-capabilities",
+  "windows": ["model-manager"],
+  "permissions": ["core:window:default", "core:app:allow-version"]
+}

@@ -1,6 +1,7 @@
 import { render, screen, act } from '@/test-utils';
 import userEvent from '@testing-library/user-event';
 import Settings from '../SettingsPage/Settings';
+import { invoke } from '@tauri-apps/api/core';
 
 describe('Settings Page', () => {
   // shared setup for all tests
@@ -24,10 +25,11 @@ describe('Settings Page', () => {
         await user.click(dropdownTrigger);
 
         const menuItems = screen.getAllByRole('menuitem');
-        expect(menuItems).toHaveLength(3);
+        expect(menuItems).toHaveLength(4);
         expect(menuItems[0]).toHaveTextContent('Nano');
         expect(menuItems[1]).toHaveTextContent('Small');
         expect(menuItems[2]).toHaveTextContent('Medium');
+        expect(menuItems[3]).toHaveTextContent('Configure...');
       });
 
       test('GPU Acceleration toggle changes state on click', async () => {
@@ -99,7 +101,21 @@ describe('Settings Page', () => {
 
         // reopen and verify options still available
         await user.click(dropdownTrigger);
-        expect(screen.getAllByRole('menuitem')).toHaveLength(3);
+        expect(screen.getAllByRole('menuitem')).toHaveLength(4);
+      });
+
+      test('clicking Configure... invokes open_model_manager Tauri command', async () => {
+        const { user } = await setupTest();
+
+        const dropdownTrigger = screen.getByRole('button', { name: /nano/i });
+        await user.click(dropdownTrigger);
+
+        const configureOption = screen.getByRole('menuitem', {
+          name: /configure/i,
+        });
+        await user.click(configureOption);
+
+        expect(invoke).toHaveBeenCalledWith('open_model_manager');
       });
     });
 
