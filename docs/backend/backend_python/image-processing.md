@@ -40,9 +40,46 @@ We use something called DBSCAN to group similar faces together. This process hap
 after every 5 photos are added (this can be changed in the code) but apart from that, the photos are assigned a cluster based on the embedding distance
 of the faces in the photo with the mean of each of the clusters.
 
+## Semantic Search with SigLIP2
+
+Beyond tag-based search (finding photos by the exact object/face labels YOLO
+and FaceNet detected), PictoPy can also search photos by **describing** them
+in plain language — "beach sunset", "two people hugging" — using Google's
+[SigLIP2](https://huggingface.co/docs/transformers/en/model_doc/siglip2)
+model.
+
+Every photo gets a single numeric "embedding" computed once, in the
+background, right after the usual object/face tagging pass finishes. When
+you search, your query gets embedded the same way and compared against every
+stored photo embedding — so a phrase the app has never seen before still
+works immediately, with no re-scan of your library required.
+
+Just type into the same search box you already use. There's no separate
+"semantic search" mode to switch on: PictoPy tries an exact tag match first,
+and only falls back to meaning-based search if that comes up empty (and the
+feature is installed).
+
+???+ tip "Fun Fact"
+SigLIP2 stands for "Sigmoid Loss for Language-Image Pre-training, v2". Unlike
+its predecessor CLIP, it uses a per-pair sigmoid loss instead of a
+whole-batch softmax during training — this is why its match scores look
+different from what you might expect (see the parameters table below).
+
+???+ note "Installing it"
+Semantic search is an optional ~1.5 GB download from **Settings → AI
+Models**, listed as a "Semantic Search" bundle (three files: a vision model,
+a text model, and a tokenizer). If it isn't installed, tag search keeps
+working exactly as before — semantic search just silently doesn't
+contribute any results.
+
+For the full technical breakdown — architecture diagrams, database schema,
+model calibration details, and known limitations — see the dedicated
+[Semantic Search](semantic-search.md) page.
+
 ## How It All Fits Together
 
 When you add a new photo, we first look for objects and faces. If we find faces, we generate embeddings for them. These embeddings then get added to our face clusters.
+Then, if the semantic search models are installed, we generate a SigLIP2 embedding for the photo too.
 All this information gets stored in our database so we can find it later.
 
 ## Under the Hood
@@ -86,5 +123,16 @@ Here are some key parameters for the main models used in PictoPy's image process
 | `eps`         | 0.3      | Maximum distance between two samples for them to be considered as in the same neighborhood |
 | `min_samples` | 2        | Number of samples in a neighborhood for a point to be considered as a core point           |
 | `metric`      | "cosine" | Distance metric used for clustering                                                        |
+
+### Semantic Search (SigLIP2)
+
+| Parameter | Value | Description |
+| -------------------------- | ---------------------------------- | ---------------------------------------------------------------------------- |
+| Default checkpoint | `base` | Set via `SIGLIP2_ACTIVE_CHECKPOINT`; `large` and `so400m` also exist but ship placeholder registry entries only (see [Semantic Search](semantic-search.md#model-distribution-and-checkpoints)). |
+| Input resolution (`base`) | 224 × 224 | Larger checkpoints use 384 × 384. |
+| Embedding dimension | 768 | Same dimensionality for both the image and text towers. |
+| `SIGLIP2_EMBED_BATCH_SIZE` | 8 | Images per batch during the background embedding pass. |
+| `SIGLIP2_MATCH_THRESHOLD` | 0.01 | Minimum sigmoid score to count as a match. SigLIP2's absolute scores run low even for real matches — this is expected, not a bug. |
+| Output | Sorted, scored image list | Scores are rounded to 4 decimal places server-side and never shown in the UI. |
 
 Note: Some of these values are default parameters and can be adjusted when initializing the models or during runtime, depending on the specific use case or performance requirements.

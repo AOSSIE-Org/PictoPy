@@ -21,6 +21,9 @@ import {
   ModelTier,
   ModelStatusResponse,
   getModelTierDescription,
+  SEMANTIC_BUNDLE_KEYS,
+  SEMANTIC_BUNDLE_LABEL,
+  SEMANTIC_BUNDLE_DESCRIPTION,
 } from '@/types/models';
 import { useModelDownloadProgress } from '@/hooks/useModelDownloadProgress';
 
@@ -38,19 +41,30 @@ export interface AvailableTabProps {
   setInstalledJustNow: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
-interface TierCardProps {
-  tier: ModelTier;
+interface SemanticBundleInfo {
+  tier: 'semantic';
   isPartial: boolean;
   combinedSize: number;
-  isRecommended: boolean;
+  isInstalledJustNow: boolean;
+}
+
+interface TierCardProps {
+  tier: string;
+  title?: string;
+  description?: string;
+  isPartial: boolean;
+  combinedSize: number;
+  isRecommended?: boolean;
   taskId: string | null;
-  onInstall: (tier: ModelTier) => Promise<void>;
-  onComplete: (tier: ModelTier) => void;
+  onInstall: (tier: string) => void;
+  onComplete: (tier: string) => void;
   isInstalledJustNow: boolean;
 }
 
 const TierCard: React.FC<TierCardProps> = ({
   tier,
+  title,
+  description,
   isPartial,
   combinedSize,
   isRecommended,
@@ -88,7 +102,9 @@ const TierCard: React.FC<TierCardProps> = ({
         <div
           className={`mb-2 flex items-center justify-between ${isRecommended ? 'mt-3' : ''}`}
         >
-          <h3 className="text-lg font-medium">{formatTierLabel(tier)}</h3>
+          <h3 className="text-lg font-medium">
+            {title || formatTierLabel(tier as ModelTier)}
+          </h3>
           {isPartial && (
             <Badge
               variant="secondary"
@@ -99,7 +115,7 @@ const TierCard: React.FC<TierCardProps> = ({
           )}
         </div>
         <p className="text-muted-foreground mt-1 mb-2 text-sm leading-relaxed">
-          {getModelTierDescription(tier)}
+          {description || getModelTierDescription(tier as ModelTier)}
         </p>
         <p className="text-muted-foreground mb-4 text-xs">
           ~{Math.round(combinedSize)} MB total size
@@ -182,9 +198,8 @@ export const AvailableTab: React.FC<AvailableTabProps> = ({
     queryFn: fetchHardwareInfo,
   });
 
-  const handleInstall = async (tier: ModelTier) => {
+  const handleInstall = async (tier: string) => {
     try {
-      // Empty string is an intentional sentinel meaning "install triggered, awaiting real task_id from POST /setup"
       setDownloadingTiers((prev) => new Map(prev).set(tier, ''));
       const data = await setupModelTier(tier);
       setDownloadingTiers((prev) =>
@@ -206,7 +221,7 @@ export const AvailableTab: React.FC<AvailableTabProps> = ({
   };
 
   const handleComplete = React.useCallback(
-    (tier: ModelTier) => {
+    (tier: string) => {
       setInstalledJustNow((prev) => {
         if (prev.has(tier)) return prev;
         return new Set(prev).add(tier);
@@ -233,7 +248,6 @@ export const AvailableTab: React.FC<AvailableTabProps> = ({
 
   const models = statusData.data;
 
-  // Group and classify tiers
   const availableTiers = TIER_ORDER.map((tier) => {
     const objModel = Object.values(models).find(
       (m) => m.feature === 'object_detection' && m.tier === tier,
@@ -242,13 +256,13 @@ export const AvailableTab: React.FC<AvailableTabProps> = ({
       (m) => m.feature === 'face_detection' && m.tier === tier,
     );
 
-    if (!objModel || !faceModel) return null; // Should never happen unless registry is broken
+    if (!objModel || !faceModel) return null;
 
     const objInstalled = objModel.installed;
     const faceInstalled = faceModel.installed;
 
     if (objInstalled && faceInstalled && !installedJustNow.has(tier)) {
-      return null; // Fully installed and not just completed, handled by InstalledTab
+      return null;
     }
 
     const isPartial =
@@ -261,82 +275,121 @@ export const AvailableTab: React.FC<AvailableTabProps> = ({
       tier,
       isPartial,
       combinedSize,
+      isInstalledJustNow: installedJustNow.has(tier),
     };
   }).filter(Boolean) as Array<{
     tier: ModelTier;
     isPartial: boolean;
     combinedSize: number;
+    isInstalledJustNow: boolean;
   }>;
+
+  const semanticModels = SEMANTIC_BUNDLE_KEYS.map((k) => models[k]).filter(
+    Boolean,
+  );
+  const semanticInstalledCount = semanticModels.filter(
+    (m) => m.installed,
+  ).length;
+  const semanticSize = semanticModels.reduce(
+    (acc, m) => acc + (m.size_mb || 0),
+    0,
+  );
+  const semanticInstalledJustNow = installedJustNow.has('semantic');
+
+  let semanticBundle: SemanticBundleInfo | null = null;
+  if (
+    semanticModels.length === 3 &&
+    (semanticInstalledCount < 3 || semanticInstalledJustNow)
+  ) {
+    semanticBundle = {
+      tier: 'semantic',
+      isPartial: semanticInstalledCount > 0 && semanticInstalledCount < 3,
+      combinedSize: semanticSize,
+      isInstalledJustNow: semanticInstalledJustNow,
+    };
+  }
+
+  if (availableTiers.length === 0 && !semanticBundle) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex flex-col items-center space-y-4 p-6 text-center">
+            <div className="relative">
+              <div className="bg-primary/10 flex h-16 w-16 items-center justify-center rounded-full">
+                <CheckCircle2 className="text-primary h-8 w-8" />
+              </div>
+              <div className="absolute -top-1 -right-1">
+                <Sparkles className="h-5 w-5 text-yellow-500" />
+              </div>
+            </div>
+            <Badge variant="secondary" className="px-3 py-1">
+              Up to Date
+            </Badge>
+            <h1 className="text-xl font-bold tracking-tight">
+              All Tiers Installed
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              You have successfully downloaded and installed all available AI
+              model tiers.
+            </p>
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="text-muted-foreground text-xs">
+                Head over to the Installed tab to manage your models or change
+                your active selection.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
-      <section>
-        <h2 className="mb-4 text-lg font-semibold">Available Tiers</h2>
-        {availableTiers.length === 0 ? (
-          <div className="flex items-center justify-center py-12">
-            <Card className="w-full max-w-md">
-              <CardContent className="flex flex-col items-center space-y-4 p-6 text-center">
-                {/* Icon */}
-                <div className="relative">
-                  <div className="bg-primary/10 flex h-16 w-16 items-center justify-center rounded-full">
-                    <CheckCircle2 className="text-primary h-8 w-8" />
-                  </div>
-                  <div className="absolute -top-1 -right-1">
-                    <Sparkles className="h-5 w-5 text-yellow-500" />
-                  </div>
-                </div>
-
-                {/* Badge */}
-                <Badge variant="secondary" className="px-3 py-1">
-                  Up to Date
-                </Badge>
-
-                {/* Title */}
-                <h1 className="text-xl font-bold tracking-tight">
-                  All Tiers Installed
-                </h1>
-
-                {/* Message */}
-                <p className="text-muted-foreground text-sm">
-                  You have successfully downloaded and installed all available
-                  AI model tiers.
-                </p>
-
-                {/* Additional Info */}
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-muted-foreground text-xs">
-                    Head over to the Installed tab to manage your models or
-                    change your active selection.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {availableTiers.map(({ tier, isPartial, combinedSize }) => {
-              const taskId = downloadingTiers.has(tier)
-                ? downloadingTiers.get(tier) || ''
-                : null;
-              const isRecommended = hwData?.data?.recommended_tier === tier;
-
+      {availableTiers.length > 0 && (
+        <section>
+          <h2 className="mb-4 text-lg font-semibold">Standard Tiers</h2>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {availableTiers.map((bundle) => {
+              if (!bundle) return null;
+              const isRecommended =
+                hwData?.data?.recommended_tier === bundle.tier;
               return (
                 <TierCard
-                  key={tier}
-                  tier={tier}
-                  isPartial={isPartial}
-                  combinedSize={combinedSize}
+                  key={bundle.tier}
+                  tier={bundle.tier}
+                  isPartial={bundle.isPartial}
+                  combinedSize={bundle.combinedSize}
                   isRecommended={isRecommended}
-                  taskId={taskId}
+                  taskId={downloadingTiers.get(bundle.tier) || null}
                   onInstall={handleInstall}
                   onComplete={handleComplete}
-                  isInstalledJustNow={installedJustNow.has(tier)}
+                  isInstalledJustNow={bundle.isInstalledJustNow}
                 />
               );
             })}
           </div>
-        )}
-      </section>
+        </section>
+      )}
+
+      {semanticBundle && (
+        <section>
+          <h2 className="mb-4 text-lg font-semibold">Additional Features</h2>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <TierCard
+              tier={semanticBundle.tier}
+              title={SEMANTIC_BUNDLE_LABEL}
+              description={SEMANTIC_BUNDLE_DESCRIPTION}
+              isPartial={semanticBundle.isPartial}
+              combinedSize={semanticBundle.combinedSize}
+              taskId={downloadingTiers.get('semantic') || null}
+              onInstall={handleInstall}
+              onComplete={handleComplete}
+              isInstalledJustNow={semanticBundle.isInstalledJustNow}
+            />
+          </div>
+        </section>
+      )}
     </div>
   );
 };
