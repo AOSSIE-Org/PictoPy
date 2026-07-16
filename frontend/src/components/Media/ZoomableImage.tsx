@@ -39,7 +39,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
       zoomIn,
       zoomOut,
       reset,
-      isFitReady
+      isFitReady,
     } = useZoomTransform({ imagePath, rotation, resetSignal });
 
     useImperativeHandle(
