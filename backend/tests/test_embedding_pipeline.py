@@ -64,7 +64,7 @@ class TestProcessUnembeddedImages:
     @patch("app.models.model_registry.get_model_path")
     @patch("app.models.model_registry.get_siglip2_registry_keys")
     @patch("os.path.exists")
-    def test_corrupt_images_excluded_from_embeddings_but_still_marked_embedded(
+    def test_corrupt_images_excluded_from_embeddings_and_not_marked_embedded(
         self,
         mock_exists,
         mock_registry_keys,
@@ -107,10 +107,12 @@ class TestProcessUnembeddedImages:
         assert {row[0] for row in upserted_rows} == {"img0", "img2"}
         assert all(row[1] == "siglip2-base-patch16-224" for row in upserted_rows)
 
-        # But ALL three -- including the corrupt one -- get marked embedded,
-        # so a permanently-unreadable file isn't retried on every future pass.
+        # Only the successfully-preprocessed images are marked embedded. The
+        # corrupt one stays isEmbedded=False so it's retried on a later pass
+        # instead of being permanently excluded from semantic search if the
+        # underlying issue (a transient lock, a restored backup) resolves.
         mock_mark_embedded.assert_called_once()
-        assert set(mock_mark_embedded.call_args[0][0]) == {"img0", "img1", "img2"}
+        assert set(mock_mark_embedded.call_args[0][0]) == {"img0", "img2"}
 
         mock_vision_instance.close.assert_called_once()
 

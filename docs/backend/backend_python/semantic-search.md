@@ -164,7 +164,7 @@ sequenceDiagram
             Vision-->>Embed: [N, 768] unit-norm float32
         end
         Embed->>DB: db_upsert_image_embeddings(good rows only)
-        Embed->>DB: db_mark_images_embedded(ALL ids in batch, including corrupt)
+        Embed->>DB: db_mark_images_embedded(good ids only, excludes corrupt)
     end
     Embed->>Vision: close()
 ```
@@ -172,12 +172,18 @@ sequenceDiagram
 Two details here are easy to get wrong on a re-read of the code, so they're
 called out explicitly:
 
-- **Corrupt images are marked embedded anyway.** `db_mark_images_embedded`
-  is called with every ID in the batch, not just the ones that produced an
-  embedding. This mirrors the existing YOLO/face pipeline's
-  mark-processed-regardless-of-outcome convention: a permanently corrupt file
-  will never preprocess successfully, so leaving `isEmbedded = False` would
-  retry it — and fail again — on every future pass, forever.
+- **Corrupt images are retried, not permanently excluded.** `db_mark_images_embedded`
+  is called with only the IDs that produced an embedding (`good_ids`), not
+  every ID in the batch. A corrupt/unreadable image stays `isEmbedded = False`
+  and re-enters `db_get_unembedded_images()` on the next pass. This
+  deliberately does **not** follow the YOLO/face pipeline's
+  mark-processed-regardless-of-outcome convention: that convention exists to
+  avoid re-running *expensive* inference on images that will never classify
+  differently, but SigLIP2 preprocessing failure is a cheap check (PIL
+  failing to open/decode), so the retry cost is low — and it means a file
+  that becomes readable later (a transient lock, a restored backup) still
+  eventually gets embedded instead of being silently excluded from semantic
+  search forever.
 - **The upsert happens before the mark.** If the process crashes between
   `db_upsert_image_embeddings` and `db_mark_images_embedded`, the image is
   re-embedded (harmless, idempotent) rather than silently lost with no
@@ -536,7 +542,7 @@ developer runs deliberately.
 | --- | --- |
 | `tests/test_image_embeddings.py` | `image_embeddings` table CRUD: round-trip storage/retrieval, `model_version` filtering, upsert-overwrites-existing-row, FK cascade delete. Runs against a disposable per-test SQLite file (see note below), not the real database. |
 | `tests/test_semantic_search_route.py` | The `/semantic-search` endpoint: 404s (text model / tokenizer missing, checked independently), 400 on a whitespace-only query, friendly empty-result responses, and — critically — descending sort order verified with two results that both clear the threshold (an earlier version of this test only had one matching result, which couldn't have detected a broken sort). |
-| `tests/test_embedding_pipeline.py` | `image_util_process_unembedded_images`: skips cleanly with no vision model installed, batches per `SIGLIP2_EMBED_BATCH_SIZE`, excludes corrupt images from the embeddings upsert while still marking them embedded, always closes the vision session even if scoring raises mid-batch. |
+| `tests/test_embedding_pipeline.py` | `image_util_process_unembedded_images`: skips cleanly with no vision model installed, batches per `SIGLIP2_EMBED_BATCH_SIZE`, excludes corrupt images from both the embeddings upsert and the embedded-marking (so they're retried on a later pass), always closes the vision session even if scoring raises mid-batch. |
 | `tests/test_onnx_session_base.py` | `ONNXSessionBase.close()`: normal decrement, the registration-leak regression scenario, no-op-when-never-opened, idempotency. Fully mocks `onnxruntime.InferenceSession` and `os.path.exists` — does not depend on the real (multi-hundred-MB, not checked into git) ONNX files existing on disk. |
 
 !!! warning "Local test runs and the real database"

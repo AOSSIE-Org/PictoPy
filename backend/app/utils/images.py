@@ -146,12 +146,10 @@ def image_util_process_unembedded_images() -> None:
 
                 good_arrays = []
                 good_ids = []
-                all_ids = []
 
                 for image in batch:
                     image_id = image["id"]
                     image_path = image["path"]
-                    all_ids.append(image_id)
 
                     preprocessed = siglip_util_preprocess_image(image_path, resolution)
                     if preprocessed is None:
@@ -172,13 +170,15 @@ def image_util_process_unembedded_images() -> None:
                     db_upsert_image_embeddings(rows)
                     embedded_count += len(good_arrays)
 
-                if all_ids:
-                    # Corrupt images (preprocessed=None) are marked embedded too,
-                    # not just good_ids -- mirrors the YOLO/face pipeline's
-                    # mark-processed-regardless-of-outcome convention. A permanently
-                    # corrupt file will never preprocess successfully, so leaving it
-                    # isEmbedded=False would retry it on every future pass forever.
-                    db_mark_images_embedded(all_ids)
+                if good_ids:
+                    # Only mark images that actually got an embedding row.
+                    # Corrupt images stay isEmbedded=False and get retried on
+                    # the next pass -- unlike YOLO/FaceNet inference, preprocessing
+                    # is a cheap check (PIL failing to open/decode), so the retry
+                    # cost is low, and a file that becomes readable later (a
+                    # transient lock, a restored backup) eventually gets embedded
+                    # instead of being permanently excluded from semantic search.
+                    db_mark_images_embedded(good_ids)
 
             elapsed = time.time() - start_time
             logger.info(
