@@ -22,7 +22,7 @@ def delete_db_files():
     db_files.extend(test_db_files)
 
     # Normalize paths and remove duplicates
-    unique_db_files = sorted(list(set(os.path.abspath(f) for f in db_files)))
+    unique_db_files = sorted({os.path.abspath(f) for f in db_files})
 
     deleted_any = False
     has_errors = False
