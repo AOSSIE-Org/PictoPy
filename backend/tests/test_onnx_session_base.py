@@ -4,7 +4,10 @@ import onnxruntime
 import pytest
 
 from app.models.SigLIP2Text import SigLIP2Text
-from app.models.session_registry import get_active_session_count
+from app.models.session_registry import (
+    get_active_session_count,
+    mark_model_session_inactive,
+)
 
 MODEL_PATH = "app/models/ONNX_Exports/SigLIP2_Base_Text.onnx"
 MODEL_KEY = "siglip2_base_text"
@@ -19,9 +22,11 @@ class _FakeInput:
 def _clean_registry():
     yield
     # Belt-and-suspenders: don't let a failed assertion mid-test leak a
-    # registered session into other tests sharing this real model key.
-    if get_active_session_count(MODEL_KEY) > 0:
-        SigLIP2Text(MODEL_PATH).close()
+    # registered session into other tests sharing this real model key. A
+    # fresh SigLIP2Text(...).close() is a no-op here (its _session_registered
+    # starts False), so decrement the registry directly instead.
+    while get_active_session_count(MODEL_KEY) > 0:
+        mark_model_session_inactive(MODEL_KEY)
 
 
 class TestONNXSessionBaseClose:
