@@ -206,7 +206,7 @@ erDiagram
         BOOLEAN isEmbedded "default 0; drives db_get_unembedded_images()"
     }
     image_embeddings {
-        TEXT image_id PK_FK "ON DELETE CASCADE from images"
+        TEXT image_id PK, FK "ON DELETE CASCADE from images"
         TEXT model_version "e.g. siglip2-base-patch16-224; indexed"
         BLOB embedding "raw float32 bytes, unit-norm, via .tobytes()"
         DATETIME created_at
@@ -219,8 +219,8 @@ erDiagram
         BOOLEAN active "default 1"
     }
     image_semantic_labels {
-        TEXT image_id PK_FK
-        INTEGER label_id PK_FK
+        TEXT image_id PK, FK
+        INTEGER label_id PK, FK
         REAL score
     }
 ```
