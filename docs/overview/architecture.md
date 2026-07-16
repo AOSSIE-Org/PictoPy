@@ -27,6 +27,10 @@ of the faces detected. All these models are run on ONNX runtime to avoid heavy d
 We use DBSCAN algorithm to perform clustering for face embeddings generated. All of our database is in SQL (sqlite) and our API calls rely
 on queries from the backend.
 
+For natural-language photo search, we additionally run [SigLIP2](https://huggingface.co/docs/transformers/en/model_doc/siglip2)
+(also via ONNX Runtime, following the same distribution pattern as YOLO/FaceNet) to generate a reusable embedding per photo in the background,
+and to embed search queries live at request time. See [Semantic Search](../backend/backend_python/semantic-search.md) for the full architecture.
+
 !!! note "Note"
 We discuss all of the features and configuration of our application in further sections of the documentation. They can be used for both developers
 as well as users who want to use the app. A postman collection has also been added which can be found in our API section.
