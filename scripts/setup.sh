@@ -39,6 +39,22 @@ elif [ -f "/etc/fedora-release" ] || [ -f "/etc/redhat-release" ]; then
         libxdo-devel \
         libayatana-appindicator-gtk3-devel \
         librsvg2-devel
+elif [ -f "/etc/arch-release" ] || [ -f "/etc/manjaro-release" ] || command -v pacman &> /dev/null; then
+    echo -e "\e[33mDetected Arch-based Linux. Installing dependencies...\e[0m"
+    sudo pacman -Sy --needed --noconfirm \
+        webkit2gtk-4.1 \
+        base-devel \
+        curl \
+        wget \
+        file \
+        xdotool \
+        openssl \
+        libayatana-appindicator \
+        librsvg \
+        nodejs \
+        npm \
+        rustup \
+        pyenv
 else
     echo -e "\e[31mUnsupported OS: $(uname). Please install system dependencies manually.\e[0m"
     exit 1
