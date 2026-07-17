@@ -13,6 +13,7 @@ import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchHardwareInfo, setupModelTier } from '@/api/api-functions';
 import { formatTierLabel, getErrorMessage } from '@/lib/utils';
 import { showGlobalAlert } from '@/features/globalAlertSlice';
+import { showInfoDialog } from '@/features/infoDialogSlice';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -222,12 +223,25 @@ export const AvailableTab: React.FC<AvailableTabProps> = ({
 
   const handleComplete = React.useCallback(
     (tier: string) => {
+      if (tier === 'semantic' && !installedJustNow.has('semantic')) {
+        // Existing photos are embedded by a backfill that starts post-install
+        dispatch(
+          showInfoDialog({
+            title: 'Semantic Search Installed',
+            message:
+              'PictoPy is now getting your photos ready in the background. ' +
+              'Once done, you can find photos by describing them in your ' +
+              "own words (like 'beach sunset' or 'birthday party'). " +
+              'You can keep using the app while it works.',
+          }),
+        );
+      }
       setInstalledJustNow((prev) => {
         if (prev.has(tier)) return prev;
         return new Set(prev).add(tier);
       });
     },
-    [setInstalledJustNow],
+    [dispatch, installedJustNow, setInstalledJustNow],
   );
 
   if (isLoading) {

@@ -2,12 +2,14 @@ import os
 import json
 import uuid
 import asyncio
-from typing import Dict
+from concurrent.futures import ProcessPoolExecutor
+from typing import Dict, List
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
+from starlette.datastructures import State
 from app.models.model_registry import MODEL_REGISTRY, TIER_MODELS, get_model_path
 from app.models.session_registry import (
     try_mark_model_for_deletion,
@@ -15,6 +17,7 @@ from app.models.session_registry import (
     _registry_lock,
 )
 from app.utils.hardware_detect import get_hardware_info
+from app.utils.images import image_util_process_unembedded_images
 from app.utils.model_downloader import ensure_model
 from app.database.metadata import db_get_metadata
 import logging
@@ -24,6 +27,26 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 REQUIRED_MODELS = ["facenet"]
+
+SEMANTIC_FEATURES = ("semantic_vision", "semantic_text")
+
+
+def get_state(request: Request) -> State:
+    return request.app.state
+
+
+def submit_embedding_backfill_if_semantic(
+    model_keys: List[str], executor: ProcessPoolExecutor
+) -> None:
+    """Run the SigLIP2 embedding pass after a semantic model install.
+
+    Covers images processed before the models were installed. The pass is
+    self-gating and idempotent, so over-triggering is a cheap no-op.
+    """
+    if any(
+        MODEL_REGISTRY[key].get("feature") in SEMANTIC_FEATURES for key in model_keys
+    ):
+        executor.submit(image_util_process_unembedded_images)
 
 
 # Global dict to track download tasks
@@ -189,7 +212,7 @@ async def delete_model(model_key: str):
 
 
 @router.post("/setup")
-async def setup_models(request: SetupRequest):
+async def setup_models(request: SetupRequest, app_state: State = Depends(get_state)):
     """
     Initializes setup by starting downloads for a specific tier + required models.
     Returns a single task_id to track overall progress.
@@ -240,6 +263,9 @@ async def setup_models(request: SetupRequest):
                 async with model_lock:
                     await ensure_model(model_key, progress_callback=progress_callback)
 
+            submit_embedding_backfill_if_semantic(
+                models_to_download, app_state.executor
+            )
             queue.put_nowait({"status": "complete"})
         except Exception as e:
             logger.error(f"Error during setup download: {e}")
@@ -257,7 +283,7 @@ async def setup_models(request: SetupRequest):
 
 
 @router.post("/download/{model_key}")
-async def start_download_model(model_key: str):
+async def start_download_model(model_key: str, app_state: State = Depends(get_state)):
     """
     Starts download for a specific model by key. Returns a task_id.
     """
@@ -287,6 +313,7 @@ async def start_download_model(model_key: str):
             model_lock = await _get_model_download_lock(model_key)
             async with model_lock:
                 await ensure_model(model_key, progress_callback=progress_callback)
+            submit_embedding_backfill_if_semantic([model_key], app_state.executor)
             queue.put_nowait({"status": "complete", "model_key": model_key})
         except Exception as e:
             logger.error(f"Error downloading model {model_key}: {e}")
