@@ -1,5 +1,9 @@
 import os
 import sys
+
+# Ensure backend directory is in sys.path so we can import from app
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from app.config.settings import DATABASE_PATH
 
 
