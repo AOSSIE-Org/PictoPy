@@ -1,7 +1,12 @@
-from unittest.mock import patch
+import json
+from unittest.mock import patch, AsyncMock, MagicMock
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from app.routes.models import router as models_router
+from app.routes.models import (
+    router as models_router,
+    submit_embedding_backfill_if_semantic,
+)
+from app.utils.images import image_util_process_unembedded_images
 
 app = FastAPI()
 app.include_router(models_router, prefix="/models")
@@ -104,3 +109,62 @@ class TestModelsAPI:
 
         mock_to_thread.assert_called_once()
         mock_release.assert_called_once_with("yolov8n")
+
+
+class TestEmbeddingBackfillTrigger:
+    """Semantic model installs must trigger the embedding backfill pass."""
+
+    def test_helper_submits_pass_for_semantic_keys(self):
+        executor = MagicMock()
+        submit_embedding_backfill_if_semantic(
+            ["siglip2_base_vision", "siglip2_base_text", "facenet"], executor
+        )
+        executor.submit.assert_called_once_with(image_util_process_unembedded_images)
+
+    def test_helper_ignores_non_semantic_keys(self):
+        executor = MagicMock()
+        submit_embedding_backfill_if_semantic(["yolo_nano", "facenet"], executor)
+        executor.submit.assert_not_called()
+
+    @staticmethod
+    def _drain_until_complete(local_client, task_id):
+        """Read the SSE progress stream until the background task finishes."""
+        with local_client.stream(
+            "GET", f"/models/download/{task_id}/progress"
+        ) as response:
+            for line in response.iter_lines():
+                if not line.startswith("data:"):
+                    continue
+                msg = json.loads(line[len("data:") :])
+                assert msg["status"] != "error", msg
+                if msg["status"] == "complete":
+                    return
+        raise AssertionError("SSE stream ended without a 'complete' event")
+
+    def _run_setup(self, tier: str) -> MagicMock:
+        executor = MagicMock()
+        app.state.executor = executor
+        with patch("app.routes.models.ensure_model", new=AsyncMock()):
+            with TestClient(app) as local_client:
+                response = local_client.post("/models/setup", json={"tier": tier})
+                assert response.status_code == 200
+                self._drain_until_complete(local_client, response.json()["task_id"])
+        return executor
+
+    def test_setup_semantic_tier_triggers_backfill(self):
+        executor = self._run_setup("semantic")
+        executor.submit.assert_called_once_with(image_util_process_unembedded_images)
+
+    def test_setup_yolo_tier_does_not_trigger_backfill(self):
+        executor = self._run_setup("nano")
+        executor.submit.assert_not_called()
+
+    def test_single_model_download_of_semantic_model_triggers_backfill(self):
+        executor = MagicMock()
+        app.state.executor = executor
+        with patch("app.routes.models.ensure_model", new=AsyncMock()):
+            with TestClient(app) as local_client:
+                response = local_client.post("/models/download/siglip2_base_vision")
+                assert response.status_code == 200
+                self._drain_until_complete(local_client, response.json()["task_id"])
+        executor.submit.assert_called_once_with(image_util_process_unembedded_images)
