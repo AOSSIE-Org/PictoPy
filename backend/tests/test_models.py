@@ -143,8 +143,9 @@ class TestEmbeddingBackfillTrigger:
 
     def _run_setup(self, tier: str) -> MagicMock:
         executor = MagicMock()
-        app.state.executor = executor
-        with patch("app.routes.models.ensure_model", new=AsyncMock()):
+        with patch.object(app.state, "executor", executor, create=True), patch(
+            "app.routes.models.ensure_model", new=AsyncMock()
+        ):
             with TestClient(app) as local_client:
                 response = local_client.post("/models/setup", json={"tier": tier})
                 assert response.status_code == 200
@@ -161,8 +162,9 @@ class TestEmbeddingBackfillTrigger:
 
     def test_single_model_download_of_semantic_model_triggers_backfill(self):
         executor = MagicMock()
-        app.state.executor = executor
-        with patch("app.routes.models.ensure_model", new=AsyncMock()):
+        with patch.object(app.state, "executor", executor, create=True), patch(
+            "app.routes.models.ensure_model", new=AsyncMock()
+        ):
             with TestClient(app) as local_client:
                 response = local_client.post("/models/download/siglip2_base_vision")
                 assert response.status_code == 200

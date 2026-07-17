@@ -2,12 +2,14 @@ import os
 import json
 import uuid
 import asyncio
-from typing import Dict
+from concurrent.futures import ProcessPoolExecutor
+from typing import Dict, List
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
+from starlette.datastructures import State
 from app.models.model_registry import MODEL_REGISTRY, TIER_MODELS, get_model_path
 from app.models.session_registry import (
     try_mark_model_for_deletion,
@@ -29,11 +31,13 @@ REQUIRED_MODELS = ["facenet"]
 SEMANTIC_FEATURES = ("semantic_vision", "semantic_text")
 
 
-def get_state(request: Request):
+def get_state(request: Request) -> State:
     return request.app.state
 
 
-def submit_embedding_backfill_if_semantic(model_keys, executor) -> None:
+def submit_embedding_backfill_if_semantic(
+    model_keys: List[str], executor: ProcessPoolExecutor
+) -> None:
     """Run the SigLIP2 embedding pass after a semantic model install.
 
     Covers images processed before the models were installed. The pass is
@@ -208,7 +212,7 @@ async def delete_model(model_key: str):
 
 
 @router.post("/setup")
-async def setup_models(request: SetupRequest, app_state=Depends(get_state)):
+async def setup_models(request: SetupRequest, app_state: State = Depends(get_state)):
     """
     Initializes setup by starting downloads for a specific tier + required models.
     Returns a single task_id to track overall progress.
@@ -279,7 +283,7 @@ async def setup_models(request: SetupRequest, app_state=Depends(get_state)):
 
 
 @router.post("/download/{model_key}")
-async def start_download_model(model_key: str, app_state=Depends(get_state)):
+async def start_download_model(model_key: str, app_state: State = Depends(get_state)):
     """
     Starts download for a specific model by key. Returns a task_id.
     """
