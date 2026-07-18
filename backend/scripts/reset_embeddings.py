@@ -5,6 +5,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database.connection import get_db_connection
+from app.database.semantic_labels import SEMANTIC_CLASS_ID_OFFSET
 
 
 def reset_embeddings():
@@ -20,11 +21,19 @@ def reset_embeddings():
         cursor.execute("UPDATE images SET isEmbedded = 0 WHERE isEmbedded = 1")
         updated_images = cursor.rowcount
 
+        print("Deleting semantic tag rows from image_classes...")
+        cursor.execute(
+            "DELETE FROM image_classes WHERE class_id >= ?",
+            (SEMANTIC_CLASS_ID_OFFSET,),
+        )
+        deleted_tags = cursor.rowcount
+
         conn.commit()
 
         print("Done.")
         print(f"Deleted {deleted_embeddings} embeddings.")
         print(f"Reset {updated_images} images to isEmbedded=0.")
+        print(f"Deleted {deleted_tags} semantic tag rows.")
 
 
 if __name__ == "__main__":
