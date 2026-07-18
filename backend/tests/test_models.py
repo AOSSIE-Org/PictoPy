@@ -1,5 +1,5 @@
 import json
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import patch, AsyncMock, MagicMock, call
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from app.routes.models import (
@@ -7,6 +7,10 @@ from app.routes.models import (
     submit_embedding_backfill_if_semantic,
 )
 from app.utils.images import image_util_process_unembedded_images
+from app.utils.semantic_labels import (
+    semantic_util_build_label_embeddings,
+    semantic_util_score_images,
+)
 
 app = FastAPI()
 app.include_router(models_router, prefix="/models")
@@ -119,7 +123,13 @@ class TestEmbeddingBackfillTrigger:
         submit_embedding_backfill_if_semantic(
             ["siglip2_base_vision", "siglip2_base_text", "facenet"], executor
         )
-        executor.submit.assert_called_once_with(image_util_process_unembedded_images)
+        executor.submit.assert_has_calls(
+            [
+                call(semantic_util_build_label_embeddings),
+                call(image_util_process_unembedded_images),
+                call(semantic_util_score_images),
+            ]
+        )
 
     def test_helper_ignores_non_semantic_keys(self):
         executor = MagicMock()
@@ -154,7 +164,13 @@ class TestEmbeddingBackfillTrigger:
 
     def test_setup_semantic_tier_triggers_backfill(self):
         executor = self._run_setup("semantic")
-        executor.submit.assert_called_once_with(image_util_process_unembedded_images)
+        executor.submit.assert_has_calls(
+            [
+                call(semantic_util_build_label_embeddings),
+                call(image_util_process_unembedded_images),
+                call(semantic_util_score_images),
+            ]
+        )
 
     def test_setup_yolo_tier_does_not_trigger_backfill(self):
         executor = self._run_setup("nano")
@@ -169,4 +185,10 @@ class TestEmbeddingBackfillTrigger:
                 response = local_client.post("/models/download/siglip2_base_vision")
                 assert response.status_code == 200
                 self._drain_until_complete(local_client, response.json()["task_id"])
-        executor.submit.assert_called_once_with(image_util_process_unembedded_images)
+        executor.submit.assert_has_calls(
+            [
+                call(semantic_util_build_label_embeddings),
+                call(image_util_process_unembedded_images),
+                call(semantic_util_score_images),
+            ]
+        )
