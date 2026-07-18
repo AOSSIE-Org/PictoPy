@@ -962,6 +962,82 @@
         }
       }
     },
+    "/images/semantic-search": {
+      "get": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Semantic Search Images",
+        "description": "Semantic search images by query text using SigLIP2.",
+        "operationId": "semantic_search_images_images_semantic_search_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Query text to search for",
+              "title": "Query"
+            },
+            "description": "Query text to search for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SemanticSearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/images/toggle-favourite": {
       "post": {
         "tags": [
@@ -3179,6 +3255,110 @@
           "success"
         ],
         "title": "RenameClusterResponse"
+      },
+      "SemanticSearchData": {
+        "properties": {
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/SemanticSearchImage"
+            },
+            "type": "array",
+            "title": "Images"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "images",
+          "total"
+        ],
+        "title": "SemanticSearchData"
+      },
+      "SemanticSearchImage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          },
+          "thumbnailPath": {
+            "type": "string",
+            "title": "Thumbnailpath"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/MetadataModel"
+          },
+          "isTagged": {
+            "type": "boolean",
+            "title": "Istagged"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "folder_id",
+          "thumbnailPath",
+          "metadata",
+          "isTagged",
+          "isFavourite",
+          "score"
+        ],
+        "title": "SemanticSearchImage"
+      },
+      "SemanticSearchResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/SemanticSearchData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "SemanticSearchResponse"
       },
       "SetupRequest": {
         "properties": {

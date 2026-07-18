@@ -7,6 +7,9 @@ import { Download, Cloud } from 'lucide-react';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchModelStatus } from '@/api/api-functions';
 
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { emit } from '@tauri-apps/api/event';
+
 const TABS: TabConfig[] = [
   { id: 'Installed', label: 'Installed', icon: Download },
   { id: 'Available', label: 'Available', icon: Cloud },
@@ -62,6 +65,25 @@ export const ModelManager: React.FC = () => {
       }
     }
   }, [statusData, downloadingTiers, installedJustNow]);
+
+  // Model Manager emits 'models-updated' on close to notify Settings.
+  useEffect(() => {
+    const unlistenPromise = getCurrentWindow().onCloseRequested(
+      async (event) => {
+        event.preventDefault();
+        try {
+          await emit('models-updated');
+        } catch (err) {
+          console.error('Failed to emit models-updated', err);
+        }
+        await getCurrentWindow().destroy();
+      },
+    );
+
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
 
   const handleTabChange = (newTab: string) => {
     if (activeTab === 'Available' && newTab !== 'Available') {

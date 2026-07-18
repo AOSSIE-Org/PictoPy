@@ -2,9 +2,13 @@ import { render, screen, waitFor } from '@/test-utils';
 import { SearchResults } from '../SearchResults/SearchResults';
 import { searchImagesByTag } from '@/api/api-functions';
 
-// Mock the API function
+// Mock the API functions. fetchModelStatus must resolve to a well-formed
+// response even in tests that don't care about it -- the "no tag matches"
+// auto-mode path calls it to decide whether to fall back to semantic search.
 jest.mock('@/api/api-functions', () => ({
   searchImagesByTag: jest.fn(),
+  semanticSearchImages: jest.fn(),
+  fetchModelStatus: jest.fn().mockResolvedValue({ success: true, data: {} }),
 }));
 
 describe('SearchResults Page', () => {
