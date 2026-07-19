@@ -47,8 +47,13 @@ class ONNXSessionBase:
                 "Please install it from Settings → AI Models before using this feature."
             )
 
+        # CoreML only partially supports the SigLIP2 graph and its partitions
+        # fail at inference on Apple Silicon; run these sessions without it.
         session = onnxruntime.InferenceSession(
-            self.model_path, providers=ONNX_util_get_execution_providers()
+            self.model_path,
+            providers=ONNX_util_get_execution_providers(
+                exclude=("CoreMLExecutionProvider",)
+            ),
         )
         if self._model_key is not None and not self._session_registered:
             mark_model_session_active(self._model_key)
