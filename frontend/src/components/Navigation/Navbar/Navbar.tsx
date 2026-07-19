@@ -145,18 +145,30 @@ export function Navbar() {
           )}
 
           {/* Input */}
-          <Input
-            type="search"
-            placeholder="Add to your search"
-            className="mr-2 flex-1 border-0 bg-neutral-200"
-            onFocus={() => setIsExpanded(true)}
-            onClick={() => setIsExpanded(true)}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSearchSubmit();
-            }}
-          />
+          <div className="relative flex-1 mr-2 flex items-center">
+            <Input
+              type="text"
+              placeholder="Add to your search"
+              className="w-full border-0 bg-neutral-200 pr-8"
+              onFocus={() => setIsExpanded(true)}
+              onClick={() => setIsExpanded(true)}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSearchSubmit();
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded-full bg-neutral-400 text-white hover:bg-neutral-500 transition-colors"
+                title="Clear text"
+                aria-label="Clear text"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
 
           {/* FaceSearch Dialog */}
           <FaceSearchDialog />
