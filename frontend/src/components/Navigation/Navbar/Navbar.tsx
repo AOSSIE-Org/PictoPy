@@ -1,6 +1,6 @@
 import { Input } from '@/components/ui/input';
 import { ThemeSelector } from '@/components/ThemeToggle';
-import { Search, Heart, ArrowRight } from 'lucide-react';
+import { Search, Heart, ArrowRight, X } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
 import { clearSearch } from '@/features/searchSlice';
@@ -134,11 +134,11 @@ export function Navbar() {
               {isSearchActive && (
                 <button
                   onClick={() => dispatch(clearSearch())}
-                  className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white"
+                  className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-neutral-400 text-white hover:bg-neutral-500 transition-colors"
                   title="Close"
                   aria-label="Close"
                 >
-                  ✕
+                  <X className="h-3 w-3" />
                 </button>
               )}
             </div>
