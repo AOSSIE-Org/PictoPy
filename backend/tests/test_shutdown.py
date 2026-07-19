@@ -22,7 +22,7 @@ def app():
 @pytest.fixture
 def client():
     with patch("app.config.settings.SHUTDOWN_TOKEN", VALID_TOKEN), patch(
-        "app.routes.shutdown.asyncio.create_task"
+        "app.routes.shutdown._delayed_shutdown"
     ):
         with TestClient(main_app, raise_server_exceptions=False) as c:
             yield c
@@ -82,7 +82,7 @@ class TestTokenRotation:
         new_token = "d" * 64
 
         with patch("app.config.settings.SHUTDOWN_TOKEN", new_token), patch(
-            "app.routes.shutdown.asyncio.create_task"
+            "app.routes.shutdown._delayed_shutdown"
         ):
             with TestClient(app, raise_server_exceptions=False) as c:
                 resp = c.post("/shutdown", headers={"X-Shutdown-Token": old_token})
@@ -91,7 +91,7 @@ class TestTokenRotation:
     def test_new_token_accepted_after_rotation(self, app):
         new_token = "e" * 64
         with patch("app.config.settings.SHUTDOWN_TOKEN", new_token), patch(
-            "app.routes.shutdown.asyncio.create_task"
+            "app.routes.shutdown._delayed_shutdown"
         ):
             with TestClient(app, raise_server_exceptions=False) as c:
                 resp = c.post("/shutdown", headers={"X-Shutdown-Token": new_token})
@@ -166,7 +166,7 @@ class TestCorruptedTokenContent:
     def test_corrupted_token_always_rejects(self, app):
         corrupted = "\x00\xff partial"
         with patch("app.config.settings.SHUTDOWN_TOKEN", corrupted), patch(
-            "app.routes.shutdown.asyncio.create_task"
+            "app.routes.shutdown._delayed_shutdown"
         ):
             with TestClient(app, raise_server_exceptions=False) as c:
                 # Even sending the corrupted string must not crash the endpoint
@@ -194,7 +194,7 @@ class TestEmptyTokenContent:
         """Extremely long token header should be rejected."""
         long_token = "a" * 1024 * 1024  # 1MB
         with patch("app.config.settings.SHUTDOWN_TOKEN", VALID_TOKEN), patch(
-            "app.routes.shutdown.asyncio.create_task"
+            "app.routes.shutdown._delayed_shutdown"
         ):
             with TestClient(app, raise_server_exceptions=False) as c:
                 resp = c.post("/shutdown", headers={"X-Shutdown-Token": long_token})

@@ -86,8 +86,7 @@ def db_get_tagging_progress() -> List[FolderTaggingInfo]:
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT
                 f.folder_id,
                 f.folder_path,
@@ -98,8 +97,7 @@ def db_get_tagging_progress() -> List[FolderTaggingInfo]:
             FROM folders f
             LEFT JOIN images i ON f.folder_id = i.folder_id
             GROUP BY f.folder_id, f.folder_path, f.AI_Tagging
-            """
-        )
+            """)
 
         results = cursor.fetchall()
 

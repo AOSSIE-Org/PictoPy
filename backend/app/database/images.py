@@ -312,15 +312,13 @@ def db_get_unembedded_images() -> List[UntaggedImageRecord]:
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT i.id, i.path, i.folder_id, i.thumbnailPath, i.metadata
             FROM images i
             JOIN folders f ON i.folder_id = f.folder_id
             WHERE f.AI_Tagging = TRUE
             AND i.isEmbedded = FALSE
-            """
-        )
+            """)
 
         results = cursor.fetchall()
 
