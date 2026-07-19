@@ -1,4 +1,4 @@
-import { render, screen } from '@/test-utils';
+import { render, screen, act } from '@/test-utils';
 import { Home } from '../Home/Home';
 import Settings from '../SettingsPage/Settings';
 
@@ -15,8 +15,11 @@ describe('Page Sanity Tests', () => {
   });
 
   describe('Settings Page', () => {
-    test('renders settings page sections', () => {
+    test('renders settings page sections', async () => {
       render(<Settings />);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
 
       expect(screen.getByText('Folder Management')).toBeInTheDocument();
       expect(screen.getByText('User Preferences')).toBeInTheDocument();
@@ -26,6 +29,6 @@ describe('Page Sanity Tests', () => {
         screen.getByRole('button', { name: /Check for Updates/i }),
       ).toBeInTheDocument();
       expect(screen.getByText('GPU Acceleration')).toBeInTheDocument();
-    }); // Settings is expected to render synchronously.
+    });
   });
 });

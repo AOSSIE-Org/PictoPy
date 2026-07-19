@@ -21,6 +21,8 @@ from app.database.albums import db_create_albums_table
 from app.database.albums import db_create_album_images_table
 from app.database.folders import db_create_folders_table
 from app.database.metadata import db_create_metadata_table
+from app.database.semantic_labels import db_create_semantic_labels_table
+from app.database.image_embeddings import db_create_image_embeddings_table
 
 from app.routes.folders import router as folders_router
 from app.routes.albums import router as albums_router
@@ -55,6 +57,8 @@ async def lifespan(app: FastAPI):
     generate_openapi_json()
     db_create_folders_table()
     db_create_images_table()
+    db_create_semantic_labels_table()
+    db_create_image_embeddings_table()
     db_create_YOLO_classes_table()
     db_create_clusters_table()  # Create clusters table first since faces references it
     db_create_faces_table()

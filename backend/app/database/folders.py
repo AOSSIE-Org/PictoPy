@@ -3,6 +3,10 @@ import os
 import uuid
 from typing import List, Tuple, Dict, Optional
 from app.config.settings import DATABASE_PATH
+from app.logging.setup_logging import get_logger
+
+# Initialize logger
+logger = get_logger(__name__)
 
 # Type definitions
 FolderId = str
@@ -49,7 +53,8 @@ def db_insert_folders_batch(folders_data: List[FolderData]) -> None:
             folders_data,
         )
         conn.commit()
-    except Exception as e:
+    except sqlite3.Error as e:
+        logger.error(f"Error inserting folders batch: {e}")
         conn.rollback()
         raise e
     finally:
@@ -178,7 +183,8 @@ def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
         deleted_count = cursor.rowcount
         conn.commit()
         return deleted_count
-    except Exception as e:
+    except sqlite3.Error as e:
+        logger.error(f"Error deleting folders batch: {e}")
         conn.rollback()
         raise e
     finally:
@@ -307,7 +313,8 @@ def db_update_ai_tagging_batch(
         updated_count = cursor.rowcount
         conn.commit()
         return updated_count
-    except Exception as e:
+    except sqlite3.Error as e:
+        logger.error(f"Error updating AI tagging batch: {e}")
         conn.rollback()
         raise e
     finally:

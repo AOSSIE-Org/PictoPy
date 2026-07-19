@@ -3,6 +3,9 @@ import json
 import numpy as np
 from typing import Optional, List, Dict, Union, TypedDict
 from app.config.settings import DATABASE_PATH
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
 
 # Type definitions
 FaceId = int
@@ -306,14 +309,22 @@ def db_update_face_cluster_ids_batch(
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
 
+    # 1. Prepare update data outside the DB transaction.
+    # mapping.get() calls could raise AttributeError if mappings are malformed;
+    # these are not sqlite3 errors and must be caught before the transaction.
     try:
-        # Prepare update data as tuples (cluster_id, face_id)
-        update_data = []
-        for mapping in face_cluster_mapping:
-            face_id = mapping.get("face_id")
-            cluster_id = mapping.get("cluster_id")
-            update_data.append((cluster_id, face_id))
+        update_data = [
+            (mapping.get("cluster_id"), mapping.get("face_id"))
+            for mapping in face_cluster_mapping
+        ]
+    except (AttributeError, KeyError, TypeError) as e:
+        if own_connection:
+            conn.close()
+        logger.error(f"Failed to prepare face cluster update data: {e}")
+        raise
 
+    # 2. Database transaction — only pure DB operations here, so sqlite3.Error is safe.
+    try:
         cursor.executemany(
             """
             UPDATE faces 
@@ -325,10 +336,10 @@ def db_update_face_cluster_ids_batch(
 
         if own_connection:
             conn.commit()
-    except Exception:
+    except sqlite3.Error as e:
         if own_connection:
             conn.rollback()
-        print("Error updating face cluster IDs in batch.")
+        logger.error(f"Error updating face cluster IDs in batch: {e}")
         raise
     finally:
         if own_connection:

@@ -9,6 +9,7 @@ import { RootState } from '@/app/store';
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
 
 import { useFolderOperations } from '@/hooks/useFolderOperations';
+import { useLibraryProcessingStatus } from '@/hooks/useLibraryProcessingStatus';
 import { FolderDetails } from '@/types/Folder';
 import SettingsCard from './SettingsCard';
 
@@ -28,6 +29,8 @@ const FolderManagementCard: React.FC = () => {
   const taggingStatus = useSelector(
     (state: RootState) => state.folders.taggingStatus,
   );
+
+  const { semanticAvailable } = useLibraryProcessingStatus();
 
   const [visibleFoldersCount, setVisibleFoldersCount] = useState(6);
 
@@ -128,6 +131,44 @@ const FolderManagementCard: React.FC = () => {
                               : 'bg-blue-500'
                           }
                         />
+
+                        {semanticAvailable && (
+                          <>
+                            <div className="text-muted-foreground mt-3 mb-1 flex items-center justify-between text-xs">
+                              <span>Semantic Indexing</span>
+                              <span
+                                className={
+                                  (taggingStatus[folder.folder_id]
+                                    ?.embedding_percentage ?? 0) >= 100
+                                    ? 'flex items-center gap-1 text-green-500'
+                                    : 'text-muted-foreground'
+                                }
+                              >
+                                {(taggingStatus[folder.folder_id]
+                                  ?.embedding_percentage ?? 0) >= 100 && (
+                                  <Check className="h-3 w-3" />
+                                )}
+                                {Math.round(
+                                  taggingStatus[folder.folder_id]
+                                    ?.embedding_percentage ?? 0,
+                                )}
+                                %
+                              </span>
+                            </div>
+                            <Progress
+                              value={
+                                taggingStatus[folder.folder_id]
+                                  ?.embedding_percentage ?? 0
+                              }
+                              indicatorClassName={
+                                (taggingStatus[folder.folder_id]
+                                  ?.embedding_percentage ?? 0) >= 100
+                                  ? 'bg-green-500'
+                                  : 'bg-blue-500'
+                              }
+                            />
+                          </>
+                        )}
                       </>
                     )}
                   </div>

@@ -104,6 +104,94 @@ def image_util_process_untagged_images() -> bool:
         return False
 
 
+def image_util_process_unembedded_images() -> None:
+    from app.config.settings import (
+        SIGLIP2_ACTIVE_CHECKPOINT,
+        SIGLIP2_SCORING_METADATA,
+        SIGLIP2_EMBED_BATCH_SIZE,
+    )
+    from app.models.model_registry import get_siglip2_registry_keys, get_model_path
+    from app.database.images import db_get_unembedded_images, db_mark_images_embedded
+    from app.database.image_embeddings import db_upsert_image_embeddings
+    from app.models.SigLIP2Vision import SigLIP2Vision
+    from app.utils.SigLIP import siglip_util_preprocess_image
+    import os
+    import time
+    import numpy as np
+
+    try:
+        vision_key, _ = get_siglip2_registry_keys(SIGLIP2_ACTIVE_CHECKPOINT)
+        vision_model_path = get_model_path(vision_key)
+        if not os.path.exists(vision_model_path):
+            logger.info("SigLIP2 vision model not installed; skipping embedding pass")
+            return
+
+        unembedded_images = db_get_unembedded_images()
+        if not unembedded_images:
+            return
+
+        metadata = SIGLIP2_SCORING_METADATA[SIGLIP2_ACTIVE_CHECKPOINT]
+        resolution = metadata["input_resolution"]
+        model_version = metadata["model_version"]
+
+        vision_model = SigLIP2Vision(vision_model_path)
+        try:
+            total_images = len(unembedded_images)
+            embedded_count = 0
+            corrupt_count = 0
+            start_time = time.time()
+
+            for i in range(0, total_images, SIGLIP2_EMBED_BATCH_SIZE):
+                batch = unembedded_images[i : i + SIGLIP2_EMBED_BATCH_SIZE]
+
+                good_arrays = []
+                good_ids = []
+
+                for image in batch:
+                    image_id = image["id"]
+                    image_path = image["path"]
+
+                    preprocessed = siglip_util_preprocess_image(image_path, resolution)
+                    if preprocessed is None:
+                        corrupt_count += 1
+                        continue
+
+                    good_arrays.append(preprocessed)
+                    good_ids.append(image_id)
+
+                if good_arrays:
+                    stacked = np.stack(good_arrays)  # [N, 3, R, R]
+                    embeddings = vision_model.get_embedding(stacked)  # [N, D]
+
+                    rows = []
+                    for idx, emb in enumerate(embeddings):
+                        rows.append((good_ids[idx], model_version, emb))
+
+                    db_upsert_image_embeddings(rows)
+                    embedded_count += len(good_arrays)
+
+                if good_ids:
+                    # Only mark images that actually got an embedding row.
+                    # Corrupt images stay isEmbedded=False and get retried on
+                    # the next pass -- unlike YOLO/FaceNet inference, preprocessing
+                    # is a cheap check (PIL failing to open/decode), so the retry
+                    # cost is low, and a file that becomes readable later (a
+                    # transient lock, a restored backup) eventually gets embedded
+                    # instead of being permanently excluded from semantic search.
+                    db_mark_images_embedded(good_ids)
+
+            elapsed = time.time() - start_time
+            logger.info(
+                f"SigLIP2 embedding pass complete. Total: {total_images}, Embedded: {embedded_count}, Corrupt: {corrupt_count}, Elapsed: {elapsed:.2f}s"
+            )
+
+        finally:
+            vision_model.close()
+
+    except Exception as e:
+        logger.error(f"Error processing unembedded images: {e}")
+
+
 def image_util_classify_and_face_detect_images(
     untagged_images: List[Dict[str, str]],
 ) -> int:
@@ -211,6 +299,7 @@ def image_util_prepare_image_records(
                 "thumbnailPath": thumbnail_path,
                 "metadata": metadata_json,
                 "isTagged": False,
+                "isEmbedded": False,
                 "latitude": latitude,  # Can be None
                 "longitude": longitude,  # Can be None
                 "captured_at": (

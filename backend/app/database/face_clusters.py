@@ -1,6 +1,9 @@
 import sqlite3
 from typing import Optional, List, Dict, TypedDict, Union
 from app.config.settings import DATABASE_PATH
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
 
 # Type definitions
 ClusterId = str
@@ -58,10 +61,10 @@ def db_delete_all_clusters(cursor: Optional[sqlite3.Cursor] = None) -> int:
         if own_connection:
             conn.commit()
         return deleted_count
-    except Exception:
+    except sqlite3.Error as e:
         if own_connection:
             conn.rollback()
-        print("Error deleting all clusters.")
+        logger.error(f"Error deleting all clusters: {e}")
         raise
     finally:
         if own_connection:
@@ -112,9 +115,10 @@ def db_insert_clusters_batch(
         if own_connection:
             conn.commit()
         return cluster_ids
-    except Exception:
+    except sqlite3.Error as e:
         if own_connection:
             conn.rollback()
+        logger.error(f"Error inserting clusters batch: {e}")
         raise
     finally:
         if own_connection:
@@ -343,5 +347,67 @@ def db_get_images_by_cluster_id(
             )
 
         return images
+    finally:
+        conn.close()
+
+
+def db_get_images_by_face_clusters(
+    cluster_ids: List[str],  # TEXT UUIDs — NOT integers
+    match_mode: str = "match_any",  # "match_any" | "match_all"
+) -> List[Dict]:
+    """
+    Return images containing the requested face cluster identities,
+    ranked by how many of those identities appear in each image.
+    """
+    if not cluster_ids:
+        return []
+
+    placeholders = ", ".join("?" * len(cluster_ids))
+    params: list = list(cluster_ids)
+
+    base_sql = f"""
+        SELECT
+            i.id            AS image_id,
+            i.path          AS image_path,
+            i.thumbnailPath AS thumbnail_path,
+            i.metadata,
+            COUNT(DISTINCT f.cluster_id) AS match_count
+        FROM images i
+        INNER JOIN faces f ON i.id = f.image_id
+        WHERE f.cluster_id IN ({placeholders})
+        GROUP BY i.id, i.path, i.thumbnailPath, i.metadata
+        {{having}}
+        ORDER BY match_count DESC
+    """
+
+    if match_mode == "match_all":
+        having = "HAVING COUNT(DISTINCT f.cluster_id) = ?"
+        params.append(len(cluster_ids))
+    else:
+        having = ""
+
+    sql = base_sql.format(having=having)
+
+    import json
+
+    conn = sqlite3.connect(DATABASE_PATH)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        rows = cursor.fetchall()
+        results = []
+        for row in rows:
+            image_id, image_path, thumbnail_path, metadata_raw, match_count = row
+            metadata = json.loads(metadata_raw) if metadata_raw else None
+            results.append(
+                {
+                    "image_id": image_id,
+                    "image_path": image_path,
+                    "thumbnail_path": thumbnail_path,
+                    "metadata": metadata,
+                    "match_count": match_count,
+                }
+            )
+        return results
     finally:
         conn.close()

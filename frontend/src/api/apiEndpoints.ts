@@ -1,6 +1,9 @@
 export const imagesEndpoints = {
   getAllImages: '/images/',
   setFavourite: '/images/toggle-favourite',
+  searchByTag: (tag: string) => `/images/search?tag=${encodeURIComponent(tag)}`,
+  semanticSearch: (query: string) =>
+    `/images/semantic-search?query=${encodeURIComponent(query)}`,
 };
 
 export const faceClustersEndpoints = {
@@ -10,6 +13,7 @@ export const faceClustersEndpoints = {
   renameCluster: (clusterId: string) => `/face-clusters/${clusterId}`,
   getClusterImages: (clusterId: string) => `/face-clusters/${clusterId}/images`,
   globalRecluster: '/face-clusters/global-recluster',
+  multiPersonSearch: '/face-clusters/multi-search',
 };
 
 export const foldersEndpoints = {

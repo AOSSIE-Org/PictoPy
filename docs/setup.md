@@ -6,7 +6,7 @@
 
 The CONTRIBUTING.md file contains detailed instructions for:
 
-1. **Script Setup** - Automated setup using our setup script, recommended only for Windows and Debian-based OS like Ubuntu.
+1. **Script Setup** - Automated setup using our setup script, recommended for Windows, Debian-based OS like Ubuntu, and Fedora/RedHat-based OS.
 2. **Manual Setup** - Step-by-step manual installation, recommended for other operating systems.
 3. **Documentation Website Setup Guide**
 

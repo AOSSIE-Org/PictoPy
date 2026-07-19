@@ -6,6 +6,7 @@ mod services;
 use sysinfo::System;
 use tauri::path::BaseDirectory;
 use tauri::{Manager, Window, WindowEvent};
+#[cfg(feature = "ci")]
 use tauri_plugin_shell::ShellExt;
 
 const ENDPOINTS: [(&str, &str, &str); 2] = [
@@ -48,8 +49,13 @@ fn on_window_event(window: &Window, event: &WindowEvent) {
         return;
     }
 
-    let _ = kill_process_tree();
-    window.app_handle().exit(0);
+    if window.label() == "main" {
+        if let Some(manager) = window.app_handle().get_webview_window("model-manager") {
+            let _ = manager.close();
+        }
+        let _ = kill_process_tree();
+        window.app_handle().exit(0);
+    }
 }
 
 #[cfg(unix)]
@@ -227,6 +233,27 @@ fn prod(_app: &tauri::AppHandle, _resource_path: &std::path::Path) -> Result<(),
     Ok(())
 }
 
+#[tauri::command]
+async fn open_model_manager(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("model-manager") {
+        let _ = window.show();
+        let _ = window.set_focus();
+        return Ok(());
+    }
+
+    tauri::WebviewWindowBuilder::new(
+        &app,
+        "model-manager",
+        tauri::WebviewUrl::App("index.html?route=/model-manager".into()),
+    )
+    .title("Settings - Model Manager")
+    .inner_size(800.0, 600.0)
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -245,6 +272,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             services::get_resources_folder_path,
+            open_model_manager,
         ])
         .on_window_event(on_window_event)
         .run(tauri::generate_context!())

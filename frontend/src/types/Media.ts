@@ -22,6 +22,10 @@ export interface Image {
   bboxes?: { x: number; y: number; width: number; height: number }[];
 }
 
+export interface ScoredImage extends Image {
+  score: number;
+}
+
 export interface ImageGalleryProps {
   mediaItems: Image[];
   title?: string;

@@ -3,6 +3,9 @@ import sqlite3
 import json
 from typing import Optional, Dict, Any
 from app.config.settings import DATABASE_PATH
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def db_create_metadata_table() -> None:
@@ -66,13 +69,23 @@ def db_update_metadata(
     Returns:
         True if the metadata was updated, False otherwise
     """
-    own_connection = cursor is None
-    if own_connection:
-        conn = sqlite3.connect(DATABASE_PATH)
-        cursor = conn.cursor()
-
+    # 1. Prepare/serialize data outside the DB transaction.
+    # json.dumps can raise TypeError/ValueError for non-serializable objects;
+    # these are not sqlite3 errors and must be caught separately.
     try:
         metadata_json = json.dumps(metadata)
+    except (TypeError, ValueError) as e:
+        logger.error(f"Failed to serialize metadata: {e}")
+        raise
+
+    own_connection = cursor is None
+    conn = None
+
+    # 2. Database transaction / owned connection setup.
+    try:
+        if own_connection:
+            conn = sqlite3.connect(DATABASE_PATH)
+            cursor = conn.cursor()
 
         # Delete all existing rows and insert new one
         cursor.execute("DELETE FROM metadata")
@@ -82,12 +95,12 @@ def db_update_metadata(
         if own_connection:
             conn.commit()
         return success
-    except Exception as e:
+    except sqlite3.Error as e:
         if own_connection:
-            conn.rollback()
-
-        print(f"Error updating metadata: {e}")
+            if conn is not None:
+                conn.rollback()
+        logger.error(f"Error updating metadata: {e}")
         raise
     finally:
-        if own_connection:
+        if own_connection and conn is not None:
             conn.close()
