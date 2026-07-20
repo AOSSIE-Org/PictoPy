@@ -16,7 +16,7 @@ else:
     )
 
 # Microservice URLs
-SYNC_MICROSERVICE_URL = os.getenv("SYNC_MICROSERVICE_URL", "http://localhost:52124")
+SYNC_MICROSERVICE_URL = os.getenv("SYNC_MICROSERVICE_URL") or "http://localhost:52124"
 
 
 CONFIDENCE_PERCENT = 0.6
