@@ -103,12 +103,9 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
           </button>
 
           {showSettings && (
-            <div className="absolute top-full right-0 pt-2">
-              <div className="w-48 rounded-xl bg-black/80 p-4 shadow-lg">
-                <div className="mb-2 flex justify-between text-xs text-white/70">
-                  <span>2s</span>
-                  <span>10s</span>
-                </div>
+            <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2">
+              <div className="flex w-fit items-center gap-3 rounded-md border border-white/20 bg-black/85 px-3 py-1.5 text-xs text-white shadow-lg backdrop-blur-sm">
+                <span>2s</span>
                 <input
                   type="range"
                   min={0}
@@ -117,14 +114,12 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
                   value={sliderValue}
                   onChange={handleSliderChange}
                   aria-label="Slideshow duration"
-                  className="h-1.5 w-full cursor-pointer appearance-none rounded-lg accent-indigo-500"
+                  className="h-1.5 w-32 cursor-pointer appearance-none rounded-lg accent-indigo-500"
                   style={{
                     background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${(sliderValue / 2) * 100}%, rgba(255,255,255,0.2) ${(sliderValue / 2) * 100}%, rgba(255,255,255,0.2) 100%)`,
                   }}
                 />
-                <div className="mt-2 text-center text-xs text-white/70">
-                  {DURATION_STEPS[sliderValue] / 1000}s per image
-                </div>
+                <span>10s</span>
               </div>
             </div>
           )}
