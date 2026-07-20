@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Folder, Trash2, Check } from 'lucide-react';
+import { Folder, Trash2, Check, Loader2 } from 'lucide-react';
 
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,8 @@ import { Progress } from '@/components/ui/progress';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/store';
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
+
+import { Badge } from '@/components/ui/badge';
 
 import { useFolderOperations } from '@/hooks/useFolderOperations';
 import { useLibraryProcessingStatus } from '@/hooks/useLibraryProcessingStatus';
@@ -56,7 +58,7 @@ const FolderManagementCard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-3">
-                      <Folder className="h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
+                      <Folder className="h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400" />
                       <span className="text-foreground truncate">
                         {folder.folder_path}
                       </span>
@@ -92,7 +94,15 @@ const FolderManagementCard: React.FC = () => {
 
                 {folder.AI_Tagging && (
                   <div className="mt-3">
-                    {!folder.image_count ? (
+                    {folder.indexing_status === 'in_progress' ? (
+                      <div className="flex items-center gap-4 [--radius:1.2rem]">
+                        <Badge className="bg-zinc-900 text-white hover:bg-black/90">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Indexing Folder...
+                        </Badge>
+                      </div>
+                    ) : folder.image_count === 0 &&
+                      folder.indexing_status === 'completed' ? (
                       <div className="text-muted-foreground text-sm italic">
                         Folder is empty
                       </div>

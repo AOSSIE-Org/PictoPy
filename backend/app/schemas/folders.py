@@ -31,6 +31,9 @@ class FolderDetails(BaseModel):
     AI_Tagging: bool
     taggingCompleted: Optional[bool] = None
     image_count: int = 0
+    indexing_status: Optional[str] = (
+        "completed"  # Default to "completed" if not provided
+    )
 
 
 class GetAllFoldersData(BaseModel):

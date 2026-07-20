@@ -2369,6 +2369,18 @@
             "type": "integer",
             "title": "Image Count",
             "default": 0
+          },
+          "indexing_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indexing Status",
+            "default": "completed"
           }
         },
         "type": "object",

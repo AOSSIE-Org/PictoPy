@@ -30,6 +30,7 @@ def db_create_folders_table() -> None:
                 last_modified_time INTEGER,
                 AI_Tagging BOOLEAN,
                 taggingCompleted BOOLEAN,
+                indexing_status TEXT DEFAULT 'not_started',
                 FOREIGN KEY (parent_folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
             )
             """
@@ -402,7 +403,7 @@ def db_get_folder_ids_by_paths(
 
 
 def db_get_all_folder_details() -> (
-    List[Tuple[str, str, Optional[str], int, bool, Optional[bool], int]]
+    List[Tuple[str, str, Optional[str], int, bool, Optional[bool], str, int]]
 ):
     """
     Get all folder details including folder_id, folder_path, parent_folder_id,
@@ -422,6 +423,7 @@ def db_get_all_folder_details() -> (
                 f.last_modified_time, 
                 f.AI_Tagging, 
                 f.taggingCompleted,
+                f.indexing_status,
                 COUNT(i.id) as image_count
             FROM folders f
             LEFT JOIN images i ON f.folder_id = i.folder_id
@@ -452,5 +454,22 @@ def db_get_direct_child_folders(parent_folder_id: str) -> List[Tuple[str, str]]:
         )
 
         return cursor.fetchall()
+    finally:
+        conn.close()
+
+
+def db_update_folder_indexing_status(folder_id: str, status: str) -> None:
+    """Update the indexing_status of a specific folder."""
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE folders SET indexing_status = ? WHERE folder_id = ?",
+            (status, folder_id),
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        logger.error(f"Error updating indexing status: {e}")
+        conn.rollback()
     finally:
         conn.close()
