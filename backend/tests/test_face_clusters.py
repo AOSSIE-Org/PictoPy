@@ -2,8 +2,15 @@ import pytest
 import numpy as np
 from unittest.mock import patch
 from fastapi import FastAPI
+import app.database.face_clusters as face_clusters_db
+import app.database.faces as faces_db
+import app.database.images as images_db
+import app.database.folders as folders_db
+import app.database.yolo_mapping as yolo_db
 from app.utils.face_clusters import (
     cluster_util_cluster_all_face_embeddings,
+    cluster_util_face_clusters_sync,
+    cluster_util_is_reclustering_needed,
     estimate_eps,
 )
 from app.utils.face_quality import face_passes_quality_gate
@@ -704,3 +711,165 @@ class TestFaceClusteringAlgo:
             )
             is False
         )
+
+
+# ##############################
+# Stale cluster cleanup (issue #1023)
+# ##############################
+
+
+@pytest.fixture
+def isolated_cluster_db(tmp_path, monkeypatch):
+    """Point face_clusters/faces DB helpers at a disposable SQLite file.
+
+    Each database module binds DATABASE_PATH at import time, so every module
+    that opens a connection needs its own attribute patched directly.
+    """
+    db_path = str(tmp_path / "test_face_clusters.sqlite3")
+    monkeypatch.setattr(face_clusters_db, "DATABASE_PATH", db_path)
+    monkeypatch.setattr(faces_db, "DATABASE_PATH", db_path)
+    monkeypatch.setattr(images_db, "DATABASE_PATH", db_path)
+    monkeypatch.setattr(folders_db, "DATABASE_PATH", db_path)
+    monkeypatch.setattr(yolo_db, "DATABASE_PATH", db_path)
+
+    yolo_db.db_create_YOLO_classes_table()
+    face_clusters_db.db_create_clusters_table()
+    faces_db.db_create_faces_table()
+    folders_db.db_create_folders_table()
+    images_db.db_create_images_table()
+    yield db_path
+
+
+class TestEmptyClusterCleanup:
+    """Removing a folder cascades away its faces, but the clusters those faces
+    built are left behind. They must not keep surfacing in the UI."""
+
+    def test_listing_excludes_clusters_with_no_faces(self, isolated_cluster_db):
+        """A cluster whose faces are all gone is not returned to the caller."""
+        face_clusters_db.db_insert_clusters_batch(
+            [
+                {
+                    "cluster_id": "populated",
+                    "cluster_name": "Has Faces",
+                    "face_image_base64": "b64",
+                },
+                {
+                    "cluster_id": "orphaned",
+                    "cluster_name": "Folder Deleted",
+                    "face_image_base64": "b64",
+                },
+            ]
+        )
+        faces_db.db_insert_face_embeddings(
+            image_id="img-1",
+            embeddings=np.ones(128),
+            confidence=0.9,
+            bbox={"x": 0, "y": 0, "width": 10, "height": 10},
+            cluster_id="populated",
+        )
+
+        listed = face_clusters_db.db_get_all_clusters_with_face_counts()
+
+        assert [c["cluster_id"] for c in listed] == ["populated"]
+
+    def test_clusters_count_reflects_stored_rows(self, isolated_cluster_db):
+        assert face_clusters_db.db_get_clusters_count() == 0
+
+        face_clusters_db.db_insert_clusters_batch(
+            [{"cluster_id": "c1", "cluster_name": None, "face_image_base64": None}]
+        )
+
+        assert face_clusters_db.db_get_clusters_count() == 1
+
+
+class TestReclusterWithNoFaces:
+    """A forced recluster of an emptied library must clear stale clusters
+    instead of raising and leaving them in place."""
+
+    @patch("app.utils.face_clusters.db_get_all_faces_with_cluster_names")
+    def test_cluster_all_embeddings_returns_pair_when_no_faces(self, mock_faces):
+        """The no-faces path must return the same (results, skipped) shape as
+        every other path -- callers unpack it into two names."""
+        mock_faces.return_value = []
+
+        assert cluster_util_cluster_all_face_embeddings() == ([], 0)
+
+    @patch("app.utils.face_clusters.db_update_metadata")
+    @patch("app.utils.face_clusters.db_delete_all_clusters")
+    @patch("app.utils.face_clusters.get_db_connection")
+    @patch("app.utils.face_clusters.db_get_all_faces_with_cluster_names")
+    @patch("app.utils.face_clusters.db_get_metadata")
+    def test_forced_recluster_clears_clusters_when_no_faces_remain(
+        self, mock_metadata, mock_faces, mock_conn, mock_delete, mock_update_metadata
+    ):
+        mock_metadata.return_value = {"user_preferences": {}}
+        mock_faces.return_value = []
+
+        created, skipped = cluster_util_face_clusters_sync(force_full_reclustering=True)
+
+        assert (created, skipped) == (0, 0)
+        mock_delete.assert_called_once()
+
+    @patch("app.utils.face_clusters.db_delete_all_clusters")
+    @patch("app.utils.face_clusters.get_db_connection")
+    @patch("app.utils.face_clusters.db_update_face_cluster_ids_batch")
+    @patch(
+        "app.utils.face_clusters.cluster_util_assign_cluster_to_faces_without_clusterId"
+    )
+    @patch("app.utils.face_clusters.cluster_util_is_reclustering_needed")
+    @patch("app.utils.face_clusters.db_get_metadata")
+    def test_incremental_pass_never_deletes_clusters(
+        self,
+        mock_metadata,
+        mock_needed,
+        mock_assign,
+        mock_update_batch,
+        mock_conn,
+        mock_delete,
+    ):
+        """Only a full recluster rebuilds from scratch; the incremental path
+        must leave existing clusters alone."""
+        mock_metadata.return_value = {"user_preferences": {}}
+        mock_needed.return_value = False
+        mock_assign.return_value = ([{"face_id": 1, "cluster_id": "c1"}], 0)
+
+        cluster_util_face_clusters_sync()
+
+        mock_delete.assert_not_called()
+
+
+class TestReclusteringNeededBootstrap:
+    """Incremental assignment matches faces against existing cluster means, so
+    it can never create the first cluster -- that case needs a full pass."""
+
+    @patch("app.utils.face_clusters.db_get_clusters_count")
+    @patch("app.utils.face_clusters.db_get_faces_unassigned_clusters")
+    def test_full_pass_forced_when_no_clusters_exist_yet(
+        self, mock_unassigned, mock_count
+    ):
+        mock_unassigned.return_value = [{"face_id": i} for i in range(50)]
+        mock_count.return_value = 0
+
+        assert cluster_util_is_reclustering_needed({"user_preferences": {}}) is True
+
+    @patch("app.utils.face_clusters.db_get_clusters_count")
+    @patch("app.utils.face_clusters.db_get_faces_unassigned_clusters")
+    def test_incremental_still_used_once_clusters_exist(
+        self, mock_unassigned, mock_count
+    ):
+        """Guard against over-correcting into a full recluster every sync."""
+        mock_unassigned.return_value = [{"face_id": i} for i in range(50)]
+        mock_count.return_value = 3
+
+        assert cluster_util_is_reclustering_needed({"user_preferences": {}}) is False
+
+    @patch("app.utils.face_clusters.db_get_clusters_count")
+    @patch("app.utils.face_clusters.db_get_faces_unassigned_clusters")
+    def test_no_faces_and_no_clusters_does_not_force_a_pass(
+        self, mock_unassigned, mock_count
+    ):
+        """An empty library has nothing to bootstrap from."""
+        mock_unassigned.return_value = []
+        mock_count.return_value = 0
+
+        assert cluster_util_is_reclustering_needed({"user_preferences": {}}) is False
