@@ -1,8 +1,11 @@
+import asyncio
+import contextlib
 import pytest
 import threading
 import time
 import numpy as np
-from unittest.mock import patch
+from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock, patch
 from fastapi import FastAPI
 from app.utils.face_clusters import (
     cluster_util_cluster_all_face_embeddings,
@@ -535,6 +538,59 @@ class TestGlobalReclusterAPI:
         detail = response.json()["detail"]
         assert detail["success"] is False
         assert detail["error"] == "Task Not Found"
+
+    @pytest.mark.asyncio
+    async def test_cleanup_reaps_tasks_past_ttl(self):
+        """The periodic cleanup loop drops a finished task once it has sat
+        past RECLUSTER_TASK_TTL_MINUTES, and leaves a fresher one alone.
+
+        Patches asyncio.sleep (rather than waiting on the loop's real 5-minute
+        interval) so the loop body actually runs within the test, then cancels
+        it after the reap instead of letting it run forever.
+        """
+        stale_entry = face_clusters_module.ReclusterTask(status="complete")
+        stale_entry.finished_at = datetime.now(timezone.utc) - timedelta(
+            minutes=face_clusters_module.RECLUSTER_TASK_TTL_MINUTES + 1
+        )
+        fresh_entry = face_clusters_module.ReclusterTask(status="complete")
+        fresh_entry.finished_at = datetime.now(timezone.utc)
+
+        face_clusters_module.recluster_tasks["stale-task"] = stale_entry
+        face_clusters_module.recluster_tasks["fresh-task"] = fresh_entry
+
+        # A bare AsyncMock resolves without a real suspension point, which
+        # would let the cleanup loop's `while True` starve the event loop
+        # instead of yielding to it. Route the mock through a real (but
+        # zero-duration) sleep so it stays a genuine checkpoint.
+        real_sleep = asyncio.sleep
+
+        async def instant_sleep(*_args, **_kwargs):
+            await real_sleep(0)
+
+        with patch(
+            "app.routes.face_clusters.asyncio.sleep",
+            new=AsyncMock(side_effect=instant_sleep),
+        ):
+            cleanup_task = asyncio.create_task(
+                face_clusters_module._cleanup_stale_recluster_tasks()
+            )
+            try:
+
+                async def until_reaped():
+                    while "stale-task" in face_clusters_module.recluster_tasks:
+                        await asyncio.sleep(0)
+
+                await asyncio.wait_for(until_reaped(), timeout=2)
+            finally:
+                cleanup_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await cleanup_task
+
+        assert "stale-task" not in face_clusters_module.recluster_tasks
+        assert "fresh-task" in face_clusters_module.recluster_tasks
+
+        response = client.get("/face_clusters/global-recluster/stale-task")
+        assert response.status_code == 404
 
 
 # ============================================================================
