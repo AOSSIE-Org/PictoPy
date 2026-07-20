@@ -23,6 +23,7 @@ import os
 import sys
 import time
 from pathlib import Path
+from typing import Any, Callable
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -46,7 +47,11 @@ THRESHOLDS = [0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.02]
 MARGIN_FACTORS = [1.0, 2.0, 5.0, 10.0, 25.0]  # score >= factor * generic baseline
 
 
-def build_label_matrix(labels, text_model, tokenize):
+def build_label_matrix(
+    labels: list[dict],
+    text_model: Any,
+    tokenize: Callable[[str], tuple[np.ndarray, np.ndarray]],
+) -> np.ndarray:
     """Ensembled label vectors: renormalized mean of description embeddings."""
     vectors = []
     for label in labels:

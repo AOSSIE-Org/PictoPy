@@ -1,11 +1,24 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from app.logging.setup_logging import get_logger
+
+if TYPE_CHECKING:
+    import numpy as np
 
 logger = get_logger(__name__)
 
 SCORING_CHUNK_SIZE = 256
 
 
-def _scoring_signature(model_version, top_k, thresholds, meta, label_matrix):
+def _scoring_signature(
+    model_version: str,
+    top_k: int,
+    thresholds: np.ndarray,
+    meta: list[tuple[int, str, float | None]],
+    label_matrix: np.ndarray,
+) -> str:
     """Fingerprint of everything an image's stored scores depend on. Any
     change (vocabulary, label embeddings, thresholds, K, checkpoint) makes
     every image look unscored, and the sweep rewrites it -- re-scoring is one
