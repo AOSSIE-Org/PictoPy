@@ -134,11 +134,11 @@ export function Navbar() {
               {isSearchActive && (
                 <button
                   onClick={() => dispatch(clearSearch())}
-                  className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-neutral-400 text-white hover:bg-neutral-500 transition-colors"
+                  className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   title="Close"
                   aria-label="Close"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
@@ -161,11 +161,11 @@ export function Navbar() {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded-full bg-neutral-400 text-white hover:bg-neutral-500 transition-colors"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 title="Clear text"
                 aria-label="Clear text"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
