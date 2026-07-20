@@ -77,10 +77,8 @@ async def lifespan(app: FastAPI):
     # there as class_ids >= SEMANTIC_CLASS_ID_OFFSET
     semantic_util_sync_vocabulary()
     # Create ProcessPoolExecutor and attach it to app.state
-    # NOTE: model-download and global-reclustering job tracking is in-memory and
-    # per-worker, so the server is launched with a single worker (see run.sh /
-    # run-server.ps1). Keep it that way unless that state is moved to a shared
-    # store.
+    # NOTE: model-download/reclustering job tracking is in-memory and per-worker
+    # (see run.sh/run-server.ps1), so this must stay a single worker.
     app.state.executor = ProcessPoolExecutor(max_workers=1)
     # Self-gating no-ops unless something is missing/stale (fresh install,
     # checkpoint swap, edited seed). Single-worker executor runs them in

@@ -40,9 +40,8 @@ const idleState: ReclusterState = {
 export function useGlobalRecluster() {
   const queryClient = useQueryClient();
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Identifies the latest trigger() call. Every async callback captures the id
-  // it started with and bails if a newer trigger (or unmount) has since bumped
-  // it, so stale runs can't update state or keep polling.
+  // Identifies the latest trigger() call. A callback bails if a newer trigger
+  // (or unmount) has since bumped this, so stale runs can't leak updates.
   const runIdRef = useRef(0);
   const [state, setState] = useState<ReclusterState>(idleState);
 

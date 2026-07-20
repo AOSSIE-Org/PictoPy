@@ -558,10 +558,8 @@ class TestGlobalReclusterAPI:
         face_clusters_module.recluster_tasks["stale-task"] = stale_entry
         face_clusters_module.recluster_tasks["fresh-task"] = fresh_entry
 
-        # A bare AsyncMock resolves without a real suspension point, which
-        # would let the cleanup loop's `while True` starve the event loop
-        # instead of yielding to it. Route the mock through a real (but
-        # zero-duration) sleep so it stays a genuine checkpoint.
+        # A bare AsyncMock never suspends, so the loop's `while True` would
+        # starve the event loop; route it through a real zero-duration sleep.
         real_sleep = asyncio.sleep
 
         async def instant_sleep(*_args, **_kwargs):

@@ -43,10 +43,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-# Global reclustering runs synchronously over every face embedding in the
-# library and can take well past any reasonable HTTP timeout on large
-# libraries, so it runs as a background task that the client polls instead
-# of blocking the request.
+# Reclustering scans every face embedding and can run past any HTTP timeout
+# on large libraries, so it runs as a background task the client polls.
 @dataclass
 class ReclusterTask:
     status: str = "running"  # running | complete | error
@@ -60,17 +58,12 @@ class ReclusterTask:
 
 recluster_tasks: Dict[str, ReclusterTask] = {}
 
-# Only one global reclustering job may run at a time: a full pass deletes and
-# rebuilds every cluster, so two concurrent runs would race on the same tables.
-# Holds the task_id of the in-flight job, or None when idle. Safe without a
-# lock because it is only read/written from the (single-threaded) event loop
-# with no await between check-and-set.
+# Holds the in-flight job's task_id (None when idle). A full recluster rebuilds
+# every cluster, so a second concurrent run would race on the same tables.
 _active_recluster_task_id: Optional[str] = None
 
-# How long a finished task's result is retained for polling, measured from when
-# it finished (not when it started) so a long-running job's result isn't reaped
-# almost immediately after completion. Running tasks are never reaped (they are
-# bounded to one by the concurrency guard above).
+# Minutes a finished job's result stays available for polling, counted from
+# completion (not start) so a long job isn't reaped right after it finishes.
 RECLUSTER_TASK_TTL_MINUTES = 15
 
 
@@ -96,9 +89,8 @@ async def _run_global_recluster(task_id: str):
         entry.status = "error"
         entry.message = f"Global reclustering failed: {str(e)}"
     finally:
-        # Stamp completion time so cleanup ages the result from when it finished,
-        # and release the concurrency guard so a new job can be started, while
-        # the finished result stays in recluster_tasks for the client to poll.
+        # Stamp completion time (cleanup ages results from this) and release
+        # the concurrency guard; the result itself stays for the client to poll.
         entry.finished_at = datetime.now(timezone.utc)
         if _active_recluster_task_id == task_id:
             _active_recluster_task_id = None
@@ -464,9 +456,8 @@ async def get_global_recluster_status(task_id: str):
             data=GlobalReclusterStatusData(status="running"),
         )
 
-    # Terminal state: leave the entry in place so repeated polls (multiple
-    # tabs, retries) return the same result; _cleanup_stale_recluster_tasks
-    # reaps it once it ages out.
+    # Leave the entry in place so repeated polls (multiple tabs, retries) see
+    # the same result; _cleanup_stale_recluster_tasks reaps it once stale.
     if entry.status == "error":
         return GlobalReclusterStatusResponse(
             success=False,

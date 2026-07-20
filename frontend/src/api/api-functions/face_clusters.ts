@@ -79,9 +79,8 @@ export interface GlobalReclusterStatusData {
   faces_skipped: number | null;
 }
 
-// Global reclustering runs over every face embedding in the library and can
-// take well past any reasonable HTTP timeout, so the backend runs it as a
-// background job: this kicks it off and returns a task_id immediately.
+// Reclustering scans every embedding and can exceed any HTTP timeout, so the
+// backend runs it as a background job; this kicks it off and returns a task_id.
 export const startGlobalReclustering = async (): Promise<
   BackendRes<GlobalReclusterStartData>
 > => {
