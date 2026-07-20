@@ -163,7 +163,7 @@ def get_all_face_embeddings():
                 m.name as tag_name
             FROM faces f
             JOIN images i ON f.image_id=i.id
-            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
         """
         )

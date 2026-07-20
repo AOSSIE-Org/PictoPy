@@ -100,12 +100,20 @@ def db_create_images_table() -> None:
         CREATE TABLE IF NOT EXISTS image_classes (
             image_id TEXT,
             class_id INTEGER,
+            score REAL,
             PRIMARY KEY (image_id, class_id),
             FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
             FOREIGN KEY (class_id) REFERENCES mappings(class_id) ON DELETE CASCADE
         )
     """
     )
+
+    # score: semantic-label match score (NULL for YOLO rows). Guarded ALTER
+    # because shipped databases predate the column and CREATE IF NOT EXISTS
+    # won't add it.
+    cursor.execute("PRAGMA table_info(image_classes)")
+    if "score" not in {row[1] for row in cursor.fetchall()}:
+        cursor.execute("ALTER TABLE image_classes ADD COLUMN score REAL")
 
     conn.commit()
     conn.close()
@@ -182,7 +190,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                 i.captured_at,
                 m.name as tag_name
             FROM images i
-            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
         """
 
@@ -620,7 +628,7 @@ def db_search_images_by_tag(tag_name: str) -> List[dict]:
                 i.captured_at,
                 m.name as tag_name
             FROM images i
-            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
             WHERE i.id IN (
                 SELECT ic2.image_id FROM image_classes ic2
@@ -678,7 +686,7 @@ def db_get_images_by_ids(image_ids: List[str]) -> List[dict]:
                     i.captured_at,
                     m.name as tag_name
                 FROM images i
-                LEFT JOIN image_classes ic ON i.id = ic.image_id
+                LEFT JOIN image_classes_display ic ON i.id = ic.image_id
                 LEFT JOIN mappings m ON ic.class_id = m.class_id
                 WHERE i.id IN ({placeholders})
                 ORDER BY i.path, m.name
@@ -745,7 +753,7 @@ def db_get_images_by_date_range(
                 i.captured_at,
                 GROUP_CONCAT(m.name, ',') as tags
             FROM images i
-            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
             WHERE i.captured_at BETWEEN ? AND ?
         """
@@ -838,7 +846,7 @@ def db_get_images_near_location(
                 i.captured_at,
                 GROUP_CONCAT(m.name, ',') as tags
             FROM images i
-            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
             WHERE i.latitude BETWEEN ? AND ?
               AND i.longitude BETWEEN ? AND ?
@@ -916,7 +924,7 @@ def db_get_images_by_year_month(year: int, month: int) -> List[dict]:
                 i.captured_at,
                 GROUP_CONCAT(m.name, ',') as tags
             FROM images i
-            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
             WHERE strftime('%Y', i.captured_at) = ?
               AND strftime('%m', i.captured_at) = ?
@@ -984,7 +992,7 @@ def db_get_images_with_location() -> List[dict]:
                 i.captured_at,
                 GROUP_CONCAT(m.name, ',') as tags
             FROM images i
-            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
             WHERE i.latitude IS NOT NULL 
               AND i.longitude IS NOT NULL
@@ -1051,7 +1059,7 @@ def db_get_all_images_for_memories() -> List[dict]:
                 i.captured_at,
                 GROUP_CONCAT(m.name, ',') as tags
             FROM images i
-            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
             GROUP BY i.id
             ORDER BY i.captured_at DESC

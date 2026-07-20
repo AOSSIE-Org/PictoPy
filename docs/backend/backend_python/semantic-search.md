@@ -78,7 +78,11 @@ graph TB
 Instead, the frontend tries exact tag search first and only falls back to
 semantic search when nothing matches — this keeps the existing tag-search
 path completely untouched and adds semantic search as a fallback, not a
-replacement.
+replacement. Since the curated-vocabulary layer landed, tag search also
+matches the ~395 precomputed semantic labels (see
+[the vocabulary section](#curated-vocabulary-layer-semantic_labels)), so
+common words like "beach" or "sunset" get instant cache hits and never
+reach the live-scoring fallback.
 
 ```mermaid
 sequenceDiagram
@@ -204,8 +208,9 @@ called out explicitly:
 ```mermaid
 erDiagram
     images ||--o| image_embeddings : "has at most one, per model_version"
-    images ||--o{ image_semantic_labels : "scored against (dormant)"
-    semantic_labels ||--o{ image_semantic_labels : "scores images for (dormant)"
+    images ||--o{ image_classes : "tagged with (YOLO + semantic)"
+    mappings ||--o{ image_classes : ""
+    mappings ||--o| semantic_labels : "class_id >= 1000"
 
     images {
         TEXT id PK
@@ -215,19 +220,23 @@ erDiagram
         TEXT image_id PK, FK "ON DELETE CASCADE from images"
         TEXT model_version "e.g. siglip2-base-patch16-224; indexed"
         BLOB embedding "raw float32 bytes, unit-norm, via .tobytes()"
+        TEXT scored_signature "vocab/label state scored against; NULL = unscored"
         DATETIME created_at
     }
-    semantic_labels {
-        INTEGER label_id PK
-        TEXT name UK
-        TEXT prompt_template
-        REAL threshold
-        BOOLEAN active "default 1"
-    }
-    image_semantic_labels {
+    image_classes {
         TEXT image_id PK, FK
-        INTEGER label_id PK, FK
-        REAL score
+        INTEGER class_id PK, FK
+        REAL score "NULL for YOLO rows"
+    }
+    semantic_labels {
+        INTEGER class_id PK "same id as mappings row"
+        TEXT name UK
+        TEXT category "scene | object | event | attribute"
+        TEXT descriptions "JSON array; source of truth"
+        REAL threshold "NULL = bucket default"
+        BOOLEAN active "default 1"
+        BLOB label_embedding "ensembled description embedding"
+        TEXT embedding_model_version
     }
 ```
 
@@ -239,6 +248,7 @@ CREATE TABLE IF NOT EXISTS image_embeddings (
     model_version TEXT NOT NULL,
     embedding BLOB NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    scored_signature TEXT,  -- added via guarded ALTER; see vocabulary layer
     FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS ix_image_embeddings_model_version
@@ -274,47 +284,63 @@ CREATE INDEX IF NOT EXISTS ix_image_embeddings_model_version
   contract, and renormalizing would silently double-apply the normalization
   math.
 
-### `semantic_labels` / `image_semantic_labels` — created, not yet used
+### Curated vocabulary layer (semantic_labels)
 
-Both tables exist (`backend/app/database/semantic_labels.py`,
-`db_create_semantic_labels_table()`, wired into `main.py` startup) but no
-code writes to or reads from them yet. They're reserved for a planned
-future feature: a curated, precomputed label set for **browsing/display**
-(e.g. showing "AI tags: Christmas, celebration" on a photo nobody searched
-for, or populating a filter-chip list) — a job live query-time scoring can't
-do, since it only runs in response to an actual typed query. This is
-deliberately **not** a search gatekeeper; arbitrary free-text search already
-works without any row existing in these tables.
+The curated-vocabulary layer scores every embedded image against ~395
+predefined labels (scenes, objects, events, attributes) and stores the
+results as **regular tags**: labels register as `mappings` rows at
+`class_id >= 1000` (`SEMANTIC_CLASS_ID_OFFSET`; YOLO owns 0–79), and the
+scoring pass writes plain `image_classes` rows with a `score`. Tag search,
+tag chips, and person-view tag lists pick them up with no consumer changes.
+The planned `image_semantic_labels` table was dropped in favor of this
+reuse. Free-text search is unaffected — this layer is a cache/browse
+feature, not a search gatekeeper.
+
+`semantic_labels` itself is a definition + cache table:
 
 ```sql
 CREATE TABLE IF NOT EXISTS semantic_labels (
-    label_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    class_id INTEGER PRIMARY KEY,    -- same id as the mappings row
     name TEXT UNIQUE NOT NULL,
-    prompt_template TEXT,
-    threshold REAL,
-    active BOOLEAN DEFAULT 1
-);
-
-CREATE TABLE IF NOT EXISTS image_semantic_labels (
-    image_id TEXT,
-    label_id INTEGER,
-    score REAL NOT NULL,
-    PRIMARY KEY (image_id, label_id),
-    FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
-    FOREIGN KEY (label_id) REFERENCES semantic_labels(label_id) ON DELETE CASCADE
+    category TEXT NOT NULL,          -- scene | object | event | attribute
+    descriptions TEXT NOT NULL,      -- JSON array; source of truth
+    threshold REAL,                  -- per-label override, NULL = bucket default
+    active BOOLEAN DEFAULT 1,
+    label_embedding BLOB,            -- renormalized mean of description embeddings
+    embedding_model_version TEXT
 );
 ```
 
+Key behaviors (all in `backend/app/utils/semantic_labels.py` and
+`backend/app/database/semantic_labels.py`):
+
+- **Seed**: `backend/app/data/semantic_vocabulary.json` is idempotently
+  upserted at startup. Description edits null the cached label embedding;
+  labels removed from the seed deactivate; YOLO-name collisions are skipped.
+- **Label embeddings**: each label's 2–4 caption-shaped descriptions are
+  encoded through the text tower and averaged (prompt ensembling) — this is
+  the fix for SigLIP2's bare-noun weakness on the curated path.
+- **Scoring**: one matmul per image against the label matrix, bucket
+  thresholds (`SEMANTIC_BUCKET_THRESHOLDS` — calibrated, ~2 orders of
+  magnitude below `SIGLIP2_MATCH_THRESHOLD`, never interchangeable), top-15
+  stored (`SEMANTIC_SCORE_TOP_K`).
+- **Invalidation**: a scoring signature (checkpoint + vocab + thresholds +
+  K + label-matrix bytes) is stamped per image in
+  `image_embeddings.scored_signature`; any change re-scores wholesale.
+- **Display cut**: the `image_classes_display` view (recreated each
+  startup) caps chips at the top-5 semantic tags per image
+  (`SEMANTIC_DISPLAY_TOP_K`); search matching uses the full table.
+- Calibration data: `backend/scripts/vocabulary/calibration_report.json`.
+
 !!! note "Schema migrations"
-    This project has no `ALTER TABLE` / migration tooling anywhere —
-    `CREATE TABLE IF NOT EXISTS` is a no-op against a table that already
-    exists, so a new column on an *existing* table never reaches an
-    already-created user database, only fresh installs. This is why
-    `isEmbedded` (a new column on the pre-existing `images` table) needed
-    the same scrutiny as a schema change, and why `image_embeddings` /
-    `semantic_labels` / `image_semantic_labels`, being wholly new tables,
-    don't have this problem — `CREATE TABLE IF NOT EXISTS` does add a new
-    table to an existing database correctly.
+    This project has no migration tooling — `CREATE TABLE IF NOT EXISTS`
+    is a no-op against an existing table. The vocabulary layer handled
+    this two ways: the old `semantic_labels`/`image_semantic_labels`
+    shells shipped with **no writers** (guaranteed empty), so they are
+    detected via `PRAGMA table_info` and drop-recreated; the populated
+    tables got **guarded ALTERs** (`image_classes.score`,
+    `image_embeddings.scored_signature`) that check column presence
+    before altering.
 
 ## Model distribution and checkpoints
 
@@ -526,13 +552,14 @@ Summary of behavior not obvious from the schema alone:
 ```python
 DELETE FROM image_embeddings;
 UPDATE images SET isEmbedded = 0 WHERE isEmbedded = 1;
+DELETE FROM image_classes WHERE class_id >= 1000;  -- semantic tag rows
 ```
 
 Run this any time the embedding or preprocessing pipeline changes in a way
 that invalidates already-stored embeddings (checkpoint swap, preprocessing
 fix, threshold recalibration against a different pipeline). It forces every
 image back through `image_util_process_unembedded_images()` on the next
-sync/tagging pass. There is no automatic detection of "preprocessing
+sync/tagging pass; the semantic scoring sweep then re-tags them. There is no automatic detection of "preprocessing
 changed, invalidate stored embeddings" — this script is a manual step a
 developer runs deliberately.
 
@@ -572,9 +599,9 @@ developer runs deliberately.
   `onnxconverter_common.float16.convert_float_to_float16`, which otherwise
   crashes on >2GB in-memory models) but wasn't finished, since `base`-only
   is the current long-term plan.
-- **The curated `semantic_labels` layer is dormant** (see above) — a
-  reasonable follow-up once free-text search has been in the hands of users
-  for a while.
+- **EXIF tag write-back is deferred** — the curated vocabulary layer (see
+  above) produces the stable, versioned tags it needs, but writing them
+  into image files is its own later PR.
 - **Persistent text-session caching is per-process, in-memory** — it does
   not survive a server restart, and there's no size/TTL bound (a single
   cached session is the whole point, so this is intentional, not an
