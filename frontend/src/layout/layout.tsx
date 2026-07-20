@@ -20,7 +20,8 @@ const Layout: React.FC = () => {
         <Navbar />
         <div className="flex" style={{ height: 'calc(100vh - 56px)' }}>
           <AppSidebar />
-          <div className="m-4 w-full">
+          {/* Contain scrolling here so Navbar's parent height never exceeds 100vh — now the navbar is stuck it will not go away */}
+          <div className="m-4 w-full overflow-y-auto">
             <Outlet />
           </div>
         </div>
