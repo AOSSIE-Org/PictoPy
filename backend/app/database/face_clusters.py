@@ -311,13 +311,15 @@ def db_get_images_by_cluster_id(
             FROM images i
             INNER JOIN faces f ON i.id = f.image_id
             WHERE f.cluster_id = ?
-            ORDER BY i.path
+            ORDER BY i.path, f.confidence DESC
             """,
             (cluster_id,),
         )
 
         rows = cursor.fetchall()
 
+        # One row per image: keep only the highest-confidence face
+        seen_image_ids = set()
         images = []
         for row in rows:
             (
@@ -329,6 +331,10 @@ def db_get_images_by_cluster_id(
                 confidence,
                 bbox_json,
             ) = row
+
+            if image_id in seen_image_ids:
+                continue
+            seen_image_ids.add(image_id)
 
             import json
 

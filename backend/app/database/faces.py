@@ -230,16 +230,20 @@ def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbed
     cursor = conn.cursor()
 
     try:
-        cursor.execute("SELECT face_id, embeddings FROM faces WHERE cluster_id IS NULL")
+        cursor.execute(
+            "SELECT face_id, image_id, embeddings FROM faces WHERE cluster_id IS NULL"
+        )
 
         rows = cursor.fetchall()
 
         faces = []
         for row in rows:
-            face_id, embeddings_json = row
+            face_id, image_id, embeddings_json = row
             # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
-            faces.append({"face_id": face_id, "embeddings": embeddings})
+            faces.append(
+                {"face_id": face_id, "image_id": image_id, "embeddings": embeddings}
+            )
 
         return faces
     finally:
@@ -261,7 +265,7 @@ def db_get_all_faces_with_cluster_names() -> (
     try:
         cursor.execute(
             """
-            SELECT f.face_id, f.embeddings, fc.cluster_name
+            SELECT f.face_id, f.image_id, f.embeddings, fc.cluster_name
             FROM faces f
             LEFT JOIN face_clusters fc ON f.cluster_id = fc.cluster_id
             ORDER BY f.face_id
@@ -272,12 +276,13 @@ def db_get_all_faces_with_cluster_names() -> (
 
         faces = []
         for row in rows:
-            face_id, embeddings_json, cluster_name = row
+            face_id, image_id, embeddings_json, cluster_name = row
             # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
             faces.append(
                 {
                     "face_id": face_id,
+                    "image_id": image_id,
                     "embeddings": embeddings,
                     "cluster_name": cluster_name,
                 }
@@ -350,6 +355,18 @@ def db_update_face_cluster_ids_batch(
     finally:
         if own_connection:
             conn.close()
+
+
+def db_get_cluster_image_pairs() -> set:
+    """Distinct (cluster_id, image_id) pairs for all cluster-assigned faces."""
+    conn = sqlite3.connect(DATABASE_PATH)
+    try:
+        rows = conn.execute(
+            "SELECT DISTINCT cluster_id, image_id FROM faces WHERE cluster_id IS NOT NULL"
+        ).fetchall()
+        return set(rows)
+    finally:
+        conn.close()
 
 
 def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]]]:
