@@ -231,7 +231,7 @@ def cluster_util_cluster_all_face_embeddings(
     faces_data = db_get_all_faces_with_cluster_names()
 
     if not faces_data:
-        return []
+        return [], 0
 
     # Extract embeddings and face IDs with validation
     embeddings = []
