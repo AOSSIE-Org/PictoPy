@@ -84,7 +84,11 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
           onMouseEnter={() => setShowSettings(true)}
           onMouseLeave={() => setShowSettings(false)}
           onFocus={() => setShowSettings(true)}
-          onBlur={() => setShowSettings(false)}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setShowSettings(false);
+            }
+          }}
         >
           <button
             onClick={onToggleSlideshow}
