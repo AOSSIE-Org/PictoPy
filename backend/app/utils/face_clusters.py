@@ -22,7 +22,11 @@ from app.database.faces import (
     db_get_faces_unassigned_clusters,
     db_get_cluster_mean_embeddings,
 )
-from app.database.face_clusters import db_delete_all_clusters, db_insert_clusters_batch
+from app.database.face_clusters import (
+    db_delete_all_clusters,
+    db_insert_clusters_batch,
+    db_get_clusters_count,
+)
 from app.database.metadata import (
     db_get_metadata,
     db_update_metadata,
@@ -70,6 +74,7 @@ def cluster_util_is_reclustering_needed(metadata) -> bool:
     Check if reclustering is needed based on:
     1. Time since last clustering (24 hours)
     2. Number of faces without cluster ID (> 100)
+    3. No clusters existing yet while faces are waiting to be assigned
 
     Returns:
         bool: True if reclustering is needed, False otherwise
@@ -95,6 +100,11 @@ def cluster_util_is_reclustering_needed(metadata) -> bool:
     if len(unassigned_faces) > 100:
         return True
 
+    # Incremental assignment matches faces against the means of existing clusters, so
+    # it can never create the first one. Bootstrap that case with a full pass.
+    if unassigned_faces and db_get_clusters_count() == 0:
+        return True
+
     return False
 
 
@@ -112,6 +122,16 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
         results, total_faces_skipped = cluster_util_cluster_all_face_embeddings()
 
         if not results:
+            # A full recluster rebuilds from scratch, so producing no clusters means
+            # none should remain. Without this the rows outlive the faces that
+            # justified them (e.g. after their folder is deleted) and keep surfacing.
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                db_delete_all_clusters(cursor)
+
+                current_metadata = metadata or {}
+                current_metadata["reclustering_time"] = datetime.now().timestamp()
+                db_update_metadata(current_metadata, cursor)
             return 0, total_faces_skipped
 
         results = [result.to_dict() for result in results]
@@ -230,7 +250,7 @@ def cluster_util_cluster_all_face_embeddings(
     faces_data = db_get_all_faces_with_cluster_names()
 
     if not faces_data:
-        return []
+        return [], 0
 
     # Extract embeddings and face IDs with validation
     embeddings = []

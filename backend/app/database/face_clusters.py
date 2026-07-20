@@ -187,6 +187,23 @@ def db_get_all_clusters() -> List[ClusterData]:
         conn.close()
 
 
+def db_get_clusters_count() -> int:
+    """
+    Count the clusters currently stored in the database.
+
+    Returns:
+        Number of rows in the face_clusters table
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT COUNT(*) FROM face_clusters")
+        return cursor.fetchone()[0]
+    finally:
+        conn.close()
+
+
 def db_update_cluster(
     cluster_id: ClusterId,
     cluster_name: Optional[ClusterName] = None,
@@ -259,6 +276,7 @@ def db_get_all_clusters_with_face_counts() -> (
             FROM face_clusters fc
             LEFT JOIN faces f ON fc.cluster_id = f.cluster_id
             GROUP BY fc.cluster_id, fc.cluster_name, fc.face_image_base64
+            HAVING COUNT(f.face_id) > 0
             ORDER BY fc.cluster_id
             """
         )
