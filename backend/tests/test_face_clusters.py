@@ -1,4 +1,6 @@
 import pytest
+import threading
+import time
 import numpy as np
 from unittest.mock import patch
 from fastapi import FastAPI
@@ -8,6 +10,7 @@ from app.utils.face_clusters import (
 )
 from app.utils.face_quality import face_passes_quality_gate
 from fastapi.testclient import TestClient
+from app.routes import face_clusters as face_clusters_module
 from app.routes.face_clusters import router as face_clusters_router
 
 app = FastAPI()
@@ -416,6 +419,122 @@ class TestFaceClustersAPI:
         """Test that unsupported HTTP methods return 405."""
         response = client.request(method, endpoint)
         assert response.status_code == 405
+
+
+# ============================================================================
+# Global Reclustering Background Job Tests
+# ============================================================================
+
+
+def poll_until_terminal(job_client, task_id, timeout=10.0):
+    """Poll a reclustering task until it leaves the 'running' state."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        response = job_client.get(f"/face_clusters/global-recluster/{task_id}")
+        assert response.status_code == 200
+        payload = response.json()
+        if payload["data"]["status"] != "running":
+            return payload
+        time.sleep(0.05)
+
+    raise AssertionError(f"Task {task_id} did not reach a terminal state in {timeout}s")
+
+
+class TestGlobalReclusterAPI:
+    """Test class for the global reclustering background job endpoints.
+
+    These tests use TestClient as a context manager so that a single event
+    loop is shared across requests: the job is an asyncio task created by
+    POST and read back by a later GET, and a per-request loop would discard
+    it in between.
+    """
+
+    @pytest.fixture(autouse=True)
+    def reset_recluster_state(self):
+        """Reset module-level job state so tests cannot leak into each other."""
+        face_clusters_module.recluster_tasks.clear()
+        face_clusters_module._active_recluster_task_id = None
+        yield
+        face_clusters_module.recluster_tasks.clear()
+        face_clusters_module._active_recluster_task_id = None
+
+    @patch("app.routes.face_clusters.cluster_util_face_clusters_sync")
+    def test_start_global_recluster_returns_202_and_completes(self, mock_recluster):
+        """Starting a job returns 202 with a task_id, and polling that task_id
+        eventually yields the clustering result."""
+        mock_recluster.return_value = (3, 1)
+
+        with TestClient(app) as job_client:
+            start_response = job_client.post("/face_clusters/global-recluster")
+
+            assert start_response.status_code == 202
+            start_payload = start_response.json()
+            assert start_payload["success"] is True
+            task_id = start_payload["data"]["task_id"]
+            assert task_id
+
+            status_payload = poll_until_terminal(job_client, task_id)
+
+        assert status_payload["success"] is True
+        assert status_payload["data"]["status"] == "complete"
+        assert status_payload["data"]["clusters_created"] == 3
+        assert status_payload["data"]["faces_skipped"] == 1
+        mock_recluster.assert_called_once_with(force_full_reclustering=True)
+
+    @patch("app.routes.face_clusters.cluster_util_face_clusters_sync")
+    def test_second_trigger_rejoins_running_job(self, mock_recluster):
+        """Triggering while a job is in flight returns the running task_id
+        instead of starting a second pass, which would race on the cluster
+        tables (a full recluster deletes and rebuilds every cluster)."""
+        release = threading.Event()
+
+        def blocking_recluster(**_kwargs):
+            release.wait(timeout=10)
+            return (2, 0)
+
+        mock_recluster.side_effect = blocking_recluster
+
+        with TestClient(app) as job_client:
+            first_response = job_client.post("/face_clusters/global-recluster")
+            second_response = job_client.post("/face_clusters/global-recluster")
+
+            assert first_response.status_code == 202
+            assert second_response.status_code == 202
+
+            first_task_id = first_response.json()["data"]["task_id"]
+            assert second_response.json()["data"]["task_id"] == first_task_id
+
+            # Let the blocked job finish so the client context can exit cleanly.
+            release.set()
+            status_payload = poll_until_terminal(job_client, first_task_id)
+
+        assert status_payload["data"]["status"] == "complete"
+        assert mock_recluster.call_count == 1
+
+    @patch("app.routes.face_clusters.cluster_util_face_clusters_sync")
+    def test_failed_job_reports_error_status(self, mock_recluster):
+        """A job that raises is reported as an error result to the poller
+        rather than surfacing as a failed HTTP request."""
+        mock_recluster.side_effect = RuntimeError("clustering blew up")
+
+        with TestClient(app) as job_client:
+            start_response = job_client.post("/face_clusters/global-recluster")
+            task_id = start_response.json()["data"]["task_id"]
+
+            status_payload = poll_until_terminal(job_client, task_id)
+
+        assert status_payload["success"] is False
+        assert status_payload["data"]["status"] == "error"
+        assert "clustering blew up" in status_payload["message"]
+
+    def test_status_unknown_task_id_returns_404(self):
+        """Polling an unknown task_id returns 404 rather than hanging or 500."""
+        response = client.get("/face_clusters/global-recluster/does-not-exist")
+
+        assert response.status_code == 404
+        detail = response.json()["detail"]
+        assert detail["success"] is False
+        assert detail["error"] == "Task Not Found"
 
 
 # ============================================================================

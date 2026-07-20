@@ -454,7 +454,7 @@ async def get_global_recluster_status(task_id: str):
             detail=ErrorResponse(
                 success=False,
                 error="Task Not Found",
-                message=f"Recluster task '{task_id}' not found or already consumed.",
+                message=f"Recluster task '{task_id}' not found or expired.",
             ).model_dump(),
         )
 
