@@ -274,9 +274,8 @@ def db_get_all_clusters_with_face_counts() -> (
                 COUNT(f.face_id) as face_count,
                 fc.face_image_base64
             FROM face_clusters fc
-            LEFT JOIN faces f ON fc.cluster_id = f.cluster_id
+            INNER JOIN faces f ON fc.cluster_id = f.cluster_id
             GROUP BY fc.cluster_id, fc.cluster_name, fc.face_image_base64
-            HAVING COUNT(f.face_id) > 0
             ORDER BY fc.cluster_id
             """
         )
