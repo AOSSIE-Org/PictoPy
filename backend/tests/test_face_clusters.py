@@ -670,8 +670,87 @@ class TestFaceClusteringAlgo:
         # 2 elements
         assert estimate_eps(np.random.randn(2, 512), k=2) is None
 
+    @patch("app.utils.face_clusters.db_get_all_faces_with_cluster_names")
+    def test_adaptive_eps_clamping_regression(self, mock_db_get):
+        """Test 4: Adaptive eps clamping under sparse datasets with singletons"""
+        # Create 9 embeddings:
+        # Identity A: 2 points (very close)
+        # Identity B: 2 points (very close)
+        # 5 Singleton points (completely random / orthogonal)
+        dim = 512
+        np.random.seed(42)
+
+        # Identity A
+        center_a = np.random.randn(dim)
+        center_a /= np.linalg.norm(center_a)
+        pt_a1 = center_a + np.random.randn(dim) * 0.01
+        pt_a1 /= np.linalg.norm(pt_a1)
+        pt_a2 = center_a + np.random.randn(dim) * 0.01
+        pt_a2 /= np.linalg.norm(pt_a2)
+
+        # Identity B (orthogonal to A)
+        pt_b1 = np.random.randn(dim)
+        pt_b1 -= np.dot(pt_b1, center_a) * center_a
+        pt_b1 /= np.linalg.norm(pt_b1)
+        pt_b2 = pt_b1 + np.random.randn(dim) * 0.01
+        pt_b2 /= np.linalg.norm(pt_b2)
+
+        # 5 Singletons (mutually orthogonal to each other and A/B)
+        singletons = []
+        for _ in range(5):
+            vec = np.random.randn(dim)
+            vec -= np.dot(vec, center_a) * center_a
+            vec -= np.dot(vec, pt_b1) * pt_b1
+            for prev in singletons:
+                vec -= np.dot(vec, prev) * prev
+            vec /= np.linalg.norm(vec)
+            singletons.append(vec)
+
+        all_embeddings = [pt_a1, pt_a2, pt_b1, pt_b2] + singletons
+
+        # Mock database call
+        mock_db_get.return_value = [
+            {"face_id": i, "embeddings": emb, "cluster_name": None}
+            for i, emb in enumerate(all_embeddings)
+        ]
+
+        # Run clustering with similarity_threshold=0.85 -> max_distance = 0.15
+        results, _ = cluster_util_cluster_all_face_embeddings(
+            min_samples=2, similarity_threshold=0.85
+        )
+
+        # Group face_ids by their cluster UUIDs
+        clusters = {}
+        for r in results:
+            if r.cluster_uuid not in clusters:
+                clusters[r.cluster_uuid] = []
+            clusters[r.cluster_uuid].append(r.face_id)
+
+        cluster_a_uuid = None
+        cluster_b_uuid = None
+
+        for cluster_uuid, face_ids in clusters.items():
+            if 0 in face_ids:
+                cluster_a_uuid = cluster_uuid
+                assert 1 in face_ids, "Identity A faces should be grouped together"
+                assert all(
+                    f in [0, 1] for f in face_ids
+                ), f"Identity A cluster contains unexpected faces: {face_ids}"
+            elif 2 in face_ids:
+                cluster_b_uuid = cluster_uuid
+                assert 3 in face_ids, "Identity B faces should be grouped together"
+                assert all(
+                    f in [2, 3] for f in face_ids
+                ), f"Identity B cluster contains unexpected faces: {face_ids}"
+
+        assert cluster_a_uuid is not None, "Identity A was not clustered"
+        assert cluster_b_uuid is not None, "Identity B was not clustered"
+        assert (
+            cluster_a_uuid != cluster_b_uuid
+        ), "Identity A and Identity B should not be merged into the same cluster"
+
     def test_quality_gate(self):
-        """Test 4: Quality gate unit tests"""
+        """Test 5: Quality gate unit tests"""
         # A sharp, large face crop should pass
         # Random noise image has high variance (sharp)
         np.random.seed(42)

@@ -41,8 +41,10 @@ from concurrent.futures import ProcessPoolExecutor
 from app.utils.images import (
     image_util_process_folder_images,
     image_util_process_untagged_images,
+    image_util_process_unembedded_images,
 )
 from app.utils.model_bootstrap import ensure_ai_tagging_models
+from app.utils.semantic_labels import semantic_util_score_images
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.utils.API import API_util_restart_sync_microservice_watcher
 
@@ -92,6 +94,8 @@ def post_AI_tagging_enabled_sequence():
         ensure_ai_tagging_models()
         image_util_process_untagged_images()
         cluster_util_face_clusters_sync()
+        image_util_process_unembedded_images()
+        semantic_util_score_images()
     except Exception as e:
         logger.error(f"Error in post processing after AI tagging was enabled: {e}")
         return False
@@ -120,6 +124,8 @@ def post_sync_folder_sequence(
         image_util_process_folder_images(folder_data)
         image_util_process_untagged_images()
         cluster_util_face_clusters_sync()
+        image_util_process_unembedded_images()
+        semantic_util_score_images()
 
         # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()

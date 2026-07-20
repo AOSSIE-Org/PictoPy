@@ -11,11 +11,15 @@ import { PersonImages } from '@/pages/PersonImages/PersonImages';
 import { ComingSoon } from '@/pages/ComingSoon/ComingSoon';
 import { MemoriesPage } from '@/components/Memories';
 import { MemoryDetail } from '@/components/Memories/MemoryDetail';
+import { ModelManager } from '@/pages/ModelManager/ModelManager';
+
+import { SearchResults } from '@/pages/SearchResults/SearchResults';
 
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route index element={<InitialSteps />} />
+      <Route path={ROUTES.MODEL_MANAGER} element={<ModelManager />} />
       <Route element={<Layout />}>
         <Route path={ROUTES.HOME} element={<Home />} />
         <Route path={ROUTES.VIDEOS} element={<ComingSoon />} />
@@ -26,6 +30,7 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.MEMORIES} element={<MemoriesPage />} />
         <Route path={ROUTES.MEMORY_DETAIL} element={<MemoryDetail />} />
         <Route path={ROUTES.PERSON} element={<PersonImages />} />
+        <Route path={ROUTES.SEARCH} element={<SearchResults />} />
       </Route>
     </Routes>
   );

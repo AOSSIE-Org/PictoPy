@@ -51,7 +51,66 @@ describe('getErrorMessage', () => {
     expect(getErrorMessage(new Error('disk full'))).toBe('disk full');
   });
 
-  test('extracts response data from AxiosError', () => {
+  test('extracts plain string detail from AxiosError', () => {
+    const axiosErr = fakeAxiosError('Request failed', 'ERR_BAD_REQUEST', {
+      detail: 'Model not found in registry',
+    });
+    expect(getErrorMessage(axiosErr)).toBe('Model not found in registry');
+  });
+
+  test('does not overwrite legitimately extracted string that exactly matches fallback', () => {
+    const axiosErr = fakeAxiosError('Request failed', 'ERR_BAD_REQUEST', {
+      detail: 'Custom fallback string',
+    });
+    // Even though the extracted detail exactly matches the fallback,
+    // it shouldn't fall through to Axios error details
+    expect(getErrorMessage(axiosErr, 'Custom fallback string')).toBe(
+      'Custom fallback string',
+    );
+  });
+
+  test('extracts nested error and message from object detail in AxiosError', () => {
+    const axiosErr = fakeAxiosError('Request failed', 'ERR_BAD_REQUEST', {
+      detail: {
+        success: false,
+        error: 'Validation Error',
+        message: 'Cluster name cannot be empty',
+      },
+    });
+    expect(getErrorMessage(axiosErr)).toBe(
+      'Validation Error - Cluster name cannot be empty',
+    );
+  });
+
+  test('extracts joined msgs from Pydantic validation array detail in AxiosError', () => {
+    const axiosErr = fakeAxiosError('Request failed', '422', {
+      detail: [
+        {
+          loc: ['body', 'name'],
+          msg: 'Field required',
+          type: 'value_error.missing',
+        },
+        {
+          loc: ['body', 'age'],
+          msg: 'Must be an integer',
+          type: 'type_error.integer',
+        },
+      ],
+    });
+    expect(getErrorMessage(axiosErr)).toBe(
+      'Field required - Must be an integer',
+    );
+  });
+
+  test('returns fallback if extracted value is not a string (type guard)', () => {
+    const axiosErr = fakeAxiosError('Request failed', 'ERR_BAD_REQUEST', {
+      detail: { something: 'weird' }, // neither string, nor array, nor has error/message
+    });
+    // With nothing matching, it falls back to Axios error details
+    expect(getErrorMessage(axiosErr)).toBe('ERR_BAD_REQUEST: Request failed');
+  });
+
+  test('extracts top-level error and message from AxiosError', () => {
     const axiosErr = fakeAxiosError('Request failed', 'ERR_BAD_REQUEST', {
       error: 'Not Found',
       message: 'Image does not exist',

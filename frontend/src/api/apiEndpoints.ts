@@ -1,6 +1,9 @@
 export const imagesEndpoints = {
   getAllImages: '/images/',
   setFavourite: '/images/toggle-favourite',
+  searchByTag: (tag: string) => `/images/search?tag=${encodeURIComponent(tag)}`,
+  semanticSearch: (query: string) =>
+    `/images/semantic-search?query=${encodeURIComponent(query)}`,
 };
 
 export const faceClustersEndpoints = {
