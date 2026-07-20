@@ -35,10 +35,12 @@ def db_get_all_folders_with_ids() -> List[FolderIdPath]:
     cursor = conn.cursor()
 
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT folder_id, folder_path FROM folders
             ORDER BY folder_path
-            """)
+            """
+        )
         return cursor.fetchall()
     except Exception as e:
         logger.error(f"Error getting folders from database: {e}")
@@ -59,10 +61,12 @@ def db_check_database_connection() -> bool:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
         # Check if folders table exists
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT name FROM sqlite_master 
             WHERE type='table' AND name='folders'
-            """)
+            """
+        )
         result = cursor.fetchone()
         return result is not None
     except Exception as e:
@@ -86,7 +90,8 @@ def db_get_tagging_progress() -> List[FolderTaggingInfo]:
     cursor = conn.cursor()
 
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 f.folder_id,
                 f.folder_path,
@@ -97,7 +102,8 @@ def db_get_tagging_progress() -> List[FolderTaggingInfo]:
             FROM folders f
             LEFT JOIN images i ON f.folder_id = i.folder_id
             GROUP BY f.folder_id, f.folder_path, f.AI_Tagging
-            """)
+            """
+        )
 
         results = cursor.fetchall()
 

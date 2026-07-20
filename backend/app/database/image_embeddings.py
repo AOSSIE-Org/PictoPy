@@ -8,7 +8,8 @@ def db_create_image_embeddings_table():
     try:
         conn = _connect()
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS image_embeddings (
                 image_id TEXT PRIMARY KEY,
                 model_version TEXT NOT NULL,
@@ -16,7 +17,8 @@ def db_create_image_embeddings_table():
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE
             )
-            """)
+            """
+        )
         cursor.execute(
             "CREATE INDEX IF NOT EXISTS ix_image_embeddings_model_version "
             "ON image_embeddings(model_version)"

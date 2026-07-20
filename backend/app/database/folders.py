@@ -21,7 +21,8 @@ def db_create_folders_table() -> None:
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS folders (
                 folder_id TEXT PRIMARY KEY,
                 parent_folder_id TEXT,
@@ -31,7 +32,8 @@ def db_create_folders_table() -> None:
                 taggingCompleted BOOLEAN,
                 FOREIGN KEY (parent_folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
             )
-            """)
+            """
+        )
         conn.commit()
     finally:
         if conn is not None:
@@ -411,7 +413,8 @@ def db_get_all_folder_details() -> (
     cursor = conn.cursor()
 
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT 
                 f.folder_id, 
                 f.folder_path, 
@@ -424,7 +427,8 @@ def db_get_all_folder_details() -> (
             LEFT JOIN images i ON f.folder_id = i.folder_id
             GROUP BY f.folder_id
             ORDER BY f.folder_path
-            """)
+            """
+        )
         return cursor.fetchall()
     finally:
         conn.close()

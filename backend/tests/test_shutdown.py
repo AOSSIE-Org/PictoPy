@@ -164,7 +164,7 @@ class TestCorruptedTokenContent:
     """If the token file had garbage, hmac.compare_digest must still return False."""
 
     def test_corrupted_token_always_rejects(self, app):
-        corrupted = "\x00\xff partial"
+        corrupted = "\x00\x01 partial"
         with patch("app.config.settings.SHUTDOWN_TOKEN", corrupted), patch(
             "app.routes.shutdown._delayed_shutdown"
         ):
