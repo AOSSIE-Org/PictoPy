@@ -80,7 +80,7 @@ semantic search when nothing matches — this keeps the existing tag-search
 path completely untouched and adds semantic search as a fallback, not a
 replacement. Since the curated-vocabulary layer landed, tag search also
 matches the ~395 precomputed semantic labels (see
-[the vocabulary section](#semantic_labels-curated-vocabulary-active)), so
+[the vocabulary section](#curated-vocabulary-layer-semantic_labels)), so
 common words like "beach" or "sunset" get instant cache hits and never
 reach the live-scoring fallback.
 
@@ -284,7 +284,7 @@ CREATE INDEX IF NOT EXISTS ix_image_embeddings_model_version
   contract, and renormalizing would silently double-apply the normalization
   math.
 
-### `semantic_labels` — curated vocabulary (active)
+### Curated vocabulary layer (semantic_labels)
 
 The curated-vocabulary layer scores every embedded image against ~395
 predefined labels (scenes, objects, events, attributes) and stores the
