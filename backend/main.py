@@ -23,6 +23,11 @@ from app.database.folders import db_create_folders_table
 from app.database.metadata import db_create_metadata_table
 from app.database.semantic_labels import db_create_semantic_labels_table
 from app.database.image_embeddings import db_create_image_embeddings_table
+from app.utils.semantic_labels import (
+    semantic_util_sync_vocabulary,
+    semantic_util_build_label_embeddings,
+    semantic_util_score_images,
+)
 
 from app.routes.folders import router as folders_router
 from app.routes.albums import router as albums_router
@@ -65,8 +70,16 @@ async def lifespan(app: FastAPI):
     db_create_albums_table()
     db_create_album_images_table()
     db_create_metadata_table()
+    # Needs the mappings table (created above): semantic labels register
+    # there as class_ids >= SEMANTIC_CLASS_ID_OFFSET
+    semantic_util_sync_vocabulary()
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor(max_workers=1)
+    # Self-gating no-ops unless something is missing/stale (fresh install,
+    # checkpoint swap, edited seed). Single-worker executor runs them in
+    # order: the scoring sweep needs the label embeddings.
+    app.state.executor.submit(semantic_util_build_label_embeddings)
+    app.state.executor.submit(semantic_util_score_images)
 
     # Start the SSE model download cleanup task
     cleanup_task = asyncio.create_task(_cleanup_stale_tasks())

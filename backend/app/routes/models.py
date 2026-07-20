@@ -18,6 +18,10 @@ from app.models.session_registry import (
 )
 from app.utils.hardware_detect import get_hardware_info
 from app.utils.images import image_util_process_unembedded_images
+from app.utils.semantic_labels import (
+    semantic_util_build_label_embeddings,
+    semantic_util_score_images,
+)
 from app.utils.model_downloader import ensure_model
 from app.database.metadata import db_get_metadata
 import logging
@@ -46,7 +50,12 @@ def submit_embedding_backfill_if_semantic(
     if any(
         MODEL_REGISTRY[key].get("feature") in SEMANTIC_FEATURES for key in model_keys
     ):
+        # The executor is single-worker, so these run in order: label
+        # embeddings, then image embeddings, then the scoring sweep that
+        # depends on both.
+        executor.submit(semantic_util_build_label_embeddings)
         executor.submit(image_util_process_unembedded_images)
+        executor.submit(semantic_util_score_images)
 
 
 # Global dict to track download tasks
