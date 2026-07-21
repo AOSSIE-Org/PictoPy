@@ -4,7 +4,7 @@ import Album from '../Album/Album';
 import { Home } from '@/pages/Home/Home';
 import Memories from '../Memories/Memories';
 import Settings from '../SettingsPage/Settings';
-import Videos from '../VideosPage/Videos';
+import { Videos } from '../VideosPage/Videos';
 import { ROUTES } from '@/constants/routes';
 import QueryClientProviders from '@/config/QueryClientProvider';
 import { BrowserRouter } from 'react-router';
