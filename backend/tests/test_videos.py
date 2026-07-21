@@ -257,6 +257,56 @@ class TestProcessFolderVideos:
         assert db_get_all_videos() == []
         assert not os.path.exists(thumbnail_path)
 
+    def test_repeat_scan_reuses_existing_thumbnails(
+        self, test_db, test_folder_id, real_video_file, temp_media_dir, monkeypatch
+    ):
+        """Re-scanning an unchanged folder must not orphan the previous thumbnail."""
+        from app.utils.videos import video_util_process_folder_videos
+
+        thumb_dir = os.path.join(temp_media_dir, "thumbs")
+        monkeypatch.setattr("app.utils.videos.THUMBNAIL_IMAGES_PATH", thumb_dir)
+
+        video_path = os.path.join(temp_media_dir, "clip.mp4")
+        shutil.copyfile(real_video_file, video_path)
+        os.remove(real_video_file)
+
+        folder_data = [(temp_media_dir, test_folder_id, False)]
+        assert video_util_process_folder_videos(folder_data) is True
+
+        first = db_get_all_videos()
+        assert len(os.listdir(thumb_dir)) == 1
+
+        # A second pass over unchanged files should be a no-op
+        assert video_util_process_folder_videos(folder_data) is True
+
+        second = db_get_all_videos()
+        assert len(second) == 1
+        assert second[0]["id"] == first[0]["id"]
+        assert second[0]["thumbnailPath"] == first[0]["thumbnailPath"]
+        assert len(os.listdir(thumb_dir)) == 1
+
+    def test_rescan_regenerates_a_missing_thumbnail(
+        self, test_db, test_folder_id, real_video_file, temp_media_dir, monkeypatch
+    ):
+        """A deleted thumbnail file should be regenerated on the next scan."""
+        from app.utils.videos import video_util_process_folder_videos
+
+        thumb_dir = os.path.join(temp_media_dir, "thumbs")
+        monkeypatch.setattr("app.utils.videos.THUMBNAIL_IMAGES_PATH", thumb_dir)
+
+        video_path = os.path.join(temp_media_dir, "clip.mp4")
+        shutil.copyfile(real_video_file, video_path)
+        os.remove(real_video_file)
+
+        folder_data = [(temp_media_dir, test_folder_id, False)]
+        video_util_process_folder_videos(folder_data)
+        os.remove(db_get_all_videos()[0]["thumbnailPath"])
+
+        assert video_util_process_folder_videos(folder_data) is True
+        refreshed = db_get_all_videos()[0]
+        assert refreshed["thumbnailPath"] is not None
+        assert os.path.exists(refreshed["thumbnailPath"])
+
 
 # ##############################
 # Database
@@ -385,3 +435,27 @@ class TestVideosAPI:
     def test_toggle_favourite_unknown_id(self, client):
         response = client.post("/videos/toggle-favourite", json={"video_id": "nope"})
         assert response.status_code == 404
+
+    def test_one_malformed_record_does_not_break_the_listing(
+        self, client, test_folder_id
+    ):
+        """A row with unusable metadata is skipped, not fatal to the whole tab."""
+        good_metadata = (
+            '{"name": "a.mp4", "date_created": null, "width": 640, "height": 480,'
+            ' "file_location": "/videos/a.mp4", "file_size": 1, "item_type": "video/mp4"}'
+        )
+        db_bulk_insert_videos(
+            [
+                make_video_record(
+                    "vid-good", "/videos/a.mp4", test_folder_id, metadata=good_metadata
+                ),
+                make_video_record(
+                    "vid-bad", "/videos/b.mp4", test_folder_id, metadata="not json"
+                ),
+            ]
+        )
+
+        response = client.get("/videos/")
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert [v["id"] for v in data] == ["vid-good"]

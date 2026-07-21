@@ -5,7 +5,7 @@ import uuid
 import datetime
 import json
 import mimetypes
-from typing import List, Tuple, Dict
+from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 
 import cv2
@@ -54,8 +54,17 @@ def video_util_process_folder_videos(folder_data: List[Tuple[str, int, bool]]) -
 
                 folder_path_to_id = {os.path.abspath(folder_path): folder_id}
 
+                # What this folder already has indexed, so unchanged files are
+                # left alone instead of being re-decoded into a fresh thumbnail.
+                already_indexed = {
+                    path: thumbnail_path
+                    for _, path, thumbnail_path in db_get_videos_by_folder_ids(
+                        [folder_id]
+                    )
+                }
+
                 folder_video_records = video_util_prepare_video_records(
-                    video_files, folder_path_to_id
+                    video_files, folder_path_to_id, already_indexed
                 )
                 all_video_records.extend(folder_video_records)
 
@@ -76,12 +85,15 @@ def video_util_process_folder_videos(folder_data: List[Tuple[str, int, bool]]) -
 
 
 def video_util_prepare_video_records(
-    video_files: List[str], folder_path_to_id: Dict[str, int]
+    video_files: List[str],
+    folder_path_to_id: Dict[str, int],
+    already_indexed: Optional[Dict[str, Optional[str]]] = None,
 ) -> List[Dict]:
     """
     Prepare video records with thumbnails for database insertion.
     A failed thumbnail (undecodable codec) keeps the record with thumbnailPath=None.
     """
+    already_indexed = already_indexed or {}
     video_records = []
 
     for video_path in video_files:
@@ -90,16 +102,29 @@ def video_util_prepare_video_records(
         if not folder_id:
             continue  # Skip if no matching folder ID found
 
+        # Already indexed and its thumbnail is still on disk: regenerating would
+        # orphan the old JPEG and re-decode the file for nothing.
+        existing_thumbnail = already_indexed.get(video_path)
+        if existing_thumbnail and os.path.exists(existing_thumbnail):
+            continue
+
         video_id = str(uuid.uuid4())
         thumbnail_name = f"thumbnail_{video_id}.jpg"
         thumbnail_path = os.path.abspath(
             os.path.join(THUMBNAIL_IMAGES_PATH, thumbnail_name)
         )
 
-        if not video_util_generate_thumbnail(video_path, thumbnail_path):
-            thumbnail_path = None
+        # One capture serves both the poster frame and the metadata read
+        capture = cv2.VideoCapture(video_path)
+        try:
+            if not video_util_generate_thumbnail(
+                video_path, thumbnail_path, capture=capture
+            ):
+                thumbnail_path = None
 
-        metadata = video_util_extract_metadata(video_path)
+            metadata = video_util_extract_metadata(video_path, capture=capture)
+        finally:
+            capture.release()
 
         video_records.append(
             {
@@ -161,12 +186,20 @@ def video_util_is_valid_video(file_path: str) -> bool:
 
 
 def video_util_generate_thumbnail(
-    video_path: str, thumbnail_path: str, size: Tuple[int, int] = (600, 600)
+    video_path: str,
+    thumbnail_path: str,
+    size: Tuple[int, int] = (600, 600),
+    capture: Optional[cv2.VideoCapture] = None,
 ) -> bool:
-    """Generate a poster-frame thumbnail for a single video."""
-    cap = None
+    """Generate a poster-frame thumbnail for a single video.
+
+    Pass an open `capture` to share one decoder with metadata extraction.
+    """
+    owns_capture = capture is None
+    cap = capture
     try:
-        cap = cv2.VideoCapture(video_path)
+        if cap is None:
+            cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             return False
 
@@ -192,12 +225,17 @@ def video_util_generate_thumbnail(
         logger.error(f"Error generating thumbnail for {video_path}: {e}")
         return False
     finally:
-        if cap is not None:
+        if owns_capture and cap is not None:
             cap.release()
 
 
-def video_util_extract_metadata(video_path: str) -> dict:
-    """Extract metadata for a given video file (cv2 props + file stats)."""
+def video_util_extract_metadata(
+    video_path: str, capture: Optional[cv2.VideoCapture] = None
+) -> dict:
+    """Extract metadata for a given video file (cv2 props + file stats).
+
+    Pass an open `capture` to share one decoder with thumbnail generation.
+    """
     metadata = {
         "name": os.path.basename(video_path),
         "date_created": None,
@@ -220,9 +258,11 @@ def video_util_extract_metadata(video_path: str) -> dict:
         logger.error(f"Error reading file stats for {video_path}: {e}")
         return metadata
 
-    cap = None
+    owns_capture = capture is None
+    cap = capture
     try:
-        cap = cv2.VideoCapture(video_path)
+        if cap is None:
+            cap = cv2.VideoCapture(video_path)
         if cap.isOpened():
             metadata["width"] = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
             metadata["height"] = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
@@ -235,7 +275,7 @@ def video_util_extract_metadata(video_path: str) -> dict:
     except Exception as e:
         logger.error(f"Error extracting video metadata for {video_path}: {e}")
     finally:
-        if cap is not None:
+        if owns_capture and cap is not None:
             cap.release()
 
     return metadata

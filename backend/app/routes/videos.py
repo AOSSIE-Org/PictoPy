@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from app.database.videos import (
     db_get_all_videos,
@@ -8,7 +8,6 @@ from app.database.videos import (
     db_get_video_by_id,
 )
 from app.schemas.videos import ErrorResponse
-from app.utils.images import image_util_parse_metadata
 from app.logging.setup_logging import get_logger
 
 # Initialize logger
@@ -55,18 +54,26 @@ def get_all_videos():
     try:
         videos = db_get_all_videos()
 
-        video_data = [
-            VideoData(
-                id=video["id"],
-                path=video["path"],
-                folder_id=video["folder_id"],
-                thumbnailPath=video["thumbnailPath"],
-                metadata=image_util_parse_metadata(video["metadata"]),
-                isFavourite=video.get("isFavourite", False),
-                tags=video["tags"],
-            )
-            for video in videos
-        ]
+        # Build per row: one record with unusable metadata shouldn't 500 the
+        # whole listing and hide every other video.
+        video_data = []
+        for video in videos:
+            try:
+                video_data.append(
+                    VideoData(
+                        id=video["id"],
+                        path=video["path"],
+                        folder_id=video["folder_id"],
+                        thumbnailPath=video["thumbnailPath"],
+                        metadata=video["metadata"],
+                        isFavourite=video.get("isFavourite", False),
+                        tags=video["tags"],
+                    )
+                )
+            except ValidationError as e:
+                logger.warning(
+                    f"Skipping video {video.get('id')} with invalid metadata: {e}"
+                )
 
         return GetAllVideosResponse(
             success=True,
@@ -89,7 +96,17 @@ class ToggleFavouriteRequest(BaseModel):
     video_id: str
 
 
-@router.post("/toggle-favourite")
+class ToggleFavouriteResponse(BaseModel):
+    success: bool
+    video_id: str
+    isFavourite: bool
+
+
+@router.post(
+    "/toggle-favourite",
+    response_model=ToggleFavouriteResponse,
+    responses={code: {"model": ErrorResponse} for code in [404, 500]},
+)
 def toggle_favourite(req: ToggleFavouriteRequest):
     """
     Toggle the favorite status of a video.

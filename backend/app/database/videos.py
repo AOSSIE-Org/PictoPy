@@ -282,7 +282,7 @@ def db_get_video_by_id(video_id: str) -> Optional[dict]:
         return {
             "id": row[0],
             "path": row[1],
-            "folder_id": row[2],
+            "folder_id": str(row[2]),
             "thumbnailPath": row[3],
             "metadata": metadata,
             "isTagged": bool(row[5]),

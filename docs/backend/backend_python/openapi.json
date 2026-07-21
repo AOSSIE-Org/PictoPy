@@ -1133,7 +1133,29 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ToggleFavouriteResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
               }
             }
           },
@@ -1341,14 +1363,9 @@
             "in": "query",
             "required": false,
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/InputType"
-                }
-              ],
+              "$ref": "#/components/schemas/InputType",
               "description": "Choose input type: 'path' or 'base64'",
-              "default": "path",
-              "title": "Input Type"
+              "default": "path"
             },
             "description": "Choose input type: 'path' or 'base64'"
           }
@@ -1616,7 +1633,7 @@
             "required": false,
             "schema": {
               "type": "number",
-              "maximum": 100.0,
+              "maximum": 100,
               "minimum": 0.1,
               "description": "Location clustering radius in km",
               "default": 5.0,
@@ -1704,7 +1721,7 @@
             "required": false,
             "schema": {
               "type": "number",
-              "maximum": 100.0,
+              "maximum": 100,
               "minimum": 0.1,
               "description": "Location clustering radius in km",
               "default": 5.0,
@@ -1784,7 +1801,7 @@
             "required": false,
             "schema": {
               "type": "number",
-              "maximum": 100.0,
+              "maximum": 100,
               "minimum": 0.1,
               "description": "Location clustering radius in km",
               "default": 5.0,
@@ -2996,6 +3013,7 @@
           "metadata": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -3191,6 +3209,7 @@
           "metadata": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -3614,6 +3633,29 @@
           "success"
         ],
         "title": "SyncFolderResponse"
+      },
+      "ToggleFavouriteResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "video_id": {
+            "type": "string",
+            "title": "Video Id"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "video_id",
+          "isFavourite"
+        ],
+        "title": "ToggleFavouriteResponse"
       },
       "UpdateAITaggingData": {
         "properties": {
