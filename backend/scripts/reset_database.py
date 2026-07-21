@@ -47,11 +47,12 @@ def delete_db_files():
         print("No database files were found or deleted.")
 
     if has_errors:
-        print("Error: Database reset failed because some files could not be deleted.", file=sys.stderr)
+        print(
+            "Error: Database reset failed because some files could not be deleted.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
 
 if __name__ == "__main__":
     delete_db_files()
-
-
