@@ -3888,6 +3888,168 @@
         ],
         "title": "ErrorResponse",
         "description": "Error response model"
+      },
+      "WeeklyMemoriesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "weekly_memories": {
+            "items": {
+            "items": { "$ref": "`#/components/schemas/WeeklyMemoryImage`" }
+            },
+            "type": "array",
+            "title": "Weekly Memories"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "weekly_memories"
+        ],
+        "title": "WeeklyMemoriesResponse"
+      },
+      "WeeklyMemory": {
+        "type": "object",
+        "required": ["mem_id", "images", "start_date", "end_date"],
+        "properties": {
+          "mem_id": { "type": "string", "title": "Memory ID" },
+          "images": {
+            "type": "array",
+            "items": { "$ref": "`#/components/schemas/WeeklyMemoryImage`" }
+          },
+          "start_date": { "type": "string", "title": "Start Date" },
+          "end_date": { "type": "string", "title": "End Date" }
+        },
+        "title": "WeeklyMemory"
+      },
+      "WeeklyMemoryImage": {
+        "type": "object",
+        "required": ["asset_id", "thumbnail_path"],
+        "properties": {
+          "asset_id": { "type": "string", "title": "Asset ID" },
+          "thumbnail_path": { "type": "string", "title": "Thumbnail Path" }
+        },
+        "title": "WeeklyMemoryImage"
+      },
+      "app__schemas__face_clusters__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "title": "ErrorResponse"
+      },
+      "app__schemas__folders__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "title": "ErrorResponse"
+      },
+      "app__schemas__images__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "error"
+        ],
+        "title": "ErrorResponse"
+      },
+      "app__schemas__user_preferences__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "error",
+          "message"
+        ],
+        "title": "ErrorResponse",
+        "description": "Error response model"
       }
     }
   }

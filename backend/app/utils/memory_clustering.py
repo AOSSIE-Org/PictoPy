@@ -15,11 +15,12 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from collections import defaultdict
 import hashlib
-
+from math import radians, cos, sin, asin, sqrt
 import numpy as np
 from sklearn.cluster import DBSCAN
-
+import uuid
 from app.logging.setup_logging import get_logger
+from app.database.images import db_get_all_images
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -80,7 +81,6 @@ def find_nearest_city(
     Returns:
         City name if within range, None otherwise
     """
-    from math import radians, cos, sin, asin, sqrt
 
     def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         """Calculate distance between two points in km using Haversine formula."""
@@ -102,6 +102,16 @@ def find_nearest_city(
             nearest_city = city_name
 
     return nearest_city
+
+
+# function to count total memories which has location
+# this can also be done in tsx.
+def find_total_location_memories(data: list) -> int:
+    tlm = 0  # total location memories
+    for memory in data:
+        if memory["location_name"] is not None:
+            tlm += 1
+    return tlm
 
 
 class MemoryClustering:
@@ -385,7 +395,7 @@ class MemoryClustering:
                     title = date_obj.strftime("%B %Y")
                 else:
                     title = "Undated Photos"
-                location_name = ""
+                location_name = None
                 center_lat = 0
                 center_lon = 0
 
@@ -944,3 +954,46 @@ class MemoryClustering:
             hash_input = f"lat:{lat_rounded}|lon:{lon_rounded}"
             hash_digest = hashlib.sha256(hash_input.encode()).hexdigest()[:8]
             return f"mem_nodate_{hash_digest}"
+
+
+def generate_clusters_for_weekends() -> List[Dict]:
+    images = db_get_all_images()
+
+    # sort by date
+    images.sort(key=lambda x: x["metadata"]["date_created"], reverse=True)
+
+    weekend_memories = {}
+
+    for img in images:
+        metadata = img.get("metadata")
+        if not metadata:
+            continue
+        date_str = metadata.get("date_created")
+        if not date_str:
+            continue
+        try:
+            dt = datetime.fromisoformat(date_str)
+        except (ValueError, TypeError):
+            continue
+
+        # get year and week number
+        year, week, _ = dt.isocalendar()
+
+        week_key = f"{year}-W{week}"
+
+        if week_key not in weekend_memories:
+            weekend_memories[week_key] = {
+                "mem_id": str(uuid.uuid4()),
+                "images": [],
+                "end_date": date_str.split("T")[0],
+                "start_date": "",
+            }
+        image_info = {
+            "id": img["id"],
+            "path": img["path"],
+            "thumbnailPath": img["thumbnailPath"],
+        }
+        weekend_memories[week_key]["start_date"] = date_str.split("T")[0]
+        weekend_memories[week_key]["images"].append(image_info)
+
+    return list(weekend_memories.values())
