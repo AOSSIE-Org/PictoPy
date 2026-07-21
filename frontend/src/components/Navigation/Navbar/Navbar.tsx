@@ -133,8 +133,9 @@ export function Navbar() {
               />
               {isSearchActive && (
                 <button
+                  type="button"
                   onClick={() => dispatch(clearSearch())}
-                  className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  className="text-muted-foreground hover:text-foreground absolute -top-1.5 -right-1.5 flex h-4 w-4 cursor-pointer items-center justify-center transition-colors"
                   title="Close"
                   aria-label="Close"
                 >
@@ -145,9 +146,9 @@ export function Navbar() {
           )}
 
           {/* Input */}
-          <div className="relative flex-1 mr-2 flex items-center">
+          <div className="relative mr-2 flex flex-1 items-center">
             <Input
-              type="text"
+              type="search"
               placeholder="Add to your search"
               className="w-full border-0 bg-neutral-200 pr-8"
               onFocus={() => setIsExpanded(true)}
@@ -160,8 +161,9 @@ export function Navbar() {
             />
             {searchQuery && (
               <button
+                type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 flex h-4 w-4 -translate-y-1/2 cursor-pointer items-center justify-center transition-colors"
                 title="Clear text"
                 aria-label="Clear text"
               >
