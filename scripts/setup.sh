@@ -41,7 +41,7 @@ elif [ -f "/etc/fedora-release" ] || [ -f "/etc/redhat-release" ]; then
         librsvg2-devel
 elif [ -f "/etc/arch-release" ] || [ -f "/etc/manjaro-release" ] || command -v pacman &> /dev/null; then
     echo -e "\e[33mDetected Arch-based Linux. Installing dependencies...\e[0m"
-    sudo pacman -Sy --needed --noconfirm \
+    sudo pacman -Syu --needed --noconfirm \
         webkit2gtk-4.1 \
         base-devel \
         curl \
