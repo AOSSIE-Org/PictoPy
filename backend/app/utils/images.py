@@ -217,7 +217,7 @@ def image_util_classify_and_face_detect_images(
                 db_insert_image_classes_batch(image_class_pairs)
 
             # Step 3: Detect faces if "person" class is present
-            if classes and 0 in classes and 0 < classes.count(0) < 7:
+            if classes and 0 in classes:
                 result = face_detector.detect_faces(image_id, image_path)
                 if result:
                     total_faces_skipped += result.get("faces_skipped", 0)
