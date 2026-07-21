@@ -311,13 +311,16 @@ def watcher_util_stop_folder_watcher() -> None:
         # Signal the watcher to stop
         stop_event.set()
 
-        # Wait for thread to finish
-        watcher_thread.join(timeout=5.0)
+        # Wait for thread to finish if not called from the thread itself
+        if threading.current_thread() != watcher_thread:
+            watcher_thread.join(timeout=5.0)
 
-        if watcher_thread.is_alive():
-            logger.warning("Warning: Watcher thread did not stop gracefully")
+            if watcher_thread.is_alive():
+                logger.warning("Warning: Watcher thread did not stop gracefully")
+            else:
+                logger.info("Watcher stopped successfully")
         else:
-            logger.info("Watcher stopped successfully")
+            logger.info("Watcher stopped successfully (called from within watcher thread)")
 
     except Exception as e:
         logger.error(f"Error stopping watcher: {e}")
@@ -336,6 +339,17 @@ def watcher_util_restart_folder_watcher() -> bool:
         True if restart was successful, False otherwise
     """
     logger.info("Restarting folder watcher...")
+    
+    if watcher_thread and threading.current_thread() == watcher_thread:
+        # We are inside the watcher thread, so we can't join ourselves.
+        # Launch a background thread to do the restart.
+        def restart_worker():
+            watcher_util_stop_folder_watcher()
+            watcher_util_start_folder_watcher()
+
+        threading.Thread(target=restart_worker, daemon=True).start()
+        return True
+
     watcher_util_stop_folder_watcher()
     return watcher_util_start_folder_watcher()
 
