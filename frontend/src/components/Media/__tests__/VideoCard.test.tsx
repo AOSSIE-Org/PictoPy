@@ -8,10 +8,11 @@ jest.mock('@tauri-apps/api/core', () => ({
 }));
 
 const mockToggleFavourite = jest.fn();
+let mockFavouritePending = false;
 jest.mock('@/hooks/useToggleVideoFav', () => ({
   useToggleVideoFav: () => ({
     toggleFavourite: mockToggleFavourite,
-    toggleFavouritePending: false,
+    toggleFavouritePending: mockFavouritePending,
   }),
 }));
 
@@ -38,6 +39,7 @@ const makeVideo = (overrides: Partial<Video> = {}): Video => ({
 describe('VideoCard', () => {
   beforeEach(() => {
     mockToggleFavourite.mockClear();
+    mockFavouritePending = false;
   });
 
   test('renders converted thumbnail and duration badge', () => {
@@ -72,5 +74,43 @@ describe('VideoCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Favourite' }));
     expect(mockToggleFavourite).toHaveBeenCalledWith('vid-1');
     expect(onClick).not.toHaveBeenCalled();
+  });
+
+  test('is reachable as a button with an accessible name', () => {
+    render(<VideoCard video={makeVideo()} />);
+    const card = screen.getByRole('button', { name: 'Play sample.mp4' });
+    expect(card).toHaveAttribute('tabindex', '0');
+  });
+
+  test.each(['Enter', ' '])('activates the card with the %s key', (key) => {
+    const onClick = jest.fn();
+    render(<VideoCard video={makeVideo()} onClick={onClick} />);
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Play sample.mp4' }), {
+      key,
+    });
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  test('keys aimed at the favourite button do not activate the card', () => {
+    const onClick = jest.fn();
+    render(<VideoCard video={makeVideo()} onClick={onClick} />);
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Favourite' }), {
+      key: 'Enter',
+    });
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  test('favourite button is disabled while a toggle is in flight', () => {
+    mockFavouritePending = true;
+    render(<VideoCard video={makeVideo()} />);
+
+    const favourite = screen.getByRole('button', { name: 'Favourite' });
+    expect(favourite).toBeDisabled();
+    expect(favourite).toHaveAttribute('aria-busy', 'true');
+
+    fireEvent.click(favourite);
+    expect(mockToggleFavourite).not.toHaveBeenCalled();
   });
 });

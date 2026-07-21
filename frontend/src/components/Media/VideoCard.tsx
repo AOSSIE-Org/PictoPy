@@ -2,6 +2,7 @@ import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Film, Heart, Play } from 'lucide-react';
+import type React from 'react';
 import { useCallback } from 'react';
 import { Video } from '@/types/Media';
 import { convertFileSrc } from '@tauri-apps/api/core';
@@ -15,22 +16,38 @@ interface VideoCardProps {
 }
 
 export function VideoCard({ video, className, onClick }: VideoCardProps) {
-  const { toggleFavourite } = useToggleVideoFav();
+  const { toggleFavourite, toggleFavouritePending } = useToggleVideoFav();
   const duration = formatDurationLabel(video.metadata?.duration);
 
   const handleToggleFavourite = useCallback(() => {
-    if (video?.id) {
+    if (video?.id && !toggleFavouritePending) {
       toggleFavourite(video.id);
     }
-  }, [video, toggleFavourite]);
+  }, [video, toggleFavourite, toggleFavouritePending]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      // Ignore keys aimed at the favourite button nested inside the card.
+      if (e.target !== e.currentTarget) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onClick?.();
+      }
+    },
+    [onClick],
+  );
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Play ${video.metadata?.name || 'video'}`}
       className={cn(
-        'group bg-card cursor-pointer overflow-hidden rounded-lg border transition-all hover:shadow-md',
+        'group bg-card focus-visible:ring-primary cursor-pointer overflow-hidden rounded-lg border transition-all hover:shadow-md focus-visible:ring-2 focus-visible:outline-none',
         className,
       )}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
     >
       <div className="relative">
         <AspectRatio ratio={1}>
@@ -55,11 +72,13 @@ export function VideoCard({ video, className, onClick }: VideoCardProps) {
             </div>
           </div>
 
-          {/* Favourite action on hover */}
-          <div className="absolute top-2 right-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+          {/* Favourite action: revealed on hover, or on keyboard focus */}
+          <div className="absolute top-2 right-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-within:opacity-100">
             <Button
               variant="ghost"
               size="icon"
+              disabled={toggleFavouritePending}
+              aria-busy={toggleFavouritePending}
               className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${
                 video.isFavourite
                   ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'

@@ -13,6 +13,7 @@ from PIL import Image
 
 from app.config.settings import THUMBNAIL_IMAGES_PATH
 from app.database.videos import (
+    VideoRecord,
     db_bulk_insert_videos,
     db_get_videos_by_folder_ids,
     db_delete_videos_by_ids,
@@ -40,7 +41,7 @@ def video_util_process_folder_videos(folder_data: List[Tuple[str, int, bool]]) -
         # Ensure thumbnail directory exists
         os.makedirs(THUMBNAIL_IMAGES_PATH, exist_ok=True)
 
-        all_video_records = []
+        all_video_records: List[VideoRecord] = []
         all_folder_ids = []
 
         for folder_path, folder_id, recursive in folder_data:
@@ -88,13 +89,13 @@ def video_util_prepare_video_records(
     video_files: List[str],
     folder_path_to_id: Dict[str, int],
     already_indexed: Optional[Dict[str, Optional[str]]] = None,
-) -> List[Dict]:
+) -> List[VideoRecord]:
     """
     Prepare video records with thumbnails for database insertion.
     A failed thumbnail (undecodable codec) keeps the record with thumbnailPath=None.
     """
     already_indexed = already_indexed or {}
-    video_records = []
+    video_records: List[VideoRecord] = []
 
     for video_path in video_files:
         folder_id = image_util_find_folder_id_for_image(video_path, folder_path_to_id)

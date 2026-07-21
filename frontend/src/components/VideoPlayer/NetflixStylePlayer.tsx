@@ -61,7 +61,14 @@ export default function NetflixStylePlayer({
 
   const resolvedSrc = useMemo(() => convertFileSrc(videoSrc), [videoSrc]);
 
+  // Reset per-source state. The overlay remounts the player per video, but this
+  // keeps the component correct if a caller swaps videoSrc without remounting.
   useEffect(() => {
+    videoRef.current?.pause();
+    setIsPlaying(false);
+    setProgress(0);
+    setCurrentTime(0);
+    setDuration(0);
     setHasError(false);
     setPreviewTime(null);
   }, [resolvedSrc]);
