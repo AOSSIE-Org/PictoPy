@@ -74,6 +74,31 @@ require_cmd "node" "Node.js not found. Install it from https://nodejs.org, or $S
 require_cmd "npm" "npm not found (usually bundled with Node.js). Install Node.js from https://nodejs.org, or $SETUP_HINT"
 require_cmd "cargo" "Rust/Cargo not found (required by 'npm run tauri dev'). Install it from https://rustup.rs, or $SETUP_HINT"
 
+# Creates a venv at `venv_dir` using whatever `python`/`python3` is on PATH.
+# A venv is just an empty container (unlike a .env secrets file, there's no
+# "wrong value" risk), so auto-creating a missing one on first run is safe
+# and matches how poetry/uv/pipenv behave. All output goes to stderr since
+# resolve_venv's stdout is captured via command substitution by its callers.
+create_venv() {
+    local prefix="$1"
+    local venv_dir="$2"
+    local py_cmd="python"
+    if ! command -v python &> /dev/null; then
+        if command -v python3 &> /dev/null; then
+            py_cmd="python3"
+        else
+            echo -e "${RED}[$prefix] 'python' not found. Install Python 3, or $SETUP_HINT${NC}" >&2
+            return 1
+        fi
+    fi
+    echo "[$prefix] Creating virtual environment at $venv_dir..." >&2
+    if ! "$py_cmd" -m venv "$venv_dir" >&2; then
+        echo -e "${RED}[$prefix] Failed to create virtual environment.${NC}" >&2
+        return 1
+    fi
+    return 0
+}
+
 # --- venv resolution helper ---
 # Tries each candidate venv folder name in order and prepends its bin dir
 # (bin/ on Unix, Scripts/ on Windows) to PATH directly. Deliberately does
@@ -83,9 +108,11 @@ require_cmd "cargo" "Rust/Cargo not found (required by 'npm run tauri dev'). Ins
 # folder is ever renamed or moved after creation, which happens easily
 # since ".env"/".venv" naming is inconsistent across tooling. Resolving
 # the bin dir fresh from its current location every run sidesteps that.
+# Auto-creates one under the first candidate name if none of them exist yet.
 resolve_venv() {
-    local base_dir="$1"
-    shift
+    local prefix="$1"
+    local base_dir="$2"
+    shift 2
     local candidates=("$@")
     local bin_subdir="bin"
     [[ "$OS_TYPE" == "windows" ]] && bin_subdir="Scripts"
@@ -98,9 +125,10 @@ resolve_venv() {
         fi
     done
 
-    echo -e "${RED}Could not find a venv in $base_dir (looked for: ${candidates[*]})${NC}" >&2
-    echo -e "${YELLOW}${SETUP_HINT}${NC}" >&2
-    return 1
+    local venv_dir="$base_dir/${candidates[0]}"
+    create_venv "$prefix" "$venv_dir" || return 1
+    echo "$venv_dir/$bin_subdir"
+    return 0
 }
 
 # pip/uvicorn/fastapi console-script launchers generated inside a venv have
@@ -141,7 +169,7 @@ start_backend() {
     (
         echo "[BACKEND] Starting... ${BACKEND_DIR}"
         cd "$BACKEND_DIR"
-        bin_dir=$(resolve_venv "$BACKEND_DIR" ".env" "venv") || exit 1
+        bin_dir=$(resolve_venv "BACKEND" "$BACKEND_DIR" ".env" "venv") || exit 1
         export PATH="$bin_dir:$PATH"
         pip_install "BACKEND" || exit 1
         if [[ "$MODE" == "prod" ]]; then
@@ -161,7 +189,7 @@ start_backend() {
 start_sync() {
     (
         cd "$SYNC_DIR"
-        bin_dir=$(resolve_venv "$SYNC_DIR" ".sync-env" "venv") || exit 1
+        bin_dir=$(resolve_venv "SYNC" "$SYNC_DIR" ".sync-env" "venv") || exit 1
         export PATH="$bin_dir:$PATH"
         pip_install "SYNC" || exit 1
         echo "[SYNC] Starting sync-microservice on port 52124..."

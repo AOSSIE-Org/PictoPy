@@ -94,12 +94,31 @@ requireCmd('node', `Node.js not found. Install it from https://nodejs.org, or ${
 requireCmd('npm', `npm not found (usually bundled with Node.js). Install Node.js from https://nodejs.org, or ${SETUP_HINT}`);
 requireCmd('cargo', `Rust/Cargo not found (required by 'npm run tauri dev'). Install it from https://rustup.rs, or ${SETUP_HINT}`);
 
+// Creates a venv at `venvDir` using whatever `python`/`python3` is on PATH.
+// A venv is just an empty container (unlike a .env secrets file, there's no
+// "wrong value" risk), so auto-creating a missing one on first run is safe
+// and matches how poetry/uv/pipenv behave.
+function createVenv(prefix, venvDir) {
+  const pythonCmd = commandExists('python') ? 'python' : commandExists('python3') ? 'python3' : null;
+  if (!pythonCmd) {
+    console.error(`${RED}[${prefix}] 'python' not found. Install Python 3, or ${SETUP_HINT}${NC}`);
+    process.exit(1);
+  }
+  console.log(`[${prefix}] Creating virtual environment at ${venvDir}...`);
+  const result = spawnSync(pythonCmd, ['-m', 'venv', venvDir], { stdio: 'inherit' });
+  if (result.status !== 0) {
+    console.error(`${RED}[${prefix}] Failed to create virtual environment.${NC}`);
+    process.exit(1);
+  }
+}
+
 // --- venv resolution helper ---
 // Tries each candidate venv folder name in order, using the correct
 // bin dir per OS (bin/ on Unix, Scripts/ on Windows). Instead of "sourcing"
 // activate (there's no such thing for a child process spawned from Node),
-// the resolved bin dir is prepended to PATH for that child.
-function resolveVenv(baseDir, candidates) {
+// the resolved bin dir is prepended to PATH for that child. Auto-creates
+// one under the first candidate name if none of them exist yet.
+function resolveVenv(prefix, baseDir, candidates) {
   for (const name of candidates) {
     const venvDir = path.join(baseDir, name);
     const binDir = path.join(venvDir, IS_WINDOWS ? 'Scripts' : 'bin');
@@ -107,9 +126,10 @@ function resolveVenv(baseDir, candidates) {
       return { venvDir, binDir };
     }
   }
-  console.error(`${RED}Could not find a venv in ${baseDir} (looked for: ${candidates.join(', ')})${NC}`);
-  console.error(`${YELLOW}${SETUP_HINT}${NC}`);
-  return null;
+  const venvDir = path.join(baseDir, candidates[0]);
+  createVenv(prefix, venvDir);
+  const binDir = path.join(venvDir, IS_WINDOWS ? 'Scripts' : 'bin');
+  return { venvDir, binDir };
 }
 
 // --- process orchestration ---
@@ -240,7 +260,7 @@ function pipInstall(prefix, serviceDir, venv, python) {
 
 function startBackend() {
   console.log(`[BACKEND] Starting... ${BACKEND_DIR}`);
-  const venv = resolveVenv(BACKEND_DIR, ['.env', 'venv']);
+  const venv = resolveVenv('BACKEND', BACKEND_DIR, ['.env', 'venv']);
   if (!venv) process.exit(1);
   const python = venvPython(venv);
   pipInstall('BACKEND', BACKEND_DIR, venv, python);
@@ -267,7 +287,7 @@ function startBackend() {
 }
 
 function startSync() {
-  const venv = resolveVenv(SYNC_DIR, ['.sync-env', 'venv']);
+  const venv = resolveVenv('SYNC', SYNC_DIR, ['.sync-env', 'venv']);
   if (!venv) process.exit(1);
   const python = venvPython(venv);
   pipInstall('SYNC', SYNC_DIR, venv, python);
