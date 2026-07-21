@@ -44,13 +44,14 @@ if ($args[0] -eq "--test") {
         Start-Sleep -Seconds 3
     }
 } else {
-    # Get the WORKERS environment variable or use a default value
-    $workers = if ($env:WORKERS) { $env:WORKERS } else { "1" }
-    Write-Host "WORKERS: $workers"
+    # Model-download and global-reclustering job tracking is in-memory and
+    # per-worker, so the server must run with a single worker; a job started in
+    # one worker would be invisible to others (missed status polls, duplicate
+    # jobs). Do not raise the worker count above 1.
 
     # Start the Hypercorn server
     $process = Start-Process -FilePath "hypercorn" `
-                             -ArgumentList "main:app --workers $workers --bind 0.0.0.0:8000" `
+                             -ArgumentList "main:app --workers 1 --bind 0.0.0.0:8000" `
                              -PassThru
 
     # Wait for process termination or Ctrl+C

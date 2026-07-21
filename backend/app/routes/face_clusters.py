@@ -1,7 +1,10 @@
+import asyncio
 import logging
 from binascii import Error as Base64Error
 import base64
-from typing import Annotated
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Annotated, Dict, Optional
 import uuid
 import os
 from fastapi import APIRouter, HTTPException, Query, status
@@ -20,8 +23,10 @@ from app.schemas.face_clusters import (
     ErrorResponse,
     GetClustersResponse,
     GetClustersData,
-    GlobalReclusterResponse,
-    GlobalReclusterData,
+    GlobalReclusterStartData,
+    GlobalReclusterStartResponse,
+    GlobalReclusterStatusData,
+    GlobalReclusterStatusResponse,
     ClusterMetadata,
     GetClusterImagesResponse,
     GetClusterImagesData,
@@ -36,6 +41,80 @@ from app.utils.faceSearch import perform_face_search
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+# Reclustering scans every face embedding and can run past any HTTP timeout
+# on large libraries, so it runs as a background task the client polls.
+@dataclass
+class ReclusterTask:
+    status: str = "running"  # running | complete | error
+    clusters_created: Optional[int] = None
+    faces_skipped: Optional[int] = None
+    message: Optional[str] = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    finished_at: Optional[datetime] = None
+    task: Optional[asyncio.Task] = None
+
+
+recluster_tasks: Dict[str, ReclusterTask] = {}
+
+# Holds the in-flight job's task_id (None when idle). A full recluster rebuilds
+# every cluster, so a second concurrent run would race on the same tables.
+_active_recluster_task_id: Optional[str] = None
+
+# Minutes a finished job's result stays available for polling, counted from
+# completion (not start) so a long job isn't reaped right after it finishes.
+RECLUSTER_TASK_TTL_MINUTES = 15
+
+
+async def _run_global_recluster(task_id: str):
+    global _active_recluster_task_id
+    entry = recluster_tasks[task_id]
+    try:
+        result, total_faces_skipped = await asyncio.to_thread(
+            cluster_util_face_clusters_sync, force_full_reclustering=True
+        )
+
+        entry.status = "complete"
+        entry.clusters_created = result or 0
+        entry.faces_skipped = total_faces_skipped
+        entry.message = (
+            "No faces found to cluster"
+            if not result
+            else "Global reclustering completed successfully."
+        )
+        logger.info("Global reclustering completed successfully (task_id=%s)", task_id)
+    except Exception as e:
+        logger.error(f"Global reclustering failed: {str(e)}")
+        entry.status = "error"
+        entry.message = f"Global reclustering failed: {str(e)}"
+    finally:
+        # Stamp completion time (cleanup ages results from this) and release
+        # the concurrency guard; the result itself stays for the client to poll.
+        entry.finished_at = datetime.now(timezone.utc)
+        if _active_recluster_task_id == task_id:
+            _active_recluster_task_id = None
+
+
+async def _cleanup_stale_recluster_tasks():
+    """Periodically drop finished reclustering results once they age out.
+
+    Running tasks are left untouched (a legitimate recluster can run for a
+    long time, and the concurrency guard already bounds them to one).
+    """
+    while True:
+        await asyncio.sleep(300)  # run every 5 minutes
+        now = datetime.now(timezone.utc)
+        stale = [
+            tid
+            for tid, entry in recluster_tasks.items()
+            if entry.status != "running"
+            and entry.finished_at is not None
+            and (now - entry.finished_at).total_seconds()
+            > RECLUSTER_TASK_TTL_MINUTES * 60
+        ]
+        for tid in stale:
+            recluster_tasks.pop(tid, None)
 
 
 @router.put(
@@ -308,50 +387,93 @@ def face_tagging(
 
 @router.post(
     "/global-recluster",
-    response_model=GlobalReclusterResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=GlobalReclusterStartResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
-def trigger_global_reclustering():
+async def trigger_global_reclustering():
     """
-    Manually trigger global face reclustering.
+    Start a global face reclustering job in the background.
     This forces full reclustering regardless of the 24-hour rule.
+
+    Returns immediately with a task_id; poll
+    GET /face-clusters/global-recluster/{task_id} for the result, since
+    reclustering runs over every face embedding and can take a long time
+    on large libraries.
+
+    If a reclustering job is already running, its task_id is returned instead
+    of starting a second (concurrent runs would race on the cluster tables).
     """
-    try:
-        logger.info("Starting manual global face reclustering...")
+    global _active_recluster_task_id
 
-        result, total_faces_skipped = cluster_util_face_clusters_sync(
-            force_full_reclustering=True
+    if _active_recluster_task_id is not None:
+        logger.info(
+            "Global reclustering already in progress (task_id=%s); reusing it",
+            _active_recluster_task_id,
         )
-
-        if result == 0:
-            return GlobalReclusterResponse(
-                success=True,
-                message="No faces found to cluster",
-                data=GlobalReclusterData(
-                    clusters_created=0, faces_skipped=total_faces_skipped
-                ),
-            )
-
-        logger.info("Global reclustering completed successfully")
-
-        return GlobalReclusterResponse(
+        return GlobalReclusterStartResponse(
             success=True,
-            message="Global reclustering completed successfully.",
-            data=GlobalReclusterData(
-                clusters_created=result, faces_skipped=total_faces_skipped
-            ),
+            message="Global reclustering already in progress.",
+            data=GlobalReclusterStartData(task_id=_active_recluster_task_id),
         )
 
-    except Exception as e:
-        logger.error(f"Global reclustering failed: {str(e)}")
+    task_id = str(uuid.uuid4())
+    entry = ReclusterTask()
+    recluster_tasks[task_id] = entry
+    _active_recluster_task_id = task_id
+    entry.task = asyncio.create_task(_run_global_recluster(task_id))
+
+    logger.info("Started manual global face reclustering (task_id=%s)", task_id)
+
+    return GlobalReclusterStartResponse(
+        success=True,
+        message="Global reclustering started.",
+        data=GlobalReclusterStartData(task_id=task_id),
+    )
+
+
+@router.get(
+    "/global-recluster/{task_id}",
+    response_model=GlobalReclusterStatusResponse,
+    responses={code: {"model": ErrorResponse} for code in [404]},
+)
+async def get_global_recluster_status(task_id: str):
+    """Poll the status of a previously started global reclustering job."""
+    entry = recluster_tasks.get(task_id)
+    if entry is None:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ErrorResponse(
                 success=False,
-                error="Internal server error",
-                message=f"Global reclustering failed: {str(e)}",
+                error="Task Not Found",
+                message=f"Recluster task '{task_id}' not found or expired.",
             ).model_dump(),
         )
+
+    if entry.status == "running":
+        return GlobalReclusterStatusResponse(
+            success=True,
+            data=GlobalReclusterStatusData(status="running"),
+        )
+
+    # Leave the entry in place so repeated polls (multiple tabs, retries) see
+    # the same result; _cleanup_stale_recluster_tasks reaps it once stale.
+    if entry.status == "error":
+        return GlobalReclusterStatusResponse(
+            success=False,
+            message=entry.message,
+            data=GlobalReclusterStatusData(status="error"),
+        )
+
+    return GlobalReclusterStatusResponse(
+        success=True,
+        message=entry.message,
+        data=GlobalReclusterStatusData(
+            status="complete",
+            clusters_created=entry.clusters_created,
+            faces_skipped=entry.faces_skipped,
+        ),
+    )
 
 
 @router.post(
