@@ -52,9 +52,7 @@ elif [ -f "/etc/arch-release" ] || [ -f "/etc/manjaro-release" ] || command -v p
         libayatana-appindicator \
         librsvg \
         nodejs \
-        npm \
-        rustup \
-        pyenv
+        npm
 else
     echo -e "\e[31mUnsupported OS: $(uname). Please install system dependencies manually.\e[0m"
     exit 1
