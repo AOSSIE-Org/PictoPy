@@ -6,6 +6,11 @@ export const imagesEndpoints = {
     `/images/semantic-search?query=${encodeURIComponent(query)}`,
 };
 
+export const videosEndpoints = {
+  getAllVideos: '/videos/',
+  setFavourite: '/videos/toggle-favourite',
+};
+
 export const faceClustersEndpoints = {
   getAllClusters: '/face-clusters/',
   searchForFaces: '/face-clusters/face-search?input_type=path',
