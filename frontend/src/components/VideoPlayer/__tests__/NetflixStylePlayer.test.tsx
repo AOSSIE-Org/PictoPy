@@ -458,6 +458,169 @@ describe('NetflixStylePlayer', () => {
     }
   });
 
+  test('shows an error message when the video fails to decode', () => {
+    render(
+      <NetflixStylePlayer videoSrc="video.mp4" title="Test" description="" />,
+    );
+
+    expect(
+      screen.queryByText('This video cannot be played'),
+    ).not.toBeInTheDocument();
+
+    const video = document.querySelector('video') as HTMLVideoElement;
+    act(() => {
+      fireEvent(video, new Event('error'));
+    });
+
+    expect(screen.getByText('This video cannot be played')).toBeInTheDocument();
+  });
+
+  test('does not autoplay by default', () => {
+    jest.useFakeTimers();
+    try {
+      render(
+        <NetflixStylePlayer videoSrc="video.mp4" title="Test" description="" />,
+      );
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(window.HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+      expect(screen.getByTestId('icon-play')).toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('autoplays after a short delay when autoPlay is set', () => {
+    jest.useFakeTimers();
+    try {
+      render(
+        <NetflixStylePlayer
+          videoSrc="video.mp4"
+          title="Test"
+          description=""
+          autoPlay
+        />,
+      );
+
+      // Nothing happens immediately — the delay hasn't elapsed yet.
+      expect(window.HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+      expect(screen.getByTestId('icon-play')).toBeInTheDocument();
+
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+
+      expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('icon-pause')).toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  describe('seek bar hover preview', () => {
+    /** Renders the player with a known duration and a measurable seek bar. */
+    const setupSeekBar = (duration = 100, width = 400) => {
+      render(
+        <NetflixStylePlayer videoSrc="video.mp4" title="Test" description="" />,
+      );
+      const video = document.querySelector('video') as HTMLVideoElement;
+      Object.defineProperty(video, 'duration', {
+        value: duration,
+        writable: true,
+        configurable: true,
+      });
+
+      const seekBar = screen.getByRole('slider', { name: 'Seek' });
+      seekBar.getBoundingClientRect = jest.fn(
+        () => ({ left: 0, width, top: 0, height: 1 }) as DOMRect,
+      );
+      // The padded wrapper carries the pointer handlers.
+      return { hitArea: seekBar.parentElement as HTMLElement };
+    };
+
+    test('is not mounted until the user first hovers the bar', () => {
+      const { hitArea } = setupSeekBar();
+      expect(screen.queryByTestId('seek-preview')).not.toBeInTheDocument();
+
+      act(() => {
+        fireEvent.mouseEnter(hitArea, { clientX: 200 });
+      });
+      expect(screen.getByTestId('seek-preview')).toBeInTheDocument();
+    });
+
+    test('shows the timestamp for the hovered position', () => {
+      const { hitArea } = setupSeekBar(100, 400);
+
+      act(() => {
+        fireEvent.mouseEnter(hitArea, { clientX: 200 });
+      });
+      // Halfway across a 100s video
+      expect(screen.getByTestId('seek-preview')).toHaveTextContent('0:50');
+
+      act(() => {
+        fireEvent.mouseMove(hitArea, { clientX: 100 });
+      });
+      expect(screen.getByTestId('seek-preview')).toHaveTextContent('0:25');
+    });
+
+    test('seeks the hidden preview video to the hovered time', () => {
+      const { hitArea } = setupSeekBar(100, 400);
+
+      act(() => {
+        fireEvent.mouseEnter(hitArea, { clientX: 200 });
+      });
+
+      const preview = document.querySelector(
+        '[data-testid="seek-preview"] video',
+      ) as HTMLVideoElement;
+      expect(preview).toBeInTheDocument();
+
+      // jsdom doesn't implement media seeking, so observe currentTime directly.
+      const previewState = mockVideoProperties(preview);
+
+      act(() => {
+        fireEvent.mouseMove(hitArea, { clientX: 100 });
+      });
+      expect(previewState.currentTime).toBeCloseTo(25);
+
+      act(() => {
+        fireEvent.mouseMove(hitArea, { clientX: 300 });
+      });
+      expect(previewState.currentTime).toBeCloseTo(75);
+    });
+
+    test('keeps the preview inside the bar at the edges', () => {
+      const { hitArea } = setupSeekBar(100, 400);
+
+      act(() => {
+        fireEvent.mouseEnter(hitArea, { clientX: 0 });
+      });
+      // Clamped to half the preview width rather than sitting at 0
+      expect(screen.getByTestId('seek-preview')).toHaveStyle({ left: '80px' });
+
+      act(() => {
+        fireEvent.mouseMove(hitArea, { clientX: 400 });
+      });
+      expect(screen.getByTestId('seek-preview')).toHaveStyle({ left: '320px' });
+    });
+
+    test('hides the preview when the pointer leaves the bar', () => {
+      const { hitArea } = setupSeekBar();
+
+      act(() => {
+        fireEvent.mouseEnter(hitArea, { clientX: 200 });
+      });
+      expect(screen.getByTestId('seek-preview')).toHaveClass('opacity-100');
+
+      act(() => {
+        fireEvent.mouseLeave(hitArea);
+      });
+      // Stays mounted (so later hovers are instant) but is hidden
+      expect(screen.getByTestId('seek-preview')).toHaveClass('opacity-0');
+    });
+  });
+
   describe('Tauri CSP Policy Configuration', () => {
     test('tauri.conf.json whitelists asset: and http://asset.localhost in media-src CSP', () => {
       const configPath = path.resolve(

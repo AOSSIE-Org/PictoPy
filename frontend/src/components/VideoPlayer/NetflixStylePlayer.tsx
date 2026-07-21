@@ -17,14 +17,25 @@ interface NetflixStylePlayerProps {
   videoSrc: string;
   title: string;
   description: string;
+  autoPlay?: boolean;
+  onEnded?: () => void;
 }
 
 const CONTROLS_HIDE_DELAY_MS = 3000;
+// Small delay before autoplay so the open/navigation transition settles first,
+// mirroring how streaming apps ease into playback rather than starting instantly.
+const AUTO_PLAY_DELAY_MS = 500;
+// Width of the seek-bar hover preview, used to keep it inside the bar's bounds.
+const SEEK_PREVIEW_WIDTH_PX = 160;
+// Don't re-seek the preview for sub-threshold cursor moves.
+const SEEK_PREVIEW_STEP_S = 0.2;
 
 export default function NetflixStylePlayer({
   videoSrc,
   title,
   description,
+  autoPlay = false,
+  onEnded,
 }: NetflixStylePlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -35,11 +46,45 @@ export default function NetflixStylePlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isFocusWithin, setIsFocusWithin] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [previewTime, setPreviewTime] = useState<number | null>(null);
+  const [previewLeft, setPreviewLeft] = useState(0);
+  // Mounted lazily on first scrub so users who never hover pay no decode cost,
+  // then kept mounted so subsequent hovers are instant.
+  const [isPreviewMounted, setIsPreviewMounted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
+  const seekBarRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hideControlsTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const resolvedSrc = useMemo(() => convertFileSrc(videoSrc), [videoSrc]);
+
+  useEffect(() => {
+    setHasError(false);
+    setPreviewTime(null);
+  }, [resolvedSrc]);
+
+  // Seek the preview after render so it also works on the very first hover,
+  // when the element has only just been mounted and the ref isn't set yet.
+  useEffect(() => {
+    const preview = previewVideoRef.current;
+    if (previewTime === null || !preview) return;
+    if (Math.abs(preview.currentTime - previewTime) > SEEK_PREVIEW_STEP_S) {
+      preview.currentTime = previewTime;
+    }
+  }, [previewTime, isPreviewMounted]);
+
+  // Autoplay after a short delay. Opening/navigating is a user gesture, so
+  // playback is normally allowed; if the browser blocks it, play() rejects and
+  // the video simply stays paused with controls visible.
+  useEffect(() => {
+    if (!autoPlay) return;
+    const timer = setTimeout(() => {
+      videoRef.current?.play().catch(() => {});
+    }, AUTO_PLAY_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [autoPlay, resolvedSrc]);
 
   // Always visible while paused; while playing, visible on hover/touch/focus only.
   const controlsVisible = !isPlaying || showControls || isFocusWithin;
@@ -227,6 +272,34 @@ export default function NetflixStylePlayer({
     }
   };
 
+  /** Maps the cursor position over the seek bar to a timestamp and seeks the
+   *  hidden preview video to that frame. */
+  const handleSeekHover = (e: React.MouseEvent<HTMLDivElement>) => {
+    const bar = seekBarRef.current;
+    const video = videoRef.current;
+    if (!bar || !video) return;
+
+    const maxTime = Number.isFinite(video.duration) ? video.duration : 0;
+    if (maxTime <= 0) return;
+
+    const { left, width } = bar.getBoundingClientRect();
+    if (width <= 0) return;
+
+    const ratio = Math.min(Math.max((e.clientX - left) / width, 0), 1);
+    const time = ratio * maxTime;
+
+    // Keep the preview inside the bar instead of spilling off either end.
+    const half = SEEK_PREVIEW_WIDTH_PX / 2;
+    const clampMax = Math.max(half, width - half);
+    setPreviewLeft(Math.min(Math.max(ratio * width, half), clampMax));
+    setPreviewTime(time);
+  };
+
+  const handleSeekEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+    setIsPreviewMounted(true);
+    handleSeekHover(e);
+  };
+
   const handleSeekBarKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const video = videoRef.current;
     if (!video) return;
@@ -289,9 +362,24 @@ export default function NetflixStylePlayer({
           onDurationChange={handleDurationChange}
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
-          onEnded={() => setIsPlaying(false)}
+          onEnded={() => {
+            setIsPlaying(false);
+            onEnded?.();
+          }}
+          onError={() => setHasError(true)}
           preload="auto"
         />
+        {hasError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/90 text-center">
+            <p className="text-lg font-semibold text-white">
+              This video cannot be played
+            </p>
+            <p className="max-w-md text-sm text-gray-400">
+              The file may use a codec that is not supported by the built-in
+              player.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* pointer-events-none so it never steals play/pause clicks */}
@@ -320,22 +408,58 @@ export default function NetflixStylePlayer({
             : 'pointer-events-none opacity-0'
         }`}
       >
-        <div
-          role="slider"
-          tabIndex={0}
-          aria-label="Seek"
-          aria-valuemin={0}
-          aria-valuemax={Number.isFinite(duration) ? duration : 0}
-          aria-valuenow={currentTime}
-          aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
-          className="h-1 w-full cursor-pointer bg-gray-600 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-hidden"
-          onClick={handleProgressBarClick}
-          onKeyDown={handleSeekBarKeyDown}
-        >
+        <div className="relative">
+          {/* Hover preview: a second, muted video seeked to the hovered frame */}
+          {isPreviewMounted && (
+            <div
+              className={`pointer-events-none absolute bottom-3 z-10 -translate-x-1/2 transition-opacity duration-150 ${
+                previewTime !== null ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{ left: `${previewLeft}px` }}
+              data-testid="seek-preview"
+            >
+              <video
+                ref={previewVideoRef}
+                src={resolvedSrc}
+                muted
+                playsInline
+                preload="metadata"
+                tabIndex={-1}
+                aria-hidden="true"
+                className="h-24 w-40 rounded-md border border-white/20 bg-black object-contain shadow-lg"
+              />
+              <div className="mt-1 text-center text-xs font-medium text-white">
+                {formatTime(previewTime ?? 0)}
+              </div>
+            </div>
+          )}
+
+          {/* py-2/-my-2 widens the pointer target without moving the 1px bar */}
           <div
-            className="h-full bg-red-600"
-            style={{ width: `${progress}%` }}
-          />
+            className="-my-2 cursor-pointer py-2"
+            onClick={handleProgressBarClick}
+            onMouseEnter={handleSeekEnter}
+            onMouseMove={handleSeekHover}
+            onMouseLeave={() => setPreviewTime(null)}
+          >
+            <div
+              ref={seekBarRef}
+              role="slider"
+              tabIndex={0}
+              aria-label="Seek"
+              aria-valuemin={0}
+              aria-valuemax={Number.isFinite(duration) ? duration : 0}
+              aria-valuenow={currentTime}
+              aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
+              className="h-1 w-full bg-gray-600 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-hidden"
+              onKeyDown={handleSeekBarKeyDown}
+            >
+              <div
+                className="h-full bg-red-600"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
