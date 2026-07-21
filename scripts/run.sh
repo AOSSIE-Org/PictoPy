@@ -74,48 +74,51 @@ require_cmd "node" "Node.js not found. Install it from https://nodejs.org, or $S
 require_cmd "npm" "npm not found (usually bundled with Node.js). Install Node.js from https://nodejs.org, or $SETUP_HINT"
 require_cmd "cargo" "Rust/Cargo not found (required by 'npm run tauri dev'). Install it from https://rustup.rs, or $SETUP_HINT"
 
-# --- venv activation helper ---
-# Tries each candidate venv folder name in order, using the correct
-# activate path per OS (bin/activate on Unix, Scripts/activate on Windows).
-activate_venv() {
+# --- venv resolution helper ---
+# Tries each candidate venv folder name in order and prepends its bin dir
+# (bin/ on Unix, Scripts/ on Windows) to PATH directly. Deliberately does
+# NOT `source <venv>/activate`: that script bakes in an absolute path at
+# creation time (see its VIRTUAL_ENV= line and pyvenv.cfg), and silently
+# breaks -- falling through to system Python with no error -- if the venv
+# folder is ever renamed or moved after creation, which happens easily
+# since ".env"/".venv" naming is inconsistent across tooling. Resolving
+# the bin dir fresh from its current location every run sidesteps that.
+resolve_venv() {
     local base_dir="$1"
     shift
     local candidates=("$@")
+    local bin_subdir="bin"
+    [[ "$OS_TYPE" == "windows" ]] && bin_subdir="Scripts"
 
     for name in "${candidates[@]}"; do
         local venv_dir="$base_dir/$name"
-        if [[ "$OS_TYPE" == "windows" ]]; then
-            if [[ -f "$venv_dir/Scripts/activate" ]]; then
-                source "$venv_dir/Scripts/activate"
-                return 0
-            fi
-        else
-            if [[ -f "$venv_dir/bin/activate" ]]; then
-                source "$venv_dir/bin/activate"
-                return 0
-            fi
+        if [[ -f "$venv_dir/$bin_subdir/activate" ]]; then
+            echo "$venv_dir/$bin_subdir"
+            return 0
         fi
     done
 
-    echo -e "${RED}Could not find a venv in $base_dir (looked for: ${candidates[*]})${NC}"
-    echo -e "${YELLOW}${SETUP_HINT}${NC}"
+    echo -e "${RED}Could not find a venv in $base_dir (looked for: ${candidates[*]})${NC}" >&2
+    echo -e "${YELLOW}${SETUP_HINT}${NC}" >&2
     return 1
 }
 
-# Verifies a command exists inside the *currently activated* venv, with
-# guidance to reinstall dependencies rather than a bare "command not found".
-require_venv_cmd() {
-    local cmd="$1"
-    local venv_dir="$2"
-    if ! command -v "$cmd" &> /dev/null; then
-        echo -e "${RED}'$cmd' not found in venv at $venv_dir.${NC}"
-        echo -e "${YELLOW}The venv exists but looks incomplete. Try:${NC}"
-        if [[ "$OS_TYPE" == "windows" ]]; then
-            echo -e "${YELLOW}  source \"$venv_dir/Scripts/activate\" && pip install -r requirements.txt${NC}"
-        else
-            echo -e "${YELLOW}  source \"$venv_dir/bin/activate\" && pip install -r requirements.txt${NC}"
-        fi
-        echo -e "${YELLOW}...or rerun: $SETUP_HINT${NC}"
+# pip/uvicorn/fastapi console-script launchers generated inside a venv have
+# proven unreliable on some platforms (see scripts/run.js for the Windows
+# case that motivated this). Invoking everything as `python -m <module>`
+# sidesteps those launcher stubs entirely.
+export PYTHONUNBUFFERED=1
+export PYTHONUTF8=1
+
+# Installs a service's Python dependencies before starting it, matching
+# `source <venv>/activate && pip install -r requirements.txt` from the
+# project's README. Blocking by design: the server must not start against
+# a venv with missing/outdated packages.
+pip_install() {
+    local prefix="$1"
+    echo "[$prefix] Installing dependencies from requirements.txt..."
+    if ! python -m pip install -r requirements.txt; then
+        echo -e "${RED}[$prefix] pip install -r requirements.txt failed.${NC}"
         return 1
     fi
     return 0
@@ -138,14 +141,18 @@ start_backend() {
     (
         echo "[BACKEND] Starting... ${BACKEND_DIR}"
         cd "$BACKEND_DIR"
-        activate_venv "$BACKEND_DIR" ".env" "venv" || exit 1
-        require_venv_cmd "uvicorn" "$BACKEND_DIR/.env" || exit 1
+        bin_dir=$(resolve_venv "$BACKEND_DIR" ".env" "venv") || exit 1
+        export PATH="$bin_dir:$PATH"
+        pip_install "BACKEND" || exit 1
         if [[ "$MODE" == "prod" ]]; then
             echo "[BACKEND] Starting in production mode on port 52123..."
-            uvicorn main:app --host 0.0.0.0 --port 52123 --workers "${WORKERS:-1}"
+            python -m uvicorn main:app --host 0.0.0.0 --port 52123 --workers "${WORKERS:-1}"
         else
+            # Backend pins fastapi-cli==0.0.3, which predates
+            # `fastapi.__main__` (no `python -m fastapi` support), unlike
+            # sync-microservice's newer fastapi-cli. Use uvicorn directly.
             echo "[BACKEND] Starting in dev mode on port 52123..."
-            uvicorn main:app --host 0.0.0.0 --port 52123 --reload
+            python -m uvicorn main:app --host 0.0.0.0 --port 52123 --reload
         fi
     ) 2>&1 | sed -u 's/^/[BACKEND] /' &
     PIDS+=($!)
@@ -154,14 +161,14 @@ start_backend() {
 start_sync() {
     (
         cd "$SYNC_DIR"
-        activate_venv "$SYNC_DIR" ".sync-env" "venv" || exit 1
+        bin_dir=$(resolve_venv "$SYNC_DIR" ".sync-env" "venv") || exit 1
+        export PATH="$bin_dir:$PATH"
+        pip_install "SYNC" || exit 1
         echo "[SYNC] Starting sync-microservice on port 52124..."
         if [[ "$MODE" == "prod" ]]; then
-            require_venv_cmd "uvicorn" "$SYNC_DIR/.sync-env" || exit 1
-            uvicorn main:app --host 0.0.0.0 --port 52124
+            python -m uvicorn main:app --host 0.0.0.0 --port 52124
         else
-            require_venv_cmd "fastapi" "$SYNC_DIR/.sync-env" || exit 1
-            fastapi dev --port 52124
+            python -m fastapi dev --port 52124
         fi
     ) 2>&1 | sed -u 's/^/[SYNC] /' &
     PIDS+=($!)

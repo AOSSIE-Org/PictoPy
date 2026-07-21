@@ -112,33 +112,6 @@ function resolveVenv(baseDir, candidates) {
   return null;
 }
 
-// Verifies a command exists inside the resolved venv's bin dir, with
-// guidance to reinstall dependencies rather than a bare "command not found".
-function requireVenvCmd(binDir, venvDir, cmd) {
-  const resolved = IS_WINDOWS
-    ? [`${cmd}.exe`, `${cmd}.cmd`].map((f) => path.join(binDir, f)).find((p) => fs.existsSync(p))
-    : (() => {
-        const p = path.join(binDir, cmd);
-        try {
-          fs.accessSync(p, fs.constants.X_OK);
-          return p;
-        } catch {
-          return null;
-        }
-      })();
-
-  if (!resolved) {
-    console.error(`${RED}'${cmd}' not found in venv at ${venvDir}.${NC}`);
-    console.error(`${YELLOW}The venv exists but looks incomplete. Try:${NC}`);
-    const activateHint = IS_WINDOWS
-      ? `${venvDir}\\Scripts\\activate && pip install -r requirements.txt`
-      : `source "${venvDir}/bin/activate" && pip install -r requirements.txt`;
-    console.error(`${YELLOW}  ${activateHint}${NC}`);
-    console.error(`${YELLOW}...or rerun: ${SETUP_HINT}${NC}`);
-  }
-  return resolved;
-}
-
 // --- process orchestration ---
 const children = [];
 let aliveCount = 0;
@@ -219,50 +192,96 @@ process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);
 
 function venvEnv(binDir) {
-  return { ...process.env, PATH: `${binDir}${path.delimiter}${process.env.PATH || process.env.Path || ''}` };
+  return {
+    ...process.env,
+    PATH: `${binDir}${path.delimiter}${process.env.PATH || process.env.Path || ''}`,
+    // Node pipes child stdio, so Python sees a non-tty and fully buffers
+    // stdout instead of line-buffering it. Force unbuffered output so
+    // uvicorn/fastapi logs show up live instead of only on exit.
+    PYTHONUNBUFFERED: '1',
+    // Without a real console attached, rich (used by `fastapi dev`'s banner)
+    // falls back to the legacy Windows console writer, which encodes with
+    // cp1252 and crashes on the emoji in its own startup banner. Forcing
+    // UTF-8 mode avoids that.
+    PYTHONUTF8: '1',
+  };
+}
+
+// pip/uvicorn/fastapi console-script .exe launchers generated inside a venv
+// have turned out to be unreliable on this Windows setup (some fail
+// instantly with no output, e.g. "Fatal error in launcher: Unable to find
+// an appended archive"). Invoking everything as `python -m <module>`
+// sidesteps those launcher stubs entirely and has proven reliable.
+function venvPython(venv) {
+  const python = path.join(venv.binDir, IS_WINDOWS ? 'python.exe' : 'python');
+  if (!fs.existsSync(python)) {
+    console.error(`${RED}'python' not found in venv at ${venv.venvDir}.${NC}`);
+    process.exit(1);
+  }
+  return python;
+}
+
+// Installs a service's Python dependencies before starting it, matching
+// `source <venv>/activate && pip install -r requirements.txt` from the
+// project's README. Blocking by design: the server must not start against
+// a venv with missing/outdated packages.
+function pipInstall(prefix, serviceDir, venv, python) {
+  console.log(`[${prefix}] Installing dependencies from requirements.txt...`);
+  const result = spawnSync(python, ['-m', 'pip', 'install', '-r', 'requirements.txt'], {
+    cwd: serviceDir,
+    env: venvEnv(venv.binDir),
+    stdio: 'inherit',
+  });
+  if (result.status !== 0) {
+    console.error(`${RED}[${prefix}] pip install -r requirements.txt failed.${NC}`);
+    process.exit(1);
+  }
 }
 
 function startBackend() {
   console.log(`[BACKEND] Starting... ${BACKEND_DIR}`);
   const venv = resolveVenv(BACKEND_DIR, ['.env', 'venv']);
   if (!venv) process.exit(1);
-  const uvicorn = requireVenvCmd(venv.binDir, venv.venvDir, 'uvicorn');
-  if (!uvicorn) process.exit(1);
+  const python = venvPython(venv);
+  pipInstall('BACKEND', BACKEND_DIR, venv, python);
 
   const env = venvEnv(venv.binDir);
-  let args;
   if (MODE === 'prod') {
     console.log('[BACKEND] Starting in production mode on port 52123...');
-    args = ['main:app', '--host', '0.0.0.0', '--port', '52123', '--workers', process.env.WORKERS || '1'];
+    spawnService('BACKEND', python, ['-m', 'uvicorn', 'main:app', '--host', '0.0.0.0', '--port', '52123', '--workers', process.env.WORKERS || '1'], {
+      cwd: BACKEND_DIR,
+      env,
+      detached: !IS_WINDOWS,
+    });
   } else {
+    // Backend pins fastapi-cli==0.0.3, which predates `fastapi.__main__`
+    // (no `python -m fastapi` support), unlike sync-microservice's newer
+    // fastapi-cli. Use uvicorn directly here instead.
     console.log('[BACKEND] Starting in dev mode on port 52123...');
-    args = ['main:app', '--host', '0.0.0.0', '--port', '52123', '--reload'];
+    spawnService('BACKEND', python, ['-m', 'uvicorn', 'main:app', '--host', '0.0.0.0', '--port', '52123', '--reload'], {
+      cwd: BACKEND_DIR,
+      env,
+      detached: !IS_WINDOWS,
+    });
   }
-  spawnService('BACKEND', uvicorn, args, {
-    cwd: BACKEND_DIR,
-    env,
-    detached: !IS_WINDOWS,
-  });
 }
 
 function startSync() {
   const venv = resolveVenv(SYNC_DIR, ['.sync-env', 'venv']);
   if (!venv) process.exit(1);
+  const python = venvPython(venv);
+  pipInstall('SYNC', SYNC_DIR, venv, python);
   console.log('[SYNC] Starting sync-microservice on port 52124...');
 
   const env = venvEnv(venv.binDir);
   if (MODE === 'prod') {
-    const uvicorn = requireVenvCmd(venv.binDir, venv.venvDir, 'uvicorn');
-    if (!uvicorn) process.exit(1);
-    spawnService('SYNC', uvicorn, ['main:app', '--host', '0.0.0.0', '--port', '52124'], {
+    spawnService('SYNC', python, ['-m', 'uvicorn', 'main:app', '--host', '0.0.0.0', '--port', '52124'], {
       cwd: SYNC_DIR,
       env,
       detached: !IS_WINDOWS,
     });
   } else {
-    const fastapi = requireVenvCmd(venv.binDir, venv.venvDir, 'fastapi');
-    if (!fastapi) process.exit(1);
-    spawnService('SYNC', fastapi, ['dev', '--port', '52124'], {
+    spawnService('SYNC', python, ['-m', 'fastapi', 'dev', '--port', '52124'], {
       cwd: SYNC_DIR,
       env,
       detached: !IS_WINDOWS,
