@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 from concurrent.futures import ProcessPoolExecutor
 from app.database.faces import db_create_faces_table
 from app.database.images import db_create_images_table
+from app.database.videos import db_create_videos_table
 from app.database.face_clusters import db_create_clusters_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 from app.database.albums import db_create_albums_table
@@ -32,6 +33,7 @@ from app.utils.semantic_labels import (
 from app.routes.folders import router as folders_router
 from app.routes.albums import router as albums_router
 from app.routes.images import router as images_router
+from app.routes.videos import router as videos_router
 from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
 from app.routes.memories import router as memories_router
@@ -62,6 +64,7 @@ async def lifespan(app: FastAPI):
     generate_openapi_json()
     db_create_folders_table()
     db_create_images_table()
+    db_create_videos_table()
     db_create_semantic_labels_table()
     db_create_image_embeddings_table()
     db_create_YOLO_classes_table()
@@ -156,6 +159,7 @@ async def root():
 app.include_router(folders_router, prefix="/folders", tags=["Folders"])
 app.include_router(albums_router, prefix="/albums", tags=["Albums"])
 app.include_router(images_router, prefix="/images", tags=["Images"])
+app.include_router(videos_router, prefix="/videos", tags=["Videos"])
 app.include_router(
     face_clusters_router, prefix="/face-clusters", tags=["Face Clusters"]
 )
