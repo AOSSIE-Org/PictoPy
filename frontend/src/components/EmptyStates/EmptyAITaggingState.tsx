@@ -20,7 +20,7 @@ export const EmptyAITaggingState = () => {
         </div>
         <div className="flex items-center gap-2">
           <ImageIcon className="h-4 w-4" />
-          <span>Supports PNG, JPG, JPEG image formats.</span>
+          <span>Supports PNG, JPG, JPEG, WebP image formats.</span>
         </div>
       </div>
     </div>
