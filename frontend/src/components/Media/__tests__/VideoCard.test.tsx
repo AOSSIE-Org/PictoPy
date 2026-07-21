@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { VideoCard, formatVideoDuration } from '../VideoCard';
+import { VideoCard } from '../VideoCard';
 import { Video } from '@/types/Media';
 
 // Mock Tauri convertFileSrc API
@@ -33,23 +33,6 @@ const makeVideo = (overrides: Partial<Video> = {}): Video => ({
   },
   isFavourite: false,
   ...overrides,
-});
-
-describe('formatVideoDuration', () => {
-  test('formats minutes and seconds', () => {
-    expect(formatVideoDuration(75)).toBe('1:15');
-  });
-
-  test('formats hours', () => {
-    expect(formatVideoDuration(3725)).toBe('1:02:05');
-  });
-
-  test('returns null for missing or invalid durations', () => {
-    expect(formatVideoDuration(undefined)).toBeNull();
-    expect(formatVideoDuration(null)).toBeNull();
-    expect(formatVideoDuration(0)).toBeNull();
-    expect(formatVideoDuration(Infinity)).toBeNull();
-  });
 });
 
 describe('VideoCard', () => {

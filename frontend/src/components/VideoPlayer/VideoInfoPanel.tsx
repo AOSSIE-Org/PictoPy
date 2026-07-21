@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Film, Calendar, Clock, Monitor, Info } from 'lucide-react';
 import { Video } from '@/types/Media';
-import { formatVideoDuration } from '@/components/Media/VideoCard';
+import { formatDurationLabel } from '@/utils/durationUtils';
 
 interface VideoInfoPanelProps {
   show: boolean;
@@ -36,7 +36,7 @@ export const VideoInfoPanel: React.FC<VideoInfoPanelProps> = ({
     return video.metadata?.name || video.path?.split(/[/\\]/).pop() || 'Video';
   };
 
-  const duration = formatVideoDuration(video?.metadata?.duration);
+  const duration = formatDurationLabel(video?.metadata?.duration);
   const width = video?.metadata?.width ?? 0;
   const height = video?.metadata?.height ?? 0;
   const resolution =

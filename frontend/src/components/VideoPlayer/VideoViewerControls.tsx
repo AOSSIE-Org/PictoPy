@@ -30,8 +30,9 @@ export const VideoViewerControls: React.FC<VideoViewerControlsProps> = ({
         className={`cursor-pointer rounded-full ${
           showInfo ? 'bg-indigo-500/70' : 'bg-black/50'
         } p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg`}
-        aria-label="Show Info"
-        title="Show Info"
+        aria-pressed={showInfo}
+        aria-label={showInfo ? 'Hide Info' : 'Show Info'}
+        title={showInfo ? 'Hide Info' : 'Show Info'}
       >
         <Info className="h-5 w-5" />
       </button>

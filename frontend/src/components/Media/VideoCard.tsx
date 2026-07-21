@@ -6,6 +6,7 @@ import { useCallback } from 'react';
 import { Video } from '@/types/Media';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { useToggleVideoFav } from '@/hooks/useToggleVideoFav';
+import { formatDurationLabel } from '@/utils/durationUtils';
 
 interface VideoCardProps {
   video: Video;
@@ -13,24 +14,9 @@ interface VideoCardProps {
   onClick?: () => void;
 }
 
-export const formatVideoDuration = (durationInSeconds?: number | null) => {
-  if (!durationInSeconds || !Number.isFinite(durationInSeconds)) {
-    return null;
-  }
-  const totalSeconds = Math.round(durationInSeconds);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  }
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-};
-
 export function VideoCard({ video, className, onClick }: VideoCardProps) {
   const { toggleFavourite } = useToggleVideoFav();
-  const duration = formatVideoDuration(video.metadata?.duration);
+  const duration = formatDurationLabel(video.metadata?.duration);
 
   const handleToggleFavourite = useCallback(() => {
     if (video?.id) {

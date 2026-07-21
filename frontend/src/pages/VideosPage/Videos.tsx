@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Film } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ChronologicalVideoGallery } from '@/components/Media/ChronologicalVideoGallery';
 import { MonthMarker } from '@/components/Media/ChronologicalGallery';
@@ -59,6 +60,7 @@ export const Videos = () => {
             title="No Videos to Display"
             description="Your gallery is empty. Please add a folder containing videos to get started."
             formatsHint="Supports MP4, MOV, WebM, M4V video formats."
+            formatsIcon={Film}
           />
         )}
       </div>

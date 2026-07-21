@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Slider } from '../../components/ui/Slider';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { formatPlaybackTime } from '@/utils/durationUtils';
 
 interface NetflixStylePlayerProps {
   videoSrc: string;
@@ -170,20 +171,6 @@ export default function NetflixStylePlayer({
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
   }, []);
-
-  const formatTime = (timeInSeconds: number) => {
-    if (!Number.isFinite(timeInSeconds)) {
-      return '0:00';
-    }
-    const hours = Math.floor(timeInSeconds / 3600);
-    const minutes = Math.floor((timeInSeconds % 3600) / 60);
-    const seconds = Math.floor(timeInSeconds % 60);
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
 
   const togglePlay = () => {
     const video = videoRef.current;
@@ -429,7 +416,7 @@ export default function NetflixStylePlayer({
                 className="h-24 w-40 rounded-md border border-white/20 bg-black object-contain shadow-lg"
               />
               <div className="mt-1 text-center text-xs font-medium text-white">
-                {formatTime(previewTime ?? 0)}
+                {formatPlaybackTime(previewTime ?? 0)}
               </div>
             </div>
           )}
@@ -450,7 +437,7 @@ export default function NetflixStylePlayer({
               aria-valuemin={0}
               aria-valuemax={Number.isFinite(duration) ? duration : 0}
               aria-valuenow={currentTime}
-              aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
+              aria-valuetext={`${formatPlaybackTime(currentTime)} of ${formatPlaybackTime(duration)}`}
               className="h-1 w-full bg-gray-600 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-hidden"
               onKeyDown={handleSeekBarKeyDown}
             >
@@ -494,7 +481,9 @@ export default function NetflixStylePlayer({
             <FastForward size={24} />
           </button>
           <div className="text-white">
-            {formatTime(currentTime) + ' / ' + formatTime(duration)}
+            {formatPlaybackTime(currentTime) +
+              ' / ' +
+              formatPlaybackTime(duration)}
           </div>
         </div>
 

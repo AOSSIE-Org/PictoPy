@@ -1,4 +1,4 @@
-import { FolderOpen, Image as ImageIcon } from 'lucide-react';
+import { FolderOpen, Image as ImageIcon, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { ROUTES } from '@/constants/routes';
 
@@ -6,12 +6,14 @@ interface EmptyGalleryStateProps {
   title?: string;
   description?: string;
   formatsHint?: string;
+  formatsIcon?: LucideIcon;
 }
 
 export const EmptyGalleryState = ({
   title = 'No Images to Display',
   description = 'Your gallery is empty. Please add a folder containing images to get started.',
   formatsHint = 'Supports PNG, JPG, JPEG image formats.',
+  formatsIcon: FormatsIcon = ImageIcon,
 }: EmptyGalleryStateProps) => {
   const navigate = useNavigate();
 
@@ -42,7 +44,7 @@ export const EmptyGalleryState = ({
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <ImageIcon className="h-4 w-4" />
+          <FormatsIcon className="h-4 w-4" />
           <span>{formatsHint}</span>
         </div>
       </div>
