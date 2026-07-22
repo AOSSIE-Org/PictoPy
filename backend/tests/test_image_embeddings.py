@@ -4,6 +4,7 @@ import pytest
 import app.database.images as images_module
 import app.database.folders as folders_module
 import app.database.yolo_mapping as yolo_mapping_module
+import app.database.connection as connection_module
 from app.database.images import _connect, db_create_images_table
 from app.database.folders import db_create_folders_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
@@ -36,6 +37,7 @@ def _isolated_db(tmp_path, monkeypatch):
     monkeypatch.setattr(images_module, "DATABASE_PATH", db_path)
     monkeypatch.setattr(folders_module, "DATABASE_PATH", db_path)
     monkeypatch.setattr(yolo_mapping_module, "DATABASE_PATH", db_path)
+    monkeypatch.setattr(connection_module, "DATABASE_PATH", db_path)
 
     # images' schema FK-references folders/mappings; SQLite validates that
     # the referenced tables exist at INSERT time even for a NULL FK value,
