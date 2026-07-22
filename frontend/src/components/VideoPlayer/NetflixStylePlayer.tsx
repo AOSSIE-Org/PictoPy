@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Slider } from '../../components/ui/Slider';
 import { convertFileSrc } from '@tauri-apps/api/core';
-import { formatPlaybackTime } from '@/utils/durationUtils';
+import { formatDuration } from '@/utils/durationUtils';
 
 interface NetflixStylePlayerProps {
   videoSrc: string;
@@ -423,7 +423,7 @@ export default function NetflixStylePlayer({
                 className="h-24 w-40 rounded-md border border-white/20 bg-black object-contain shadow-lg"
               />
               <div className="mt-1 text-center text-xs font-medium text-white">
-                {formatPlaybackTime(previewTime ?? 0)}
+                {formatDuration(previewTime ?? 0)}
               </div>
             </div>
           )}
@@ -444,7 +444,7 @@ export default function NetflixStylePlayer({
               aria-valuemin={0}
               aria-valuemax={Number.isFinite(duration) ? duration : 0}
               aria-valuenow={currentTime}
-              aria-valuetext={`${formatPlaybackTime(currentTime)} of ${formatPlaybackTime(duration)}`}
+              aria-valuetext={`${formatDuration(currentTime)} of ${formatDuration(duration)}`}
               className="h-1 w-full bg-gray-600 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-hidden"
               onKeyDown={handleSeekBarKeyDown}
             >
@@ -488,9 +488,7 @@ export default function NetflixStylePlayer({
             <FastForward size={24} />
           </button>
           <div className="text-white">
-            {formatPlaybackTime(currentTime) +
-              ' / ' +
-              formatPlaybackTime(duration)}
+            {formatDuration(currentTime) + ' / ' + formatDuration(duration)}
           </div>
         </div>
 

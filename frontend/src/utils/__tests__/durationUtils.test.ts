@@ -1,8 +1,4 @@
-import {
-  formatDuration,
-  formatDurationLabel,
-  formatPlaybackTime,
-} from '../durationUtils';
+import { formatDuration, formatDurationLabel } from '../durationUtils';
 
 describe('formatDuration', () => {
   test('formats minutes and seconds', () => {
@@ -16,16 +12,16 @@ describe('formatDuration', () => {
   test('clamps negatives to zero', () => {
     expect(formatDuration(-5)).toBe('0:00');
   });
-});
 
-describe('formatPlaybackTime', () => {
-  test('floors partial seconds so the clock never runs ahead', () => {
-    expect(formatPlaybackTime(2.9)).toBe('0:02');
+  test('floors partial seconds so a clock never runs ahead', () => {
+    expect(formatDuration(2.9)).toBe('0:02');
   });
 
-  test('falls back to 0:00 for unknown durations', () => {
-    expect(formatPlaybackTime(NaN)).toBe('0:00');
-    expect(formatPlaybackTime(Infinity)).toBe('0:00');
+  test('normalises non-finite input instead of rendering NaN', () => {
+    // An unknown media duration surfaces as NaN/Infinity
+    expect(formatDuration(NaN)).toBe('0:00');
+    expect(formatDuration(Infinity)).toBe('0:00');
+    expect(formatDuration(-Infinity)).toBe('0:00');
   });
 });
 

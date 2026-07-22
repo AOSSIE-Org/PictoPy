@@ -515,6 +515,16 @@ class TestVideosAPI:
         response = client.post("/videos/toggle-favourite", json={"video_id": "nope"})
         assert response.status_code == 404
 
+    def test_toggle_favourite_error_matches_the_documented_envelope(self, client):
+        """The 404 body must carry the ErrorResponse fields the route advertises."""
+        response = client.post("/videos/toggle-favourite", json={"video_id": "nope"})
+        assert response.status_code == 404
+
+        detail = response.json()["detail"]
+        assert detail["success"] is False
+        assert detail["error"]
+        assert detail["message"]
+
     def test_one_malformed_record_does_not_break_the_listing(
         self, client, test_folder_id
     ):

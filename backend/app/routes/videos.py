@@ -117,14 +117,22 @@ def toggle_favourite(req: ToggleFavouriteRequest):
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Video not found or failed to toggle",
+                detail=ErrorResponse(
+                    success=False,
+                    error="Video not found",
+                    message=f"No video with id '{video_id}' could be toggled",
+                ).model_dump(),
             )
         # Fetch updated status to return
         video = db_get_video_by_id(video_id)
         if not video:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Video not found after toggle",
+                detail=ErrorResponse(
+                    success=False,
+                    error="Video not found",
+                    message=f"Video '{video_id}' disappeared after toggling",
+                ).model_dump(),
             )
         return {
             "success": True,
@@ -137,5 +145,9 @@ def toggle_favourite(req: ToggleFavouriteRequest):
         logger.error(f"error in /toggle-favourite route: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal server error: {e}",
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Unable to toggle favourite: {str(e)}",
+            ).model_dump(),
         )
