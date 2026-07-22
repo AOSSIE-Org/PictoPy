@@ -2,7 +2,6 @@ import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Film, Heart, Play } from 'lucide-react';
-import type React from 'react';
 import { useCallback } from 'react';
 import { Video } from '@/types/Media';
 import { convertFileSrc } from '@tauri-apps/api/core';
@@ -25,29 +24,12 @@ export function VideoCard({ video, className, onClick }: VideoCardProps) {
     }
   }, [video, toggleFavourite, toggleFavouritePending]);
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
-      // Ignore keys aimed at the favourite button nested inside the card.
-      if (e.target !== e.currentTarget) return;
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onClick?.();
-      }
-    },
-    [onClick],
-  );
-
   return (
     <div
-      role="button"
-      tabIndex={0}
-      aria-label={`Play ${video.metadata?.name || 'video'}`}
       className={cn(
-        'group bg-card focus-visible:ring-primary cursor-pointer overflow-hidden rounded-lg border transition-all hover:shadow-md focus-visible:ring-2 focus-visible:outline-none',
+        'group bg-card overflow-hidden rounded-lg border transition-all hover:shadow-md',
         className,
       )}
-      onClick={onClick}
-      onKeyDown={handleKeyDown}
     >
       <div className="relative">
         <AspectRatio ratio={1}>
@@ -63,17 +45,29 @@ export function VideoCard({ video, className, onClick }: VideoCardProps) {
             </div>
           )}
           {/* Dark overlay on hover */}
-          <div className="absolute inset-0 bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+          <div className="pointer-events-none absolute inset-0 bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
 
-          {/* Centered play indicator */}
-          <div className="absolute inset-0 flex items-center justify-center">
+          {/* Centered play indicator (decorative — the button below is the control) */}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="rounded-full bg-black/50 p-3 text-white transition-transform duration-200 group-hover:scale-110">
               <Play className="h-6 w-6" fill="currentColor" />
             </div>
           </div>
 
+          {/* Playback control: a real button covering the thumbnail, kept a
+              sibling of the favourite button so the two never nest. Omitted
+              entirely when there's nothing to activate. */}
+          {onClick && (
+            <button
+              type="button"
+              onClick={onClick}
+              aria-label={`Play ${video.metadata?.name || 'video'}`}
+              className="focus-visible:ring-primary absolute inset-0 z-10 cursor-pointer focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+            />
+          )}
+
           {/* Favourite action: revealed on hover, or on keyboard focus */}
-          <div className="absolute top-2 right-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-within:opacity-100">
+          <div className="absolute top-2 right-2 z-20 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-within:opacity-100">
             <Button
               variant="ghost"
               size="icon"
@@ -84,10 +78,7 @@ export function VideoCard({ video, className, onClick }: VideoCardProps) {
                   ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
                   : 'bg-white/10 hover:bg-white/20 hover:shadow-lg'
               }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleToggleFavourite();
-              }}
+              onClick={handleToggleFavourite}
             >
               {video.isFavourite ? (
                 <Heart className="h-5 w-5" fill="currentColor" />
@@ -100,7 +91,7 @@ export function VideoCard({ video, className, onClick }: VideoCardProps) {
 
           {/* Duration badge */}
           {duration && (
-            <div className="absolute right-2 bottom-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
+            <div className="pointer-events-none absolute right-2 bottom-2 z-20 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
               {duration}
             </div>
           )}

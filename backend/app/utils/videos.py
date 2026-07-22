@@ -5,7 +5,7 @@ import uuid
 import datetime
 import json
 import mimetypes
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 from pathlib import Path
 
 import cv2
@@ -15,10 +15,14 @@ from app.config.settings import THUMBNAIL_IMAGES_PATH
 from app.database.videos import (
     VideoRecord,
     db_bulk_insert_videos,
+    db_get_video_index_by_folder_ids,
     db_get_videos_by_folder_ids,
     db_delete_videos_by_ids,
 )
-from app.utils.images import image_util_find_folder_id_for_image
+from app.utils.images import (
+    image_util_find_folder_id_for_image,
+    image_util_parse_metadata,
+)
 from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
@@ -26,6 +30,9 @@ logger = get_logger(__name__)
 # Formats WebView2's HTML5 <video> can play; extend deliberately —
 # indexing formats the player can't decode gives a broken playback UX.
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm", ".m4v"}
+
+# path -> (stored thumbnail path, stored metadata) for videos already in the DB
+IndexedVideos = Dict[str, Tuple[Optional[str], Mapping[str, Any]]]
 
 
 def video_util_process_folder_videos(folder_data: List[Tuple[str, int, bool]]) -> bool:
@@ -58,9 +65,9 @@ def video_util_process_folder_videos(folder_data: List[Tuple[str, int, bool]]) -
                 # What this folder already has indexed, so unchanged files are
                 # left alone instead of being re-decoded into a fresh thumbnail.
                 already_indexed = {
-                    path: thumbnail_path
-                    for _, path, thumbnail_path in db_get_videos_by_folder_ids(
-                        [folder_id]
+                    path: (thumbnail_path, image_util_parse_metadata(metadata))
+                    for path, thumbnail_path, metadata in (
+                        db_get_video_index_by_folder_ids([folder_id])
                     )
                 }
 
@@ -85,10 +92,28 @@ def video_util_process_folder_videos(folder_data: List[Tuple[str, int, bool]]) -
         return False
 
 
+def video_util_source_is_unchanged(
+    video_path: str, stored_metadata: Mapping[str, Any]
+) -> bool:
+    """Compare a video against the size/mtime recorded when it was indexed."""
+    try:
+        stats = os.stat(video_path)
+    except OSError:
+        return False
+
+    if stored_metadata.get("file_size") != stats.st_size:
+        return False
+
+    return (
+        stored_metadata.get("date_created")
+        == datetime.datetime.fromtimestamp(stats.st_mtime).isoformat()
+    )
+
+
 def video_util_prepare_video_records(
     video_files: List[str],
     folder_path_to_id: Dict[str, int],
-    already_indexed: Optional[Dict[str, Optional[str]]] = None,
+    already_indexed: Optional[IndexedVideos] = None,
 ) -> List[VideoRecord]:
     """
     Prepare video records with thumbnails for database insertion.
@@ -103,10 +128,18 @@ def video_util_prepare_video_records(
         if not folder_id:
             continue  # Skip if no matching folder ID found
 
-        # Already indexed and its thumbnail is still on disk: regenerating would
-        # orphan the old JPEG and re-decode the file for nothing.
-        existing_thumbnail = already_indexed.get(video_path)
-        if existing_thumbnail and os.path.exists(existing_thumbnail):
+        existing_thumbnail, existing_metadata = already_indexed.get(
+            video_path, (None, {})
+        )
+
+        # Untouched since it was indexed and its thumbnail is still on disk:
+        # regenerating would orphan the old JPEG and re-decode for nothing.
+        # A file swapped in at the same path fails the fingerprint and is redone.
+        if (
+            existing_thumbnail
+            and os.path.exists(existing_thumbnail)
+            and video_util_source_is_unchanged(video_path, existing_metadata)
+        ):
             continue
 
         video_id = str(uuid.uuid4())
@@ -126,6 +159,22 @@ def video_util_prepare_video_records(
             metadata = video_util_extract_metadata(video_path, capture=capture)
         finally:
             capture.release()
+
+        # The row is about to point at the new JPEG, so drop the superseded one.
+        # Only once the replacement exists, otherwise a failed re-encode would
+        # leave the record pointing at a thumbnail we already deleted.
+        if (
+            thumbnail_path
+            and existing_thumbnail
+            and existing_thumbnail != thumbnail_path
+            and os.path.exists(existing_thumbnail)
+        ):
+            try:
+                os.remove(existing_thumbnail)
+            except OSError as e:
+                logger.error(
+                    f"Error removing stale thumbnail {existing_thumbnail}: {e}"
+                )
 
         video_records.append(
             {

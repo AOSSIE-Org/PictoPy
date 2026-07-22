@@ -285,6 +285,45 @@ class TestProcessFolderVideos:
         assert second[0]["thumbnailPath"] == first[0]["thumbnailPath"]
         assert len(os.listdir(thumb_dir)) == 1
 
+    def test_replacing_the_source_refreshes_the_record(
+        self, test_db, test_folder_id, real_video_file, temp_media_dir, monkeypatch
+    ):
+        """A different video swapped in at the same path must not stay stale."""
+        from app.utils.videos import video_util_process_folder_videos
+
+        thumb_dir = os.path.join(temp_media_dir, "thumbs")
+        monkeypatch.setattr("app.utils.videos.THUMBNAIL_IMAGES_PATH", thumb_dir)
+
+        video_path = os.path.join(temp_media_dir, "clip.mp4")
+        shutil.copyfile(real_video_file, video_path)
+
+        folder_data = [(temp_media_dir, test_folder_id, False)]
+        video_util_process_folder_videos(folder_data)
+        first = db_get_all_videos()[0]
+
+        # Swap in a longer, larger clip at the same path
+        import numpy as np
+
+        writer = cv2.VideoWriter(
+            real_video_file, cv2.VideoWriter_fourcc(*"MJPG"), 10.0, (64, 64)
+        )
+        for i in range(40):
+            writer.write(np.full((64, 64, 3), i * 5, dtype=np.uint8))
+        writer.release()
+        shutil.copyfile(real_video_file, video_path)
+        os.remove(real_video_file)
+
+        assert video_util_process_folder_videos(folder_data) is True
+
+        refreshed = db_get_all_videos()[0]
+        assert refreshed["metadata"]["duration"] > first["metadata"]["duration"]
+        assert refreshed["metadata"]["file_size"] != first["metadata"]["file_size"]
+        # New poster written, superseded one cleaned up rather than orphaned
+        assert refreshed["thumbnailPath"] != first["thumbnailPath"]
+        assert os.path.exists(refreshed["thumbnailPath"])
+        assert not os.path.exists(first["thumbnailPath"])
+        assert len(os.listdir(thumb_dir)) == 1
+
     def test_rescan_regenerates_a_missing_thumbnail(
         self, test_db, test_folder_id, real_video_file, temp_media_dir, monkeypatch
     ):

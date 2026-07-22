@@ -57,13 +57,11 @@ describe('VideoCard', () => {
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
-  test('invokes onClick when the card is clicked', () => {
+  test('invokes onClick when the play control is activated', () => {
     const onClick = jest.fn();
-    const { container } = render(
-      <VideoCard video={makeVideo()} onClick={onClick} />,
-    );
+    render(<VideoCard video={makeVideo()} onClick={onClick} />);
 
-    fireEvent.click(container.firstChild as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: 'Play sample.mp4' }));
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
@@ -76,30 +74,23 @@ describe('VideoCard', () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
-  test('is reachable as a button with an accessible name', () => {
+  test('exposes playback as a native button so keyboard activation is free', () => {
+    render(<VideoCard video={makeVideo()} onClick={jest.fn()} />);
+
+    const play = screen.getByRole('button', { name: 'Play sample.mp4' });
+    expect(play.tagName).toBe('BUTTON');
+    // The favourite control must be a sibling, never nested inside playback
+    expect(
+      play.contains(screen.getByRole('button', { name: 'Favourite' })),
+    ).toBe(false);
+  });
+
+  test('renders no playback control when there is nothing to activate', () => {
     render(<VideoCard video={makeVideo()} />);
-    const card = screen.getByRole('button', { name: 'Play sample.mp4' });
-    expect(card).toHaveAttribute('tabindex', '0');
-  });
 
-  test.each(['Enter', ' '])('activates the card with the %s key', (key) => {
-    const onClick = jest.fn();
-    render(<VideoCard video={makeVideo()} onClick={onClick} />);
-
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Play sample.mp4' }), {
-      key,
-    });
-    expect(onClick).toHaveBeenCalledTimes(1);
-  });
-
-  test('keys aimed at the favourite button do not activate the card', () => {
-    const onClick = jest.fn();
-    render(<VideoCard video={makeVideo()} onClick={onClick} />);
-
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Favourite' }), {
-      key: 'Enter',
-    });
-    expect(onClick).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('button', { name: /^Play / }),
+    ).not.toBeInTheDocument();
   });
 
   test('favourite button is disabled while a toggle is in flight', () => {

@@ -163,6 +163,43 @@ def db_get_all_videos() -> List[dict]:
         conn.close()
 
 
+def db_get_video_index_by_folder_ids(
+    folder_ids: List[int],
+) -> List[Tuple[VideoPath, Optional[str], Optional[str]]]:
+    """
+    Get what is already indexed for the given folders, so a rescan can tell
+    unchanged files from replaced ones.
+
+    Args:
+        folder_ids: List of folder IDs to look up
+
+    Returns:
+        List of tuples containing (path, thumbnail_path, metadata_json)
+    """
+    if not folder_ids:
+        return []
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        placeholders = ",".join("?" for _ in folder_ids)
+        cursor.execute(
+            f"""
+            SELECT path, thumbnailPath, metadata
+            FROM videos
+            WHERE folder_id IN ({placeholders})
+            """,
+            folder_ids,
+        )
+        return cursor.fetchall()
+    except sqlite3.Error as e:
+        logger.error(f"Error getting video index by folder IDs: {e}")
+        return []
+    finally:
+        conn.close()
+
+
 def db_get_videos_by_folder_ids(
     folder_ids: List[int],
 ) -> List[Tuple[VideoId, VideoPath, str]]:
