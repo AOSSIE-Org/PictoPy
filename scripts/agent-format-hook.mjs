@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-// Claude Code hook: auto-formats files an agent edits, and blocks `ruff format`.
+// Claude Code hook: auto-formats files an agent edits, and blocks the Ruff formatter.
 // Registered in .claude/settings.json. Reads the hook payload as JSON on stdin.
 //
 // Two modes:
 //   (no args)  PostToolUse on Edit|Write — format the edited file
 //   --guard    PreToolUse on Bash — deny `ruff format`, which would reflow the
 //              Python codebase to Ruff's 300-column width and fight black.
+//
+// Regression tests: node scripts/agent-format-hook.test.mjs
 
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
@@ -24,38 +26,72 @@ function readStdin() {
   }
 }
 
-/** Run a command, swallowing "not installed" so a partial dev env isn't blocked. */
+/**
+ * Run a formatter. Never uses a shell: the file path comes from the hook payload,
+ * and on Windows `shell: true` would hand it to cmd.exe where a filename
+ * containing shell metacharacters could execute arbitrary commands.
+ * A missing toolchain is not an error — a frontend-only contributor has no black.
+ */
 function run(cmd, args, cwd) {
-  const result = spawnSync(cmd, args, {
-    cwd,
-    shell: process.platform === 'win32',
-    stdio: 'ignore',
-  });
+  const result = spawnSync(cmd, args, { cwd, shell: false, stdio: 'ignore' });
   return result.error === undefined && result.status === 0;
 }
 
+/** Node entry points, so prettier/eslint run without a .cmd shim (which would need a shell). */
+function nodeBin(pkg, entry) {
+  const p = path.join(REPO_ROOT, 'frontend', 'node_modules', pkg, entry);
+  return existsSync(p) ? p : null;
+}
+
+// ---------------------------------------------------------------- guard mode
+
+const RUNNER_PREFIX = /^(?:uv|poetry|pipx|pdm|hatch|rye)\s+run\s+/;
+const PYTHON_M_PREFIX = /^python[0-9.]*\s+-m\s+/;
+const ENV_PREFIX = /^(?:\w+=\S*\s+)+/;
+
+/** True when a single command segment invokes the Ruff formatter. */
+function isRuffFormatCommand(segment) {
+  let s = segment.trim().replace(ENV_PREFIX, '');
+
+  // Peel runner wrappers: `uv run ruff format`, `python -m ruff format`.
+  for (;;) {
+    const next = s.replace(RUNNER_PREFIX, '').replace(PYTHON_M_PREFIX, '');
+    if (next === s) break;
+    s = next;
+  }
+
+  return /^ruff\s+format\b/.test(s);
+}
+
 /**
- * True when `ruff format` is actually being executed, rather than merely mentioned
+ * True when `ruff format` is actually executed, rather than merely mentioned
  * inside a quoted argument such as a commit message or an echo.
  */
-function runsRuffFormat(command) {
-  // Drop quoted strings first, so prose mentioning "ruff format" doesn't match.
+function runsRuffFormat(command, depth = 0) {
+  if (depth > 3) return false;
+
+  // Recurse into `sh -c "<payload>"` so wrapped invocations are still caught.
+  // Only a shell's -c flag unwraps a quoted string; `git commit -m "..."` does not.
+  const wrapped =
+    /\b(?:sh|bash|zsh|dash|ksh|pwsh|powershell(?:\.exe)?|cmd(?:\.exe)?)\s+(?:-c|-Command|\/[cC])\s+(?:'([^']*)'|"((?:[^"\\]|\\.)*)")/g;
+  for (const match of command.matchAll(wrapped)) {
+    if (runsRuffFormat(match[1] ?? match[2] ?? '', depth + 1)) return true;
+  }
+
+  // Blank quoted strings so prose mentioning the command doesn't trigger a block.
   const unquoted = command
     .replace(/'[^']*'/g, "''")
     .replace(/"(?:[^"\\]|\\.)*"/g, '""');
 
-  // Then require it at the start of a command segment, not buried in arguments.
-  return unquoted
-    .split(/&&|\|\||[;|\n]/)
-    .some((segment) => /^\s*(?:\w+=\S+\s+)*ruff\s+format\b/.test(segment));
+  // Split on command separators, including a single `&` for background jobs.
+  return unquoted.split(/&&|\|\||[;|&\n]/).some(isRuffFormatCommand);
 }
 
 function guard(payload) {
-  const command = payload?.tool_input?.command ?? '';
-  if (runsRuffFormat(command)) {
+  if (runsRuffFormat(payload?.tool_input?.command ?? '')) {
     // exit 2 tells Claude Code to block the call and show stderr to the model.
     process.stderr.write(
-      'Blocked: `ruff format` would reflow this codebase to 300 columns.\n' +
+      'Blocked: the Ruff formatter would reflow this codebase to 300 columns.\n' +
         'Python here is formatted with black at 88 columns. Use:\n' +
         '  pre-commit run --config .pre-commit-config.yaml --all-files\n',
     );
@@ -64,24 +100,41 @@ function guard(payload) {
   process.exit(0);
 }
 
+// --------------------------------------------------------------- format mode
+
+// Generated, vendored, or cache trees that must never be reformatted.
+const EXCLUDED_DIRS =
+  /(^|[\\/])(node_modules|dist|target|gen|__pycache__|site-packages|\.mypy_cache|\.ruff_cache|htmlcov)[\\/]/;
+
+// Specific protected paths, matched against a forward-slash relative path.
+const EXCLUDED_PATHS = [
+  'frontend/src/components/ui/', // shadcn-generated
+];
+const EXCLUDED_FILES = ['frontend/package-lock.json', 'package-lock.json'];
+
+function isExcluded(rel) {
+  const normalized = rel.split(path.sep).join('/');
+  if (normalized.startsWith('..')) return true; // outside the repository
+  if (EXCLUDED_DIRS.test(rel)) return true;
+  if (EXCLUDED_FILES.includes(normalized)) return true;
+  return EXCLUDED_PATHS.some((prefix) => normalized.startsWith(prefix));
+}
+
 function format(payload) {
   const filePath = payload?.tool_input?.file_path;
   if (!filePath || !existsSync(filePath)) process.exit(0);
+  if (isExcluded(path.relative(REPO_ROOT, filePath))) process.exit(0);
 
   const ext = path.extname(filePath).toLowerCase();
-  const rel = path.relative(REPO_ROOT, filePath);
-
-  // Never reformat generated, vendored, or dependency trees.
-  if (/(^|[\\/])(node_modules|dist|target|gen|__pycache__|site-packages)[\\/]/.test(rel)) {
-    process.exit(0);
-  }
 
   if (ext === '.py') {
     run('black', ['--quiet', filePath], REPO_ROOT);
   } else if (['.ts', '.tsx', '.js', '.jsx', '.json'].includes(ext)) {
     const frontend = path.join(REPO_ROOT, 'frontend');
-    run('npx', ['--no-install', 'prettier', '--write', filePath], frontend);
-    run('npx', ['--no-install', 'eslint', '--fix', filePath], frontend);
+    const prettier = nodeBin('prettier', path.join('bin', 'prettier.cjs'));
+    const eslint = nodeBin('eslint', path.join('bin', 'eslint.js'));
+    if (prettier) run(process.execPath, [prettier, '--write', filePath], frontend);
+    if (eslint) run(process.execPath, [eslint, '--fix', filePath], frontend);
   } else if (ext === '.rs') {
     run('cargo', ['fmt', '--', filePath], path.join(REPO_ROOT, 'frontend', 'src-tauri'));
   }
@@ -89,12 +142,18 @@ function format(payload) {
   process.exit(0);
 }
 
-let payload = {};
-try {
-  payload = JSON.parse(readStdin() || '{}');
-} catch {
-  process.exit(0);
-}
+// ---------------------------------------------------------------------- main
 
-if (GUARD) guard(payload);
-else format(payload);
+export { runsRuffFormat, isExcluded };
+
+// Only act when run as the hook, so the test file can import the helpers above.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  let payload = {};
+  try {
+    payload = JSON.parse(readStdin() || '{}');
+  } catch {
+    process.exit(0);
+  }
+  if (GUARD) guard(payload);
+  else format(payload);
+}

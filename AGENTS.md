@@ -25,18 +25,22 @@ not vendored in the repository.
 
 ## Commands
 
-These are exactly what CI runs. Run the ones for the areas you touched.
+Run the ones for the areas you touched. CI runs the **check** column; use the **fix** column
+locally so the check passes. Run everything from the repository root — the `cd` is wrapped in
+a subshell so it does not leak into the next command.
 
-| Task | Command |
-| --- | --- |
-| Frontend lint | `cd frontend && npm run lint:check` |
-| Frontend format | `cd frontend && npm run format:fix` |
-| Frontend tests | `cd frontend && npm test` |
-| Backend tests | `cd backend && pytest` |
-| Python lint + format | `pre-commit run --config .pre-commit-config.yaml --all-files` |
-| Rust format | `cd frontend/src-tauri && cargo fmt` |
-| Rust tests | `cd frontend/src-tauri && cargo test` |
-| Version bump | `npm run version:bump -- X.Y.Z` |
+| Task | Check (what CI runs) | Fix |
+| --- | --- | --- |
+| Frontend lint | `(cd frontend && npm run lint:check)` | `npm run lint:fix` |
+| Frontend format | `(cd frontend && npm run format:check)` | `npm run format:fix` |
+| Frontend tests | `(cd frontend && npm test)` | — |
+| Python lint + format | `pre-commit run --config .pre-commit-config.yaml --all-files` | rewrites in place |
+| Backend tests | `(cd backend && pytest)` | — |
+| Rust format | `(cd frontend/src-tauri && cargo fmt -- --check)` | `cargo fmt` |
+| Version bump | `npm run version:bump -- X.Y.Z` | — |
+
+`cargo test` is not part of the PR check workflow, but run it for any `frontend/src-tauri/`
+change. `agent-kit/references/ci-gates.md` maps every gate to the workflow job it comes from.
 
 Setup is scripted: see `docs/Script_Setup_Guide.md` (Windows, Debian, Fedora) or
 `docs/Manual_Setup_Guide.md` (everything else).

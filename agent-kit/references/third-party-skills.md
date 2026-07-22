@@ -18,7 +18,8 @@ skills stay where their installer manages them, and this file records what they 
 
 ## Before adopting
 
-A third-party skill is instructions an agent will follow on this codebase. Read it first.
+A third-party skill is a set of instructions an agent will follow on this codebase. Read it
+first.
 
 - Does it contradict anything in our `AGENTS.md` files? Ours wins — either skip the skill
   or note the conflict below.

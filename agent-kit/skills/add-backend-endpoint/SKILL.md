@@ -30,6 +30,10 @@ If the resource already has some layers, extend them rather than creating parall
 
 ## 2. Database layer — `backend/app/database/<resource>.py`
 
+**Use plan mode for this step.** Changes under `backend/app/database/` ripple into
+`backend/main.py`, `backend/tests/conftest.py`, and any query in `sync-microservice/` that
+reads the same table. Agree the schema before writing it — see the root `CLAUDE.md`.
+
 Template: `agent-kit/templates/database.py.md`.
 
 - Every function that touches SQLite is prefixed `db_`.
@@ -71,12 +75,19 @@ one failure path. The session fixture in `conftest.py` creates every table and s
 
 ## 7. Verify
 
+Step 5 edits `frontend/src/api/apiEndpoints.ts`, so the frontend counts as touched. Run its
+gates too, or this playbook can report success while the frontend contract is broken.
+
 ```bash
-cd backend && pytest
-pre-commit run --config ../.pre-commit-config.yaml --all-files
+pre-commit run --config .pre-commit-config.yaml --all-files
+(cd backend && pytest)
+(cd frontend && npm run lint:check && npm run format:check && npm test)
 ```
 
-black reformats to 88 columns. **Never run `ruff format`** — Ruff is configured at 300
+Or run `/pre-pr-check`, which covers every area and is the single place the gate list is
+maintained.
+
+black reformats to 88 columns. **Never run the Ruff formatter** — Ruff is configured at 300
 columns here and would reflow the whole codebase.
 
 If this change touched a table that `sync-microservice/` also reads, check

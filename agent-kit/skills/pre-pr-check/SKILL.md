@@ -38,10 +38,13 @@ Errors from paths inside local virtualenvs (`.env/`, `.docs-env/`, `.sync-env/`,
 
 ## 3. Frontend
 
+Every command below runs from the repository root. Each `cd` is wrapped in a subshell so it
+does not leak into the next command.
+
 ```bash
-cd frontend && npm run lint:check
-cd frontend && npm run format:check
-cd frontend && npm test
+(cd frontend && npm run lint:check)
+(cd frontend && npm run format:check)
+(cd frontend && npm test)
 ```
 
 `lint:check` runs with `--max-warnings 0`. The most common failure by far is a leftover
@@ -57,7 +60,7 @@ Covers both `backend/` and `sync-microservice/`.
 
 ```bash
 pre-commit run --config .pre-commit-config.yaml --all-files
-cd backend && pytest
+(cd backend && pytest)
 ```
 
 If the black hook reformats files, that is a pass with changes — re-stage them. **Never**
@@ -67,8 +70,8 @@ columns here and would reflow the entire codebase.
 ## 5. Rust
 
 ```bash
-cd frontend/src-tauri && cargo fmt -- --check
-cd frontend/src-tauri && cargo test
+(cd frontend/src-tauri && cargo fmt -- --check)
+(cd frontend/src-tauri && cargo test)
 ```
 
 If the format check fails, run `cargo fmt` without `--check` to fix it.

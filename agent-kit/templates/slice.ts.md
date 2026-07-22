@@ -22,12 +22,19 @@ const featureSlice = createSlice({
   reducers: {
     setItems(state, action: PayloadAction<Item[]>) {
       state.items = action.payload;
+      // Replacing the list can strand an index past the new end, which would make
+      // the selector return undefined instead of the documented null.
+      if (state.currentViewIndex >= action.payload.length) {
+        state.currentViewIndex = -1;
+      }
     },
 
     setCurrentViewIndex(state, action: PayloadAction<number>) {
       const index = action.payload;
       // The reducer owns validity; callers don't bounds-check before dispatching.
-      if (index >= -1 && index < state.items.length) {
+      // Integer check included: arrays have no element at 0.5, so a fractional
+      // index would pass a plain range check and still resolve to undefined.
+      if (Number.isInteger(index) && index >= -1 && index < state.items.length) {
         state.currentViewIndex = index;
       } else {
         console.warn(
@@ -63,6 +70,8 @@ export const selectCurrentItem = (state: RootState) =>
 
 - Reducers are **total**: validate indices and ranges inside the reducer, warn and no-op on
   bad input. Callers dispatch without pre-checking.
+- A reducer that replaces the collection must also re-check any index into it. Stale
+  indices are the usual cause of a selector returning `undefined`.
 - `-1` is the convention for "nothing selected" in this codebase, not `null`.
 - Derived data goes in selectors, never computed inline in a component.
 - Register the reducer in the store under `frontend/src/store/`.

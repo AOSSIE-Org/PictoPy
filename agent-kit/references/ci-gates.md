@@ -32,14 +32,13 @@ Jest with `jest.config.ts`. Node 18 on the runner.
 
 Three steps, and the two build checks fail more often than the tests do:
 
+Each step runs in a subshell so the `cd` does not leak into the next one. Run them from the
+repository root.
+
 ```bash
-cd backend && pip install -r requirements.txt
-pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
-
-cd sync-microservice && pip install -r requirements.txt
-pyinstaller main.py --name PictoPy_Sync_Microservice --onedir --distpath dist
-
-cd backend && pytest
+(cd backend && pip install -r requirements.txt && pyinstaller main.py --name PictoPy_Server --onedir --distpath dist)
+(cd sync-microservice && pip install -r requirements.txt && pyinstaller main.py --name PictoPy_Sync_Microservice --onedir --distpath dist)
+(cd backend && pytest)
 ```
 
 The PyInstaller steps catch imports that work in development but break when frozen — a new
@@ -47,6 +46,10 @@ dependency that is imported dynamically will pass `pytest` and fail here. Python
 the runner.
 
 ## Not in this workflow
+
+- `node scripts/agent-format-hook.test.mjs` covers the formatting hook's `ruff format`
+  guard and its path exclusions. There is no Node test job for `scripts/` in CI, so run it
+  by hand when changing `scripts/agent-format-hook.mjs`.
 
 - `cargo test` is not run by `pr-check-tests.yml`, but `CONTRIBUTING.md` asks contributors
   to run it and `pr-check-build.yml` builds the Rust side. Run it for any `src-tauri/`

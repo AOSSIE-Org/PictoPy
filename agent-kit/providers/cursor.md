@@ -27,8 +27,16 @@ globs: ["frontend/src-tauri/**/*.rs"]
 
 ## Notes
 
-- No hooks equivalent, so nothing auto-formats. Run the gates in
-  `agent-kit/skills/pre-pr-check/SKILL.md` before pushing.
+- **This repository does not configure Cursor hooks**, so nothing auto-formats for you.
+  Run the gates in `agent-kit/skills/pre-pr-check/SKILL.md` before pushing.
+
+  Cursor does support them: `.cursor/hooks.json` (project) or `~/.cursor/hooks.json`
+  (user), with lifecycle events including `afterFileEdit` and `beforeShellExecution`, and
+  it can load third-party Claude Code hooks. Those two events line up with what
+  `.claude/settings.json` already does — auto-format an edited file, and block the Ruff
+  formatter — so `scripts/agent-format-hook.mjs` could be wired up for Cursor without
+  changing the script. That is worth doing once the hook has proven itself in Claude Code;
+  raise an issue if you want to take it on.
 - Cursor's shadcn integration may want to write into `frontend/src/components/ui/`. That
   directory is generated — regenerate rather than hand-editing, and never commit ad-hoc
   edits there.

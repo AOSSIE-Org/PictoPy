@@ -73,8 +73,9 @@ def db_get_all_<resource>() -> List[<Resource>Record]:
 
 ## Notes
 
-- **Every** function here is prefixed `db_`. The prefix is what makes the data layer
-  greppable across four hundred files.
+- **Every public** function here is prefixed `db_`. The prefix is what makes the data layer
+  greppable across four hundred files. Module-private helpers are the exception and keep
+  their leading underscore — `_connect()` is named that deliberately; do not rename it.
 - Always go through `_connect()`. SQLite disables foreign-key enforcement per connection by
   default, so a direct `sqlite3.connect` silently loses `ON DELETE CASCADE`.
 - `try`/`finally` around every connection — the codebase does not use context managers here
