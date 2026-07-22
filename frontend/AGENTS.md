@@ -7,6 +7,35 @@ Rules for the React + TypeScript UI. The root `AGENTS.md` still applies.
 Repeated here because this is where it bites. `.eslintrc.json` sets `no-warning-comments`
 to `error` for those terms and lint runs with `--max-warnings 0`, so one marker fails CI.
 
+## Reuse before adding
+
+Search these before creating anything new:
+
+- `src/components/ui/` — 27 shadcn primitives (button, dialog, input, slider, …). Compose
+  these rather than writing a new one.
+- `src/hooks/` — 20 hooks, including `useToggleFav`, `useZoomTransform`,
+  `useKeyboardNavigation`.
+- `src/utils/` — `dateUtils`, `durationUtils`, `imageFallback`, `personUtils`,
+  `tauriUtils`, and more.
+- `src/lib/utils.ts` — the `cn()` class-merging helper. Use it instead of string
+  concatenation for conditional classes.
+- `src/constants/` — routes, avatars, onboarding steps. Static lists go here, not inline.
+
+A component that duplicates an existing one is the most common review finding. Extract
+shared code on the third occurrence.
+
+## Types
+
+`tsconfig.json` sets `strict`, `noUnusedLocals`, and `noUnusedParameters`, and
+`npm run build` runs `tsc` — a type error fails the build.
+
+- Type every prop interface, every export, and every API response.
+- The codebase still contains some `any`. Do not add more, and do not reach for `as` to
+  silence a real error — fix the type.
+- Response types must match the backend's Pydantic model in
+  `backend/app/routes/<resource>.py`. That is the source of truth; do not guess the shape.
+- Prefer `type`/`interface` in `src/types/` over inline shapes repeated across files.
+
 ## Layout
 
 | What | Where | Naming |

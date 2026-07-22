@@ -33,6 +33,18 @@ them before writing a new resource.
 - Connect through the module-private `_connect()`, which sets
   `PRAGMA foreign_keys = ON`. Do not call `sqlite3.connect` directly.
 
+## Types and reuse
+
+- Annotate function signatures and return types, as the existing modules do. There is no
+  mypy gate in CI, so annotations exist for the reader and the next agent — that makes them
+  more important to get right, not less.
+- Table rows are `TypedDict` classes (`VideoRecord`), never bare dicts passed around.
+- Before writing a helper, check `app/utils/` — it already has 19 modules covering image
+  metadata, face clustering, hardware detection, model bootstrap, and more.
+- Keep layers honest: routes handle HTTP and validation only. Business logic goes in
+  `app/utils/`, data access in `app/database/`. A route that opens a SQLite connection is
+  in the wrong layer.
+
 ## Wiring a new resource
 
 Miss one of these and it silently half-works:

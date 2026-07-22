@@ -41,6 +41,59 @@ These are exactly what CI runs. Run the ones for the areas you touched.
 Setup is scripted: see `docs/Script_Setup_Guide.md` (Windows, Debian, Fedora) or
 `docs/Manual_Setup_Guide.md` (everything else).
 
+## Code quality
+
+### Match the codebase before anything else
+
+Before writing a new file, read the nearest existing file that does the same kind of job
+and follow its structure, naming, and idiom. Consistency with what is already here beats
+any general best practice. If you are about to introduce a pattern the codebase does not
+use — a new state library, a different test style, a second way to call the API — don't;
+extend the existing pattern, or raise it on the issue first.
+
+### Reuse before adding
+
+Search before you create. Adding a second component that does what an existing one already
+does is the most common quality problem in this repository.
+
+| Before adding a… | Search here first |
+| --- | --- |
+| UI primitive (button, dialog, input) | `frontend/src/components/ui/` — 27 already exist |
+| Shared helper | `frontend/src/utils/`, `frontend/src/lib/utils.ts` |
+| Hook | `frontend/src/hooks/` |
+| Constant, route, or static list | `frontend/src/constants/` |
+| Python helper | `backend/app/utils/` |
+
+Extract shared code on the **third** occurrence, not the second — premature abstraction is
+also a cost. When you do extract, put it in the directories above so the next person finds
+it.
+
+### Keep modules focused
+
+One module, one job. A route file handles HTTP; business logic belongs in `app/utils/`, and
+data access in `app/database/`. A component renders; data fetching belongs in a hook, and
+derived data in a selector. If a file has grown past a few hundred lines it is usually doing
+more than one job.
+
+### Types are not optional
+
+- **TypeScript**: `tsconfig.json` sets `strict`, `noUnusedLocals`, and `noUnusedParameters`,
+  and `npm run build` runs `tsc`. Type every export and every API boundary. The codebase
+  still has some `any` — do not add more, and do not use `as` to silence a real type error.
+- **Python**: annotate function signatures and return types, as the existing modules do.
+  Table rows are `TypedDict` classes, not bare dicts. There is no mypy gate in CI, so
+  annotations are for the reader and for the next agent — write them accordingly.
+- Frontend types must match the backend's Pydantic response model. The backend is the
+  source of truth; check `backend/app/routes/` rather than guessing the shape.
+
+### Comments explain why
+
+One or two lines, explaining *why* rather than *what*. The codebase does not use long prose
+comment blocks or multi-paragraph docstrings — match what is already there. A comment that
+restates the code is noise; a comment that records a non-obvious reason is valuable.
+
+Do not leave commented-out code. Delete it; git remembers.
+
 ## Rules that are not obvious from the code
 
 These are the mistakes agents make most often in this repository.
@@ -57,11 +110,6 @@ here as a **linter only** — `ruff --fix` is fine, `ruff format` is not.
 `frontend/.eslintrc.json` sets `no-warning-comments` to `error` for those terms, and lint
 runs with `--max-warnings 0`. A single leftover `// TODO` fails CI. If work is genuinely
 incomplete, open an issue instead of leaving a marker in the code.
-
-### Keep comments short
-
-One or two lines, explaining *why* rather than *what*. The codebase does not use long
-prose comment blocks or multi-paragraph docstrings. Match what is already there.
 
 ### Version strings are triplicated
 

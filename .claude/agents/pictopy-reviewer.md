@@ -27,6 +27,28 @@ Then read the root `AGENTS.md` and the `AGENTS.md` nearest each changed file.
   match the codebase.
 - No edits to generated or vendored paths: `dist/`, `target/`, `gen/`, `node_modules/`,
   `__pycache__/`, `frontend/src/components/ui/`.
+- No commented-out code.
+
+### Reuse and structure
+
+This is the highest-value check — search before accepting anything new.
+
+- For each new component, hook, or helper, grep for an existing one that does the same
+  job. Check `frontend/src/components/ui/`, `src/hooks/`, `src/utils/`, `src/lib/utils.ts`,
+  `src/constants/`, and `backend/app/utils/`. A near-duplicate is a finding.
+- Flag logic copy-pasted into a third location — that is the point to extract it.
+- Flag layer violations: a route opening a database connection, a component fetching data
+  directly, derived state computed in a component instead of a selector.
+- Flag any new pattern the codebase does not already use (a second state library, a
+  different test style, a second way to call the API).
+
+### Types
+
+- New TypeScript must be typed: props, exports, and API responses. Flag added `any`, and
+  flag `as` used to silence an error rather than to narrow a genuinely wider type.
+- Frontend response types must match the backend Pydantic model. Compare them.
+- New Python functions should carry signature and return annotations, and table rows should
+  be `TypedDict`, matching the surrounding modules.
 - If any of `package.json`, `frontend/package.json`, or `frontend/src-tauri/Cargo.toml`
   changed, all three versions must still match.
 
