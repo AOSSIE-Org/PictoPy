@@ -4,6 +4,7 @@ import os
 # Import database table creation functions
 from app.database.faces import db_create_faces_table
 from app.database.images import db_create_images_table
+from app.database.videos import db_create_videos_table
 from app.database.face_clusters import db_create_clusters_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 from app.database.albums import db_create_albums_table, db_create_album_images_table
@@ -30,6 +31,7 @@ def setup_before_all_tests():
         db_create_albums_table()
         db_create_album_images_table()
         db_create_images_table()
+        db_create_videos_table()
         db_create_semantic_labels_table()
         db_create_image_embeddings_table()
         db_create_metadata_table()

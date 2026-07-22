@@ -1050,7 +1050,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ToggleFavouriteRequest"
+                "$ref": "#/components/schemas/app__routes__images__ToggleFavouriteRequest"
               }
             }
           },
@@ -1062,6 +1062,100 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/": {
+      "get": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Get All Videos",
+        "description": "Get all videos from the database.",
+        "operationId": "get_all_videos_videos__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAllVideosResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/toggle-favourite": {
+      "post": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Toggle Favourite",
+        "description": "Toggle the favorite status of a video.",
+        "operationId": "toggle_favourite_videos_toggle_favourite_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__routes__videos__ToggleFavouriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToggleFavouriteResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
               }
             }
           },
@@ -1269,14 +1363,9 @@
             "in": "query",
             "required": false,
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/InputType"
-                }
-              ],
+              "$ref": "#/components/schemas/InputType",
               "description": "Choose input type: 'path' or 'base64'",
-              "default": "path",
-              "title": "Input Type"
+              "default": "path"
             },
             "description": "Choose input type: 'path' or 'base64'"
           }
@@ -1544,7 +1633,7 @@
             "required": false,
             "schema": {
               "type": "number",
-              "maximum": 100.0,
+              "maximum": 100,
               "minimum": 0.1,
               "description": "Location clustering radius in km",
               "default": 5.0,
@@ -1632,7 +1721,7 @@
             "required": false,
             "schema": {
               "type": "number",
-              "maximum": 100.0,
+              "maximum": 100,
               "minimum": 0.1,
               "description": "Location clustering radius in km",
               "default": 5.0,
@@ -1712,7 +1801,7 @@
             "required": false,
             "schema": {
               "type": "number",
-              "maximum": 100.0,
+              "maximum": 100,
               "minimum": 0.1,
               "description": "Location clustering radius in km",
               "default": 5.0,
@@ -2560,6 +2649,32 @@
         ],
         "title": "GetAllImagesResponse"
       },
+      "GetAllVideosResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/VideoData"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetAllVideosResponse"
+      },
       "GetClusterImagesData": {
         "properties": {
           "cluster_id": {
@@ -2910,6 +3025,7 @@
           "metadata": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -3105,6 +3221,7 @@
           "metadata": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -3529,18 +3646,28 @@
         ],
         "title": "SyncFolderResponse"
       },
-      "ToggleFavouriteRequest": {
+      "ToggleFavouriteResponse": {
         "properties": {
-          "image_id": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "video_id": {
             "type": "string",
-            "title": "Image Id"
+            "title": "Video Id"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
           }
         },
         "type": "object",
         "required": [
-          "image_id"
+          "success",
+          "video_id",
+          "isFavourite"
         ],
-        "title": "ToggleFavouriteRequest"
+        "title": "ToggleFavouriteResponse"
       },
       "UpdateAITaggingData": {
         "properties": {
@@ -3788,6 +3915,162 @@
         ],
         "title": "ValidationError"
       },
+      "VideoData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          },
+          "thumbnailPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnailpath"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/VideoMetadataModel"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "folder_id",
+          "thumbnailPath",
+          "metadata",
+          "isFavourite"
+        ],
+        "title": "VideoData"
+      },
+      "VideoMetadataModel": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "date_created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Created"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "fps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fps"
+          },
+          "file_location": {
+            "type": "string",
+            "title": "File Location"
+          },
+          "file_size": {
+            "type": "integer",
+            "title": "File Size"
+          },
+          "item_type": {
+            "type": "string",
+            "title": "Item Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "date_created",
+          "width",
+          "height",
+          "file_location",
+          "file_size",
+          "item_type"
+        ],
+        "title": "VideoMetadataModel"
+      },
+      "app__routes__images__ToggleFavouriteRequest": {
+        "properties": {
+          "image_id": {
+            "type": "string",
+            "title": "Image Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_id"
+        ],
+        "title": "ToggleFavouriteRequest"
+      },
+      "app__routes__videos__ToggleFavouriteRequest": {
+        "properties": {
+          "video_id": {
+            "type": "string",
+            "title": "Video Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video_id"
+        ],
+        "title": "ToggleFavouriteRequest"
+      },
       "app__schemas__face_clusters__ErrorResponse": {
         "properties": {
           "success": {
@@ -3900,6 +4183,29 @@
         ],
         "title": "ErrorResponse",
         "description": "Error response model"
+      },
+      "app__schemas__videos__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "error"
+        ],
+        "title": "ErrorResponse"
       }
     }
   }
