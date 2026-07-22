@@ -1,3 +1,4 @@
+import math
 import sqlite3
 from typing import Optional, List, Dict, TypedDict, Union
 from app.config.settings import DATABASE_PATH
@@ -241,6 +242,9 @@ def db_get_all_clusters_with_face_counts() -> (
 ):
     """
     Retrieve all clusters with their face counts and stored face images.
+    Ordered by prominence: avg detection confidence weighted by log of face count,
+    so frequently-photographed people (likely the device owner) rank first
+    without letting large low-quality clusters outrank clean ones.
 
     Returns:
         List of dictionaries containing cluster_id, cluster_name, face_count, and face_image_base64
@@ -251,15 +255,15 @@ def db_get_all_clusters_with_face_counts() -> (
     try:
         cursor.execute(
             """
-            SELECT 
-                fc.cluster_id, 
-                fc.cluster_name, 
+            SELECT
+                fc.cluster_id,
+                fc.cluster_name,
                 COUNT(f.face_id) as face_count,
-                fc.face_image_base64
+                fc.face_image_base64,
+                COALESCE(AVG(f.confidence), 0) as avg_confidence
             FROM face_clusters fc
             LEFT JOIN faces f ON fc.cluster_id = f.cluster_id
             GROUP BY fc.cluster_id, fc.cluster_name, fc.face_image_base64
-            ORDER BY fc.cluster_id
             """
         )
 
@@ -267,16 +271,20 @@ def db_get_all_clusters_with_face_counts() -> (
 
         clusters = []
         for row in rows:
-            cluster_id, cluster_name, face_count, face_image_base64 = row
+            cluster_id, cluster_name, face_count, face_image_base64, avg_conf = row
             clusters.append(
                 {
                     "cluster_id": cluster_id,
                     "cluster_name": cluster_name,
                     "face_count": face_count,
                     "face_image_base64": face_image_base64,
+                    "_score": avg_conf * math.log2(1 + face_count),
                 }
             )
 
+        clusters.sort(key=lambda c: c["_score"], reverse=True)
+        for cluster in clusters:
+            del cluster["_score"]
         return clusters
     finally:
         conn.close()
@@ -311,13 +319,15 @@ def db_get_images_by_cluster_id(
             FROM images i
             INNER JOIN faces f ON i.id = f.image_id
             WHERE f.cluster_id = ?
-            ORDER BY i.path
+            ORDER BY i.path, f.confidence DESC
             """,
             (cluster_id,),
         )
 
         rows = cursor.fetchall()
 
+        # One row per image: keep only the highest-confidence face
+        seen_image_ids = set()
         images = []
         for row in rows:
             (
@@ -329,6 +339,10 @@ def db_get_images_by_cluster_id(
                 confidence,
                 bbox_json,
             ) = row
+
+            if image_id in seen_image_ids:
+                continue
+            seen_image_ids.add(image_id)
 
             import json
 

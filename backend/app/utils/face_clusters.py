@@ -21,6 +21,7 @@ from app.database.faces import (
     db_update_face_cluster_ids_batch,
     db_get_faces_unassigned_clusters,
     db_get_cluster_mean_embeddings,
+    db_get_cluster_image_pairs,
 )
 from app.database.face_clusters import db_delete_all_clusters, db_insert_clusters_batch
 from app.database.metadata import (
@@ -230,11 +231,12 @@ def cluster_util_cluster_all_face_embeddings(
     faces_data = db_get_all_faces_with_cluster_names()
 
     if not faces_data:
-        return []
+        return [], 0
 
     # Extract embeddings and face IDs with validation
     embeddings = []
     face_ids = []
+    image_ids = []
     existing_cluster_names = []
     invalid_count = 0
 
@@ -244,6 +246,7 @@ def cluster_util_cluster_all_face_embeddings(
         # Validate embedding before adding
         if _validate_embedding(embedding):
             face_ids.append(face["face_id"])
+            image_ids.append(face.get("image_id"))
             embeddings.append(embedding)
             existing_cluster_names.append(face["cluster_name"])
         else:
@@ -360,6 +363,10 @@ def cluster_util_cluster_all_face_embeddings(
         results, merge_threshold=effective_merge_threshold
     )
 
+    # Cannot-link constraint: faces co-occurring in one photo are different people
+    face_to_image = dict(zip(face_ids, image_ids))
+    results = _enforce_one_face_per_image(results, face_to_image)
+
     return results, total_faces_skipped
 
 
@@ -422,6 +429,9 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
 
     mean_embeddings_array = np.array(mean_embeddings)
 
+    # (cluster_id, image_id) pairs already taken; a photo's faces are distinct people
+    occupied_pairs = db_get_cluster_image_pairs()
+
     # Prepare batch update data
     face_cluster_mappings = []
     skipped_invalid = 0
@@ -454,9 +464,18 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
             nearest_cluster_idx = np.argmin(distances)
             nearest_cluster_id = cluster_ids[nearest_cluster_idx]
 
+            image_id = face.get("image_id")
+            if (
+                image_id is not None
+                and (nearest_cluster_id, image_id) in occupied_pairs
+            ):
+                continue
+
             face_cluster_mappings.append(
                 {"face_id": face_id, "cluster_id": nearest_cluster_id}
             )
+            if image_id is not None:
+                occupied_pairs.add((nearest_cluster_id, image_id))
 
     if skipped_invalid > 0:
         logger.warning(
@@ -466,6 +485,56 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
     total_faces_skipped = skipped_invalid
 
     return face_cluster_mappings, total_faces_skipped
+
+
+def _enforce_one_face_per_image(
+    results: List[ClusterResult], face_to_image: Dict[int, Optional[str]]
+) -> List[ClusterResult]:
+    """
+    Keep at most one face per image in each cluster: co-occurring faces belong
+    to different people. The face closest to the cluster centroid wins; the
+    rest are dropped from results (left unclustered).
+    """
+    by_cluster = defaultdict(list)
+    for result in results:
+        by_cluster[result.cluster_uuid].append(result)
+
+    kept = []
+    dropped = 0
+    for cluster_results in by_cluster.values():
+        centroid = np.mean([r.embedding for r in cluster_results], axis=0)
+        centroid_norm = np.linalg.norm(centroid)
+
+        best_per_image: Dict[str, Tuple[float, ClusterResult]] = {}
+        for result in cluster_results:
+            image_id = face_to_image.get(result.face_id)
+            if image_id is None:
+                kept.append(result)
+                continue
+
+            emb_norm = np.linalg.norm(result.embedding)
+            if centroid_norm < 1e-6 or emb_norm < 1e-6:
+                similarity = 0.0
+            else:
+                similarity = float(
+                    np.dot(result.embedding, centroid) / (emb_norm * centroid_norm)
+                )
+
+            prev = best_per_image.get(image_id)
+            if prev is None:
+                best_per_image[image_id] = (similarity, result)
+            else:
+                dropped += 1
+                if similarity > prev[0]:
+                    best_per_image[image_id] = (similarity, result)
+
+        kept.extend(result for _, result in best_per_image.values())
+
+    if dropped:
+        logger.info(
+            f"Cannot-link constraint: dropped {dropped} same-image duplicate face(s) from clusters"
+        )
+    return kept
 
 
 def _merge_similar_clusters(

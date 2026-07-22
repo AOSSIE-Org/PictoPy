@@ -195,9 +195,10 @@ PICTO_CLUSTERING_MERGE_THRESHOLD = _get_env_float(
 PICTO_CLUSTERING_CONF_THRESHOLD = _get_env_float(
     "PICTO_CLUSTERING_CONF_THRESHOLD", 0.45, min_value=0.0, max_value=1.0
 )
+# Laplacian variance is low (~40-75) on clean studio portraits, so keep this permissive.
 PICTO_CLUSTERING_BLUR_THRESHOLD = _get_env_float(
-    "PICTO_CLUSTERING_BLUR_THRESHOLD", 80.0, min_value=0.0
+    "PICTO_CLUSTERING_BLUR_THRESHOLD", 20.0, min_value=0.0
 )
 PICTO_CLUSTERING_MIN_FACE_SIZE = _get_env_int(
-    "PICTO_CLUSTERING_MIN_FACE_SIZE", 1600, min_value=1
+    "PICTO_CLUSTERING_MIN_FACE_SIZE", 1000, min_value=1
 )
