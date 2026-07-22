@@ -3,6 +3,8 @@ description: PictoPy project conventions
 alwaysApply: true
 ---
 
+# PictoPy project conventions
+
 Follow `AGENTS.md` at the repository root, and the nearest `AGENTS.md` to the file you are
 editing (`backend/`, `frontend/`, `frontend/src-tauri/`, and `sync-microservice/` each have
 one). Those files are the source of truth for this project's conventions.
