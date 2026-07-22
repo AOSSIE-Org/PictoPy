@@ -46,7 +46,10 @@ export function VideoCard({ video, className, onClick }: VideoCardProps) {
               className="h-full w-full object-cover transition-transform group-hover:scale-105"
             />
           ) : (
-            <div className="bg-muted flex h-full w-full items-center justify-center">
+            <div
+              data-testid="video-thumbnail-placeholder"
+              className="bg-muted flex h-full w-full items-center justify-center"
+            >
               <Film className="text-muted-foreground h-10 w-10" />
             </div>
           )}
@@ -59,7 +62,10 @@ export function VideoCard({ video, className, onClick }: VideoCardProps) {
               non-playable card never looks playable. */}
           {onClick && (
             <>
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div
+                data-testid="video-play-indicator"
+                className="pointer-events-none absolute inset-0 flex items-center justify-center"
+              >
                 <div className="rounded-full bg-black/50 p-3 text-white transition-transform duration-200 group-hover:scale-110">
                   <Play className="h-6 w-6" fill="currentColor" />
                 </div>

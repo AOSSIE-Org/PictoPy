@@ -55,6 +55,9 @@ describe('VideoCard', () => {
     render(<VideoCard video={makeVideo({ thumbnailPath: null })} />);
 
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId('video-thumbnail-placeholder'),
+    ).toBeInTheDocument();
   });
 
   test('invokes onClick when the play control is activated', () => {
@@ -86,29 +89,36 @@ describe('VideoCard', () => {
   });
 
   test('renders no playback control or play glyph without an action', () => {
-    const { container } = render(<VideoCard video={makeVideo()} />);
+    render(<VideoCard video={makeVideo()} />);
 
     expect(
       screen.queryByRole('button', { name: /^Play / }),
     ).not.toBeInTheDocument();
     // The card must not look playable when it isn't
-    expect(container.querySelector('.lucide-play')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('video-play-indicator'),
+    ).not.toBeInTheDocument();
   });
 
   test('shows the play glyph when the card is playable', () => {
-    const { container } = render(
-      <VideoCard video={makeVideo()} onClick={jest.fn()} />,
-    );
-    expect(container.querySelector('.lucide-play')).toBeInTheDocument();
+    render(<VideoCard video={makeVideo()} onClick={jest.fn()} />);
+
+    expect(screen.getByTestId('video-play-indicator')).toBeInTheDocument();
   });
 
   test('falls back to the placeholder when the thumbnail fails to load', () => {
     render(<VideoCard video={makeVideo()} />);
 
-    const img = screen.getByAltText('sample.mp4');
-    fireEvent.error(img);
+    expect(
+      screen.queryByTestId('video-thumbnail-placeholder'),
+    ).not.toBeInTheDocument();
+
+    fireEvent.error(screen.getByAltText('sample.mp4'));
 
     expect(screen.queryByAltText('sample.mp4')).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId('video-thumbnail-placeholder'),
+    ).toBeInTheDocument();
   });
 
   test('favourite button is disabled while a toggle is in flight', () => {
