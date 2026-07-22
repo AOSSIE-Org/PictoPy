@@ -5,7 +5,7 @@ import uuid
 import datetime
 import json
 import mimetypes
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 from pathlib import Path
 
 import cv2
@@ -50,6 +50,7 @@ def video_util_process_folder_videos(folder_data: List[Tuple[str, int, bool]]) -
 
         all_video_records: List[VideoRecord] = []
         all_folder_ids = []
+        superseded_thumbnails: List[str] = []
 
         for folder_path, folder_id, recursive in folder_data:
             try:
@@ -74,6 +75,11 @@ def video_util_process_folder_videos(folder_data: List[Tuple[str, int, bool]]) -
                 folder_video_records = video_util_prepare_video_records(
                     video_files, folder_path_to_id, already_indexed
                 )
+                superseded_thumbnails.extend(
+                    video_util_collect_superseded_thumbnails(
+                        folder_video_records, already_indexed
+                    )
+                )
                 all_video_records.extend(folder_video_records)
 
             except Exception as e:
@@ -84,12 +90,58 @@ def video_util_process_folder_videos(folder_data: List[Tuple[str, int, bool]]) -
             video_util_remove_obsolete_videos(all_folder_ids)
 
         if all_video_records:
-            return db_bulk_insert_videos(all_video_records)
+            inserted = db_bulk_insert_videos(all_video_records)
+            if inserted:
+                # Rows now point at the new posters, so the old ones are free
+                video_util_remove_thumbnail_files(superseded_thumbnails)
+            else:
+                # Nothing references the posters we just wrote; the surviving
+                # rows still point at their original, untouched thumbnails.
+                video_util_remove_thumbnail_files(
+                    record.get("thumbnailPath") for record in all_video_records
+                )
+            return inserted
 
         return True  # No videos to process is not an error
     except Exception as e:
         logger.error(f"Error processing folders: {e}")
         return False
+
+
+def video_util_remove_thumbnail_files(
+    thumbnail_paths: Iterable[Optional[str]],
+) -> None:
+    """Delete thumbnail files, tolerating ones that are already gone."""
+    for thumbnail_path in thumbnail_paths:
+        if not thumbnail_path or not os.path.exists(thumbnail_path):
+            continue
+        try:
+            os.remove(thumbnail_path)
+            logger.info(f"Removed thumbnail: {thumbnail_path}")
+        except OSError as e:
+            logger.error(f"Error removing thumbnail {thumbnail_path}: {e}")
+
+
+def video_util_collect_superseded_thumbnails(
+    records: List[VideoRecord], already_indexed: IndexedVideos
+) -> List[str]:
+    """Posters a rescan is about to replace.
+
+    Held back until the upsert succeeds, so a failed write never leaves a row
+    pointing at a thumbnail that has already been deleted.
+    """
+    superseded = []
+    for record in records:
+        new_thumbnail = record.get("thumbnailPath")
+        # Regeneration failed, so the row keeps its existing poster
+        if not new_thumbnail:
+            continue
+
+        old_thumbnail, _ = already_indexed.get(record["path"], (None, {}))
+        if old_thumbnail and old_thumbnail != new_thumbnail:
+            superseded.append(old_thumbnail)
+
+    return superseded
 
 
 def video_util_source_is_unchanged(
@@ -159,22 +211,6 @@ def video_util_prepare_video_records(
             metadata = video_util_extract_metadata(video_path, capture=capture)
         finally:
             capture.release()
-
-        # The row is about to point at the new JPEG, so drop the superseded one.
-        # Only once the replacement exists, otherwise a failed re-encode would
-        # leave the record pointing at a thumbnail we already deleted.
-        if (
-            thumbnail_path
-            and existing_thumbnail
-            and existing_thumbnail != thumbnail_path
-            and os.path.exists(existing_thumbnail)
-        ):
-            try:
-                os.remove(existing_thumbnail)
-            except OSError as e:
-                logger.error(
-                    f"Error removing stale thumbnail {existing_thumbnail}: {e}"
-                )
 
         video_records.append(
             {
@@ -344,18 +380,16 @@ def video_util_remove_obsolete_videos(folder_id_list: List[int]) -> int:
     existing_db_videos = db_get_videos_by_folder_ids(folder_id_list)
 
     obsolete_videos = []
+    obsolete_thumbnails = []
     for video_id, video_path, thumbnail_path in existing_db_videos:
         if not os.path.exists(video_path):
             obsolete_videos.append(video_id)
-            if thumbnail_path and os.path.exists(thumbnail_path):
-                try:
-                    os.remove(thumbnail_path)
-                    logger.info(f"Removed obsolete thumbnail: {thumbnail_path}")
-                except OSError as e:
-                    logger.error(f"Error removing thumbnail {thumbnail_path}: {e}")
+            obsolete_thumbnails.append(thumbnail_path)
 
     if obsolete_videos:
+        # Drop the rows first: an orphaned file beats a row pointing at nothing
         db_delete_videos_by_ids(obsolete_videos)
+        video_util_remove_thumbnail_files(obsolete_thumbnails)
         logger.info(f"Removed {len(obsolete_videos)} obsolete video(s) from database")
 
     return len(obsolete_videos)

@@ -85,12 +85,30 @@ describe('VideoCard', () => {
     ).toBe(false);
   });
 
-  test('renders no playback control when there is nothing to activate', () => {
-    render(<VideoCard video={makeVideo()} />);
+  test('renders no playback control or play glyph without an action', () => {
+    const { container } = render(<VideoCard video={makeVideo()} />);
 
     expect(
       screen.queryByRole('button', { name: /^Play / }),
     ).not.toBeInTheDocument();
+    // The card must not look playable when it isn't
+    expect(container.querySelector('.lucide-play')).not.toBeInTheDocument();
+  });
+
+  test('shows the play glyph when the card is playable', () => {
+    const { container } = render(
+      <VideoCard video={makeVideo()} onClick={jest.fn()} />,
+    );
+    expect(container.querySelector('.lucide-play')).toBeInTheDocument();
+  });
+
+  test('falls back to the placeholder when the thumbnail fails to load', () => {
+    render(<VideoCard video={makeVideo()} />);
+
+    const img = screen.getByAltText('sample.mp4');
+    fireEvent.error(img);
+
+    expect(screen.queryByAltText('sample.mp4')).not.toBeInTheDocument();
   });
 
   test('favourite button is disabled while a toggle is in flight', () => {

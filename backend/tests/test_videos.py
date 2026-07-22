@@ -324,6 +324,46 @@ class TestProcessFolderVideos:
         assert not os.path.exists(first["thumbnailPath"])
         assert len(os.listdir(thumb_dir)) == 1
 
+    def test_failed_upsert_keeps_the_previous_thumbnail(
+        self, test_db, test_folder_id, real_video_file, temp_media_dir, monkeypatch
+    ):
+        """If the write fails, the surviving row's poster must still be on disk."""
+        import app.utils.videos as videos_module
+
+        thumb_dir = os.path.join(temp_media_dir, "thumbs")
+        monkeypatch.setattr("app.utils.videos.THUMBNAIL_IMAGES_PATH", thumb_dir)
+
+        video_path = os.path.join(temp_media_dir, "clip.mp4")
+        shutil.copyfile(real_video_file, video_path)
+
+        folder_data = [(temp_media_dir, test_folder_id, False)]
+        videos_module.video_util_process_folder_videos(folder_data)
+        original = db_get_all_videos()[0]
+
+        # Replace the source so the rescan regenerates, then fail the write
+        import numpy as np
+
+        writer = cv2.VideoWriter(
+            real_video_file, cv2.VideoWriter_fourcc(*"MJPG"), 10.0, (64, 64)
+        )
+        for i in range(40):
+            writer.write(np.full((64, 64, 3), i * 5, dtype=np.uint8))
+        writer.release()
+        shutil.copyfile(real_video_file, video_path)
+        os.remove(real_video_file)
+
+        monkeypatch.setattr(
+            videos_module, "db_bulk_insert_videos", lambda records: False
+        )
+        assert videos_module.video_util_process_folder_videos(folder_data) is False
+
+        # Row is untouched and still points at a thumbnail that exists
+        unchanged = db_get_all_videos()[0]
+        assert unchanged["thumbnailPath"] == original["thumbnailPath"]
+        assert os.path.exists(original["thumbnailPath"])
+        # The poster written for the abandoned record is not left behind
+        assert len(os.listdir(thumb_dir)) == 1
+
     def test_rescan_regenerates_a_missing_thumbnail(
         self, test_db, test_folder_id, real_video_file, temp_media_dir, monkeypatch
     ):

@@ -253,13 +253,21 @@ def db_delete_videos_by_ids(video_ids: List[VideoId]) -> bool:
     cursor = conn.cursor()
 
     try:
-        placeholders = ",".join("?" for _ in video_ids)
-        cursor.execute(
-            f"DELETE FROM videos WHERE id IN ({placeholders})",
-            video_ids,
-        )
+        # Chunk by 500 to stay under SQLite's variable limit per statement,
+        # matching db_get_images_by_ids's convention.
+        deleted = 0
+        chunk_size = 500
+        for i in range(0, len(video_ids), chunk_size):
+            chunk = video_ids[i : i + chunk_size]
+            placeholders = ",".join("?" for _ in chunk)
+            cursor.execute(
+                f"DELETE FROM videos WHERE id IN ({placeholders})",
+                chunk,
+            )
+            deleted += cursor.rowcount
+
         conn.commit()
-        logger.info(f"Deleted {cursor.rowcount} obsolete video(s) from database")
+        logger.info(f"Deleted {deleted} obsolete video(s) from database")
         return True
     except sqlite3.Error as e:
         logger.error(f"Error deleting videos: {e}")
