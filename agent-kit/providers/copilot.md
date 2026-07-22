@@ -21,6 +21,17 @@ of Copilot-only path rules would be a second thing to keep in sync. On a surface
 resolves `AGENTS.md` natively, the nested files are picked up directly; on one that only
 reads the repository-wide file, Copilot follows the pointer.
 
+## Skills
+
+Copilot loads project-level agent skills from `.github/skills/`, `.claude/skills/`, and
+`.agents/skills/`. This repository already ships the last two, so **Copilot picks up the
+same four playbooks with no extra configuration** — no `.github/skills/` copy is needed,
+and adding one would be a third set of stubs to keep in sync.
+
+Project skills are available in Copilot CLI, VS Code and JetBrains agent mode, the Copilot
+app, the cloud agent, and Copilot code review. They are not available to inline
+completions.
+
 ## Limitations to be aware of
 
 - **Inline completions ignore all of this.** Ghost-text suggestions are not instruction-
@@ -30,8 +41,6 @@ reads the repository-wide file, Copilot follows the pointer.
   file; GitHub.com Chat does not read path-specific instructions. If a rule seems to be
   ignored, check the **References** section of the Copilot response to see which
   instruction files were actually applied.
-- No skills support. The playbooks in `agent-kit/skills/` are still readable — point
-  Copilot at the file directly when you want one.
 - This repository configures no Copilot hooks, so nothing auto-formats. Run the gates in
   `agent-kit/skills/pre-pr-check/SKILL.md` before pushing.
 

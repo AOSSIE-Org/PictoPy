@@ -36,7 +36,16 @@ npx markdownlint-cli2 --config .github/.markdownlint-cli2.jsonc
 Errors from paths inside local virtualenvs (`.env/`, `.docs-env/`, `.sync-env/`,
 `site-packages/`) are pre-existing noise, not caused by the change. Ignore them and say so.
 
-## 3. Frontend
+## 3. Agent hook tests
+
+Only needed if the diff touches `scripts/agent-format-hook*.mjs`, but it is fast and needs
+no dependencies.
+
+```bash
+node scripts/agent-format-hook.test.mjs
+```
+
+## 4. Frontend
 
 Every command below runs from the repository root. Each `cd` is wrapped in a subshell so it
 does not leak into the next command.
@@ -54,7 +63,7 @@ remove it — do not disable the rule.
 If `format:check` fails, fix it with `cd frontend && npm run format:fix` rather than editing
 by hand.
 
-## 4. Python
+## 5. Python
 
 Covers both `backend/` and `sync-microservice/`.
 
@@ -67,7 +76,7 @@ If the black hook reformats files, that is a pass with changes — re-stage them
 resolve a formatting disagreement by running `ruff format`; Ruff is configured at 300
 columns here and would reflow the entire codebase.
 
-## 5. Rust
+## 6. Rust
 
 ```bash
 (cd frontend/src-tauri && cargo fmt -- --check)
@@ -76,7 +85,7 @@ columns here and would reflow the entire codebase.
 
 If the format check fails, run `cargo fmt` without `--check` to fix it.
 
-## 6. Repository consistency
+## 7. Repository consistency
 
 - If `git diff` touches any of `package.json`, `frontend/package.json`, or
   `frontend/src-tauri/Cargo.toml`, confirm all three versions still match. They must only
@@ -86,7 +95,7 @@ If the format check fails, run `cargo fmt` without `--check` to fix it.
   `description` in each stub matches the playbook's. This is the one place the stub layout
   can silently rot.
 
-## 7. Pull request readiness
+## 8. Pull request readiness
 
 - The PR body must reference its issue as `#<number>` — `linked-issue.yml` copies labels
   from the linked issue onto the PR.

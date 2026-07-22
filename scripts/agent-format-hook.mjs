@@ -114,7 +114,9 @@ const EXCLUDED_FILES = ['frontend/package-lock.json', 'package-lock.json'];
 
 function isExcluded(rel) {
   const normalized = rel.split(path.sep).join('/');
-  if (normalized.startsWith('..')) return true; // outside the repository
+  // Outside the repository. On Windows, path.relative across drives returns an
+  // absolute path rather than a '..' prefix, so both forms have to be checked.
+  if (normalized.startsWith('..') || path.isAbsolute(rel)) return true;
   if (EXCLUDED_DIRS.test(rel)) return true;
   if (EXCLUDED_FILES.includes(normalized)) return true;
   return EXCLUDED_PATHS.some((prefix) => normalized.startsWith(prefix));

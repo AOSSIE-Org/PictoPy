@@ -14,6 +14,7 @@ Workflow triggers on `pull_request` against `main`.
 | Frontend lint | `cd frontend && npm run lint:check` |
 | Frontend format | `cd frontend && npm run format:check` |
 | Python lint + format | `pre-commit run --config .pre-commit-config.yaml --all-files` |
+| Agent hook tests | `node scripts/agent-format-hook.test.mjs` |
 | Rust format | `cd frontend/src-tauri && cargo fmt -- --check` |
 
 CI installs `pre-commit ruff black` and runs pre-commit from inside `backend/` with
@@ -45,11 +46,10 @@ The PyInstaller steps catch imports that work in development but break when froz
 dependency that is imported dynamically will pass `pytest` and fail here. Python 3.11 on
 the runner.
 
-## Not in this workflow
+The agent hook tests cover the formatting hook's guard, its path exclusions, and the
+entrypoint's exit codes. They need no dependencies, so the step runs before `npm install`.
 
-- `node scripts/agent-format-hook.test.mjs` covers the formatting hook's `ruff format`
-  guard and its path exclusions. There is no Node test job for `scripts/` in CI, so run it
-  by hand when changing `scripts/agent-format-hook.mjs`.
+## Not in this workflow
 
 - `cargo test` is not run by `pr-check-tests.yml`, but `CONTRIBUTING.md` asks contributors
   to run it and `pr-check-build.yml` builds the Rust side. Run it for any `src-tauri/`

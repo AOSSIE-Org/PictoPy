@@ -1,10 +1,32 @@
 #!/usr/bin/env node
-// Regression tests for the agent format hook. Run: node scripts/agent-format-hook.test.mjs
+// Regression tests for the agent format hook.
 //
-// Not wired into CI — CI has no Node test job for scripts/. Run it by hand when
-// changing the guard, and see agent-kit/references/ci-gates.md.
+// Run: node scripts/agent-format-hook.test.mjs
+// Also runs in CI, in the Linting job of .github/workflows/pr-check-tests.yml.
+//
+// Two layers: the guard and exclusion helpers directly, then the real entrypoint
+// as a subprocess, because Claude Code depends on its exit codes (2 blocks, 0 allows).
+
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { runsRuffFormat, isExcluded } from './agent-format-hook.mjs';
+
+const HOOK = path.join(path.dirname(fileURLToPath(import.meta.url)), 'agent-format-hook.mjs');
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+let failed = 0;
+function check(ok, label) {
+  if (!ok) {
+    failed++;
+    console.error(`FAIL  ${label}`);
+  }
+}
+
+// ------------------------------------------------------- guard detection
 
 // [command, should be blocked]
 const GUARD_CASES = [
@@ -29,7 +51,7 @@ const GUARD_CASES = [
   ['python -m ruff format .', true],
   ['python3.11 -m ruff format .', true],
 
-  // Must NOT block: different Ruff subcommand.
+  // Must NOT block: a different Ruff subcommand.
   ['ruff check --fix backend/', false],
   ['ruff check .', false],
 
@@ -44,6 +66,12 @@ const GUARD_CASES = [
   ['black backend/', false],
   ['', false],
 ];
+
+for (const [command, expected] of GUARD_CASES) {
+  check(runsRuffFormat(command) === expected, `guard ${JSON.stringify(command)}`);
+}
+
+// ------------------------------------------------------- path exclusion
 
 // [relative path, should be skipped by the formatter]
 const EXCLUSION_CASES = [
@@ -62,28 +90,87 @@ const EXCLUSION_CASES = [
   ['frontend/src/components/Media/Player.tsx', false],
 ];
 
-let failed = 0;
-
-for (const [command, expected] of GUARD_CASES) {
-  const actual = runsRuffFormat(command);
-  if (actual !== expected) {
-    failed++;
-    console.error(`FAIL guard    got=${actual} want=${expected}  ${JSON.stringify(command)}`);
-  }
-}
-
 for (const [rel, expected] of EXCLUSION_CASES) {
-  const actual = isExcluded(rel.split('/').join(process.platform === 'win32' ? '\\' : '/'));
-  if (actual !== expected) {
-    failed++;
-    console.error(`FAIL exclude  got=${actual} want=${expected}  ${rel}`);
+  const native = rel.split('/').join(path.sep);
+  check(isExcluded(native) === expected, `exclude ${rel}`);
+}
+
+// ------------------------------------------------- entrypoint (subprocess)
+
+function runHook(args, payload) {
+  return spawnSync(process.execPath, [HOOK, ...args], {
+    input: typeof payload === 'string' ? payload : JSON.stringify(payload),
+    encoding: 'utf8',
+  });
+}
+
+// Guard mode: blocked invocations exit 2 and explain why on stderr.
+{
+  const r = runHook(['--guard'], { tool_input: { command: 'ruff format backend/' } });
+  check(r.status === 2, 'entrypoint: blocked command exits 2');
+  check(/Blocked/.test(r.stderr), 'entrypoint: blocked command explains itself on stderr');
+  check(/black/.test(r.stderr), 'entrypoint: blocked command names the correct formatter');
+}
+
+// Guard mode: allowed invocations exit 0 silently.
+{
+  const r = runHook(['--guard'], { tool_input: { command: 'ruff check --fix .' } });
+  check(r.status === 0, 'entrypoint: allowed command exits 0');
+  check(r.stderr === '', 'entrypoint: allowed command is silent');
+}
+
+// Guard mode: fail open rather than blocking the session on bad input.
+for (const [label, payload] of [
+  ['malformed JSON', 'not json at all'],
+  ['empty stdin', ''],
+  ['missing tool_input', {}],
+]) {
+  const r = runHook(['--guard'], payload);
+  check(r.status === 0, `entrypoint: ${label} exits 0`);
+}
+
+// Format mode: a missing file is a no-op, not a crash.
+{
+  const r = runHook([], { tool_input: { file_path: path.join(REPO_ROOT, 'does-not-exist.py') } });
+  check(r.status === 0, 'entrypoint: missing file exits 0');
+}
+
+// Format mode: an excluded path is left byte-for-byte alone.
+{
+  const uiDir = path.join(REPO_ROOT, 'frontend', 'src', 'components', 'ui');
+  const probe = path.join(uiDir, '__hook_probe__.json');
+  const ugly = '{"b":2,   "a":1}\n';
+  writeFileSync(probe, ugly);
+  try {
+    const r = runHook([], { tool_input: { file_path: probe } });
+    check(r.status === 0, 'entrypoint: excluded path exits 0');
+    check(readFileSync(probe, 'utf8') === ugly, 'entrypoint: excluded path is not rewritten');
+  } finally {
+    rmSync(probe, { force: true });
   }
 }
 
-const total = GUARD_CASES.length + EXCLUSION_CASES.length;
+// Format mode: a path outside the repository is refused.
+{
+  const dir = mkdtempSync(path.join(tmpdir(), 'hook-test-'));
+  const outside = path.join(dir, 'scratch.py');
+  const ugly = 'def  f( a,b ):\n    return a\n';
+  writeFileSync(outside, ugly);
+  try {
+    const r = runHook([], { tool_input: { file_path: outside } });
+    check(r.status === 0, 'entrypoint: outside-repo path exits 0');
+    check(readFileSync(outside, 'utf8') === ugly, 'entrypoint: outside-repo path is not rewritten');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// ---------------------------------------------------------------- report
+
+const total = GUARD_CASES.length + EXCLUSION_CASES.length + 13;
 if (failed === 0) {
-  console.log(`All ${total} cases passed.`);
+  console.log(`All ${total} checks passed.`);
 } else {
-  console.error(`\n${failed} of ${total} cases failed.`);
+  console.error(`\n${failed} of ${total} checks failed.`);
   process.exit(1);
 }
