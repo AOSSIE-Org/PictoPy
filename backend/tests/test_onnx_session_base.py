@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.models.ONNXSessionBase import ONNXSessionBase
 from app.models.SigLIP2Text import SigLIP2Text
 from app.models.session_registry import (
     get_active_session_count,
@@ -102,3 +103,21 @@ class TestONNXSessionBaseClose:
         session.close()
         session.close()  # second call must not raise or double-decrement
         assert get_active_session_count(MODEL_KEY) == 0
+
+
+class TestONNXSessionBaseCreation:
+    @patch("os.path.exists", return_value=False)
+    def test_get_session_raises_when_model_missing(self, mock_exists):
+        session = SigLIP2Text(MODEL_PATH)
+        with pytest.raises(RuntimeError, match="not installed"):
+            session.get_session()
+
+    def test_base_clear_tensor_names_is_abstract(self):
+        base = ONNXSessionBase(MODEL_PATH)
+        with pytest.raises(NotImplementedError):
+            base._clear_tensor_names()
+
+    def test_del_swallows_close_errors(self):
+        base = ONNXSessionBase(MODEL_PATH)
+        base.close = MagicMock(side_effect=RuntimeError("boom"))
+        base.__del__()  # must not raise
