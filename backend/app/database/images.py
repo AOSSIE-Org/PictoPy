@@ -8,10 +8,9 @@ from datetime import datetime
 # App-specific imports
 import app.database.connection as connection_module
 from app.database.connection import get_db_connection
+from app.logging.setup_logging import get_logger
 
 DATABASE_PATH = connection_module.DATABASE_PATH
-
-from app.logging.setup_logging import get_logger
 
 # Initialize logger
 logger = get_logger(__name__)
