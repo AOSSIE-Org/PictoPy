@@ -18,9 +18,11 @@ import { runsRuffFormat, isExcluded, repoRelative } from './agent-format-hook.mj
 const HOOK = path.join(path.dirname(fileURLToPath(import.meta.url)), 'agent-format-hook.mjs');
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+let ran = 0;
 let failed = 0;
 const skipped = [];
 function check(ok, label) {
+  ran++;
   if (!ok) {
     failed++;
     console.error(`FAIL  ${label}`);
@@ -215,7 +217,6 @@ for (const [label, payload] of [
       const rel = repoRelative(target);
       check(rel === null || isExcluded(rel), 'boundary: outside-repo target is refused');
       check(repoRelative(path.join(REPO_ROOT, 'backend')) === 'backend', 'boundary: in-repo path resolves');
-      check(true, 'entrypoint: escaping link case skipped');
     }
   } finally {
     rmSync(linkDir, { recursive: true, force: true });
@@ -225,13 +226,12 @@ for (const [label, payload] of [
 
 // ---------------------------------------------------------------- report
 
-const total = GUARD_CASES.length + EXCLUSION_CASES.length + 17;
 for (const note of skipped) {
   console.log(`SKIP  ${note} — asserted the boundary logic directly instead`);
 }
 if (failed === 0) {
-  console.log(`All ${total} checks passed.`);
+  console.log(`All ${ran} checks passed.`);
 } else {
-  console.error(`\n${failed} of ${total} checks failed.`);
+  console.error(`\n${failed} of ${ran} checks failed.`);
   process.exit(1);
 }
