@@ -6,6 +6,7 @@ import app.database.folders as folders_module
 import app.database.yolo_mapping as yolo_mapping_module
 import app.database.connection as connection_module
 from app.database.images import _connect, db_create_images_table
+from app.database.connection import get_db_connection
 from app.database.folders import db_create_folders_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 from app.database.image_embeddings import (
@@ -164,10 +165,8 @@ class TestImageEmbeddingsDB:
         )
         assert db_count_embeddings("siglip2-base-patch16-224") == 1
 
-        conn = _connect()
-        conn.execute("DELETE FROM images WHERE id = ?", ("img7",))
-        conn.commit()
-        conn.close()
+        with get_db_connection() as conn:
+            conn.execute("DELETE FROM images WHERE id = ?", ("img7",))
 
         ids, _ = db_get_all_embeddings("siglip2-base-patch16-224")
         assert "img7" not in ids
