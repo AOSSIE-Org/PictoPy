@@ -6,11 +6,12 @@ import json
 from datetime import datetime
 
 # App-specific imports
-from app.config.settings import (
-    DATABASE_PATH,
-)
-from app.logging.setup_logging import get_logger
+import app.database.connection as connection_module
 from app.database.connection import get_db_connection
+
+DATABASE_PATH = connection_module.DATABASE_PATH
+
+from app.logging.setup_logging import get_logger
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -53,7 +54,7 @@ ImageClassPair = Tuple[ImageId, ClassId]
 
 
 def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(connection_module.DATABASE_PATH)
     # Ensure ON DELETE CASCADE and other FKs are enforced
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
@@ -484,28 +485,25 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
 
 
 def db_toggle_image_favourite_status(image_id: str) -> bool:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
     try:
-        cursor.execute("SELECT id FROM images WHERE id = ?", (image_id,))
-        if not cursor.fetchone():
-            return False
-        cursor.execute(
-            """
-            UPDATE images
-            SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
-            WHERE id = ?
-            """,
-            (image_id,),
-        )
-        conn.commit()
-        return cursor.rowcount > 0
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM images WHERE id = ?", (image_id,))
+            if not cursor.fetchone():
+                return False
+            cursor.execute(
+                """
+                UPDATE images
+                SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
+                WHERE id = ?
+                """,
+                (image_id,),
+            )
+            row_count = cursor.rowcount
+        return row_count > 0
     except sqlite3.Error as e:
         logger.error(f"Database error: {e}")
-        conn.rollback()
         return False
-    finally:
-        conn.close()
 
 
 def db_get_image_by_id(image_id: str) -> Optional[dict]:
