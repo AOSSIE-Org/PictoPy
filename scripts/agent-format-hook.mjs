@@ -10,7 +10,7 @@
 // Regression tests: node scripts/agent-format-hook.test.mjs
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -122,10 +122,26 @@ function isExcluded(rel) {
   return EXCLUDED_PATHS.some((prefix) => normalized.startsWith(prefix));
 }
 
+/**
+ * Repository-relative path for a file, with symlinks resolved on both sides.
+ * A lexical path.relative() would accept an in-repository symlink whose target
+ * lives outside the repository, and the formatter would then rewrite that target.
+ * Returns null when the path cannot be resolved.
+ */
+function repoRelative(filePath) {
+  try {
+    return path.relative(realpathSync(REPO_ROOT), realpathSync(filePath));
+  } catch {
+    return null;
+  }
+}
+
 function format(payload) {
   const filePath = payload?.tool_input?.file_path;
   if (!filePath || !existsSync(filePath)) process.exit(0);
-  if (isExcluded(path.relative(REPO_ROOT, filePath))) process.exit(0);
+
+  const rel = repoRelative(filePath);
+  if (rel === null || isExcluded(rel)) process.exit(0);
 
   const ext = path.extname(filePath).toLowerCase();
 
@@ -146,7 +162,7 @@ function format(payload) {
 
 // ---------------------------------------------------------------------- main
 
-export { runsRuffFormat, isExcluded };
+export { runsRuffFormat, isExcluded, repoRelative };
 
 // Only act when run as the hook, so the test file can import the helpers above.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

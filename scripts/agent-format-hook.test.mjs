@@ -8,17 +8,18 @@
 // as a subprocess, because Claude Code depends on its exit codes (2 blocks, 0 allows).
 
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { runsRuffFormat, isExcluded } from './agent-format-hook.mjs';
+import { runsRuffFormat, isExcluded, repoRelative } from './agent-format-hook.mjs';
 
 const HOOK = path.join(path.dirname(fileURLToPath(import.meta.url)), 'agent-format-hook.mjs');
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 let failed = 0;
+const skipped = [];
 function check(ok, label) {
   if (!ok) {
     failed++;
@@ -136,9 +137,12 @@ for (const [label, payload] of [
 }
 
 // Format mode: an excluded path is left byte-for-byte alone.
+// The probe lives in its own mkdtemp directory so a manual run can never clobber
+// a real file in the shadcn-generated tree.
 {
   const uiDir = path.join(REPO_ROOT, 'frontend', 'src', 'components', 'ui');
-  const probe = path.join(uiDir, '__hook_probe__.json');
+  const probeDir = mkdtempSync(path.join(uiDir, '__hook_probe__-'));
+  const probe = path.join(probeDir, 'probe.json');
   const ugly = '{"b":2,   "a":1}\n';
   writeFileSync(probe, ugly);
   try {
@@ -146,7 +150,7 @@ for (const [label, payload] of [
     check(r.status === 0, 'entrypoint: excluded path exits 0');
     check(readFileSync(probe, 'utf8') === ugly, 'entrypoint: excluded path is not rewritten');
   } finally {
-    rmSync(probe, { force: true });
+    rmSync(probeDir, { recursive: true, force: true });
   }
 }
 
@@ -165,9 +169,66 @@ for (const [label, payload] of [
   }
 }
 
+// Format mode: an in-repository symlink pointing outside the repository is refused.
+// A lexical path check would see an in-repository path here and format the target.
+{
+  const outsideDir = mkdtempSync(path.join(tmpdir(), 'hook-test-link-'));
+  const target = path.join(outsideDir, 'target.py');
+  const linkDir = mkdtempSync(path.join(REPO_ROOT, 'backend', '__hook_probe__-'));
+  const link = path.join(linkDir, 'link.py');
+  const ugly = 'def  f( a,b ):\n    return a\n';
+  writeFileSync(target, ugly);
+
+  let linkViaJunction = null;
+  let linked = true;
+  try {
+    symlinkSync(target, link, 'file');
+  } catch {
+    // Windows blocks file symlinks without Developer Mode, but permits directory
+    // junctions. A junction reproduces the same escape, so fall back to one.
+    try {
+      symlinkSync(outsideDir, path.join(linkDir, 'dir'), 'junction');
+      linkViaJunction = path.join(linkDir, 'dir', 'target.py');
+    } catch {
+      linked = false;
+    }
+  }
+
+  try {
+    if (linked) {
+      const escaping = linkViaJunction ?? link;
+      const r = runHook([], { tool_input: { file_path: escaping } });
+      check(r.status === 0, 'entrypoint: escaping link exits 0');
+      check(
+        readFileSync(target, 'utf8') === ugly,
+        'entrypoint: escaping link target is not rewritten',
+      );
+      // The lexical path looks in-repository; only link resolution catches it.
+      const rel = repoRelative(escaping);
+      check(rel === null || isExcluded(rel), 'boundary: escaping link is refused');
+      check(
+        !isExcluded(path.relative(REPO_ROOT, escaping)),
+        'boundary: a lexical check would have let it through',
+      );
+    } else {
+      skipped.push('escaping link (no permission to create a symlink or junction)');
+      const rel = repoRelative(target);
+      check(rel === null || isExcluded(rel), 'boundary: outside-repo target is refused');
+      check(repoRelative(path.join(REPO_ROOT, 'backend')) === 'backend', 'boundary: in-repo path resolves');
+      check(true, 'entrypoint: escaping link case skipped');
+    }
+  } finally {
+    rmSync(linkDir, { recursive: true, force: true });
+    rmSync(outsideDir, { recursive: true, force: true });
+  }
+}
+
 // ---------------------------------------------------------------- report
 
-const total = GUARD_CASES.length + EXCLUSION_CASES.length + 13;
+const total = GUARD_CASES.length + EXCLUSION_CASES.length + 17;
+for (const note of skipped) {
+  console.log(`SKIP  ${note} — asserted the boundary logic directly instead`);
+}
 if (failed === 0) {
   console.log(`All ${total} checks passed.`);
 } else {
