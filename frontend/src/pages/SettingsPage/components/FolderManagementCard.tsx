@@ -94,15 +94,14 @@ const FolderManagementCard: React.FC = () => {
 
                 {folder.AI_Tagging && (
                   <div className="mt-3">
-                    {folder.indexing_status === 'in_progress' ? (
+                    {folder.indexing_status !== 'completed' ? (
                       <div className="flex items-center gap-4 [--radius:1.2rem]">
                         <Badge className="bg-zinc-900 text-white hover:bg-black/90">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Indexing Folder...
                         </Badge>
                       </div>
-                    ) : folder.image_count === 0 &&
-                      folder.indexing_status === 'completed' ? (
+                    ) : folder.image_count === 0 ? (
                       <div className="text-muted-foreground text-sm italic">
                         Folder is empty
                       </div>

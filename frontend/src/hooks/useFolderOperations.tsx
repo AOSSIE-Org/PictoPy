@@ -26,7 +26,7 @@ export const useFolderOperations = () => {
     queryKey: ['folders'],
     queryFn: getAllFolders,
     refetchInterval: folders.some(
-      (f) => f.AI_Tagging && f.indexing_status === 'in_progress',
+      (f) => f.AI_Tagging && f.indexing_status !== 'completed',
     )
       ? 1000
       : false,
