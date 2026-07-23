@@ -170,3 +170,50 @@ class TestImageEmbeddingsDB:
 
         ids, _ = db_get_all_embeddings("siglip2-base-patch16-224")
         assert "img7" not in ids
+
+    def test_deleting_image_cascades_to_embeddings_and_classes_regression(self):
+        # 1. Insert two dummy images
+        _insert_dummy_image("img7")
+        _insert_dummy_image("img8")
+
+        # 2. Insert embeddings for both
+        db_upsert_image_embeddings(
+            [
+                ("img7", "siglip2-base-patch16-224", np.ones(3, dtype=np.float32)),
+                ("img8", "siglip2-base-patch16-224", np.ones(3, dtype=np.float32)),
+            ]
+        )
+
+        # 3. Insert image classes (semantic scores) for both
+        with get_db_connection() as conn:
+            conn.execute(
+                "INSERT INTO image_classes (image_id, class_id, score) VALUES (?, 1, 0.85)",
+                ("img7",),
+            )
+            conn.execute(
+                "INSERT INTO image_classes (image_id, class_id, score) VALUES (?, 1, 0.95)",
+                ("img8",),
+            )
+
+        # Verify initial state
+        assert db_count_embeddings("siglip2-base-patch16-224") == 2
+        with get_db_connection() as conn:
+            res = conn.execute("SELECT COUNT(*) FROM image_classes").fetchone()
+            assert res[0] == 2
+
+        # 4. Call production delete logic for img7
+        from app.database.images import db_delete_images_by_ids
+
+        db_delete_images_by_ids(["img7"])
+
+        # 5. Assert img7 cascades deleted, but img8 remains intact
+        ids, _ = db_get_all_embeddings("siglip2-base-patch16-224")
+        assert "img7" not in ids
+        assert "img8" in ids
+
+        with get_db_connection() as conn:
+            remaining_classes = conn.execute(
+                "SELECT image_id FROM image_classes"
+            ).fetchall()
+            assert len(remaining_classes) == 1
+            assert remaining_classes[0][0] == "img8"
