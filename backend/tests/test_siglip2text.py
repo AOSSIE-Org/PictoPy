@@ -1,24 +1,24 @@
+from typing import Iterator, List, Optional
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 
 from app.models.SigLIP2Text import SigLIP2Text
-from app.models.session_registry import (
-    get_active_session_count,
-    mark_model_session_inactive,
-)
+from app.models.session_registry import get_active_session_count
 
 MODEL_PATH = "app/models/ONNX_Exports/SigLIP2_Base_Text.onnx"
 MODEL_KEY = "siglip2_base_text"
 
 
 class _FakeTensor:
-    def __init__(self, name):
+    def __init__(self, name: Optional[str]):
         self.name = name
 
 
-def _ort_session(input_names, output_name="output"):
+def _ort_session(
+    input_names: List[str], output_name: Optional[str] = "output"
+) -> MagicMock:
     """Stand-in for onnxruntime.InferenceSession -- no real model file needed."""
     session = MagicMock()
     session.get_inputs.return_value = [_FakeTensor(n) for n in input_names]
@@ -27,23 +27,31 @@ def _ort_session(input_names, output_name="output"):
 
 
 @pytest.fixture(autouse=True)
-def _clean_registry():
+def _clean_registry() -> Iterator[None]:
+    # No session may be registered before or after a test. A nonzero count at
+    # teardown means a test leaked a session that close() should have released;
+    # draining it here instead would mask that bug.
+    assert get_active_session_count(MODEL_KEY) == 0
     yield
-    # Don't leak a registered session into other tests sharing this model key
-    while get_active_session_count(MODEL_KEY) > 0:
-        mark_model_session_inactive(MODEL_KEY)
+    assert get_active_session_count(MODEL_KEY) == 0
 
 
 class TestGetSession:
     @patch("onnxruntime.InferenceSession")
     @patch("os.path.exists", return_value=True)
     def test_second_call_returns_cached_session(self, mock_exists, mock_cls):
-        mock_cls.return_value = _ort_session(["input_ids", "attention_mask"])
+        # Distinct objects per construction so a re-build would be observable
+        mock_cls.side_effect = [
+            _ort_session(["input_ids", "attention_mask"]),
+            _ort_session(["input_ids", "attention_mask"]),
+        ]
         model = SigLIP2Text(MODEL_PATH)
 
         first = model.get_session()
         second = model.get_session()  # fast path: self._session already set
-        assert second == first
+        # Built once and cached -- no second InferenceSession, same object back
+        assert mock_cls.call_count == 1
+        assert second[0] is first[0]
         model.close()
 
     def test_raises_if_names_cleared_mid_call(self):
@@ -82,4 +90,20 @@ class TestGetEmbedding:
         embedding = model.get_embedding(ids, mask)
         assert np.allclose(np.linalg.norm(embedding), 1.0)
         assert np.allclose(embedding, [0.6, 0.8])
+        model.close()
+
+    @patch("onnxruntime.InferenceSession")
+    @patch("os.path.exists", return_value=True)
+    def test_zero_vector_is_returned_unchanged(self, mock_exists, mock_cls):
+        # A zero embedding has norm 0 -- it must pass through, not divide by zero
+        session = _ort_session(["input_ids", "attention_mask"])
+        session.run.return_value = [np.zeros((1, 2), dtype=np.float32)]
+        mock_cls.return_value = session
+
+        model = SigLIP2Text(MODEL_PATH)
+        ids = np.zeros((1, 4), dtype=np.int64)
+        mask = np.ones((1, 4), dtype=np.int64)
+
+        embedding = model.get_embedding(ids, mask)
+        assert np.allclose(embedding, [0.0, 0.0])
         model.close()

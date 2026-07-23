@@ -561,7 +561,10 @@ class TestVideosAPI:
         monkeypatch.setattr("app.routes.videos.db_get_all_videos", boom)
         response = client.get("/videos/")
         assert response.status_code == 500
-        assert response.json()["detail"]["success"] is False
+        detail = response.json()["detail"]
+        assert detail["success"] is False
+        assert detail["error"]
+        assert detail["message"]
 
     def test_toggle_favourite_row_disappears_after_toggle(self, client, monkeypatch):
         # Toggle reports success, but the row can't be read back -> 404
@@ -579,7 +582,10 @@ class TestVideosAPI:
         monkeypatch.setattr("app.routes.videos.db_toggle_video_favourite_status", boom)
         response = client.post("/videos/toggle-favourite", json={"video_id": "vid-1"})
         assert response.status_code == 500
-        assert response.json()["detail"]["success"] is False
+        detail = response.json()["detail"]
+        assert detail["success"] is False
+        assert detail["error"]
+        assert detail["message"]
 
 
 # ##############################

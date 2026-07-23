@@ -2,6 +2,7 @@ import os
 import sqlite3
 import tempfile
 from datetime import datetime
+from typing import Any, Dict, Iterator
 
 import pytest
 
@@ -36,7 +37,7 @@ from app.database.semantic_labels import db_create_semantic_labels_table
 
 
 @pytest.fixture(scope="function")
-def test_db(monkeypatch):
+def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
     """Point the image/folder/mapping DB modules at a fresh tempfile database."""
     db_fd, db_path = tempfile.mkstemp()
     os.close(db_fd)
@@ -59,7 +60,7 @@ def test_db(monkeypatch):
 
 
 @pytest.fixture
-def folder(test_db):
+def folder(test_db: str) -> str:
     """Insert a folder row (AI_Tagging on) to satisfy the images.folder_id FK."""
     folder_id = "folder-1"
     conn = sqlite3.connect(test_db)
@@ -73,8 +74,10 @@ def folder(test_db):
     return folder_id
 
 
-def make_image_record(image_id, path, folder_id, **overrides):
-    record = {
+def make_image_record(
+    image_id: str, path: str, folder_id: str, **overrides: Any
+) -> Dict[str, Any]:
+    record: Dict[str, Any] = {
         "id": image_id,
         "path": path,
         "folder_id": folder_id,
@@ -90,7 +93,7 @@ def make_image_record(image_id, path, folder_id, **overrides):
     return record
 
 
-def add_tag(db_path, image_id, class_id, name):
+def add_tag(db_path: str, image_id: str, class_id: int, name: str) -> None:
     """Register a mapping name and attach it to an image via image_classes."""
     conn = sqlite3.connect(db_path)
     conn.execute(
@@ -105,7 +108,7 @@ def add_tag(db_path, image_id, class_id, name):
     conn.close()
 
 
-def drop_object(db_path, kind, name):
+def drop_object(db_path: str, kind: str, name: str) -> None:
     """Drop a table/view so the next query against it raises sqlite3.Error."""
     conn = sqlite3.connect(db_path)
     conn.execute(f"DROP {kind} IF EXISTS {name}")
@@ -332,6 +335,14 @@ class TestFolderQueriesAndDeletion:
             ]
         )
         db_insert_image_classes_batch([("img-1", 0)])
+
+        # The junction row must exist first, or the cascade assertion is vacuous
+        conn = sqlite3.connect(test_db)
+        before = conn.execute(
+            "SELECT COUNT(*) FROM image_classes WHERE image_id = 'img-1'"
+        ).fetchone()[0]
+        conn.close()
+        assert before == 1
 
         assert db_delete_images_by_ids(["img-1"]) is True
         assert [img["id"] for img in db_get_all_images()] == ["img-2"]
