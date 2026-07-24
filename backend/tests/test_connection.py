@@ -1,61 +1,88 @@
+import os
 import sqlite3
+import tempfile
+from typing import Iterator
+
 import pytest
-from unittest.mock import patch
 
 from app.database.connection import get_db_connection
 
+# ##############################
+# Pytest Fixtures
+# ##############################
 
-def test_get_db_connection_commits_on_success(tmp_path):
-    db_path = tmp_path / "test.db"
 
-    with patch("app.database.connection.DATABASE_PATH", str(db_path)):
+@pytest.fixture(scope="function")
+def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
+    """Point the connection helper at a fresh tempfile database."""
+    db_fd, db_path = tempfile.mkstemp()
+    os.close(db_fd)
+    try:
+        monkeypatch.setattr("app.config.settings.DATABASE_PATH", db_path)
+        monkeypatch.setattr("app.database.connection.DATABASE_PATH", db_path)
+
+        yield db_path
+    finally:
+        os.unlink(db_path)
+
+
+def read_names(db_path: str) -> list:
+    """Read every row from the scratch table on a separate connection."""
+    conn = sqlite3.connect(db_path)
+    rows = conn.execute("SELECT name FROM test").fetchall()
+    conn.close()
+    return rows
+
+
+# ##############################
+# Transaction handling
+# ##############################
+
+
+class TestGetDbConnection:
+    def test_commits_on_success(self, test_db):
         with get_db_connection() as conn:
-            conn.execute("DROP TABLE IF EXISTS test")
             conn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
             conn.execute("INSERT INTO test (name) VALUES (?)", ("Alice",))
 
-        # reopen DB to check commit happened
-        conn = sqlite3.connect(db_path)
-        result = conn.execute("SELECT name FROM test").fetchone()
-        conn.close()
+        # Visible from a fresh connection, so the commit really happened
+        assert read_names(test_db) == [("Alice",)]
 
-    assert result[0] == "Alice"
-
-
-def test_get_db_connection_rolls_back_on_exception(tmp_path):
-    db_path = tmp_path / "test.db"
-
-    with patch("app.database.connection.DATABASE_PATH", str(db_path)):
-        # Create table first and commit successfully
+    def test_rolls_back_on_exception(self, test_db):
         with get_db_connection() as conn:
-            conn.execute(
-                "CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)"
-            )
+            conn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
 
-        # Insert data, then raise error
         with pytest.raises(ValueError):
             with get_db_connection() as conn:
-                conn.execute(
-                    "INSERT INTO test (name) VALUES (?)",
-                    ("Bob",),
-                )
+                conn.execute("INSERT INTO test (name) VALUES (?)", ("Bob",))
                 raise ValueError("fail")
 
-        # Check Bob was rolled back
-        conn = sqlite3.connect(db_path)
-        result = conn.execute("SELECT name FROM test").fetchone()
-        conn.close()
-    assert result is None
+        assert read_names(test_db) == []
 
-def test_get_db_connection_enables_pragmas(tmp_path):
-    db_path = tmp_path / "test.db"
-
-    with patch("app.database.connection.DATABASE_PATH", str(db_path)):
+    def test_closes_the_connection_on_the_way_out(self, test_db):
         with get_db_connection() as conn:
-            foreign_keys = conn.execute("PRAGMA foreign_keys").fetchone()[0]
-            ignore_check = conn.execute("PRAGMA ignore_check_constraints").fetchone()[0]
-            recursive_triggers = conn.execute("PRAGMA recursive_triggers").fetchone()[0]
+            conn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
 
-    assert foreign_keys == 1
-    assert ignore_check == 0
-    assert recursive_triggers == 1
+        # The handle is released, so using it again is an error
+        with pytest.raises(sqlite3.ProgrammingError):
+            conn.execute("SELECT 1")
+
+
+# ##############################
+# Pragmas
+# ##############################
+
+
+class TestConnectionPragmas:
+    @pytest.mark.parametrize(
+        "pragma, expected",
+        [
+            ("foreign_keys", 1),
+            ("ignore_check_constraints", 0),
+            ("recursive_triggers", 1),
+            ("defer_foreign_keys", 0),
+        ],
+    )
+    def test_enforcement_pragmas_are_set(self, test_db, pragma, expected):
+        with get_db_connection() as conn:
+            assert conn.execute(f"PRAGMA {pragma}").fetchone()[0] == expected
