@@ -217,7 +217,7 @@ def image_util_classify_and_face_detect_images(
                 db_insert_image_classes_batch(image_class_pairs)
 
             # Step 3: Detect faces if "person" class is present
-            if classes and 0 in classes:
+            if classes and 0 in classes and 0 < classes.count(0) < 7:
                 result = face_detector.detect_faces(image_id, image_path)
                 if result:
                     total_faces_skipped += result.get("faces_skipped", 0)
@@ -443,19 +443,12 @@ def image_util_find_folder_id_for_image(
 
 def image_util_is_valid_image(file_path: str) -> bool:
     """Check if the file is a valid image with allowed extensions."""
-    # Check file extension first
     allowed_extensions = {".jpg", ".jpeg", ".png"}
-    file_extension = Path(file_path).suffix.lower()
-
-    if file_extension not in allowed_extensions:
+    if Path(file_path).suffix.lower() not in allowed_extensions:
         return False
-
-    # Then verify it's a valid image
     try:
-        with Image.open(file_path) as img:
-            img.verify()
-        return True
-    except Exception:
+        return os.path.getsize(file_path) > 0
+    except OSError:
         return False
 
 
