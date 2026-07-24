@@ -28,7 +28,8 @@ def logged_db_connection(action: str):
 def db_create_albums_table() -> None:
     with logged_db_connection("creating albums table") as conn:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS albums (
                 album_id TEXT PRIMARY KEY,
                 album_name TEXT UNIQUE,
@@ -36,13 +37,15 @@ def db_create_albums_table() -> None:
                 is_hidden BOOLEAN DEFAULT 0,
                 password_hash TEXT
             )
-            """)
+            """
+        )
 
 
 def db_create_album_images_table() -> None:
     with logged_db_connection("creating album_images table") as conn:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS album_images (
                 album_id TEXT,
                 image_id TEXT,
@@ -50,7 +53,8 @@ def db_create_album_images_table() -> None:
                 FOREIGN KEY (album_id) REFERENCES albums(album_id) ON DELETE CASCADE,
                 FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE
             )
-            """)
+            """
+        )
 
 
 def db_get_all_albums(show_hidden: bool = False) -> list[tuple]:

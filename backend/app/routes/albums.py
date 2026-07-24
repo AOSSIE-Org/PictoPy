@@ -198,9 +198,19 @@ def update_album(
                 ).model_dump(),
             )
 
-    db_update_album(
-        album_id, body.name, body.description, body.is_hidden, body.password
-    )
+    try:
+        db_update_album(
+            album_id, body.name, body.description, body.is_hidden, body.password
+        )
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=ErrorResponse(
+                success=False,
+                error="Album Already Exists",
+                message=f"Album '{body.name}' is already in the database.",
+            ).model_dump(),
+        )
     return SuccessResponse(success=True, msg="Album updated successfully")
 
 
