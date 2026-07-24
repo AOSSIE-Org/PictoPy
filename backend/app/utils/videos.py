@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import uuid
 import datetime
 import json
@@ -11,7 +12,7 @@ from pathlib import Path
 import cv2
 from PIL import Image
 
-from app.config.settings import THUMBNAIL_IMAGES_PATH
+from app.config.settings import THUMBNAIL_IMAGES_PATH, VIDEO_FRAMES_PATH
 from app.database.videos import (
     VideoRecord,
     db_bulk_insert_videos,
@@ -390,6 +391,352 @@ def video_util_remove_obsolete_videos(folder_id_list: List[int]) -> int:
         # Drop the rows first: an orphaned file beats a row pointing at nothing
         db_delete_videos_by_ids(obsolete_videos)
         video_util_remove_thumbnail_files(obsolete_thumbnails)
+        # The video_frames rows cascade with the video; their JPEGs don't.
+        for video_id in obsolete_videos:
+            video_util_remove_frame_directory(video_id)
         logger.info(f"Removed {len(obsolete_videos)} obsolete video(s) from database")
 
     return len(obsolete_videos)
+
+
+# ============================================================================
+# KEYFRAME SAMPLING - AI tagging without per-frame inference
+# ============================================================================
+
+
+def video_util_frame_directory(video_id: str) -> str:
+    """Where a video's sampled keyframe JPEGs live."""
+    return os.path.join(VIDEO_FRAMES_PATH, video_id)
+
+
+def video_util_remove_frame_directory(video_id: str) -> None:
+    frame_dir = video_util_frame_directory(video_id)
+    if os.path.isdir(frame_dir):
+        try:
+            shutil.rmtree(frame_dir)
+        except OSError as e:
+            logger.error(f"Error removing frame directory {frame_dir}: {e}")
+
+
+def video_util_get_frame_interval() -> float:
+    """The user's keyframe interval, falling back to the configured default."""
+    from app.config.settings import VIDEO_FRAME_INTERVAL_SECONDS
+    from app.database.metadata import db_get_metadata
+
+    try:
+        metadata = db_get_metadata() or {}
+        interval = metadata.get("user_preferences", {}).get("Video_Frame_Interval")
+        if interval is not None:
+            return float(interval)
+    except Exception as e:
+        logger.warning(f"Could not read frame interval preference: {e}")
+
+    return VIDEO_FRAME_INTERVAL_SECONDS
+
+
+def video_util_sample_frame_timestamps(
+    duration: Optional[float], interval: float, max_frames: int
+) -> List[float]:
+    """Timestamps (seconds) to sample a video at.
+
+    Frames land at chunk midpoints -- the start of a video is often a black
+    leader frame, and a midpoint is the most representative moment of the
+    chunk it stands for. Videos long enough to exceed max_frames get their
+    interval stretched rather than their frame count grown, so inference cost
+    per video is bounded regardless of length.
+    """
+    if not duration or duration <= 0 or interval <= 0:
+        return [0.0]
+
+    effective_interval = max(interval, duration / max_frames)
+    if duration <= effective_interval:
+        return [duration / 2]
+
+    timestamps = []
+    position = effective_interval / 2
+    while position < duration and len(timestamps) < max_frames:
+        timestamps.append(round(position, 3))
+        position += effective_interval
+
+    return timestamps or [duration / 2]
+
+
+def video_util_extract_video_frames(
+    video_id: str, video_path: str, interval: float
+) -> List[dict]:
+    """Sample a video into keyframe JPEGs on disk.
+
+    Seeks to each timestamp rather than decoding sequentially -- that's what
+    keeps a two-hour video affordable. Returns frame records ready for
+    db_bulk_insert_video_frames; a frame that won't decode is skipped, not
+    fatal.
+    """
+    from app.config.settings import (
+        VIDEO_FRAME_MAX_DIMENSION,
+        VIDEO_MAX_FRAMES_PER_VIDEO,
+    )
+
+    frame_dir = video_util_frame_directory(video_id)
+    # Start from a clean sample: a re-tag must not mix frames from a previous
+    # interval into the new set.
+    video_util_remove_frame_directory(video_id)
+
+    capture = cv2.VideoCapture(video_path)
+    try:
+        if not capture.isOpened():
+            logger.warning(f"Could not open video for frame sampling: {video_path}")
+            return []
+
+        fps = capture.get(cv2.CAP_PROP_FPS) or 0
+        frame_count = capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0
+        duration = frame_count / fps if fps > 0 and frame_count > 0 else None
+
+        timestamps = video_util_sample_frame_timestamps(
+            duration, interval, VIDEO_MAX_FRAMES_PER_VIDEO
+        )
+
+        os.makedirs(frame_dir, exist_ok=True)
+
+        frame_records = []
+        for index, timestamp in enumerate(timestamps):
+            capture.set(cv2.CAP_PROP_POS_MSEC, timestamp * 1000)
+            ret, frame = capture.read()
+            if not ret or frame is None:
+                continue
+
+            frame_path = os.path.abspath(
+                os.path.join(frame_dir, f"frame_{index:04d}.jpg")
+            )
+            try:
+                img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                img.thumbnail((VIDEO_FRAME_MAX_DIMENSION, VIDEO_FRAME_MAX_DIMENSION))
+                img.save(frame_path, "JPEG", quality=85)
+            except Exception as e:
+                logger.error(f"Error saving frame {index} of {video_path}: {e}")
+                continue
+
+            frame_records.append(
+                {
+                    "id": str(uuid.uuid4()),
+                    "video_id": video_id,
+                    "frame_path": frame_path,
+                    "timestamp_sec": timestamp,
+                    "frame_index": index,
+                }
+            )
+
+        return frame_records
+    except Exception as e:
+        logger.error(f"Error sampling frames for {video_path}: {e}")
+        return []
+    finally:
+        capture.release()
+
+
+def video_util_aggregate_frame_classes(
+    frame_class_ids: List[List[int]], min_support: int
+) -> List[Tuple[int, int]]:
+    """Roll per-frame detections up to video-level (class_id, frame_count).
+
+    A class is only kept if it was seen in enough frames -- one detection in
+    one unlucky keyframe describes the frame, not the video. Videos too short
+    to have that many frames fall back to a support of 1.
+    """
+    if not frame_class_ids:
+        return []
+
+    counts: Dict[int, int] = {}
+    for class_ids in frame_class_ids:
+        for class_id in set(class_ids or []):
+            counts[class_id] = counts.get(class_id, 0) + 1
+
+    required = min_support if len(frame_class_ids) >= min_support + 1 else 1
+    return sorted(
+        ((class_id, count) for class_id, count in counts.items() if count >= required),
+        key=lambda pair: (-pair[1], pair[0]),
+    )
+
+
+def video_util_process_untagged_videos() -> bool:
+    """Sample and object-tag every untagged video in AI-tagging folders."""
+    from app.config.settings import VIDEO_TAG_MIN_FRAME_SUPPORT
+    from app.database.video_frames import (
+        db_bulk_insert_video_frames,
+        db_delete_frames_for_videos,
+        db_get_untagged_videos,
+        db_mark_videos_tagged,
+        db_write_video_classes,
+    )
+    from app.models.ObjectClassifier import ObjectClassifier
+
+    try:
+        untagged_videos = db_get_untagged_videos()
+        if not untagged_videos:
+            return True
+
+        interval = video_util_get_frame_interval()
+        object_classifier = ObjectClassifier()
+        total_frames = 0
+
+        try:
+            for video in untagged_videos:
+                video_id = video["id"]
+                frames = video_util_extract_video_frames(
+                    video_id, video["path"], interval
+                )
+
+                if not frames:
+                    # Undecodable files are still marked tagged, otherwise
+                    # every folder sync retries them forever.
+                    logger.warning(
+                        f"No frames sampled from {video['path']}; tagging as empty"
+                    )
+                    db_mark_videos_tagged([video_id])
+                    continue
+
+                db_delete_frames_for_videos([video_id])
+                db_bulk_insert_video_frames(frames)
+                total_frames += len(frames)
+
+                frame_class_ids = [
+                    object_classifier.get_classes(frame["frame_path"]) or []
+                    for frame in frames
+                ]
+                db_write_video_classes(
+                    video_id,
+                    video_util_aggregate_frame_classes(
+                        frame_class_ids, VIDEO_TAG_MIN_FRAME_SUPPORT
+                    ),
+                )
+                db_mark_videos_tagged([video_id])
+        finally:
+            object_classifier.close()
+
+        logger.info(
+            f"Video tagging pass complete. Videos: {len(untagged_videos)}, "
+            f"Frames sampled: {total_frames}, Interval: {interval}s"
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Error processing untagged videos: {e}")
+        return False
+
+
+def video_util_process_unembedded_frames() -> None:
+    """Embed sampled keyframes with SigLIP2 -- the video counterpart of
+    image_util_process_unembedded_images."""
+    import time
+
+    import numpy as np
+
+    from app.config.settings import (
+        SIGLIP2_ACTIVE_CHECKPOINT,
+        SIGLIP2_SCORING_METADATA,
+        SIGLIP2_EMBED_BATCH_SIZE,
+    )
+    from app.database.video_frames import (
+        db_get_unembedded_video_frames,
+        db_mark_video_frames_embedded,
+        db_upsert_video_frame_embeddings,
+    )
+    from app.models.model_registry import get_siglip2_registry_keys, get_model_path
+    from app.models.SigLIP2Vision import SigLIP2Vision
+    from app.utils.SigLIP import siglip_util_preprocess_image
+
+    try:
+        vision_key, _ = get_siglip2_registry_keys(SIGLIP2_ACTIVE_CHECKPOINT)
+        vision_model_path = get_model_path(vision_key)
+        if not os.path.exists(vision_model_path):
+            logger.info(
+                "SigLIP2 vision model not installed; skipping frame embedding pass"
+            )
+            return
+
+        unembedded_frames = db_get_unembedded_video_frames()
+        if not unembedded_frames:
+            return
+
+        metadata = SIGLIP2_SCORING_METADATA[SIGLIP2_ACTIVE_CHECKPOINT]
+        resolution = metadata["input_resolution"]
+        model_version = metadata["model_version"]
+
+        vision_model = SigLIP2Vision(vision_model_path)
+        try:
+            total_frames = len(unembedded_frames)
+            embedded_count = 0
+            corrupt_count = 0
+            start_time = time.time()
+
+            for i in range(0, total_frames, SIGLIP2_EMBED_BATCH_SIZE):
+                batch = unembedded_frames[i : i + SIGLIP2_EMBED_BATCH_SIZE]
+
+                good_arrays = []
+                good_ids = []
+
+                for frame in batch:
+                    preprocessed = siglip_util_preprocess_image(
+                        frame["frame_path"], resolution
+                    )
+                    if preprocessed is None:
+                        corrupt_count += 1
+                        continue
+
+                    good_arrays.append(preprocessed)
+                    good_ids.append(frame["id"])
+
+                if not good_arrays:
+                    continue
+
+                stacked = np.stack(good_arrays)  # [N, 3, R, R]
+                embeddings = vision_model.get_embedding(stacked)  # [N, D]
+
+                db_upsert_video_frame_embeddings(
+                    [
+                        (good_ids[idx], model_version, emb)
+                        for idx, emb in enumerate(embeddings)
+                    ]
+                )
+                embedded_count += len(good_arrays)
+
+                # Only frames that actually got an embedding row, so a frame
+                # that fails to decode is retried next pass.
+                db_mark_video_frames_embedded(good_ids)
+
+            elapsed = time.time() - start_time
+            logger.info(
+                f"Video frame embedding pass complete. Total: {total_frames}, "
+                f"Embedded: {embedded_count}, Corrupt: {corrupt_count}, "
+                f"Elapsed: {elapsed:.2f}s"
+            )
+        finally:
+            vision_model.close()
+
+    except Exception as e:
+        logger.error(f"Error embedding video frames: {e}")
+
+
+def video_util_purge_frame_cache() -> int:
+    """Delete the keyframe JPEGs and return the bytes reclaimed.
+
+    Frame rows and their embeddings survive, so tags and semantic search keep
+    working -- only a re-tag would need the frames extracted again.
+    """
+    from app.database.video_frames import db_clear_frame_paths
+
+    reclaimed = 0
+    if os.path.isdir(VIDEO_FRAMES_PATH):
+        for root, _, files in os.walk(VIDEO_FRAMES_PATH):
+            for file in files:
+                try:
+                    reclaimed += os.path.getsize(os.path.join(root, file))
+                except OSError:
+                    continue
+        try:
+            shutil.rmtree(VIDEO_FRAMES_PATH)
+        except OSError as e:
+            logger.error(f"Error purging frame cache: {e}")
+            return 0
+
+    db_clear_frame_paths()
+    logger.info(f"Purged video frame cache, reclaimed {reclaimed} bytes")
+    return reclaimed

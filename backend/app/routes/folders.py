@@ -43,9 +43,16 @@ from app.utils.images import (
     image_util_process_untagged_images,
     image_util_process_unembedded_images,
 )
-from app.utils.videos import video_util_process_folder_videos
+from app.utils.videos import (
+    video_util_process_folder_videos,
+    video_util_process_untagged_videos,
+    video_util_process_unembedded_frames,
+)
 from app.utils.model_bootstrap import ensure_ai_tagging_models
-from app.utils.semantic_labels import semantic_util_score_images
+from app.utils.semantic_labels import (
+    semantic_util_score_images,
+    semantic_util_score_videos,
+)
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.utils.API import API_util_restart_sync_microservice_watcher
 
@@ -98,6 +105,10 @@ def post_AI_tagging_enabled_sequence():
         cluster_util_face_clusters_sync()
         image_util_process_unembedded_images()
         semantic_util_score_images()
+        # Videos last: photos are the primary surface, so they finish first.
+        video_util_process_untagged_videos()
+        video_util_process_unembedded_frames()
+        semantic_util_score_videos()
     except Exception as e:
         logger.error(f"Error in post processing after AI tagging was enabled: {e}")
         return False
@@ -129,6 +140,9 @@ def post_sync_folder_sequence(
         cluster_util_face_clusters_sync()
         image_util_process_unembedded_images()
         semantic_util_score_images()
+        video_util_process_untagged_videos()
+        video_util_process_unembedded_frames()
+        semantic_util_score_videos()
 
         # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()
