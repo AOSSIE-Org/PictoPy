@@ -18,13 +18,14 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
     """Point the YOLO mapping DB module at a fresh tempfile database."""
     db_fd, db_path = tempfile.mkstemp()
     os.close(db_fd)
+    try:
+        monkeypatch.setattr("app.config.settings.DATABASE_PATH", db_path)
+        monkeypatch.setattr("app.database.yolo_mapping.DATABASE_PATH", db_path)
 
-    monkeypatch.setattr("app.config.settings.DATABASE_PATH", db_path)
-    monkeypatch.setattr("app.database.yolo_mapping.DATABASE_PATH", db_path)
-
-    yield db_path
-
-    os.unlink(db_path)
+        yield db_path
+    finally:
+        # finally, not post-yield: a setup failure would otherwise leak the file
+        os.unlink(db_path)
 
 
 def set_class_names(monkeypatch: pytest.MonkeyPatch, names: List[str]) -> None:

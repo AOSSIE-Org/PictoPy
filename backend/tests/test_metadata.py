@@ -23,15 +23,16 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
     """Point the metadata DB module at a fresh tempfile database."""
     db_fd, db_path = tempfile.mkstemp()
     os.close(db_fd)
+    try:
+        monkeypatch.setattr("app.config.settings.DATABASE_PATH", db_path)
+        monkeypatch.setattr("app.database.metadata.DATABASE_PATH", db_path)
 
-    monkeypatch.setattr("app.config.settings.DATABASE_PATH", db_path)
-    monkeypatch.setattr("app.database.metadata.DATABASE_PATH", db_path)
+        db_create_metadata_table()
 
-    db_create_metadata_table()
-
-    yield db_path
-
-    os.unlink(db_path)
+        yield db_path
+    finally:
+        # finally, not post-yield: a setup failure would otherwise leak the file
+        os.unlink(db_path)
 
 
 def stored_rows(db_path: str) -> List[Tuple[str]]:
