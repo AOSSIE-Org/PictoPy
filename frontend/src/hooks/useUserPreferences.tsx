@@ -15,6 +15,7 @@ export const useUserPreferences = () => {
   const [preferences, setPreferences] = useState<UserPreferencesData>({
     YOLO_model_size: 'nano',
     GPU_Acceleration: false,
+    Video_Frame_Interval: 5,
   });
 
   // Query for user preferences
@@ -89,6 +90,17 @@ export const useUserPreferences = () => {
     return updatePreference(updatedPreferences);
   };
 
+  /**
+   * Update the video keyframe sampling interval (seconds)
+   */
+  const updateVideoFrameInterval = async (interval: number) => {
+    const updatedPreferences = {
+      ...preferences,
+      Video_Frame_Interval: interval,
+    };
+    return updatePreference(updatedPreferences);
+  };
+
   return {
     // Data
     preferences,
@@ -98,6 +110,7 @@ export const useUserPreferences = () => {
     updatePreference,
     updateYoloModelSize,
     toggleGpuAcceleration,
+    updateVideoFrameInterval,
 
     // For refetching preferences after external events (e.g., Model Manager window closing)
     refetch: preferencesQuery.refetch,

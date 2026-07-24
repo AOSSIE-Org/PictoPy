@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { Tag } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 
@@ -6,12 +7,15 @@ interface ImageTagsProps {
   tags: any[];
   showTags?: boolean;
   isImageHovered: boolean;
+  /** Extra classes for the anchor, e.g. a z-index above overlay controls. */
+  className?: string;
 }
 
 export function ImageTags({
   tags,
   showTags = true,
   isImageHovered,
+  className,
 }: ImageTagsProps) {
   const [isTagsHovered, setIsTagsHovered] = useState(false);
   const [showTagsFromImageHover, setShowTagsFromImageHover] = useState(false);
@@ -50,7 +54,10 @@ export function ImageTags({
 
   return (
     <div
-      className="absolute bottom-2 left-2 transition-all duration-200"
+      className={cn(
+        'absolute bottom-2 left-2 transition-all duration-200',
+        className,
+      )}
       onMouseEnter={() => showTags && setIsTagsHovered(true)}
       onMouseLeave={() => showTags && setIsTagsHovered(false)}
     >

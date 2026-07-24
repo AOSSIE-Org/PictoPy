@@ -3,17 +3,27 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AxiosError } from 'axios';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
-import { Image, ScoredImage } from '@/types/Media';
+import { VideoCard } from '@/components/Media/VideoCard';
+import { VideoPlayerOverlay } from '@/components/VideoPlayer/VideoPlayerOverlay';
+import { Image, ScoredImage, ScoredVideo, Video } from '@/types/Media';
 import { setCurrentViewIndex, setImages } from '@/features/imageSlice';
+import {
+  setCurrentViewIndex as setCurrentVideoViewIndex,
+  setVideos,
+} from '@/features/videoSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
+import { selectIsVideoViewOpen, selectVideos } from '@/features/videoSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import {
   searchImagesByTag,
   semanticSearchImages,
+  searchVideosByTag,
+  semanticSearchVideos,
   fetchModelStatus,
   SemanticSearchAPIResponse,
+  SemanticSearchVideosAPIResponse,
 } from '@/api/api-functions';
 import { APIResponse } from '@/types/API';
 import { getErrorMessage } from '@/lib/utils';
@@ -33,6 +43,16 @@ interface SemanticSearchResult extends SemanticSearchAPIResponse {
 
 type SearchQueryResult = TagSearchResult | SemanticSearchResult;
 
+interface VideoTagSearchResult extends APIResponse {
+  resultType: 'tag';
+}
+
+interface VideoSemanticSearchResult extends SemanticSearchVideosAPIResponse {
+  resultType: 'semantic';
+}
+
+type VideoSearchQueryResult = VideoTagSearchResult | VideoSemanticSearchResult;
+
 const getHttpStatus = (error: unknown): number | undefined => {
   const axiosErr = error as AxiosError;
   return axiosErr?.isAxiosError ? axiosErr.response?.status : undefined;
@@ -46,6 +66,8 @@ export const SearchResults = () => {
   const mode = searchParams.get('mode') || 'auto';
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const displayImages = useSelector(selectImages);
+  const isVideoViewOpen = useSelector(selectIsVideoViewOpen);
+  const displayVideos = useSelector(selectVideos);
 
   const [searchError, setSearchError] = useState<string | null>(null);
 
@@ -94,6 +116,48 @@ export const SearchResults = () => {
       },
       enabled: !!query,
     });
+
+  // Videos run as their own query: they share the mode logic but a video
+  // failure (e.g. no frames embedded yet) must not blank the image results.
+  const { data: videoData, isSuccess: isVideoSuccess } = usePictoQuery({
+    queryKey: ['search-results-videos', query, mode],
+    queryFn: async (): Promise<VideoSearchQueryResult> => {
+      if (mode === 'semantic') {
+        const res = await semanticSearchVideos({ query });
+        return { ...res, resultType: 'semantic' };
+      }
+
+      const tagResponse = await searchVideosByTag({ tag: query });
+      if (mode === 'tag' || (tagResponse.data?.length ?? 0) > 0) {
+        return { ...tagResponse, resultType: 'tag' };
+      }
+
+      const statusRes = await fetchModelStatus();
+      const semAvailable =
+        statusRes.success && statusRes.data
+          ? isSemanticSearchAvailable(statusRes.data)
+          : false;
+
+      if (semAvailable) {
+        const semResponse = await semanticSearchVideos({ query });
+        return { ...semResponse, resultType: 'semantic' };
+      }
+
+      return { ...tagResponse, resultType: 'tag' };
+    },
+    enabled: !!query,
+  });
+
+  useEffect(() => {
+    if (!isVideoSuccess || !videoData) return;
+
+    const fetchedVideos: Video[] =
+      videoData.resultType === 'semantic'
+        ? ((videoData.data?.videos ?? []) as ScoredVideo[])
+        : ((videoData.data ?? []) as Video[]);
+
+    dispatch(setVideos(fetchedVideos));
+  }, [videoData, isVideoSuccess, dispatch]);
 
   const effectiveMode = data?.resultType || mode;
 
@@ -188,31 +252,55 @@ export const SearchResults = () => {
         <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
           <p>Please enter a search term to find images.</p>
         </div>
-      ) : displayImages.length === 0 && isSuccess ? (
+      ) : displayImages.length === 0 &&
+        displayVideos.length === 0 &&
+        isSuccess ? (
         <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
           {effectiveMode === 'semantic' ? (
-            <p>No matches found. Try describing the photo differently.</p>
+            <p>No matches found. Try describing it differently.</p>
           ) : (
-            <p>No images found matching your search.</p>
+            <p>No photos or videos found matching your search.</p>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {displayImages.map((image, index) => (
-            <div key={image.id} className="group relative">
-              <ImageCard
-                image={image}
-                imageIndex={index}
-                className="w-full transition-transform duration-200 group-hover:scale-105"
-                onClick={() => dispatch(setCurrentViewIndex(index))}
-              />
+        <>
+          {displayImages.length > 0 && (
+            <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {displayImages.map((image, index) => (
+                <div key={image.id} className="group relative">
+                  <ImageCard
+                    image={image}
+                    imageIndex={index}
+                    className="w-full transition-transform duration-200 group-hover:scale-105"
+                    onClick={() => dispatch(setCurrentViewIndex(index))}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+
+          {displayVideos.length > 0 && (
+            <>
+              <h2 className="mb-4 text-xl font-semibold">Videos</h2>
+              <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {displayVideos.map((video, index) => (
+                  <div key={video.id} className="group relative">
+                    <VideoCard
+                      video={video}
+                      className="w-full transition-transform duration-200 group-hover:scale-105"
+                      onClick={() => dispatch(setCurrentVideoViewIndex(index))}
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </>
       )}
 
-      {/* Media Viewer Modal */}
+      {/* Media Viewer Modals */}
       {isImageViewOpen && <MediaView images={displayImages} />}
+      {isVideoViewOpen && <VideoPlayerOverlay videos={displayVideos} />}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Film, Calendar, Clock, Monitor, Info } from 'lucide-react';
+import { X, Film, Calendar, Clock, Monitor, Info, Tag } from 'lucide-react';
 import { Video } from '@/types/Media';
 import { formatDurationLabel } from '@/utils/durationUtils';
 
@@ -41,6 +41,7 @@ export const VideoInfoPanel: React.FC<VideoInfoPanelProps> = ({
   const height = video?.metadata?.height ?? 0;
   const resolution =
     width > 0 && height > 0 ? `${width} × ${height}` : 'Not available';
+  const tags = video?.tags ?? [];
 
   return (
     <AnimatePresence>
@@ -110,6 +111,27 @@ export const VideoInfoPanel: React.FC<VideoInfoPanelProps> = ({
                 <p className="font-medium text-white">{resolution}</p>
               </div>
             </div>
+
+            {tags.length > 0 && (
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-white/10 p-2">
+                  <Tag className="h-5 w-5 text-rose-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-white/50">Tags</p>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-white/30 px-2 py-0.5 text-xs text-white"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-start gap-3">
               <div className="rounded-lg bg-white/10 p-2">
