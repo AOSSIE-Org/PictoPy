@@ -98,6 +98,7 @@ def sample_folder_details():
             1693526400,  # timestamp
             True,  # AI_Tagging
             False,  # taggingCompleted
+            "completed",  # indexing_status
             0,  # image_count
         ),
         (
@@ -107,6 +108,7 @@ def sample_folder_details():
             1693526500,
             False,
             True,
+            "completed",
             25,
         ),
     ]
