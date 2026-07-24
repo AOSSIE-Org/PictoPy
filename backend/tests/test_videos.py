@@ -2,6 +2,7 @@ import os
 import sqlite3
 import tempfile
 import shutil
+from unittest.mock import MagicMock
 
 import cv2
 import pytest
@@ -23,6 +24,10 @@ from app.utils.videos import (
     video_util_generate_thumbnail,
     video_util_extract_metadata,
     video_util_prepare_video_records,
+    video_util_process_folder_videos,
+    video_util_collect_superseded_thumbnails,
+    video_util_source_is_unchanged,
+    video_util_remove_thumbnail_files,
 )
 from app.routes.videos import router as videos_router
 
@@ -548,3 +553,151 @@ class TestVideosAPI:
         assert response.status_code == 200
         data = response.json()["data"]
         assert [v["id"] for v in data] == ["vid-good"]
+
+    def test_get_all_videos_db_error_returns_500(self, client, monkeypatch):
+        def boom():
+            raise RuntimeError("db down")
+
+        monkeypatch.setattr("app.routes.videos.db_get_all_videos", boom)
+        response = client.get("/videos/")
+        assert response.status_code == 500
+        detail = response.json()["detail"]
+        assert detail["success"] is False
+        assert detail["error"]
+        assert detail["message"]
+
+    def test_toggle_favourite_row_disappears_after_toggle(self, client, monkeypatch):
+        # Toggle reports success, but the row can't be read back -> 404
+        monkeypatch.setattr(
+            "app.routes.videos.db_toggle_video_favourite_status", lambda vid: True
+        )
+        monkeypatch.setattr("app.routes.videos.db_get_video_by_id", lambda vid: None)
+        response = client.post("/videos/toggle-favourite", json={"video_id": "vid-1"})
+        assert response.status_code == 404
+
+    def test_toggle_favourite_db_error_returns_500(self, client, monkeypatch):
+        def boom(vid):
+            raise RuntimeError("db down")
+
+        monkeypatch.setattr("app.routes.videos.db_toggle_video_favourite_status", boom)
+        response = client.post("/videos/toggle-favourite", json={"video_id": "vid-1"})
+        assert response.status_code == 500
+        detail = response.json()["detail"]
+        assert detail["success"] is False
+        assert detail["error"]
+        assert detail["message"]
+
+
+# ##############################
+# Utility edge cases
+# ##############################
+
+
+class TestVideoUtilEdgeCases:
+    def test_collect_superseded_skips_records_without_thumbnail(self):
+        records = [{"path": "/v/a.mp4", "thumbnailPath": None}]
+        already = {"/v/a.mp4": ("/thumbs/old.jpg", {})}
+        assert video_util_collect_superseded_thumbnails(records, already) == []
+
+    def test_source_is_unchanged_missing_file(self):
+        assert video_util_source_is_unchanged("/nope/missing.mp4", {}) is False
+
+    def test_remove_thumbnail_files_tolerates_os_error(
+        self, temp_media_dir, monkeypatch
+    ):
+        thumb = os.path.join(temp_media_dir, "t.jpg")
+        with open(thumb, "wb") as f:
+            f.write(b"x")
+
+        def boom(path):
+            raise OSError("locked")
+
+        monkeypatch.setattr("app.utils.videos.os.remove", boom)
+        # Must swallow the error, not raise
+        video_util_remove_thumbnail_files([thumb])
+
+    def test_get_videos_from_folder_non_recursive_bad_dir(self):
+        assert video_util_get_videos_from_folder("/no/such/dir", recursive=False) == []
+
+    def test_extract_metadata_missing_file(self):
+        metadata = video_util_extract_metadata("/no/such/file.mp4")
+        assert metadata["file_size"] == 0
+        assert metadata["width"] == 0
+
+    def test_prepare_records_skips_when_folder_id_falsy(self, temp_media_dir):
+        video_path = os.path.join(temp_media_dir, "a.mp4")
+        with open(video_path, "wb") as f:
+            f.write(b"data")
+        # Folder resolves to id 0, which the guard treats as "no folder"
+        records = video_util_prepare_video_records(
+            [video_path], {os.path.abspath(temp_media_dir): 0}
+        )
+        assert records == []
+
+    def test_process_folder_inner_exception_is_isolated(
+        self, test_db, test_folder_id, temp_media_dir, monkeypatch
+    ):
+        thumb_dir = os.path.join(temp_media_dir, "thumbs")
+        monkeypatch.setattr("app.utils.videos.THUMBNAIL_IMAGES_PATH", thumb_dir)
+        with open(os.path.join(temp_media_dir, "a.mp4"), "wb") as f:
+            f.write(b"data")
+
+        def boom(folder_ids):
+            raise RuntimeError("index read failed")
+
+        monkeypatch.setattr("app.utils.videos.db_get_video_index_by_folder_ids", boom)
+        # The inner handler swallows the error and continues -> overall success
+        folder_data = [(temp_media_dir, test_folder_id, False)]
+        assert video_util_process_folder_videos(folder_data) is True
+
+    def test_process_folder_outer_exception_returns_false(self, monkeypatch):
+        def boom(path, exist_ok=False):
+            raise RuntimeError("mkdir failed")
+
+        monkeypatch.setattr("app.utils.videos.os.makedirs", boom)
+        assert video_util_process_folder_videos([]) is False
+
+    def test_generate_thumbnail_returns_false_when_frame_unreadable(
+        self, temp_media_dir
+    ):
+        cap = MagicMock()
+        cap.isOpened.return_value = True
+        cap.get.return_value = 0  # fps/frame_count 0 -> target 0
+        cap.read.return_value = (False, None)
+        out = os.path.join(temp_media_dir, "t.jpg")
+        assert video_util_generate_thumbnail("x.mp4", out, capture=cap) is False
+
+    def test_generate_thumbnail_retries_from_first_frame(self, temp_media_dir):
+        import numpy as np
+
+        frame = np.zeros((10, 10, 3), dtype=np.uint8)
+        cap = MagicMock()
+        cap.isOpened.return_value = True
+        cap.get.side_effect = lambda prop: {
+            cv2.CAP_PROP_FPS: 30.0,
+            cv2.CAP_PROP_FRAME_COUNT: 100.0,
+        }.get(prop, 0)
+        # First read at the seeked frame fails; the retry from frame 0 succeeds
+        cap.read.side_effect = [(False, None), (True, frame)]
+        out = os.path.join(temp_media_dir, "t.jpg")
+        assert video_util_generate_thumbnail("x.mp4", out, capture=cap) is True
+        assert os.path.exists(out)
+
+    def test_generate_thumbnail_swallows_exceptions(self, temp_media_dir):
+        cap = MagicMock()
+        cap.isOpened.return_value = True
+        cap.get.return_value = 0
+        cap.read.side_effect = RuntimeError("decode boom")
+        out = os.path.join(temp_media_dir, "t.jpg")
+        assert video_util_generate_thumbnail("x.mp4", out, capture=cap) is False
+
+    def test_extract_metadata_swallows_capture_errors(self, temp_media_dir):
+        real = os.path.join(temp_media_dir, "a.mp4")
+        with open(real, "wb") as f:
+            f.write(b"data")
+        cap = MagicMock()
+        cap.isOpened.return_value = True
+        cap.get.side_effect = RuntimeError("prop boom")
+        metadata = video_util_extract_metadata(real, capture=cap)
+        assert metadata["file_size"] > 0  # os.stat ran before the capture error
+        assert metadata["width"] == 0  # capture error left the defaults
