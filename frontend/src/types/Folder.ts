@@ -7,6 +7,7 @@ export interface FolderDetails {
   taggingCompleted?: boolean;
   image_count?: number;
   video_count?: number;
+  indexing_status?: 'not_started' | 'in_progress' | 'completed';
 }
 
 export interface GetAllFoldersData {

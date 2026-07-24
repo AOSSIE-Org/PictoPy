@@ -98,6 +98,7 @@ def sample_folder_details():
             1693526400,  # timestamp
             True,  # AI_Tagging
             False,  # taggingCompleted
+            "completed",  # indexing_status
             0,  # image_count
             7,  # video_count -- a video-only folder is not "empty"
         ),
@@ -108,6 +109,7 @@ def sample_folder_details():
             1693526500,
             False,
             True,
+            "completed",
             25,
             0,
         ),

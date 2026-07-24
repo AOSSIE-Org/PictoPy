@@ -10,6 +10,7 @@ from app.database.folders import (
     db_get_direct_child_folders,
     db_get_folder_ids_by_path_prefix,
     db_get_all_folder_details,
+    db_update_folder_indexing_status,
 )
 from app.logging.setup_logging import get_logger
 from app.schemas.folders import (
@@ -68,6 +69,7 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
     This function is called after a folder is successfully added.
     It processes images in the folder and updates the database.
     """
+    folder_ids_and_paths = []
     try:
         # Get all folder IDs and paths that match the root path prefix
         folder_data = []
@@ -77,6 +79,8 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
         for folder_id_from_db, folder_path_from_db in folder_ids_and_paths:
             folder_data.append((folder_path_from_db, folder_id_from_db, False))
 
+            db_update_folder_indexing_status(folder_id_from_db, "in_progress")
+
         logger.info(f"Add folder: {folder_data}")
         # Process images and videos in all folders
         image_util_process_folder_images(folder_data)
@@ -85,10 +89,15 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
         # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()
 
+        for folder_id_from_db, _ in folder_ids_and_paths:
+            db_update_folder_indexing_status(folder_id_from_db, "completed")
+
     except Exception as e:
         logger.error(
             f"Error in post processing after folder {folder_path} was added: {e}"
         )
+        for folder_id_from_db, _ in folder_ids_and_paths:
+            db_update_folder_indexing_status(folder_id_from_db, "completed")
         return False
     return True
 
@@ -474,6 +483,7 @@ def get_all_folders():
                 last_modified_time,
                 ai_tagging,
                 tagging_completed,
+                indexing_status,
                 image_count,
                 video_count,
             ) = folder_data
@@ -485,6 +495,7 @@ def get_all_folders():
                     last_modified_time=last_modified_time,
                     AI_Tagging=ai_tagging,
                     taggingCompleted=tagging_completed,
+                    indexing_status=indexing_status,
                     image_count=image_count,
                     video_count=video_count,
                 )
