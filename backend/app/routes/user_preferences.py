@@ -30,6 +30,7 @@ def get_user_preferences():
         user_preferences = UserPreferencesData(
             YOLO_model_size=user_prefs_data.get("YOLO_model_size", "small"),
             GPU_Acceleration=user_prefs_data.get("GPU_Acceleration", True),
+            Video_Frame_Interval=user_prefs_data.get("Video_Frame_Interval", 5.0),
         )
 
         return GetUserPreferencesResponse(
@@ -58,7 +59,11 @@ def update_user_preferences(request: UpdateUserPreferencesRequest):
     """Update user preferences in metadata."""
     try:
         # Step 1: Validate that at least one field is provided
-        if request.YOLO_model_size is None and request.GPU_Acceleration is None:
+        if (
+            request.YOLO_model_size is None
+            and request.GPU_Acceleration is None
+            and request.Video_Frame_Interval is None
+        ):
             raise ValueError("At least one preference field must be provided")
 
         # Step 2: Get current metadata
@@ -73,6 +78,9 @@ def update_user_preferences(request: UpdateUserPreferencesRequest):
 
         if request.GPU_Acceleration is not None:
             current_user_prefs["GPU_Acceleration"] = request.GPU_Acceleration
+
+        if request.Video_Frame_Interval is not None:
+            current_user_prefs["Video_Frame_Interval"] = request.Video_Frame_Interval
 
         # Step 5: Update metadata with new user preferences
         metadata["user_preferences"] = current_user_prefs
@@ -94,6 +102,7 @@ def update_user_preferences(request: UpdateUserPreferencesRequest):
         user_preferences = UserPreferencesData(
             YOLO_model_size=current_user_prefs.get("YOLO_model_size", "small"),
             GPU_Acceleration=current_user_prefs.get("GPU_Acceleration", True),
+            Video_Frame_Interval=current_user_prefs.get("Video_Frame_Interval", 5.0),
         )
 
         return UpdateUserPreferencesResponse(
