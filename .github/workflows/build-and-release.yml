@@ -300,16 +300,16 @@ jobs:
       matrix:
         include:
           - platform: "macos-latest"
-            # Enable CI feature so prod() spawns backend + sync in release builds
-            args: "--target aarch64-apple-darwin --features ci"
+            # Enable bundled-sidecars feature so prod() spawns backend + sync in release builds
+            args: "--target aarch64-apple-darwin --features bundled-sidecars"
             server-artifact: "PictoPy-MacOS"
             sync-artifact: "PictoPy-Sync-MacOS"
           - platform: "ubuntu-22.04"
-            args: "--features ci"
+            args: "--features bundled-sidecars"
             server-artifact: "PictoPy-Ubuntu"
             sync-artifact: "PictoPy-Sync-Ubuntu"
           - platform: "windows-latest"
-            args: "--features ci"
+            args: "--features bundled-sidecars"
             server-artifact: "PictoPy-Windows"
             sync-artifact: "PictoPy-Sync-Windows"
     runs-on: ${{ matrix.platform }}
