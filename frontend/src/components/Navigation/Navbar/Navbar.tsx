@@ -1,6 +1,6 @@
 import { Input } from '@/components/ui/input';
 import { ThemeSelector } from '@/components/ThemeToggle';
-import { Search, Heart, ArrowRight } from 'lucide-react';
+import { Search, Heart, ArrowRight, X } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
 import { clearSearch } from '@/features/searchSlice';
@@ -133,30 +133,44 @@ export function Navbar() {
               />
               {isSearchActive && (
                 <button
+                  type="button"
                   onClick={() => dispatch(clearSearch())}
-                  className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white"
+                  className="text-muted-foreground hover:text-foreground absolute -top-1.5 -right-1.5 flex h-4 w-4 cursor-pointer items-center justify-center transition-colors"
                   title="Close"
                   aria-label="Close"
                 >
-                  ✕
+                  <X className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
           )}
 
           {/* Input */}
-          <Input
-            type="search"
-            placeholder="Add to your search"
-            className="mr-2 flex-1 border-0 bg-neutral-200"
-            onFocus={() => setIsExpanded(true)}
-            onClick={() => setIsExpanded(true)}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSearchSubmit();
-            }}
-          />
+          <div className="relative mr-2 flex flex-1 items-center">
+            <Input
+              type="search"
+              placeholder="Add to your search"
+              className="w-full border-0 bg-neutral-200 pr-8"
+              onFocus={() => setIsExpanded(true)}
+              onClick={() => setIsExpanded(true)}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSearchSubmit();
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 flex h-4 w-4 -translate-y-1/2 cursor-pointer items-center justify-center transition-colors"
+                title="Clear text"
+                aria-label="Clear text"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
 
           {/* FaceSearch Dialog */}
           <FaceSearchDialog />
