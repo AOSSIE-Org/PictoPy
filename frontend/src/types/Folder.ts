@@ -6,6 +6,7 @@ export interface FolderDetails {
   AI_Tagging: boolean;
   taggingCompleted?: boolean;
   image_count?: number;
+  video_count?: number;
 }
 
 export interface GetAllFoldersData {

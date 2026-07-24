@@ -475,6 +475,7 @@ def get_all_folders():
                 ai_tagging,
                 tagging_completed,
                 image_count,
+                video_count,
             ) = folder_data
             folders.append(
                 FolderDetails(
@@ -485,6 +486,7 @@ def get_all_folders():
                     AI_Tagging=ai_tagging,
                     taggingCompleted=tagging_completed,
                     image_count=image_count,
+                    video_count=video_count,
                 )
             )
 

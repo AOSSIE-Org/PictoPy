@@ -402,29 +402,34 @@ def db_get_folder_ids_by_paths(
 
 
 def db_get_all_folder_details() -> (
-    List[Tuple[str, str, Optional[str], int, bool, Optional[bool], int]]
+    List[Tuple[str, str, Optional[str], int, bool, Optional[bool], int, int]]
 ):
     """
     Get all folder details including folder_id, folder_path, parent_folder_id,
-    last_modified_time, AI_Tagging, taggingCompleted, and image_count.
+    last_modified_time, AI_Tagging, taggingCompleted, image_count and
+    video_count.
     Returns list of tuples with all folder information.
     """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     try:
+        # COUNT(DISTINCT ...) because joining both media tables multiplies the
+        # rows: a folder with 3 images and 4 videos yields 12 join rows.
         cursor.execute(
             """
-            SELECT 
-                f.folder_id, 
-                f.folder_path, 
-                f.parent_folder_id, 
-                f.last_modified_time, 
-                f.AI_Tagging, 
+            SELECT
+                f.folder_id,
+                f.folder_path,
+                f.parent_folder_id,
+                f.last_modified_time,
+                f.AI_Tagging,
                 f.taggingCompleted,
-                COUNT(i.id) as image_count
+                COUNT(DISTINCT i.id) as image_count,
+                COUNT(DISTINCT v.id) as video_count
             FROM folders f
             LEFT JOIN images i ON f.folder_id = i.folder_id
+            LEFT JOIN videos v ON f.folder_id = v.folder_id
             GROUP BY f.folder_id
             ORDER BY f.folder_path
             """
