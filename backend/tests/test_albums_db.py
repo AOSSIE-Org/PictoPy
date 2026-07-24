@@ -2,6 +2,7 @@ import os
 import sqlite3
 import tempfile
 from typing import Iterator, List, Optional
+from unittest.mock import MagicMock, patch
 
 import bcrypt
 import pytest
@@ -101,6 +102,25 @@ class TestAlbumTables:
         # Re-running against an existing schema must not raise
         db_create_albums_table()
         db_create_album_images_table()
+
+    @pytest.mark.parametrize(
+        "create_table", [db_create_albums_table, db_create_album_images_table]
+    )
+    def test_closes_the_connection_when_create_fails(self, create_table):
+        """The finally-based cleanup must still run when the CREATE raises.
+
+        Mocked deliberately: a real CREATE can't be made to fail while leaving
+        the connection observable.
+        """
+        with patch("app.database.albums.sqlite3.connect") as mock_connect:
+            conn = MagicMock()
+            conn.cursor.return_value.execute.side_effect = sqlite3.Error("fail")
+            mock_connect.return_value = conn
+
+            with pytest.raises(sqlite3.Error):
+                create_table()
+
+            conn.close.assert_called_once()
 
 
 # ##############################

@@ -3,6 +3,7 @@ import os
 import sqlite3
 import tempfile
 from typing import Iterator, Optional
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -85,6 +86,22 @@ class TestFacesTable:
     def test_is_idempotent(self, test_db):
         # Re-running against an existing schema must not raise
         db_create_faces_table()
+
+    def test_closes_the_connection_when_create_fails(self):
+        """The finally-based cleanup must still run when the CREATE raises.
+
+        Mocked deliberately: a real CREATE can't be made to fail while leaving
+        the connection observable.
+        """
+        with patch("app.database.faces.sqlite3.connect") as mock_connect:
+            conn = MagicMock()
+            conn.cursor.return_value.execute.side_effect = sqlite3.Error("fail")
+            mock_connect.return_value = conn
+
+            with pytest.raises(sqlite3.Error):
+                db_create_faces_table()
+
+            conn.close.assert_called_once()
 
 
 # ##############################
@@ -190,6 +207,29 @@ class TestUpdateClusterIdsBatch:
 
         db_update_face_cluster_ids_batch([{"face_id": face_id, "cluster_id": None}])
 
+        assert [f["face_id"] for f in db_get_faces_unassigned_clusters()] == [face_id]
+
+    def test_caller_supplied_cursor_is_left_uncommitted(self, test_db):
+        """With a caller's cursor the helper must not commit or close it --
+        the caller owns the transaction."""
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        face_id = add_face("img-1")
+
+        conn = sqlite3.connect(test_db)
+        cursor = conn.cursor()
+        db_update_face_cluster_ids_batch(
+            [{"face_id": face_id, "cluster_id": cluster}], cursor=cursor
+        )
+
+        # Visible inside the caller's transaction, and the cursor still works
+        assigned = cursor.execute(
+            "SELECT cluster_id FROM faces WHERE face_id = ?", (face_id,)
+        ).fetchone()
+        assert assigned[0] == cluster
+
+        # Nothing was committed, so rolling back discards the update
+        conn.rollback()
+        conn.close()
         assert [f["face_id"] for f in db_get_faces_unassigned_clusters()] == [face_id]
 
 
