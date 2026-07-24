@@ -63,9 +63,8 @@ router = APIRouter()
 
 # GET /albums/ - Get all albums
 
-router.get("/", response_model=GetAlbumsResponse)
 
-
+@router.get("/", response_model=GetAlbumsResponse)
 @handle_route_exceptions(
     "Internal Server Error", "An unexpected error occurred while fetching albums."
 )
@@ -86,9 +85,8 @@ def get_albums(show_hidden: bool = Query(False)):
 
 # POST /albums/ - Create a new album
 
-router.post("/", response_model=CreateAlbumResponse)
 
-
+@router.post("/", response_model=CreateAlbumResponse)
 @handle_route_exceptions(
     "Internal Server Error", "An unexpected error occurred while creating the album."
 )
@@ -122,9 +120,7 @@ def create_album(body: CreateAlbumRequest):
 
 
 # GET /albums/{album_id} - Get specific album details
-router.get("/{album_id}", response_model=GetAlbumResponse)
-
-
+@router.get("/{album_id}", response_model=GetAlbumResponse)
 @handle_route_exceptions(
     "Internal Server Error", "An unexpected error occurred while fetching the album."
 )
@@ -149,9 +145,8 @@ def get_album(album_id: str = Path(...)):
 
 # PUT /albums/{album_id} - Update Album
 
-router.put("/{album_id}", response_model=SuccessResponse)
 
-
+@router.put("/{album_id}", response_model=SuccessResponse)
 @handle_route_exceptions(
     "Failed to Update Album", "An unexpected error occurred while updating the album."
 )
@@ -215,9 +210,7 @@ def update_album(
 
 
 # DELETE /albums/{album_id} - Delete an album
-router.delete("/{album_id}", response_model=SuccessResponse)
-
-
+@router.delete("/{album_id}", response_model=SuccessResponse)
 @handle_route_exceptions(
     "Failed to Delete Album", "An unexpected error occurred while deleting the album."
 )
@@ -238,9 +231,7 @@ def delete_album(album_id: str = Path(...)):
 
 
 # GET /albums/{album_id}/images - Get all images in an album
-router.post("/{album_id}/images/get", response_model=GetAlbumImagesResponse)
-
-
+@router.post("/{album_id}/images/get", response_model=GetAlbumImagesResponse)
 @handle_route_exceptions(
     "Failed to Retrieve Images", "An unexpected error occurred while retrieving images."
 )
@@ -292,9 +283,8 @@ def get_album_images(
 
 # POST /albums/{album_id}/images - Add images to an album
 
-router.post("/{album_id}/images", response_model=SuccessResponse)
 
-
+@router.post("/{album_id}/images", response_model=SuccessResponse)
 @handle_route_exceptions(
     "Failed to Add Images", "An unexpected error occurred while adding images."
 )
@@ -339,9 +329,8 @@ def add_images_to_album(
 
 # DELETE /albums/{album_id}/images/{image_id} - Remove image from album
 
-router.delete("/{album_id}/images/{image_id}", response_model=SuccessResponse)
 
-
+@router.delete("/{album_id}/images/{image_id}", response_model=SuccessResponse)
 @handle_route_exceptions(
     "Failed to Remove Image", "An unexpected error occurred while removing the image."
 )
@@ -372,9 +361,8 @@ def remove_image_from_album(album_id: str = Path(...), image_id: str = Path(...)
 
 # DELETE /albums/{album_id}/images - Remove multiple images from album
 
-router.delete("/{album_id}/images", response_model=SuccessResponse)
 
-
+@router.delete("/{album_id}/images", response_model=SuccessResponse)
 @handle_route_exceptions(
     "Failed to Remove Images", "An unexpected error occurred while removing the images."
 )
