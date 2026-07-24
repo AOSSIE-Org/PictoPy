@@ -46,6 +46,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "PictoPy",
         "width": 800,
         "height": 600,
@@ -54,6 +55,7 @@
         "resizable": true,
         "fullscreen": false,
         "maximized": false,
+        "skipTaskbar": false,
         "devtools": true
       }
     ],
