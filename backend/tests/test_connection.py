@@ -1,7 +1,7 @@
 import os
 import sqlite3
 import tempfile
-from typing import Iterator
+from typing import Iterator, List, Tuple
 
 import pytest
 
@@ -26,12 +26,13 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
         os.unlink(db_path)
 
 
-def read_names(db_path: str) -> list:
+def read_names(db_path: str) -> List[Tuple[str]]:
     """Read every row from the scratch table on a separate connection."""
     conn = sqlite3.connect(db_path)
-    rows = conn.execute("SELECT name FROM test").fetchall()
-    conn.close()
-    return rows
+    try:
+        return conn.execute("SELECT name FROM test").fetchall()
+    finally:
+        conn.close()
 
 
 # ##############################

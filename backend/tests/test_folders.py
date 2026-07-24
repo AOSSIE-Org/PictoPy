@@ -1,5 +1,6 @@
 import sqlite3
 import uuid
+from typing import Iterator
 
 import pytest
 from fastapi import FastAPI
@@ -43,7 +44,7 @@ from app.database.yolo_mapping import db_create_YOLO_classes_table
 
 
 @pytest.fixture(scope="function")
-def test_db(monkeypatch):
+def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
     """Point the folder DB modules at a fresh tempfile database."""
     db_fd, db_path = tempfile.mkstemp()
     os.close(db_fd)
@@ -749,7 +750,7 @@ class TestFoldersUnit:
         assert rows == [("folder-id-1",), ("folder-id-2",)]
 
     @patch("app.database.folders.sqlite3.connect")
-    def test_db_insert_folders_batch_error(self, mock_connect):
+    def test_db_insert_folders_batch_error(self, mock_connect, test_db):
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
 
@@ -774,9 +775,8 @@ class TestFoldersUnit:
         folder = tmp_path / "photos"
         folder.mkdir()
         fake_uuid = uuid.UUID("12345678-1234-5678-1234-567812345678")
-        with patch("app.database.folders.DATABASE_PATH", test_db), patch(
-            "app.database.folders.uuid.uuid4", return_value=fake_uuid
-        ):
+        # test_db already patches DATABASE_PATH, so only uuid4 needs stubbing
+        with patch("app.database.folders.uuid.uuid4", return_value=fake_uuid):
             result = db_insert_folder(str(folder), folder_id=None)
         assert result == str(fake_uuid)
 
@@ -855,7 +855,7 @@ class TestFoldersUnit:
         assert set(result) == {"folder-id-1", "folder-id-2"}
 
     @patch("app.database.folders.sqlite3.connect")
-    def test_db_delete_folders_batch_error(self, mock_connect):
+    def test_db_delete_folders_batch_error(self, mock_connect, test_db):
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_connect.return_value = mock_conn
@@ -929,6 +929,31 @@ class TestFoldersUnit:
 
         assert parent_id == "root-id"
 
+    def test_db_update_parent_ids_for_subtree_preserves_existing_parent(self, test_db):
+        # The update only rewrites rows whose parent_folder_id is still NULL
+        db_insert_folders_batch(
+            [
+                ("root-id", "/tmp/root", None, 1693526400, True, False),
+                ("child-id", "/tmp/root/child", "old-parent", 1693526500, True, False),
+            ]
+        )
+
+        db_update_parent_ids_for_subtree(
+            "/tmp/root",
+            {"/tmp/root/child": ("child-id", "root-id")},
+        )
+
+        conn = sqlite3.connect(test_db)
+        try:
+            parent_id = conn.execute(
+                "SELECT parent_folder_id FROM folders WHERE folder_id = ?",
+                ("child-id",),
+            ).fetchone()[0]
+        finally:
+            conn.close()
+
+        assert parent_id == "old-parent"
+
     def test_db_folder_exists_true_false(self, test_db, tmp_path):
 
         folder = tmp_path / "photos"
@@ -958,28 +983,36 @@ class TestFoldersUnit:
         assert result == "parent-id"
 
     def test_db_find_parent_folder_id_not_found(self, test_db):
-        conn = sqlite3.connect(test_db)
-        conn.commit()
-        conn.close()
+        # The fixture already yields an empty schema; nothing to seed here
         result = db_find_parent_folder_id("/tmp/photos/2024")
         assert result is None
 
     def test_db_update_ai_tagging_batch(self, test_db):
         conn = sqlite3.connect(test_db)
-        cursor = conn.cursor()
-        cursor.execute(
+        conn.execute(
             "INSERT INTO folders (folder_id, folder_path, AI_Tagging) VALUES (?, ?, ?)",
             ("tmp", "/tmp", False),
         )
         conn.commit()
         conn.close()
-        result = db_update_ai_tagging_batch(["tmp"], True)
-        assert result == 1
-        result = db_update_ai_tagging_batch([], True)
-        assert result == 0
+
+        assert db_update_ai_tagging_batch(["tmp"], True) == 1
+
+        # rowcount alone can't tell right column/value from wrong: read it back
+        conn = sqlite3.connect(test_db)
+        try:
+            ai_tagging = conn.execute(
+                "SELECT AI_Tagging FROM folders WHERE folder_id = ?", ("tmp",)
+            ).fetchone()[0]
+        finally:
+            conn.close()
+        assert ai_tagging == 1
+
+    def test_db_update_ai_tagging_batch_empty_list(self, test_db):
+        assert db_update_ai_tagging_batch([], True) == 0
 
     @patch("app.database.folders.sqlite3.connect")
-    def test_db_update_ai_tagging_batch_sqlite_error(self, mock_connect):
+    def test_db_update_ai_tagging_batch_sqlite_error(self, mock_connect, test_db):
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
 
@@ -995,14 +1028,14 @@ class TestFoldersUnit:
         mock_conn.close.assert_called_once()
 
     @patch("app.database.folders.db_update_ai_tagging_batch")
-    def test_db_enable_ai_tagging_batch(self, mock_update_batch):
+    def test_db_enable_ai_tagging_batch(self, mock_update_batch, test_db):
         mock_update_batch.return_value = 1
         result = db_enable_ai_tagging_batch(["tmp"])
         assert result == 1
         mock_update_batch.assert_called_once_with(["tmp"], True)
 
     @patch("app.database.folders.db_update_ai_tagging_batch")
-    def test_db_disable_ai_tagging_batch(self, mock_update_batch):
+    def test_db_disable_ai_tagging_batch(self, mock_update_batch, test_db):
         mock_update_batch.return_value = 1
         result = db_disable_ai_tagging_batch(["tmp"])
         assert result == 1
@@ -1022,10 +1055,11 @@ class TestFoldersUnit:
         conn.commit()
         conn.close()
         result = db_get_folder_ids_by_path_prefix("/tmp")
-        assert result == [
+        # The query has no ORDER BY, so row order isn't part of the contract
+        assert set(result) == {
             ("folder-id-1", "/tmp/photos"),
             ("folder-id-2", "/tmp/photos/2024"),
-        ]
+        }
 
     def test_db_get_folder_ids_by_paths(self, test_db):
         conn = sqlite3.connect(test_db)
