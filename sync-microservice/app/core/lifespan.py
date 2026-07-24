@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+import asyncio
 import time
+import app.config.settings as settings
 from app.database.folders import (
     db_check_database_connection,
 )
@@ -26,6 +28,30 @@ async def lifespan(app: FastAPI):
     try:
         # Startup
         logger.info("Starting PictoPy Sync Microservice...")
+
+        # Wait for shutdown token from backend (up to 5 seconds)
+        logger.info("Waiting for shutdown token from backend...")
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline:
+            try:
+                with open(settings.SHUTDOWN_TOKEN_FILE) as f:
+                    token = f.read().strip()
+                if token:
+                    settings.SHUTDOWN_TOKEN = token
+                    logger.info("Shutdown token loaded successfully")
+                    break
+            except FileNotFoundError:
+                pass
+            except Exception as e:
+                logger.error(f"Error reading shutdown token file: {e}")
+            await asyncio.sleep(0.1)
+
+        if not settings.SHUTDOWN_TOKEN:
+            logger.error(
+                f"pictopy_shutdown.token not found at {settings.SHUTDOWN_TOKEN_FILE} after 5 seconds"
+            )
+            logger.error("Ensure the backend starts before the sync service.")
+            raise RuntimeError("Backend shutdown token not found")
 
         # Check database connection
         logger.info("Checking database connection...")
@@ -54,7 +80,7 @@ async def lifespan(app: FastAPI):
             logger.warning(
                 f"Database connection attempt {attempt} failed. Retrying in {retry_interval} seconds... ({elapsed_time:.1f}s elapsed)"
             )
-            time.sleep(retry_interval)
+            await asyncio.sleep(retry_interval)
 
         watcher_started = watcher_util_start_folder_watcher()
 
