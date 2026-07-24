@@ -7,6 +7,8 @@ const config: Config.InitialOptions = {
     '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
   },
   moduleNameMapper: {
+    '^@/config/Backend$': '<rootDir>/__mocks__/Backend.ts',
+    '^config/Backend$': '<rootDir>/__mocks__/Backend.ts',
     '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|less|sass|scss)$': 'identity-obj-proxy',
     'utils/isProd$': '<rootDir>/__mocks__/isProd.ts',
