@@ -318,7 +318,7 @@ def add_images_to_album(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ErrorResponse(
-                success=False, error="Invalid Image IDs", message=str(e)
+                success=False, error="Failed to Add Images", message=str(e)
             ).model_dump(),
         )
 
@@ -353,7 +353,7 @@ def remove_image_from_album(album_id: str = Path(...), image_id: str = Path(...)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ErrorResponse(
-                success=False, error="Image Not Found", message=str(e)
+                success=False, error="Failed to Remove Image", message=str(e)
             ).model_dump(),
         )
 
