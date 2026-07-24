@@ -50,6 +50,25 @@ def write_raw(db_path: str, sql: str, params: Tuple[Any, ...] = ()) -> None:
     conn.close()
 
 
+class RollbackSpy:
+    """Real connection that records whether rollback() was called.
+
+    close() discards an uncommitted transaction on its own, so restored data
+    alone can't prove the rollback ran -- this pins it.
+    """
+
+    def __init__(self, conn: sqlite3.Connection):
+        self._conn = conn
+        self.rolled_back = False
+
+    def rollback(self) -> None:
+        self.rolled_back = True
+        self._conn.rollback()
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._conn, name)
+
+
 # ##############################
 # Table creation
 # ##############################
@@ -132,13 +151,45 @@ class TestUpdateMetadata:
 
         assert db_get_metadata() == expected
 
-    def test_rolls_back_when_serialization_fails(self, test_db):
+    def test_serialization_failure_never_touches_the_row(self, test_db):
+        # json.dumps raises before the DELETE, so nothing is written at all
         assert db_update_metadata({"safe": True}) is True
 
         with pytest.raises(TypeError):
             db_update_metadata({"bad": object()})
 
         assert db_get_metadata() == {"safe": True}
+
+    def test_rolls_back_a_write_that_fails_midway(self, test_db):
+        """Abort the INSERT so the DELETE has already applied -- the original
+        row must come back, which a pre-write failure can never prove."""
+        assert db_update_metadata({"safe": True}) is True
+
+        spies: List[RollbackSpy] = []
+        # Bind the real connect first: patching the attribute below rebinds it
+        # on the shared sqlite3 module, so calling it here would recurse.
+        real_connect = sqlite3.connect
+
+        def spied_connect(*args: Any, **kwargs: Any) -> RollbackSpy:
+            spy = RollbackSpy(real_connect(*args, **kwargs))
+            spies.append(spy)
+            return spy
+
+        write_raw(
+            test_db,
+            "CREATE TRIGGER block_insert BEFORE INSERT ON metadata "
+            "BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+        )
+        try:
+            with patch("app.database.metadata.sqlite3.connect", spied_connect):
+                with pytest.raises(sqlite3.IntegrityError):
+                    db_update_metadata({"replacement": True})
+        finally:
+            write_raw(test_db, "DROP TRIGGER block_insert")
+
+        assert [spy.rolled_back for spy in spies] == [True]
+        assert db_get_metadata() == {"safe": True}
+        assert len(stored_rows(test_db)) == 1
 
     def test_caller_cursor_failure_is_left_to_the_caller(self, test_db):
         """On failure with a caller's cursor the helper must not roll back --
