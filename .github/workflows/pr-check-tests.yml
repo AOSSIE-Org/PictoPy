@@ -24,6 +24,9 @@ jobs:
         with:
           node-version: "18"
 
+      - name: Agent hook tests
+        run: node scripts/agent-format-hook.test.mjs
+
       - name: Install Dependencies
         run: |
           cd frontend
