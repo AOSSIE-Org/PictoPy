@@ -174,12 +174,25 @@ def get_cluster_images(cluster_id: str):
         images_data = db_get_images_by_cluster_id(cluster_id)
 
         # Step 3: Convert to response models
+        
+        # Step 3: Convert to response models
+        import json
+
+        def parse_metadata(metadata):
+            """Parse metadata if stored as JSON string."""
+            if isinstance(metadata, str):
+                try:
+                    metadata = json.loads(metadata)
+                except json.JSONDecodeError:
+                    return None
+            return metadata if isinstance(metadata, dict) else None
+
         images = [
             ImageInCluster(
                 id=img["image_id"],
                 path=img["image_path"],
                 thumbnailPath=img["thumbnail_path"],
-                metadata=img["metadata"],
+                metadata=parse_metadata(img["metadata"]),
                 face_id=img["face_id"],
                 confidence=img["confidence"],
                 bbox=img["bbox"],
