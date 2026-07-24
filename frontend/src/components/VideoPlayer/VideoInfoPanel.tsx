@@ -120,9 +120,9 @@ export const VideoInfoPanel: React.FC<VideoInfoPanelProps> = ({
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-white/50">Tags</p>
                   <div className="mt-1 flex flex-wrap gap-1">
-                    {tags.map((tag) => (
+                    {tags.map((tag, index) => (
                       <span
-                        key={tag}
+                        key={`${tag}-${index}`}
                         className="rounded-full border border-white/30 px-2 py-0.5 text-xs text-white"
                       >
                         {tag}

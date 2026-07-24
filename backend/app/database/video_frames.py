@@ -444,30 +444,41 @@ def db_get_all_frame_embeddings(
 def db_get_video_tags(video_ids: Optional[List[str]] = None) -> Dict[str, List[str]]:
     """Display tag names per video. Pass video_ids to restrict, or None for
     every video."""
+    base_query = """
+        SELECT vc.video_id, m.name
+        FROM video_classes_display vc
+        JOIN mappings m ON vc.class_id = m.class_id
+    """
+    order_by = " ORDER BY vc.video_id, m.name"
+
     conn = None
     try:
         conn = _connect()
         cursor = conn.cursor()
 
-        query = """
-            SELECT vc.video_id, m.name
-            FROM video_classes_display vc
-            JOIN mappings m ON vc.class_id = m.class_id
-        """
-        params: List[str] = []
-        if video_ids is not None:
+        tags: Dict[str, List[str]] = {}
+
+        def collect(query: str, params: List[str]) -> None:
+            cursor.execute(query, params)
+            for video_id, name in cursor.fetchall():
+                tags.setdefault(video_id, []).append(name)
+
+        if video_ids is None:
+            collect(base_query + order_by, [])
+        else:
             if not video_ids:
                 return {}
-            placeholders = ",".join("?" for _ in video_ids)
-            query += f" WHERE vc.video_id IN ({placeholders})"
-            params = video_ids
-        query += " ORDER BY vc.video_id, m.name"
+            # Chunk below SQLite's 999-placeholder limit so libraries with
+            # more than ~999 videos don't error out and lose every tag.
+            chunk_size = 500
+            for i in range(0, len(video_ids), chunk_size):
+                chunk = video_ids[i : i + chunk_size]
+                placeholders = ",".join("?" for _ in chunk)
+                collect(
+                    base_query + f" WHERE vc.video_id IN ({placeholders})" + order_by,
+                    chunk,
+                )
 
-        cursor.execute(query, params)
-
-        tags: Dict[str, List[str]] = {}
-        for video_id, name in cursor.fetchall():
-            tags.setdefault(video_id, []).append(name)
         return tags
     except sqlite3.Error as e:
         logger.error(f"Error getting video tags: {e}")

@@ -4068,8 +4068,8 @@
             "anyOf": [
               {
                 "type": "number",
-                "maximum": 60.0,
-                "minimum": 1.0
+                "maximum": 300.0,
+                "minimum": 0.5
               },
               {
                 "type": "null"
@@ -4124,8 +4124,8 @@
           },
           "Video_Frame_Interval": {
             "type": "number",
-            "maximum": 60.0,
-            "minimum": 1.0,
+            "maximum": 300.0,
+            "minimum": 0.5,
             "title": "Video Frame Interval",
             "default": 5.0
           }

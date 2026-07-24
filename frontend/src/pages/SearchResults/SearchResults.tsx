@@ -118,8 +118,15 @@ export const SearchResults = () => {
     });
 
   // Videos run as their own query: they share the mode logic but a video
-  // failure (e.g. no frames embedded yet) must not blank the image results.
-  const { data: videoData, isSuccess: isVideoSuccess } = usePictoQuery({
+  // failure (e.g. no frames embedded yet) must not blank the image results,
+  // and vice versa.
+  const {
+    data: videoData,
+    isSuccess: isVideoSuccess,
+    isError: isVideoError,
+    error: videoError,
+    errorMessage: videoErrorMessage,
+  } = usePictoQuery({
     queryKey: ['search-results-videos', query, mode],
     queryFn: async (): Promise<VideoSearchQueryResult> => {
       if (mode === 'semantic') {
@@ -132,11 +139,16 @@ export const SearchResults = () => {
         return { ...tagResponse, resultType: 'tag' };
       }
 
-      const statusRes = await fetchModelStatus();
-      const semAvailable =
-        statusRes.success && statusRes.data
-          ? isSemanticSearchAvailable(statusRes.data)
-          : false;
+      // Reuse the status already fetched above; only fetch again if it
+      // hasn't resolved yet, avoiding a redundant round-trip per search.
+      let semAvailable = semanticAvailable;
+      if (!isStatusSuccess) {
+        const statusRes = await fetchModelStatus();
+        semAvailable =
+          statusRes.success && statusRes.data
+            ? isSemanticSearchAvailable(statusRes.data)
+            : false;
+      }
 
       if (semAvailable) {
         const semResponse = await semanticSearchVideos({ query });
@@ -158,6 +170,22 @@ export const SearchResults = () => {
 
     dispatch(setVideos(fetchedVideos));
   }, [videoData, isVideoSuccess, dispatch]);
+
+  // A failed video search should not be silent; surface it in the logs like
+  // the image query's error branch does.
+  useEffect(() => {
+    if (isVideoError) {
+      console.error(
+        'Video search failed:',
+        getErrorMessage(videoError, videoErrorMessage),
+      );
+    }
+  }, [isVideoError, videoError, videoErrorMessage]);
+
+  const videoSearchError = isVideoError
+    ? getErrorMessage(videoError, videoErrorMessage) ||
+      'Failed to search videos'
+    : null;
 
   const effectiveMode = data?.resultType || mode;
 
@@ -240,7 +268,12 @@ export const SearchResults = () => {
           </div>
         )}
 
-      {searchError ? (
+      {!query ? (
+        <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
+          <p>Please enter a search term to find photos and videos.</p>
+        </div>
+      ) : searchError && videoSearchError ? (
+        // Only a total failure (both media types) takes over the whole view.
         <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
           <AlertCircle className="text-destructive mb-4 h-12 w-12" />
           <h3 className="text-destructive mb-2 text-xl font-medium">
@@ -248,53 +281,75 @@ export const SearchResults = () => {
           </h3>
           <p>{searchError}</p>
         </div>
-      ) : !query ? (
-        <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
-          <p>Please enter a search term to find images.</p>
-        </div>
-      ) : displayImages.length === 0 &&
-        displayVideos.length === 0 &&
-        isSuccess ? (
-        <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
-          {effectiveMode === 'semantic' ? (
-            <p>No matches found. Try describing it differently.</p>
-          ) : (
-            <p>No photos or videos found matching your search.</p>
-          )}
-        </div>
       ) : (
         <>
-          {displayImages.length > 0 && (
-            <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {displayImages.map((image, index) => (
-                <div key={image.id} className="group relative">
-                  <ImageCard
-                    image={image}
-                    imageIndex={index}
-                    className="w-full transition-transform duration-200 group-hover:scale-105"
-                    onClick={() => dispatch(setCurrentViewIndex(index))}
-                  />
-                </div>
-              ))}
+          {/* Photos: an image-search error is shown inline so it never hides
+              successfully-fetched videos. */}
+          {searchError ? (
+            <div className="text-muted-foreground mb-6 flex items-center gap-2 text-sm">
+              <AlertCircle className="text-destructive h-4 w-4 shrink-0" />
+              <span>Couldn't load photo results: {searchError}</span>
             </div>
-          )}
-
-          {displayVideos.length > 0 && (
-            <>
-              <h2 className="mb-4 text-xl font-semibold">Videos</h2>
+          ) : (
+            displayImages.length > 0 && (
               <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {displayVideos.map((video, index) => (
-                  <div key={video.id} className="group relative">
-                    <VideoCard
-                      video={video}
+                {displayImages.map((image, index) => (
+                  <div key={image.id} className="group relative">
+                    <ImageCard
+                      image={image}
+                      imageIndex={index}
                       className="w-full transition-transform duration-200 group-hover:scale-105"
-                      onClick={() => dispatch(setCurrentVideoViewIndex(index))}
+                      onClick={() => dispatch(setCurrentViewIndex(index))}
                     />
                   </div>
                 ))}
               </div>
-            </>
+            )
           )}
+
+          {/* Videos: symmetric — a video-search error is inline and never
+              hides successfully-fetched photos. */}
+          {videoSearchError ? (
+            <div className="text-muted-foreground mb-6 flex items-center gap-2 text-sm">
+              <AlertCircle className="text-destructive h-4 w-4 shrink-0" />
+              <span>Couldn't load video results: {videoSearchError}</span>
+            </div>
+          ) : (
+            displayVideos.length > 0 && (
+              <>
+                <h2 className="mb-4 text-xl font-semibold">Videos</h2>
+                <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                  {displayVideos.map((video, index) => (
+                    <div key={video.id} className="group relative">
+                      <VideoCard
+                        video={video}
+                        className="w-full transition-transform duration-200 group-hover:scale-105"
+                        onClick={() =>
+                          dispatch(setCurrentVideoViewIndex(index))
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              </>
+            )
+          )}
+
+          {/* Both searches succeeded but nothing matched. */}
+          {!searchError &&
+            !videoSearchError &&
+            isSuccess &&
+            isVideoSuccess &&
+            displayImages.length === 0 &&
+            displayVideos.length === 0 && (
+              <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
+                {effectiveMode === 'semantic' ? (
+                  <p>No matches found. Try describing it differently.</p>
+                ) : (
+                  <p>No photos or videos found matching your search.</p>
+                )}
+              </div>
+            )}
         </>
       )}
 

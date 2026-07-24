@@ -99,38 +99,46 @@ def db_get_tagging_progress() -> List[FolderTaggingInfo]:
     cursor = conn.cursor()
 
     try:
-        # COUNT(DISTINCT ...) because joining both media tables multiplies the
-        # rows. embedded_videos is a correlated subquery: a video is "embedded"
-        # once tagged with no unembedded frames left -- a zero-frame
-        # (undecodable) video counts as embedded so it never stalls the bar.
+        # Pre-aggregate each media table by folder before joining, so a folder
+        # with M images and N videos never fans out to M*N intermediate rows.
+        # A video is "embedded" once tagged with no unembedded frames left -- a
+        # zero-frame (undecodable) video counts as embedded so it never stalls
+        # the bar.
         cursor.execute(
             """
             SELECT
                 f.folder_id,
                 f.folder_path,
                 f.AI_Tagging,
-                COUNT(DISTINCT i.id) as total_images,
-                COUNT(DISTINCT CASE WHEN i.isTagged = 1 THEN i.id END)
-                    as tagged_images,
-                COUNT(DISTINCT CASE WHEN i.isEmbedded = 1 THEN i.id END)
-                    as embedded_images,
-                COUNT(DISTINCT v.id) as total_videos,
-                COUNT(DISTINCT CASE WHEN v.isTagged = 1 THEN v.id END)
-                    as tagged_videos,
-                (
-                    SELECT COUNT(*)
-                    FROM videos v2
-                    WHERE v2.folder_id = f.folder_id
-                      AND v2.isTagged = 1
-                      AND NOT EXISTS (
-                          SELECT 1 FROM video_frames vf
-                          WHERE vf.video_id = v2.id AND vf.isEmbedded = 0
-                      )
-                ) as embedded_videos
+                COALESCE(img.total_images, 0) as total_images,
+                COALESCE(img.tagged_images, 0) as tagged_images,
+                COALESCE(img.embedded_images, 0) as embedded_images,
+                COALESCE(vid.total_videos, 0) as total_videos,
+                COALESCE(vid.tagged_videos, 0) as tagged_videos,
+                COALESCE(vid.embedded_videos, 0) as embedded_videos
             FROM folders f
-            LEFT JOIN images i ON f.folder_id = i.folder_id
-            LEFT JOIN videos v ON f.folder_id = v.folder_id
-            GROUP BY f.folder_id, f.folder_path, f.AI_Tagging
+            LEFT JOIN (
+                SELECT folder_id,
+                       COUNT(*) as total_images,
+                       SUM(CASE WHEN isTagged = 1 THEN 1 ELSE 0 END)
+                           as tagged_images,
+                       SUM(CASE WHEN isEmbedded = 1 THEN 1 ELSE 0 END)
+                           as embedded_images
+                FROM images
+                GROUP BY folder_id
+            ) img ON img.folder_id = f.folder_id
+            LEFT JOIN (
+                SELECT v2.folder_id,
+                       COUNT(*) as total_videos,
+                       SUM(CASE WHEN v2.isTagged = 1 THEN 1 ELSE 0 END)
+                           as tagged_videos,
+                       SUM(CASE WHEN v2.isTagged = 1 AND NOT EXISTS (
+                           SELECT 1 FROM video_frames vf
+                           WHERE vf.video_id = v2.id AND vf.isEmbedded = 0
+                       ) THEN 1 ELSE 0 END) as embedded_videos
+                FROM videos v2
+                GROUP BY v2.folder_id
+            ) vid ON vid.folder_id = f.folder_id
             """
         )
 

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
+from app.config.settings import VIDEO_FRAME_INTERVAL_SECONDS
 from app.database.metadata import db_get_metadata, db_update_metadata
 from app.schemas.user_preferences import (
     GetUserPreferencesResponse,
@@ -30,7 +31,9 @@ def get_user_preferences():
         user_preferences = UserPreferencesData(
             YOLO_model_size=user_prefs_data.get("YOLO_model_size", "small"),
             GPU_Acceleration=user_prefs_data.get("GPU_Acceleration", True),
-            Video_Frame_Interval=user_prefs_data.get("Video_Frame_Interval", 5.0),
+            Video_Frame_Interval=user_prefs_data.get(
+                "Video_Frame_Interval", VIDEO_FRAME_INTERVAL_SECONDS
+            ),
         )
 
         return GetUserPreferencesResponse(
@@ -102,7 +105,9 @@ def update_user_preferences(request: UpdateUserPreferencesRequest):
         user_preferences = UserPreferencesData(
             YOLO_model_size=current_user_prefs.get("YOLO_model_size", "small"),
             GPU_Acceleration=current_user_prefs.get("GPU_Acceleration", True),
-            Video_Frame_Interval=current_user_prefs.get("Video_Frame_Interval", 5.0),
+            Video_Frame_Interval=current_user_prefs.get(
+                "Video_Frame_Interval", VIDEO_FRAME_INTERVAL_SECONDS
+            ),
         )
 
         return UpdateUserPreferencesResponse(
