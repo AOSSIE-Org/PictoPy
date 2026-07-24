@@ -100,6 +100,7 @@ def sample_folder_details():
             False,  # taggingCompleted
             "completed",  # indexing_status
             0,  # image_count
+            7,  # video_count -- a video-only folder is not "empty"
         ),
         (
             "folder-id-2",
@@ -110,6 +111,7 @@ def sample_folder_details():
             True,
             "completed",
             25,
+            0,
         ),
     ]
 

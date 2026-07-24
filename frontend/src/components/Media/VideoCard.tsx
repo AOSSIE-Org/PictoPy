@@ -7,6 +7,7 @@ import { Video } from '@/types/Media';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { useToggleVideoFav } from '@/hooks/useToggleVideoFav';
 import { formatDurationLabel } from '@/utils/durationUtils';
+import { ImageTags } from '@/components/Media/ImageTags';
 
 interface VideoCardProps {
   video: Video;
@@ -20,6 +21,7 @@ export function VideoCard({ video, className, onClick }: VideoCardProps) {
   // A rescan can replace the poster on disk, so fall back rather than showing
   // a broken image if the file is gone by the time the card renders.
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => setThumbnailFailed(false), [video.thumbnailPath]);
 
@@ -35,6 +37,8 @@ export function VideoCard({ video, className, onClick }: VideoCardProps) {
         'group bg-card overflow-hidden rounded-lg border transition-all hover:shadow-md',
         className,
       )}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <div className="relative">
         <AspectRatio ratio={1}>
@@ -109,6 +113,14 @@ export function VideoCard({ video, className, onClick }: VideoCardProps) {
             </div>
           )}
         </AspectRatio>
+
+        {/* Tags sampled from the video's keyframes. Stacked above the
+            playback overlay so the badge stays hoverable. */}
+        <ImageTags
+          tags={video.tags || []}
+          isImageHovered={isHovered}
+          className="z-20"
+        />
       </div>
     </div>
   );

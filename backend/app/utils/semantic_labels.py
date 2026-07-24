@@ -128,6 +128,57 @@ def semantic_util_build_label_embeddings() -> None:
         logger.error(f"Error building semantic label embeddings: {e}")
 
 
+def _load_label_scoring_context():
+    """Everything a scoring pass needs: the cached label matrix, per-label
+    thresholds, the signature that invalidates stale scores, and the
+    checkpoint's sigmoid calibration. Returns None when no label embeddings
+    are cached for the active checkpoint.
+    """
+    import numpy as np
+    from app.config.settings import (
+        SIGLIP2_ACTIVE_CHECKPOINT,
+        SIGLIP2_SCORING_METADATA,
+        SEMANTIC_SCORE_TOP_K,
+        SEMANTIC_BUCKET_THRESHOLDS,
+        SEMANTIC_DEFAULT_THRESHOLD,
+    )
+    from app.database.semantic_labels import db_get_active_label_embeddings
+
+    metadata = SIGLIP2_SCORING_METADATA[SIGLIP2_ACTIVE_CHECKPOINT]
+    model_version = metadata["model_version"]
+
+    meta, label_matrix = db_get_active_label_embeddings(model_version)
+    if not meta:
+        return None
+
+    thresholds = np.array(
+        [
+            (
+                override
+                if override is not None
+                else SEMANTIC_BUCKET_THRESHOLDS.get(
+                    category, SEMANTIC_DEFAULT_THRESHOLD
+                )
+            )
+            for _, category, override in meta
+        ],
+        dtype=np.float32,
+    )
+    signature = _scoring_signature(
+        model_version, SEMANTIC_SCORE_TOP_K, thresholds, meta, label_matrix
+    )
+
+    return {
+        "model_version": model_version,
+        "meta": meta,
+        "label_matrix": label_matrix,
+        "thresholds": thresholds,
+        "signature": signature,
+        "logit_scale": np.exp(metadata["logit_scale"]),
+        "logit_bias": metadata["logit_bias"],
+    }
+
+
 def semantic_util_score_images() -> None:
     """Score embedded images against the cached label matrix and write
     top-K above-threshold tags as image_classes rows.
@@ -139,49 +190,26 @@ def semantic_util_score_images() -> None:
     """
     import time
     import numpy as np
-    from app.config.settings import (
-        SIGLIP2_ACTIVE_CHECKPOINT,
-        SIGLIP2_SCORING_METADATA,
-        SEMANTIC_SCORE_TOP_K,
-        SEMANTIC_BUCKET_THRESHOLDS,
-        SEMANTIC_DEFAULT_THRESHOLD,
-    )
-    from app.database.semantic_labels import (
-        db_get_active_label_embeddings,
-        db_write_image_semantic_scores,
-    )
+    from app.config.settings import SEMANTIC_SCORE_TOP_K
+    from app.database.semantic_labels import db_write_image_semantic_scores
     from app.database.image_embeddings import db_get_embeddings_needing_scoring
 
     try:
-        metadata = SIGLIP2_SCORING_METADATA[SIGLIP2_ACTIVE_CHECKPOINT]
-        model_version = metadata["model_version"]
-        logit_scale = np.exp(metadata["logit_scale"])
-        logit_bias = metadata["logit_bias"]
-
-        meta, label_matrix = db_get_active_label_embeddings(model_version)
-        if not meta:
+        context = _load_label_scoring_context()
+        if context is None:
             logger.info(
                 "No cached label embeddings for the active checkpoint; "
                 "skipping semantic scoring pass"
             )
             return
 
-        thresholds = np.array(
-            [
-                (
-                    override
-                    if override is not None
-                    else SEMANTIC_BUCKET_THRESHOLDS.get(
-                        category, SEMANTIC_DEFAULT_THRESHOLD
-                    )
-                )
-                for _, category, override in meta
-            ],
-            dtype=np.float32,
-        )
-        signature = _scoring_signature(
-            model_version, SEMANTIC_SCORE_TOP_K, thresholds, meta, label_matrix
-        )
+        model_version = context["model_version"]
+        meta = context["meta"]
+        label_matrix = context["label_matrix"]
+        thresholds = context["thresholds"]
+        signature = context["signature"]
+        logit_scale = context["logit_scale"]
+        logit_bias = context["logit_bias"]
 
         total_images = 0
         start_time = time.time()
@@ -220,3 +248,94 @@ def semantic_util_score_images() -> None:
             )
     except Exception as e:
         logger.error(f"Error in semantic scoring pass: {e}")
+
+
+def semantic_util_score_videos() -> None:
+    """Score sampled keyframes and roll them up into video-level tags.
+
+    Loops per video rather than in flat chunks like the image pass: a video's
+    tags are an aggregate over all its frames, so they have to be scored
+    together. A label's video score is its best frame's score, and it only
+    counts if enough frames agreed.
+    """
+    import time
+    import numpy as np
+    from app.config.settings import VIDEO_TAG_MIN_FRAME_SUPPORT, VIDEO_TAG_TOP_K
+    from app.database.video_frames import (
+        db_get_frame_embeddings_for_video,
+        db_get_videos_needing_scoring,
+        db_write_video_semantic_scores,
+    )
+
+    try:
+        context = _load_label_scoring_context()
+        if context is None:
+            logger.info(
+                "No cached label embeddings for the active checkpoint; "
+                "skipping video scoring pass"
+            )
+            return
+
+        model_version = context["model_version"]
+        meta = context["meta"]
+        label_matrix = context["label_matrix"]
+        thresholds = context["thresholds"]
+        signature = context["signature"]
+        logit_scale = context["logit_scale"]
+        logit_bias = context["logit_bias"]
+
+        total_videos = 0
+        start_time = time.time()
+        while True:
+            video_ids = db_get_videos_needing_scoring(
+                model_version, signature, SCORING_CHUNK_SIZE
+            )
+            if not video_ids:
+                break
+
+            for video_id in video_ids:
+                frame_matrix = db_get_frame_embeddings_for_video(
+                    video_id, model_version
+                )
+                if frame_matrix.size == 0:
+                    # Can't happen given the query join, but stamping anyway
+                    # keeps the while loop from spinning on such a row.
+                    db_write_video_semantic_scores(video_id, [], signature)
+                    continue
+
+                logits = frame_matrix @ label_matrix.T * logit_scale + logit_bias
+                scores = 1.0 / (1.0 + np.exp(-logits))  # [frames, labels]
+
+                hits = scores >= thresholds
+                frame_counts = hits.sum(axis=0)
+                best_scores = np.where(hits, scores, 0.0).max(axis=0)
+
+                frame_total = frame_matrix.shape[0]
+                required = (
+                    VIDEO_TAG_MIN_FRAME_SUPPORT
+                    if frame_total >= VIDEO_TAG_MIN_FRAME_SUPPORT + 1
+                    else 1
+                )
+                candidates = np.flatnonzero(frame_counts >= required)
+                if len(candidates) > VIDEO_TAG_TOP_K:
+                    keep = np.argsort(best_scores[candidates])[::-1][:VIDEO_TAG_TOP_K]
+                    candidates = candidates[keep]
+
+                db_write_video_semantic_scores(
+                    video_id,
+                    [
+                        (meta[j][0], float(best_scores[j]), int(frame_counts[j]))
+                        for j in candidates
+                    ],
+                    signature,
+                )
+                total_videos += 1
+
+        if total_videos:
+            elapsed = time.time() - start_time
+            logger.info(
+                f"Video semantic scoring pass complete. Videos: {total_videos}, "
+                f"Labels: {len(meta)}, Elapsed: {elapsed:.2f}s"
+            )
+    except Exception as e:
+        logger.error(f"Error in video semantic scoring pass: {e}")

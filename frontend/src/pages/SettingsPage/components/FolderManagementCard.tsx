@@ -101,7 +101,7 @@ const FolderManagementCard: React.FC = () => {
                           Indexing Folder...
                         </Badge>
                       </div>
-                    ) : folder.image_count === 0 ? (
+                    ) : !folder.image_count && !folder.video_count ? (
                       <div className="text-muted-foreground text-sm italic">
                         Folder is empty
                       </div>

@@ -990,7 +990,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SemanticSearchResponse"
+                  "$ref": "#/components/schemas/app__routes__images__SemanticSearchResponse"
                 }
               }
             }
@@ -1093,6 +1093,179 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GetAllVideosResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/search": {
+      "get": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Search Videos By Tag",
+        "description": "Search videos by tag name.",
+        "operationId": "search_videos_by_tag_videos_search_get",
+        "parameters": [
+          {
+            "name": "tag",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Tag name to search for",
+              "title": "Tag"
+            },
+            "description": "Tag name to search for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAllVideosResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/semantic-search": {
+      "get": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Semantic Search Videos",
+        "description": "Semantic search videos by query text using SigLIP2 keyframe embeddings.",
+        "operationId": "semantic_search_videos_videos_semantic_search_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Query text to search for",
+              "title": "Query"
+            },
+            "description": "Query text to search for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__routes__videos__SemanticSearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/purge-frame-cache": {
+      "post": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Purge Frame Cache",
+        "description": "Delete the sampled keyframe JPEGs. Tags and semantic search survive:\nonly the on-disk frames are removed, not their embeddings.",
+        "operationId": "purge_frame_cache_videos_purge_frame_cache_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurgeFrameCacheResponse"
                 }
               }
             }
@@ -2459,6 +2632,11 @@
             "title": "Image Count",
             "default": 0
           },
+          "video_count": {
+            "type": "integer",
+            "title": "Video Count",
+            "default": 0
+          },
           "indexing_status": {
             "anyOf": [
               {
@@ -3309,6 +3487,29 @@
         ],
         "title": "MultiPersonSearchResponse"
       },
+      "PurgeFrameCacheResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "bytes_reclaimed": {
+            "type": "integer",
+            "title": "Bytes Reclaimed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "bytes_reclaimed"
+        ],
+        "title": "PurgeFrameCacheResponse"
+      },
       "RenameClusterData": {
         "properties": {
           "cluster_id": {
@@ -3385,26 +3586,79 @@
         ],
         "title": "RenameClusterResponse"
       },
-      "SemanticSearchData": {
+      "ScoredVideoData": {
         "properties": {
-          "images": {
-            "items": {
-              "$ref": "#/components/schemas/SemanticSearchImage"
-            },
-            "type": "array",
-            "title": "Images"
+          "id": {
+            "type": "string",
+            "title": "Id"
           },
-          "total": {
-            "type": "integer",
-            "title": "Total"
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          },
+          "thumbnailPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnailpath"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/VideoMetadataModel"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "best_frame_timestamp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Frame Timestamp"
           }
         },
         "type": "object",
         "required": [
-          "images",
-          "total"
+          "id",
+          "path",
+          "folder_id",
+          "thumbnailPath",
+          "metadata",
+          "isFavourite",
+          "score"
         ],
-        "title": "SemanticSearchData"
+        "title": "ScoredVideoData"
       },
       "SemanticSearchImage": {
         "properties": {
@@ -3466,28 +3720,6 @@
           "score"
         ],
         "title": "SemanticSearchImage"
-      },
-      "SemanticSearchResponse": {
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "title": "Success"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message"
-          },
-          "data": {
-            "$ref": "#/components/schemas/SemanticSearchData"
-          }
-        },
-        "type": "object",
-        "required": [
-          "success",
-          "message",
-          "data"
-        ],
-        "title": "SemanticSearchResponse"
       },
       "SetupRequest": {
         "properties": {
@@ -3831,6 +4063,19 @@
               }
             ],
             "title": "Gpu Acceleration"
+          },
+          "Video_Frame_Interval": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 60.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Frame Interval"
           }
         },
         "type": "object",
@@ -3876,6 +4121,13 @@
             "type": "boolean",
             "title": "Gpu Acceleration",
             "default": true
+          },
+          "Video_Frame_Interval": {
+            "type": "number",
+            "maximum": 60.0,
+            "minimum": 1.0,
+            "title": "Video Frame Interval",
+            "default": 5.0
           }
         },
         "type": "object",
@@ -4045,6 +4297,49 @@
         ],
         "title": "VideoMetadataModel"
       },
+      "app__routes__images__SemanticSearchData": {
+        "properties": {
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/SemanticSearchImage"
+            },
+            "type": "array",
+            "title": "Images"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "images",
+          "total"
+        ],
+        "title": "SemanticSearchData"
+      },
+      "app__routes__images__SemanticSearchResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/app__routes__images__SemanticSearchData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "SemanticSearchResponse"
+      },
       "app__routes__images__ToggleFavouriteRequest": {
         "properties": {
           "image_id": {
@@ -4057,6 +4352,49 @@
           "image_id"
         ],
         "title": "ToggleFavouriteRequest"
+      },
+      "app__routes__videos__SemanticSearchData": {
+        "properties": {
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/ScoredVideoData"
+            },
+            "type": "array",
+            "title": "Videos"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "videos",
+          "total"
+        ],
+        "title": "SemanticSearchData"
+      },
+      "app__routes__videos__SemanticSearchResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/app__routes__videos__SemanticSearchData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "SemanticSearchResponse"
       },
       "app__routes__videos__ToggleFavouriteRequest": {
         "properties": {

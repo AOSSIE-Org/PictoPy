@@ -6,6 +6,8 @@ import { APIResponse } from '@/types/API';
 export interface UserPreferencesData {
   YOLO_model_size: 'nano' | 'small' | 'medium';
   GPU_Acceleration: boolean;
+  /** Seconds between sampled video keyframes when tagging videos. */
+  Video_Frame_Interval: number;
 }
 
 export interface GetUserPreferencesResponse extends APIResponse {
@@ -15,6 +17,7 @@ export interface GetUserPreferencesResponse extends APIResponse {
 export interface UpdateUserPreferencesRequest {
   YOLO_model_size?: 'nano' | 'small' | 'medium';
   GPU_Acceleration?: boolean;
+  Video_Frame_Interval?: number;
 }
 
 export interface UpdateUserPreferencesResponse extends APIResponse {
