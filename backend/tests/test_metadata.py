@@ -1,128 +1,159 @@
 import json
+import os
 import sqlite3
+import tempfile
+from typing import Any, Dict, Iterator, List, Tuple
+from unittest.mock import patch
 
 import pytest
 
-from app.database import metadata as metadata_db
+from app.database.metadata import (
+    db_create_metadata_table,
+    db_get_metadata,
+    db_update_metadata,
+)
+
+# ##############################
+# Pytest Fixtures
+# ##############################
 
 
-@pytest.fixture()
-def metadata_database(tmp_path, monkeypatch):
-    db_path = tmp_path / "metadata.sqlite3"
-    monkeypatch.setattr(metadata_db, "DATABASE_PATH", str(db_path))
-    return db_path
+@pytest.fixture(scope="function")
+def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
+    """Point the metadata DB module at a fresh tempfile database."""
+    db_fd, db_path = tempfile.mkstemp()
+    os.close(db_fd)
+
+    monkeypatch.setattr("app.config.settings.DATABASE_PATH", db_path)
+    monkeypatch.setattr("app.database.metadata.DATABASE_PATH", db_path)
+
+    db_create_metadata_table()
+
+    yield db_path
+
+    os.unlink(db_path)
 
 
-# Validates that metadata table creation inserts a default empty metadata row.
-def test_create_metadata_table_initializes_empty_metadata(metadata_database):
-    metadata_db.db_create_metadata_table()
-
-    with sqlite3.connect(str(metadata_database)) as conn:
-        rows = conn.execute("SELECT metadata FROM metadata").fetchall()
-
-    assert rows == [("{}",)]
-    assert metadata_db.db_get_metadata() == {}
+def stored_rows(db_path: str) -> List[Tuple[str]]:
+    """Read the raw metadata rows straight from the table."""
+    conn = sqlite3.connect(db_path)
+    rows = conn.execute("SELECT metadata FROM metadata").fetchall()
+    conn.close()
+    return rows
 
 
-# Validates that creating the metadata table again does not overwrite existing metadata.
-def test_create_metadata_table_preserves_existing_metadata(metadata_database):
-    metadata_db.db_create_metadata_table()
-    expected_metadata = {"user_preferences": {"YOLO_model_size": "medium"}}
-
-    assert metadata_db.db_update_metadata(expected_metadata) is True
-    metadata_db.db_create_metadata_table()
-
-    with sqlite3.connect(str(metadata_database)) as conn:
-        row_count = conn.execute("SELECT COUNT(*) FROM metadata").fetchone()[0]
-
-    assert row_count == 1
-    assert metadata_db.db_get_metadata() == expected_metadata
+def write_raw(db_path: str, sql: str, params: Tuple[Any, ...] = ()) -> None:
+    """Run a statement against the metadata table and commit it."""
+    conn = sqlite3.connect(db_path)
+    conn.execute(sql, params)
+    conn.commit()
+    conn.close()
 
 
-# Validates that metadata retrieval returns None when the table has no metadata row.
-def test_get_metadata_returns_none_when_no_row_exists(metadata_database):
-    metadata_db.db_create_metadata_table()
-
-    with sqlite3.connect(str(metadata_database)) as conn:
-        conn.execute("DELETE FROM metadata")
-
-    assert metadata_db.db_get_metadata() is None
+# ##############################
+# Table creation
+# ##############################
 
 
-# Validates that blank metadata content is treated as missing metadata.
-def test_get_metadata_returns_none_for_blank_metadata(metadata_database):
-    metadata_db.db_create_metadata_table()
+class TestCreateMetadataTable:
+    def test_seeds_a_single_empty_row(self, test_db):
+        assert stored_rows(test_db) == [("{}",)]
+        assert db_get_metadata() == {}
 
-    with sqlite3.connect(str(metadata_database)) as conn:
-        conn.execute("UPDATE metadata SET metadata = ?", ("",))
+    def test_preserves_existing_metadata(self, test_db):
+        expected: Dict[str, Any] = {"user_preferences": {"YOLO_model_size": "medium"}}
+        assert db_update_metadata(expected) is True
 
-    assert metadata_db.db_get_metadata() is None
+        db_create_metadata_table()  # re-running must not reseed the row
 
+        assert len(stored_rows(test_db)) == 1
+        assert db_get_metadata() == expected
 
-# Validates that invalid JSON in the metadata row is handled as missing metadata.
-def test_get_metadata_returns_none_for_invalid_json(metadata_database):
-    metadata_db.db_create_metadata_table()
-
-    with sqlite3.connect(str(metadata_database)) as conn:
-        conn.execute("UPDATE metadata SET metadata = ?", ("{invalid-json",))
-
-    assert metadata_db.db_get_metadata() is None
-
-
-# Validates that updating metadata stores nested JSON-compatible values.
-def test_update_metadata_stores_nested_values(metadata_database):
-    metadata_db.db_create_metadata_table()
-    expected_metadata = {
-        "user_preferences": {"YOLO_model_size": "nano", "GPU_Acceleration": False},
-        "recent_folders": ["photos", "archives"],
-        "version": 2,
-    }
-
-    assert metadata_db.db_update_metadata(expected_metadata) is True
-
-    assert metadata_db.db_get_metadata() == expected_metadata
+    def test_survives_a_connection_failure(self):
+        """connect() failing leaves conn as None, so the finally must no-op."""
+        with patch(
+            "app.database.metadata.sqlite3.connect", side_effect=sqlite3.Error("fail")
+        ):
+            with pytest.raises(sqlite3.Error):
+                db_create_metadata_table()
 
 
-# Validates that updating metadata replaces the previous row instead of appending another row.
-def test_update_metadata_replaces_existing_metadata_row(metadata_database):
-    metadata_db.db_create_metadata_table()
-    old_metadata = {"old": True}
-    new_metadata = {"new": True, "count": 3}
-
-    assert metadata_db.db_update_metadata(old_metadata) is True
-    assert metadata_db.db_update_metadata(new_metadata) is True
-
-    with sqlite3.connect(str(metadata_database)) as conn:
-        rows = conn.execute("SELECT metadata FROM metadata").fetchall()
-
-    assert len(rows) == 1
-    assert json.loads(rows[0][0]) == new_metadata
+# ##############################
+# Reading metadata
+# ##############################
 
 
-# Validates that metadata can be updated through an existing database cursor.
-def test_update_metadata_with_existing_cursor(metadata_database):
-    metadata_db.db_create_metadata_table()
-    expected_metadata = {"bulk_update": True}
+class TestGetMetadata:
+    def test_returns_none_without_a_row(self, test_db):
+        write_raw(test_db, "DELETE FROM metadata")
+        assert db_get_metadata() is None
 
-    conn = sqlite3.connect(str(metadata_database))
-    try:
-        cursor = conn.cursor()
-        assert metadata_db.db_update_metadata(expected_metadata, cursor) is True
-        conn.commit()
-    finally:
-        conn.close()
+    def test_returns_none_for_blank_metadata(self, test_db):
+        write_raw(test_db, "UPDATE metadata SET metadata = ?", ("",))
+        assert db_get_metadata() is None
 
-    assert metadata_db.db_get_metadata() == expected_metadata
+    def test_returns_none_for_invalid_json(self, test_db):
+        write_raw(test_db, "UPDATE metadata SET metadata = ?", ("{invalid-json",))
+        assert db_get_metadata() is None
 
 
-# Validates that update failures roll back without deleting previous metadata.
-def test_update_metadata_rolls_back_when_json_serialization_fails(metadata_database):
-    metadata_db.db_create_metadata_table()
-    original_metadata = {"safe": True}
+# ##############################
+# Updating metadata
+# ##############################
 
-    assert metadata_db.db_update_metadata(original_metadata) is True
 
-    with pytest.raises(TypeError):
-        metadata_db.db_update_metadata({"bad": object()})
+class TestUpdateMetadata:
+    def test_stores_nested_values(self, test_db):
+        expected: Dict[str, Any] = {
+            "user_preferences": {"YOLO_model_size": "nano", "GPU_Acceleration": False},
+            "recent_folders": ["photos", "archives"],
+            "version": 2,
+        }
+        assert db_update_metadata(expected) is True
+        assert db_get_metadata() == expected
 
-    assert metadata_db.db_get_metadata() == original_metadata
+    def test_replaces_the_previous_row(self, test_db):
+        assert db_update_metadata({"old": True}) is True
+        assert db_update_metadata({"new": True, "count": 3}) is True
+
+        rows = stored_rows(test_db)
+        assert len(rows) == 1
+        assert json.loads(rows[0][0]) == {"new": True, "count": 3}
+
+    def test_accepts_a_caller_supplied_cursor(self, test_db):
+        expected = {"bulk_update": True}
+
+        conn = sqlite3.connect(test_db)
+        try:
+            assert db_update_metadata(expected, conn.cursor()) is True
+            conn.commit()  # the helper leaves committing to the caller
+        finally:
+            conn.close()
+
+        assert db_get_metadata() == expected
+
+    def test_rolls_back_when_serialization_fails(self, test_db):
+        assert db_update_metadata({"safe": True}) is True
+
+        with pytest.raises(TypeError):
+            db_update_metadata({"bad": object()})
+
+        assert db_get_metadata() == {"safe": True}
+
+    def test_caller_cursor_failure_is_left_to_the_caller(self, test_db):
+        """On failure with a caller's cursor the helper must not roll back --
+        the caller owns the transaction."""
+        conn = sqlite3.connect(test_db)
+        try:
+            cursor = conn.cursor()
+            assert db_update_metadata({"safe": True}, cursor) is True
+
+            with pytest.raises(TypeError):
+                db_update_metadata({"bad": object()}, cursor)
+
+            # The earlier write survived, so the caller can still commit it
+            conn.commit()
+        finally:
+            conn.close()
+
+        assert db_get_metadata() == {"safe": True}
