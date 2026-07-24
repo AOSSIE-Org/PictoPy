@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import sqlite3
+from contextlib import contextmanager
 
 import bcrypt
 
@@ -6,6 +9,22 @@ from app.database.connection import get_db_connection
 from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
+
+
+@contextmanager
+def logged_db_connection(action: str):
+    try:
+        with get_db_connection() as conn:
+            yield conn
+    except sqlite3.IntegrityError as e:
+        logger.error(f"Integrity Error {action}: {e}")
+        raise
+    except sqlite3.OperationalError as e:
+        logger.error(f"Operational Error {action}: {e}")
+        raise
+    except sqlite3.Error as e:
+        logger.error(f"Database Error {action}: {e}")
+        raise
 
 
 def db_create_albums_table() -> None:
