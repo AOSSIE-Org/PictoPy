@@ -1,8 +1,12 @@
-import pytest
-import sqlite3
 import json
+import os
+import sqlite3
+import tempfile
+from typing import Iterator, Optional
+
 import numpy as np
-from unittest.mock import patch, MagicMock
+import pytest
+
 from app.database.faces import (
     db_create_faces_table,
     db_insert_face_embeddings,
@@ -11,211 +15,213 @@ from app.database.faces import (
     db_update_face_cluster_ids_batch,
     db_get_cluster_mean_embeddings,
 )
+from app.database.face_clusters import db_create_clusters_table
+
+# ##############################
+# Pytest Fixtures
+# ##############################
 
 
-class TestDbCreateFacesTable:
-    # Tests that faces table is created successfully without errors
-    def test_create_faces_table_success(self):
-        with patch("app.database.faces.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_connect.return_value = mock_conn
-            db_create_faces_table()
-            mock_conn.cursor.return_value.execute.assert_called_once()
-            mock_conn.commit.assert_called_once()
+@pytest.fixture(scope="function")
+def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
+    """Point the face DB modules at a fresh tempfile database."""
+    db_fd, db_path = tempfile.mkstemp()
+    os.close(db_fd)
 
-    # Tests that connection is closed even when table creation fails
-    def test_create_faces_table_closes_connection_on_error(self):
-        with patch("app.database.faces.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_conn.cursor.return_value.execute.side_effect = sqlite3.Error("fail")
-            mock_connect.return_value = mock_conn
-            with pytest.raises(sqlite3.Error):
-                db_create_faces_table()
-            mock_conn.close.assert_called_once()
+    monkeypatch.setattr("app.config.settings.DATABASE_PATH", db_path)
+    monkeypatch.setattr("app.database.faces.DATABASE_PATH", db_path)
+    monkeypatch.setattr("app.database.face_clusters.DATABASE_PATH", db_path)
+
+    # clusters first: db_get_all_faces_with_cluster_names LEFT JOINs it
+    db_create_clusters_table()
+    db_create_faces_table()
+
+    yield db_path
+
+    os.unlink(db_path)
 
 
-class TestDbInsertFaceEmbeddings:
-    # Tests that face embedding is inserted and returns a valid face_id
-    def test_insert_face_embeddings_success(self):
-        image_id = "test-image-uuid"
-        embeddings = [np.array([0.1, 0.2, 0.3])]
-        with patch("app.database.faces.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.lastrowid = 1
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_insert_face_embeddings(image_id, embeddings)
-            assert result == 1
-            mock_cursor.execute.assert_called_once()
-            mock_conn.commit.assert_called_once()
+def add_cluster(db_path: str, cluster_id: str, name: str) -> str:
+    """Insert a face_clusters row and return its id."""
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "INSERT INTO face_clusters (cluster_id, cluster_name) VALUES (?, ?)",
+        (cluster_id, name),
+    )
+    conn.commit()
+    conn.close()
+    return cluster_id
 
-    # Tests that face embedding is inserted with optional confidence and bbox
-    def test_insert_face_embeddings_with_metadata(self):
-        image_id = "test-image-uuid"
-        embeddings = [np.array([0.4, 0.5, 0.6])]
+
+def add_face(
+    image_id: str = "img-1",
+    embedding: Optional[np.ndarray] = None,
+    cluster_id: Optional[str] = None,
+    **kwargs,
+) -> int:
+    """Insert a face row and return its generated face_id."""
+    if embedding is None:
+        embedding = np.array([0.1, 0.2])
+    return db_insert_face_embeddings(
+        image_id, embedding, cluster_id=cluster_id, **kwargs
+    )
+
+
+# ##############################
+# Table creation
+# ##############################
+
+
+class TestFacesTable:
+    def test_creates_faces_table(self, test_db):
+        conn = sqlite3.connect(test_db)
+        tables = {
+            row[0]
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+        conn.close()
+        assert "faces" in tables
+
+    def test_is_idempotent(self, test_db):
+        # Re-running against an existing schema must not raise
+        db_create_faces_table()
+
+
+# ##############################
+# Inserting embeddings
+# ##############################
+
+
+class TestInsertFaceEmbeddings:
+    def test_returns_incrementing_face_ids(self, test_db):
+        assert add_face("img-1") == 1
+        assert add_face("img-2") == 2
+
+    def test_stores_confidence_and_bbox(self, test_db):
         bbox = {"x": 10, "y": 20, "width": 50, "height": 60}
-        with patch("app.database.faces.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.lastrowid = 2
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_insert_face_embeddings(
-                image_id, embeddings, confidence=0.98, bbox=bbox
-            )
-            assert result == 2
-            call_args = mock_cursor.execute.call_args[0][1]
-            assert call_args[3] == 0.98
-            assert json.loads(call_args[4]) == bbox
+        face_id = add_face("img-1", confidence=0.98, bbox=bbox)
 
-    # Tests that connection is always closed after insert
-    def test_insert_face_embeddings_closes_connection(self):
-        image_id = "test-image-uuid"
-        embeddings = [np.array([0.1, 0.2])]
-        with patch("app.database.faces.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.lastrowid = 3
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            db_insert_face_embeddings(image_id, embeddings)
-            mock_conn.close.assert_called_once()
+        conn = sqlite3.connect(test_db)
+        confidence, bbox_json = conn.execute(
+            "SELECT confidence, bbox FROM faces WHERE face_id = ?", (face_id,)
+        ).fetchone()
+        conn.close()
+        assert confidence == 0.98
+        assert json.loads(bbox_json) == bbox
+
+    def test_bbox_is_null_when_omitted(self, test_db):
+        face_id = add_face("img-1")
+
+        conn = sqlite3.connect(test_db)
+        confidence, bbox_json = conn.execute(
+            "SELECT confidence, bbox FROM faces WHERE face_id = ?", (face_id,)
+        ).fetchone()
+        conn.close()
+        assert confidence is None
+        assert bbox_json is None
 
 
-class TestDbGetFacesUnassignedClusters:
-    # Tests that faces without cluster_id are returned as list of dicts
-    def test_get_unassigned_faces_returns_list(self):
-        fake_embedding = np.array([0.1, 0.2, 0.3])
-        fake_rows = [(1, json.dumps(fake_embedding.tolist()))]
-        with patch("app.database.faces.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchall.return_value = fake_rows
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_faces_unassigned_clusters()
-            assert len(result) == 1
-            assert result[0]["face_id"] == 1
-            assert isinstance(result[0]["embeddings"], np.ndarray)
+# ##############################
+# Reading faces
+# ##############################
 
-    # Tests that empty list is returned when all faces have clusters assigned
-    def test_get_unassigned_faces_empty(self):
-        with patch("app.database.faces.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchall.return_value = []
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_faces_unassigned_clusters()
-            assert result == []
-        mock_conn.close.assert_called_once()
 
-class TestDbGetAllFacesWithClusterNames:
-    # Tests that faces are returned with their cluster names
-    def test_get_faces_with_cluster_names(self):
-        fake_embedding = np.array([0.1, 0.2, 0.3])
-        fake_rows = [(1, json.dumps(fake_embedding.tolist()), "Alice")]
-        with patch("app.database.faces.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchall.return_value = fake_rows
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_all_faces_with_cluster_names()
-            assert len(result) == 1
-            assert result[0]["face_id"] == 1
-            assert result[0]["cluster_name"] == "Alice"
-            assert isinstance(result[0]["embeddings"], np.ndarray)
+class TestUnassignedFaces:
+    def test_lists_only_faces_without_a_cluster(self, test_db):
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        unassigned = add_face("img-1", np.array([0.1, 0.2]))
+        add_face("img-2", np.array([0.3, 0.4]), cluster_id=cluster)
 
-    # Tests that cluster_name is None for faces not assigned to any cluster
-    def test_get_faces_with_no_cluster_name(self):
-        fake_embedding = np.array([0.5, 0.6])
-        fake_rows = [(2, json.dumps(fake_embedding.tolist()), None)]
-        with patch("app.database.faces.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchall.return_value = fake_rows
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_all_faces_with_cluster_names()
-            assert result[0]["cluster_name"] is None
+        faces = db_get_faces_unassigned_clusters()
+        assert [face["face_id"] for face in faces] == [unassigned]
+        assert np.allclose(faces[0]["embeddings"], [0.1, 0.2])
 
-    # Tests that empty list is returned when no faces exist in database
-    def test_get_faces_empty(self):
-        with patch("app.database.faces.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchall.return_value = []
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_all_faces_with_cluster_names()
-            assert result == []
-        mock_conn.close.assert_called_once()
+    def test_returns_empty_when_all_assigned(self, test_db):
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        add_face("img-1", cluster_id=cluster)
+        assert db_get_faces_unassigned_clusters() == []
 
-class TestDbUpdateFaceClusterIdsBatch:
-    # Tests that batch update runs without error for valid mapping list
-    def test_update_batch_success(self):
-        mapping = [{"face_id": 1, "cluster_id": 10}, {"face_id": 2, "cluster_id": 20}]
-        with patch("app.database.faces.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            db_update_face_cluster_ids_batch(mapping)
-            mock_cursor.executemany.assert_called_once()
-            mock_conn.commit.assert_called_once()
 
-    # Tests that empty mapping list returns early without any database calls
-    def test_update_batch_empty_mapping(self):
-        with patch("app.database.faces.sqlite3.connect") as mock_connect:
-            db_update_face_cluster_ids_batch([])
-            mock_connect.assert_not_called()
+class TestFacesWithClusterNames:
+    def test_returns_the_cluster_name(self, test_db):
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        add_face("img-1", np.array([0.1, 0.2]), cluster_id=cluster)
 
-    # Tests that cluster_id can be set to None to unassign a face from cluster
-    def test_update_batch_with_none_cluster(self):
-        mapping = [{"face_id": 1, "cluster_id": None}]
-        with patch("app.database.faces.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            db_update_face_cluster_ids_batch(mapping)
-            call_args = mock_cursor.executemany.call_args[0][1]
-            assert call_args[0] == (None, 1)
-        mock_conn.close.assert_called_once()
+        faces = db_get_all_faces_with_cluster_names()
+        assert len(faces) == 1
+        assert faces[0]["cluster_name"] == "Alice"
+        assert np.allclose(faces[0]["embeddings"], [0.1, 0.2])
 
-class TestDbGetClusterMeanEmbeddings:
-    # Tests that mean embeddings are calculated correctly per cluster
-    def test_get_cluster_mean_embeddings_success(self):
-        emb1 = np.array([0.2, 0.4])
-        emb2 = np.array([0.6, 0.8])
-        fake_rows = [
-            (1, json.dumps(emb1.tolist())),
-            (1, json.dumps(emb2.tolist())),
-        ]
-        with patch("app.database.faces.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchall.return_value = fake_rows
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_cluster_mean_embeddings()
-            assert len(result) == 1
-            assert result[0]["cluster_id"] == 1
-            expected_mean = np.mean([emb1, emb2], axis=0)
-            np.testing.assert_array_almost_equal(
-                result[0]["mean_embedding"], expected_mean
-            )
+    def test_cluster_name_is_none_when_unassigned(self, test_db):
+        add_face("img-1")
+        assert db_get_all_faces_with_cluster_names()[0]["cluster_name"] is None
 
-    # Tests that empty list is returned when no faces have cluster assigned
-    def test_get_cluster_mean_embeddings_empty(self):
-        with patch("app.database.faces.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchall.return_value = []
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_cluster_mean_embeddings()
-            assert result == []
-            mock_conn.close.assert_called_once()
+    def test_returns_empty_without_faces(self, test_db):
+        assert db_get_all_faces_with_cluster_names() == []
+
+
+# ##############################
+# Cluster assignment
+# ##############################
+
+
+class TestUpdateClusterIdsBatch:
+    def test_assigns_clusters_to_faces(self, test_db):
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        first, second = add_face("img-1"), add_face("img-2")
+
+        db_update_face_cluster_ids_batch(
+            [
+                {"face_id": first, "cluster_id": cluster},
+                {"face_id": second, "cluster_id": cluster},
+            ]
+        )
+
+        assert db_get_faces_unassigned_clusters() == []
+
+    def test_empty_mapping_is_a_noop(self, test_db):
+        add_face("img-1")
+        db_update_face_cluster_ids_batch([])
+        assert len(db_get_faces_unassigned_clusters()) == 1
+
+    def test_none_cluster_unassigns_a_face(self, test_db):
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        face_id = add_face("img-1", cluster_id=cluster)
+
+        db_update_face_cluster_ids_batch([{"face_id": face_id, "cluster_id": None}])
+
+        assert [f["face_id"] for f in db_get_faces_unassigned_clusters()] == [face_id]
+
+
+# ##############################
+# Cluster mean embeddings
+# ##############################
+
+
+class TestClusterMeanEmbeddings:
+    def test_averages_embeddings_per_cluster(self, test_db):
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        add_face("img-1", np.array([0.2, 0.4]), cluster_id=cluster)
+        add_face("img-2", np.array([0.6, 0.8]), cluster_id=cluster)
+
+        means = db_get_cluster_mean_embeddings()
+        assert len(means) == 1
+        assert means[0]["cluster_id"] == cluster
+        assert np.allclose(means[0]["mean_embedding"], [0.4, 0.6])
+
+    def test_keeps_clusters_separate(self, test_db):
+        first = add_cluster(test_db, "cluster-1", "Alice")
+        second = add_cluster(test_db, "cluster-2", "Bob")
+        add_face("img-1", np.array([0.2, 0.4]), cluster_id=first)
+        add_face("img-2", np.array([1.0, 1.0]), cluster_id=second)
+
+        means = {
+            row["cluster_id"]: row["mean_embedding"]
+            for row in db_get_cluster_mean_embeddings()
+        }
+        assert np.allclose(means[first], [0.2, 0.4])
+        assert np.allclose(means[second], [1.0, 1.0])
+
+    def test_returns_empty_without_assigned_faces(self, test_db):
+        add_face("img-1")  # unassigned faces are excluded
+        assert db_get_cluster_mean_embeddings() == []

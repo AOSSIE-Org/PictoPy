@@ -1,7 +1,11 @@
-import pytest
+import os
 import sqlite3
-import uuid
-from unittest.mock import patch, MagicMock
+import tempfile
+from typing import Iterator, List, Optional
+
+import bcrypt
+import pytest
+
 from app.database.albums import (
     db_create_albums_table,
     db_create_album_images_table,
@@ -15,306 +19,203 @@ from app.database.albums import (
     db_remove_images_from_album,
     verify_album_password,
 )
+from app.database.images import db_create_images_table
+
+# ##############################
+# Pytest Fixtures
+# ##############################
 
 
-class TestDbCreateAlbumsTable:
-    # Tests that albums table is created without raising errors
-    def test_create_albums_table_success(self):
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_connect.return_value = mock_conn
-            db_create_albums_table()
-            mock_conn.cursor.return_value.execute.assert_called_once()
-            mock_conn.commit.assert_called_once()
+@pytest.fixture(scope="function")
+def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
+    """Point the album DB modules at a fresh tempfile database."""
+    db_fd, db_path = tempfile.mkstemp()
+    os.close(db_fd)
 
-    # Tests that connection is closed even if an error occurs
-    def test_create_albums_table_closes_connection_on_error(self):
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_conn.cursor.return_value.execute.side_effect = sqlite3.Error("fail")
-            mock_connect.return_value = mock_conn
-            with pytest.raises(sqlite3.Error):
-                db_create_albums_table()
-            mock_conn.close.assert_called_once()
+    monkeypatch.setattr("app.config.settings.DATABASE_PATH", db_path)
+    monkeypatch.setattr("app.database.albums.DATABASE_PATH", db_path)
+    monkeypatch.setattr("app.database.images.DATABASE_PATH", db_path)
+    # db_delete_album goes through the shared get_db_connection helper
+    monkeypatch.setattr("app.database.connection.DATABASE_PATH", db_path)
 
+    db_create_albums_table()
+    db_create_album_images_table()
+    # album_images FKs into images, and get_db_connection enforces foreign
+    # keys -- deleting an album can't resolve the cascade without this table.
+    db_create_images_table()
 
-class TestDbCreateAlbumImagesTable:
-    # Tests that album_images table is created without raising errors
-    def test_create_album_images_table_success(self):
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_connect.return_value = mock_conn
-            db_create_album_images_table()
-            mock_conn.cursor.return_value.execute.assert_called_once()
-            mock_conn.commit.assert_called_once()
-    
-    # Tests that connection is closed even if an error occurs during table creation
-    # def test_create_album_images_table_closes_connection_on_error(self):
-    #     with patch("app.database.albums.sqlite3.connect") as mock_connect:
-    #         mock_conn = MagicMock()
-    #         mock_conn.cursor.return_value.execute.side_effect = sqlite3.Error("fail")
-    #         mock_connect.return_value = mock_conn
-    #         with pytest.raises(sqlite3.Error):
-    #             db_create_album_images_table()
-    #         mock_conn.close.assert_called_once()
+    yield db_path
 
-    def test_create_album_images_table_closes_connection_on_error(self):
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_conn.cursor.return_value.execute.side_effect = sqlite3.Error("fail")
-            mock_connect.return_value = mock_conn
-            with pytest.raises(sqlite3.Error):
-                db_create_album_images_table()
-            mock_conn.close.assert_called_once()
-
-class TestDbGetAllAlbums:
-    # Tests that all visible albums are returned when show_hidden is False
-    def test_get_all_albums_public_only(self):
-        fake_albums = [
-            ("id-1", "Album One", "Desc 1", 0, None),
-            ("id-2", "Album Two", "Desc 2", 0, None),
-        ]
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchall.return_value = fake_albums
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_all_albums(show_hidden=False)
-            assert result == fake_albums
-            mock_cursor.execute.assert_called_once_with(
-                "SELECT * FROM albums WHERE is_hidden = 0"
-            )
-
-    # Tests that hidden albums are also returned when show_hidden is True
-    def test_get_all_albums_include_hidden(self):
-        fake_albums = [
-            ("id-1", "Album One", "Desc 1", 0, None),
-            ("id-2", "Hidden Album", "Secret", 1, "hash"),
-        ]
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchall.return_value = fake_albums
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_all_albums(show_hidden=True)
-            assert result == fake_albums
-            mock_cursor.execute.assert_called_once_with("SELECT * FROM albums")
-
-    # Tests that an empty list is returned when no albums exist
-    def test_get_all_albums_empty(self):
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchall.return_value = []
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_all_albums()
-            assert result == []
+    os.unlink(db_path)
 
 
-class TestDbGetAlbumByName:
-    # Tests that correct album is returned when name matches
-    def test_get_album_by_name_found(self):
-        fake_album = ("id-1", "Summer Trip", "Fun times", 0, None)
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchone.return_value = fake_album
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_album_by_name("Summer Trip")
-            assert result == fake_album
-
-    # Tests that None is returned when album name does not exist
-    def test_get_album_by_name_not_found(self):
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchone.return_value = None
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_album_by_name("Nonexistent")
-            assert result is None
+def make_album(
+    album_id: str = "album-1",
+    name: str = "Trip",
+    description: str = "",
+    hidden: bool = False,
+    password: Optional[str] = None,
+) -> str:
+    """Insert an album and return its id."""
+    db_insert_album(album_id, name, description, hidden, password)
+    return album_id
 
 
-class TestDbGetAlbum:
-    # Tests that correct album is returned when album_id matches
-    def test_get_album_found(self):
-        album_id = str(uuid.uuid4())
-        fake_album = (album_id, "My Album", "Description", 0, None)
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchone.return_value = fake_album
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_album(album_id)
-            assert result == fake_album
-
-    # Tests that None is returned when album_id does not exist
-    def test_get_album_not_found(self):
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchone.return_value = None
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_album("nonexistent-id")
-            assert result is None
+def link_images(db_path: str, album_id: str, image_ids: List[str]) -> None:
+    """Seed album_images rows directly -- these reads don't need real images."""
+    conn = sqlite3.connect(db_path)
+    conn.executemany(
+        "INSERT INTO album_images (album_id, image_id) VALUES (?, ?)",
+        [(album_id, image_id) for image_id in image_ids],
+    )
+    conn.commit()
+    conn.close()
 
 
-class TestDbInsertAlbum:
-    # Tests that a basic album without password is inserted correctly
-    def test_insert_album_without_password(self):
-        album_id = str(uuid.uuid4())
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            db_insert_album(album_id, "Test Album", "A description", False, None)
-            mock_cursor.execute.assert_called_once()
-            mock_conn.commit.assert_called_once()
-
-    # Tests that a password is hashed before being stored in the database
-    def test_insert_album_with_password_hashes_it(self):
-        album_id = str(uuid.uuid4())
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            db_insert_album(album_id, "Secret Album", "Hidden", True, "mypassword")
-            call_args = mock_cursor.execute.call_args[0][1]
-            # password_hash should not be plain text
-            assert call_args[4] != "mypassword"
-            assert call_args[4] is not None
+def stored_hash(db_path: str, album_id: str) -> Optional[str]:
+    """Read an album's raw password_hash straight from the table."""
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        "SELECT password_hash FROM albums WHERE album_id = ?", (album_id,)
+    ).fetchone()
+    conn.close()
+    return row[0]
 
 
-class TestDbUpdateAlbum:
-    # Tests that album fields are updated correctly without changing password
-    def test_update_album_without_password(self):
-        album_id = str(uuid.uuid4())
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            db_update_album(album_id, "New Name", "New Desc", False, None)
-            mock_cursor.execute.assert_called_once()
-            mock_conn.commit.assert_called_once()
-
-    # Tests that password is hashed when updating album with a new password
-    def test_update_album_with_new_password(self):
-        album_id = str(uuid.uuid4())
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            db_update_album(album_id, "New Name", "New Desc", True, "newpassword")
-            call_args = mock_cursor.execute.call_args[0][1]
-            assert call_args[3] != "newpassword"
+# ##############################
+# Table creation
+# ##############################
 
 
-class TestDbDeleteAlbum:
-    # Tests that delete is called with the correct album_id
-    def test_delete_album_success(self):
-        album_id = str(uuid.uuid4())
-        with patch("app.database.albums.get_db_connection") as mock_conn_ctx:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value = mock_cursor
-            mock_conn_ctx.return_value.__enter__ = MagicMock(return_value=mock_conn)
-            mock_conn_ctx.return_value.__exit__ = MagicMock(return_value=False)
-            db_delete_album(album_id)
-            mock_cursor.execute.assert_called_once_with(
-                "DELETE FROM albums WHERE album_id = ?", (album_id,)
-            )
+class TestAlbumTables:
+    def test_creates_both_tables(self, test_db):
+        conn = sqlite3.connect(test_db)
+        tables = {
+            row[0]
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+        conn.close()
+        assert {"albums", "album_images"} <= tables
+
+    def test_is_idempotent(self, test_db):
+        # Re-running against an existing schema must not raise
+        db_create_albums_table()
+        db_create_album_images_table()
 
 
-class TestDbGetAlbumImages:
-    # Tests that list of image IDs is returned for a valid album
-    def test_get_album_images_returns_list(self):
-        album_id = str(uuid.uuid4())
-        fake_images = [("img-1",), ("img-2",), ("img-3",)]
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchall.return_value = fake_images
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_album_images(album_id)
-            assert result == ["img-1", "img-2", "img-3"]
-
-    # Tests that empty list is returned when album has no images
-    def test_get_album_images_empty(self):
-        album_id = str(uuid.uuid4())
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchall.return_value = []
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = db_get_album_images(album_id)
-            assert result == []
+# ##############################
+# Album CRUD
+# ##############################
 
 
-class TestDbRemoveImagesFromAlbum:
-    # Tests that multiple images are removed from album in one call
-    def test_remove_images_from_album(self):
-        album_id = str(uuid.uuid4())
-        image_ids = ["img-1", "img-2"]
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            db_remove_images_from_album(album_id, image_ids)
-            mock_cursor.executemany.assert_called_once()
-            mock_conn.commit.assert_called_once()
+class TestAlbumCrud:
+    def test_insert_then_fetch_by_id_and_name(self, test_db):
+        make_album("album-1", "Summer Trip", "Fun times")
+
+        by_id = db_get_album("album-1")
+        assert by_id[:3] == ("album-1", "Summer Trip", "Fun times")
+        assert db_get_album_by_name("Summer Trip") == by_id
+
+    def test_missing_album_returns_none(self, test_db):
+        assert db_get_album("nope") is None
+        assert db_get_album_by_name("nope") is None
+
+    def test_duplicate_album_name_is_rejected(self, test_db):
+        make_album("album-1", "Trip")
+        # album_name carries a UNIQUE constraint
+        with pytest.raises(sqlite3.IntegrityError):
+            make_album("album-2", "Trip")
+
+    def test_get_all_albums_hides_hidden_by_default(self, test_db):
+        make_album("album-1", "Public")
+        make_album("album-2", "Secret", hidden=True, password="pw")
+
+        visible = [row[1] for row in db_get_all_albums(show_hidden=False)]
+        every = [row[1] for row in db_get_all_albums(show_hidden=True)]
+        assert visible == ["Public"]
+        assert sorted(every) == ["Public", "Secret"]
+
+    def test_update_changes_fields(self, test_db):
+        make_album("album-1", "Old", "Old desc")
+
+        db_update_album("album-1", "New", "New desc", True, None)
+
+        album = db_get_album("album-1")
+        assert album[1] == "New"
+        assert album[2] == "New desc"
+        assert album[3] == 1
+
+    def test_delete_removes_the_row(self, test_db):
+        make_album("album-1", "Trip")
+        db_delete_album("album-1")
+        assert db_get_album("album-1") is None
 
 
-class TestVerifyAlbumPassword:
-    # Tests that correct password returns True
-    def test_verify_correct_password(self):
-        import bcrypt
-        album_id = str(uuid.uuid4())
-        password = "securepass"
-        hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchone.return_value = (hashed,)
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = verify_album_password(album_id, password)
-            assert result is True
+# ##############################
+# Album images
+# ##############################
 
-    # Tests that wrong password returns False
-    def test_verify_wrong_password(self):
-        import bcrypt
-        album_id = str(uuid.uuid4())
-        hashed = bcrypt.hashpw("correct".encode(), bcrypt.gensalt()).decode()
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchone.return_value = (hashed,)
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = verify_album_password(album_id, "wrongpass")
-            assert result is False
 
-    # Tests that missing album returns False without error
-    def test_verify_album_not_found_returns_false(self):
-        album_id = str(uuid.uuid4())
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchone.return_value = None
-            mock_conn.cursor.return_value = mock_cursor
-            mock_connect.return_value = mock_conn
-            result = verify_album_password(album_id, "anypassword")
-            assert result is False
+class TestAlbumImages:
+    def test_returns_linked_image_ids(self, test_db):
+        make_album("album-1", "Trip")
+        link_images(test_db, "album-1", ["img-1", "img-2", "img-3"])
+
+        assert db_get_album_images("album-1") == ["img-1", "img-2", "img-3"]
+
+    def test_returns_empty_for_album_without_images(self, test_db):
+        make_album("album-1", "Trip")
+        assert db_get_album_images("album-1") == []
+
+    def test_remove_images_drops_only_the_named_ones(self, test_db):
+        make_album("album-1", "Trip")
+        link_images(test_db, "album-1", ["img-1", "img-2", "img-3"])
+
+        db_remove_images_from_album("album-1", ["img-1", "img-3"])
+
+        assert db_get_album_images("album-1") == ["img-2"]
+
+
+# ##############################
+# Password handling
+# ##############################
+
+
+class TestAlbumPassword:
+    def test_password_is_stored_hashed(self, test_db):
+        make_album("album-1", "Secret", hidden=True, password="securepass")
+
+        hashed = stored_hash(test_db, "album-1")
+        assert hashed is not None
+        assert hashed != "securepass"
+        assert bcrypt.checkpw(b"securepass", hashed.encode())
+
+    def test_verify_accepts_correct_and_rejects_wrong(self, test_db):
+        make_album("album-1", "Secret", hidden=True, password="securepass")
+
+        assert verify_album_password("album-1", "securepass") is True
+        assert verify_album_password("album-1", "wrongpass") is False
+
+    def test_verify_returns_false_without_a_password(self, test_db):
+        make_album("album-1", "Open")
+        assert verify_album_password("album-1", "anything") is False
+
+    def test_verify_returns_false_for_missing_album(self, test_db):
+        assert verify_album_password("nope", "anything") is False
+
+    def test_update_replaces_the_password(self, test_db):
+        make_album("album-1", "Secret", hidden=True, password="oldpass")
+
+        db_update_album("album-1", "Secret", "", True, "newpass")
+
+        assert verify_album_password("album-1", "newpass") is True
+        assert verify_album_password("album-1", "oldpass") is False
+
+    def test_update_without_password_keeps_the_existing_one(self, test_db):
+        make_album("album-1", "Secret", hidden=True, password="oldpass")
+        before = stored_hash(test_db, "album-1")
+
+        db_update_album("album-1", "Renamed", "", True, None)
+
+        assert stored_hash(test_db, "album-1") == before
+        assert verify_album_password("album-1", "oldpass") is True
