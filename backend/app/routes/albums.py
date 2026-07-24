@@ -156,8 +156,8 @@ router.put("/{album_id}", response_model=SuccessResponse)
     "Failed to Update Album", "An unexpected error occurred while updating the album."
 )
 def update_album(
-    album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)
-):  # noqa: B008
+    album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)  # noqa: B008
+):
     album = db_get_album(album_id)
     if not album:
         raise HTTPException(
@@ -289,8 +289,8 @@ router.post("/{album_id}/images", response_model=SuccessResponse)
     "Failed to Add Images", "An unexpected error occurred while adding images."
 )
 def add_images_to_album(
-    album_id: str = Path(...), body: ImageIdsRequest = Body(...)
-):  # noqa: B008
+    album_id: str = Path(...), body: ImageIdsRequest = Body(...)  # noqa: B008
+):
     album = db_get_album(album_id)
     if not album:
         raise HTTPException(

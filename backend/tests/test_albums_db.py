@@ -111,7 +111,7 @@ class TestAlbumTables:
         Mocked deliberately: a real CREATE can't be made to fail while leaving
         the connection observable.
         """
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
+        with patch("app.database.connection.sqlite3.connect") as mock_connect:
             conn = MagicMock()
             conn.cursor.return_value.execute.side_effect = sqlite3.Error("fail")
             mock_connect.return_value = conn
