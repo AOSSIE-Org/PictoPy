@@ -59,7 +59,12 @@ export default function NetflixStylePlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const hideControlsTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
-  const resolvedSrc = useMemo(() => convertFileSrc(videoSrc), [videoSrc]);
+  // const resolvedSrc = useMemo(() => convertFileSrc(videoSrc), [videoSrc]);
+  const resolvedSrc = useMemo(() => {
+  const src = convertFileSrc(videoSrc);
+  console.log('Resolved video src:', src);
+  return src;
+}, [videoSrc]);
 
   // Reset per-source state. The overlay remounts the player per video, but this
   // keeps the component correct if a caller swaps videoSrc without remounting.
@@ -459,66 +464,66 @@ export default function NetflixStylePlayer({
 
       {/* Controls */}
       <div
-        className={`absolute right-0 bottom-4 left-0 flex items-center justify-between px-4 transition-opacity ${
-          controlsVisible
-            ? 'pointer-events-auto opacity-100'
-            : 'pointer-events-none opacity-0'
-        }`}
-      >
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => skipTime(-10)}
-            className="p-2 text-white"
-            aria-label="Rewind 10 seconds"
-          >
-            <Rewind size={24} />
-          </button>
-          <button
-            onClick={togglePlay}
-            className="p-2 text-white"
-            aria-label={isPlaying ? 'Pause' : 'Play'}
-          >
-            {isPlaying ? <Pause size={24} /> : <Play size={24} />}
-          </button>
-          <button
-            onClick={() => skipTime(10)}
-            className="p-2 text-white"
-            aria-label="Fast forward 10 seconds"
-          >
-            <FastForward size={24} />
-          </button>
-          <div className="text-white">
-            {formatDuration(currentTime) + ' / ' + formatDuration(duration)}
-          </div>
-        </div>
-
-        {/* Volume and Fullscreen */}
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={toggleMute}
-            className="text-white"
-            aria-label={isMuted ? 'Unmute' : 'Mute'}
-          >
-            {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
-          </button>
-          <Slider
-            min={0}
-            max={1}
-            step={0.01}
-            value={[isMuted ? 0 : volume]}
-            onValueChange={handleVolumeChange}
-            className="w-24"
-            aria-label="Volume"
-          />
-          <button
-            onClick={toggleFullScreen}
-            className="text-white"
-            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-          >
-            {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
-          </button>
+      className={`absolute right-0 bottom-4 left-0 flex items-center justify-between px-4 transition-opacity ${
+        controlsVisible
+          ? 'pointer-events-auto opacity-100'
+          : 'pointer-events-none opacity-0'
+      }`}
+    >
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={() => skipTime(-10)}
+          className="cursor-pointer rounded-full bg-black/50 p-2 text-white transition-all duration-200 hover:bg-black/70"
+          aria-label="Rewind 10 seconds"
+        >
+          <Rewind size={24} />
+        </button>
+        <button
+          onClick={togglePlay}
+          className="cursor-pointer rounded-full bg-black/50 p-2 text-white transition-all duration-200 hover:bg-black/70"
+          aria-label={isPlaying ? 'Pause' : 'Play'}
+        >
+          {isPlaying ? <Pause size={24} /> : <Play size={24} />}
+        </button>
+        <button
+          onClick={() => skipTime(10)}
+          className="cursor-pointer rounded-full bg-black/50 p-2 text-white transition-all duration-200 hover:bg-black/70"
+          aria-label="Fast forward 10 seconds"
+        >
+          <FastForward size={24} />
+        </button>
+        <div className="text-white">
+          {formatDuration(currentTime) + ' / ' + formatDuration(duration)}
         </div>
       </div>
+    
+      {/* Volume and Fullscreen */}
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={toggleMute}
+          className="cursor-pointer rounded-full bg-black/50 p-2 text-white transition-all duration-200 hover:bg-black/70"
+          aria-label={isMuted ? 'Unmute' : 'Mute'}
+        >
+          {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+        </button>
+        <Slider
+          min={0}
+          max={1}
+          step={0.01}
+          value={[isMuted ? 0 : volume]}
+          onValueChange={handleVolumeChange}
+          className="w-24"
+          aria-label="Volume"
+        />
+        <button
+          onClick={toggleFullScreen}
+          className="cursor-pointer rounded-full bg-black/50 p-2 text-white transition-all duration-200 hover:bg-black/70"
+          aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+        >
+          {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+        </button>
+      </div>
+    </div>
     </div>
   );
 }
