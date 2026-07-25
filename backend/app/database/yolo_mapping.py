@@ -12,12 +12,14 @@ def db_create_YOLO_classes_table():
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
                 CREATE TABLE IF NOT EXISTS mappings (
                 class_id INTEGER PRIMARY KEY,
                 name VARCHAR NOT NULL
         )
-        """)
+        """
+        )
         for class_id, name in enumerate(class_names):
             cursor.execute(
                 "INSERT OR REPLACE INTO mappings (class_id, name) VALUES (?, ?)",

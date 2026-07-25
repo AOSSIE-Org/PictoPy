@@ -33,7 +33,8 @@ def db_create_semantic_labels_table():
         # semantic labels exactly like YOLO classes. descriptions (JSON
         # array) are the source of truth; label_embedding caches their
         # renormalized mean for embedding_model_version.
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS semantic_labels (
                 class_id INTEGER PRIMARY KEY,
                 name TEXT UNIQUE NOT NULL,
@@ -44,7 +45,8 @@ def db_create_semantic_labels_table():
                 label_embedding BLOB,
                 embedding_model_version TEXT
             )
-            """)
+            """
+        )
 
         # Display cut: tag-list queries join this view instead of
         # image_classes, so chips show all YOLO tags but only the
@@ -54,7 +56,8 @@ def db_create_semantic_labels_table():
         from app.config.settings import SEMANTIC_DISPLAY_TOP_K
 
         cursor.execute("DROP VIEW IF EXISTS image_classes_display")
-        cursor.execute(f"""
+        cursor.execute(
+            f"""
             CREATE VIEW image_classes_display AS
             SELECT image_id, class_id FROM (
                 SELECT image_id, class_id,
@@ -65,7 +68,8 @@ def db_create_semantic_labels_table():
             ) WHERE display_rank <= {int(SEMANTIC_DISPLAY_TOP_K)}
             UNION ALL
             SELECT image_id, class_id FROM image_classes WHERE score IS NULL
-            """)
+            """
+        )
 
         conn.commit()
     finally:

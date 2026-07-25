@@ -64,7 +64,8 @@ class TestSchemaMigration:
     def test_old_shell_schema_is_dropped_and_recreated(self):
         conn = _connect()
         conn.execute("DROP TABLE semantic_labels")
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE semantic_labels (
                 label_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT UNIQUE NOT NULL,
@@ -72,15 +73,18 @@ class TestSchemaMigration:
                 threshold REAL,
                 active BOOLEAN DEFAULT 1
             )
-            """)
-        conn.execute("""
+            """
+        )
+        conn.execute(
+            """
             CREATE TABLE image_semantic_labels (
                 image_id TEXT,
                 label_id INTEGER,
                 score REAL NOT NULL,
                 PRIMARY KEY (image_id, label_id)
             )
-            """)
+            """
+        )
         conn.commit()
         conn.close()
 
