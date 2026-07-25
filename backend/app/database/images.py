@@ -1,6 +1,6 @@
 # Standard library imports
 import sqlite3
-from typing import Any, List, Mapping, Tuple, TypedDict, Union, Optional
+from typing import Any, Dict, List, Mapping, Tuple, TypedDict, Union, Optional
 import json
 
 from datetime import datetime
@@ -31,6 +31,7 @@ class ImageRecord(TypedDict, total=False):
     metadata: Union[Mapping[str, Any], str]
     isTagged: bool
     isFavourite: bool
+    isEmbedded: bool
     # New fields for Memories feature
     latitude: Optional[float]
     longitude: Optional[float]
@@ -72,6 +73,7 @@ def db_create_images_table() -> None:
             metadata TEXT,
             isTagged BOOLEAN DEFAULT 0,
             isFavourite BOOLEAN DEFAULT 0,
+            isEmbedded BOOLEAN DEFAULT 0,
             latitude REAL,
             longitude REAL,
             captured_at DATETIME,
@@ -98,12 +100,20 @@ def db_create_images_table() -> None:
         CREATE TABLE IF NOT EXISTS image_classes (
             image_id TEXT,
             class_id INTEGER,
+            score REAL,
             PRIMARY KEY (image_id, class_id),
             FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
             FOREIGN KEY (class_id) REFERENCES mappings(class_id) ON DELETE CASCADE
         )
     """
     )
+
+    # score: semantic-label match score (NULL for YOLO rows). Guarded ALTER
+    # because shipped databases predate the column and CREATE IF NOT EXISTS
+    # won't add it.
+    cursor.execute("PRAGMA table_info(image_classes)")
+    if "score" not in {row[1] for row in cursor.fetchall()}:
+        cursor.execute("ALTER TABLE image_classes ADD COLUMN score REAL")
 
     conn.commit()
     conn.close()
@@ -120,8 +130,8 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
     try:
         cursor.executemany(
             """
-            INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged, latitude, longitude, captured_at)
-            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged, :latitude, :longitude, :captured_at)
+            INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged, isEmbedded, latitude, longitude, captured_at)
+            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged, COALESCE(:isEmbedded, 0), :latitude, :longitude, :captured_at)
             ON CONFLICT(path) DO UPDATE SET
                 folder_id=excluded.folder_id,
                 thumbnailPath=excluded.thumbnailPath,
@@ -129,6 +139,10 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
                 isTagged=CASE
                     WHEN excluded.isTagged THEN 1
                     ELSE images.isTagged
+                END,
+                isEmbedded=CASE
+                    WHEN excluded.isEmbedded THEN 1
+                    ELSE images.isEmbedded
                 END,
                 latitude=COALESCE(excluded.latitude, images.latitude),
                 longitude=COALESCE(excluded.longitude, images.longitude),
@@ -138,7 +152,7 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
         )
         conn.commit()
         return True
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error inserting image records: {e}")
         conn.rollback()
         return False
@@ -176,7 +190,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                 i.captured_at,
                 m.name as tag_name
             FROM images i
-            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
         """
 
@@ -244,7 +258,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
 
         return images
 
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error getting all images: {e}")
         return []
     finally:
@@ -298,6 +312,53 @@ def db_get_untagged_images() -> List[UntaggedImageRecord]:
         conn.close()
 
 
+def db_get_unembedded_images() -> List[UntaggedImageRecord]:
+    """
+    Find all images that need SigLIP2 embedding.
+    Returns images where:
+    - The image's folder has AI_Tagging enabled (True)
+    - The image has isEmbedded set to False
+
+    Returns:
+        List of dictionaries containing image data: id, path, folder_id, thumbnailPath, metadata
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT i.id, i.path, i.folder_id, i.thumbnailPath, i.metadata
+            FROM images i
+            JOIN folders f ON i.folder_id = f.folder_id
+            WHERE f.AI_Tagging = TRUE
+            AND i.isEmbedded = FALSE
+            """
+        )
+
+        results = cursor.fetchall()
+
+        unembedded_images = []
+        for image_id, path, folder_id, thumbnail_path, metadata in results:
+            from app.utils.images import image_util_parse_metadata
+
+            md = image_util_parse_metadata(metadata)
+            unembedded_images.append(
+                {
+                    "id": image_id,
+                    "path": path,
+                    "folder_id": str(folder_id) if folder_id is not None else None,
+                    "thumbnailPath": thumbnail_path,
+                    "metadata": md,
+                }
+            )
+
+        return unembedded_images
+
+    finally:
+        conn.close()
+
+
 def db_update_image_tagged_status(image_id: ImageId, is_tagged: bool = True) -> bool:
     """
     Update the isTagged status for a specific image.
@@ -319,7 +380,7 @@ def db_update_image_tagged_status(image_id: ImageId, is_tagged: bool = True) -> 
         )
         conn.commit()
         return cursor.rowcount > 0
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error updating image tagged status: {e}")
         conn.rollback()
         return False
@@ -353,7 +414,7 @@ def db_insert_image_classes_batch(image_class_pairs: List[ImageClassPair]) -> bo
         )
         conn.commit()
         return True
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error inserting image classes: {e}")
         conn.rollback()
         return False
@@ -391,7 +452,7 @@ def db_get_images_by_folder_ids(
             folder_ids,
         )
         return cursor.fetchall()
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error getting images by folder IDs: {e}")
         return []
     finally:
@@ -425,7 +486,7 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
         conn.commit()
         logger.info(f"Deleted {cursor.rowcount} obsolete image(s) from database")
         return True
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error deleting images: {e}")
         conn.rollback()
         return False
@@ -450,7 +511,7 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         )
         conn.commit()
         return cursor.rowcount > 0
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Database error: {e}")
         conn.rollback()
         return False
@@ -493,6 +554,168 @@ def db_get_image_by_id(image_id: str) -> Optional[dict]:
         conn.close()
 
 
+def _group_image_rows_with_tags(
+    rows: List[Tuple], images_dict: Dict[str, dict]
+) -> None:
+    """
+    Group flat image+tag join rows (the shared 11-column SELECT shape used by
+    db_search_images_by_tag and db_get_images_by_ids) into images_dict, keyed
+    by image_id, aggregating tag_name into a deduplicated "tags" list.
+    Mutates images_dict in place so callers can accumulate across chunks.
+    """
+    for (
+        image_id,
+        path,
+        folder_id,
+        thumbnail_path,
+        metadata,
+        is_tagged,
+        is_favourite,
+        latitude,
+        longitude,
+        captured_at,
+        tag_name_result,
+    ) in rows:
+        if image_id not in images_dict:
+            images_dict[image_id] = {
+                "id": image_id,
+                "path": path,
+                "folder_id": str(folder_id) if folder_id is not None else "",
+                "thumbnailPath": thumbnail_path,
+                "metadata": metadata,
+                "isTagged": bool(is_tagged),
+                "isFavourite": bool(is_favourite),
+                "latitude": latitude,
+                "longitude": longitude,
+                "captured_at": captured_at if captured_at else None,
+                "tags": [],
+            }
+
+        if tag_name_result and tag_name_result not in images_dict[image_id]["tags"]:
+            images_dict[image_id]["tags"].append(tag_name_result)
+
+
+def _finalize_grouped_images(images_dict: Dict[str, dict]) -> List[dict]:
+    """Convert an images_dict from _group_image_rows_with_tags into a list,
+    normalizing an empty "tags" list to None."""
+    images = []
+    for image_data in images_dict.values():
+        if not image_data["tags"]:
+            image_data["tags"] = None
+        images.append(image_data)
+    return images
+
+
+def db_search_images_by_tag(tag_name: str) -> List[dict]:
+    """
+    Get all images that match a specific tag name, returning their full tag list.
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+            SELECT
+                i.id,
+                i.path,
+                i.folder_id,
+                i.thumbnailPath,
+                i.metadata,
+                i.isTagged,
+                i.isFavourite,
+                i.latitude,
+                i.longitude,
+                i.captured_at,
+                m.name as tag_name
+            FROM images i
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
+            LEFT JOIN mappings m ON ic.class_id = m.class_id
+            WHERE i.id IN (
+                SELECT ic2.image_id FROM image_classes ic2
+                JOIN mappings m2 ON ic2.class_id = m2.class_id
+                WHERE LOWER(m2.name) = LOWER(?)
+            )
+            ORDER BY i.path, m.name
+        """
+
+        cursor.execute(query, [tag_name])
+        results = cursor.fetchall()
+
+        images_dict: Dict[str, dict] = {}
+        _group_image_rows_with_tags(results, images_dict)
+        images = _finalize_grouped_images(images_dict)
+
+        images.sort(key=lambda x: x["path"])
+        return images
+
+    except sqlite3.Error as e:
+        logger.error(f"Error searching images by tag: {e}")
+        raise
+    finally:
+        conn.close()
+
+
+def db_get_images_by_ids(image_ids: List[str]) -> List[dict]:
+    """
+    Get a list of images by their IDs, returning their full tag list.
+    """
+    if not image_ids:
+        return []
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        images_dict: Dict[str, dict] = {}
+        chunk_size = 500
+
+        for i in range(0, len(image_ids), chunk_size):
+            chunk = image_ids[i : i + chunk_size]
+            placeholders = ",".join("?" for _ in chunk)
+            query = f"""
+                SELECT
+                    i.id,
+                    i.path,
+                    i.folder_id,
+                    i.thumbnailPath,
+                    i.metadata,
+                    i.isTagged,
+                    i.isFavourite,
+                    i.latitude,
+                    i.longitude,
+                    i.captured_at,
+                    m.name as tag_name
+                FROM images i
+                LEFT JOIN image_classes_display ic ON i.id = ic.image_id
+                LEFT JOIN mappings m ON ic.class_id = m.class_id
+                WHERE i.id IN ({placeholders})
+                ORDER BY i.path, m.name
+            """
+
+            cursor.execute(query, chunk)
+            results = cursor.fetchall()
+            _group_image_rows_with_tags(results, images_dict)
+
+        images = _finalize_grouped_images(images_dict)
+
+        # Preserve the original order from image_ids
+        # Create a lookup for fast indexing
+        image_lookup = {img["id"]: img for img in images}
+
+        ordered_images = []
+        for img_id in image_ids:
+            if img_id in image_lookup:
+                ordered_images.append(image_lookup[img_id])
+
+        return ordered_images
+
+    except sqlite3.Error as e:
+        logger.error(f"Error getting images by IDs: {e}")
+        raise
+    finally:
+        conn.close()
+
+
 # ============================================================================
 # MEMORIES FEATURE - Location and Time-based Queries
 # ============================================================================
@@ -530,7 +753,7 @@ def db_get_images_by_date_range(
                 i.captured_at,
                 GROUP_CONCAT(m.name, ',') as tags
             FROM images i
-            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
             WHERE i.captured_at BETWEEN ? AND ?
         """
@@ -570,7 +793,7 @@ def db_get_images_by_date_range(
 
         return images
 
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error getting images by date range: {e}")
         return []
     finally:
@@ -623,7 +846,7 @@ def db_get_images_near_location(
                 i.captured_at,
                 GROUP_CONCAT(m.name, ',') as tags
             FROM images i
-            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
             WHERE i.latitude BETWEEN ? AND ?
               AND i.longitude BETWEEN ? AND ?
@@ -664,7 +887,7 @@ def db_get_images_near_location(
 
         return images
 
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error getting images near location: {e}")
         return []
     finally:
@@ -701,7 +924,7 @@ def db_get_images_by_year_month(year: int, month: int) -> List[dict]:
                 i.captured_at,
                 GROUP_CONCAT(m.name, ',') as tags
             FROM images i
-            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
             WHERE strftime('%Y', i.captured_at) = ?
               AND strftime('%m', i.captured_at) = ?
@@ -735,7 +958,7 @@ def db_get_images_by_year_month(year: int, month: int) -> List[dict]:
 
         return images
 
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error getting images by year/month: {e}")
         return []
     finally:
@@ -769,7 +992,7 @@ def db_get_images_with_location() -> List[dict]:
                 i.captured_at,
                 GROUP_CONCAT(m.name, ',') as tags
             FROM images i
-            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
             WHERE i.latitude IS NOT NULL 
               AND i.longitude IS NOT NULL
@@ -802,7 +1025,7 @@ def db_get_images_with_location() -> List[dict]:
 
         return images
 
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error fetching images with location: {e}")
         return []
     finally:
@@ -836,7 +1059,7 @@ def db_get_all_images_for_memories() -> List[dict]:
                 i.captured_at,
                 GROUP_CONCAT(m.name, ',') as tags
             FROM images i
-            LEFT JOIN image_classes ic ON i.id = ic.image_id
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
             GROUP BY i.id
             ORDER BY i.captured_at DESC
@@ -867,8 +1090,39 @@ def db_get_all_images_for_memories() -> List[dict]:
 
         return images
 
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error getting images from database: {e}")
         return []
     finally:
         conn.close()
+
+
+def db_mark_images_embedded(image_ids: List[str]) -> bool:
+    """Mark a batch of images as embedded in the database."""
+    if not image_ids:
+        return True
+
+    conn = None
+    try:
+        conn = _connect()
+        cursor = conn.cursor()
+
+        # Chunk by 500 to stay under SQLite's 999-variable limit per statement,
+        # matching db_get_images_by_ids's convention.
+        chunk_size = 500
+        for i in range(0, len(image_ids), chunk_size):
+            chunk = image_ids[i : i + chunk_size]
+            placeholders = ",".join(["?"] * len(chunk))
+            query = f"UPDATE images SET isEmbedded = 1 WHERE id IN ({placeholders})"
+            cursor.execute(query, chunk)
+
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Error marking images as embedded: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()

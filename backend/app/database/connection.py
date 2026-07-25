@@ -2,6 +2,9 @@ import sqlite3
 from contextlib import contextmanager
 from typing import Generator
 from app.config.settings import DATABASE_PATH
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @contextmanager
@@ -25,7 +28,8 @@ def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
     try:
         yield conn
         conn.commit()
-    except Exception:
+    except Exception as e:
+        logger.error(f"Database transaction failed, rolling back: {e}")
         conn.rollback()
         raise
     finally:

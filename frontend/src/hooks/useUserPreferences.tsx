@@ -56,31 +56,37 @@ export const useUserPreferences = () => {
   /**
    * Update a specific preference
    */
-  const updatePreference = (updatedPreferences: UserPreferencesData) => {
+  const updatePreference = async (updatedPreferences: UserPreferencesData) => {
+    const previousPreferences = preferences;
     setPreferences(updatedPreferences);
-    updatePreferencesMutation.mutate(updatedPreferences);
+    try {
+      return await updatePreferencesMutation.mutateAsync(updatedPreferences);
+    } catch (err) {
+      setPreferences(previousPreferences);
+      throw err;
+    }
   };
 
   /**
    * Update YOLO model size
    */
-  const updateYoloModelSize = (size: 'nano' | 'small' | 'medium') => {
+  const updateYoloModelSize = async (size: 'nano' | 'small' | 'medium') => {
     const updatedPreferences = {
       ...preferences,
       YOLO_model_size: size,
     };
-    updatePreference(updatedPreferences);
+    return updatePreference(updatedPreferences);
   };
 
   /**
    * Toggle GPU acceleration
    */
-  const toggleGpuAcceleration = () => {
+  const toggleGpuAcceleration = async () => {
     const updatedPreferences = {
       ...preferences,
       GPU_Acceleration: !preferences.GPU_Acceleration,
     };
-    updatePreference(updatedPreferences);
+    return updatePreference(updatedPreferences);
   };
 
   return {
@@ -92,6 +98,9 @@ export const useUserPreferences = () => {
     updatePreference,
     updateYoloModelSize,
     toggleGpuAcceleration,
+
+    // For refetching preferences after external events (e.g., Model Manager window closing)
+    refetch: preferencesQuery.refetch,
 
     // Mutation state (for use in UI, e.g., disabling buttons)
     isUpdating: updatePreferencesMutation.isPending,

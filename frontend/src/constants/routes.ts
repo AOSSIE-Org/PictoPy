@@ -10,4 +10,6 @@ export const ROUTES = {
   MEMORIES: 'memories',
   MEMORY_DETAIL: 'memories/:memoryId',
   PERSON: 'person/:clusterId',
+  MODEL_MANAGER: 'model-manager',
+  SEARCH: 'search',
 };

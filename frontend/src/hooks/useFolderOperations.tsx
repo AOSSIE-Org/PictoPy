@@ -25,6 +25,12 @@ export const useFolderOperations = () => {
   const foldersQuery = usePictoQuery({
     queryKey: ['folders'],
     queryFn: getAllFolders,
+    refetchInterval: folders.some(
+      (f) => f.AI_Tagging && f.indexing_status !== 'completed',
+    )
+      ? 1000
+      : false,
+    refetchIntervalInBackground: true,
   });
 
   const taggingStatusQuery = usePictoQuery({

@@ -39,6 +39,7 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
       zoomIn,
       zoomOut,
       reset,
+      isFitReady,
     } = useZoomTransform({ imagePath, rotation, resetSignal });
 
     useImperativeHandle(
@@ -113,6 +114,8 @@ export const ZoomableImage = forwardRef<ZoomableImageRef, ZoomableImageProps>(
               transform: `rotate(${rotation}deg)`,
               transformOrigin: 'center center',
               pointerEvents: 'none',
+              opacity: isFitReady ? 1 : 0,
+              transition: isFitReady ? 'opacity 120ms ease-out' : 'none',
             }}
           />
         </div>

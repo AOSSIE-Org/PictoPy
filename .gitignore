@@ -33,3 +33,7 @@ videos_cache.txt
 venv/
 frontend/dist
 env/
+
+# semantic vocabulary source downloads (cache for scripts/build_semantic_vocabulary.py)
+backend/scripts/vocabulary/sources/
+backend/scripts/vocabulary/eval_images/

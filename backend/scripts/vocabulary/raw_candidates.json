@@ -1,0 +1,6073 @@
+{
+  "generated_by": "scripts/build_semantic_vocabulary.py",
+  "sources": {
+    "places365": "https://raw.githubusercontent.com/CSAILVision/places365/master/categories_places365.txt",
+    "open_images": "https://storage.googleapis.com/openimages/v7/oidv7-class-descriptions-boxable.csv",
+    "coco_exclusion": "app/utils/YOLO.py class_names"
+  },
+  "candidate_count": 838,
+  "candidates": [
+    {
+      "name": "accordion",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "adhesive tape",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "aircraft",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "airfield",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "airplane cabin",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "airport terminal",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "alarm clock",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "alcove",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "alley",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "alpaca",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ambulance",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "amphitheater",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "amusement arcade",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "amusement park",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "animal",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ant",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "antelope",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "apartment building",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "outdoor"
+      ]
+    },
+    {
+      "name": "aquarium",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "aqueduct",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "arcade",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "arch",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "archaelogical excavation",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "archive",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "arena",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "hockey",
+        "performance",
+        "rodeo"
+      ]
+    },
+    {
+      "name": "armadillo",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "army base",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "art gallery",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "art school",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "art studio",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "artichoke",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "artists loft",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "assembly line",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "athletic field",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "outdoor"
+      ]
+    },
+    {
+      "name": "atrium",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "public"
+      ]
+    },
+    {
+      "name": "attic",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "auditorium",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "auto factory",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "auto part",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "auto showroom",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "axe",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "badlands",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "bagel",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "baked goods",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bakery",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "shop"
+      ]
+    },
+    {
+      "name": "balance beam",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "balcony",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "exterior",
+        "interior"
+      ]
+    },
+    {
+      "name": "ball (object)",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ball pit",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "balloon",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ballroom",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "bamboo forest",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "band-aid",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "banjo",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bank vault",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "banquet hall",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "bar",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "barge",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "barn",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "barndoor",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "barrel",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "baseball field",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "basement",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "basketball court",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor"
+      ]
+    },
+    {
+      "name": "bat (animal)",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bathroom",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "bathroom accessory",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bathroom cabinet",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bathtub",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bazaar",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor",
+        "outdoor"
+      ]
+    },
+    {
+      "name": "beach",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "beach house",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "beaker",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "beard",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "beauty salon",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "bedchamber",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "bedroom",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "bee",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "beehive",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "beer",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "beer garden",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "beer hall",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "beetle",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bell pepper",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "belt",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "berth",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "bicycle helmet",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bicycle wheel",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bidet",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "billboard",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "billiard table",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "binoculars",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "biology laboratory",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "blender",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "blue jay",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "boardwalk",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "boat deck",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "boathouse",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "bomb",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bookcase",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bookstore",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "boot",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "booth",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor"
+      ]
+    },
+    {
+      "name": "botanical garden",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "bottle opener",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bow and arrow",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bow window",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor"
+      ]
+    },
+    {
+      "name": "bowling alley",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "bowling equipment",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "box",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "boxing ring",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "brassiere",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bread",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bridge",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "briefcase",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bronze sculpture",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "brown bear",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "building",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "building facade",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "bull",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bullring",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "burial chamber",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "burrito",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "bus interior",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "bus station",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor"
+      ]
+    },
+    {
+      "name": "bust",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "butchers shop",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "butte",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "butterfly",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cabbage",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cabin",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "outdoor"
+      ]
+    },
+    {
+      "name": "cabinetry",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cafeteria",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "cake stand",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "calculator",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "camel",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "camera",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "campsite",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "campus",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "can opener",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "canal",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "natural",
+        "urban"
+      ]
+    },
+    {
+      "name": "canary",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "candle",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "candy",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "candy store",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "cannon",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "canoe",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cantaloupe",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "canyon",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "car interior",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "carnivore",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "carrousel",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "cart",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cassette deck",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "castle",
+      "category": "scene",
+      "sources": [
+        "places365",
+        "open_images"
+      ]
+    },
+    {
+      "name": "cat furniture",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "catacomb",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "caterpillar",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ceiling fan",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cello",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cemetery",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "centipede",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "chainsaw",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "chalet",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "cheese",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cheetah",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "chemistry lab",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "chest of drawers",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "chicken",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "childs room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "chime",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "chisel",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "chopsticks",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "christmas tree",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "church",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor",
+        "outdoor"
+      ]
+    },
+    {
+      "name": "classroom",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "clean room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "cliff",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "closet",
+      "category": "scene",
+      "sources": [
+        "places365",
+        "open_images"
+      ]
+    },
+    {
+      "name": "clothing",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "clothing store",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "coast",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "coat",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cockpit",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "cocktail",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cocktail shaker",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "coconut",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "coffee (drink)",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "coffee cup",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "coffee shop",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "coffee table",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "coffeemaker",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "coin",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "common fig",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "common sunflower",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "computer monitor",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "computer room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "conference center",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "conference room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "construction site",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "container",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "convenience store",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cookie",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cooking spray",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "corded phone",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "corn field",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "corral",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "corridor",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "cosmetics",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cottage",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "countertop",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "courthouse",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "courtyard",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "cowboy hat",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "crab",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cream",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "creek",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "crevasse",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "cricket ball",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "crocodile",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "croissant",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "crosswalk",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "crown",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "crutch",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cucumber",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cupboard",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "curtain",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "cutting board",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "dagger",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "dairy product",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "dam",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "deer",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "delicatessen",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "department store",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "desert",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "sand",
+        "vegetation"
+      ]
+    },
+    {
+      "name": "desert road",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "desk",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "dessert",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "diaper",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "dice",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "digital clock",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "diner",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "outdoor"
+      ]
+    },
+    {
+      "name": "dining hall",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "dining room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "dinosaur",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "discotheque",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "dishwasher",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "dog bed",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "doll",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "dolphin",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "door",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "door handle",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "doorway",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "outdoor"
+      ]
+    },
+    {
+      "name": "dorm room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "downtown",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "dragonfly",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "drawer",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "dress",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "dressing room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "drill (tool)",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "drink",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "drinking straw",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "driveway",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "drugstore",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "drum",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "duck",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "dumbbell",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "eagle",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "earring",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "egg",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "elevator",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "door"
+      ]
+    },
+    {
+      "name": "elevator lobby",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "elevator shaft",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "embassy",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "engine room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "entrance hall",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "envelope",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "eraser",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "escalator",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor"
+      ]
+    },
+    {
+      "name": "excavation",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "fabric store",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "face powder",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "facial tissue holder",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "falcon",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "farm",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "fashion accessory",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "fast food",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "fastfood restaurant",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "fax",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "fedora",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "field",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "cultivated",
+        "wild"
+      ]
+    },
+    {
+      "name": "field road",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "filing cabinet",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "fire escape",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "fire station",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "fireplace",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "fish",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "fishpond",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "fixed-wing aircraft",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "flag",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "flashlight",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "flea market",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor"
+      ]
+    },
+    {
+      "name": "florist shop",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor"
+      ]
+    },
+    {
+      "name": "flower",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "flowerpot",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "flute",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "food",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "food court",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "food processor",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "football",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "football field",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "football helmet",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "footwear",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "forest",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "broadleaf"
+      ]
+    },
+    {
+      "name": "forest path",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "forest road",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "formal garden",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "fountain",
+      "category": "scene",
+      "sources": [
+        "places365",
+        "open_images"
+      ]
+    },
+    {
+      "name": "fox",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "french fries",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "french horn",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "frog",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "fruit",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "frying pan",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "furniture",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "galley",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "garage",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor",
+        "outdoor"
+      ]
+    },
+    {
+      "name": "garden asparagus",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "gas station",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "gas stove",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "gazebo",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "exterior"
+      ]
+    },
+    {
+      "name": "general store",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor",
+        "outdoor"
+      ]
+    },
+    {
+      "name": "gift shop",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "glacier",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "glasses",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "glove",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "goat",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "goggles",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "goldfish",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "golf ball",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "golf cart",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "golf course",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "gondola",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "goose",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "grape",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "grapefruit",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "greenhouse",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor",
+        "outdoor"
+      ]
+    },
+    {
+      "name": "grinder",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "grotto",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "guacamole",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "guitar",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "gymnasium",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor"
+      ]
+    },
+    {
+      "name": "hair spray",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "hamburger",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "hammer",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "hamster",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "hand dryer",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "handgun",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "hangar",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor",
+        "outdoor"
+      ]
+    },
+    {
+      "name": "harbor",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "harbor seal",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "hardware store",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "harmonica",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "harp",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "harpsichord",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "hat",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "hayfield",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "headphones",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "heater",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "hedgehog",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "helicopter",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "heliport",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "helmet",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "high heels",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "highway",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "hiking equipment",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "hippopotamus",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "home appliance",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "home office",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "home theater",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "honeycomb",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "horizontal bar",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "hospital",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "hospital room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "hot spring",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "hotel",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "outdoor"
+      ]
+    },
+    {
+      "name": "hotel room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "house",
+      "category": "scene",
+      "sources": [
+        "places365",
+        "open_images"
+      ]
+    },
+    {
+      "name": "humidifier",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "hunting lodge",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "outdoor"
+      ]
+    },
+    {
+      "name": "ice cream",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ice cream parlor",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "ice floe",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "ice shelf",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "ice skating rink",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor",
+        "outdoor"
+      ]
+    },
+    {
+      "name": "iceberg",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "igloo",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "indoor rower",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "industrial area",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "infant bed",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "inn",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "outdoor"
+      ]
+    },
+    {
+      "name": "insect",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "invertebrate",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ipod",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "islet",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "isopod",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "jacket",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "jacuzzi",
+      "category": "scene",
+      "sources": [
+        "places365",
+        "open_images"
+      ],
+      "variants": [
+        "indoor"
+      ]
+    },
+    {
+      "name": "jaguar (animal)",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "jail cell",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "japanese garden",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "jeans",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "jellyfish",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "jet ski",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "jewelry shop",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "jug",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "juice",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "junkyard",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "kangaroo",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "kasbah",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "kennel",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "outdoor"
+      ]
+    },
+    {
+      "name": "kettle",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "kindergarden classroom",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "kitchen",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "kitchen appliance",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "kitchen knife",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "kitchen utensil",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "kitchenware",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "koala",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ladder",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ladle",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ladybug",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "lagoon",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "lake",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "natural"
+      ]
+    },
+    {
+      "name": "lamp",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "land vehicle",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "landfill",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "landing deck",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "lantern",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "laundromat",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "lavender (plant)",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "lawn",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "lecture room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "legislative chamber",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "lemon (plant)",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "leopard",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "library",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor",
+        "outdoor"
+      ]
+    },
+    {
+      "name": "light bulb",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "light switch",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "lighthouse",
+      "category": "scene",
+      "sources": [
+        "places365",
+        "open_images"
+      ]
+    },
+    {
+      "name": "lily",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "limousine",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "lion",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "lipstick",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "living room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "lizard",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "loading dock",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "lobby",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "lobster",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "lock chamber",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "locker room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "loveseat",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "luggage and bags",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "lynx",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "magpie",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "mammal",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "mango",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "mansion",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "manufactured home",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "maple",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "maraca",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "marine invertebrates",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "marine mammal",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "market",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor",
+        "outdoor"
+      ]
+    },
+    {
+      "name": "marsh",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "martial arts gym",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "mausoleum",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "measuring cup",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "mechanical fan",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "medical equipment",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "medina",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "mezzanine",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "microphone",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "milk",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "miniskirt",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "mirror",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "missile",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "mixer",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "mixing bowl",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "moat",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "water"
+      ]
+    },
+    {
+      "name": "monkey",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "mosque",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "outdoor"
+      ]
+    },
+    {
+      "name": "motel",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "moths and butterflies",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "mountain",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "mountain path",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "mountain snowy",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "movie theater",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor"
+      ]
+    },
+    {
+      "name": "muffin",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "mug",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "mule",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "museum",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor",
+        "outdoor"
+      ]
+    },
+    {
+      "name": "mushroom",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "music studio",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "musical instrument",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "musical keyboard",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "nail (construction)",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "natural history museum",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "necklace",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "nightstand",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "nursery",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "nursing home",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "oast house",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "oboe",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ocean",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "office",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "office building",
+      "category": "scene",
+      "sources": [
+        "places365",
+        "open_images"
+      ]
+    },
+    {
+      "name": "office cubicles",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "office supplies",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "oilrig",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "operating room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "orange (fruit)",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "orchard",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "orchestra pit",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "organ (musical instrument)",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ostrich",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "otter",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "owl",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "oyster",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "paddle",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pagoda",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "palace",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "palm tree",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pancake",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "panda",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pantry",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "paper cutter",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "paper towel",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "parachute",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "park",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "parking garage",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor",
+        "outdoor"
+      ]
+    },
+    {
+      "name": "parking lot",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "parrot",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pasta",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pastry",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pasture",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "patio",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "pavilion",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "peach",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pear",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pen",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pencil case",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pencil sharpener",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "penguin",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "perfume",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "personal care",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "personal flotation device",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pet shop",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "pharmacy",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "phone booth",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "physics laboratory",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "piano",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "picnic area",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "picnic basket",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "picture frame",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pier",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "pig",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pillow",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pineapple",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pitcher (container)",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pizza cutter",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pizzeria",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "plant",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "plastic bag",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "plate",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "platter",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "playground",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "playroom",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "plaza",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "plumbing fixture",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "polar bear",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pomegranate",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pond",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "popcorn",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "porch",
+      "category": "scene",
+      "sources": [
+        "places365",
+        "open_images"
+      ]
+    },
+    {
+      "name": "porcupine",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "poster",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "potato",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "power plugs and sockets",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pressure cooker",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "pretzel",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "printer",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "promenade",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "pub",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor"
+      ]
+    },
+    {
+      "name": "pumpkin",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "punching bag",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "rabbit",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "raccoon",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "racecourse",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "raceway",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "racket",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "radish",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "raft",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "railroad track",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "rainforest",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "ratchet (device)",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "raven",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "rays and skates",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "reception",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "recreation room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "red panda",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "repair shop",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "reptile",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "residential neighborhood",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "restaurant",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "restaurant kitchen",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "restaurant patio",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "rhinoceros",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "rice paddy",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "rifle",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ring binder",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "river",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "rock arch",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "rocket",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "roller skates",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "roof garden",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "rope bridge",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "rose",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "rugby ball",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ruin",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "ruler",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "runway",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "salad",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "salt and pepper shakers",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sandal",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sandbox",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "saucer",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sauna",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "saxophone",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "scale",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "scarf",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "schoolhouse",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "science museum",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "scoreboard",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "scorpion",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "screwdriver",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sculpture",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sea lion",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sea turtle",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "seafood",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "seahorse",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "seat belt",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "segway",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "server room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "serving tray",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sewing machine",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "shark",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "shed",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "shelf",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "shellfish",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "shirt",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "shoe shop",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "shopfront",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "shopping mall",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor"
+      ]
+    },
+    {
+      "name": "shorts",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "shotgun",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "shower",
+      "category": "scene",
+      "sources": [
+        "places365",
+        "open_images"
+      ]
+    },
+    {
+      "name": "shrimp",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ski resort",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "ski slope",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "skirt",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "skull",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "skunk",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sky",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "skyscraper",
+      "category": "scene",
+      "sources": [
+        "places365",
+        "open_images"
+      ]
+    },
+    {
+      "name": "slow cooker",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "slum",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "snack",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "snail",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "snake",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "snowfield",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "snowman",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "snowmobile",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "snowplow",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "soap dispenser",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "soccer field",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "sock",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sombrero",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sparrow",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "spatula",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "spice rack",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "spider",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sports equipment",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sports uniform",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "squash (plant)",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "squid",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "squirrel",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "stable",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "stadium",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "baseball",
+        "football",
+        "soccer"
+      ]
+    },
+    {
+      "name": "stage",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "indoor",
+        "outdoor"
+      ]
+    },
+    {
+      "name": "staircase",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "stairs",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "stapler",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "starfish",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "stationary bicycle",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "stethoscope",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "stool",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "storage room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "strawberry",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "street",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "street light",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "stretcher",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "studio couch",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "submarine",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "submarine sandwich",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "subway station",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "platform"
+      ]
+    },
+    {
+      "name": "suit",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sun hat",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sunglasses",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "supermarket",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "sushi",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sushi bar",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "swamp",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "swan",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "swim cap",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "swimming hole",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "swimming pool",
+      "category": "scene",
+      "sources": [
+        "places365",
+        "open_images"
+      ],
+      "variants": [
+        "indoor",
+        "outdoor"
+      ]
+    },
+    {
+      "name": "swimwear",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "sword",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "synagogue",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "outdoor"
+      ]
+    },
+    {
+      "name": "syringe",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "table",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "table tennis racket",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tablet computer",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tableware",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "taco",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tank",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tap",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tart",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "taxi",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tea",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "teapot",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "telephone",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "television room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "television studio",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "temple",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "asia"
+      ]
+    },
+    {
+      "name": "tennis ball",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tent",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "throne room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "tiara",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tick",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "ticket booth",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "tiger",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tin can",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tire",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "toilet paper",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tomato",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tool",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "topiary garden",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "torch",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tortoise",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "towel",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tower",
+      "category": "scene",
+      "sources": [
+        "places365",
+        "open_images"
+      ]
+    },
+    {
+      "name": "toy",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "toyshop",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "traffic sign",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "train interior",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "train station",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "platform"
+      ]
+    },
+    {
+      "name": "training bench",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "treadmill",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tree",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tree farm",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "tree house",
+      "category": "scene",
+      "sources": [
+        "places365",
+        "open_images"
+      ]
+    },
+    {
+      "name": "trench",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "tripod",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "trombone",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "trousers",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "trumpet",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "tundra",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "turkey",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "turtle",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "underwater",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "ocean deep"
+      ]
+    },
+    {
+      "name": "unicycle",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "utility room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "valley",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "van",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "vegetable",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "vegetable garden",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "vehicle",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "vehicle registration plate",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "veterinarians office",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "viaduct",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "village",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "vineyard",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "violin",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "volcano",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "volleyball (ball)",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "volleyball court",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ],
+      "variants": [
+        "outdoor"
+      ]
+    },
+    {
+      "name": "waffle",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "waffle iron",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "waiting room",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "wall clock",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "wardrobe",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "washing machine",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "waste container",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "watch",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "water park",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "water tower",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "watercraft",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "waterfall",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "watering hole",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "watermelon",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "wave",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "weapon",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "wet bar",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "whale",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "wheat field",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "wheel",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "wheelchair",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "whisk",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "whiteboard",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "willow",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "wind farm",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "windmill",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "window",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "window blind",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "wine",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "wine rack",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "winter melon",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "wok",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "wood-burning stove",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "woodpecker",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "worm",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "wrench",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    },
+    {
+      "name": "yard",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "youth hostel",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "zen garden",
+      "category": "scene",
+      "sources": [
+        "places365"
+      ]
+    },
+    {
+      "name": "zucchini",
+      "category": "object",
+      "sources": [
+        "open_images"
+      ]
+    }
+  ]
+}

@@ -40,7 +40,7 @@ export const Home = () => {
 
   useEffect(() => {
     if (!isSearchActive && isSuccess) {
-      const images = data?.data as Image[];
+      const images = (data?.data ?? []) as Image[];
       dispatch(setImages(images));
     }
   }, [data, isSuccess, dispatch, isSearchActive]);

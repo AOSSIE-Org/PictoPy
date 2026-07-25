@@ -80,3 +80,18 @@ export const triggerGlobalReclustering = async (): Promise<
   );
   return response.data;
 };
+
+export interface MultiPersonSearchRequest {
+  cluster_ids: string[];
+  match_mode: 'match_any' | 'match_all';
+}
+
+export const fetchMultiPersonSearch = async (
+  request: MultiPersonSearchRequest,
+): Promise<APIResponse> => {
+  const response = await apiClient.post<APIResponse>(
+    faceClustersEndpoints.multiPersonSearch,
+    request,
+  );
+  return response.data;
+};

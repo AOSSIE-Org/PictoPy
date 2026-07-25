@@ -1,5 +1,7 @@
 # Setting Up using Script
 
+The automated setup script supports **Windows**, **Debian-based Linux (e.g., Ubuntu)**, and **Fedora/RedHat-based Linux**.
+
 ## Video Setup Guide
 
 - [Windows](https://youtu.be/nNVAE4or280?si=j_y9Xn8Kra6tPHjw)

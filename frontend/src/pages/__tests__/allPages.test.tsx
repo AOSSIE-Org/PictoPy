@@ -1,10 +1,10 @@
-import { render } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import { AITagging } from '@/pages/AITagging/AITagging';
 import Album from '../Album/Album';
 import { Home } from '@/pages/Home/Home';
 import Memories from '../Memories/Memories';
 import Settings from '../SettingsPage/Settings';
-import Videos from '../VideosPage/Videos';
+import { Videos } from '../VideosPage/Videos';
 import { ROUTES } from '@/constants/routes';
 import QueryClientProviders from '@/config/QueryClientProvider';
 import { BrowserRouter } from 'react-router';
@@ -23,7 +23,7 @@ const pages = [
 
 describe('Page rendering tests', () => {
   pages.forEach(({ path, Component }) => {
-    test(`renders ${path} without crashing`, () => {
+    test(`renders ${path} without crashing`, async () => {
       render(
         <Provider store={store}>
           <ThemeProvider>
@@ -35,6 +35,9 @@ describe('Page rendering tests', () => {
           </ThemeProvider>
         </Provider>,
       );
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
     });
   });
 });

@@ -6,6 +6,7 @@ export interface FolderDetails {
   AI_Tagging: boolean;
   taggingCompleted?: boolean;
   image_count?: number;
+  indexing_status?: 'not_started' | 'in_progress' | 'completed';
 }
 
 export interface GetAllFoldersData {

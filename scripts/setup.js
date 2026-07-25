@@ -17,10 +17,12 @@ if (os.platform() === 'win32') {
   command = 'powershell.exe';
   args = ['-ExecutionPolicy', 'Bypass', '-File', psScript];
 } else if (os.platform() === 'linux') {
-  // Check if it's Debian-based Linux
+  // Check if it's Debian-based or Fedora-based Linux
   const debianVersionPath = '/etc/debian_version';
-  if (fs.existsSync(debianVersionPath)) {
-    // On Debian-based Linux, use the bash script
+  const fedoraReleasePath = '/etc/fedora-release';
+  const redhatReleasePath = '/etc/redhat-release';
+  if (fs.existsSync(debianVersionPath) || fs.existsSync(fedoraReleasePath) || fs.existsSync(redhatReleasePath)) {
+    // On Debian, Fedora or RedHat Linux, use the bash script
     command = bashScript;
     args = [];
 
@@ -32,13 +34,13 @@ if (os.platform() === 'win32') {
       fs.chmodSync(bashScript, 0o755);
     }
   } else {
-    console.error('Unsupported Linux distribution. This setup script only supports Debian-based Linux distributions.');
+    console.error('Unsupported Linux distribution. This setup script only supports Debian-based and Fedora/RedHat-based Linux distributions.');
     console.error('Please install system dependencies manually and run the individual setup commands.');
     process.exit(1);
   }
 } else {
   console.error(`Unsupported operating system: ${os.platform()}`);
-  console.error('This setup script only supports Windows and Debian-based Linux distributions.');
+  console.error('This setup script only supports Windows, Debian-based, and Fedora/RedHat-based Linux distributions.');
   console.error('Please install system dependencies manually and run the individual setup commands.');
   process.exit(1);
 }

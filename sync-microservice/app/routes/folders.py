@@ -18,13 +18,11 @@ router = APIRouter()
 )
 def get_folders_tagging_status():
     """
-    Get tagging progress for all folders.
+    Get tagging and semantic-embedding progress for all folders.
 
     Returns:
-        List of folders with their tagging progress information including:
-        - folder_id: Unique identifier for the folder
-        - folder_path: Path to the folder
-        - tagging_percentage: Percentage of images that have been tagged (0-100)
+        List of folders with tagging/embedding percentages, raw image
+        counts, and each folder's AI_Tagging flag.
     """
     try:
         tagging_progress = db_get_tagging_progress()
@@ -34,6 +32,11 @@ def get_folders_tagging_status():
                 folder_id=folder.folder_id,
                 folder_path=folder.folder_path,
                 tagging_percentage=folder.tagging_percentage,
+                embedding_percentage=folder.embedding_percentage,
+                total_images=folder.total_images,
+                tagged_images=folder.tagged_images,
+                embedded_images=folder.embedded_images,
+                ai_tagging=folder.ai_tagging,
             )
             for folder in tagging_progress
         ]

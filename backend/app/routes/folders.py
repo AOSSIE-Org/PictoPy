@@ -10,6 +10,7 @@ from app.database.folders import (
     db_get_direct_child_folders,
     db_get_folder_ids_by_path_prefix,
     db_get_all_folder_details,
+    db_update_folder_indexing_status,
 )
 from app.logging.setup_logging import get_logger
 from app.schemas.folders import (
@@ -41,8 +42,11 @@ from concurrent.futures import ProcessPoolExecutor
 from app.utils.images import (
     image_util_process_folder_images,
     image_util_process_untagged_images,
+    image_util_process_unembedded_images,
 )
+from app.utils.videos import video_util_process_folder_videos
 from app.utils.model_bootstrap import ensure_ai_tagging_models
+from app.utils.semantic_labels import semantic_util_score_images
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.utils.API import API_util_restart_sync_microservice_watcher
 
@@ -58,6 +62,7 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
     This function is called after a folder is successfully added.
     It processes images in the folder and updates the database.
     """
+    folder_ids_and_paths = []
     try:
         # Get all folder IDs and paths that match the root path prefix
         folder_data = []
@@ -67,17 +72,25 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
         for folder_id_from_db, folder_path_from_db in folder_ids_and_paths:
             folder_data.append((folder_path_from_db, folder_id_from_db, False))
 
+            db_update_folder_indexing_status(folder_id_from_db, "in_progress")
+
         logger.info(f"Add folder: {folder_data}")
-        # Process images in all folders
+        # Process images and videos in all folders
         image_util_process_folder_images(folder_data)
+        video_util_process_folder_videos(folder_data)
 
         # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()
+
+        for folder_id_from_db, _ in folder_ids_and_paths:
+            db_update_folder_indexing_status(folder_id_from_db, "completed")
 
     except Exception as e:
         logger.error(
             f"Error in post processing after folder {folder_path} was added: {e}"
         )
+        for folder_id_from_db, _ in folder_ids_and_paths:
+            db_update_folder_indexing_status(folder_id_from_db, "completed")
         return False
     return True
 
@@ -92,6 +105,8 @@ def post_AI_tagging_enabled_sequence():
         ensure_ai_tagging_models()
         image_util_process_untagged_images()
         cluster_util_face_clusters_sync()
+        image_util_process_unembedded_images()
+        semantic_util_score_images()
     except Exception as e:
         logger.error(f"Error in post processing after AI tagging was enabled: {e}")
         return False
@@ -116,10 +131,13 @@ def post_sync_folder_sequence(
             folder_data.append((added_folder_path, added_folder_id, False))
 
         logger.info(f"Sync folder: {folder_data}")
-        # Process images in all folders
+        # Process images and videos in all folders
         image_util_process_folder_images(folder_data)
+        video_util_process_folder_videos(folder_data)
         image_util_process_untagged_images()
         cluster_util_face_clusters_sync()
+        image_util_process_unembedded_images()
+        semantic_util_score_images()
 
         # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()
@@ -451,6 +469,7 @@ def get_all_folders():
                 last_modified_time,
                 ai_tagging,
                 tagging_completed,
+                indexing_status,
                 image_count,
             ) = folder_data
             folders.append(
@@ -461,6 +480,7 @@ def get_all_folders():
                     last_modified_time=last_modified_time,
                     AI_Tagging=ai_tagging,
                     taggingCompleted=tagging_completed,
+                    indexing_status=indexing_status,
                     image_count=image_count,
                 )
             )

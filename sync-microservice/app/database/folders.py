@@ -12,11 +12,16 @@ FolderIdPath = Tuple[FolderId, str]
 
 
 class FolderTaggingInfo(NamedTuple):
-    """Represents folder tagging information"""
+    """Represents folder tagging and semantic-embedding information"""
 
     folder_id: FolderId
     folder_path: FolderPath
     tagging_percentage: float
+    embedding_percentage: float
+    total_images: int
+    tagged_images: int
+    embedded_images: int
+    ai_tagging: bool
 
 
 def db_get_all_folders_with_ids() -> List[FolderIdPath]:
@@ -74,11 +79,12 @@ def db_check_database_connection() -> bool:
 
 def db_get_tagging_progress() -> List[FolderTaggingInfo]:
     """
-    Calculate tagging percentage for all folders.
-    Tagging percentage = (tagged images / total images) * 100
+    Calculate tagging and semantic-embedding percentages for all folders.
+    Each percentage = (processed images / total images) * 100.
 
     Returns:
-        List of FolderTaggingInfo containing folder_id, folder_path, and tagging_percentage
+        List of FolderTaggingInfo with percentages, raw counts, and each
+        folder's AI_Tagging flag
     """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
@@ -86,32 +92,48 @@ def db_get_tagging_progress() -> List[FolderTaggingInfo]:
     try:
         cursor.execute(
             """
-            SELECT 
+            SELECT
                 f.folder_id,
                 f.folder_path,
+                f.AI_Tagging,
                 COUNT(i.id) as total_images,
-                COUNT(CASE WHEN i.isTagged = 1 THEN 1 END) as tagged_images
+                COUNT(CASE WHEN i.isTagged = 1 THEN 1 END) as tagged_images,
+                COUNT(CASE WHEN i.isEmbedded = 1 THEN 1 END) as embedded_images
             FROM folders f
             LEFT JOIN images i ON f.folder_id = i.folder_id
-            GROUP BY f.folder_id, f.folder_path
+            GROUP BY f.folder_id, f.folder_path, f.AI_Tagging
             """
         )
 
         results = cursor.fetchall()
 
         folder_info_list = []
-        for folder_id, folder_path, total_images, tagged_images in results:
-            # Calculate percentage, handle division by zero
+        for (
+            folder_id,
+            folder_path,
+            ai_tagging,
+            total_images,
+            tagged_images,
+            embedded_images,
+        ) in results:
+            # Calculate percentages, handle division by zero
             if total_images > 0:
                 tagging_percentage = (tagged_images / total_images) * 100
+                embedding_percentage = (embedded_images / total_images) * 100
             else:
                 tagging_percentage = 0.0
+                embedding_percentage = 0.0
 
             folder_info_list.append(
                 FolderTaggingInfo(
                     folder_id=folder_id,
                     folder_path=folder_path,
                     tagging_percentage=round(tagging_percentage, 2),
+                    embedding_percentage=round(embedding_percentage, 2),
+                    total_images=total_images,
+                    tagged_images=tagged_images,
+                    embedded_images=embedded_images,
+                    ai_tagging=bool(ai_tagging),
                 )
             )
 

@@ -6,12 +6,21 @@ import uuid
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock, call
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.routes.models import router as models_router, DownloadTaskEntry
+from app.routes.models import (
+    router as models_router,
+    DownloadTaskEntry,
+    submit_embedding_backfill_if_semantic,
+)
 import app.routes.models as models_module
+from app.utils.images import image_util_process_unembedded_images
+from app.utils.semantic_labels import (
+    semantic_util_build_label_embeddings,
+    semantic_util_score_images,
+)
 
 app = FastAPI()
 app.include_router(models_router, prefix="/models", tags=["models"])
@@ -30,47 +39,78 @@ def mock_model_registry():
     return {
         "yolo_nano": {
             "filename": "YOLOv11_Nano.onnx",
+            "url": "https://example.com/models/YOLOv11_Nano.onnx",
+            "sha256": "fake_sha256_yolo_nano",
             "feature": "object_detection",
             "tier": "nano",
             "size_mb": 10.2,
         },
         "yolo_nano_face": {
             "filename": "YOLOv11_Nano_Face.onnx",
+            "url": "https://example.com/models/YOLOv11_Nano_Face.onnx",
+            "sha256": "fake_sha256_yolo_nano_face",
             "feature": "face_detection",
             "tier": "nano",
             "size_mb": 10.1,
         },
         "yolo_small": {
             "filename": "YOLOv11_Small.onnx",
+            "url": "https://example.com/models/YOLOv11_Small.onnx",
+            "sha256": "fake_sha256_yolo_small",
             "feature": "object_detection",
             "tier": "small",
             "size_mb": 36.2,
         },
         "yolo_small_face": {
             "filename": "YOLOv11_Small_Face.onnx",
+            "url": "https://example.com/models/YOLOv11_Small_Face.onnx",
+            "sha256": "fake_sha256_yolo_small_face",
             "feature": "face_detection",
             "tier": "small",
             "size_mb": 36.1,
         },
         "yolo_medium": {
             "filename": "YOLOv11_Medium.onnx",
+            "url": "https://example.com/models/YOLOv11_Medium.onnx",
+            "sha256": "fake_sha256_yolo_medium",
             "feature": "object_detection",
             "tier": "medium",
             "size_mb": 76.9,
         },
         "yolo_medium_face": {
             "filename": "YOLOv11_Medium_Face.onnx",
+            "url": "https://example.com/models/YOLOv11_Medium_Face.onnx",
+            "sha256": "fake_sha256_yolo_medium_face",
             "feature": "face_detection",
             "tier": "medium",
             "size_mb": 76.6,
         },
         "facenet": {
             "filename": "FaceNet_128D.onnx",
+            "url": "https://example.com/models/FaceNet_128D.onnx",
+            "sha256": "fake_sha256_facenet",
             "feature": "face_embedding",
             "tier": "required",
             "size_mb": 87.0,
         },
     }
+
+
+@pytest.fixture
+def mock_model_registry_with_placeholder(mock_model_registry):
+    # Mirrors the real registry's not-yet-uploaded entries (e.g. siglip2_large_vision),
+    # which /status must exclude from its response.
+    registry = dict(mock_model_registry)
+    registry["siglip2_large_vision"] = {
+        "filename": "SigLIP2_Large_Vision.onnx",
+        "url": "PLACEHOLDER_URL",
+        "sha256": "PLACEHOLDER_SHA256",
+        "feature": "semantic_vision",
+        "tier": "medium",
+        "size_mb": 0,
+    }
+    return registry
+
 
 @pytest.fixture
 def mock_hardware_info():
@@ -83,10 +123,12 @@ def mock_hardware_info():
         "recommended_tier": "medium",
     }
 
+
 @pytest.fixture
 def hardware_response(mock_hardware_info):
     with patch("app.routes.models.get_hardware_info", return_value=mock_hardware_info):
         return client.get("/models/hardware")
+
 
 @pytest.fixture(autouse=True)
 def clear_download_tasks():
@@ -158,6 +200,7 @@ def error_task_response(error_task_id):
         headers={"Accept": "text/event-stream"}
     )
 
+
 @pytest.fixture
 def mock_tier_models():
     return {
@@ -180,35 +223,17 @@ def setup_required_response(mock_tier_models):
     with patch("app.routes.models.TIER_MODELS", mock_tier_models), \
          patch("app.routes.models.ensure_model", return_value=None):
         return client.post("/models/setup", json={"tier": "required"})
-    
+
+
 @pytest.fixture
 def download_facenet_response(mock_model_registry):
     with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
          patch("app.routes.models.ensure_model", return_value=None):
         return client.post("/models/download/facenet")
 
-@pytest.fixture
-def delete_installed_model_response(mock_model_registry):
-    with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-         patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-         patch("app.routes.models.try_mark_model_for_deletion", return_value=None), \
-         patch("app.routes.models.release_model_deletion_mark"), \
-         patch("app.routes.models.os.path.exists", return_value=True), \
-         patch("app.routes.models.os.remove"):
-        return client.delete("/models/yolo_nano")
-
-
-@pytest.fixture
-def delete_missing_model_response(mock_model_registry):
-    with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-         patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-         patch("app.routes.models.try_mark_model_for_deletion", return_value=None), \
-         patch("app.routes.models.release_model_deletion_mark"), \
-         patch("app.routes.models.os.path.exists", return_value=False):
-        return client.delete("/models/yolo_nano")
 
 # ##############################
-# Test Classes
+# Test Classes — endpoints not covered upstream
 # ##############################
 
 class TestModelStatus:
@@ -322,6 +347,18 @@ class TestModelStatus:
             assert data["facenet"]["name"] == "FaceNet_128D.onnx"
             assert data["yolo_nano"]["name"] == "YOLOv11_Nano.onnx"
 
+    def test_placeholder_models_excluded_from_status(self, mock_model_registry_with_placeholder):
+        # Entries with PLACEHOLDER_URL / PLACEHOLDER_SHA256 (not-yet-uploaded
+        # models) must not appear in /status.
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry_with_placeholder), \
+             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
+             patch("app.routes.models.os.path.exists", return_value=False):
+            response = client.get("/models/status")
+            data = response.json()["data"]
+            assert "siglip2_large_vision" not in data
+            assert "yolo_nano" in data
+
+
 class TestHardwareInformation:
     """Test suite for GET /models/hardware."""
 
@@ -330,19 +367,16 @@ class TestHardwareInformation:
 
     def test_success_is_true(self, hardware_response):
         json_response = hardware_response.json()
-
         assert json_response["success"] is True
 
     def test_data_is_object(self, hardware_response):
         json_response = hardware_response.json()
         data = json_response["data"]
-
         assert isinstance(data, dict)
 
     def test_data_has_required_fields(self, hardware_response):
         json_response = hardware_response.json()
         data = json_response["data"]
-
         assert "ram_gb" in data
         assert "gpu_detected" in data
         assert "gpu_names" in data
@@ -353,26 +387,22 @@ class TestHardwareInformation:
     def test_ram_is_positive_number(self, hardware_response):
         json_response = hardware_response.json()
         ram = json_response["data"]["ram_gb"]
-
         assert isinstance(ram, (int, float))
         assert ram > 0
 
     def test_ram_gb_is_realistic(self, hardware_response):
         json_response = hardware_response.json()
         ram = json_response["data"]["ram_gb"]
-
         assert 0.5 <= ram <= 2048
 
     def test_gpu_is_boolean(self, hardware_response):
         json_response = hardware_response.json()
         gpu_detected = json_response["data"]["gpu_detected"]
-
         assert isinstance(gpu_detected, bool)
 
     def test_gpu_names_is_array(self, hardware_response):
         json_response = hardware_response.json()
         gpu_names = json_response["data"]["gpu_names"]
-
         assert isinstance(gpu_names, list)
 
     def test_gpu_names_contains_strings(self, hardware_response):
@@ -384,19 +414,16 @@ class TestHardwareInformation:
     def test_apple_silicon_type(self, hardware_response):
         json_response = hardware_response.json()
         apple_silicon = json_response["data"]["apple_silicon"]
-
         assert apple_silicon is None or isinstance(apple_silicon, bool)
 
     def test_cpu_provider_always_present(self, hardware_response):
         json_response = hardware_response.json()
         providers = json_response["data"]["available_providers"]
-
         assert "CPUExecutionProvider" in providers
 
     def test_available_providers_is_non_empty_array(self, hardware_response):
         json_response = hardware_response.json()
         providers = json_response["data"]["available_providers"]
-
         assert isinstance(providers, list)
         assert len(providers) > 0
 
@@ -409,13 +436,11 @@ class TestHardwareInformation:
     def test_recommended_tier_is_valid(self, hardware_response):
         json_response = hardware_response.json()
         recommended_tier = json_response["data"]["recommended_tier"]
-
         assert recommended_tier in ["nano", "small", "medium"]
 
     def test_recommended_tier_is_string(self, hardware_response):
         json_response = hardware_response.json()
         recommended_tier = json_response["data"]["recommended_tier"]
-
         assert isinstance(recommended_tier, str)
 
     def test_gpu_detected_true_means_names_not_empty(self, hardware_response):
@@ -436,9 +461,7 @@ class TestHardwareInformation:
 
     def test_post_method_not_allowed(self):
         response = client.post("/models/hardware")
-
         assert response.status_code == 405
-
 
     def test_returns_500_when_hardware_detection_fails(self):
         with patch(
@@ -446,9 +469,7 @@ class TestHardwareInformation:
             side_effect=Exception("hardware error")
         ):
             response = client.get("/models/hardware")
-
             assert response.status_code == 500
-
 
     def test_no_gpu_returns_empty_gpu_names(self):
         mock_no_gpu = {
@@ -465,10 +486,10 @@ class TestHardwareInformation:
             data = json_response["data"]
             gpu_detected = data["gpu_detected"]
             gpu_names = data["gpu_names"]
-
             assert gpu_detected is False
             assert gpu_names == []
-    
+
+
 class TestDownloadProgress:
     """Tests for GET /models/download/{task_id}/progress"""
 
@@ -480,7 +501,6 @@ class TestDownloadProgress:
     def test_returns_404_for_unknown_task_id(self):
         fake_id = str(uuid.uuid4())
         response = client.get(f"/models/download/{fake_id}/progress")
-
         assert response.status_code == 404
 
     def test_returns_404_error_message(self):
@@ -492,32 +512,27 @@ class TestDownloadProgress:
 
     def test_returns_409_when_listener_already_active(self, active_listener_task_id):
         response = client.get(f"/models/download/{active_listener_task_id}/progress")
-
         assert response.status_code == 409
 
     # --- Content type tests ---
 
     def test_content_type_is_event_stream(self, completed_task_response):
         content_type = completed_task_response.headers["content-type"]
-
         assert "text/event-stream" in content_type
 
     # --- Response body tests ---
 
     def test_response_body_is_not_empty(self, completed_task_response):
         raw = completed_task_response.text
-
         assert isinstance(raw, str)
         assert len(raw) > 0
 
     def test_response_starts_with_data_prefix(self, completed_task_response):
         raw = completed_task_response.text
-
         assert "data:" in raw
 
     def test_stream_data_is_valid_json(self, completed_task_response):
         raw = completed_task_response.text
-
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
                 json_part = line[len("data:"):].strip()
@@ -526,7 +541,6 @@ class TestDownloadProgress:
 
     def test_stream_data_has_status_field(self, completed_task_response):
         raw = completed_task_response.text
-
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
                 json_part = line[len("data:"):].strip()
@@ -536,7 +550,6 @@ class TestDownloadProgress:
     def test_status_is_valid_value(self, completed_task_response):
         valid_statuses = ["downloading", "complete", "error"]
         raw = completed_task_response.text
-
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
                 json_part = line[len("data:"):].strip()
@@ -548,7 +561,6 @@ class TestDownloadProgress:
 
     def test_completed_stream_has_model_key(self, completed_task_response):
         raw = completed_task_response.text
-
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
                 json_part = line[len("data:"):].strip()
@@ -558,7 +570,6 @@ class TestDownloadProgress:
 
     def test_completed_stream_model_key_is_string(self, completed_task_response):
         raw = completed_task_response.text
-
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
                 json_part = line[len("data:"):].strip()
@@ -569,7 +580,6 @@ class TestDownloadProgress:
 
     def test_completed_stream_model_key_value(self, completed_task_response):
         raw = completed_task_response.text
-
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
                 json_part = line[len("data:"):].strip()
@@ -582,12 +592,10 @@ class TestDownloadProgress:
 
     def test_error_stream_contains_error_status(self, error_task_response):
         raw = error_task_response.text
-
         assert "error" in raw
 
     def test_error_stream_has_message_field(self, error_task_response):
         raw = error_task_response.text
-
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
                 json_part = line[len("data:"):].strip()
@@ -597,7 +605,6 @@ class TestDownloadProgress:
 
     def test_error_stream_message_is_string(self, error_task_response):
         raw = error_task_response.text
-        
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
                 json_part = line[len("data:"):].strip()
@@ -605,6 +612,7 @@ class TestDownloadProgress:
                 if parsed["status"] == "error":
                     message = parsed["message"]
                     assert isinstance(message, str)
+
 
 class TestSetupModels:
     """Tests for POST /models/setup"""
@@ -688,6 +696,7 @@ class TestSetupModels:
         response = client.post("/models/setup")
         assert response.status_code == 422
 
+
 class TestStartDownloadModel:
     """Tests for POST /models/download/{model_key}"""
 
@@ -755,96 +764,183 @@ class TestStartDownloadModel:
             response = client.post(f"/models/download/{model_key}")
             assert response.status_code == 200
 
-class TestDeleteModel:
-    """Tests for DELETE /models/{model_key}"""
 
-    # --- 404 unknown key ---
+# ##############################
+# Test Classes — from upstream (verbatim)
+# ##############################
 
-    def test_unknown_model_key_returns_404(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry):
-            response = client.delete("/models/doesnotexist")
-            assert response.status_code == 404
+class TestModelsAPI:
 
-    def test_unknown_model_key_detail_mentions_key(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry):
-            response = client.delete("/models/doesnotexist")
-            json_response = response.json()
-            detail = json_response["detail"]
-            assert "doesnotexist" in detail
+    def test_delete_model_not_found(self):
+        response = client.delete("/models/invalid_key")
+        assert response.status_code == 404
+        assert "not found in registry" in response.json()["detail"]
 
-    # --- 409 model in use ---
+    @patch(
+        "app.routes.models.MODEL_REGISTRY",
+        {"facenet": {"tier": "required", "filename": "facenet.onnx"}},
+    )
+    def test_delete_required_model(self):
+        response = client.delete("/models/facenet")
+        assert response.status_code == 409
+        assert "Cannot delete a required model" in response.json()["detail"]
 
-    def test_model_in_use_returns_409(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.try_mark_model_for_deletion", return_value=2), \
-             patch("app.routes.models.release_model_deletion_mark"):
-            response = client.delete("/models/yolo_nano")
-            assert response.status_code == 409
+    @patch(
+        "app.routes.models.MODEL_REGISTRY",
+        {"yolov8s": {"tier": "small", "filename": "yolov8s.onnx"}},
+    )
+    @patch("app.routes.models.db_get_metadata")
+    def test_delete_active_tier_model(self, mock_get_metadata):
+        mock_get_metadata.return_value = {
+            "user_preferences": {"YOLO_model_size": "small"}
+        }
+        response = client.delete("/models/yolov8s")
+        assert response.status_code == 409
+        assert "currently active" in response.json()["detail"]
 
-    def test_model_in_use_detail_mentions_session_count(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.try_mark_model_for_deletion", return_value=2), \
-             patch("app.routes.models.release_model_deletion_mark"):
-            response = client.delete("/models/yolo_nano")
-            json_response = response.json()
-            detail = json_response["detail"]
-            assert "2" in detail
+    @patch(
+        "app.routes.models.MODEL_REGISTRY",
+        {"yolov8s_face": {"tier": "small", "filename": "yolov8s_face.onnx"}},
+    )
+    @patch("app.routes.models.db_get_metadata")
+    def test_delete_active_tier_face_model(self, mock_get_metadata):
+        mock_get_metadata.return_value = {
+            "user_preferences": {"YOLO_model_size": "small"}
+        }
+        response = client.delete("/models/yolov8s_face")
+        assert response.status_code == 409
+        assert "currently active" in response.json()["detail"]
 
-    # --- 200 file exists and deleted ---
+    @patch(
+        "app.routes.models.MODEL_REGISTRY",
+        {"yolov8n": {"tier": "nano", "filename": "yolov8n.onnx"}},
+    )
+    @patch("app.routes.models.db_get_metadata")
+    @patch("app.routes.models.try_mark_model_for_deletion")
+    @patch("app.routes.models.get_model_path")
+    def test_delete_model_in_use(self, mock_get_path, mock_try_mark, mock_get_metadata):
+        mock_get_metadata.return_value = {
+            "user_preferences": {"YOLO_model_size": "small"}
+        }
+        mock_try_mark.return_value = 2  # 2 active sessions
+        mock_get_path.return_value = "/path/to/model"
 
-    def test_delete_installed_model_returns_200(self, delete_installed_model_response):
-        assert delete_installed_model_response.status_code == 200
+        response = client.delete("/models/yolov8n")
 
-    def test_delete_installed_model_success_is_true(self, delete_installed_model_response):
-        json_response = delete_installed_model_response.json()
-        assert json_response["success"] is True
+        assert response.status_code == 409
+        assert "currently in use by 2 active session" in response.json()["detail"]
 
-    def test_delete_installed_model_message_contains_key(self, delete_installed_model_response):
-        json_response = delete_installed_model_response.json()
-        message = json_response["message"]
-        assert "yolo_nano" in message
+    @patch(
+        "app.routes.models.MODEL_REGISTRY",
+        {"yolov8n": {"tier": "nano", "filename": "yolov8n.onnx"}},
+    )
+    @patch("app.routes.models.db_get_metadata")
+    @patch("app.routes.models.try_mark_model_for_deletion")
+    @patch("app.routes.models.release_model_deletion_mark")
+    @patch("app.routes.models.get_model_path")
+    @patch("os.path.exists")
+    @patch("asyncio.to_thread")
+    def test_delete_model_success(
+        self,
+        mock_to_thread,
+        mock_exists,
+        mock_get_path,
+        mock_release,
+        mock_try_mark,
+        mock_get_metadata,
+    ):
+        mock_get_metadata.return_value = {
+            "user_preferences": {"YOLO_model_size": "small"}
+        }
+        mock_try_mark.return_value = None
+        mock_get_path.return_value = "/path/to/model"
+        mock_exists.return_value = True
 
-    def test_delete_installed_model_message_contains_deleted(self, delete_installed_model_response):
-        json_response = delete_installed_model_response.json()
-        message = json_response["message"]
-        assert "deleted" in message
+        response = client.delete("/models/yolov8n")
 
-    # --- 200 file already not present ---
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "deleted successfully" in data["message"]
 
-    def test_delete_missing_model_returns_200(self, delete_missing_model_response):
-        assert delete_missing_model_response.status_code == 200
+        mock_to_thread.assert_called_once()
+        mock_release.assert_called_once_with("yolov8n")
 
-    def test_delete_missing_model_success_is_true(self, delete_missing_model_response):
-        json_response = delete_missing_model_response.json()
-        assert json_response["success"] is True
 
-    def test_delete_missing_model_message_contains_already(self, delete_missing_model_response):
-        json_response = delete_missing_model_response.json()
-        message = json_response["message"]
-        assert "already" in message
+class TestEmbeddingBackfillTrigger:
+    """Semantic model installs must trigger the embedding backfill pass."""
 
-    # --- 500 deletion fails ---
+    def test_helper_submits_pass_for_semantic_keys(self):
+        executor = MagicMock()
+        submit_embedding_backfill_if_semantic(
+            ["siglip2_base_vision", "siglip2_base_text", "facenet"], executor
+        )
+        executor.submit.assert_has_calls(
+            [
+                call(semantic_util_build_label_embeddings),
+                call(image_util_process_unembedded_images),
+                call(semantic_util_score_images),
+            ]
+        )
 
-    def test_os_error_on_delete_returns_500(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.try_mark_model_for_deletion", return_value=None), \
-             patch("app.routes.models.release_model_deletion_mark"), \
-             patch("app.routes.models.os.path.exists", return_value=True), \
-             patch("app.routes.models.os.remove", side_effect=OSError("Permission denied")):
-            response = client.delete("/models/yolo_nano")
-            assert response.status_code == 500
+    def test_helper_ignores_non_semantic_keys(self):
+        executor = MagicMock()
+        submit_embedding_backfill_if_semantic(["yolo_nano", "facenet"], executor)
+        executor.submit.assert_not_called()
 
-    def test_os_error_detail_mentions_failure(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.try_mark_model_for_deletion", return_value=None), \
-             patch("app.routes.models.release_model_deletion_mark"), \
-             patch("app.routes.models.os.path.exists", return_value=True), \
-             patch("app.routes.models.os.remove", side_effect=OSError("Permission denied")):
-            response = client.delete("/models/yolo_nano")
-            json_response = response.json()
-            detail = json_response["detail"]
-            assert "Permission denied" in detail
+    @staticmethod
+    def _drain_until_complete(local_client, task_id):
+        """Read the SSE progress stream until the background task finishes."""
+        with local_client.stream(
+            "GET", f"/models/download/{task_id}/progress"
+        ) as response:
+            for line in response.iter_lines():
+                if not line.startswith("data:"):
+                    continue
+                msg = json.loads(line[len("data:") :])
+                assert msg["status"] != "error", msg
+                if msg["status"] == "complete":
+                    return
+        raise AssertionError("SSE stream ended without a 'complete' event")
+
+    def _run_setup(self, tier: str) -> MagicMock:
+        executor = MagicMock()
+        with patch.object(app.state, "executor", executor, create=True), patch(
+            "app.routes.models.ensure_model", new=AsyncMock()
+        ):
+            with TestClient(app) as local_client:
+                response = local_client.post("/models/setup", json={"tier": tier})
+                assert response.status_code == 200
+                self._drain_until_complete(local_client, response.json()["task_id"])
+        return executor
+
+    def test_setup_semantic_tier_triggers_backfill(self):
+        executor = self._run_setup("semantic")
+        executor.submit.assert_has_calls(
+            [
+                call(semantic_util_build_label_embeddings),
+                call(image_util_process_unembedded_images),
+                call(semantic_util_score_images),
+            ]
+        )
+
+    def test_setup_yolo_tier_does_not_trigger_backfill(self):
+        executor = self._run_setup("nano")
+        executor.submit.assert_not_called()
+
+    def test_single_model_download_of_semantic_model_triggers_backfill(self):
+        executor = MagicMock()
+        with patch.object(app.state, "executor", executor, create=True), patch(
+            "app.routes.models.ensure_model", new=AsyncMock()
+        ):
+            with TestClient(app) as local_client:
+                response = local_client.post("/models/download/siglip2_base_vision")
+                assert response.status_code == 200
+                self._drain_until_complete(local_client, response.json()["task_id"])
+        executor.submit.assert_has_calls(
+            [
+                call(semantic_util_build_label_embeddings),
+                call(image_util_process_unembedded_images),
+                call(semantic_util_score_images),
+            ]
+        )

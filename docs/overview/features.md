@@ -31,7 +31,12 @@
   - Detected objects
   - Recognized faces
   - Embedded metadata
-- Find visually or semantically similar images
+- **Semantic Search** (optional, ~1.5 GB download): describe a photo in your
+  own words — "beach sunset", "two people hugging" — and find it even if no
+  detected tag matches the exact phrase. Powered by
+  [SigLIP2](https://huggingface.co/docs/transformers/en/model_doc/siglip2),
+  running fully on-device via ONNX Runtime. Falls back automatically from
+  tag search; no mode switch required.
 
 ### Memories Feature
 
@@ -98,6 +103,7 @@ Automatically creates meaningful photo collections inspired by Google Photos:
 | Image Processing  | OpenCV, ONNX Runtime |
 | Object Detection  | YOLOv11              |
 | Face Recognition  | FaceNet              |
+| Semantic Search   | SigLIP2              |
 | API Framework     | FastAPI              |
 | State Management  | Redux Toolkit        |
 | Styling           | Tailwind CSS         |
