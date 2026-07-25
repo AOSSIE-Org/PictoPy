@@ -142,9 +142,14 @@ def db_get_folder_path_from_id(folder_id: FolderId) -> Optional[FolderPath]:
 
 
 def db_get_all_folders() -> List[FolderPath]:
-    with sqlite3.connect(DATABASE_PATH) as conn:
+    # try/finally, not `with`: sqlite3's context manager commits the
+    # transaction but leaves the connection (and its file handle) open.
+    conn = sqlite3.connect(DATABASE_PATH)
+    try:
         rows = conn.execute("SELECT folder_path FROM folders").fetchall()
         return [row[0] for row in rows] if rows else []
+    finally:
+        conn.close()
 
 
 def db_get_all_folder_ids() -> List[FolderId]:
