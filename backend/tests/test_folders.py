@@ -1135,34 +1135,46 @@ class TestFoldersUnit:
         ]
 
     def test_db_get_all_folder_details_counts_videos(self, test_db):
-        """A folder with images and videos reports both counts distinctly."""
+        """Distinct image/video counts on both sides of the media join.
+
+        The mixed folder deliberately has >1 of each: the images x videos
+        join fans out to 2*2=4 rows, so counting anything but DISTINCT ids
+        would over-report. A separate video-only folder pins image_count=0.
+        """
         conn = sqlite3.connect(test_db)
-        conn.execute(
+        conn.executemany(
             """
             INSERT INTO folders (folder_id, folder_path, parent_folder_id,
                                  last_modified_time, AI_Tagging, taggingCompleted)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            ("folder-id-1", "/home/user/media", None, 1693526400, True, False),
+            [
+                ("mixed", "/home/user/media", None, 1693526400, True, False),
+                ("videos-only", "/home/user/clips", None, 1693526400, True, False),
+            ],
         )
-        conn.execute(
+        conn.executemany(
             "INSERT INTO images (id, path, folder_id) VALUES (?, ?, ?)",
-            ("img-1", "/home/user/media/a.jpg", "folder-id-1"),
+            [
+                ("img-1", "/home/user/media/a.jpg", "mixed"),
+                ("img-2", "/home/user/media/b.jpg", "mixed"),
+            ],
         )
         conn.executemany(
             "INSERT INTO videos (id, path, folder_id) VALUES (?, ?, ?)",
             [
-                ("vid-1", "/home/user/media/a.mp4", "folder-id-1"),
-                ("vid-2", "/home/user/media/b.mp4", "folder-id-1"),
+                ("vid-1", "/home/user/media/a.mp4", "mixed"),
+                ("vid-2", "/home/user/media/b.mp4", "mixed"),
+                ("vid-3", "/home/user/clips/c.mp4", "videos-only"),
             ],
         )
         conn.commit()
         conn.close()
 
-        (row,) = db_get_all_folder_details()
-        image_count, video_count = row[7], row[8]
-        assert image_count == 1
-        assert video_count == 2
+        # (image_count, video_count) keyed by folder_id, order-independent.
+        counts = {row[0]: (row[7], row[8]) for row in db_get_all_folder_details()}
+        assert counts["mixed"] == (2, 2)
+        assert counts["videos-only"] == (0, 1)
 
     def test_db_get_direct_child_folders(self, test_db):
         conn = sqlite3.connect(test_db)
