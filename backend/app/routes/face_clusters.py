@@ -42,19 +42,19 @@ router = APIRouter()
 def is_safe_path(target_path: str) -> bool:
     """Validate that target_path is within one of the registered folders or temp_uploads."""
 
-    abs_target = os.path.abspath(target_path)
+    real_target = os.path.realpath(target_path)
     try:
         allowed_folders = db_get_all_folders()
     except Exception:
         allowed_folders = []
 
-    temp_dir = os.path.abspath("temp_uploads")
+    temp_dir = os.path.realpath("temp_uploads")
     allowed_folders.append(temp_dir)
 
     for folder in allowed_folders:
-        abs_folder = os.path.abspath(folder)
+        real_folder = os.path.realpath(folder)
         try:
-            if os.path.commonpath([abs_folder, abs_target]) == abs_folder:
+            if os.path.commonpath([real_folder, real_target]) == real_folder:
                 return True
         except ValueError:
             continue
@@ -259,15 +259,6 @@ def face_tagging(
                     message="image path is required.",
                 ).model_dump(),
             )
-        if not os.path.isfile(local_file_path):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ErrorResponse(
-                    success=False,
-                    error="Invalid file path",
-                    message="The provided path is not a valid file",
-                ).model_dump(),
-            )
         if not is_safe_path(local_file_path):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -275,6 +266,15 @@ def face_tagging(
                     success=False,
                     error="Access Denied",
                     message="Access to the specified file path is restricted.",
+                ).model_dump(),
+            )
+        if not os.path.isfile(local_file_path):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Invalid file path",
+                    message="The provided path is not a valid file",
                 ).model_dump(),
             )
         image_path = payload.path

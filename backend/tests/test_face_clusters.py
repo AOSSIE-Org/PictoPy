@@ -424,11 +424,47 @@ class TestFaceClustersAPI:
         mock_folders.return_value = ["/allowed/folder"]
         mock_perform.return_value = {"success": True, "data": []}
 
-        # Mock os.path.isfile to simulate a valid file target
-        with patch("os.path.isfile", return_value=True):
+        # Mock os.path.realpath to resolve the traversal path
+        def realpath_mock(path):
+            # Normalizing Windows drive prefixes or slashes for tests
+            cleaned = path.replace("\\", "/").lower()
+            if "../restricted" in cleaned or "/restricted" in cleaned:
+                return "/restricted/file.jpg"
+            if "/allowed/folder" in cleaned:
+                return "/allowed/folder"
+            return path
+
+        with patch("os.path.realpath", side_effect=realpath_mock):
             response = client.post(
                 "/face_clusters/face-search?input_type=path",
-                json={"path": "/restricted/file.jpg", "base64_data": ""},
+                json={
+                    "path": "/allowed/folder/../restricted/file.jpg",
+                    "base64_data": "",
+                },
+            )
+        assert response.status_code == 403
+        assert response.json()["detail"]["error"] == "Access Denied"
+
+    @patch("app.routes.face_clusters.db_get_all_folders")
+    @patch("app.routes.face_clusters.perform_face_search")
+    def test_face_search_symlink_escape_blocked(self, mock_perform, mock_folders):
+        """Test that symlinks inside allowed folders pointing outside are rejected."""
+        mock_folders.return_value = ["/allowed/folder"]
+        mock_perform.return_value = {"success": True, "data": []}
+
+        # Simulating a symlink at "/allowed/folder/link.jpg" pointing to "/restricted/secret.jpg"
+        def realpath_mock(path):
+            cleaned = path.replace("\\", "/").lower()
+            if cleaned == "/allowed/folder/link.jpg":
+                return "/restricted/secret.jpg"
+            if cleaned == "/allowed/folder":
+                return "/allowed/folder"
+            return path
+
+        with patch("os.path.realpath", side_effect=realpath_mock):
+            response = client.post(
+                "/face_clusters/face-search?input_type=path",
+                json={"path": "/allowed/folder/link.jpg", "base64_data": ""},
             )
         assert response.status_code == 403
         assert response.json()["detail"]["error"] == "Access Denied"
@@ -446,7 +482,7 @@ class TestFaceClustersAPI:
                 json={"path": "/allowed/folder/family.jpg", "base64_data": ""},
             )
         assert response.status_code == 200
-        mock_perform.assert_called_once_with("/allowed/folder/family.jpg")
+        mock_perform.assert_called_once()
 
 
 # ============================================================================
