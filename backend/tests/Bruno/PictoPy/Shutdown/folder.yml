@@ -1,7 +1,0 @@
-info:
-  name: Shutdown
-  type: folder
-  seq: 1
-
-request:
-  auth: inherit
