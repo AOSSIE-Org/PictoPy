@@ -33,9 +33,32 @@ from app.schemas.face_clusters import (
 )
 from app.schemas.images import FaceSearchRequest, InputType
 from app.utils.faceSearch import perform_face_search
+from app.database.folders import db_get_all_folders
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def is_safe_path(target_path: str) -> bool:
+    """Validate that target_path is within one of the registered folders or temp_uploads."""
+
+    abs_target = os.path.abspath(target_path)
+    try:
+        allowed_folders = db_get_all_folders()
+    except Exception:
+        allowed_folders = []
+
+    temp_dir = os.path.abspath("temp_uploads")
+    allowed_folders.append(temp_dir)
+
+    for folder in allowed_folders:
+        abs_folder = os.path.abspath(folder)
+        try:
+            if os.path.commonpath([abs_folder, abs_target]) == abs_folder:
+                return True
+        except ValueError:
+            continue
+    return False
 
 
 @router.put(
@@ -243,6 +266,15 @@ def face_tagging(
                     success=False,
                     error="Invalid file path",
                     message="The provided path is not a valid file",
+                ).model_dump(),
+            )
+        if not is_safe_path(local_file_path):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Access Denied",
+                    message="Access to the specified file path is restricted.",
                 ).model_dump(),
             )
         image_path = payload.path

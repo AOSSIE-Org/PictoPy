@@ -417,6 +417,37 @@ class TestFaceClustersAPI:
         response = client.request(method, endpoint)
         assert response.status_code == 405
 
+    @patch("app.routes.face_clusters.db_get_all_folders")
+    @patch("app.routes.face_clusters.perform_face_search")
+    def test_face_search_path_traversal_blocked(self, mock_perform, mock_folders):
+        """Test that paths outside allowed folders are blocked with 403."""
+        mock_folders.return_value = ["/allowed/folder"]
+        mock_perform.return_value = {"success": True, "data": []}
+
+        # Mock os.path.isfile to simulate a valid file target
+        with patch("os.path.isfile", return_value=True):
+            response = client.post(
+                "/face_clusters/face-search?input_type=path",
+                json={"path": "/restricted/file.jpg", "base64_data": ""},
+            )
+        assert response.status_code == 403
+        assert response.json()["detail"]["error"] == "Access Denied"
+
+    @patch("app.routes.face_clusters.db_get_all_folders")
+    @patch("app.routes.face_clusters.perform_face_search")
+    def test_face_search_safe_path_allowed(self, mock_perform, mock_folders):
+        """Test that paths inside allowed folders are allowed."""
+        mock_folders.return_value = ["/allowed/folder"]
+        mock_perform.return_value = {"success": True, "data": []}
+
+        with patch("os.path.isfile", return_value=True):
+            response = client.post(
+                "/face_clusters/face-search?input_type=path",
+                json={"path": "/allowed/folder/family.jpg", "base64_data": ""},
+            )
+        assert response.status_code == 200
+        mock_perform.assert_called_once_with("/allowed/folder/family.jpg")
+
 
 # ============================================================================
 # Algorithmic Logic Tests
