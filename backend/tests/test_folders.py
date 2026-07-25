@@ -36,6 +36,7 @@ from app.database.folders import (
     db_find_parent_folder_id,
 )
 from app.database.images import db_create_images_table
+from app.database.videos import db_create_videos_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 
 # ##############################
@@ -52,6 +53,7 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
         monkeypatch.setattr("app.config.settings.DATABASE_PATH", db_path)
         monkeypatch.setattr("app.database.folders.DATABASE_PATH", db_path)
         monkeypatch.setattr("app.database.images.DATABASE_PATH", db_path)
+        monkeypatch.setattr("app.database.videos.DATABASE_PATH", db_path)
         monkeypatch.setattr("app.database.yolo_mapping.DATABASE_PATH", db_path)
 
         # Build the real schema rather than a hand-written copy: a divergent
@@ -61,6 +63,7 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
         db_create_YOLO_classes_table()
         db_create_folders_table()
         db_create_images_table()  # db_get_all_folder_details LEFT JOINs it
+        db_create_videos_table()  # db_get_all_folder_details LEFT JOINs it too
 
         yield db_path
     finally:
@@ -1124,6 +1127,7 @@ class TestFoldersUnit:
                 0,  # taggingCompleted
                 "not_started",  # indexing_status (schema default)
                 2,  # image_count
+                0,  # video_count
             )
         ]
 
