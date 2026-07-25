@@ -1,12 +1,13 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
 
-from app.config.settings import VIDEO_FRAME_INTERVAL_SECONDS
-
-# Kept in lockstep with the sampler's config (settings.py) so the API reports,
-# validates, and defaults to exactly what video_util_get_frame_interval() uses.
-VIDEO_FRAME_INTERVAL_MIN = 0.5
-VIDEO_FRAME_INTERVAL_MAX = 300.0
+# Single-sourced from the sampler's config so the API reports, validates, and
+# defaults to exactly what video_util_get_frame_interval() uses.
+from app.config.settings import (
+    VIDEO_FRAME_INTERVAL_SECONDS,
+    VIDEO_FRAME_INTERVAL_MIN,
+    VIDEO_FRAME_INTERVAL_MAX,
+)
 
 
 class UserPreferencesData(BaseModel):

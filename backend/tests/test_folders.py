@@ -651,6 +651,9 @@ class TestFoldersAPI:
         assert first_folder["parent_folder_id"] is None
         assert first_folder["AI_Tagging"] is True
         assert first_folder["taggingCompleted"] is False
+        # The video-only fixture folder must surface its media counts.
+        assert first_folder["image_count"] == 0
+        assert first_folder["video_count"] == 7
 
         mock_get_all_folders.assert_called_once()
 
@@ -1130,6 +1133,36 @@ class TestFoldersUnit:
                 0,  # video_count
             )
         ]
+
+    def test_db_get_all_folder_details_counts_videos(self, test_db):
+        """A folder with images and videos reports both counts distinctly."""
+        conn = sqlite3.connect(test_db)
+        conn.execute(
+            """
+            INSERT INTO folders (folder_id, folder_path, parent_folder_id,
+                                 last_modified_time, AI_Tagging, taggingCompleted)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            ("folder-id-1", "/home/user/media", None, 1693526400, True, False),
+        )
+        conn.execute(
+            "INSERT INTO images (id, path, folder_id) VALUES (?, ?, ?)",
+            ("img-1", "/home/user/media/a.jpg", "folder-id-1"),
+        )
+        conn.executemany(
+            "INSERT INTO videos (id, path, folder_id) VALUES (?, ?, ?)",
+            [
+                ("vid-1", "/home/user/media/a.mp4", "folder-id-1"),
+                ("vid-2", "/home/user/media/b.mp4", "folder-id-1"),
+            ],
+        )
+        conn.commit()
+        conn.close()
+
+        (row,) = db_get_all_folder_details()
+        image_count, video_count = row[7], row[8]
+        assert image_count == 1
+        assert video_count == 2
 
     def test_db_get_direct_child_folders(self, test_db):
         conn = sqlite3.connect(test_db)

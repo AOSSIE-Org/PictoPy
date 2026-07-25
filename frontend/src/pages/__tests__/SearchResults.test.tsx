@@ -38,8 +38,9 @@ describe('SearchResults Page', () => {
   test('renders empty state when no query is provided', async () => {
     renderWithQuery('');
 
-    // Should not call the API if query is empty
+    // Neither search runs when there's no query
     expect(searchImagesByTag).not.toHaveBeenCalled();
+    expect(searchVideosByTag).not.toHaveBeenCalled();
 
     // Check for empty state message
     expect(
@@ -160,6 +161,40 @@ describe('SearchResults Page', () => {
         // ...and the videos still render.
         expect(screen.getByText('Videos')).toBeInTheDocument();
         expect(screen.getByLabelText(/Play clip.mp4/i)).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  test('a video-search error is shown inline and does not hide photo results', async () => {
+    (searchImagesByTag as jest.Mock).mockResolvedValue({
+      success: true,
+      data: [
+        {
+          id: '1',
+          path: '/img1.jpg',
+          thumbnailPath: '/thumb1.jpg',
+          tags: ['cat'],
+        },
+      ],
+    });
+    (searchVideosByTag as jest.Mock).mockRejectedValue(
+      new Error('Network Error'),
+    );
+
+    renderWithQuery('cat');
+
+    await waitFor(
+      () => {
+        // Inline video error, not the full-screen takeover...
+        expect(
+          screen.getByText(/Couldn't load video results/i),
+        ).toBeInTheDocument();
+        expect(screen.queryByText(/^Search Failed$/i)).not.toBeInTheDocument();
+        // ...and the photos still render.
+        expect(
+          screen.queryByText(/Couldn't load photo results/i),
+        ).not.toBeInTheDocument();
       },
       { timeout: 3000 },
     );
