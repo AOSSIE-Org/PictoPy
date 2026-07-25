@@ -47,8 +47,7 @@ def db_create_videos_table() -> None:
     # Videos are kept separate from images by design; isTagged is reserved
     # for future AI video tagging. thumbnailPath is nullable: videos whose
     # codec OpenCV cannot decode are still indexed (frontend shows a placeholder).
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS videos (
             id TEXT PRIMARY KEY,
             path VARCHAR UNIQUE,
@@ -60,8 +59,7 @@ def db_create_videos_table() -> None:
             captured_at DATETIME,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
-    """
-    )
+    """)
 
     cursor.execute(
         "CREATE INDEX IF NOT EXISTS ix_videos_captured_at ON videos(captured_at)"
@@ -117,13 +115,11 @@ def db_get_all_videos() -> List[dict]:
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT id, path, folder_id, thumbnailPath, metadata, isTagged, isFavourite, captured_at
             FROM videos
             ORDER BY path
-            """
-        )
+            """)
 
         results = cursor.fetchall()
 

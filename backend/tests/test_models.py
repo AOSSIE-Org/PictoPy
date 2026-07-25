@@ -32,6 +32,7 @@ client = TestClient(app)
 # Pytest Fixtures
 # ##############################
 
+
 @pytest.fixture
 def mock_model_registry():
     # Keys match MODEL_REGISTRY structure — "filename" not "name"
@@ -189,7 +190,7 @@ def active_listener_task_id():
 def completed_task_response(completed_task_id):
     return client.get(
         f"/models/download/{completed_task_id}/progress",
-        headers={"Accept": "text/event-stream"}
+        headers={"Accept": "text/event-stream"},
     )
 
 
@@ -197,7 +198,7 @@ def completed_task_response(completed_task_id):
 def error_task_response(error_task_id):
     return client.get(
         f"/models/download/{error_task_id}/progress",
-        headers={"Accept": "text/event-stream"}
+        headers={"Accept": "text/event-stream"},
     )
 
 
@@ -213,22 +214,25 @@ def mock_tier_models():
 
 @pytest.fixture
 def setup_nano_response(mock_tier_models):
-    with patch("app.routes.models.TIER_MODELS", mock_tier_models), \
-         patch("app.routes.models.ensure_model", return_value=None):
+    with patch("app.routes.models.TIER_MODELS", mock_tier_models), patch(
+        "app.routes.models.ensure_model", return_value=None
+    ):
         return client.post("/models/setup", json={"tier": "nano"})
 
 
 @pytest.fixture
 def setup_required_response(mock_tier_models):
-    with patch("app.routes.models.TIER_MODELS", mock_tier_models), \
-         patch("app.routes.models.ensure_model", return_value=None):
+    with patch("app.routes.models.TIER_MODELS", mock_tier_models), patch(
+        "app.routes.models.ensure_model", return_value=None
+    ):
         return client.post("/models/setup", json={"tier": "required"})
 
 
 @pytest.fixture
 def download_facenet_response(mock_model_registry):
-    with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-         patch("app.routes.models.ensure_model", return_value=None):
+    with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), patch(
+        "app.routes.models.ensure_model", return_value=None
+    ):
         return client.post("/models/download/facenet")
 
 
@@ -236,49 +240,53 @@ def download_facenet_response(mock_model_registry):
 # Test Classes — endpoints not covered upstream
 # ##############################
 
+
 class TestModelStatus:
     """Tests suite for GET /models/status"""
 
     def test_returns_200(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.os.path.exists", return_value=False):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), patch(
+            "app.routes.models.get_model_path", return_value="/fake/path.onnx"
+        ), patch("app.routes.models.os.path.exists", return_value=False):
             response = client.get("/models/status")
             assert response.status_code == 200
 
     def test_success_is_true(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.os.path.exists", return_value=False):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), patch(
+            "app.routes.models.get_model_path", return_value="/fake/path.onnx"
+        ), patch("app.routes.models.os.path.exists", return_value=False):
             response = client.get("/models/status")
             assert response.json()["success"] is True
 
     def test_data_is_object(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.os.path.exists", return_value=False):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), patch(
+            "app.routes.models.get_model_path", return_value="/fake/path.onnx"
+        ), patch("app.routes.models.os.path.exists", return_value=False):
             response = client.get("/models/status")
             assert isinstance(response.json()["data"], dict)
 
     def test_all_7_models_present(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.os.path.exists", return_value=False):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), patch(
+            "app.routes.models.get_model_path", return_value="/fake/path.onnx"
+        ), patch("app.routes.models.os.path.exists", return_value=False):
             response = client.get("/models/status")
             data = response.json()["data"]
             expected = [
-                "yolo_nano", "yolo_nano_face",
-                "yolo_small", "yolo_small_face",
-                "yolo_medium", "yolo_medium_face",
+                "yolo_nano",
+                "yolo_nano_face",
+                "yolo_small",
+                "yolo_small_face",
+                "yolo_medium",
+                "yolo_medium_face",
                 "facenet",
             ]
             for key in expected:
                 assert key in data, f"Missing model key: {key}"
 
     def test_each_model_has_required_fields(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.os.path.exists", return_value=False):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), patch(
+            "app.routes.models.get_model_path", return_value="/fake/path.onnx"
+        ), patch("app.routes.models.os.path.exists", return_value=False):
             response = client.get("/models/status")
             for model in response.json()["data"].values():
                 assert "name" in model
@@ -288,49 +296,49 @@ class TestModelStatus:
                 assert "size_mb" in model
 
     def test_installed_is_always_boolean(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.os.path.exists", return_value=False):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), patch(
+            "app.routes.models.get_model_path", return_value="/fake/path.onnx"
+        ), patch("app.routes.models.os.path.exists", return_value=False):
             response = client.get("/models/status")
             for model in response.json()["data"].values():
                 assert isinstance(model["installed"], bool)
 
     def test_installed_true_when_file_exists(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.os.path.exists", return_value=True):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), patch(
+            "app.routes.models.get_model_path", return_value="/fake/path.onnx"
+        ), patch("app.routes.models.os.path.exists", return_value=True):
             response = client.get("/models/status")
             for model in response.json()["data"].values():
                 assert model["installed"] is True
 
     def test_installed_false_when_file_missing(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.os.path.exists", return_value=False):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), patch(
+            "app.routes.models.get_model_path", return_value="/fake/path.onnx"
+        ), patch("app.routes.models.os.path.exists", return_value=False):
             response = client.get("/models/status")
             for model in response.json()["data"].values():
                 assert model["installed"] is False
 
     def test_tier_values_are_valid(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.os.path.exists", return_value=False):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), patch(
+            "app.routes.models.get_model_path", return_value="/fake/path.onnx"
+        ), patch("app.routes.models.os.path.exists", return_value=False):
             valid_tiers = ["nano", "small", "medium", "required"]
             response = client.get("/models/status")
             for model in response.json()["data"].values():
                 assert model["tier"] in valid_tiers
 
     def test_facenet_tier_is_required(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.os.path.exists", return_value=False):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), patch(
+            "app.routes.models.get_model_path", return_value="/fake/path.onnx"
+        ), patch("app.routes.models.os.path.exists", return_value=False):
             response = client.get("/models/status")
             assert response.json()["data"]["facenet"]["tier"] == "required"
 
     def test_size_mb_is_positive_number(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.os.path.exists", return_value=False):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), patch(
+            "app.routes.models.get_model_path", return_value="/fake/path.onnx"
+        ), patch("app.routes.models.os.path.exists", return_value=False):
             response = client.get("/models/status")
             for model in response.json()["data"].values():
                 assert isinstance(model["size_mb"], (int, float))
@@ -339,20 +347,26 @@ class TestModelStatus:
     def test_name_field_matches_filename(self, mock_model_registry):
         # Route maps spec["filename"] → response field "name"
         # Verifying the mapping is correct
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.os.path.exists", return_value=False):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), patch(
+            "app.routes.models.get_model_path", return_value="/fake/path.onnx"
+        ), patch("app.routes.models.os.path.exists", return_value=False):
             response = client.get("/models/status")
             data = response.json()["data"]
             assert data["facenet"]["name"] == "FaceNet_128D.onnx"
             assert data["yolo_nano"]["name"] == "YOLOv11_Nano.onnx"
 
-    def test_placeholder_models_excluded_from_status(self, mock_model_registry_with_placeholder):
+    def test_placeholder_models_excluded_from_status(
+        self, mock_model_registry_with_placeholder
+    ):
         # Entries with PLACEHOLDER_URL / PLACEHOLDER_SHA256 (not-yet-uploaded
         # models) must not appear in /status.
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry_with_placeholder), \
-             patch("app.routes.models.get_model_path", return_value="/fake/path.onnx"), \
-             patch("app.routes.models.os.path.exists", return_value=False):
+        with patch(
+            "app.routes.models.MODEL_REGISTRY", mock_model_registry_with_placeholder
+        ), patch(
+            "app.routes.models.get_model_path", return_value="/fake/path.onnx"
+        ), patch(
+            "app.routes.models.os.path.exists", return_value=False
+        ):
             response = client.get("/models/status")
             data = response.json()["data"]
             assert "siglip2_large_vision" not in data
@@ -466,7 +480,7 @@ class TestHardwareInformation:
     def test_returns_500_when_hardware_detection_fails(self):
         with patch(
             "app.routes.models.get_hardware_info",
-            side_effect=Exception("hardware error")
+            side_effect=Exception("hardware error"),
         ):
             response = client.get("/models/hardware")
             assert response.status_code == 500
@@ -535,7 +549,7 @@ class TestDownloadProgress:
         raw = completed_task_response.text
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
-                json_part = line[len("data:"):].strip()
+                json_part = line[len("data:") :].strip()
                 parsed = json.loads(json_part)
                 assert isinstance(parsed, dict)
 
@@ -543,7 +557,7 @@ class TestDownloadProgress:
         raw = completed_task_response.text
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
-                json_part = line[len("data:"):].strip()
+                json_part = line[len("data:") :].strip()
                 parsed = json.loads(json_part)
                 assert "status" in parsed
 
@@ -552,7 +566,7 @@ class TestDownloadProgress:
         raw = completed_task_response.text
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
-                json_part = line[len("data:"):].strip()
+                json_part = line[len("data:") :].strip()
                 parsed = json.loads(json_part)
                 status = parsed["status"]
                 assert status in valid_statuses
@@ -563,7 +577,7 @@ class TestDownloadProgress:
         raw = completed_task_response.text
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
-                json_part = line[len("data:"):].strip()
+                json_part = line[len("data:") :].strip()
                 parsed = json.loads(json_part)
                 if parsed["status"] == "complete":
                     assert "model_key" in parsed
@@ -572,7 +586,7 @@ class TestDownloadProgress:
         raw = completed_task_response.text
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
-                json_part = line[len("data:"):].strip()
+                json_part = line[len("data:") :].strip()
                 parsed = json.loads(json_part)
                 if parsed["status"] == "complete":
                     model_key = parsed["model_key"]
@@ -582,7 +596,7 @@ class TestDownloadProgress:
         raw = completed_task_response.text
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
-                json_part = line[len("data:"):].strip()
+                json_part = line[len("data:") :].strip()
                 parsed = json.loads(json_part)
                 if parsed["status"] == "complete":
                     model_key = parsed["model_key"]
@@ -598,7 +612,7 @@ class TestDownloadProgress:
         raw = error_task_response.text
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
-                json_part = line[len("data:"):].strip()
+                json_part = line[len("data:") :].strip()
                 parsed = json.loads(json_part)
                 if parsed["status"] == "error":
                     assert "message" in parsed
@@ -607,7 +621,7 @@ class TestDownloadProgress:
         raw = error_task_response.text
         for line in raw.strip().split("\n"):
             if line.startswith("data:"):
-                json_part = line[len("data:"):].strip()
+                json_part = line[len("data:") :].strip()
                 parsed = json.loads(json_part)
                 if parsed["status"] == "error":
                     message = parsed["message"]
@@ -623,14 +637,16 @@ class TestSetupModels:
         assert setup_nano_response.status_code == 200
 
     def test_small_tier_returns_200(self, mock_tier_models):
-        with patch("app.routes.models.TIER_MODELS", mock_tier_models), \
-             patch("app.routes.models.ensure_model", return_value=None):
+        with patch("app.routes.models.TIER_MODELS", mock_tier_models), patch(
+            "app.routes.models.ensure_model", return_value=None
+        ):
             response = client.post("/models/setup", json={"tier": "small"})
             assert response.status_code == 200
 
     def test_medium_tier_returns_200(self, mock_tier_models):
-        with patch("app.routes.models.TIER_MODELS", mock_tier_models), \
-             patch("app.routes.models.ensure_model", return_value=None):
+        with patch("app.routes.models.TIER_MODELS", mock_tier_models), patch(
+            "app.routes.models.ensure_model", return_value=None
+        ):
             response = client.post("/models/setup", json={"tier": "medium"})
             assert response.status_code == 200
 
@@ -662,8 +678,9 @@ class TestSetupModels:
         assert "nano" in message
 
     def test_each_call_gets_unique_task_id(self, mock_tier_models):
-        with patch("app.routes.models.TIER_MODELS", mock_tier_models), \
-             patch("app.routes.models.ensure_model", return_value=None):
+        with patch("app.routes.models.TIER_MODELS", mock_tier_models), patch(
+            "app.routes.models.ensure_model", return_value=None
+        ):
             response_1 = client.post("/models/setup", json={"tier": "nano"})
             response_2 = client.post("/models/setup", json={"tier": "nano"})
             task_id_1 = response_1.json()["task_id"]
@@ -742,8 +759,9 @@ class TestStartDownloadModel:
         assert "facenet" in message
 
     def test_each_call_gets_unique_task_id(self, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.ensure_model", return_value=None):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), patch(
+            "app.routes.models.ensure_model", return_value=None
+        ):
             response_1 = client.post("/models/download/facenet")
             response_2 = client.post("/models/download/facenet")
             task_id_1 = response_1.json()["task_id"]
@@ -752,15 +770,22 @@ class TestStartDownloadModel:
 
     # --- All valid model keys ---
 
-    @pytest.mark.parametrize("model_key", [
-        "yolo_nano", "yolo_nano_face",
-        "yolo_small", "yolo_small_face",
-        "yolo_medium", "yolo_medium_face",
-        "facenet",
-    ])
+    @pytest.mark.parametrize(
+        "model_key",
+        [
+            "yolo_nano",
+            "yolo_nano_face",
+            "yolo_small",
+            "yolo_small_face",
+            "yolo_medium",
+            "yolo_medium_face",
+            "facenet",
+        ],
+    )
     def test_all_valid_model_keys_return_200(self, model_key, mock_model_registry):
-        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), \
-             patch("app.routes.models.ensure_model", return_value=None):
+        with patch("app.routes.models.MODEL_REGISTRY", mock_model_registry), patch(
+            "app.routes.models.ensure_model", return_value=None
+        ):
             response = client.post(f"/models/download/{model_key}")
             assert response.status_code == 200
 
@@ -768,6 +793,7 @@ class TestStartDownloadModel:
 # ##############################
 # Test Classes — from upstream (verbatim)
 # ##############################
+
 
 class TestModelsAPI:
 

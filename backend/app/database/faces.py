@@ -35,8 +35,7 @@ def db_create_faces_table() -> None:
         conn = sqlite3.connect(DATABASE_PATH)
         conn.execute("PRAGMA foreign_keys = ON")
         cursor = conn.cursor()
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS faces (
                 face_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 image_id TEXT,
@@ -47,8 +46,7 @@ def db_create_faces_table() -> None:
                 FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
                 FOREIGN KEY (cluster_id) REFERENCES face_clusters(cluster_id) ON DELETE SET NULL
             )
-        """
-        )
+        """)
         conn.commit()
     finally:
         if conn is not None:
@@ -149,8 +147,7 @@ def get_all_face_embeddings():
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT
                 f.embeddings,
                 f.bbox,
@@ -165,8 +162,7 @@ def get_all_face_embeddings():
             JOIN images i ON f.image_id=i.id
             LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
-        """
-        )
+        """)
         results = cursor.fetchall()
 
         from app.utils.images import image_util_parse_metadata
@@ -263,14 +259,12 @@ def db_get_all_faces_with_cluster_names() -> (
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT f.face_id, f.image_id, f.embeddings, fc.cluster_name
             FROM faces f
             LEFT JOIN face_clusters fc ON f.cluster_id = fc.cluster_id
             ORDER BY f.face_id
-            """
-        )
+            """)
 
         rows = cursor.fetchall()
 
@@ -381,14 +375,12 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT f.cluster_id, f.embeddings
             FROM faces f
             WHERE f.cluster_id IS NOT NULL
             ORDER BY f.cluster_id
-            """
-        )
+            """)
 
         rows = cursor.fetchall()
 
