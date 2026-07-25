@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 import numpy as np
 from app.database.images import _connect
 
@@ -97,6 +97,43 @@ def db_get_all_embeddings(model_version: str) -> Tuple[List[str], np.ndarray]:
 
         matrix = np.vstack(embeddings_list)
         return image_ids, matrix
+    finally:
+        if conn:
+            conn.close()
+
+
+def db_get_embeddings_for_image_ids(
+    image_ids: List[str], model_version: str
+) -> Dict[str, np.ndarray]:
+    """
+    Embeddings for an explicit id list, keyed by image id.
+
+    Memory curation only ever compares a single candidate set, so it loads
+    those rows rather than the whole table: db_get_all_embeddings on a large
+    library materializes hundreds of megabytes in the worker process.
+    """
+    if not image_ids:
+        return {}
+
+    conn = None
+    try:
+        conn = _connect()
+        cursor = conn.cursor()
+        found: Dict[str, np.ndarray] = {}
+        # Chunked to stay under SQLite's variable limit, as elsewhere.
+        for start in range(0, len(image_ids), 500):
+            chunk = image_ids[start : start + 500]
+            placeholders = ", ".join("?" * len(chunk))
+            cursor.execute(
+                f"""
+                SELECT image_id, embedding FROM image_embeddings
+                WHERE model_version = ? AND image_id IN ({placeholders})
+                """,
+                [model_version, *chunk],
+            )
+            for image_id, blob in cursor.fetchall():
+                found[image_id] = np.frombuffer(blob, dtype=np.float32)
+        return found
     finally:
         if conn:
             conn.close()
