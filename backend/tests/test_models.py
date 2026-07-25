@@ -100,7 +100,9 @@ def mock_model_registry():
 @pytest.fixture
 def mock_model_registry_with_placeholder(mock_model_registry):
     # Mirrors the real registry's not-yet-uploaded entries (e.g. siglip2_large_vision),
-    # which /status must exclude from its response.
+    # which /status must exclude. Covered as three independent cases so a
+    # regression from `or` to `and` in the route's placeholder check would
+    # still be caught.
     registry = dict(mock_model_registry)
     registry["siglip2_large_vision"] = {
         "filename": "SigLIP2_Large_Vision.onnx",
@@ -109,6 +111,22 @@ def mock_model_registry_with_placeholder(mock_model_registry):
         "feature": "semantic_vision",
         "tier": "medium",
         "size_mb": 0,
+    }
+    registry["siglip2_url_placeholder_only"] = {
+        "filename": "SigLIP2_URL_Only.onnx",
+        "url": "PLACEHOLDER_URL",
+        "sha256": "real_sha256_value",
+        "feature": "semantic_vision",
+        "tier": "medium",
+        "size_mb": 100.0,
+    }
+    registry["siglip2_sha_placeholder_only"] = {
+        "filename": "SigLIP2_SHA_Only.onnx",
+        "url": "https://example.com/models/SigLIP2_SHA_Only.onnx",
+        "sha256": "PLACEHOLDER_SHA256",
+        "feature": "semantic_vision",
+        "tier": "medium",
+        "size_mb": 100.0,
     }
     return registry
 
@@ -370,6 +388,8 @@ class TestModelStatus:
             response = client.get("/models/status")
             data = response.json()["data"]
             assert "siglip2_large_vision" not in data
+            assert "siglip2_url_placeholder_only" not in data
+            assert "siglip2_sha_placeholder_only" not in data
             assert "yolo_nano" in data
 
 
