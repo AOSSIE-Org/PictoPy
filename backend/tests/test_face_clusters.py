@@ -434,7 +434,9 @@ class TestFaceClustersAPI:
                 return "/allowed/folder"
             return path
 
-        with patch("os.path.realpath", side_effect=realpath_mock):
+        with patch("os.path.realpath", side_effect=realpath_mock), patch(
+            "os.path.isfile", return_value=True
+        ):
             response = client.post(
                 "/face_clusters/face-search?input_type=path",
                 json={
@@ -444,6 +446,7 @@ class TestFaceClustersAPI:
             )
         assert response.status_code == 403
         assert response.json()["detail"]["error"] == "Access Denied"
+        mock_perform.assert_not_called()
 
     @patch("app.routes.face_clusters.db_get_all_folders")
     @patch("app.routes.face_clusters.perform_face_search")
@@ -461,13 +464,16 @@ class TestFaceClustersAPI:
                 return "/allowed/folder"
             return path
 
-        with patch("os.path.realpath", side_effect=realpath_mock):
+        with patch("os.path.realpath", side_effect=realpath_mock), patch(
+            "os.path.isfile", return_value=True
+        ):
             response = client.post(
                 "/face_clusters/face-search?input_type=path",
                 json={"path": "/allowed/folder/link.jpg", "base64_data": ""},
             )
         assert response.status_code == 403
         assert response.json()["detail"]["error"] == "Access Denied"
+        mock_perform.assert_not_called()
 
     @patch("app.routes.face_clusters.db_get_all_folders")
     @patch("app.routes.face_clusters.perform_face_search")
