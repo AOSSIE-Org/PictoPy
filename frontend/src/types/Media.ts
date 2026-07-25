@@ -48,6 +48,12 @@ export interface Video {
   tags?: string[];
 }
 
+export interface ScoredVideo extends Video {
+  score: number;
+  /** Timestamp (seconds) of the keyframe that matched best. */
+  best_frame_timestamp?: number | null;
+}
+
 export interface ImageGalleryProps {
   mediaItems: Image[];
   title?: string;

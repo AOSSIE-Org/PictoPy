@@ -12,7 +12,12 @@ FolderIdPath = Tuple[FolderId, str]
 
 
 class FolderTaggingInfo(NamedTuple):
-    """Represents folder tagging and semantic-embedding information"""
+    """Represents folder tagging and semantic-embedding information.
+
+    Percentages are over images and videos combined, so a video-only folder
+    still reports real progress. The raw per-medium counts are exposed so the
+    frontend can aggregate them however it needs.
+    """
 
     folder_id: FolderId
     folder_path: FolderPath
@@ -21,6 +26,9 @@ class FolderTaggingInfo(NamedTuple):
     total_images: int
     tagged_images: int
     embedded_images: int
+    total_videos: int
+    tagged_videos: int
+    embedded_videos: int
     ai_tagging: bool
 
 
@@ -80,28 +88,57 @@ def db_check_database_connection() -> bool:
 def db_get_tagging_progress() -> List[FolderTaggingInfo]:
     """
     Calculate tagging and semantic-embedding percentages for all folders.
-    Each percentage = (processed images / total images) * 100.
+    Each percentage = (processed media / total media) * 100, counting images
+    and videos together.
 
     Returns:
-        List of FolderTaggingInfo with percentages, raw counts, and each
-        folder's AI_Tagging flag
+        List of FolderTaggingInfo with percentages, raw per-medium counts, and
+        each folder's AI_Tagging flag
     """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     try:
+        # Pre-aggregate each media table by folder before joining, so a folder
+        # with M images and N videos never fans out to M*N intermediate rows.
+        # A video is "embedded" once tagged with no unembedded frames left -- a
+        # zero-frame (undecodable) video counts as embedded so it never stalls
+        # the bar.
         cursor.execute(
             """
             SELECT
                 f.folder_id,
                 f.folder_path,
                 f.AI_Tagging,
-                COUNT(i.id) as total_images,
-                COUNT(CASE WHEN i.isTagged = 1 THEN 1 END) as tagged_images,
-                COUNT(CASE WHEN i.isEmbedded = 1 THEN 1 END) as embedded_images
+                COALESCE(img.total_images, 0) as total_images,
+                COALESCE(img.tagged_images, 0) as tagged_images,
+                COALESCE(img.embedded_images, 0) as embedded_images,
+                COALESCE(vid.total_videos, 0) as total_videos,
+                COALESCE(vid.tagged_videos, 0) as tagged_videos,
+                COALESCE(vid.embedded_videos, 0) as embedded_videos
             FROM folders f
-            LEFT JOIN images i ON f.folder_id = i.folder_id
-            GROUP BY f.folder_id, f.folder_path, f.AI_Tagging
+            LEFT JOIN (
+                SELECT folder_id,
+                       COUNT(*) as total_images,
+                       SUM(CASE WHEN isTagged = 1 THEN 1 ELSE 0 END)
+                           as tagged_images,
+                       SUM(CASE WHEN isEmbedded = 1 THEN 1 ELSE 0 END)
+                           as embedded_images
+                FROM images
+                GROUP BY folder_id
+            ) img ON img.folder_id = f.folder_id
+            LEFT JOIN (
+                SELECT v2.folder_id,
+                       COUNT(*) as total_videos,
+                       SUM(CASE WHEN v2.isTagged = 1 THEN 1 ELSE 0 END)
+                           as tagged_videos,
+                       SUM(CASE WHEN v2.isTagged = 1 AND NOT EXISTS (
+                           SELECT 1 FROM video_frames vf
+                           WHERE vf.video_id = v2.id AND vf.isEmbedded = 0
+                       ) THEN 1 ELSE 0 END) as embedded_videos
+                FROM videos v2
+                GROUP BY v2.folder_id
+            ) vid ON vid.folder_id = f.folder_id
             """
         )
 
@@ -115,11 +152,17 @@ def db_get_tagging_progress() -> List[FolderTaggingInfo]:
             total_images,
             tagged_images,
             embedded_images,
+            total_videos,
+            tagged_videos,
+            embedded_videos,
         ) in results:
-            # Calculate percentages, handle division by zero
-            if total_images > 0:
-                tagging_percentage = (tagged_images / total_images) * 100
-                embedding_percentage = (embedded_images / total_images) * 100
+            # Percentages are over images and videos together.
+            total_media = total_images + total_videos
+            if total_media > 0:
+                tagging_percentage = (tagged_images + tagged_videos) / total_media * 100
+                embedding_percentage = (
+                    (embedded_images + embedded_videos) / total_media * 100
+                )
             else:
                 tagging_percentage = 0.0
                 embedding_percentage = 0.0
@@ -133,6 +176,9 @@ def db_get_tagging_progress() -> List[FolderTaggingInfo]:
                     total_images=total_images,
                     tagged_images=tagged_images,
                     embedded_images=embedded_images,
+                    total_videos=total_videos,
+                    tagged_videos=tagged_videos,
+                    embedded_videos=embedded_videos,
                     ai_tagging=bool(ai_tagging),
                 )
             )

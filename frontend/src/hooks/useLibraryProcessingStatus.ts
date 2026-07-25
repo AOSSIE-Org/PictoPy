@@ -14,9 +14,10 @@ export interface LibraryProcessingStatus {
   phase: LibraryProcessingPhase;
   /** Progress (0-100) of the current phase; 100 when idle */
   percentage: number;
-  totalImages: number;
-  taggedImages: number;
-  embeddedImages: number;
+  /** Counts are over images and videos combined. */
+  totalItems: number;
+  taggedItems: number;
+  embeddedItems: number;
 }
 
 const aggregate = (data: APIResponse | undefined) => {
@@ -25,17 +26,18 @@ const aggregate = (data: APIResponse | undefined) => {
     ? (rawFolders as FolderTaggingInfo[])
     : [];
 
-  let totalImages = 0;
-  let taggedImages = 0;
-  let embeddedImages = 0;
+  let totalItems = 0;
+  let taggedItems = 0;
+  let embeddedItems = 0;
   for (const folder of folders) {
     // Only AI-tagging folders are ever processed
     if (!folder?.ai_tagging) continue;
-    totalImages += folder.total_images ?? 0;
-    taggedImages += folder.tagged_images ?? 0;
-    embeddedImages += folder.embedded_images ?? 0;
+    totalItems += (folder.total_images ?? 0) + (folder.total_videos ?? 0);
+    taggedItems += (folder.tagged_images ?? 0) + (folder.tagged_videos ?? 0);
+    embeddedItems +=
+      (folder.embedded_images ?? 0) + (folder.embedded_videos ?? 0);
   }
-  return { totalImages, taggedImages, embeddedImages };
+  return { totalItems, taggedItems, embeddedItems };
 };
 
 /**
@@ -59,12 +61,12 @@ export const useLibraryProcessingStatus = (): LibraryProcessingStatus => {
     queryFn: getFoldersTaggingStatus,
     staleTime: 1000,
     refetchInterval: (query) => {
-      const { totalImages, taggedImages, embeddedImages } = aggregate(
+      const { totalItems, taggedItems, embeddedItems } = aggregate(
         query.state.data,
       );
       const busy =
-        taggedImages < totalImages ||
-        (semanticAvailable && embeddedImages < totalImages);
+        taggedItems < totalItems ||
+        (semanticAvailable && embeddedItems < totalItems);
       return busy ? 1000 : 10000;
     },
     refetchIntervalInBackground: true,
@@ -73,30 +75,30 @@ export const useLibraryProcessingStatus = (): LibraryProcessingStatus => {
     refetchOnWindowFocus: false,
   });
 
-  const { totalImages, taggedImages, embeddedImages } = aggregate(
+  const { totalItems, taggedItems, embeddedItems } = aggregate(
     taggingStatusQuery.data,
   );
 
   let phase: LibraryProcessingPhase = 'idle';
   let percentage = 100;
-  if (totalImages > 0 && taggedImages < totalImages) {
+  if (totalItems > 0 && taggedItems < totalItems) {
     phase = 'tagging';
-    percentage = (taggedImages / totalImages) * 100;
+    percentage = (taggedItems / totalItems) * 100;
   } else if (
     semanticAvailable &&
-    totalImages > 0 &&
-    embeddedImages < totalImages
+    totalItems > 0 &&
+    embeddedItems < totalItems
   ) {
     phase = 'indexing';
-    percentage = (embeddedImages / totalImages) * 100;
+    percentage = (embeddedItems / totalItems) * 100;
   }
 
   return {
     semanticAvailable,
     phase,
     percentage,
-    totalImages,
-    taggedImages,
-    embeddedImages,
+    totalItems,
+    taggedItems,
+    embeddedItems,
   };
 };

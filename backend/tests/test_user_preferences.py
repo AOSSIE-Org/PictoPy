@@ -504,3 +504,62 @@ class TestUserPreferencesAPI:
         """Test that unsupported HTTP methods return 405."""
         response = client.request(method, endpoint)
         assert response.status_code == 405
+
+
+class TestVideoFrameIntervalValidation:
+    """Boundary coverage for the video keyframe interval on both preference
+    models, guarding the sampling API contract."""
+
+    def test_default_matches_sampler_config(self):
+        from app.schemas.user_preferences import UserPreferencesData
+        from app.config.settings import VIDEO_FRAME_INTERVAL_SECONDS
+
+        assert (
+            UserPreferencesData().Video_Frame_Interval == VIDEO_FRAME_INTERVAL_SECONDS
+        )
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            0.5,  # exact minimum
+            300.0,  # exact maximum
+            5.0,
+        ],
+    )
+    def test_accepts_in_range_values(self, value):
+        from app.schemas.user_preferences import (
+            UserPreferencesData,
+            UpdateUserPreferencesRequest,
+        )
+
+        assert UserPreferencesData(Video_Frame_Interval=value).Video_Frame_Interval == (
+            value
+        )
+        assert (
+            UpdateUserPreferencesRequest(
+                Video_Frame_Interval=value
+            ).Video_Frame_Interval
+            == value
+        )
+
+    @pytest.mark.parametrize("value", [0.4, 300.1, 0.0, -1.0])
+    def test_rejects_out_of_range_values(self, value):
+        from pydantic import ValidationError
+        from app.schemas.user_preferences import (
+            UserPreferencesData,
+            UpdateUserPreferencesRequest,
+        )
+
+        with pytest.raises(ValidationError):
+            UserPreferencesData(Video_Frame_Interval=value)
+        with pytest.raises(ValidationError):
+            UpdateUserPreferencesRequest(Video_Frame_Interval=value)
+
+    def test_partial_update_allows_none(self):
+        from app.schemas.user_preferences import UpdateUserPreferencesRequest
+
+        assert UpdateUserPreferencesRequest().Video_Frame_Interval is None
+        assert (
+            UpdateUserPreferencesRequest(Video_Frame_Interval=None).Video_Frame_Interval
+            is None
+        )

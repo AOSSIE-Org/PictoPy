@@ -9,6 +9,10 @@ export const imagesEndpoints = {
 export const videosEndpoints = {
   getAllVideos: '/videos/',
   setFavourite: '/videos/toggle-favourite',
+  searchByTag: (tag: string) => `/videos/search?tag=${encodeURIComponent(tag)}`,
+  semanticSearch: (query: string) =>
+    `/videos/semantic-search?query=${encodeURIComponent(query)}`,
+  purgeFrameCache: '/videos/purge-frame-cache',
 };
 
 export const faceClustersEndpoints = {
