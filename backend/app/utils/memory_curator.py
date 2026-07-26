@@ -1,0 +1,724 @@
+"""
+Memory curation.
+
+Turns the photo library into persisted, ranked memories. Three triggers
+produce candidate sets; each set is scored, deduplicated and written to the
+memories table.
+
+- anniversary:    photos from this calendar date in previous years
+- import_event:   a burst of photos that hangs together in time and place
+- semantic_event: photos SigLIP2 recognises as one occasion
+"""
+
+import hashlib
+import json
+import uuid
+from collections import defaultdict
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, List, Optional, Sequence
+
+import numpy as np
+
+from app.config.settings import (
+    SIGLIP2_ACTIVE_CHECKPOINT,
+    SIGLIP2_SCORING_METADATA,
+)
+from app.database.image_embeddings import db_get_embeddings_for_image_ids
+from app.database.memories import (
+    db_finish_memory_run,
+    db_get_anniversary_candidates,
+    db_get_event_label_hits,
+    db_get_event_labels,
+    db_get_images_by_ids_for_memories,
+    db_get_images_in_period,
+    db_get_recently_used_image_ids,
+    db_get_scoring_signals,
+    db_get_top_event_label,
+    db_get_uncurated_image_ids,
+    db_start_memory_run,
+    db_upsert_memory,
+)
+from app.database.metadata import db_get_metadata
+from app.logging.setup_logging import get_logger
+from app.schemas.user_preferences import MemoriesPreferences
+from app.utils.memory_scoring import (
+    aggregate_memory_score,
+    detect_home_location,
+    parse_captured_at,
+    score_candidates,
+    spread_over_time,
+    suppress_near_duplicates,
+)
+
+logger = get_logger(__name__)
+
+# Bumped when curation changes in a way that makes existing memories stale.
+GENERATOR_VERSION = 2
+
+# --- Anniversary -----------------------------------------------------------
+
+# EXIF timestamps carry the camera's local time, so a photo taken near
+# midnight abroad lands on the neighbouring date.
+ANNIVERSARY_DAY_WINDOW = 1
+
+# A wall of "4 years ago", "5 years ago", "6 years ago" is noise.
+MAX_ANNIVERSARY_MEMORIES = 2
+
+# --- Import event ----------------------------------------------------------
+
+# A gap this long, or a jump this far, ends an event. Temporal segmentation
+# rather than DBSCAN over coordinates: clustering by location alone collapses
+# a year of at-home photos into one blob.
+IMPORT_GAP_HOURS = 8.0
+IMPORT_JUMP_KM = 40.0
+IMPORT_MAX_SPAN_DAYS = 14
+MAX_IMPORT_MEMORIES = 3
+
+# Cap the pool so a first import of a huge library does not stall the worker.
+IMPORT_CANDIDATE_LIMIT = 5000
+
+# --- Semantic event --------------------------------------------------------
+
+EVENT_MIN_SCORE = 0.15
+EVENT_GAP_HOURS = 36.0
+EVENT_MIN_IMAGES = 6
+EVENT_MEAN_SCORE = 0.25
+EVENT_PEAK_SCORE = 0.50
+
+# Visual cohesion is the real discriminator: it rejects occurrences where the
+# label fired but the photos look nothing alike, which is what stops "picnic"
+# matching three unrelated lawn shots.
+EVENT_COHESION = 0.55
+
+# Two labels covering the same weekend are one occasion, not two.
+EVENT_MERGE_OVERLAP = 0.60
+
+# An anniversary of a semantic event is only worth surfacing as such if it is
+# imminent; otherwise it is a rediscovery and surfaces today.
+EVENT_ANNIVERSARY_LOOKAHEAD_DAYS = 3
+MAX_SEMANTIC_MEMORIES = 3
+
+# --- Shared ----------------------------------------------------------------
+
+# Images used recently are demoted for anniversaries (a sparse calendar date
+# cannot spare photos) and excluded outright elsewhere (those pools are large).
+RECENT_USE_WINDOW_DAYS = 30
+RECENT_USE_PENALTY = 0.35
+
+# Labels whose title-cased form reads wrong.
+EVENT_DISPLAY_NAMES = {
+    "valentines day": "Valentine's Day",
+    "new year": "New Year",
+    "lunar new year": "Lunar New Year",
+    "eid": "Eid",
+    "bbq": "BBQ",
+}
+
+
+def memory_curator_get_preferences() -> MemoriesPreferences:
+    """
+    Read memories preferences from the metadata blob.
+
+    Read-only by design: db_update_metadata rewrites the whole blob, so a write
+    from the curator process would clobber a concurrent settings save.
+    """
+    metadata = db_get_metadata() or {}
+    stored = (metadata.get("user_preferences") or {}).get("memories") or {}
+    try:
+        return MemoriesPreferences.model_validate(stored)
+    except ValueError as e:
+        logger.warning(f"Invalid memories preferences, using defaults: {e}")
+        return MemoriesPreferences()
+
+
+def memory_curator_params_signature(preferences: MemoriesPreferences) -> str:
+    """Fingerprint the inputs that determine curation output."""
+    payload = {
+        "version": GENERATOR_VERSION,
+        "min_images": preferences.min_images,
+        "max_images": preferences.max_images,
+        "weights": preferences.weights.model_dump(),
+    }
+    encoded = json.dumps(payload, sort_keys=True).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()[:16]
+
+
+def _active_model_version() -> str:
+    return SIGLIP2_SCORING_METADATA[SIGLIP2_ACTIVE_CHECKPOINT]["model_version"]
+
+
+def _anniversary_window(reference: date) -> List[str]:
+    """Build the MM-DD strings matched by an anniversary lookup."""
+    offsets = range(-ANNIVERSARY_DAY_WINDOW, ANNIVERSARY_DAY_WINDOW + 1)
+    return sorted({(reference + timedelta(days=o)).strftime("%m-%d") for o in offsets})
+
+
+def _display_event_name(label: str) -> str:
+    return EVENT_DISPLAY_NAMES.get(label, label.title())
+
+
+def _haversine_km(a: Dict[str, Any], b: Dict[str, Any]) -> Optional[float]:
+    """Distance between two image rows, or None if either lacks GPS."""
+    from app.utils.memory_scoring import haversine_km
+
+    if (
+        a.get("latitude") is None
+        or a.get("longitude") is None
+        or b.get("latitude") is None
+        or b.get("longitude") is None
+    ):
+        return None
+    return haversine_km(a["latitude"], a["longitude"], b["latitude"], b["longitude"])
+
+
+class _CurationContext:
+    """Inputs shared by every trigger within a single run."""
+
+    def __init__(
+        self,
+        reference: date,
+        preferences: MemoriesPreferences,
+        params_signature: str,
+    ):
+        self.reference = reference
+        self.run_date = reference.isoformat()
+        self.preferences = preferences
+        self.params_signature = params_signature
+        self.weights = preferences.weights
+        self.home = detect_home_location()
+        self.model_version = _active_model_version()
+        self.recently_used = db_get_recently_used_image_ids(
+            RECENT_USE_WINDOW_DAYS, self.run_date
+        )
+
+
+def _build_memory(
+    context: _CurationContext,
+    *,
+    image_ids: Sequence[str],
+    dedupe_key: str,
+    event_type: str,
+    title: str,
+    subtitle: Optional[str],
+    surface_date: str,
+    hard_exclude_recent: bool,
+) -> bool:
+    """
+    Score, trim and persist one candidate set. Returns whether it qualified.
+
+    Shared by all three triggers: they differ only in how candidates are
+    found, not in how they are ranked.
+    """
+    preferences = context.preferences
+    candidate_ids = list(image_ids)
+
+    if hard_exclude_recent:
+        candidate_ids = [i for i in candidate_ids if i not in context.recently_used]
+    if len(candidate_ids) < preferences.min_images:
+        return False
+
+    signal_rows = db_get_scoring_signals(candidate_ids)
+    if len(signal_rows) < preferences.min_images:
+        return False
+
+    scored = score_candidates(
+        signal_rows,
+        context.weights,
+        context.home,
+        penalized_ids=None if hard_exclude_recent else context.recently_used,
+        penalty=RECENT_USE_PENALTY,
+    )
+
+    embeddings = db_get_embeddings_for_image_ids(
+        [c["id"] for c in scored], context.model_version
+    )
+    deduplicated = suppress_near_duplicates(scored, embeddings)
+    if len(deduplicated) < preferences.min_images:
+        return False
+
+    selected = spread_over_time(deduplicated, preferences.max_images)
+    if len(selected) < preferences.min_images:
+        return False
+
+    cover = max(selected, key=lambda c: c["score"])
+    timestamps = [c["captured_at"] for c in selected if c.get("captured_at")]
+
+    db_upsert_memory(
+        {
+            "memory_id": str(uuid.uuid4()),
+            "dedupe_key": dedupe_key,
+            "event_type": event_type,
+            "status": "complete",
+            "title": title,
+            "subtitle": subtitle,
+            "surface_date": surface_date,
+            "period_start": min(timestamps).isoformat() if timestamps else None,
+            "period_end": max(timestamps).isoformat() if timestamps else None,
+            "cover_image_id": cover["id"],
+            "image_count": len(selected),
+            "score": aggregate_memory_score(selected),
+            # Kept for debugging why a given photo made the cut. Not shown.
+            "signals": cover["signals"],
+            "params_signature": context.params_signature,
+        },
+        [
+            (candidate["id"], order, candidate["score"])
+            for order, candidate in enumerate(selected)
+        ],
+    )
+    return True
+
+
+# ##############################
+# Trigger 1: anniversary
+# ##############################
+
+
+def _curate_anniversaries(context: _CurationContext) -> int:
+    """Build memories from photos taken on this date in previous years."""
+    reference = context.reference
+    candidates = db_get_anniversary_candidates(
+        _anniversary_window(reference), reference.year - 1
+    )
+    if not candidates:
+        return 0
+
+    by_year: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
+    for image in candidates:
+        capture_year = image.get("capture_year")
+        if capture_year is not None:
+            by_year[capture_year].append(image)
+
+    qualifying = [
+        (year, images)
+        for year, images in by_year.items()
+        if len(images) >= context.preferences.min_images
+    ]
+    # Prefer the years with the most to show, then the most recent.
+    qualifying.sort(key=lambda pair: (-len(pair[1]), -pair[0]))
+
+    generated = 0
+    for year, images in qualifying[:MAX_ANNIVERSARY_MEMORIES]:
+        try:
+            years_ago = reference.year - year
+            # Taken from the photos themselves, not rebuilt from the reference
+            # date: Feb 29 has no counterpart in a non-leap source year.
+            timestamps = [
+                parse_captured_at(image.get("captured_at")) for image in images
+            ]
+            timestamps = [t for t in timestamps if t is not None]
+            subtitle = min(timestamps).strftime("%B %Y") if timestamps else str(year)
+
+            if _build_memory(
+                context,
+                image_ids=[image["id"] for image in images],
+                dedupe_key=f"anniv:{reference.strftime('%m-%d')}:{year}",
+                event_type="anniversary",
+                title=(
+                    "1 year ago today"
+                    if years_ago == 1
+                    else f"{years_ago} years ago today"
+                ),
+                subtitle=subtitle,
+                surface_date=reference.isoformat(),
+                # A sparse calendar date cannot spare photos, so reuse is a
+                # penalty rather than an exclusion.
+                hard_exclude_recent=False,
+            ):
+                generated += 1
+        except Exception:
+            logger.error(
+                f"Failed to curate anniversary memory for {year}", exc_info=True
+            )
+
+    return generated
+
+
+# ##############################
+# Trigger 2: import event
+# ##############################
+
+
+def segment_by_time_and_place(
+    images: Sequence[Dict[str, Any]],
+    gap_hours: float = IMPORT_GAP_HOURS,
+    jump_km: float = IMPORT_JUMP_KM,
+) -> List[List[Dict[str, Any]]]:
+    """
+    Split chronologically ordered images into events.
+
+    A long pause or a big move ends the current event. O(n log n), and unlike
+    spatial clustering it distinguishes two separate trips to the same place.
+    """
+    timed = [i for i in images if parse_captured_at(i.get("captured_at"))]
+    if not timed:
+        return []
+
+    timed.sort(key=lambda i: parse_captured_at(i.get("captured_at")))
+
+    segments: List[List[Dict[str, Any]]] = []
+    current: List[Dict[str, Any]] = [timed[0]]
+
+    for previous, image in zip(timed, timed[1:]):
+        gap = (
+            parse_captured_at(image["captured_at"])
+            - parse_captured_at(previous["captured_at"])
+        ).total_seconds() / 3600.0
+        distance = _haversine_km(previous, image)
+        moved = distance is not None and distance > jump_km
+
+        if gap > gap_hours or moved:
+            segments.append(current)
+            current = []
+        current.append(image)
+
+    segments.append(current)
+    return segments
+
+
+def _span_days(segment: Sequence[Dict[str, Any]]) -> float:
+    timestamps = [parse_captured_at(i.get("captured_at")) for i in segment]
+    timestamps = [t for t in timestamps if t is not None]
+    if len(timestamps) < 2:
+        return 0.0
+    return (max(timestamps) - min(timestamps)).total_seconds() / 86400.0
+
+
+def _curate_import_events(context: _CurationContext) -> int:
+    """Build memories from bursts of photos not yet used by any memory."""
+    pool_ids = db_get_uncurated_image_ids(limit=IMPORT_CANDIDATE_LIMIT)
+    if len(pool_ids) < context.preferences.min_images:
+        return 0
+
+    images = db_get_images_by_ids_for_memories(pool_ids)
+    segments = [
+        segment
+        for segment in segment_by_time_and_place(images)
+        if len(segment) >= context.preferences.min_images
+        and _span_days(segment) <= IMPORT_MAX_SPAN_DAYS
+    ]
+    if not segments:
+        return 0
+
+    # Biggest first: the strongest events are worth surfacing before the cap.
+    segments.sort(key=len, reverse=True)
+
+    generated = 0
+    for segment in segments[:MAX_IMPORT_MEMORIES]:
+        try:
+            image_ids = [image["id"] for image in segment]
+            timestamps = [
+                parse_captured_at(image.get("captured_at")) for image in segment
+            ]
+            timestamps = [t for t in timestamps if t is not None]
+            if not timestamps:
+                continue
+
+            start, end = min(timestamps), max(timestamps)
+            month_label = start.strftime("%B %Y")
+
+            # Name it after what the AI recognised, when it recognised
+            # anything; otherwise fall back to the month.
+            top_event = db_get_top_event_label(image_ids, EVENT_MIN_SCORE)
+            title = _display_event_name(top_event[1]) if top_event else month_label
+            subtitle = month_label if top_event else None
+
+            if _build_memory(
+                context,
+                image_ids=image_ids,
+                dedupe_key=f"import:{start.date()}..{end.date()}",
+                event_type="import_event",
+                title=title,
+                subtitle=subtitle,
+                surface_date=context.run_date,
+                hard_exclude_recent=True,
+            ):
+                generated += 1
+        except Exception:
+            logger.error("Failed to curate import event memory", exc_info=True)
+
+    return generated
+
+
+# ##############################
+# Trigger 3: semantic event
+# ##############################
+
+
+def group_event_occurrences(
+    hits: Sequence[Dict[str, Any]], gap_hours: float = EVENT_GAP_HOURS
+) -> List[Dict[str, Any]]:
+    """
+    Turn per-image event-label hits into discrete occurrences.
+
+    Each label's hits are split wherever they stop being contemporaneous, so
+    three separate birthdays become three occurrences rather than one.
+    """
+    by_label: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
+    for hit in hits:
+        timestamp = parse_captured_at(hit.get("captured_at"))
+        if timestamp is None:
+            continue
+        by_label[hit["class_id"]].append({**hit, "timestamp": timestamp})
+
+    occurrences: List[Dict[str, Any]] = []
+    for class_id, label_hits in by_label.items():
+        label_hits.sort(key=lambda h: h["timestamp"])
+        current: List[Dict[str, Any]] = [label_hits[0]]
+
+        for previous, hit in zip(label_hits, label_hits[1:]):
+            gap = (hit["timestamp"] - previous["timestamp"]).total_seconds() / 3600.0
+            if gap > gap_hours:
+                occurrences.append(_make_occurrence(class_id, current))
+                current = []
+            current.append(hit)
+
+        occurrences.append(_make_occurrence(class_id, current))
+
+    return occurrences
+
+
+def _make_occurrence(class_id: int, hits: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    scores = [h.get("score") or 0.0 for h in hits]
+    timestamps = [h["timestamp"] for h in hits]
+    return {
+        "class_id": class_id,
+        "image_ids": [h["image_id"] for h in hits],
+        "scores": scores,
+        "mean_score": sum(scores) / len(scores) if scores else 0.0,
+        "peak_score": max(scores) if scores else 0.0,
+        "total_score": sum(scores),
+        "start": min(timestamps),
+        "end": max(timestamps),
+    }
+
+
+def passes_coherence_gate(
+    occurrence: Dict[str, Any],
+    embeddings: Dict[str, np.ndarray],
+    min_images: int = EVENT_MIN_IMAGES,
+) -> bool:
+    """
+    Decide whether an occurrence is really one event.
+
+    Score agreement alone is not enough: the visual cohesion check is what
+    rejects a label that fired weakly across photos with nothing in common.
+    """
+    if len(occurrence["image_ids"]) < min_images:
+        return False
+    if occurrence["mean_score"] < EVENT_MEAN_SCORE:
+        return False
+    if occurrence["peak_score"] < EVENT_PEAK_SCORE:
+        return False
+
+    vectors = [
+        embeddings[image_id]
+        for image_id in occurrence["image_ids"]
+        if image_id in embeddings
+    ]
+    # Without embeddings the visual test cannot run; the score gates above
+    # already had to pass, so accept rather than silently drop everything.
+    if len(vectors) < 2:
+        return True
+
+    matrix = np.vstack([np.asarray(v, dtype=np.float32) for v in vectors])
+    norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0
+    matrix = matrix / norms
+
+    centroid = matrix.mean(axis=0)
+    centroid_norm = float(np.linalg.norm(centroid))
+    if centroid_norm == 0:
+        return False
+    centroid = centroid / centroid_norm
+
+    return float(np.mean(matrix @ centroid)) >= EVENT_COHESION
+
+
+def merge_overlapping_occurrences(
+    occurrences: Sequence[Dict[str, Any]],
+    overlap_ratio: float = EVENT_MERGE_OVERLAP,
+) -> List[Dict[str, Any]]:
+    """
+    Fold occurrences covering the same stretch of time into one memory.
+
+    A wedding weekend can fire "wedding" and "mehndi"; that is one occasion
+    with two labels, not two memories over the same photos.
+    """
+    ordered = sorted(occurrences, key=lambda o: o["start"])
+    merged: List[Dict[str, Any]] = []
+
+    for occurrence in ordered:
+        target = None
+        for candidate in merged:
+            overlap = (
+                min(candidate["end"], occurrence["end"])
+                - max(candidate["start"], occurrence["start"])
+            ).total_seconds()
+            if overlap <= 0:
+                continue
+            shorter = min(
+                (candidate["end"] - candidate["start"]).total_seconds(),
+                (occurrence["end"] - occurrence["start"]).total_seconds(),
+            )
+            # Two instants at the same moment are the same occasion.
+            if shorter <= 0 or overlap / shorter >= overlap_ratio:
+                target = candidate
+                break
+
+        if target is None:
+            merged.append({**occurrence, "class_ids": [occurrence["class_id"]]})
+            continue
+
+        target["image_ids"] = list(
+            dict.fromkeys([*target["image_ids"], *occurrence["image_ids"]])
+        )
+        target["start"] = min(target["start"], occurrence["start"])
+        target["end"] = max(target["end"], occurrence["end"])
+        target["class_ids"].append(occurrence["class_id"])
+        # Primary label is whichever contributed more total confidence.
+        if occurrence["total_score"] > target["total_score"]:
+            target["class_id"] = occurrence["class_id"]
+            target["total_score"] = occurrence["total_score"]
+
+    return merged
+
+
+def _curate_semantic_events(context: _CurationContext) -> int:
+    """Build memories from photos SigLIP2 recognises as one occasion."""
+    labels = db_get_event_labels()
+    if not labels:
+        return 0
+
+    label_names = {label["class_id"]: label["name"] for label in labels}
+    hits = db_get_event_label_hits(list(label_names), EVENT_MIN_SCORE)
+    if not hits:
+        return 0
+
+    occurrences = group_event_occurrences(hits)
+    if not occurrences:
+        return 0
+
+    # One embedding fetch for every image under consideration, rather than
+    # one per occurrence.
+    all_ids = sorted({i for o in occurrences for i in o["image_ids"]})
+    embeddings = db_get_embeddings_for_image_ids(all_ids, context.model_version)
+
+    coherent = [o for o in occurrences if passes_coherence_gate(o, embeddings)]
+    if not coherent:
+        return 0
+
+    merged = merge_overlapping_occurrences(coherent)
+    merged.sort(key=lambda o: -len(o["image_ids"]))
+
+    generated = 0
+    for occurrence in merged[:MAX_SEMANTIC_MEMORIES]:
+        try:
+            start, end = occurrence["start"], occurrence["end"]
+
+            # Pull in the unlabeled candids between the recognised shots;
+            # they are what turn a label dump into a story.
+            expansion = db_get_images_in_period(
+                start.isoformat(),
+                end.isoformat(),
+                exclude_ids=occurrence["image_ids"],
+            )
+            image_ids = [
+                *occurrence["image_ids"],
+                *[image["id"] for image in expansion],
+            ]
+
+            label = label_names.get(occurrence["class_id"], "event")
+            if _build_memory(
+                context,
+                image_ids=image_ids,
+                dedupe_key=f"semantic:{occurrence['class_id']}:{start.date()}",
+                event_type="semantic_event",
+                title=_display_event_name(label),
+                subtitle=start.strftime("%B %Y"),
+                surface_date=_semantic_surface_date(context.reference, start),
+                hard_exclude_recent=True,
+            ):
+                generated += 1
+        except Exception:
+            logger.error("Failed to curate semantic event memory", exc_info=True)
+
+    return generated
+
+
+def _semantic_surface_date(reference: date, event_start: datetime) -> str:
+    """
+    Surface on the event's upcoming anniversary, else today.
+
+    An anniversary within the next few days is worth waiting for; anything
+    else is a rediscovery and should show now.
+    """
+    try:
+        anniversary = event_start.date().replace(year=reference.year)
+    except ValueError:
+        # Feb 29 in a non-leap reference year.
+        return reference.isoformat()
+
+    delta = (anniversary - reference).days
+    if 0 <= delta <= EVENT_ANNIVERSARY_LOOKAHEAD_DAYS:
+        return anniversary.isoformat()
+    return reference.isoformat()
+
+
+# ##############################
+# Entry point
+# ##############################
+
+
+def memory_curator_run(
+    reference_date: Optional[str] = None,
+    force: bool = False,
+    trigger: str = "manual",
+) -> int:
+    """
+    Run curation for a date and return the number of memories written.
+
+    Records the run in memory_runs so an interrupted pass is detectable, and
+    never raises: callers are import hooks and background tasks where a
+    curation failure must not fail the surrounding work.
+    """
+    reference = date.fromisoformat(reference_date) if reference_date else date.today()
+    run_date = reference.isoformat()
+
+    preferences = memory_curator_get_preferences()
+    if not preferences.enabled and not force:
+        logger.info("Memories are disabled; skipping curation")
+        return 0
+
+    params_signature = memory_curator_params_signature(preferences)
+    db_start_memory_run(run_date, params_signature)
+    logger.info(f"Curating memories for {run_date} (trigger={trigger}, force={force})")
+
+    try:
+        context = _CurationContext(reference, preferences, params_signature)
+
+        generated = 0
+        for name, curate in (
+            ("anniversary", _curate_anniversaries),
+            ("semantic_event", _curate_semantic_events),
+            ("import_event", _curate_import_events),
+        ):
+            try:
+                produced = curate(context)
+                generated += produced
+                logger.info(f"{name}: {produced} memories")
+            except Exception:
+                # One failing trigger must not cost the others their output.
+                logger.error(f"{name} curation failed", exc_info=True)
+            # Later triggers must not reuse what an earlier one just claimed.
+            context.recently_used = db_get_recently_used_image_ids(
+                RECENT_USE_WINDOW_DAYS, run_date
+            )
+
+        db_finish_memory_run(run_date, "complete", generated)
+        logger.info(f"Curation complete for {run_date}: {generated} memories")
+        return generated
+    except Exception as e:
+        logger.error(f"Curation failed for {run_date}", exc_info=True)
+        db_finish_memory_run(run_date, "failed", 0, str(e))
+        return 0
