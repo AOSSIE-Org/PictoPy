@@ -339,9 +339,12 @@ export default function NetflixStylePlayer({
       onMouseLeave={() => isPlaying && hideControlsNow()}
       onTouchStart={revealControlsTemporarily}
       onFocus={(e) => {
-        if ((e.target as HTMLElement).matches?.(':focus-visible')) {
-          setIsFocusWithin(true);
-        }
+        // Pin controls open only for keyboard focus (:focus-visible), not mouse
+        // clicks. Reassign every focus so moving to a pointer-focused control
+        // clears the flag instead of leaving controls stuck visible.
+        setIsFocusWithin(
+          (e.target as HTMLElement).matches?.(':focus-visible') ?? false,
+        );
         revealControlsTemporarily();
       }}
       onBlur={(e) => {
