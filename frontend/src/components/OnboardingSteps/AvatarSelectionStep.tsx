@@ -242,6 +242,9 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
         onOpenChange={setCropDialogOpen}
         imageSrc={rawImage}
         onCropped={handleCropped}
+        onError={(message) =>
+          dispatch(showGlobalAlert({ title: 'Upload failed', message }))
+        }
       />
     </>
   );

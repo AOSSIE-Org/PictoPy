@@ -18,6 +18,8 @@ interface AvatarCropDialogProps {
   imageSrc: string | null;
   /** Called with the final square, cropped image as a data URL. */
   onCropped: (dataUrl: string) => void;
+  /** Called with a user-facing message if cropping fails. */
+  onError?: (message: string) => void;
 }
 
 export const AvatarCropDialog: React.FC<AvatarCropDialogProps> = ({
@@ -25,6 +27,7 @@ export const AvatarCropDialog: React.FC<AvatarCropDialogProps> = ({
   onOpenChange,
   imageSrc,
   onCropped,
+  onError,
 }) => {
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -52,6 +55,9 @@ export const AvatarCropDialog: React.FC<AvatarCropDialogProps> = ({
       const dataUrl = await getCroppedImg(imageSrc, croppedAreaPixels);
       onCropped(dataUrl);
       handleOpenChange(false);
+    } catch (error) {
+      console.error('Failed to crop image:', error);
+      onError?.('Could not process the selected image. Please try again.');
     } finally {
       setIsSaving(false);
     }

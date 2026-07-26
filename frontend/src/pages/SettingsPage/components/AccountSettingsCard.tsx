@@ -282,6 +282,9 @@ const AccountSettingsCard: React.FC = () => {
         onOpenChange={setCropDialogOpen}
         imageSrc={rawImage}
         onCropped={handleCropped}
+        onError={(message) =>
+          dispatch(showGlobalAlert({ title: 'Upload failed', message }))
+        }
       />
     </SettingsCard>
   );
