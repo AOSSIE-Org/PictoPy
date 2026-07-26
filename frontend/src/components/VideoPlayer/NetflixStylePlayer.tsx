@@ -5,8 +5,8 @@ import {
   Pause,
   Maximize2,
   Minimize2,
-  Rewind,
-  FastForward,
+  RotateCcw,
+  RotateCw,
   Volume2,
   VolumeX,
 } from 'lucide-react';
@@ -331,13 +331,17 @@ export default function NetflixStylePlayer({
   return (
     <div
       ref={containerRef}
-      className="relative aspect-video w-full bg-black"
+      className={`relative aspect-video w-full bg-black ${
+        controlsVisible ? '' : 'cursor-none'
+      }`}
       onMouseMove={revealControlsTemporarily}
       onMouseEnter={revealControlsTemporarily}
       onMouseLeave={() => isPlaying && hideControlsNow()}
       onTouchStart={revealControlsTemporarily}
-      onFocus={() => {
-        setIsFocusWithin(true);
+      onFocus={(e) => {
+        if ((e.target as HTMLElement).matches?.(':focus-visible')) {
+          setIsFocusWithin(true);
+        }
         revealControlsTemporarily();
       }}
       onBlur={(e) => {
@@ -476,7 +480,7 @@ export default function NetflixStylePlayer({
             className="cursor-pointer rounded-full bg-black/50 p-2 text-white transition-all duration-200 hover:bg-black/70"
             aria-label="Rewind 10 seconds"
           >
-            <Rewind size={24} />
+            <RotateCcw size={24} />
           </button>
           <button
             onClick={togglePlay}
@@ -490,31 +494,36 @@ export default function NetflixStylePlayer({
             className="cursor-pointer rounded-full bg-black/50 p-2 text-white transition-all duration-200 hover:bg-black/70"
             aria-label="Fast forward 10 seconds"
           >
-            <FastForward size={24} />
+            <RotateCw size={24} />
           </button>
-          <div className="rounded-full bg-black/50 px-2 py-1 text-white">
-            {formatDuration(currentTime) + ' / ' + formatDuration(duration)}
+          {/* Volume: slider reveals on hover */}
+          <div className="group/volume flex items-center rounded-full bg-black/50 text-white transition-all duration-200 hover:bg-black/70">
+            <button
+              onClick={toggleMute}
+              className="cursor-pointer rounded-full p-2 transition-all duration-200"
+              aria-label={isMuted ? 'Unmute' : 'Mute'}
+            >
+              {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+            </button>
+            <div className="max-w-0 overflow-hidden opacity-0 transition-all duration-200 group-focus-within/volume:max-w-[7rem] group-focus-within/volume:pr-2 group-focus-within/volume:opacity-100 group-hover/volume:max-w-[7rem] group-hover/volume:pr-2 group-hover/volume:opacity-100">
+              <Slider
+                min={0}
+                max={1}
+                step={0.01}
+                value={[isMuted ? 0 : volume]}
+                onValueChange={handleVolumeChange}
+                className="h-10 w-24 cursor-pointer px-2"
+                aria-label="Volume"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Volume and Fullscreen */}
+        {/* Timestamp and Fullscreen */}
         <div className="flex items-center space-x-4">
-          <button
-            onClick={toggleMute}
-            className="cursor-pointer rounded-full bg-black/50 p-2 text-white transition-all duration-200 hover:bg-black/70"
-            aria-label={isMuted ? 'Unmute' : 'Mute'}
-          >
-            {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
-          </button>
-          <Slider
-            min={0}
-            max={1}
-            step={0.01}
-            value={[isMuted ? 0 : volume]}
-            onValueChange={handleVolumeChange}
-            className="w-24"
-            aria-label="Volume"
-          />
+          <div className="rounded-full bg-black/50 p-2 text-white">
+            {formatDuration(currentTime) + ' / ' + formatDuration(duration)}
+          </div>
           <button
             onClick={toggleFullScreen}
             className="cursor-pointer rounded-full bg-black/50 p-2 text-white transition-all duration-200 hover:bg-black/70"
