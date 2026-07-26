@@ -25,6 +25,7 @@ from app.database.metadata import db_create_metadata_table
 from app.database.semantic_labels import db_create_semantic_labels_table
 from app.database.image_embeddings import db_create_image_embeddings_table
 from app.database.video_frames import db_create_video_frames_tables
+from app.database.memories import db_create_memories_table
 from app.utils.semantic_labels import (
     semantic_util_sync_vocabulary,
     semantic_util_build_label_embeddings,
@@ -76,6 +77,7 @@ async def lifespan(app: FastAPI):
     db_create_albums_table()
     db_create_album_images_table()
     db_create_metadata_table()
+    db_create_memories_table()  # References images(id)
     # Needs the mappings table (created above): semantic labels register
     # there as class_ids >= SEMANTIC_CLASS_ID_OFFSET
     semantic_util_sync_vocabulary()
@@ -170,9 +172,7 @@ app.include_router(
 app.include_router(
     user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
 )
-app.include_router(
-    memories_router
-)  # Memories router (prefix already defined in router)
+app.include_router(memories_router, prefix="/memories", tags=["Memories"])
 app.include_router(shutdown_router, tags=["Shutdown"])
 app.include_router(models_router, prefix="/models", tags=["Models"])
 

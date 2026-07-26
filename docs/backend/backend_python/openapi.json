@@ -1536,9 +1536,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/InputType",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/InputType"
+                }
+              ],
               "description": "Choose input type: 'path' or 'base64'",
-              "default": "path"
+              "default": "path",
+              "title": "Input Type"
             },
             "description": "Choose input type: 'path' or 'base64'"
           }
@@ -1791,64 +1796,52 @@
         }
       }
     },
-    "/api/memories/generate": {
+    "/memories/generate": {
       "post": {
         "tags": [
-          "memories"
+          "Memories"
         ],
         "summary": "Generate Memories",
-        "description": "SIMPLIFIED: Generate memories from ALL images.\n- GPS images \u2192 location-based memories\n- Non-GPS images \u2192 monthly date-based memories\n\nReturns simple breakdown: {location_count, date_count, total}",
-        "operationId": "generate_memories_api_memories_generate_post",
-        "parameters": [
-          {
-            "name": "location_radius_km",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "maximum": 100,
-              "minimum": 0.1,
-              "description": "Location clustering radius in km",
-              "default": 5.0,
-              "title": "Location Radius Km"
-            },
-            "description": "Location clustering radius in km"
+        "description": "Queue a curation run.\n\nReturns immediately; the run itself goes to the shared single-worker\nexecutor so it serializes behind indexing and semantic scoring rather than\nracing them.",
+        "operationId": "generate_memories_memories_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateMemoriesRequest"
+              }
+            }
           },
-          {
-            "name": "date_tolerance_days",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 30,
-              "minimum": 1,
-              "description": "Date tolerance in days",
-              "default": 3,
-              "title": "Date Tolerance Days"
-            },
-            "description": "Date tolerance in days"
-          },
-          {
-            "name": "min_images",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 10,
-              "minimum": 1,
-              "description": "Minimum images per memory",
-              "default": 2,
-              "title": "Min Images"
-            },
-            "description": "Minimum images per memory"
-          }
-        ],
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateMemoriesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
               }
             }
           },
@@ -1865,56 +1858,147 @@
         }
       }
     },
-    "/api/memories/timeline": {
+    "/memories/status": {
       "get": {
         "tags": [
-          "memories"
+          "Memories"
         ],
-        "summary": "Get Timeline",
-        "description": "Get memories from the past N days as a timeline.\n\nThis endpoint:\n1. Calculates date range (today - N days to today)\n2. Fetches images within that date range\n3. Clusters them into memories\n4. Returns timeline of memories\n\nArgs:\n    days: Number of days to look back (default: 365 = 1 year)\n    location_radius_km: Location clustering radius (default: 5km)\n    date_tolerance_days: Date tolerance for temporal clustering (default: 3)\n\nReturns:\n    TimelineResponse with memories ordered by date\n\nRaises:\n    HTTPException: If database query fails",
-        "operationId": "get_timeline_api_memories_timeline_get",
+        "summary": "Get Memory Status",
+        "description": "Report scheduler state.\n\nPolled by the Tauri background task, which is why indexing_busy is computed\nhere: the desktop shell never opens the database itself.",
+        "operationId": "get_memory_status_memories_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryStatusResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/today": {
+      "get": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Get Today Memory",
+        "description": "Get the memory to surface now, or null if there is nothing to show.\n\nHaving nothing to surface is a normal state for a small or new library, so\nthis returns 200 with a null payload rather than a 404.",
+        "operationId": "get_today_memory_memories_today_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTodayMemoryResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories": {
+      "get": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "List Memories",
+        "description": "List memory cards, newest first. Backs the history filmstrip and grid.",
+        "operationId": "list_memories_memories_get",
         "parameters": [
           {
-            "name": "days",
+            "name": "limit",
             "in": "query",
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 3650,
-              "minimum": 1,
-              "description": "Number of days to look back",
-              "default": 365,
-              "title": "Days"
-            },
-            "description": "Number of days to look back"
-          },
-          {
-            "name": "location_radius_km",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
               "maximum": 100,
-              "minimum": 0.1,
-              "description": "Location clustering radius in km",
-              "default": 5.0,
-              "title": "Location Radius Km"
+              "minimum": 1,
+              "description": "Maximum memories to return",
+              "default": 30,
+              "title": "Limit"
             },
-            "description": "Location clustering radius in km"
+            "description": "Maximum memories to return"
           },
           {
-            "name": "date_tolerance_days",
+            "name": "offset",
             "in": "query",
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 30,
-              "minimum": 1,
-              "description": "Date tolerance in days",
-              "default": 3,
-              "title": "Date Tolerance Days"
+              "minimum": 0,
+              "description": "Number of memories to skip",
+              "default": 0,
+              "title": "Offset"
             },
-            "description": "Date tolerance in days"
+            "description": "Number of memories to skip"
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by anniversary, import_event or semantic_event",
+              "title": "Event Type"
+            },
+            "description": "Filter by anniversary, import_event or semantic_event"
+          },
+          {
+            "name": "include_viewed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include already-viewed memories",
+              "default": true,
+              "title": "Include Viewed"
+            },
+            "description": "Include already-viewed memories"
+          },
+          {
+            "name": "include_dismissed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include dismissed memories",
+              "default": false,
+              "title": "Include Dismissed"
+            },
+            "description": "Include dismissed memories"
           }
         ],
         "responses": {
@@ -1922,9 +2006,21 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/GetMemoriesResponse"
+                }
               }
             }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1939,62 +2035,165 @@
         }
       }
     },
-    "/api/memories/on-this-day": {
+    "/memories/{memory_id}": {
       "get": {
         "tags": [
-          "memories"
+          "Memories"
         ],
-        "summary": "Get On This Day",
-        "description": "Get photos taken on this date in previous years.\n\nThis endpoint:\n1. Gets current month and day\n2. Searches for images from this month-day in all previous years\n3. Groups by year\n4. Returns images sorted by year (most recent first)\n\nReturns:\n    OnThisDayResponse with images from this date in previous years\n\nRaises:\n    HTTPException: If database query fails",
-        "operationId": "get_on_this_day_api_memories_on_this_day_get",
+        "summary": "Get Memory",
+        "description": "Get a single memory with its full image set.",
+        "operationId": "get_memory_memories__memory_id__get",
+        "parameters": [
+          {
+            "name": "memory_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Memory Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/GetMemoryResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
         }
-      }
-    },
-    "/api/memories/locations": {
-      "get": {
+      },
+      "patch": {
         "tags": [
-          "memories"
+          "Memories"
         ],
-        "summary": "Get Locations",
-        "description": "Get all unique locations where photos were taken.\n\nThis endpoint:\n1. Fetches all images with GPS coordinates\n2. Clusters them by location\n3. Returns location clusters with photo counts\n4. Includes sample images for each location\n\nArgs:\n    location_radius_km: Location clustering radius (default: 5km)\n    max_sample_images: Maximum sample images per location (default: 5)\n\nReturns:\n    LocationsResponse with list of location clusters\n\nRaises:\n    HTTPException: If database query fails",
-        "operationId": "get_locations_api_memories_locations_get",
+        "summary": "Update Memory",
+        "description": "Update a memory's viewed, dismissed or notified state.",
+        "operationId": "update_memory_memories__memory_id__patch",
         "parameters": [
           {
-            "name": "location_radius_km",
-            "in": "query",
-            "required": false,
+            "name": "memory_id",
+            "in": "path",
+            "required": true,
             "schema": {
-              "type": "number",
-              "maximum": 100,
-              "minimum": 0.1,
-              "description": "Location clustering radius in km",
-              "default": 5.0,
-              "title": "Location Radius Km"
-            },
-            "description": "Location clustering radius in km"
+              "type": "string",
+              "title": "Memory Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateMemoryResponse"
+                }
+              }
+            }
           },
-          {
-            "name": "max_sample_images",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 20,
-              "minimum": 1,
-              "description": "Max sample images per location",
-              "default": 5,
-              "title": "Max Sample Images"
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
             },
-            "description": "Max sample images per location"
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Delete Memory",
+        "description": "Delete a memory. Its curated image list cascades; the photos remain.",
+        "operationId": "delete_memory_memories__memory_id__delete",
+        "parameters": [
+          {
+            "name": "memory_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Memory Id"
+            }
           }
         ],
         "responses": {
@@ -2002,9 +2201,31 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteMemoryResponse"
+                }
               }
             }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -2559,6 +2780,42 @@
         ],
         "title": "DeleteFoldersResponse"
       },
+      "DeleteMemoryData": {
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "title": "Memory Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory_id"
+        ],
+        "title": "DeleteMemoryData",
+        "description": "Outcome of a delete call."
+      },
+      "DeleteMemoryResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DeleteMemoryData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "DeleteMemoryResponse"
+      },
       "FaceSearchRequest": {
         "properties": {
           "path": {
@@ -2658,6 +2915,80 @@
           "AI_Tagging"
         ],
         "title": "FolderDetails"
+      },
+      "GenerateMemoriesData": {
+        "properties": {
+          "run_date": {
+            "type": "string",
+            "title": "Run Date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "complete",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "queued": {
+            "type": "boolean",
+            "title": "Queued"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_date",
+          "status",
+          "queued"
+        ],
+        "title": "GenerateMemoriesData",
+        "description": "Outcome of a generate call."
+      },
+      "GenerateMemoriesRequest": {
+        "properties": {
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "default": false
+          },
+          "reference_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Date"
+          }
+        },
+        "type": "object",
+        "title": "GenerateMemoriesRequest",
+        "description": "Request model for triggering a curation run."
+      },
+      "GenerateMemoriesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/GenerateMemoriesData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GenerateMemoriesResponse"
       },
       "GetAlbumImagesRequest": {
         "properties": {
@@ -2998,6 +3329,121 @@
         ],
         "title": "GetClustersResponse"
       },
+      "GetMemoriesData": {
+        "properties": {
+          "memories": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryCard"
+            },
+            "type": "array",
+            "title": "Memories"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "GetMemoriesData",
+        "description": "Paginated memory cards."
+      },
+      "GetMemoriesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/GetMemoriesData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetMemoriesResponse"
+      },
+      "GetMemoryData": {
+        "properties": {
+          "memory": {
+            "$ref": "#/components/schemas/MemoryStory"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory"
+        ],
+        "title": "GetMemoryData",
+        "description": "A single memory story."
+      },
+      "GetMemoryResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/GetMemoryData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetMemoryResponse"
+      },
+      "GetTodayMemoryData": {
+        "properties": {
+          "memory": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemoryStory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "GetTodayMemoryData",
+        "description": "The memory to surface now, if any.\n\n`memory` is null rather than a 404 when nothing qualifies: this endpoint is\npolled, and an empty library is a normal state, not an error."
+      },
+      "GetTodayMemoryResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/GetTodayMemoryData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetTodayMemoryResponse"
+      },
       "GetUserPreferencesResponse": {
         "properties": {
           "success": {
@@ -3203,7 +3649,6 @@
           "metadata": {
             "anyOf": [
               {
-                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -3265,6 +3710,852 @@
           "base64"
         ],
         "title": "InputType"
+      },
+      "MemoriesPreferences": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "notifications_enabled": {
+            "type": "boolean",
+            "title": "Notifications Enabled",
+            "default": true
+          },
+          "story_music_enabled": {
+            "type": "boolean",
+            "title": "Story Music Enabled",
+            "default": false
+          },
+          "slide_duration_seconds": {
+            "type": "number",
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Slide Duration Seconds",
+            "default": 5.0
+          },
+          "min_images": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 2.0,
+            "title": "Min Images",
+            "default": 5
+          },
+          "max_images": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 5.0,
+            "title": "Max Images",
+            "default": 30
+          },
+          "weights": {
+            "$ref": "#/components/schemas/MemoryScoringWeights"
+          }
+        },
+        "type": "object",
+        "title": "MemoriesPreferences",
+        "description": "Memory generation and delivery preferences."
+      },
+      "MemoriesPreferencesUpdate": {
+        "properties": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "notifications_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notifications Enabled"
+          },
+          "story_music_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Story Music Enabled"
+          },
+          "slide_duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 30.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slide Duration Seconds"
+          },
+          "min_images": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 50.0,
+                "minimum": 2.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Images"
+          },
+          "max_images": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 5.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Images"
+          },
+          "weights": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemoryScoringWeightsUpdate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "MemoriesPreferencesUpdate",
+        "description": "Partial update for memories preferences; every field is optional."
+      },
+      "MemoryCard": {
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "title": "Memory Id"
+          },
+          "dedupe_key": {
+            "type": "string",
+            "title": "Dedupe Key"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "anniversary",
+              "import_event",
+              "semantic_event"
+            ],
+            "title": "Event Type"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "complete",
+              "failed",
+              "empty"
+            ],
+            "title": "Status"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "subtitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtitle"
+          },
+          "place_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Label"
+          },
+          "center_lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Center Lat"
+          },
+          "center_lon": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Center Lon"
+          },
+          "surface_date": {
+            "type": "string",
+            "title": "Surface Date"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count",
+            "default": 0
+          },
+          "cover_image_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Id"
+          },
+          "cover_thumbnail_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Thumbnail Path"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "default": 0.0
+          },
+          "notified_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notified At"
+          },
+          "viewed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewed At"
+          },
+          "dismissed": {
+            "type": "boolean",
+            "title": "Dismissed",
+            "default": false
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory_id",
+          "dedupe_key",
+          "event_type",
+          "status",
+          "title",
+          "surface_date"
+        ],
+        "title": "MemoryCard",
+        "description": "Memory summary, without the image set. Used by the history filmstrip."
+      },
+      "MemoryImageItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "thumbnailPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnailpath"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite",
+            "default": false
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "sort_order"
+        ],
+        "title": "MemoryImageItem",
+        "description": "A single curated image within a memory."
+      },
+      "MemoryScoringWeights": {
+        "properties": {
+          "favourite": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Favourite",
+            "default": 0.22
+          },
+          "known_people": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Known People",
+            "default": 0.2
+          },
+          "event_strength": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Event Strength",
+            "default": 0.18
+          },
+          "face_presence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Face Presence",
+            "default": 0.12
+          },
+          "semantic_confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Semantic Confidence",
+            "default": 0.1
+          },
+          "gps_novelty": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Gps Novelty",
+            "default": 0.1
+          },
+          "in_album": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "In Album",
+            "default": 0.08
+          }
+        },
+        "type": "object",
+        "title": "MemoryScoringWeights",
+        "description": "Relative importance of each memory scoring signal.\n\nWeights are normalized to sum to 1.0 on validation, so a UI slider set\nnever has to land on an exact total."
+      },
+      "MemoryScoringWeightsUpdate": {
+        "properties": {
+          "favourite": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favourite"
+          },
+          "known_people": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Known People"
+          },
+          "event_strength": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Strength"
+          },
+          "face_presence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Face Presence"
+          },
+          "semantic_confidence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Semantic Confidence"
+          },
+          "gps_novelty": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gps Novelty"
+          },
+          "in_album": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "In Album"
+          }
+        },
+        "type": "object",
+        "title": "MemoryScoringWeightsUpdate",
+        "description": "Partial update for scoring weights.\n\nDeliberately does not normalize: rescaling a single slider to 1.0 would\nwipe out the others. Stored values stay raw and are normalized on read."
+      },
+      "MemoryStatusData": {
+        "properties": {
+          "run_date": {
+            "type": "string",
+            "title": "Run Date"
+          },
+          "run_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "running",
+                  "complete",
+                  "failed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Status"
+          },
+          "indexing_busy": {
+            "type": "boolean",
+            "title": "Indexing Busy",
+            "default": false
+          },
+          "unviewed_count": {
+            "type": "integer",
+            "title": "Unviewed Count",
+            "default": 0
+          },
+          "latest_memory_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Memory Id"
+          },
+          "memories_enabled": {
+            "type": "boolean",
+            "title": "Memories Enabled",
+            "default": true
+          },
+          "notifications_enabled": {
+            "type": "boolean",
+            "title": "Notifications Enabled",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_date"
+        ],
+        "title": "MemoryStatusData",
+        "description": "Scheduler-facing snapshot. Polled by the Tauri background task."
+      },
+      "MemoryStatusResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MemoryStatusData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "MemoryStatusResponse"
+      },
+      "MemoryStory": {
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "title": "Memory Id"
+          },
+          "dedupe_key": {
+            "type": "string",
+            "title": "Dedupe Key"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "anniversary",
+              "import_event",
+              "semantic_event"
+            ],
+            "title": "Event Type"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "complete",
+              "failed",
+              "empty"
+            ],
+            "title": "Status"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "subtitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtitle"
+          },
+          "place_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Label"
+          },
+          "center_lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Center Lat"
+          },
+          "center_lon": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Center Lon"
+          },
+          "surface_date": {
+            "type": "string",
+            "title": "Surface Date"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count",
+            "default": 0
+          },
+          "cover_image_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Id"
+          },
+          "cover_thumbnail_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Thumbnail Path"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "default": 0.0
+          },
+          "notified_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notified At"
+          },
+          "viewed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewed At"
+          },
+          "dismissed": {
+            "type": "boolean",
+            "title": "Dismissed",
+            "default": false
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryImageItem"
+            },
+            "type": "array",
+            "title": "Images"
+          },
+          "signals": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory_id",
+          "dedupe_key",
+          "event_type",
+          "status",
+          "title",
+          "surface_date"
+        ],
+        "title": "MemoryStory",
+        "description": "A memory with its full image set, for the story viewer."
       },
       "MetadataModel": {
         "properties": {
@@ -3399,7 +4690,6 @@
           "metadata": {
             "anyOf": [
               {
-                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -4035,6 +5325,68 @@
         ],
         "title": "UpdateAlbumRequest"
       },
+      "UpdateMemoryRequest": {
+        "properties": {
+          "viewed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewed"
+          },
+          "dismissed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dismissed"
+          },
+          "notified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notified"
+          }
+        },
+        "type": "object",
+        "title": "UpdateMemoryRequest",
+        "description": "Request model for updating a memory's user-facing state."
+      },
+      "UpdateMemoryResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/GetMemoryData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "UpdateMemoryResponse"
+      },
       "UpdateUserPreferencesRequest": {
         "properties": {
           "YOLO_model_size": {
@@ -4076,6 +5428,16 @@
               }
             ],
             "title": "Video Frame Interval"
+          },
+          "memories": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemoriesPreferencesUpdate"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -4128,6 +5490,9 @@
             "minimum": 0.5,
             "title": "Video Frame Interval",
             "default": 5.0
+          },
+          "memories": {
+            "$ref": "#/components/schemas/MemoriesPreferences"
           }
         },
         "type": "object",
@@ -4497,6 +5862,30 @@
           "error"
         ],
         "title": "ErrorResponse"
+      },
+      "app__schemas__memories__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "error",
+          "message"
+        ],
+        "title": "ErrorResponse",
+        "description": "Error response model"
       },
       "app__schemas__user_preferences__ErrorResponse": {
         "properties": {
