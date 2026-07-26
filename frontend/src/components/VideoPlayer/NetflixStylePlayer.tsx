@@ -492,7 +492,7 @@ export default function NetflixStylePlayer({
           >
             <FastForward size={24} />
           </button>
-          <div className="rounded bg-black/70 px-2 py-1 text-white">
+          <div className="rounded-full bg-black/50 px-2 py-1 text-white">
             {formatDuration(currentTime) + ' / ' + formatDuration(duration)}
           </div>
         </div>
