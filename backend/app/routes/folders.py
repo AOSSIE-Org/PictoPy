@@ -63,6 +63,21 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
+def _curate_memories(trigger: str) -> None:
+    """
+    Refresh memories after the library changed.
+
+    Imported late to keep the curator out of the module import graph, and
+    swallowed on failure: a curation problem must never fail an import.
+    """
+    try:
+        from app.utils.memory_curator import memory_curator_run
+
+        memory_curator_run(force=True, trigger=trigger)
+    except Exception as e:
+        logger.error(f"Memory curation failed after {trigger}: {e}")
+
+
 def post_folder_add_sequence(folder_path: str, folder_id: int):
     """
     Post-addition sequence for a folder.
@@ -92,6 +107,11 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
         for folder_id_from_db, _ in folder_ids_and_paths:
             db_update_folder_indexing_status(folder_id_from_db, "completed")
 
+        # No AI has run yet, so only the date-driven triggers can produce
+        # anything here. Semantic events appear once tagging is enabled and
+        # this runs again.
+        _curate_memories("folder_add")
+
     except Exception as e:
         logger.error(
             f"Error in post processing after folder {folder_path} was added: {e}"
@@ -114,6 +134,9 @@ def post_AI_tagging_enabled_sequence():
         cluster_util_face_clusters_sync()
         image_util_process_unembedded_images()
         semantic_util_score_images()
+        # Curate before the video pass: semantic labels are written by now,
+        # and the video pass can run for minutes.
+        _curate_memories("ai_tagging")
         # Videos last: photos are the primary surface, so they finish first.
         video_util_process_untagged_videos()
         video_util_process_unembedded_frames()
@@ -149,6 +172,7 @@ def post_sync_folder_sequence(
         cluster_util_face_clusters_sync()
         image_util_process_unembedded_images()
         semantic_util_score_images()
+        _curate_memories("sync_folder")
         video_util_process_untagged_videos()
         video_util_process_unembedded_frames()
         semantic_util_score_videos()
