@@ -42,8 +42,8 @@ jest.mock('../../ui/Slider', () => ({
 jest.mock('lucide-react', () => ({
   Play: () => <span data-testid="icon-play">Play</span>,
   Pause: () => <span data-testid="icon-pause">Pause</span>,
-  Rewind: () => <span data-testid="icon-rewind">Rewind</span>,
-  FastForward: () => <span data-testid="icon-fastforward">FastForward</span>,
+  RotateCcw: () => <span data-testid="icon-rewind">Rewind</span>,
+  RotateCw: () => <span data-testid="icon-fastforward">FastForward</span>,
   Volume2: () => <span data-testid="icon-volume">Volume</span>,
   VolumeX: () => <span data-testid="icon-mute">Mute</span>,
   Maximize2: () => <span data-testid="icon-maximize">Maximize</span>,
@@ -454,6 +454,51 @@ describe('NetflixStylePlayer', () => {
       });
       expect(controls.className).toContain('opacity-0');
     } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('keyboard-pinned controls hide once focus moves to a pointer-focused control', () => {
+    jest.useFakeTimers();
+    const matchesSpy = jest.spyOn(Element.prototype, 'matches');
+    try {
+      const { container } = render(
+        <NetflixStylePlayer videoSrc="video.mp4" title="Test" description="" />,
+      );
+      const controls = container.querySelector(
+        '.absolute.right-0.bottom-4',
+      ) as HTMLElement;
+
+      act(() => {
+        fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+      });
+
+      // Keyboard focus (:focus-visible) pins the controls open past the delay.
+      act(() => {
+        screen.getByRole('button', { name: 'Pause' }).focus();
+      });
+      act(() => {
+        jest.advanceTimersByTime(4000);
+      });
+      expect(controls.className).toContain('opacity-100');
+
+      // Focus then moves to a pointer-focused control (not :focus-visible),
+      // which must clear the pinned flag rather than leave it stuck true.
+      const fullscreen = screen.getByRole('button', {
+        name: 'Enter fullscreen',
+      });
+      matchesSpy.mockReturnValue(false);
+      act(() => {
+        fullscreen.focus();
+      });
+      matchesSpy.mockRestore();
+
+      act(() => {
+        jest.advanceTimersByTime(4000);
+      });
+      expect(controls.className).toContain('opacity-0');
+    } finally {
+      matchesSpy.mockRestore();
       jest.useRealTimers();
     }
   });
