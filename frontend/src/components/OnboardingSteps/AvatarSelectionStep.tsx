@@ -16,9 +16,13 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Upload, User, Pencil } from 'lucide-react';
 import { avatars } from '@/constants/avatars';
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
 import { RootState } from '@/app/store';
+import { AvatarCropDialog } from '@/components/Dialog/avatarCropDialog';
+import { pickImageFile } from '@/utils/PFPutils/pickImagePFP';
+import { showGlobalAlert } from '@/features/globalAlertSlice';
 
 interface AvatarNameSelectionStepProps {
   stepIndex: number;
@@ -41,6 +45,8 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
     (state: RootState) => state.onboarding.isEditing,
   );
   const [longWordError, setLongWordError] = useState(false);
+  const [rawImage, setRawImage] = useState<string | null>(null);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
 
   useEffect(() => {
     if (
@@ -54,6 +60,28 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
   const handleAvatarSelect = (avatar: string) => {
     setLocalAvatar(avatar);
+  };
+
+  const handleUploadClick = async () => {
+    try {
+      const dataUrl = await pickImageFile();
+      if (!dataUrl) return;
+      setRawImage(dataUrl);
+      setCropDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to read selected image:', error);
+      dispatch(
+        showGlobalAlert({
+          title: 'Upload failed',
+          message: 'Could not read the selected image. Please try again.',
+        }),
+      );
+    }
+  };
+
+  const handleCropped = (dataUrl: string) => {
+    setLocalAvatar(dataUrl);
+    setRawImage(null);
   };
 
   const handleNameChange = (value: string) => {
@@ -158,6 +186,41 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                 );
               })}
             </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleUploadClick}
+              className="mt-4 gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Upload Image
+            </Button>
+
+            <div className="mt-4 w-fit">
+              <Label className="mb-2 block text-sm">Current Avatar</Label>
+              <button
+                type="button"
+                onClick={handleUploadClick}
+                aria-label="Change current avatar"
+                className="group relative inline-flex h-20 w-20 items-center justify-center rounded-full"
+              >
+                {selectedAvatar ? (
+                  <img
+                    src={selectedAvatar}
+                    alt="Current avatar"
+                    className="h-20 w-20 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="bg-muted text-muted-foreground flex h-20 w-20 items-center justify-center rounded-full">
+                    <User className="h-7 w-7" />
+                  </div>
+                )}
+                <span className="border-background absolute right-0 bottom-0 flex h-7 w-7 items-center justify-center rounded-full border-2 bg-blue-500 text-white transition-transform group-hover:scale-105">
+                  <Pencil className="h-3.5 w-3.5" />
+                </span>
+              </button>
+            </div>
           </div>
         </CardContent>
 
@@ -173,6 +236,13 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
       </Card>
 
       <AppFeatures />
+
+      <AvatarCropDialog
+        open={cropDialogOpen}
+        onOpenChange={setCropDialogOpen}
+        imageSrc={rawImage}
+        onCropped={handleCropped}
+      />
     </>
   );
 };

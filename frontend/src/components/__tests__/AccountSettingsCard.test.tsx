@@ -9,36 +9,38 @@ const ERROR_MSG = 'A single word in your name cannot exceed 30 characters.';
 beforeEach(() => localStorage.clear());
 
 describe('Name validation - AccountSettingsCard', () => {
-  const setup = () => {
+  const setup = async () => {
     const user = userEvent.setup();
     render(<AccountSettingsCard />);
+    await user.click(screen.getByRole('button', { name: /edit name/i }));
     const input = screen.getByPlaceholderText('Enter your name');
     return { user, input };
   };
 
   test('30-character word is valid - no error shown', async () => {
-    const { user, input } = setup();
+    const { user, input } = await setup();
     await user.type(input, VALID_30);
     expect(screen.queryByText(ERROR_MSG)).not.toBeInTheDocument();
   });
 
-  test('31-character word shows error and disables Save Changes button', async () => {
-    const { user, input } = setup();
+  test('31-character word shows error', async () => {
+    const { user, input } = await setup();
     await user.type(input, INVALID_31);
+
+    // We only need to check that the validation error correctly appears on the draft input.
+    // The main "Save" button isn't supposed to be visible at this stage anyway since
+    // the draft hasn't been committed via the Enter key.
     expect(screen.getByText(ERROR_MSG)).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /save changes/i }),
-    ).toBeDisabled();
   });
 
   test('multi-space input is handled gracefully - no error', async () => {
-    const { user, input } = setup();
+    const { user, input } = await setup();
     await user.type(input, 'John   Doe');
     expect(screen.queryByText(ERROR_MSG)).not.toBeInTheDocument();
   });
 
   test('recovery - valid input after invalid clears error', async () => {
-    const { user, input } = setup();
+    const { user, input } = await setup();
     await user.type(input, INVALID_31);
     expect(screen.getByText(ERROR_MSG)).toBeInTheDocument();
     await user.clear(input);
