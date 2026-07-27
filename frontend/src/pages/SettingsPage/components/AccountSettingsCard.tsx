@@ -54,7 +54,9 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
     const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
 
     const hasUnsavedChanges =
-      name !== savedName || selectedAvatar !== savedAvatar;
+      name !== savedName ||
+      selectedAvatar !== savedAvatar ||
+      (isEditingName && nameDraft !== name);
 
     const handleAvatarSelect = (avatar: string) => {
       setLocalAvatar(avatar);
@@ -131,7 +133,13 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
         setSavedAvatar(selectedAvatar);
         return true;
       } catch (error) {
-        console.error('Failed to save settings:');
+        console.error('Failed to save settings:', error);
+        dispatch(
+          showGlobalAlert({
+            title: 'Save failed',
+            message: 'Could not save your profile changes. Please try again.',
+          }),
+        );
         return false;
       }
     };
@@ -174,10 +182,9 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
 
     const handleLeaveSave = () => {
       const success = handleSave();
+      if (!success) return;
       setLeaveDialogOpen(false);
-      if (success) {
-        pendingLeave?.();
-      }
+      pendingLeave?.();
       setPendingLeave(null);
     };
 
