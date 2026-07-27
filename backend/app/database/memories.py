@@ -1084,9 +1084,23 @@ def db_get_event_labels() -> List[Dict[str, Any]]:
 
 
 def db_get_event_label_hits(
-    class_ids: Sequence[int], min_score: float
+    class_ids: Sequence[int], top_n: int, min_label_percentile: float
 ) -> List[Dict[str, Any]]:
-    """Images scoring above min_score for any of the given event labels."""
+    """
+    Images where an event label is genuinely the subject, by rank not score.
+
+    SigLIP2 scores are not comparable across labels: on a real library
+    "mehndi" peaks at 0.78 while "holi" never passes 0.0003, and only 6 of
+    395 labels ever exceed 0.15 anywhere. Any absolute cut therefore fires on
+    a handful of labels and silences the rest. Two ranks replace it:
+
+    - `image_rank` — is this label among the top few the image matched at
+      all? Computed over every semantic label on that image, so it survives
+      the whole vocabulary being scored low.
+    - `label_rank` — is this image a strong example of the label relative to
+      the other images that matched it? Percentile within the label's own
+      distribution, which is what makes labels comparable to each other.
+    """
     if not class_ids:
         return []
 
@@ -1098,16 +1112,28 @@ def db_get_event_label_hits(
         cursor = conn.cursor()
         cursor.execute(
             f"""
-            SELECT ic.image_id, ic.class_id, ic.score,
+            WITH semantic AS (
+                SELECT ic.image_id, ic.class_id, ic.score,
+                       RANK() OVER (
+                           PARTITION BY ic.image_id ORDER BY ic.score DESC
+                       ) AS image_rank,
+                       PERCENT_RANK() OVER (
+                           PARTITION BY ic.class_id ORDER BY ic.score
+                       ) AS label_rank
+                FROM image_classes ic
+                WHERE ic.class_id >= {SEMANTIC_CLASS_ID_OFFSET}
+            )
+            SELECT s.image_id, s.class_id, s.score, s.label_rank,
                    i.captured_at, i.latitude, i.longitude
-            FROM image_classes ic
-            JOIN images i ON i.id = ic.image_id
-            WHERE ic.class_id IN ({placeholders})
-              AND ic.score >= ?
+            FROM semantic s
+            JOIN images i ON i.id = s.image_id
+            WHERE s.class_id IN ({placeholders})
+              AND s.image_rank <= ?
+              AND s.label_rank >= ?
               AND i.captured_at IS NOT NULL
-            ORDER BY ic.class_id, i.captured_at
+            ORDER BY s.class_id, i.captured_at
             """,
-            [*class_ids, min_score],
+            [*class_ids, top_n, min_label_percentile],
         )
         return [dict(row) for row in cursor.fetchall()]
     finally:
@@ -1116,13 +1142,18 @@ def db_get_event_label_hits(
 
 
 def db_get_top_event_label(
-    image_ids: Sequence[ImageId], min_score: float
+    image_ids: Sequence[ImageId], top_n: int, min_label_percentile: float
 ) -> Optional[Tuple[int, str, float]]:
     """
-    Strongest event label across a set of images, by summed score.
+    Strongest event label across a set of images, by summed percentile.
 
     Names an import-event memory ("Birthday · March 2024") when the AI
-    pipeline has already recognised what the photos show.
+    pipeline has already recognised what the photos show. Gated exactly like
+    db_get_event_label_hits, and for the same reasons: summing raw scores
+    picks whichever label SigLIP2 scores high everywhere, and without the
+    per-image rank a label that fires faintly on all of them outvotes the one
+    the photos are actually of — an evening at the cinema came back titled
+    "Durga Puja" on that alone.
     """
     if not image_ids:
         return None
@@ -1138,14 +1169,26 @@ def db_get_top_event_label(
             placeholders = ", ".join("?" * len(chunk))
             cursor.execute(
                 f"""
-                SELECT ic.class_id, sl.name, SUM(ic.score) AS total
-                FROM image_classes ic
-                JOIN semantic_labels sl ON sl.class_id = ic.class_id
+                WITH ranked AS (
+                    SELECT ic.image_id, ic.class_id,
+                           RANK() OVER (
+                               PARTITION BY ic.image_id ORDER BY ic.score DESC
+                           ) AS image_rank,
+                           PERCENT_RANK() OVER (
+                               PARTITION BY ic.class_id ORDER BY ic.score
+                           ) AS label_rank
+                    FROM image_classes ic
+                    WHERE ic.class_id >= {SEMANTIC_CLASS_ID_OFFSET}
+                )
+                SELECT r.class_id, sl.name, SUM(r.label_rank) AS total
+                FROM ranked r
+                JOIN semantic_labels sl ON sl.class_id = r.class_id
                 WHERE sl.category = 'event' AND sl.active = 1
-                  AND ic.score >= ? AND ic.image_id IN ({placeholders})
-                GROUP BY ic.class_id, sl.name
+                  AND r.image_rank <= ?
+                  AND r.label_rank >= ? AND r.image_id IN ({placeholders})
+                GROUP BY r.class_id, sl.name
                 """,
-                [min_score, *chunk],
+                [top_n, min_label_percentile, *chunk],
             )
             for class_id, name, total in cursor.fetchall():
                 existing = totals.get(class_id)

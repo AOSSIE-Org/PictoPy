@@ -344,14 +344,46 @@ class TestEventLabels:
 
         assert [label["name"] for label in db_get_event_labels()] == ["wedding"]
 
-    def test_hits_respect_the_score_floor(self, test_db: str, images: List[str]):
+    def test_hits_rank_within_the_label(self, test_db: str, images: List[str]):
+        """
+        A raw score floor cannot serve a vocabulary where one label peaks at
+        0.78 and another never passes 0.0003. The image's standing among the
+        label's other matches is what carries across labels.
+        """
         event_id = SEMANTIC_CLASS_ID_OFFSET + 1
         add_semantic_label(test_db, event_id, "wedding", "event")
-        add_class_score(test_db, images[0], event_id, 0.9)
-        add_class_score(test_db, images[1], event_id, 0.05)
+        for image_id, score in zip(images, [0.00009, 0.00021, 0.00050, 0.00072]):
+            add_class_score(test_db, image_id, event_id, score)
 
-        hits = db_get_event_label_hits([event_id], 0.15)
-        assert [hit["image_id"] for hit in hits] == [images[0]]
+        hits = db_get_event_label_hits([event_id], 5, 0.50)
+
+        # Scores three orders of magnitude below any absolute gate still rank.
+        assert {hit["image_id"] for hit in hits} == set(images[2:4])
+
+    def test_hits_require_the_label_to_matter_to_the_image(
+        self, test_db: str, images: List[str]
+    ):
+        """
+        Ranking top within a label is not enough. Every image matches
+        something weakly, and top-of-a-weak-label is still noise unless the
+        label is also one of the strongest things that image matched.
+        """
+        event_id = SEMANTIC_CLASS_ID_OFFSET + 1
+        add_semantic_label(test_db, event_id, "wedding", "event")
+        for other in range(2, 6):
+            add_semantic_label(
+                test_db, SEMANTIC_CLASS_ID_OFFSET + other, f"scene-{other}", "scene"
+            )
+            add_class_score(test_db, images[0], SEMANTIC_CLASS_ID_OFFSET + other, 0.9)
+        add_class_score(test_db, images[0], event_id, 0.4)
+        add_class_score(test_db, images[1], event_id, 0.1)
+
+        hits = db_get_event_label_hits([event_id], 2, 0.0)
+
+        # images[0] scores the label higher, but four scenes beat it there.
+        # images[1] scores it lower and has nothing else, so the label is
+        # what that photo is about.
+        assert [hit["image_id"] for hit in hits] == [images[1]]
 
     def test_hits_require_a_capture_time(self, test_db: str, images: List[str]):
         event_id = SEMANTIC_CLASS_ID_OFFSET + 1
@@ -361,11 +393,12 @@ class TestEventLabels:
         conn.commit()
         conn.close()
         add_class_score(test_db, images[0], event_id, 0.9)
+        add_class_score(test_db, images[1], event_id, 0.1)
 
-        assert db_get_event_label_hits([event_id], 0.15) == []
+        assert db_get_event_label_hits([event_id], 5, 0.50) == []
 
     def test_no_class_ids_returns_nothing(self, test_db: str):
-        assert db_get_event_label_hits([], 0.15) == []
+        assert db_get_event_label_hits([], 5, 0.50) == []
 
     def test_top_event_label_picks_the_strongest_by_total(
         self, test_db: str, images: List[str]
@@ -375,19 +408,42 @@ class TestEventLabels:
         narrow = SEMANTIC_CLASS_ID_OFFSET + 2
         add_semantic_label(test_db, broad, "birthday", "event")
         add_semantic_label(test_db, narrow, "picnic", "event")
-        for image_id in images[:3]:
-            add_class_score(test_db, image_id, broad, 0.6)
+        for i, image_id in enumerate(images[:3]):
+            add_class_score(test_db, image_id, broad, 0.6 + i * 0.1)
         add_class_score(test_db, images[0], narrow, 0.9)
+        add_class_score(test_db, images[3], narrow, 0.1)
 
-        result = db_get_top_event_label(images, 0.15)
+        result = db_get_top_event_label(images, 5, 0.0)
         assert result is not None
         assert result[1] == "birthday"
+
+    def test_top_event_label_is_not_swayed_by_a_labels_own_scale(
+        self, test_db: str, images: List[str]
+    ):
+        """
+        The reason this ranks on percentile: summing raw scores just picks
+        whichever label SigLIP2 happens to score high on everything.
+        """
+        loud = SEMANTIC_CLASS_ID_OFFSET + 1
+        quiet = SEMANTIC_CLASS_ID_OFFSET + 2
+        add_semantic_label(test_db, loud, "night", "event")
+        add_semantic_label(test_db, quiet, "holi", "event")
+        # "night" fires at 0.3 on everything, so it says nothing about any of
+        # them; "holi" is tiny throughout but peaks on this set.
+        for image_id in images:
+            add_class_score(test_db, image_id, loud, 0.3)
+        for i, image_id in enumerate(images):
+            add_class_score(test_db, image_id, quiet, 0.0001 * (i + 1))
+
+        result = db_get_top_event_label(images[2:], 5, 0.50)
+        assert result is not None
+        assert result[1] == "holi"
 
     @pytest.mark.parametrize("ids", [[], ["img-0"]])
     def test_top_event_label_is_none_without_matches(
         self, images: List[str], ids: List[str]
     ):
-        assert db_get_top_event_label(ids, 0.15) is None
+        assert db_get_top_event_label(ids, 5, 0.15) is None
 
 
 # ##############################

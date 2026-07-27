@@ -466,6 +466,7 @@ def event_hits(
             "image_id": f"{prefix}{class_id}-{i}",
             "class_id": class_id,
             "score": score,
+            "label_rank": score,
             "captured_at": (start + step * i).strftime("%Y-%m-%d %H:%M:%S"),
             "latitude": None,
             "longitude": None,
@@ -513,31 +514,26 @@ class TestGroupEventOccurrences:
 
 
 class TestCoherenceGate:
-    def _occurrence(self, count=8, score=0.6):
-        return memory_curator.group_event_occurrences(
-            event_hits(1001, count, score=score)
-        )[0]
+    """
+    Cohesion is judged as a margin over the library's own baseline. SigLIP2
+    embeddings sit in a narrow cone, so an absolute cosine says nothing: a
+    random handful of unrelated photos already scores ~0.58 mean pairwise.
+    """
+
+    BASELINE = 0.58
+
+    def _occurrence(self, count=8):
+        return memory_curator.group_event_occurrences(event_hits(1001, count))[0]
 
     def test_accepts_a_coherent_occurrence(self):
         occurrence = self._occurrence()
         assert memory_curator.passes_coherence_gate(
-            occurrence, coherent_embeddings(event_hits(1001, 8))
+            occurrence, coherent_embeddings(event_hits(1001, 8)), self.BASELINE
         )
 
     def test_rejects_too_few_images(self):
         occurrence = self._occurrence(count=3)
-        assert not memory_curator.passes_coherence_gate(occurrence, {})
-
-    @pytest.mark.parametrize("score", [0.2, 0.24])
-    def test_rejects_weak_mean_score(self, score):
-        occurrence = self._occurrence(score=score)
-        assert not memory_curator.passes_coherence_gate(occurrence, {})
-
-    def test_rejects_when_no_image_scores_strongly(self):
-        """Uniformly middling scores mean the label never really fired."""
-        occurrence = self._occurrence(score=0.3)
-        assert occurrence["mean_score"] >= memory_curator.EVENT_MEAN_SCORE
-        assert not memory_curator.passes_coherence_gate(occurrence, {})
+        assert not memory_curator.passes_coherence_gate(occurrence, {}, self.BASELINE)
 
     def test_rejects_visually_incoherent_photos(self):
         """The gate that stops 'picnic' matching three unrelated lawn shots."""
@@ -547,11 +543,30 @@ class TestCoherenceGate:
             hit["image_id"]: SCATTER_BASIS[i % len(SCATTER_BASIS)]
             for i, hit in enumerate(hits)
         }
-        assert not memory_curator.passes_coherence_gate(occurrence, scattered)
+        assert not memory_curator.passes_coherence_gate(
+            occurrence, scattered, self.BASELINE
+        )
+
+    def test_a_group_no_tighter_than_the_library_is_rejected(self):
+        """
+        The regression the margin exists for: photos exactly as similar as any
+        random pair are not an occasion, however high the raw cosine reads.
+        """
+        hits = event_hits(1001, 8)
+        occurrence = memory_curator.group_event_occurrences(hits)[0]
+        embeddings = coherent_embeddings(hits)
+        assert not memory_curator.passes_coherence_gate(occurrence, embeddings, 1.0)
 
     def test_accepts_when_embeddings_are_unavailable(self):
-        """Score gates already passed; do not drop everything for want of vectors."""
-        assert memory_curator.passes_coherence_gate(self._occurrence(), {})
+        """Label ranks already passed; do not drop everything for want of vectors."""
+        assert memory_curator.passes_coherence_gate(
+            self._occurrence(), {}, self.BASELINE
+        )
+
+    def test_accepts_when_the_library_has_no_baseline_yet(self):
+        occurrence = self._occurrence()
+        embeddings = coherent_embeddings(event_hits(1001, 8))
+        assert memory_curator.passes_coherence_gate(occurrence, embeddings, None)
 
 
 class TestMergeOverlappingOccurrences:

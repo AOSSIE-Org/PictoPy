@@ -23,7 +23,10 @@ from app.config.settings import (
     SIGLIP2_ACTIVE_CHECKPOINT,
     SIGLIP2_SCORING_METADATA,
 )
-from app.database.image_embeddings import db_get_embeddings_for_image_ids
+from app.database.image_embeddings import (
+    db_get_embedding_sample,
+    db_get_embeddings_for_image_ids,
+)
 from app.database.memories import (
     db_delete_stale_memories,
     db_finish_memory_run,
@@ -47,7 +50,9 @@ from app.logging.setup_logging import get_logger
 from app.schemas.user_preferences import MemoriesPreferences
 from app.utils.memory_scoring import (
     aggregate_memory_score,
+    cohesion_baseline,
     detect_home_location,
+    mean_pairwise_cohesion,
     parse_captured_at,
     score_candidates,
     spread_over_time,
@@ -84,16 +89,25 @@ IMPORT_CANDIDATE_LIMIT = 5000
 
 # --- Semantic event --------------------------------------------------------
 
-EVENT_MIN_SCORE = 0.15
 EVENT_GAP_HOURS = 36.0
 EVENT_MIN_IMAGES = 6
-EVENT_MEAN_SCORE = 0.25
-EVENT_PEAK_SCORE = 0.50
 
-# Visual cohesion is the real discriminator: it rejects occurrences where the
-# label fired but the photos look nothing alike, which is what stops "picnic"
-# matching three unrelated lawn shots.
-EVENT_COHESION = 0.55
+# A label counts for an image when it is among the strongest few that image
+# matched, and the image ranks in the upper half of everything that label
+# matched. Ranks, not scores: SigLIP2 puts "mehndi" at 0.78 and "holi" at
+# 0.0003 on the same library, so no absolute cut can serve both.
+EVENT_LABEL_TOP_N = 2
+EVENT_LABEL_PERCENTILE = 0.50
+
+# Visual cohesion is the real discriminator, but only as a margin above what
+# this library already scores. SigLIP2 embeddings occupy a narrow cone: a
+# random handful of unrelated photos scores ~0.58 mean pairwise cosine, so an
+# absolute gate anywhere near that rejects nothing at all. Real occurrences
+# measured +0.31 to +0.35 above baseline; random groups measure +0.00.
+EVENT_COHESION_MARGIN = 0.15
+
+# Enough to characterize the library without loading every embedding.
+COHESION_SAMPLE_SIZE = 500
 
 # Two labels covering the same weekend are one occasion, not two.
 EVENT_MERGE_OVERLAP = 0.60
@@ -216,6 +230,11 @@ class _CurationContext:
         self.model_version = _active_model_version()
         self.recently_used = db_get_recently_used_image_ids(
             RECENT_USE_WINDOW_DAYS, self.run_date
+        )
+        # What "similar" already means in this library, so cohesion can be
+        # expressed as a margin over it rather than an absolute cosine.
+        self.cohesion_baseline = cohesion_baseline(
+            db_get_embedding_sample(self.model_version, COHESION_SAMPLE_SIZE)
         )
 
 
@@ -462,7 +481,9 @@ def _curate_import_events(context: _CurationContext) -> int:
 
             # Name it after what the AI recognised, when it recognised
             # anything; otherwise the dates are the most useful label.
-            top_event = db_get_top_event_label(image_ids, EVENT_MIN_SCORE)
+            top_event = db_get_top_event_label(
+                image_ids, EVENT_LABEL_TOP_N, EVENT_LABEL_PERCENTILE
+            )
             title = _display_event_name(top_event[1]) if top_event else period_label
             subtitle = period_label if top_event else None
 
@@ -523,7 +544,9 @@ def group_event_occurrences(
 
 
 def _make_occurrence(class_id: int, hits: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
-    scores = [h.get("score") or 0.0 for h in hits]
+    # Percentile within the label, not the raw score: raw scores from
+    # different labels are not on the same scale and cannot be averaged.
+    scores = [h.get("label_rank") or 0.0 for h in hits]
     timestamps = [h["timestamp"] for h in hits]
     return {
         "class_id": class_id,
@@ -540,19 +563,18 @@ def _make_occurrence(class_id: int, hits: Sequence[Dict[str, Any]]) -> Dict[str,
 def passes_coherence_gate(
     occurrence: Dict[str, Any],
     embeddings: Dict[str, np.ndarray],
+    baseline: Optional[float],
     min_images: int = EVENT_MIN_IMAGES,
 ) -> bool:
     """
     Decide whether an occurrence is really one event.
 
-    Score agreement alone is not enough: the visual cohesion check is what
-    rejects a label that fired weakly across photos with nothing in common.
+    Label agreement got these photos this far; whether they look like one
+    occasion is what decides it. Measured as a margin over `baseline`, the
+    library's own mean pairwise cosine — an absolute cosine says nothing when
+    every embedding already points broadly the same way.
     """
     if len(occurrence["image_ids"]) < min_images:
-        return False
-    if occurrence["mean_score"] < EVENT_MEAN_SCORE:
-        return False
-    if occurrence["peak_score"] < EVENT_PEAK_SCORE:
         return False
 
     vectors = [
@@ -560,23 +582,14 @@ def passes_coherence_gate(
         for image_id in occurrence["image_ids"]
         if image_id in embeddings
     ]
-    # Without embeddings the visual test cannot run; the score gates above
-    # already had to pass, so accept rather than silently drop everything.
-    if len(vectors) < 2:
+    cohesion = mean_pairwise_cohesion(vectors)
+    # Without embeddings, or before the library has been characterized, the
+    # visual test cannot run. The label ranks already had to pass, so accept
+    # rather than silently dropping everything.
+    if cohesion is None or baseline is None:
         return True
 
-    matrix = np.vstack([np.asarray(v, dtype=np.float32) for v in vectors])
-    norms = np.linalg.norm(matrix, axis=1, keepdims=True)
-    norms[norms == 0] = 1.0
-    matrix = matrix / norms
-
-    centroid = matrix.mean(axis=0)
-    centroid_norm = float(np.linalg.norm(centroid))
-    if centroid_norm == 0:
-        return False
-    centroid = centroid / centroid_norm
-
-    return float(np.mean(matrix @ centroid)) >= EVENT_COHESION
+    return cohesion >= baseline + EVENT_COHESION_MARGIN
 
 
 def merge_overlapping_occurrences(
@@ -635,7 +648,9 @@ def _curate_semantic_events(context: _CurationContext) -> int:
         return 0
 
     label_names = {label["class_id"]: label["name"] for label in labels}
-    hits = db_get_event_label_hits(list(label_names), EVENT_MIN_SCORE)
+    hits = db_get_event_label_hits(
+        list(label_names), EVENT_LABEL_TOP_N, EVENT_LABEL_PERCENTILE
+    )
     if not hits:
         return 0
 
@@ -648,7 +663,11 @@ def _curate_semantic_events(context: _CurationContext) -> int:
     all_ids = sorted({i for o in occurrences for i in o["image_ids"]})
     embeddings = db_get_embeddings_for_image_ids(all_ids, context.model_version)
 
-    coherent = [o for o in occurrences if passes_coherence_gate(o, embeddings)]
+    coherent = [
+        o
+        for o in occurrences
+        if passes_coherence_gate(o, embeddings, context.cohesion_baseline)
+    ]
     if not coherent:
         return 0
 

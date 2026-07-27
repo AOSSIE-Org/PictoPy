@@ -139,6 +139,32 @@ def db_get_embeddings_for_image_ids(
             conn.close()
 
 
+def db_get_embedding_sample(model_version: str, limit: int) -> List[np.ndarray]:
+    """
+    A slice of the library's embeddings, for measuring its own baseline.
+
+    Ordered by image id rather than sampled randomly so a run is
+    reproducible; ids are UUIDs, so that is already an arbitrary slice.
+    """
+    conn = None
+    try:
+        conn = _connect()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT embedding FROM image_embeddings
+            WHERE model_version = ?
+            ORDER BY image_id
+            LIMIT ?
+            """,
+            (model_version, limit),
+        )
+        return [np.frombuffer(row[0], dtype=np.float32) for row in cursor.fetchall()]
+    finally:
+        if conn:
+            conn.close()
+
+
 def db_get_embeddings_needing_scoring(
     model_version: str, signature: str, limit: int
 ) -> Tuple[List[str], np.ndarray]:
