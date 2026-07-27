@@ -36,6 +36,7 @@ from app.database.folders import (
     db_find_parent_folder_id,
 )
 from app.database.images import db_create_images_table
+from app.database.videos import db_create_videos_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 
 # ##############################
@@ -52,6 +53,7 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
         monkeypatch.setattr("app.config.settings.DATABASE_PATH", db_path)
         monkeypatch.setattr("app.database.folders.DATABASE_PATH", db_path)
         monkeypatch.setattr("app.database.images.DATABASE_PATH", db_path)
+        monkeypatch.setattr("app.database.videos.DATABASE_PATH", db_path)
         monkeypatch.setattr("app.database.yolo_mapping.DATABASE_PATH", db_path)
 
         # Build the real schema rather than a hand-written copy: a divergent
@@ -61,6 +63,7 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
         db_create_YOLO_classes_table()
         db_create_folders_table()
         db_create_images_table()  # db_get_all_folder_details LEFT JOINs it
+        db_create_videos_table()  # db_get_all_folder_details LEFT JOINs it too
 
         yield db_path
     finally:
@@ -135,6 +138,7 @@ def sample_folder_details():
             False,  # taggingCompleted
             "completed",  # indexing_status
             0,  # image_count
+            7,  # video_count -- a video-only folder is not "empty"
         ),
         (
             "folder-id-2",
@@ -145,6 +149,7 @@ def sample_folder_details():
             True,
             "completed",
             25,
+            0,
         ),
     ]
 
@@ -646,6 +651,9 @@ class TestFoldersAPI:
         assert first_folder["parent_folder_id"] is None
         assert first_folder["AI_Tagging"] is True
         assert first_folder["taggingCompleted"] is False
+        # The video-only fixture folder must surface its media counts.
+        assert first_folder["image_count"] == 0
+        assert first_folder["video_count"] == 7
 
         mock_get_all_folders.assert_called_once()
 
@@ -1122,8 +1130,51 @@ class TestFoldersUnit:
                 0,  # taggingCompleted
                 "not_started",  # indexing_status (schema default)
                 2,  # image_count
+                0,  # video_count
             )
         ]
+
+    def test_db_get_all_folder_details_counts_videos(self, test_db):
+        """Distinct image/video counts on both sides of the media join.
+
+        The mixed folder deliberately has >1 of each: the images x videos
+        join fans out to 2*2=4 rows, so counting anything but DISTINCT ids
+        would over-report. A separate video-only folder pins image_count=0.
+        """
+        conn = sqlite3.connect(test_db)
+        conn.executemany(
+            """
+            INSERT INTO folders (folder_id, folder_path, parent_folder_id,
+                                 last_modified_time, AI_Tagging, taggingCompleted)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [
+                ("mixed", "/home/user/media", None, 1693526400, True, False),
+                ("videos-only", "/home/user/clips", None, 1693526400, True, False),
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO images (id, path, folder_id) VALUES (?, ?, ?)",
+            [
+                ("img-1", "/home/user/media/a.jpg", "mixed"),
+                ("img-2", "/home/user/media/b.jpg", "mixed"),
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO videos (id, path, folder_id) VALUES (?, ?, ?)",
+            [
+                ("vid-1", "/home/user/media/a.mp4", "mixed"),
+                ("vid-2", "/home/user/media/b.mp4", "mixed"),
+                ("vid-3", "/home/user/clips/c.mp4", "videos-only"),
+            ],
+        )
+        conn.commit()
+        conn.close()
+
+        # (image_count, video_count) keyed by folder_id, order-independent.
+        counts = {row[0]: (row[7], row[8]) for row in db_get_all_folder_details()}
+        assert counts["mixed"] == (2, 2)
+        assert counts["videos-only"] == (0, 1)
 
     def test_db_get_direct_child_folders(self, test_db):
         conn = sqlite3.connect(test_db)
