@@ -13,7 +13,11 @@ from app.routes import folders
 from app.database.albums import db_create_album_images_table, db_create_albums_table
 from app.database.face_clusters import db_create_clusters_table
 from app.database.faces import db_create_faces_table
-from app.database.folders import db_create_folders_table, db_set_tagging_completed
+from app.database.folders import (
+    db_clear_stale_processing_flags,
+    db_create_folders_table,
+    db_set_tagging_completed,
+)
 from app.database.image_embeddings import (
     db_create_image_embeddings_table,
     db_get_embeddings_for_image_ids,
@@ -456,6 +460,51 @@ class TestTaggingCompletedLifecycle:
 
         assert self.result is False
         assert db_is_indexing_busy() is False
+
+    def test_startup_clears_flags_left_by_an_earlier_session(self, ai_folder: str):
+        """
+        Setting the flag when tagging ends does nothing for a library whose
+        tagging already finished under the older code. Startup has to correct
+        those rows or they stay blocked forever.
+        """
+        assert db_is_indexing_busy() is True
+
+        assert db_clear_stale_processing_flags() == 1
+        assert db_is_indexing_busy() is False
+
+    def test_startup_clears_an_interrupted_index(self, test_db: str):
+        conn = sqlite3.connect(test_db)
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path, last_modified_time, "
+            "AI_Tagging, indexing_status) VALUES ('f-killed', '/killed', 0, 0, "
+            "'in_progress')"
+        )
+        conn.commit()
+        conn.close()
+
+        assert db_is_indexing_busy() is True
+        assert db_clear_stale_processing_flags() == 1
+        assert db_is_indexing_busy() is False
+
+    def test_startup_is_idempotent_and_spares_untagged_folders(self, test_db: str):
+        conn = sqlite3.connect(test_db)
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path, last_modified_time, "
+            "AI_Tagging, taggingCompleted) VALUES ('f-plain', '/plain', 0, 0, 0)"
+        )
+        conn.commit()
+        conn.close()
+
+        assert db_clear_stale_processing_flags() == 0
+        assert db_clear_stale_processing_flags() == 0
+
+        conn = sqlite3.connect(test_db)
+        completed = conn.execute(
+            "SELECT taggingCompleted FROM folders WHERE folder_id = 'f-plain'"
+        ).fetchone()[0]
+        conn.close()
+        # Never AI-tagged, so the flag is meaningless and must stay untouched.
+        assert completed == 0
 
     def test_sync_clears_the_gate_too(self, ai_folder: str):
         with ExitStack() as stack:

@@ -494,6 +494,42 @@ def db_set_tagging_completed(completed: bool) -> int:
         conn.close()
 
 
+def db_clear_stale_processing_flags() -> int:
+    """
+    Clear processing flags left behind by a previous session.
+
+    Call only at startup. Indexing and tagging both run in the executor and
+    are only ever started by a request, so nothing can be in flight yet: any
+    folder still marked busy was interrupted, or predates the code that
+    finishes the flag. Either way it would block memory generation forever.
+
+    Returns the number of folders corrected.
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE folders SET taggingCompleted = 1 "
+            "WHERE AI_Tagging = 1 AND IFNULL(taggingCompleted, 0) = 0"
+        )
+        corrected = cursor.rowcount
+        cursor.execute(
+            "UPDATE folders SET indexing_status = 'completed' "
+            "WHERE indexing_status = 'in_progress'"
+        )
+        corrected += cursor.rowcount
+        conn.commit()
+        if corrected:
+            logger.info(f"Cleared stale processing flags on {corrected} folder(s)")
+        return corrected
+    except sqlite3.Error as e:
+        logger.error(f"Error clearing stale processing flags: {e}")
+        conn.rollback()
+        return 0
+    finally:
+        conn.close()
+
+
 def db_update_folder_indexing_status(folder_id: str, status: str) -> None:
     """Update the indexing_status of a specific folder."""
     conn = sqlite3.connect(DATABASE_PATH)

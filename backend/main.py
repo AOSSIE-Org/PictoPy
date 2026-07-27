@@ -20,7 +20,10 @@ from app.database.face_clusters import db_create_clusters_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 from app.database.albums import db_create_albums_table
 from app.database.albums import db_create_album_images_table
-from app.database.folders import db_create_folders_table
+from app.database.folders import (
+    db_create_folders_table,
+    db_clear_stale_processing_flags,
+)
 from app.database.metadata import db_create_metadata_table
 from app.database.semantic_labels import db_create_semantic_labels_table
 from app.database.image_embeddings import db_create_image_embeddings_table
@@ -78,6 +81,9 @@ async def lifespan(app: FastAPI):
     db_create_album_images_table()
     db_create_metadata_table()
     db_create_memories_table()  # References images(id)
+    # Nothing is indexing or tagging yet, so anything still flagged busy is
+    # left over from a previous session and would block memory generation.
+    db_clear_stale_processing_flags()
     # Needs the mappings table (created above): semantic labels register
     # there as class_ids >= SEMANTIC_CLASS_ID_OFFSET
     semantic_util_sync_vocabulary()
