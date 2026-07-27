@@ -25,6 +25,7 @@ from app.config.settings import (
 )
 from app.database.image_embeddings import db_get_embeddings_for_image_ids
 from app.database.memories import (
+    db_delete_stale_memories,
     db_finish_memory_run,
     db_get_anniversary_candidates,
     db_get_event_label_hits,
@@ -782,6 +783,17 @@ def memory_curator_run(
     logger.info(f"Curating memories for {run_date} (trigger={trigger}, force={force})")
 
     try:
+        # Before anything is built: drop memories the library has outgrown.
+        # A re-sync that corrects capture dates leaves them stranded, and
+        # their photos are candidates again once they are gone. Housekeeping,
+        # so failing it must not cost the run the memories it came to make.
+        try:
+            stale = db_delete_stale_memories()
+            if stale:
+                logger.info(f"Dropped {stale} memories whose capture dates moved")
+        except Exception:
+            logger.error("Failed to drop stale memories", exc_info=True)
+
         context = _CurationContext(reference, preferences, params_signature)
 
         generated = 0

@@ -725,6 +725,35 @@ class TestRunOrchestration:
         assert generated == 0
         assert finish.call_args[0][1] == "failed"
 
+    def test_stale_memories_are_dropped_before_anything_is_built(self):
+        """
+        Their photos become candidates again only once the stale memory is
+        gone, so the order matters, not just the call.
+        """
+        order: List[str] = []
+        with (
+            patch.object(
+                memory_curator,
+                "db_delete_stale_memories",
+                side_effect=lambda: order.append("prune") or 0,
+            ),
+            patch.object(
+                memory_curator,
+                "db_get_anniversary_candidates",
+                side_effect=lambda *a, **k: order.append("curate") or [],
+            ),
+        ):
+            memory_curator.memory_curator_run(reference_date=REFERENCE)
+
+        assert order[0] == "prune"
+
+    def test_a_failing_prune_does_not_stop_the_run(self):
+        with patch.object(
+            memory_curator, "db_delete_stale_memories", side_effect=Exception("locked")
+        ):
+            upserts = run_curator(anniversary=make_anniversary_images(2024, 5))
+        assert len(of_type(upserts, "anniversary")) == 1
+
     def test_recently_used_is_refreshed_between_triggers(self):
         """Later triggers must not reuse what an earlier one just claimed."""
         mocks: Dict[str, Any] = {}

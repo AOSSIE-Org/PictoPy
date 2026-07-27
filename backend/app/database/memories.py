@@ -353,6 +353,45 @@ def db_prune_empty_memories(min_images: int) -> int:
             conn.close()
 
 
+def db_delete_stale_memories() -> int:
+    """
+    Delete memories holding a photo whose capture date has since moved.
+
+    period_start/period_end are the min and max of exactly these images, so a
+    member sitting outside that window means the dates underneath the memory
+    changed after it was built — a re-extraction correcting an EXIF read, or a
+    guessed date being withdrawn. The memory now claims an occasion that never
+    happened, and no rebuild reaches it: its dedupe_key encodes the old dates,
+    so curation never generates that key again.
+    """
+    conn = None
+    try:
+        conn = _connect()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            DELETE FROM memories
+            WHERE period_start IS NOT NULL
+              AND period_end IS NOT NULL
+              AND EXISTS (
+                  SELECT 1 FROM memory_images mi
+                  JOIN images i ON i.id = mi.image_id
+                  WHERE mi.memory_id = memories.memory_id
+                    AND (i.captured_at IS NULL
+                         OR datetime(i.captured_at)
+                            < datetime(memories.period_start)
+                         OR datetime(i.captured_at)
+                            > datetime(memories.period_end))
+              )
+            """
+        )
+        conn.commit()
+        return cursor.rowcount
+    finally:
+        if conn is not None:
+            conn.close()
+
+
 def db_get_memory(memory_id: MemoryId) -> Optional[Dict[str, Any]]:
     """Get a single memory row with its live image count and cover thumbnail."""
     conn = None

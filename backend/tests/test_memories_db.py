@@ -12,6 +12,7 @@ from app.database.memories import (
     db_count_unviewed_memories,
     db_create_memories_table,
     db_delete_memory,
+    db_delete_stale_memories,
     db_finish_memory_run,
     db_get_anniversary_candidates,
     db_get_existing_dedupe_keys,
@@ -323,6 +324,112 @@ class TestMarkAndPrune:
         assert db_prune_empty_memories(2) == 1
         assert db_get_memory(shrink)["status"] == "empty"
         assert db_get_memory(keep)["status"] == "complete"
+
+
+# ##############################
+# Stale memories
+# ##############################
+
+
+def redate(db_path: str, image_id: str, captured_at: Optional[str]) -> None:
+    """Move a photo's capture date, as a re-extraction would."""
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "UPDATE images SET captured_at = ? WHERE id = ?", (captured_at, image_id)
+    )
+    conn.commit()
+    conn.close()
+
+
+class TestDeleteStaleMemories:
+    """
+    A memory's period is the min and max of its own photos. If a re-sync moves
+    one of those dates the memory describes an occasion that never happened,
+    and nothing rebuilds it: its dedupe_key encodes the dates it was born with.
+    """
+
+    def dated(self, key: str, image_ids: Sequence[str]) -> str:
+        return db_upsert_memory(
+            make_memory(
+                key,
+                period_start="2024-06-15 10:00:00",
+                period_end="2024-06-15 12:00:00",
+            ),
+            entries(image_ids),
+        )
+
+    def test_a_memory_whose_photo_moved_out_of_period_is_deleted(
+        self, test_db: str, images: List[str]
+    ):
+        memory_id = self.dated("import:2024-06-15..2024-06-15", images[:3])
+
+        redate(test_db, images[1], "2022-01-09 08:00:00")
+
+        assert db_delete_stale_memories() == 1
+        assert db_get_memory(memory_id) is None
+
+    def test_a_withdrawn_date_is_stale_too(self, test_db: str, images: List[str]):
+        """
+        Capture dates that were only ever a filesystem mtime get cleared to
+        NULL, which leaves the memory just as unfounded as a moved one.
+        """
+        memory_id = self.dated("import:2024-06-15..2024-06-15", images[:3])
+
+        redate(test_db, images[0], None)
+
+        assert db_delete_stale_memories() == 1
+        assert db_get_memory(memory_id) is None
+
+    def test_an_intact_memory_survives(self, test_db: str, images: List[str]):
+        memory_id = self.dated("import:2024-06-15..2024-06-15", images[:3])
+
+        assert db_delete_stale_memories() == 0
+        assert db_get_memory(memory_id) is not None
+
+    def test_the_period_boundaries_are_inclusive(self, test_db: str, images: List[str]):
+        """The first and last photo sit exactly on the period, by definition."""
+        memory_id = self.dated("import:2024-06-15..2024-06-15", images[:3])
+
+        redate(test_db, images[0], "2024-06-15 10:00:00")
+        redate(test_db, images[2], "2024-06-15 12:00:00")
+
+        assert db_delete_stale_memories() == 0
+        assert db_get_memory(memory_id) is not None
+
+    def test_iso_and_space_separators_compare_equal(
+        self, test_db: str, images: List[str]
+    ):
+        """Stored dates use a T; periods are written from datetime.isoformat."""
+        memory_id = self.dated("import:2024-06-15..2024-06-15", images[:3])
+
+        redate(test_db, images[1], "2024-06-15T11:30:00")
+
+        assert db_delete_stale_memories() == 0
+        assert db_get_memory(memory_id) is not None
+
+    def test_a_memory_without_a_period_is_left_alone(self, images: List[str]):
+        """No period means no claim about when it happened, so nothing to break."""
+        memory_id = db_upsert_memory(make_memory("undated"), entries(images[:3]))
+
+        assert db_delete_stale_memories() == 0
+        assert db_get_memory(memory_id) is not None
+
+    def test_only_the_affected_memory_goes(self, test_db: str, images: List[str]):
+        stale = self.dated("import:stale", images[:3])
+        intact = self.dated("import:intact", images[:2])
+
+        conn = sqlite3.connect(test_db)
+        conn.execute(
+            "DELETE FROM memory_images WHERE memory_id = ? AND image_id = ?",
+            (intact, images[1]),
+        )
+        conn.commit()
+        conn.close()
+        redate(test_db, images[1], "2022-01-09 08:00:00")
+
+        assert db_delete_stale_memories() == 1
+        assert db_get_memory(stale) is None
+        assert db_get_memory(intact) is not None
 
 
 # ##############################
