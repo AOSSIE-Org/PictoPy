@@ -68,7 +68,9 @@ class MetadataExtractor:
 
             try:
                 number = float(value)
-            except (ValueError, TypeError):
+            except (ValueError, TypeError, OverflowError):
+                # OverflowError covers integers too large to become a float,
+                # which JSON metadata can carry with no size limit
                 logger.warning(f"Ignoring unreadable {field}: {value!r}")
                 continue
 
@@ -239,7 +241,7 @@ class MetadataExtractor:
                         try:
                             captured_at = datetime.strptime(date_str, fmt)
                             break
-                        except (ValueError, TypeError):
+                        except (ValueError, TypeError, OverflowError):
                             continue
 
                 if not captured_at:

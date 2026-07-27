@@ -78,6 +78,16 @@ class TestResolveCoordinate:
         """bool is a subclass of int, but it is not a coordinate."""
         assert resolve_latitude(value, 28.6) == 28.6
 
+    @pytest.mark.parametrize("sign", [1, -1])
+    def test_oversized_integers_are_skipped(self, sign):
+        """An integer too large to become a float falls through, not raises."""
+        oversized = sign * int("9" * 400)
+        assert resolve_latitude(oversized, 28.6) == 28.6
+
+    def test_oversized_integer_alone_returns_none(self):
+        """An oversized integer with no fallback resolves to None."""
+        assert resolve_latitude(int("9" * 400)) is None
+
     def test_returns_none_when_no_candidate_qualifies(self):
         """None is returned when every candidate is unusable."""
         assert resolve_latitude(None, "", "junk", 200) is None
@@ -172,6 +182,29 @@ class TestFallthroughToLowerPrioritySource:
         """A resolvable longitude alone is not a location."""
         metadata = {"latitude": "junk", "longitude": 77.2}
         assert extractor.extract_gps_coordinates(metadata) == (None, None)
+
+    def test_oversized_integer_falls_back_to_exif(self, extractor):
+        """
+        An integer too large to convert falls through to exif.gps.
+
+        JSON puts no size limit on integers, so metadata can carry a value that
+        raises OverflowError rather than ValueError on conversion.
+        """
+        metadata = {
+            "latitude": int("9" * 400),
+            "longitude": 77.2,
+            "exif": {"gps": {"latitude": 28.6}},
+        }
+        assert extractor.extract_gps_coordinates(metadata) == (28.6, 77.2)
+
+    def test_oversized_integer_survives_the_json_entry_point(self, extractor):
+        """The same value arriving as a JSON string is handled end to end."""
+        metadata_json = (
+            '{"latitude": ' + "9" * 400 + ', "longitude": 77.2,'
+            ' "exif": {"gps": {"latitude": 28.6}}}'
+        )
+        latitude, longitude, _ = extractor.extract_all(metadata_json)
+        assert (latitude, longitude) == (28.6, 77.2)
 
 
 class TestExtractGPSCoordinatesZeroValues:
