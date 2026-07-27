@@ -31,11 +31,14 @@ from app.database.memories import (
     db_get_event_labels,
     db_get_images_by_ids_for_memories,
     db_get_images_in_period,
+    db_get_memory_ids_for_cluster,
+    db_get_memory_images,
     db_get_recently_used_image_ids,
     db_get_scoring_signals,
     db_get_top_event_label,
     db_get_uncurated_image_ids,
     db_start_memory_run,
+    db_update_memory_scores,
     db_upsert_memory,
 )
 from app.database.metadata import db_get_metadata
@@ -668,6 +671,59 @@ def _semantic_surface_date(reference: date, event_start: datetime) -> str:
 # ##############################
 # Entry point
 # ##############################
+
+
+def memory_curator_rescore(memory_ids: Sequence[str]) -> int:
+    """
+    Re-score existing memories in place. Returns the number updated.
+
+    Membership stays fixed: only the per-image scores, the cover and the
+    memory's own score move. Naming a face changes a scoring input for photos
+    that are already curated, and those memories cannot be rebuilt from
+    scratch anyway, since their images no longer appear in any candidate pool.
+    Rescoring keeps the ranking honest without reshuffling something the user
+    may already have watched.
+    """
+    if not memory_ids:
+        return 0
+
+    preferences = memory_curator_get_preferences()
+    weights = preferences.weights
+    home = detect_home_location()
+
+    updated = 0
+    for memory_id in memory_ids:
+        try:
+            images = db_get_memory_images(memory_id)
+            if not images:
+                continue
+
+            scored = score_candidates(
+                db_get_scoring_signals([image["id"] for image in images]),
+                weights,
+                home,
+            )
+            if not scored:
+                continue
+
+            cover = max(scored, key=lambda c: c["score"])
+            db_update_memory_scores(
+                memory_id,
+                [(c["id"], c["score"]) for c in scored],
+                cover["id"],
+                aggregate_memory_score(scored),
+            )
+            updated += 1
+        except Exception:
+            logger.error(f"Failed to rescore memory {memory_id}", exc_info=True)
+
+    logger.info(f"Rescored {updated} memories")
+    return updated
+
+
+def memory_curator_rescore_for_cluster(cluster_id: str) -> int:
+    """Rescore every memory containing a face from the given cluster."""
+    return memory_curator_rescore(db_get_memory_ids_for_cluster(cluster_id))
 
 
 def memory_curator_run(

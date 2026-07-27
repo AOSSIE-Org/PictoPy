@@ -1,10 +1,11 @@
 import logging
 from binascii import Error as Base64Error
 import base64
+from concurrent.futures import ProcessPoolExecutor
 from typing import Annotated
 import uuid
 import os
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from app.database.face_clusters import (
     db_get_cluster_by_id,
     db_update_cluster,
@@ -38,12 +39,34 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def get_state(request: Request):
+    return request.app.state
+
+
+def _rescore_memories_for_cluster(app_state, cluster_id: str) -> None:
+    """
+    Queue a rescore of memories containing this cluster.
+
+    Offloaded to the shared executor and swallowed on failure: renaming a
+    person must succeed whether or not memories can be refreshed.
+    """
+    try:
+        from app.utils.memory_curator import memory_curator_rescore_for_cluster
+
+        executor: ProcessPoolExecutor = app_state.executor
+        executor.submit(memory_curator_rescore_for_cluster, cluster_id)
+    except Exception as e:
+        logger.error(f"Failed to queue memory rescore for cluster {cluster_id}: {e}")
+
+
 @router.put(
     "/{cluster_id}",
     response_model=RenameClusterResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 404, 500]},
 )
-def rename_cluster(cluster_id: str, request: RenameClusterRequest):
+def rename_cluster(
+    cluster_id: str, request: RenameClusterRequest, app_state=Depends(get_state)
+):
     """Rename a face cluster by its ID."""
     try:
         # Step 1: Data Validation
@@ -80,6 +103,11 @@ def rename_cluster(cluster_id: str, request: RenameClusterRequest):
                     message=f"Failed to update cluster '{cluster_id}'.",
                 ).model_dump(),
             )
+
+        # Naming a person raises the known_people signal for every photo they
+        # appear in, so memories already holding those photos are now ranked
+        # on stale inputs.
+        _rescore_memories_for_cluster(app_state, cluster_id)
 
         return RenameClusterResponse(
             success=True,

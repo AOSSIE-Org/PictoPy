@@ -799,6 +799,72 @@ def db_get_images_by_ids_for_memories(
             conn.close()
 
 
+def db_get_memory_ids_for_cluster(cluster_id: str) -> List[MemoryId]:
+    """Ids of complete memories holding at least one face from a cluster."""
+    conn = None
+    try:
+        conn = _connect()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT DISTINCT mi.memory_id
+            FROM memory_images mi
+            JOIN faces f ON f.image_id = mi.image_id
+            JOIN memories m ON m.memory_id = mi.memory_id
+            WHERE f.cluster_id = ? AND m.status = 'complete'
+            """,
+            (cluster_id,),
+        )
+        return [row[0] for row in cursor.fetchall()]
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def db_update_memory_scores(
+    memory_id: MemoryId,
+    image_scores: Sequence[Tuple[ImageId, float]],
+    cover_image_id: Optional[ImageId],
+    score: float,
+) -> bool:
+    """
+    Rewrite the scores of a memory's existing images.
+
+    Membership and order are untouched: this exists so a change in scoring
+    inputs can be reflected without reshuffling a memory the user may already
+    have seen.
+    """
+    conn = None
+    try:
+        conn = _connect()
+        cursor = conn.cursor()
+        cursor.executemany(
+            "UPDATE memory_images SET score = ? WHERE memory_id = ? AND image_id = ?",
+            [
+                (image_score, memory_id, image_id)
+                for image_id, image_score in image_scores
+            ],
+        )
+        cursor.execute(
+            """
+            UPDATE memories
+               SET cover_image_id = ?, score = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE memory_id = ?
+            """,
+            (cover_image_id, score, memory_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        if conn is not None:
+            conn.rollback()
+        logger.error(f"Error updating scores for memory {memory_id}: {e}")
+        raise
+    finally:
+        if conn is not None:
+            conn.close()
+
+
 def db_get_scoring_signals(image_ids: Sequence[ImageId]) -> List[Dict[str, Any]]:
     """
     Collect every raw scoring signal for a candidate set in one pass.

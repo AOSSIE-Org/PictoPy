@@ -2,8 +2,9 @@ import os
 import sqlite3
 import tempfile
 from contextlib import ExitStack
+from types import SimpleNamespace
 from typing import Iterator, List
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -30,9 +31,17 @@ from app.database.memories import (
     db_get_gps_cell_centre,
     db_get_gps_histogram,
     db_get_images_in_period,
+    db_get_memory,
+    db_get_memory_ids_for_cluster,
+    db_get_memory_images,
     db_get_scoring_signals,
     db_get_top_event_label,
     db_is_indexing_busy,
+    db_upsert_memory,
+)
+from app.utils.memory_curator import (
+    memory_curator_rescore,
+    memory_curator_rescore_for_cluster,
 )
 from app.database.semantic_labels import (
     SEMANTIC_CLASS_ID_OFFSET,
@@ -519,6 +528,145 @@ class TestTaggingCompletedLifecycle:
             assert folders.post_sync_folder_sequence("/ai", 1, []) is True
 
         assert db_is_indexing_busy() is False
+
+
+# ##############################
+# Rescoring after a cluster rename
+# ##############################
+
+
+@pytest.fixture
+def memory_with_faces(test_db: str, images: List[str]) -> str:
+    """
+    A memory whose first half shows an unnamed person and second half another.
+
+    Both halves carry one face, so every image ties until one cluster is
+    named. That makes the effect of naming observable on its own.
+    """
+    conn = sqlite3.connect(test_db)
+    for cluster_id in ("c-other", "c-mum"):
+        conn.execute(
+            "INSERT INTO face_clusters (cluster_id, cluster_name) VALUES (?, '')",
+            (cluster_id,),
+        )
+    for index, image_id in enumerate(images):
+        conn.execute(
+            "INSERT INTO faces (image_id, cluster_id) VALUES (?, ?)",
+            (image_id, "c-other" if index < 2 else "c-mum"),
+        )
+    conn.commit()
+    conn.close()
+
+    memory_id = db_upsert_memory(
+        {
+            "memory_id": "mem-faces",
+            "dedupe_key": "import:2024-06-15..2024-06-15",
+            "event_type": "import_event",
+            "status": "complete",
+            "title": "June 2024",
+            "surface_date": "2024-06-15",
+            "cover_image_id": images[0],
+        },
+        [(image_id, order, 0.5) for order, image_id in enumerate(images)],
+    )
+    return memory_id
+
+
+def name_cluster(db_path: str, cluster_id: str, name: str) -> None:
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "UPDATE face_clusters SET cluster_name = ? WHERE cluster_id = ?",
+        (name, cluster_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+class TestRescoreAfterRename:
+    """
+    Naming a person raises known_people for photos already inside a memory.
+    Those memories cannot be rebuilt from scratch, because their images no
+    longer appear in any candidate pool, so they are rescored in place.
+    """
+
+    def test_finds_memories_holding_the_cluster(self, memory_with_faces: str):
+        assert db_get_memory_ids_for_cluster("c-mum") == [memory_with_faces]
+        assert db_get_memory_ids_for_cluster("c-nobody") == []
+
+    def test_ignores_incomplete_memories(self, test_db: str, memory_with_faces: str):
+        conn = sqlite3.connect(test_db)
+        conn.execute("UPDATE memories SET status = 'pending'")
+        conn.commit()
+        conn.close()
+
+        assert db_get_memory_ids_for_cluster("c-mum") == []
+
+    def test_naming_raises_scores_for_that_person(
+        self, test_db: str, memory_with_faces: str, images: List[str]
+    ):
+        before = {i["id"]: i["score"] for i in db_get_memory_images(memory_with_faces)}
+        name_cluster(test_db, "c-mum", "Mum")
+
+        assert memory_curator_rescore_for_cluster("c-mum") == 1
+
+        after = {i["id"]: i["score"] for i in db_get_memory_images(memory_with_faces)}
+        # images[2:] carry the newly named face; images[:2] do not.
+        assert all(after[i] > after[images[0]] for i in images[2:])
+        assert after != before
+
+    def test_cover_moves_to_the_newly_named_person(
+        self, test_db: str, memory_with_faces: str, images: List[str]
+    ):
+        assert db_get_memory(memory_with_faces)["cover_image_id"] == images[0]
+
+        name_cluster(test_db, "c-mum", "Mum")
+        memory_curator_rescore_for_cluster("c-mum")
+
+        assert db_get_memory(memory_with_faces)["cover_image_id"] in images[2:]
+
+    def test_membership_and_order_are_untouched(
+        self, test_db: str, memory_with_faces: str, images: List[str]
+    ):
+        """The user may already have watched this memory; do not reshuffle it."""
+        name_cluster(test_db, "c-mum", "Mum")
+        memory_curator_rescore_for_cluster("c-mum")
+
+        stored = db_get_memory_images(memory_with_faces)
+        assert [i["id"] for i in stored] == images
+        assert [i["sort_order"] for i in stored] == list(range(len(images)))
+
+    def test_memory_score_is_recomputed(self, test_db: str, memory_with_faces: str):
+        before = db_get_memory(memory_with_faces)["score"]
+        name_cluster(test_db, "c-mum", "Mum")
+        memory_curator_rescore_for_cluster("c-mum")
+
+        assert db_get_memory(memory_with_faces)["score"] > before
+
+    def test_no_memories_is_a_noop(self, test_db: str):
+        assert memory_curator_rescore_for_cluster("c-nobody") == 0
+        assert memory_curator_rescore([]) == 0
+
+    def test_one_failing_memory_does_not_abort_the_rest(
+        self, test_db: str, memory_with_faces: str
+    ):
+        with patch(
+            "app.utils.memory_curator.db_update_memory_scores",
+            side_effect=Exception("boom"),
+        ):
+            assert memory_curator_rescore([memory_with_faces]) == 0
+
+    def test_rename_route_queues_a_rescore(self):
+        """Renaming must succeed whether or not the rescore can be queued."""
+        from app.routes import face_clusters
+
+        state = SimpleNamespace(executor=MagicMock())
+        face_clusters._rescore_memories_for_cluster(state, "c-mum")
+
+        args = state.executor.submit.call_args[0]
+        assert args[1] == "c-mum"
+
+        broken = SimpleNamespace(executor=None)
+        face_clusters._rescore_memories_for_cluster(broken, "c-mum")  # must not raise
 
 
 # ##############################
