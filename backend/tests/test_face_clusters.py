@@ -772,11 +772,24 @@ class TestEmptyClusterCleanup:
 
         assert [c["cluster_id"] for c in listed] == ["populated"]
 
-    def test_clusters_count_reflects_stored_rows(self, isolated_cluster_db):
+    def test_clusters_count_only_counts_clusters_with_faces(self, isolated_cluster_db):
+        """The count drives the bootstrap decision, so it has to agree with the
+        listing: an orphan row is not a cluster anyone can use."""
         assert face_clusters_db.db_get_clusters_count() == 0
 
         face_clusters_db.db_insert_clusters_batch(
             [{"cluster_id": "c1", "cluster_name": None, "face_image_base64": None}]
+        )
+
+        # Still zero -- the row exists but has no faces behind it.
+        assert face_clusters_db.db_get_clusters_count() == 0
+
+        faces_db.db_insert_face_embeddings(
+            image_id="img-1",
+            embeddings=np.ones(128),
+            confidence=0.9,
+            bbox={"x": 0, "y": 0, "width": 10, "height": 10},
+            cluster_id="c1",
         )
 
         assert face_clusters_db.db_get_clusters_count() == 1
@@ -871,5 +884,62 @@ class TestReclusteringNeededBootstrap:
         """An empty library has nothing to bootstrap from."""
         mock_unassigned.return_value = []
         mock_count.return_value = 0
+
+        assert cluster_util_is_reclustering_needed({"user_preferences": {}}) is False
+
+    def test_orphan_rows_do_not_block_the_bootstrap_pass(self, isolated_cluster_db):
+        """Rows left behind by a deleted folder are not usable clusters.
+
+        Incremental assignment matches against cluster *means*, which come from
+        the faces table -- an orphan row contributes none, so the incremental
+        pass has nothing to match and silently assigns nothing. Counting those
+        rows as existing clusters would suppress the bootstrap full pass and
+        leave the new faces unclustered.
+        """
+        face_clusters_db.db_insert_clusters_batch(
+            [
+                {
+                    "cluster_id": "orphaned",
+                    "cluster_name": "Folder Deleted",
+                    "face_image_base64": "b64",
+                }
+            ]
+        )
+        faces_db.db_insert_face_embeddings(
+            image_id="img-new",
+            embeddings=np.ones(128),
+            confidence=0.9,
+            bbox={"x": 0, "y": 0, "width": 10, "height": 10},
+            cluster_id=None,
+        )
+
+        assert cluster_util_is_reclustering_needed({"user_preferences": {}}) is True
+
+    def test_faces_still_attached_keep_the_incremental_path(self, isolated_cluster_db):
+        """Guard the other side: a cluster that still has faces can seed the
+        incremental pass, so it must not be dragged into a full recluster."""
+        face_clusters_db.db_insert_clusters_batch(
+            [
+                {
+                    "cluster_id": "populated",
+                    "cluster_name": "Still Here",
+                    "face_image_base64": "b64",
+                }
+            ]
+        )
+        faces_db.db_insert_face_embeddings(
+            image_id="img-1",
+            embeddings=np.ones(128),
+            confidence=0.9,
+            bbox={"x": 0, "y": 0, "width": 10, "height": 10},
+            cluster_id="populated",
+        )
+        faces_db.db_insert_face_embeddings(
+            image_id="img-new",
+            embeddings=np.ones(128),
+            confidence=0.9,
+            bbox={"x": 0, "y": 0, "width": 10, "height": 10},
+            cluster_id=None,
+        )
 
         assert cluster_util_is_reclustering_needed({"user_preferences": {}}) is False
