@@ -31,16 +31,43 @@ class MetadataExtractor:
         """Initialize the metadata extractor."""
         pass
 
+    @staticmethod
+    def _first_present(*values: Any) -> Optional[Any]:
+        """
+        Return the first candidate value that is actually present.
+
+        A value counts as present unless it is None or a blank string. Zero is
+        deliberately treated as present: 0 is a valid coordinate on the equator
+        and the prime meridian, but it is falsy in Python, so an `a or b`
+        fallback chain would silently discard it.
+
+        Args:
+            *values: Candidate values, in order of preference
+
+        Returns:
+            The first present value, or None if every candidate is absent
+        """
+        for value in values:
+            if value is None:
+                continue
+            if isinstance(value, str) and not value.strip():
+                continue
+            return value
+        return None
+
     def extract_gps_coordinates(
         self, metadata: Dict[str, Any]
     ) -> Tuple[Optional[float], Optional[float]]:
         """
         Extract GPS coordinates from metadata dictionary.
 
-        Supports multiple metadata structures:
+        Supports multiple metadata structures, checked in order of preference:
         - Top-level: {"latitude": 28.6, "longitude": 77.2}
         - Nested EXIF: {"exif": {"gps": {"latitude": 28.6, "longitude": 77.2}}}
         - Alternative names: lat, lon, Latitude, Longitude
+
+        Latitude and longitude are resolved independently, so a coordinate pair
+        may be assembled from two different sources if one of them is partial.
 
         Args:
             metadata: Parsed metadata dictionary
@@ -51,6 +78,10 @@ class MetadataExtractor:
         Validates:
             - Latitude: -90 to 90
             - Longitude: -180 to 180
+
+        Note:
+            A coordinate of 0 is a real location, not a missing value, so it is
+            kept rather than falling through to the next source.
         """
         latitude = None
         longitude = None
@@ -59,23 +90,26 @@ class MetadataExtractor:
             if not isinstance(metadata, dict):
                 return None, None
 
-            # Method 1: Direct top-level fields
-            lat = metadata.get("latitude")
-            lon = metadata.get("longitude")
+            # Nested 'exif' -> 'gps' structure, when the image has one
+            exif = metadata.get("exif")
+            exif = exif if isinstance(exif, dict) else {}
+            gps = exif.get("gps")
+            gps = gps if isinstance(gps, dict) else {}
 
-            # Method 2: Check nested 'exif' -> 'gps' structure
-            if not lat or not lon:
-                exif = metadata.get("exif", {})
-                if isinstance(exif, dict):
-                    gps = exif.get("gps", {})
-                    if isinstance(gps, dict):
-                        lat = lat or gps.get("latitude")
-                        lon = lon or gps.get("longitude")
-
-            # Method 3: Check alternative field names
-            if not lat or not lon:
-                lat = lat or metadata.get("lat") or metadata.get("Latitude")
-                lon = lon or metadata.get("lon") or metadata.get("Longitude")
+            # Direct top-level fields, then nested EXIF GPS, then the
+            # alternative spellings some sources use.
+            lat = self._first_present(
+                metadata.get("latitude"),
+                gps.get("latitude"),
+                metadata.get("lat"),
+                metadata.get("Latitude"),
+            )
+            lon = self._first_present(
+                metadata.get("longitude"),
+                gps.get("longitude"),
+                metadata.get("lon"),
+                metadata.get("Longitude"),
+            )
 
             # Validate and convert coordinates
             if lat is not None and lon is not None:
