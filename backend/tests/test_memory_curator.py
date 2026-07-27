@@ -699,6 +699,50 @@ class TestSemanticSurfaceDate:
 # ##############################
 
 
+class TestOutlierTrimming:
+    """
+    Time and place said these photos belong together; cohesion asks whether
+    they look like it. An afternoon at the beach and two screenshots taken
+    that evening are indistinguishable on the clock alone.
+    """
+
+    def embeddings_for(self, images, outliers=()):
+        """Outliers get their own orthogonal direction; the rest share one."""
+        spare = iter(SCATTER_BASIS[1:])
+        return {
+            image["id"]: (next(spare) if image["id"] in outliers else COHERENT)
+            for image in images
+        }
+
+    def test_import_events_drop_what_does_not_belong(self):
+        images = make_images("burst", 9, step=timedelta(minutes=20))
+        outliers = {"burst-7", "burst-8"}
+        upserts = run_curator(
+            uncurated=images, embeddings=self.embeddings_for(images, outliers)
+        )
+
+        kept = {image_id for image_id, _, _ in upserts[0]["images"]}
+        assert kept.isdisjoint(outliers)
+        assert kept
+
+    def test_anniversaries_keep_everything(self):
+        """
+        An anniversary spans years by design. Photos from this date across
+        three of them are not supposed to look like one another, and trimming
+        on cohesion would gut exactly the memory the trigger exists to make.
+        """
+        images = make_anniversary_images(2024, 9)
+        outliers = {"2024-7", "2024-8"}
+        upserts = run_curator(
+            anniversary=images, embeddings=self.embeddings_for(images, outliers)
+        )
+
+        kept = {
+            image_id for image_id, _, _ in of_type(upserts, "anniversary")[0]["images"]
+        }
+        assert outliers <= kept
+
+
 class TestRunOrchestration:
     def test_returns_the_number_of_memories_written(self):
         with patch.object(memory_curator, "db_finish_memory_run") as finish:

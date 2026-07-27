@@ -9,16 +9,19 @@ from app.schemas.user_preferences import MemoryScoringWeights
 from app.utils import memory_scoring
 from app.utils.memory_scoring import (
     aggregate_memory_score,
+    cohesion_baseline,
     composite_score,
     compute_signals,
     detect_home_location,
     haversine_km,
+    mean_pairwise_cohesion,
     parse_captured_at,
     resolve_weights,
     score_candidates,
     scoring_signature,
     spread_over_time,
     suppress_near_duplicates,
+    trim_incoherent,
 )
 
 WEIGHTS = MemoryScoringWeights()
@@ -512,3 +515,152 @@ class TestParseCapturedAt:
     )
     def test_parses_or_returns_none(self, value, expected):
         assert parse_captured_at(value) == expected
+
+
+# ##############################
+# Cohesion
+# ##############################
+
+
+CONE_HALF_ANGLE = 1.1  # radians; wide enough to separate, narrow enough to
+# keep every pair's cosine positive
+
+
+def cone_vector(position: float) -> np.ndarray:
+    """
+    A unit vector at `position` (0..1) across a narrow cone.
+
+    Mimics how SigLIP2 actually distributes embeddings: everything points
+    broadly the same way, so cosines are high even between unrelated images
+    and only *differences* in cosine carry information.
+    """
+    tilt = CONE_HALF_ANGLE * position
+    return np.array(
+        [np.cos(tilt), np.sin(tilt) * 0.6, np.sin(tilt) * 0.8], dtype=np.float32
+    )
+
+
+class TestMeanPairwiseCohesion:
+    def test_identical_vectors_are_perfectly_cohesive(self):
+        v = np.array([1.0, 0.0], dtype=np.float32)
+        assert mean_pairwise_cohesion([v, v, v]) == pytest.approx(1.0)
+
+    def test_orthogonal_vectors_score_zero(self):
+        a = np.array([1.0, 0.0], dtype=np.float32)
+        b = np.array([0.0, 1.0], dtype=np.float32)
+        assert mean_pairwise_cohesion([a, b]) == pytest.approx(0.0, abs=1e-6)
+
+    def test_does_not_drift_with_group_size(self):
+        """
+        The reason this exists rather than cohesion to the centroid: each
+        image contributes 1/k of the centroid it is then measured against, so
+        centroid cohesion rewards small groups for being small. Same spread,
+        different k, must read the same.
+        """
+        rng = np.random.default_rng(3)
+
+        def average(k: int) -> float:
+            return float(
+                np.mean(
+                    [
+                        mean_pairwise_cohesion([cone_vector(p) for p in rng.random(k)])
+                        for _ in range(60)
+                    ]
+                )
+            )
+
+        assert abs(average(4) - average(20)) < 0.03
+
+    @pytest.mark.parametrize("count", [0, 1])
+    def test_needs_a_pair(self, count: int):
+        assert mean_pairwise_cohesion([cone_vector(0.0)] * count) is None
+
+    def test_normalizes_unnormalized_input(self):
+        a = np.array([3.0, 0.0], dtype=np.float32)
+        b = np.array([10.0, 0.0], dtype=np.float32)
+        assert mean_pairwise_cohesion([a, b]) == pytest.approx(1.0)
+
+
+class TestCohesionBaseline:
+    def test_reports_what_unrelated_photos_already_score(self):
+        """
+        Measured against the user's library this sits near 0.59, which is why
+        the old absolute gate of 0.55 could never reject anything.
+        """
+        sample = [cone_vector(i / 39) for i in range(40)]
+        baseline = cohesion_baseline(sample)
+        assert baseline is not None
+        assert 0.0 < baseline < 1.0
+
+    def test_a_coherent_group_sits_above_the_baseline(self):
+        sample = [cone_vector(i / 39) for i in range(40)]
+        tight = [cone_vector(0.05 + i * 0.002) for i in range(8)]
+        assert mean_pairwise_cohesion(tight) > cohesion_baseline(sample)
+
+
+class TestTrimIncoherent:
+    def group(self, tight: int, outliers: int) -> tuple:
+        candidates, embeddings = [], {}
+        for i in range(tight):
+            key = f"in-{i}"
+            candidates.append(candidate(key))
+            embeddings[key] = cone_vector(0.05 + i * 0.01)
+        for i in range(outliers):
+            key = f"out-{i}"
+            candidates.append(candidate(key))
+            embeddings[key] = cone_vector(0.85 + i * 0.03)
+        return candidates, embeddings
+
+    def test_drops_the_photo_that_does_not_belong(self):
+        """
+        The case this was built for: an afternoon at the beach plus two
+        screenshots taken that evening. The clock cannot tell them apart.
+        """
+        candidates, embeddings = self.group(tight=9, outliers=2)
+        kept = {c["id"] for c in trim_incoherent(candidates, embeddings, min_keep=5)}
+        assert kept == {f"in-{i}" for i in range(9)}
+
+    def test_a_varied_but_related_group_survives_intact(self):
+        """
+        A day out legitimately varies — the drive to the beach is not the
+        beach. An absolute floor would throw the drive away; the group's own
+        spread keeps it.
+        """
+        candidates, embeddings = [], {}
+        for i in range(10):
+            key = f"img-{i}"
+            candidates.append(candidate(key))
+            embeddings[key] = cone_vector(0.02 + i * 0.055)
+        kept = trim_incoherent(candidates, embeddings, min_keep=5)
+        assert len(kept) == 10
+
+    def test_a_tight_group_does_not_trim_its_own_tail(self):
+        """Without the margin floor, 2 MADs out of a near-identical burst
+        still deletes photos."""
+        candidates, embeddings = self.group(tight=10, outliers=0)
+        assert len(trim_incoherent(candidates, embeddings, min_keep=5)) == 10
+
+    def test_never_trims_below_min_keep(self):
+        candidates, embeddings = self.group(tight=6, outliers=2)
+        kept = trim_incoherent(candidates, embeddings, min_keep=8)
+        assert len(kept) == 8
+
+    def test_two_equal_clusters_are_left_alone(self):
+        """
+        Half the group cannot be "the outliers". Two occasions got merged, and
+        trimming is the wrong tool for that — the cap is what says so.
+        """
+        candidates, embeddings = self.group(tight=5, outliers=5)
+        assert len(trim_incoherent(candidates, embeddings, min_keep=3)) == 10
+
+    def test_images_without_embeddings_are_kept(self):
+        """Missing data is not a verdict — the same rule dedup follows."""
+        candidates, embeddings = self.group(tight=9, outliers=2)
+        candidates.append(candidate("unknown"))
+        kept = {c["id"] for c in trim_incoherent(candidates, embeddings, min_keep=5)}
+        assert "unknown" in kept
+
+    def test_too_few_embeddings_to_judge_leaves_the_group_alone(self):
+        candidates, embeddings = self.group(tight=9, outliers=2)
+        sparse = {k: v for k, v in list(embeddings.items())[:2]}
+        assert len(trim_incoherent(candidates, sparse, min_keep=5)) == len(candidates)

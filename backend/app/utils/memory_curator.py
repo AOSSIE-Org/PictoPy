@@ -52,6 +52,7 @@ from app.utils.memory_scoring import (
     score_candidates,
     spread_over_time,
     suppress_near_duplicates,
+    trim_incoherent,
 )
 
 logger = get_logger(__name__)
@@ -228,6 +229,7 @@ def _build_memory(
     subtitle: Optional[str],
     surface_date: str,
     hard_exclude_recent: bool,
+    trim_outliers: bool = False,
 ) -> bool:
     """
     Score, trim and persist one candidate set. Returns whether it qualified.
@@ -265,6 +267,12 @@ def _build_memory(
     deduplicated = suppress_near_duplicates(scored, embeddings)
     if len(deduplicated) < preferences.min_images:
         return False
+
+    # Time and place said these belong together; this asks whether they look
+    # like it. Only for triggers that segment on the clock — an anniversary
+    # spans years and is not supposed to be visually of a piece.
+    if trim_outliers:
+        deduplicated = trim_incoherent(deduplicated, embeddings, preferences.min_images)
 
     selected = spread_over_time(deduplicated, preferences.max_images)
     if len(selected) < preferences.min_images:
@@ -467,6 +475,7 @@ def _curate_import_events(context: _CurationContext) -> int:
                 subtitle=subtitle,
                 surface_date=context.run_date,
                 hard_exclude_recent=True,
+                trim_outliers=True,
             ):
                 generated += 1
         except Exception:
