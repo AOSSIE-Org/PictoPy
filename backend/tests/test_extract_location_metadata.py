@@ -16,31 +16,162 @@ def extractor():
 # ##############################
 
 
-class TestFirstPresent:
-    """Test class for the presence helper that backs the fallback chain."""
+LATITUDE_LIMIT = 90.0
+LONGITUDE_LIMIT = 180.0
 
-    def test_zero_is_present(self):
-        """0 and 0.0 are real values, not missing ones."""
-        assert MetadataExtractor._first_present(0) == 0
-        assert MetadataExtractor._first_present(0.0) == 0.0
+
+def resolve_latitude(*candidates):
+    """Resolve a latitude from candidates in order of preference."""
+    return MetadataExtractor._resolve_coordinate("latitude", candidates, LATITUDE_LIMIT)
+
+
+class TestResolveCoordinate:
+    """Test class for the per-candidate resolver behind the fallback chain."""
+
+    def test_zero_is_kept(self):
+        """0 and 0.0 are real coordinates, not missing values."""
+        assert resolve_latitude(0) == 0.0
+        assert resolve_latitude(0.0) == 0.0
 
     def test_none_is_skipped(self):
         """None falls through to the next candidate."""
-        assert MetadataExtractor._first_present(None, 28.6) == 28.6
+        assert resolve_latitude(None, 28.6) == 28.6
 
-    def test_blank_string_is_skipped(self):
-        """Empty and whitespace-only strings fall through to the next candidate."""
-        assert MetadataExtractor._first_present("", 28.6) == 28.6
-        assert MetadataExtractor._first_present("   ", 28.6) == 28.6
+    @pytest.mark.parametrize("blank", ["", "   ", "\t"])
+    def test_blank_string_is_skipped(self, blank):
+        """Blank strings fall through to the next candidate."""
+        assert resolve_latitude(blank, 28.6) == 28.6
 
-    def test_first_wins(self):
-        """The earliest present candidate takes precedence."""
-        assert MetadataExtractor._first_present(28.6, 77.2) == 28.6
+    def test_first_usable_candidate_wins(self):
+        """The earliest usable candidate takes precedence."""
+        assert resolve_latitude(28.6, 45.0) == 28.6
 
-    def test_all_absent_returns_none(self):
-        """None is returned when every candidate is absent."""
-        assert MetadataExtractor._first_present(None, "", None) is None
-        assert MetadataExtractor._first_present() is None
+    def test_unreadable_candidate_is_skipped(self):
+        """A value that cannot become a float falls through."""
+        assert resolve_latitude("not-a-number", 28.6) == 28.6
+
+    def test_out_of_range_candidate_is_skipped(self):
+        """A value outside the valid range falls through."""
+        assert resolve_latitude(200, 28.6) == 28.6
+
+    def test_numeric_strings_are_converted(self):
+        """Coordinates arriving as strings are converted."""
+        assert resolve_latitude("28.6") == 28.6
+
+    def test_limits_are_inclusive(self):
+        """The exact range boundaries are accepted."""
+        assert resolve_latitude(90) == 90.0
+        assert resolve_latitude(-90) == -90.0
+
+    @pytest.mark.parametrize("value", ["nan", "inf", "-inf", float("nan")])
+    def test_non_finite_values_are_skipped(self, value):
+        """NaN and infinity are not usable coordinates."""
+        assert resolve_latitude(value, 28.6) == 28.6
+
+    @pytest.mark.parametrize("value", [[1, 2], {"a": 1}, object()])
+    def test_unconvertible_types_are_skipped(self, value):
+        """Values of the wrong type fall through instead of raising."""
+        assert resolve_latitude(value, 28.6) == 28.6
+
+    @pytest.mark.parametrize("value", [True, False])
+    def test_booleans_are_skipped(self, value):
+        """bool is a subclass of int, but it is not a coordinate."""
+        assert resolve_latitude(value, 28.6) == 28.6
+
+    def test_returns_none_when_no_candidate_qualifies(self):
+        """None is returned when every candidate is unusable."""
+        assert resolve_latitude(None, "", "junk", 200) is None
+        assert resolve_latitude() is None
+
+    def test_longitude_range_is_wider_than_latitude(self):
+        """120 is a valid longitude but not a valid latitude."""
+        assert (
+            MetadataExtractor._resolve_coordinate("longitude", (120,), LONGITUDE_LIMIT)
+            == 120.0
+        )
+        assert resolve_latitude(120) is None
+
+
+class TestFallthroughToLowerPrioritySource:
+    """
+    Test class for falling through unusable values in a preferred field.
+
+    A malformed or out-of-range coordinate in a higher-priority field must not
+    mask a valid coordinate in a lower-priority one.
+    """
+
+    @pytest.mark.parametrize("bad", ["not-a-number", 200, -200, "", None, "nan"])
+    def test_bad_top_level_latitude_falls_back_to_exif(self, extractor, bad):
+        """An unusable top-level latitude falls through to exif.gps."""
+        metadata = {
+            "latitude": bad,
+            "longitude": 77.2,
+            "exif": {"gps": {"latitude": 28.6}},
+        }
+        assert extractor.extract_gps_coordinates(metadata) == (28.6, 77.2)
+
+    @pytest.mark.parametrize("bad", ["not-a-number", 400, -400, "", None])
+    def test_bad_top_level_longitude_falls_back_to_exif(self, extractor, bad):
+        """An unusable top-level longitude falls through to exif.gps."""
+        metadata = {
+            "latitude": 28.6,
+            "longitude": bad,
+            "exif": {"gps": {"longitude": 77.2}},
+        }
+        assert extractor.extract_gps_coordinates(metadata) == (28.6, 77.2)
+
+    def test_bad_top_level_falls_back_to_alias(self, extractor):
+        """An unusable top-level value falls through to the lat/lon aliases."""
+        metadata = {
+            "latitude": "junk",
+            "longitude": 999,
+            "lat": 28.6,
+            "lon": 77.2,
+        }
+        assert extractor.extract_gps_coordinates(metadata) == (28.6, 77.2)
+
+    def test_falls_through_two_bad_sources_to_the_third(self, extractor):
+        """Resolution continues past more than one unusable source."""
+        metadata = {
+            "latitude": "junk",
+            "longitude": "junk",
+            "exif": {"gps": {"latitude": 200, "longitude": 400}},
+            "lat": 28.6,
+            "lon": 77.2,
+        }
+        assert extractor.extract_gps_coordinates(metadata) == (28.6, 77.2)
+
+    def test_falls_back_to_a_zero_coordinate(self, extractor):
+        """Falling through still preserves a valid 0 further down the chain."""
+        metadata = {
+            "latitude": "junk",
+            "longitude": "junk",
+            "exif": {"gps": {"latitude": 0.0, "longitude": 0.0}},
+        }
+        assert extractor.extract_gps_coordinates(metadata) == (0.0, 0.0)
+
+    def test_each_coordinate_falls_through_independently(self, extractor):
+        """Latitude and longitude may end up resolved from different sources."""
+        metadata = {
+            "latitude": 28.6,
+            "longitude": "junk",
+            "exif": {"gps": {"longitude": 77.2}},
+        }
+        assert extractor.extract_gps_coordinates(metadata) == (28.6, 77.2)
+
+    def test_no_usable_fallback_returns_none(self, extractor):
+        """(None, None) is returned when no source holds a usable value."""
+        metadata = {
+            "latitude": "junk",
+            "longitude": 999,
+            "exif": {"gps": {"latitude": 200, "longitude": "also-junk"}},
+        }
+        assert extractor.extract_gps_coordinates(metadata) == (None, None)
+
+    def test_unusable_latitude_with_valid_longitude_returns_none(self, extractor):
+        """A resolvable longitude alone is not a location."""
+        metadata = {"latitude": "junk", "longitude": 77.2}
+        assert extractor.extract_gps_coordinates(metadata) == (None, None)
 
 
 class TestExtractGPSCoordinatesZeroValues:
