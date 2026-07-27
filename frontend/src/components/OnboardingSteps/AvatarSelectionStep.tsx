@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, User, Pencil } from 'lucide-react';
+import { User, Pencil } from 'lucide-react';
 import { avatars } from '@/constants/avatars';
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
 import { RootState } from '@/app/store';
@@ -139,7 +139,33 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="flex-1 space-y-6 overflow-y-hidden p-1 px-2">
+        <CardContent className="flex-1 space-y-6 overflow-y-auto p-1 px-2">
+          {/* Current Profile Image */}
+          <div className="mb-5">
+            <Label className="mb-2 block text-sm">Current Profile Image</Label>
+            <button
+              type="button"
+              onClick={handleUploadClick}
+              aria-label="Change profile avatar"
+              className="group relative inline-flex h-24 w-24 items-center justify-center rounded-full"
+            >
+              {selectedAvatar ? (
+                <img
+                  src={selectedAvatar}
+                  alt="Current avatar"
+                  className="h-24 w-24 rounded-full object-cover"
+                />
+              ) : (
+                <div className="bg-muted text-muted-foreground flex h-24 w-24 items-center justify-center rounded-full">
+                  <User className="h-8 w-8" />
+                </div>
+              )}
+              <span className="border-background absolute right-0 bottom-0 flex h-7 w-7 items-center justify-center rounded-full border-2 bg-blue-500 text-white transition-transform group-hover:scale-105">
+                <Pencil className="h-3.5 w-3.5" />
+              </span>
+            </button>
+          </div>
+
           <div className="mb-5">
             <Label htmlFor="name" className="mb-1 block text-sm">
               Your Name
@@ -186,41 +212,6 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                 );
               })}
             </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleUploadClick}
-              className="mt-4 gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              Upload Image
-            </Button>
-
-            <div className="mt-4 w-fit">
-              <Label className="mb-2 block text-sm">Current Avatar</Label>
-              <button
-                type="button"
-                onClick={handleUploadClick}
-                aria-label="Change current avatar"
-                className="group relative inline-flex h-20 w-20 items-center justify-center rounded-full"
-              >
-                {selectedAvatar ? (
-                  <img
-                    src={selectedAvatar}
-                    alt="Current avatar"
-                    className="h-20 w-20 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="bg-muted text-muted-foreground flex h-20 w-20 items-center justify-center rounded-full">
-                    <User className="h-7 w-7" />
-                  </div>
-                )}
-                <span className="border-background absolute right-0 bottom-0 flex h-7 w-7 items-center justify-center rounded-full border-2 bg-blue-500 text-white transition-transform group-hover:scale-105">
-                  <Pencil className="h-3.5 w-3.5" />
-                </span>
-              </button>
-            </div>
           </div>
         </CardContent>
 
@@ -242,9 +233,6 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
         onOpenChange={setCropDialogOpen}
         imageSrc={rawImage}
         onCropped={handleCropped}
-        onError={(message) =>
-          dispatch(showGlobalAlert({ title: 'Upload failed', message }))
-        }
       />
     </>
   );

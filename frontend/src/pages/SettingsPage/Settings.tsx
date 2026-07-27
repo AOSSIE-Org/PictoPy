@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
 // Import modular components
 import FolderManagementCard from './components/FolderManagementCard';
 import UserPreferencesCard from './components/UserPreferencesCard';
 import ApplicationControlsCard from './components/ApplicationControlsCard';
-import AccountSettingsCard from './components/AccountSettingsCard';
+import AccountSettingsCard, {
+  AccountSettingsCardHandle,
+} from './components/AccountSettingsCard';
 
 /**
  * Settings page component
@@ -15,8 +17,20 @@ const Settings: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('general');
+  const accountCardRef = useRef<AccountSettingsCardHandle>(null);
 
   const handleTabChange = (tab: string) => {
+    if (
+      activeTab === 'account' &&
+      tab !== 'account' &&
+      accountCardRef.current?.hasUnsavedChanges
+    ) {
+      accountCardRef.current.requestLeave(() => {
+        setActiveTab(tab);
+        navigate(`#${tab}`, { replace: true });
+      });
+      return;
+    }
     setActiveTab(tab);
     navigate(`#${tab}`, { replace: true });
   };
@@ -75,7 +89,7 @@ const Settings: React.FC = () => {
 
             {activeTab === 'account' && (
               <>
-                <AccountSettingsCard />
+                <AccountSettingsCard ref={accountCardRef} />
               </>
             )}
           </div>

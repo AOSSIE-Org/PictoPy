@@ -1,6 +1,9 @@
-import { render, screen } from '@/test-utils';
+import { render, screen, act } from '@/test-utils';
 import userEvent from '@testing-library/user-event';
-import AccountSettingsCard from '@/pages/SettingsPage/components/AccountSettingsCard';
+import { createRef } from 'react';
+import AccountSettingsCard, {
+  AccountSettingsCardHandle,
+} from '@/pages/SettingsPage/components/AccountSettingsCard';
 
 const VALID_30 = 'a'.repeat(30);
 const INVALID_31 = 'a'.repeat(31);
@@ -26,10 +29,6 @@ describe('Name validation - AccountSettingsCard', () => {
   test('31-character word shows error', async () => {
     const { user, input } = await setup();
     await user.type(input, INVALID_31);
-
-    // We only need to check that the validation error correctly appears on the draft input.
-    // The main "Save" button isn't supposed to be visible at this stage anyway since
-    // the draft hasn't been committed via the Enter key.
     expect(screen.getByText(ERROR_MSG)).toBeInTheDocument();
   });
 
@@ -46,5 +45,86 @@ describe('Name validation - AccountSettingsCard', () => {
     await user.clear(input);
     await user.type(input, 'John');
     expect(screen.queryByText(ERROR_MSG)).not.toBeInTheDocument();
+  });
+
+  test('name edit shows Enter/Esc helper text', async () => {
+    await setup();
+    expect(
+      screen.getByText('Press Enter to save • Esc to cancel'),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('Save Changes button - AccountSettingsCard', () => {
+  test('is always visible', () => {
+    render(<AccountSettingsCard />);
+    expect(
+      screen.getByRole('button', { name: 'Save Changes' }),
+    ).toBeInTheDocument();
+  });
+
+  test('is disabled until an avatar is selected', () => {
+    render(<AccountSettingsCard />);
+    expect(screen.getByRole('button', { name: 'Save Changes' })).toBeDisabled();
+  });
+
+  test('enables after selecting an avatar', async () => {
+    const user = userEvent.setup();
+    render(<AccountSettingsCard />);
+    const avatarButtons = screen.getAllByRole('button', { name: 'Avatar' });
+    await user.click(avatarButtons[0]);
+    expect(screen.getByRole('button', { name: 'Save Changes' })).toBeEnabled();
+  });
+});
+
+describe('Unsaved-changes leave guard - AccountSettingsCard', () => {
+  test('requestLeave proceeds immediately when there are no unsaved changes', () => {
+    const ref = createRef<AccountSettingsCardHandle>();
+    render(<AccountSettingsCard ref={ref} />);
+    const onLeave = jest.fn();
+    act(() => {
+      ref.current?.requestLeave(onLeave);
+    });
+    expect(onLeave).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
+  });
+
+  test('requestLeave shows a dialog when there are unsaved changes; Discard proceeds', async () => {
+    const user = userEvent.setup();
+    const ref = createRef<AccountSettingsCardHandle>();
+    render(<AccountSettingsCard ref={ref} />);
+
+    const avatarButtons = screen.getAllByRole('button', { name: 'Avatar' });
+    await user.click(avatarButtons[0]);
+    expect(ref.current?.hasUnsavedChanges).toBe(true);
+
+    const onLeave = jest.fn();
+    act(() => {
+      ref.current?.requestLeave(onLeave);
+    });
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
+    expect(onLeave).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: /^discard$/i }));
+    expect(onLeave).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
+  });
+
+  test('Cancel keeps the changes and does not leave', async () => {
+    const user = userEvent.setup();
+    const ref = createRef<AccountSettingsCardHandle>();
+    render(<AccountSettingsCard ref={ref} />);
+
+    const avatarButtons = screen.getAllByRole('button', { name: 'Avatar' });
+    await user.click(avatarButtons[0]);
+
+    const onLeave = jest.fn();
+    act(() => {
+      ref.current?.requestLeave(onLeave);
+    });
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+
+    expect(onLeave).not.toHaveBeenCalled();
+    expect(ref.current?.hasUnsavedChanges).toBe(true);
   });
 });
