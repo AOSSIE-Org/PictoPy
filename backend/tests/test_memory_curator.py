@@ -116,6 +116,7 @@ def run_curator(
     top_event_label: Optional[Any] = None,
     embeddings: Optional[Dict[str, np.ndarray]] = None,
     recently_used: Optional[set] = None,
+    own_images: Optional[set] = None,
     signals: Any = signals_for,
     upsert_side_effect: Optional[Any] = None,
     mocks: Optional[Dict[str, Any]] = None,
@@ -147,8 +148,8 @@ def run_curator(
         m("detect_home_location", return_value=None)
         m("db_get_recently_used_image_ids", return_value=set(recently_used or []))
         m("db_get_anniversary_candidates", return_value=anniversary or [])
-        m("db_get_uncurated_image_ids", return_value=[i["id"] for i in pool])
-        m("db_get_images_by_ids_for_memories", return_value=pool)
+        m("db_get_recent_dated_images", return_value=pool)
+        m("db_get_memory_image_ids_by_dedupe_key", return_value=set(own_images or []))
         m("db_get_event_labels", return_value=event_labels or [])
         m("db_get_event_label_hits", return_value=event_hits or [])
         m("db_get_images_in_period", return_value=expansion or [])
@@ -287,6 +288,7 @@ class TestAnniversaryCuration:
         assert upserts[0]["memory"]["title"] == expected_title
 
     def test_subtitle_comes_from_the_photos(self):
+        """Anniversaries are named by the year they recall, not by exact dates."""
         upserts = of_type(
             run_curator(anniversary=make_anniversary_images(2024, 4)), "anniversary"
         )
@@ -416,12 +418,12 @@ class TestImportEventCuration:
             "import_event",
         )
         assert upserts[0]["memory"]["title"] == "Birthday"
-        assert upserts[0]["memory"]["subtitle"] == "July 2024"
+        assert upserts[0]["memory"]["subtitle"] == "26 July 2024"
 
-    def test_falls_back_to_the_month_without_a_recognised_event(self):
+    def test_falls_back_to_the_dates_without_a_recognised_event(self):
         pool = make_images("misc", 6, step=timedelta(minutes=20))
         upserts = of_type(run_curator(uncurated=pool), "import_event")
-        assert upserts[0]["memory"]["title"] == "July 2024"
+        assert upserts[0]["memory"]["title"] == "26 July 2024"
 
     def test_recently_used_images_are_excluded_outright(self):
         """The import pool is large, so there is no reason to repeat photos."""
@@ -787,3 +789,97 @@ class TestEnablement:
             return_value={"user_preferences": {"memories": {"min_images": 8}}},
         ):
             assert real_get_preferences().min_images == 8
+
+
+class TestImportIdempotency:
+    """
+    The candidate pool must not depend on what is already curated. Defining it
+    as "images not yet in a memory" makes every regeneration rebuild a memory
+    from its own complement, so counts alternate and the contents swap wholesale.
+    """
+
+    def test_regenerating_reproduces_the_same_memory(self):
+        pool = make_images("trip", 12, step=timedelta(minutes=20))
+
+        first = of_type(run_curator(uncurated=pool), "import_event")
+        # Second run sees the first run's images already curated.
+        own = {entry[0] for entry in first[0]["images"]}
+        second = of_type(
+            run_curator(uncurated=pool, recently_used=own, own_images=own),
+            "import_event",
+        )
+
+        assert [e[0] for e in second[0]["images"]] == [e[0] for e in first[0]["images"]]
+        assert second[0]["memory"]["dedupe_key"] == first[0]["memory"]["dedupe_key"]
+
+    def test_a_memory_may_reuse_its_own_photos(self):
+        """Its own images are not 'already used' as far as that memory goes."""
+        pool = make_images("trip", 8, step=timedelta(minutes=20))
+        own = {f"trip-{i}" for i in range(8)}
+
+        upserts = of_type(
+            run_curator(uncurated=pool, recently_used=own, own_images=own),
+            "import_event",
+        )
+
+        assert len(upserts) == 1
+        assert len(upserts[0]["images"]) == 8
+
+    def test_other_memories_photos_stay_excluded(self):
+        pool = make_images("trip", 10, step=timedelta(minutes=20))
+        upserts = of_type(
+            run_curator(uncurated=pool, recently_used={"trip-0", "trip-1"}),
+            "import_event",
+        )
+
+        selected = {entry[0] for entry in upserts[0]["images"]}
+        assert "trip-0" not in selected and "trip-1" not in selected
+
+    def test_most_recent_segments_win_the_cap(self):
+        """A newly imported trip must not lose its slot to older, larger ones."""
+        pool: List[Dict[str, Any]] = []
+        for day, size in ((0, 30), (10, 25), (20, 20), (40, 6)):
+            pool += make_images(
+                f"d{day}",
+                size,
+                start=T0 + timedelta(days=day),
+                step=timedelta(minutes=10),
+            )
+        upserts = of_type(run_curator(uncurated=pool), "import_event")
+
+        assert len(upserts) == memory_curator.MAX_IMPORT_MEMORIES
+        # d40 is the newest and smallest; it must still be included.
+        keys = {u["memory"]["dedupe_key"] for u in upserts}
+        assert any((T0 + timedelta(days=40)).strftime("%Y-%m-%d") in k for k in keys)
+
+
+class TestPeriodLabels:
+    @pytest.mark.parametrize(
+        "start, end, expected",
+        [
+            (datetime(2026, 7, 26, 9), datetime(2026, 7, 26, 18), "26 July 2026"),
+            (datetime(2026, 7, 17, 9), datetime(2026, 7, 18, 9), "17–18 July 2026"),
+            (datetime(2026, 7, 30, 9), datetime(2026, 8, 2, 9), "30 Jul – 2 Aug 2026"),
+            (datetime(2025, 12, 30), datetime(2026, 1, 2), "Dec 2025 – Jan 2026"),
+        ],
+    )
+    def test_labels_a_span_by_its_dates(self, start, end, expected):
+        assert memory_curator._format_period_label(start, end) == expected
+
+    def test_import_titles_do_not_collide_within_a_month(self):
+        """Three bursts in one month must not all be titled "July 2026"."""
+        pool = make_images(
+            "a", 8, start=datetime(2026, 7, 5, 9), step=timedelta(minutes=20)
+        )
+        pool += make_images(
+            "b", 8, start=datetime(2026, 7, 18, 9), step=timedelta(minutes=20)
+        )
+        pool += make_images(
+            "c", 8, start=datetime(2026, 7, 25, 9), step=timedelta(minutes=20)
+        )
+
+        upserts = of_type(
+            run_curator(uncurated=pool, reference_date="2026-07-27"), "import_event"
+        )
+        titles = [u["memory"]["title"] for u in upserts]
+        assert len(set(titles)) == len(titles), titles

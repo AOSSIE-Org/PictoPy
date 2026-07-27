@@ -20,7 +20,6 @@ from app.database.memories import (
     db_get_memory_run,
     db_get_recently_used_image_ids,
     db_get_surfaceable_memory,
-    db_get_uncurated_image_ids,
     db_is_indexing_busy,
     db_list_memories,
     db_mark_memory,
@@ -448,12 +447,6 @@ class TestDedupeAndRecentUse:
 
     def test_recently_used_is_empty_without_memories(self, images: List[str]):
         assert db_get_recently_used_image_ids(30, "2026-07-26") == set()
-
-    def test_uncurated_ids_exclude_images_already_in_a_memory(self, images: List[str]):
-        db_upsert_memory(make_memory("k"), entries(images[:2]))
-
-        assert db_get_uncurated_image_ids() == images[2:]
-        assert len(db_get_uncurated_image_ids(limit=1)) == 1
 
 
 # ##############################

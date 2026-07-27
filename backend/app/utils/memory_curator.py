@@ -29,14 +29,14 @@ from app.database.memories import (
     db_get_anniversary_candidates,
     db_get_event_label_hits,
     db_get_event_labels,
-    db_get_images_by_ids_for_memories,
     db_get_images_in_period,
     db_get_memory_ids_for_cluster,
+    db_get_memory_image_ids_by_dedupe_key,
     db_get_memory_images,
     db_get_recently_used_image_ids,
     db_get_scoring_signals,
     db_get_top_event_label,
-    db_get_uncurated_image_ids,
+    db_get_recent_dated_images,
     db_start_memory_run,
     db_update_memory_scores,
     db_upsert_memory,
@@ -160,6 +160,28 @@ def _display_event_name(label: str) -> str:
     return EVENT_DISPLAY_NAMES.get(label, label.title())
 
 
+def _format_period_label(start: datetime, end: datetime) -> str:
+    """
+    Name a span by its dates.
+
+    Several bursts in one month would otherwise all be titled "July 2026",
+    which reads as duplicates in the grid.
+    """
+    if start.date() == end.date():
+        return start.strftime("%d %B %Y").lstrip("0")
+    if (start.year, start.month) == (end.year, end.month):
+        return (
+            f"{start.strftime('%d').lstrip('0')}–"
+            f"{end.strftime('%d').lstrip('0')} {start.strftime('%B %Y')}"
+        )
+    if start.year == end.year:
+        return (
+            f"{start.strftime('%d %b').lstrip('0')} – "
+            f"{end.strftime('%d %b').lstrip('0')} {start.year}"
+        )
+    return f"{start.strftime('%b %Y')} – {end.strftime('%b %Y')}"
+
+
 def _haversine_km(a: Dict[str, Any], b: Dict[str, Any]) -> Optional[float]:
     """Distance between two image rows, or None if either lacks GPS."""
     from app.utils.memory_scoring import haversine_km
@@ -216,7 +238,11 @@ def _build_memory(
     candidate_ids = list(image_ids)
 
     if hard_exclude_recent:
-        candidate_ids = [i for i in candidate_ids if i not in context.recently_used]
+        # A memory's own photos are not "already used" as far as that memory
+        # is concerned; excluding them would rebuild it from the leftovers.
+        own = db_get_memory_image_ids_by_dedupe_key(dedupe_key)
+        blocked = context.recently_used - own
+        candidate_ids = [i for i in candidate_ids if i not in blocked]
     if len(candidate_ids) < preferences.min_images:
         return False
 
@@ -389,11 +415,10 @@ def _span_days(segment: Sequence[Dict[str, Any]]) -> float:
 
 def _curate_import_events(context: _CurationContext) -> int:
     """Build memories from bursts of photos not yet used by any memory."""
-    pool_ids = db_get_uncurated_image_ids(limit=IMPORT_CANDIDATE_LIMIT)
-    if len(pool_ids) < context.preferences.min_images:
+    images = db_get_recent_dated_images(IMPORT_CANDIDATE_LIMIT)
+    if len(images) < context.preferences.min_images:
         return 0
 
-    images = db_get_images_by_ids_for_memories(pool_ids)
     segments = [
         segment
         for segment in segment_by_time_and_place(images)
@@ -403,8 +428,14 @@ def _curate_import_events(context: _CurationContext) -> int:
     if not segments:
         return 0
 
-    # Biggest first: the strongest events are worth surfacing before the cap.
-    segments.sort(key=len, reverse=True)
+    # Most recent first. Ranking by size would let the same few large events
+    # hold the cap forever and never surface a newly imported trip.
+    segments.sort(
+        key=lambda s: max(
+            parse_captured_at(i.get("captured_at")) or datetime.min for i in s
+        ),
+        reverse=True,
+    )
 
     generated = 0
     for segment in segments[:MAX_IMPORT_MEMORIES]:
@@ -418,13 +449,13 @@ def _curate_import_events(context: _CurationContext) -> int:
                 continue
 
             start, end = min(timestamps), max(timestamps)
-            month_label = start.strftime("%B %Y")
+            period_label = _format_period_label(start, end)
 
             # Name it after what the AI recognised, when it recognised
-            # anything; otherwise fall back to the month.
+            # anything; otherwise the dates are the most useful label.
             top_event = db_get_top_event_label(image_ids, EVENT_MIN_SCORE)
-            title = _display_event_name(top_event[1]) if top_event else month_label
-            subtitle = month_label if top_event else None
+            title = _display_event_name(top_event[1]) if top_event else period_label
+            subtitle = period_label if top_event else None
 
             if _build_memory(
                 context,

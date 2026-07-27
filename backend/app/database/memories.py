@@ -692,32 +692,63 @@ def db_reap_stale_memory_runs(stale_minutes: int = 30) -> int:
             conn.close()
 
 
-def db_get_uncurated_image_ids(limit: Optional[int] = None) -> List[ImageId]:
+def db_get_recent_dated_images(limit: int) -> List[Dict[str, Any]]:
     """
-    Get ids of images that belong to no memory yet, oldest capture first.
+    Get the most recently captured images, oldest first within the window.
 
-    This is the import-event candidate pool: it makes first import and
-    incremental sync the same code path, with no imported-id set to thread
-    through the executor.
+    The import-event candidate pool. Deliberately independent of what is
+    already curated: a pool defined as "not yet in a memory" flips to its own
+    complement every time a memory is written, so regenerating would swap the
+    contents of a memory rather than reproduce them.
+    """
+    conn = None
+    try:
+        conn = _connect()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT id, path, thumbnailPath, captured_at, latitude, longitude,
+                   isFavourite
+            FROM images
+            WHERE captured_at IS NOT NULL
+            ORDER BY datetime(captured_at) DESC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+        rows = []
+        for row in cursor.fetchall():
+            image = dict(row)
+            image["isFavourite"] = bool(image.get("isFavourite"))
+            rows.append(image)
+        rows.reverse()
+        return rows
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def db_get_memory_image_ids_by_dedupe_key(dedupe_key: str) -> Set[ImageId]:
+    """
+    Image ids already held by the memory with this dedupe key.
+
+    Rebuilding a memory must be allowed to reuse its own photos; only other
+    memories' photos are off limits.
     """
     conn = None
     try:
         conn = _connect()
         cursor = conn.cursor()
-        query = """
-            SELECT i.id FROM images i
-            WHERE i.captured_at IS NOT NULL
-              AND NOT EXISTS(
-                  SELECT 1 FROM memory_images mi WHERE mi.image_id = i.id
-              )
-            ORDER BY i.captured_at ASC
-        """
-        if limit is not None:
-            query += " LIMIT ?"
-            cursor.execute(query, (limit,))
-        else:
-            cursor.execute(query)
-        return [row[0] for row in cursor.fetchall()]
+        cursor.execute(
+            """
+            SELECT mi.image_id FROM memory_images mi
+            JOIN memories m ON m.memory_id = mi.memory_id
+            WHERE m.dedupe_key = ?
+            """,
+            (dedupe_key,),
+        )
+        return {row[0] for row in cursor.fetchall()}
     finally:
         if conn is not None:
             conn.close()
