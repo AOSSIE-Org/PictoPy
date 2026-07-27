@@ -13,7 +13,7 @@ from app.routes import folders
 from app.database.albums import db_create_album_images_table, db_create_albums_table
 from app.database.face_clusters import db_create_clusters_table
 from app.database.faces import db_create_faces_table
-from app.database.folders import db_create_folders_table
+from app.database.folders import db_create_folders_table, db_set_tagging_completed
 from app.database.image_embeddings import (
     db_create_image_embeddings_table,
     db_get_embeddings_for_image_ids,
@@ -28,6 +28,7 @@ from app.database.memories import (
     db_get_images_in_period,
     db_get_scoring_signals,
     db_get_top_event_label,
+    db_is_indexing_busy,
 )
 from app.database.semantic_labels import (
     SEMANTIC_CLASS_ID_OFFSET,
@@ -374,6 +375,101 @@ class TestEventLabels:
         self, images: List[str], ids: List[str]
     ):
         assert db_get_top_event_label(ids, 0.15) is None
+
+
+# ##############################
+# Tagging completion lifecycle
+# ##############################
+
+
+@pytest.fixture
+def ai_folder(test_db: str) -> str:
+    """A folder with AI tagging enabled and tagging not yet finished."""
+    conn = sqlite3.connect(test_db)
+    conn.execute(
+        "INSERT INTO folders (folder_id, folder_path, last_modified_time, "
+        "AI_Tagging, taggingCompleted, indexing_status) "
+        "VALUES ('f-ai', '/ai', 0, 1, 0, 'completed')"
+    )
+    conn.commit()
+    conn.close()
+    return "f-ai"
+
+
+class TestTaggingCompletedLifecycle:
+    """
+    The indexing gate reads folders.taggingCompleted. Nothing wrote that
+    column after insert, so every AI-tagged folder read as permanently
+    mid-tagging and memory generation stayed blocked forever.
+    """
+
+    def test_flag_toggles(self, ai_folder: str, test_db: str):
+        assert db_is_indexing_busy() is True
+
+        assert db_set_tagging_completed(True) == 1
+        assert db_is_indexing_busy() is False
+
+        assert db_set_tagging_completed(False) == 1
+        assert db_is_indexing_busy() is True
+
+    def test_ignores_folders_without_ai_tagging(self, test_db: str):
+        conn = sqlite3.connect(test_db)
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path, last_modified_time, "
+            "AI_Tagging) VALUES ('f-plain', '/plain', 0, 0)"
+        )
+        conn.commit()
+        conn.close()
+
+        assert db_set_tagging_completed(True) == 0
+
+    def _run_tagging(self, fail_at: str = "") -> List[bool]:
+        """Run the tagging sequence, sampling the gate at each step."""
+        observed: List[bool] = []
+        with ExitStack() as stack:
+            for step in AI_PIPELINE_STEPS:
+                stack.enter_context(
+                    patch.object(
+                        folders,
+                        step,
+                        side_effect=(
+                            Exception("boom")
+                            if step == fail_at
+                            else (lambda *_: observed.append(db_is_indexing_busy()))
+                        ),
+                    )
+                )
+            stack.enter_context(patch.object(folders, "_curate_memories"))
+            self.result = folders.post_AI_tagging_enabled_sequence()
+        return observed
+
+    def test_gate_is_busy_during_tagging_and_clears_after(self, ai_folder: str):
+        observed = self._run_tagging()
+
+        assert observed and all(observed), "gate must stay busy while tagging runs"
+        assert self.result is True
+        assert db_is_indexing_busy() is False
+
+    def test_a_failed_run_still_clears_the_gate(self, ai_folder: str):
+        """A folder that failed to tag is not still tagging."""
+        self._run_tagging(fail_at="image_util_process_untagged_images")
+
+        assert self.result is False
+        assert db_is_indexing_busy() is False
+
+    def test_sync_clears_the_gate_too(self, ai_folder: str):
+        with ExitStack() as stack:
+            for step in (
+                "image_util_process_folder_images",
+                "video_util_process_folder_videos",
+                "API_util_restart_sync_microservice_watcher",
+                "_curate_memories",
+                *AI_PIPELINE_STEPS[1:],
+            ):
+                stack.enter_context(patch.object(folders, step))
+            assert folders.post_sync_folder_sequence("/ai", 1, []) is True
+
+        assert db_is_indexing_busy() is False
 
 
 # ##############################

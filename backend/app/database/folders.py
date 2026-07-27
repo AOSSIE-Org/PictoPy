@@ -468,6 +468,32 @@ def db_get_direct_child_folders(parent_folder_id: str) -> List[Tuple[str, str]]:
         conn.close()
 
 
+def db_set_tagging_completed(completed: bool) -> int:
+    """
+    Mark every AI-tagged folder as finished tagging, or back to pending.
+
+    The column exists on the folders table but nothing used to write it after
+    insert, so anything reading it saw every AI-tagged folder as permanently
+    mid-tagging. The tagging sequences now clear it on entry and set it on
+    exit. Returns the number of folders updated.
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE folders SET taggingCompleted = ? WHERE AI_Tagging = 1",
+            (1 if completed else 0,),
+        )
+        conn.commit()
+        return cursor.rowcount
+    except sqlite3.Error as e:
+        logger.error(f"Error updating tagging completion: {e}")
+        conn.rollback()
+        return 0
+    finally:
+        conn.close()
+
+
 def db_update_folder_indexing_status(folder_id: str, status: str) -> None:
     """Update the indexing_status of a specific folder."""
     conn = sqlite3.connect(DATABASE_PATH)

@@ -10,6 +10,7 @@ from app.database.folders import (
     db_get_direct_child_folders,
     db_get_folder_ids_by_path_prefix,
     db_get_all_folder_details,
+    db_set_tagging_completed,
     db_update_folder_indexing_status,
 )
 from app.logging.setup_logging import get_logger
@@ -129,6 +130,7 @@ def post_AI_tagging_enabled_sequence():
     It processes untagged images in the database.
     """
     try:
+        db_set_tagging_completed(False)
         ensure_ai_tagging_models()
         image_util_process_untagged_images()
         cluster_util_face_clusters_sync()
@@ -144,6 +146,10 @@ def post_AI_tagging_enabled_sequence():
     except Exception as e:
         logger.error(f"Error in post processing after AI tagging was enabled: {e}")
         return False
+    finally:
+        # Set even on failure. A folder that failed to tag is not still
+        # tagging, and leaving the flag clear would block memories forever.
+        db_set_tagging_completed(True)
     return True
 
 
@@ -165,6 +171,7 @@ def post_sync_folder_sequence(
             folder_data.append((added_folder_path, added_folder_id, False))
 
         logger.info(f"Sync folder: {folder_data}")
+        db_set_tagging_completed(False)
         # Process images and videos in all folders
         image_util_process_folder_images(folder_data)
         video_util_process_folder_videos(folder_data)
@@ -184,6 +191,8 @@ def post_sync_folder_sequence(
             f"Error in post processing after folder {folder_path} was synced: {e}"
         )
         return False
+    finally:
+        db_set_tagging_completed(True)
     return True
 
 
