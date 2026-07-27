@@ -21,7 +21,14 @@ from app.database.images import (
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
 from app.logging.setup_logging import get_logger
-from app.utils.extract_location_metadata import MetadataExtractor
+from app.utils.extract_location_metadata import (
+    DATE_SOURCE_EXIF,
+    DATE_SOURCE_FILESYSTEM,
+    DATE_SOURCE_SIDECAR,
+    DATE_SOURCE_UNKNOWN,
+    MetadataExtractor,
+)
+from app.utils.takeout_sidecar import takeout_sidecar_read
 
 logger = get_logger(__name__)
 
@@ -585,6 +592,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
         return {
             "name": os.path.basename(image_path),
             "date_created": None,
+            "date_source": DATE_SOURCE_UNKNOWN,
             "width": 0,
             "height": 0,
             "file_location": image_path,
@@ -595,6 +603,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
     try:
         stats = os.stat(image_path)
         logger.debug(f"File exists. Size = {stats.st_size} bytes")
+        date_source = DATE_SOURCE_EXIF
 
         try:
             with Image.open(image_path) as img:
@@ -615,6 +624,18 @@ def image_util_extract_metadata(image_path: str) -> dict:
                 dt_original = _extract_capture_datetime(exif_data)
                 latitude, longitude = _extract_gps_coordinates(exif_data)
 
+                # A Google Takeout export drops EXIF from part of its own
+                # library and keeps the real values in a sibling JSON file.
+                if not dt_original or latitude is None:
+                    sidecar_dt, sidecar_lat, sidecar_lon = takeout_sidecar_read(
+                        image_path
+                    )
+                    if not dt_original and sidecar_dt:
+                        dt_original = sidecar_dt
+                        date_source = DATE_SOURCE_SIDECAR
+                    if latitude is None and sidecar_lat is not None:
+                        latitude, longitude = sidecar_lat, sidecar_lon
+
                 # Safe parse; fall back to mtime without losing width/height
                 if dt_original:
                     try:
@@ -626,14 +647,17 @@ def image_util_extract_metadata(image_path: str) -> dict:
                         date_created = datetime.datetime.fromtimestamp(
                             stats.st_mtime
                         ).isoformat()
+                        date_source = DATE_SOURCE_FILESYSTEM
                 else:
                     date_created = datetime.datetime.fromtimestamp(
                         stats.st_mtime
                     ).isoformat()
+                    date_source = DATE_SOURCE_FILESYSTEM
 
             metadata_dict = {
                 "name": os.path.basename(image_path),
                 "date_created": date_created,
+                "date_source": date_source,
                 "width": width,
                 "height": height,
                 "file_location": image_path,
@@ -654,6 +678,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
                 "date_created": datetime.datetime.fromtimestamp(
                     stats.st_mtime
                 ).isoformat(),
+                "date_source": DATE_SOURCE_FILESYSTEM,
                 "file_location": image_path,
                 "file_size": stats.st_size,
                 "width": 0,
@@ -665,6 +690,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
         return {
             "name": os.path.basename(image_path),
             "date_created": None,
+            "date_source": DATE_SOURCE_UNKNOWN,
             "width": 0,
             "height": 0,
             "file_location": image_path,

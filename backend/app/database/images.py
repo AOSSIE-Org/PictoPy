@@ -146,7 +146,10 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
                 END,
                 latitude=COALESCE(excluded.latitude, images.latitude),
                 longitude=COALESCE(excluded.longitude, images.longitude),
-                captured_at=COALESCE(excluded.captured_at, images.captured_at)
+                -- Not COALESCE: every record here comes from a full re-read of
+                -- the file, so NULL means "no capture date exists" and has to
+                -- overwrite a bad one a previous extractor guessed.
+                captured_at=excluded.captured_at
             """,
             image_records,
         )
