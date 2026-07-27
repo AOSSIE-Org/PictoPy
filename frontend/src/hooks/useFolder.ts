@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { usePictoMutation } from './useQueryExtension';
-import useMutationFeedback from './useMutationFeedback';
+import { useMutationFeedback } from './useMutationFeedback';
 import { addFolder } from '@/api/api-functions';
 
 interface UseFolderPickerOptions {
