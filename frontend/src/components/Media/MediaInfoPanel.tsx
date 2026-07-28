@@ -9,6 +9,8 @@ import {
   Tag,
   Info,
   SquareArrowOutUpRight,
+  Plus,
+  Minus,
 } from 'lucide-react';
 import { Image } from '@/types/Media';
 
@@ -27,6 +29,8 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
   currentIndex,
   totalImages,
 }) => {
+  const [showAllTags, setShowAllTags] = React.useState(false);
+
   const getFormattedDate = () => {
     if (currentImage?.metadata?.date_created) {
       return new Date(currentImage.metadata.date_created).toLocaleDateString(
@@ -145,7 +149,10 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
                 </p>
                 {currentImage?.tags?.length ? (
                   <div className="flex flex-wrap gap-2">
-                    {currentImage.tags.map((tag, i) => (
+                    {(showAllTags
+                      ? currentImage.tags
+                      : currentImage.tags.slice(0, 3)
+                    ).map((tag, i) => (
                       <span
                         key={i}
                         className="rounded-full border border-blue-500/30 bg-blue-500/20 px-2 py-1 text-xs text-blue-600 dark:text-blue-300"
@@ -153,6 +160,26 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
                         {tag}
                       </span>
                     ))}
+                    {currentImage.tags.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllTags((prev) => !prev)}
+                        className="focus-visible:ring-ring/50 inline-flex items-center gap-1.5 rounded-md bg-blue-500/20 px-2 py-1 text-xs font-medium whitespace-nowrap text-blue-600 shadow-xs transition-all outline-none hover:bg-blue-500/30 focus-visible:ring-[3px] dark:text-blue-300 dark:hover:bg-blue-500/30"
+                      >
+                        {showAllTags ? (
+                          <Minus
+                            className="h-2.5 w-2.5 shrink-0"
+                            strokeWidth={2.5}
+                          />
+                        ) : (
+                          <Plus
+                            className="h-2.5 w-2.5 shrink-0"
+                            strokeWidth={2.5}
+                          />
+                        )}
+                        <span>{showAllTags ? 'show less' : 'show more'}</span>
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <p className="text-gray-500 dark:text-white/60">
