@@ -23,10 +23,13 @@ logger = get_logger(__name__)
 # is import day, so it must never reach images.captured_at.
 DATE_SOURCE_EXIF = "exif"
 DATE_SOURCE_SIDECAR = "sidecar"
+DATE_SOURCE_CONTAINER = "container"
 DATE_SOURCE_FILESYSTEM = "filesystem"
 DATE_SOURCE_UNKNOWN = "unknown"
 
-TRUSTED_DATE_SOURCES = frozenset({DATE_SOURCE_EXIF, DATE_SOURCE_SIDECAR})
+TRUSTED_DATE_SOURCES = frozenset(
+    {DATE_SOURCE_EXIF, DATE_SOURCE_SIDECAR, DATE_SOURCE_CONTAINER}
+)
 
 
 class MetadataExtractor:
