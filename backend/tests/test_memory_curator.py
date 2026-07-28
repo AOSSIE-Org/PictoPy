@@ -153,7 +153,7 @@ def run_curator(
         m("db_get_event_labels", return_value=event_labels or [])
         m("db_get_event_label_hits", return_value=event_hits or [])
         m("db_get_images_in_period", return_value=expansion or [])
-        m("db_get_top_event_label", return_value=top_event_label)
+        m("db_get_top_memory_label", return_value=top_event_label)
         m("db_get_embeddings_for_image_ids", return_value=embeddings or {})
         m("db_get_scoring_signals", side_effect=signals)
         m(

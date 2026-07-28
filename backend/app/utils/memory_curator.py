@@ -39,7 +39,7 @@ from app.database.memories import (
     db_get_memory_images,
     db_get_recently_used_image_ids,
     db_get_scoring_signals,
-    db_get_top_event_label,
+    db_get_top_memory_label,
     db_get_recent_dated_images,
     db_start_memory_run,
     db_update_memory_scores,
@@ -108,6 +108,11 @@ EVENT_COHESION_MARGIN = 0.15
 
 # Enough to characterize the library without loading every embedding.
 COHESION_SAMPLE_SIZE = 500
+
+# A scene may name a memory only when no event label does and it covers this
+# much of it. An evening at the cinema has no event label at all, and
+# "17-18 July 2026" says less than "Movie Theater".
+TITLE_SCENE_MIN_SHARE = 0.25
 
 # Two labels covering the same weekend are one occasion, not two.
 EVENT_MERGE_OVERLAP = 0.60
@@ -481,11 +486,14 @@ def _curate_import_events(context: _CurationContext) -> int:
 
             # Name it after what the AI recognised, when it recognised
             # anything; otherwise the dates are the most useful label.
-            top_event = db_get_top_event_label(
-                image_ids, EVENT_LABEL_TOP_N, EVENT_LABEL_PERCENTILE
+            top_label = db_get_top_memory_label(
+                image_ids,
+                EVENT_LABEL_TOP_N,
+                EVENT_LABEL_PERCENTILE,
+                TITLE_SCENE_MIN_SHARE,
             )
-            title = _display_event_name(top_event[1]) if top_event else period_label
-            subtitle = period_label if top_event else None
+            title = _display_event_name(top_label[1]) if top_label else period_label
+            subtitle = period_label if top_label else None
 
             if _build_memory(
                 context,

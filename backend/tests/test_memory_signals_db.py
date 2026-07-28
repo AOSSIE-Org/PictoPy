@@ -35,7 +35,7 @@ from app.database.memories import (
     db_get_memory_ids_for_cluster,
     db_get_memory_images,
     db_get_scoring_signals,
-    db_get_top_event_label,
+    db_get_top_memory_label,
     db_is_indexing_busy,
     db_upsert_memory,
 )
@@ -400,7 +400,7 @@ class TestEventLabels:
     def test_no_class_ids_returns_nothing(self, test_db: str):
         assert db_get_event_label_hits([], 5, 0.50) == []
 
-    def test_top_event_label_picks_the_strongest_by_total(
+    def test_top_label_picks_the_strongest_by_total(
         self, test_db: str, images: List[str]
     ):
         """Summed, not peak: a label seen across the set beats one strong hit."""
@@ -413,11 +413,11 @@ class TestEventLabels:
         add_class_score(test_db, images[0], narrow, 0.9)
         add_class_score(test_db, images[3], narrow, 0.1)
 
-        result = db_get_top_event_label(images, 5, 0.0)
+        result = db_get_top_memory_label(images, 5, 0.0, 0.25)
         assert result is not None
         assert result[1] == "birthday"
 
-    def test_top_event_label_is_not_swayed_by_a_labels_own_scale(
+    def test_top_label_is_not_swayed_by_a_labels_own_scale(
         self, test_db: str, images: List[str]
     ):
         """
@@ -435,15 +435,69 @@ class TestEventLabels:
         for i, image_id in enumerate(images):
             add_class_score(test_db, image_id, quiet, 0.0001 * (i + 1))
 
-        result = db_get_top_event_label(images[2:], 5, 0.50)
+        result = db_get_top_memory_label(images[2:], 5, 0.50, 0.25)
         assert result is not None
         assert result[1] == "holi"
 
-    @pytest.mark.parametrize("ids", [[], ["img-0"]])
-    def test_top_event_label_is_none_without_matches(
-        self, images: List[str], ids: List[str]
+    def test_an_event_label_beats_a_stronger_scene(
+        self, test_db: str, images: List[str]
     ):
-        assert db_get_top_event_label(ids, 5, 0.15) is None
+        """A scene names a memory only when no event will."""
+        scene = SEMANTIC_CLASS_ID_OFFSET + 1
+        event = SEMANTIC_CLASS_ID_OFFSET + 2
+        add_semantic_label(test_db, scene, "beach", "scene")
+        add_semantic_label(test_db, event, "surfing", "event")
+        for image_id in images:
+            add_class_score(test_db, image_id, scene, 0.9)
+        add_class_score(test_db, images[0], event, 0.4)
+        add_class_score(test_db, images[1], event, 0.1)
+
+        result = db_get_top_memory_label(images, 5, 0.50, 0.25)
+        assert result is not None
+        assert result[1] == "surfing"
+
+    def test_a_scene_names_a_memory_no_event_describes(
+        self, test_db: str, images: List[str]
+    ):
+        """
+        An evening at the cinema fires "movie theater" and nothing in the
+        event vocabulary. A date is a worse title than the truth.
+        """
+        scene = SEMANTIC_CLASS_ID_OFFSET + 1
+        add_semantic_label(test_db, scene, "movie theater", "scene")
+        for i, image_id in enumerate(images):
+            add_class_score(test_db, image_id, scene, 0.5 + i * 0.1)
+
+        result = db_get_top_memory_label(images, 5, 0.50, 0.25)
+        assert result is not None
+        assert result[1] == "movie theater"
+
+    def test_a_scene_covering_too_little_does_not_title(
+        self, test_db: str, images: List[str]
+    ):
+        scene = SEMANTIC_CLASS_ID_OFFSET + 1
+        add_semantic_label(test_db, scene, "balcony", "scene")
+        add_class_score(test_db, images[0], scene, 0.9)
+        for image_id in images[1:]:
+            add_class_score(test_db, image_id, scene, 0.1)
+
+        assert db_get_top_memory_label(images, 5, 0.50, 0.90) is None
+
+    @pytest.mark.parametrize("category", ["attribute", "object"])
+    def test_attributes_and_objects_never_title(
+        self, test_db: str, images: List[str], category: str
+    ):
+        """ "Selfie" describes how a photo was taken, not what happened."""
+        class_id = SEMANTIC_CLASS_ID_OFFSET + 1
+        add_semantic_label(test_db, class_id, "selfie", category)
+        for i, image_id in enumerate(images):
+            add_class_score(test_db, image_id, class_id, 0.5 + i * 0.1)
+
+        assert db_get_top_memory_label(images, 5, 0.50, 0.25) is None
+
+    @pytest.mark.parametrize("ids", [[], ["img-0"]])
+    def test_top_label_is_none_without_matches(self, images: List[str], ids: List[str]):
+        assert db_get_top_memory_label(ids, 5, 0.15, 0.25) is None
 
 
 # ##############################

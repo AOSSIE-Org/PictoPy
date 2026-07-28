@@ -1141,19 +1141,31 @@ def db_get_event_label_hits(
             conn.close()
 
 
-def db_get_top_event_label(
-    image_ids: Sequence[ImageId], top_n: int, min_label_percentile: float
+def db_get_top_memory_label(
+    image_ids: Sequence[ImageId],
+    top_n: int,
+    min_label_percentile: float,
+    scene_min_share: float,
 ) -> Optional[Tuple[int, str, float]]:
     """
-    Strongest event label across a set of images, by summed percentile.
+    The label that best names a set of images, or None if none does.
 
-    Names an import-event memory ("Birthday · March 2024") when the AI
-    pipeline has already recognised what the photos show. Gated exactly like
-    db_get_event_label_hits, and for the same reasons: summing raw scores
-    picks whichever label SigLIP2 scores high everywhere, and without the
-    per-image rank a label that fires faintly on all of them outvotes the one
-    the photos are actually of — an evening at the cinema came back titled
-    "Durga Puja" on that alone.
+    Ranked by **summed percentile**, which is count-dominant: every qualifying
+    image contributes between the percentile floor and 1.0, so a label seen on
+    more photos beats a more confident one seen on fewer. That is the right
+    bias for naming — it is what picks "mehndi" (3 photos, 0.77 average) over
+    "eid" (2 photos, 0.91) on a set that is in fact a mehndi.
+
+    Gated exactly like db_get_event_label_hits. Without the per-image rank a
+    label firing faintly across every photo outvotes the one they are of, and
+    an evening at the cinema came back titled "Durga Puja" on that alone.
+
+    An **event** label wins outright when one qualifies. A **scene** falls back
+    in only when no event does and it covers `scene_min_share` of the memory —
+    a cinema evening reads as `movie theater`, and nothing else was ever going
+    to name it. `attribute` and `object` are never titles: "Selfie" describes
+    how a photo was taken, not what happened, and it outranks every real label
+    on a set full of them.
     """
     if not image_ids:
         return None
@@ -1162,8 +1174,8 @@ def db_get_top_event_label(
     try:
         conn = _connect()
         cursor = conn.cursor()
-        best: Optional[Tuple[int, str, float]] = None
-        totals: Dict[int, Tuple[str, float]] = {}
+        # class_id -> (name, category, summed percentile, images matched)
+        totals: Dict[int, Tuple[str, str, float, int]] = {}
         for start in range(0, len(image_ids), 500):
             chunk = list(image_ids[start : start + 500])
             placeholders = ", ".join("?" * len(chunk))
@@ -1180,25 +1192,44 @@ def db_get_top_event_label(
                     FROM image_classes ic
                     WHERE ic.class_id >= {SEMANTIC_CLASS_ID_OFFSET}
                 )
-                SELECT r.class_id, sl.name, SUM(r.label_rank) AS total
+                SELECT r.class_id, sl.name, sl.category,
+                       SUM(r.label_rank) AS total, COUNT(*) AS matched
                 FROM ranked r
                 JOIN semantic_labels sl ON sl.class_id = r.class_id
-                WHERE sl.category = 'event' AND sl.active = 1
+                WHERE sl.category IN ('event', 'scene') AND sl.active = 1
                   AND r.image_rank <= ?
                   AND r.label_rank >= ? AND r.image_id IN ({placeholders})
-                GROUP BY r.class_id, sl.name
+                GROUP BY r.class_id, sl.name, sl.category
                 """,
                 [top_n, min_label_percentile, *chunk],
             )
-            for class_id, name, total in cursor.fetchall():
-                existing = totals.get(class_id)
-                running = (existing[1] if existing else 0.0) + (total or 0.0)
-                totals[class_id] = (name, running)
+            for class_id, name, category, total, matched in cursor.fetchall():
+                _, _, running, seen = totals.get(class_id, (name, category, 0.0, 0))
+                totals[class_id] = (
+                    name,
+                    category,
+                    running + (total or 0.0),
+                    seen + (matched or 0),
+                )
 
-        for class_id, (name, total) in totals.items():
-            if best is None or total > best[2]:
-                best = (class_id, name, total)
-        return best
+        def strongest(candidates: List[Tuple[int, str, float]]):
+            return max(candidates, key=lambda c: c[2]) if candidates else None
+
+        events = [
+            (class_id, name, total)
+            for class_id, (name, category, total, _) in totals.items()
+            if category == "event"
+        ]
+        if events:
+            return strongest(events)
+
+        threshold = scene_min_share * len(image_ids)
+        scenes = [
+            (class_id, name, total)
+            for class_id, (name, category, total, matched) in totals.items()
+            if category == "scene" and matched >= threshold
+        ]
+        return strongest(scenes)
     finally:
         if conn is not None:
             conn.close()
