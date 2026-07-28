@@ -1145,7 +1145,8 @@ def db_get_top_memory_label(
     image_ids: Sequence[ImageId],
     top_n: int,
     min_label_percentile: float,
-    scene_min_share: float,
+    min_share: float,
+    min_images: int,
 ) -> Optional[Tuple[int, str, float]]:
     """
     The label that best names a set of images, or None if none does.
@@ -1160,12 +1161,18 @@ def db_get_top_memory_label(
     label firing faintly across every photo outvotes the one they are of, and
     an evening at the cinema came back titled "Durga Puja" on that alone.
 
-    An **event** label wins outright when one qualifies. A **scene** falls back
-    in only when no event does and it covers `scene_min_share` of the memory —
-    a cinema evening reads as `movie theater`, and nothing else was ever going
-    to name it. `attribute` and `object` are never titles: "Selfie" describes
-    how a photo was taken, not what happened, and it outranks every real label
-    on a set full of them.
+    **Events and scenes compete on equal terms.** Ranking events first cost
+    accuracy rather than buying it: a Juhu Beach afternoon came back "Surfing"
+    while `beach` — higher on both count and confidence — was discarded for
+    being the wrong category. Whichever label the photos actually support wins.
+
+    `attribute` and `object` are never titles: "Selfie" describes how a photo
+    was taken, not what happened, and on a set full of them it outranks every
+    real label on count alone.
+
+    A label must cover `min_images` photos *and* `min_share` of the memory.
+    Without the first, one stray match names thirty photos; without the second,
+    a pair of matches names a whole holiday.
     """
     if not image_ids:
         return None
@@ -1212,24 +1219,13 @@ def db_get_top_memory_label(
                     seen + (matched or 0),
                 )
 
-        def strongest(candidates: List[Tuple[int, str, float]]):
-            return max(candidates, key=lambda c: c[2]) if candidates else None
-
-        events = [
+        threshold = max(min_images, min_share * len(image_ids))
+        candidates = [
             (class_id, name, total)
-            for class_id, (name, category, total, _) in totals.items()
-            if category == "event"
+            for class_id, (name, _, total, matched) in totals.items()
+            if matched >= threshold
         ]
-        if events:
-            return strongest(events)
-
-        threshold = scene_min_share * len(image_ids)
-        scenes = [
-            (class_id, name, total)
-            for class_id, (name, category, total, matched) in totals.items()
-            if category == "scene" and matched >= threshold
-        ]
-        return strongest(scenes)
+        return max(candidates, key=lambda c: c[2]) if candidates else None
     finally:
         if conn is not None:
             conn.close()

@@ -413,7 +413,7 @@ class TestEventLabels:
         add_class_score(test_db, images[0], narrow, 0.9)
         add_class_score(test_db, images[3], narrow, 0.1)
 
-        result = db_get_top_memory_label(images, 5, 0.0, 0.25)
+        result = db_get_top_memory_label(images, 5, 0.0, 0.15, 2)
         assert result is not None
         assert result[1] == "birthday"
 
@@ -435,26 +435,28 @@ class TestEventLabels:
         for i, image_id in enumerate(images):
             add_class_score(test_db, image_id, quiet, 0.0001 * (i + 1))
 
-        result = db_get_top_memory_label(images[2:], 5, 0.50, 0.25)
+        result = db_get_top_memory_label(images[2:], 5, 0.50, 0.15, 2)
         assert result is not None
         assert result[1] == "holi"
 
-    def test_an_event_label_beats_a_stronger_scene(
-        self, test_db: str, images: List[str]
-    ):
-        """A scene names a memory only when no event will."""
+    def test_a_scene_can_beat_an_event(self, test_db: str, images: List[str]):
+        """
+        Categories compete on equal terms. Ranking events first cost accuracy:
+        a beach afternoon came back "Surfing" while "beach" - higher on both
+        count and confidence - was discarded for being the wrong category.
+        """
         scene = SEMANTIC_CLASS_ID_OFFSET + 1
         event = SEMANTIC_CLASS_ID_OFFSET + 2
         add_semantic_label(test_db, scene, "beach", "scene")
         add_semantic_label(test_db, event, "surfing", "event")
-        for image_id in images:
-            add_class_score(test_db, image_id, scene, 0.9)
-        add_class_score(test_db, images[0], event, 0.4)
-        add_class_score(test_db, images[1], event, 0.1)
+        for i, image_id in enumerate(images):
+            add_class_score(test_db, image_id, scene, 0.5 + i * 0.1)
+        for i, image_id in enumerate(images[:3]):
+            add_class_score(test_db, image_id, event, 0.5 + i * 0.1)
 
-        result = db_get_top_memory_label(images, 5, 0.50, 0.25)
+        result = db_get_top_memory_label(images, 5, 0.50, 0.15, 2)
         assert result is not None
-        assert result[1] == "surfing"
+        assert result[1] == "beach"
 
     def test_a_scene_names_a_memory_no_event_describes(
         self, test_db: str, images: List[str]
@@ -468,11 +470,11 @@ class TestEventLabels:
         for i, image_id in enumerate(images):
             add_class_score(test_db, image_id, scene, 0.5 + i * 0.1)
 
-        result = db_get_top_memory_label(images, 5, 0.50, 0.25)
+        result = db_get_top_memory_label(images, 5, 0.50, 0.15, 2)
         assert result is not None
         assert result[1] == "movie theater"
 
-    def test_a_scene_covering_too_little_does_not_title(
+    def test_a_label_covering_too_little_does_not_title(
         self, test_db: str, images: List[str]
     ):
         scene = SEMANTIC_CLASS_ID_OFFSET + 1
@@ -481,7 +483,15 @@ class TestEventLabels:
         for image_id in images[1:]:
             add_class_score(test_db, image_id, scene, 0.1)
 
-        assert db_get_top_memory_label(images, 5, 0.50, 0.90) is None
+        assert db_get_top_memory_label(images, 5, 0.50, 0.90, 2) is None
+
+    def test_one_stray_match_never_titles(self, test_db: str, images: List[str]):
+        """The share alone would let a single photo name the whole memory."""
+        event = SEMANTIC_CLASS_ID_OFFSET + 1
+        add_semantic_label(test_db, event, "wedding", "event")
+        add_class_score(test_db, images[0], event, 0.9)
+
+        assert db_get_top_memory_label(images, 5, 0.0, 0.0, 2) is None
 
     @pytest.mark.parametrize("category", ["attribute", "object"])
     def test_attributes_and_objects_never_title(
@@ -493,11 +503,11 @@ class TestEventLabels:
         for i, image_id in enumerate(images):
             add_class_score(test_db, image_id, class_id, 0.5 + i * 0.1)
 
-        assert db_get_top_memory_label(images, 5, 0.50, 0.25) is None
+        assert db_get_top_memory_label(images, 5, 0.50, 0.15, 2) is None
 
     @pytest.mark.parametrize("ids", [[], ["img-0"]])
     def test_top_label_is_none_without_matches(self, images: List[str], ids: List[str]):
-        assert db_get_top_memory_label(ids, 5, 0.15, 0.25) is None
+        assert db_get_top_memory_label(ids, 5, 0.15, 0.15, 2) is None
 
 
 # ##############################

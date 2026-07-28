@@ -15,7 +15,7 @@ import json
 import uuid
 from collections import defaultdict
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -109,10 +109,11 @@ EVENT_COHESION_MARGIN = 0.15
 # Enough to characterize the library without loading every embedding.
 COHESION_SAMPLE_SIZE = 500
 
-# A scene may name a memory only when no event label does and it covers this
-# much of it. An evening at the cinema has no event label at all, and
-# "17-18 July 2026" says less than "Movie Theater".
-TITLE_SCENE_MIN_SHARE = 0.25
+# A label may name a memory once it covers this much of it. Both bounds are
+# needed: the share alone lets a pair of matches name a whole holiday, the
+# count alone lets one stray match name thirty photos.
+TITLE_MIN_SHARE = 0.15
+TITLE_MIN_IMAGES = 2
 
 # Two labels covering the same weekend are one occasion, not two.
 EVENT_MERGE_OVERLAP = 0.60
@@ -254,6 +255,7 @@ def _build_memory(
     surface_date: str,
     hard_exclude_recent: bool,
     trim_outliers: bool = False,
+    rename: Optional[Callable[[List[str]], Tuple[str, Optional[str]]]] = None,
 ) -> bool:
     """
     Score, trim and persist one candidate set. Returns whether it qualified.
@@ -301,6 +303,11 @@ def _build_memory(
     selected = spread_over_time(deduplicated, preferences.max_images)
     if len(selected) < preferences.min_images:
         return False
+
+    # Name it after what survived. Titling the candidate set instead lets a
+    # photo that was just trimmed for not belonging still vote on the label.
+    if rename is not None:
+        title, subtitle = rename([c["id"] for c in selected])
 
     cover = max(selected, key=lambda c: c["score"])
     timestamps = [c["captured_at"] for c in selected if c.get("captured_at")]
@@ -485,26 +492,33 @@ def _curate_import_events(context: _CurationContext) -> int:
             period_label = _format_period_label(start, end)
 
             # Name it after what the AI recognised, when it recognised
-            # anything; otherwise the dates are the most useful label.
-            top_label = db_get_top_memory_label(
-                image_ids,
-                EVENT_LABEL_TOP_N,
-                EVENT_LABEL_PERCENTILE,
-                TITLE_SCENE_MIN_SHARE,
-            )
-            title = _display_event_name(top_label[1]) if top_label else period_label
-            subtitle = period_label if top_label else None
+            # anything; otherwise the dates are the most useful label. Deferred
+            # until the set is final, so a trimmed photo cannot name the rest.
+            def name_from_labels(
+                selected_ids: List[str], period_label: str = period_label
+            ) -> Tuple[str, Optional[str]]:
+                top_label = db_get_top_memory_label(
+                    selected_ids,
+                    EVENT_LABEL_TOP_N,
+                    EVENT_LABEL_PERCENTILE,
+                    TITLE_MIN_SHARE,
+                    TITLE_MIN_IMAGES,
+                )
+                if top_label is None:
+                    return period_label, None
+                return _display_event_name(top_label[1]), period_label
 
             if _build_memory(
                 context,
                 image_ids=image_ids,
                 dedupe_key=f"import:{start.date()}..{end.date()}",
                 event_type="import_event",
-                title=title,
-                subtitle=subtitle,
+                title=period_label,
+                subtitle=None,
                 surface_date=context.run_date,
                 hard_exclude_recent=True,
                 trim_outliers=True,
+                rename=name_from_labels,
             ):
                 generated += 1
         except Exception:

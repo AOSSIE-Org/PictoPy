@@ -153,7 +153,14 @@ def run_curator(
         m("db_get_event_labels", return_value=event_labels or [])
         m("db_get_event_label_hits", return_value=event_hits or [])
         m("db_get_images_in_period", return_value=expansion or [])
-        m("db_get_top_memory_label", return_value=top_event_label)
+        m(
+            "db_get_top_memory_label",
+            **(
+                {"side_effect": top_event_label}
+                if callable(top_event_label)
+                else {"return_value": top_event_label}
+            ),
+        )
         m("db_get_embeddings_for_image_ids", return_value=embeddings or {})
         m("db_get_scoring_signals", side_effect=signals)
         m(
@@ -739,6 +746,28 @@ class TestOutlierTrimming:
         kept = {image_id for image_id, _, _ in upserts[0]["images"]}
         assert kept.isdisjoint(outliers)
         assert kept
+
+    def test_the_title_is_decided_after_trimming(self):
+        """
+        A photo trimmed for not belonging must not still vote on the label.
+        Titling the candidate set kept a beach afternoon named "Surfing" when
+        the two screenshots that outvoted "beach" were no longer in it.
+        """
+        images = make_images("burst", 9, step=timedelta(minutes=20))
+        outliers = {"burst-7", "burst-8"}
+        seen = {}
+
+        def label(image_ids, *args):
+            seen["ids"] = set(image_ids)
+            return (1001, "beach", 1.0)
+
+        run_curator(
+            uncurated=images,
+            embeddings=self.embeddings_for(images, outliers),
+            top_event_label=label,
+        )
+
+        assert seen["ids"].isdisjoint(outliers)
 
     def test_anniversaries_keep_everything(self):
         """
