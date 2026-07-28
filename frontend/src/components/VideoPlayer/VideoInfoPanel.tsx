@@ -54,6 +54,13 @@ export const VideoInfoPanel: React.FC<VideoInfoPanelProps> = ({
   const tags = video?.tags ?? [];
   const [showAllTags, setShowAllTags] = React.useState(false);
 
+  const tagResetKey = `${show}:${video?.id ?? ''}`;
+  const [prevTagResetKey, setPrevTagResetKey] = React.useState(tagResetKey);
+  if (tagResetKey !== prevTagResetKey) {
+    setPrevTagResetKey(tagResetKey);
+    setShowAllTags(false);
+  }
+
   return (
     <AnimatePresence>
       {show && (

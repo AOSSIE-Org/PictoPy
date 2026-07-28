@@ -87,4 +87,41 @@ describe('MediaInfoPanel tag list', () => {
       screen.getByRole('button', { name: /show more/i }),
     ).toBeInTheDocument();
   });
+
+  test('resets to the compact default when a different image is shown', () => {
+    const first = makeImage(['alpha', 'beta', 'gamma', 'delta', 'epsilon']);
+    const second: Image = {
+      ...makeImage(['one', 'two', 'three', 'four']),
+      id: 'img2',
+    };
+    const { rerender } = render(
+      <MediaInfoPanel
+        show
+        onClose={jest.fn()}
+        currentImage={first}
+        currentIndex={0}
+        totalImages={2}
+      />,
+    );
+
+    // Expand on the first image.
+    fireEvent.click(screen.getByRole('button', { name: /show more/i }));
+    expect(screen.getByText('epsilon')).toBeInTheDocument();
+
+    // Navigating to a different image collapses the list again.
+    rerender(
+      <MediaInfoPanel
+        show
+        onClose={jest.fn()}
+        currentImage={second}
+        currentIndex={1}
+        totalImages={2}
+      />,
+    );
+
+    expect(screen.queryByText('four')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /show more/i }),
+    ).toBeInTheDocument();
+  });
 });

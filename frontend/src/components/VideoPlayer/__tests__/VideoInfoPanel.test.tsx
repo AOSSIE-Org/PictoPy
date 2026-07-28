@@ -86,4 +86,41 @@ describe('VideoInfoPanel tag list', () => {
       screen.getByRole('button', { name: /show more/i }),
     ).toBeInTheDocument();
   });
+
+  test('resets to the compact default when a different video is shown', () => {
+    const first = makeVideo(['alpha', 'beta', 'gamma', 'delta', 'epsilon']);
+    const second: Video = {
+      ...makeVideo(['one', 'two', 'three', 'four']),
+      id: 'v2',
+    };
+    const { rerender } = render(
+      <VideoInfoPanel
+        show
+        onClose={jest.fn()}
+        video={first}
+        currentIndex={0}
+        totalVideos={2}
+      />,
+    );
+
+    // Expand on the first video.
+    fireEvent.click(screen.getByRole('button', { name: /show more/i }));
+    expect(screen.getByText('epsilon')).toBeInTheDocument();
+
+    // Navigating to a different video collapses the list again.
+    rerender(
+      <VideoInfoPanel
+        show
+        onClose={jest.fn()}
+        video={second}
+        currentIndex={1}
+        totalVideos={2}
+      />,
+    );
+
+    expect(screen.queryByText('four')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /show more/i }),
+    ).toBeInTheDocument();
+  });
 });

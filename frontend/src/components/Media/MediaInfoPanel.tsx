@@ -31,6 +31,13 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
 }) => {
   const [showAllTags, setShowAllTags] = React.useState(false);
 
+  const tagResetKey = `${show}:${currentImage?.id ?? ''}`;
+  const [prevTagResetKey, setPrevTagResetKey] = React.useState(tagResetKey);
+  if (tagResetKey !== prevTagResetKey) {
+    setPrevTagResetKey(tagResetKey);
+    setShowAllTags(false);
+  }
+
   const getFormattedDate = () => {
     if (currentImage?.metadata?.date_created) {
       return new Date(currentImage.metadata.date_created).toLocaleDateString(
