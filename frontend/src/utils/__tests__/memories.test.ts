@@ -1,4 +1,8 @@
-import type { MemoryCard, MemoryImage } from '@/api/api-functions/memories';
+import type {
+  MemoryCard,
+  MemoryImage,
+  MemoryVideo,
+} from '@/api/api-functions/memories';
 import {
   MEMORY_PLACEHOLDER_IMAGE,
   formatDateRange,
@@ -9,6 +13,8 @@ import {
   getCoverUrl,
   getMemoryImageUrl,
   getThumbnailUrl,
+  buildMemorySlides,
+  slideDurationMs,
 } from '../memories';
 
 // The shared setup mock only provides `invoke`; these helpers need
@@ -33,6 +39,7 @@ const makeMemory = (overrides: Partial<MemoryCard> = {}): MemoryCard => ({
   period_start: null,
   period_end: null,
   image_count: 3,
+  video_count: 0,
   cover_image_id: 'img-0',
   cover_thumbnail_path: '/thumbs/0.jpg',
   score: 0.7,
@@ -165,5 +172,85 @@ describe('image URLs', () => {
     expect(getCoverUrl(makeMemory({ cover_thumbnail_path: null }))).toBe(
       MEMORY_PLACEHOLDER_IMAGE,
     );
+  });
+});
+
+describe('buildMemorySlides', () => {
+  const image = (id: string, sort_order: number) =>
+    ({
+      id,
+      path: `/photos/${id}.jpg`,
+      thumbnailPath: null,
+      captured_at: null,
+      latitude: null,
+      longitude: null,
+      isFavourite: false,
+      sort_order,
+      score: 1,
+    }) as MemoryImage;
+
+  const video = (id: string, sort_order: number, duration: number | null = 8) =>
+    ({
+      id,
+      path: `/videos/${id}.mp4`,
+      thumbnailPath: null,
+      captured_at: null,
+      duration,
+      isFavourite: false,
+      sort_order,
+      score: 1,
+    }) as MemoryVideo;
+
+  it('merges stills and clips into one sequence', () => {
+    // Two tables, one sort_order sequence - so this is a merge, not a concat.
+    const slides = buildMemorySlides({
+      images: [image('p1', 0), image('p2', 2)],
+      videos: [video('v1', 1)],
+    });
+
+    expect(slides.map((slide) => slide.id)).toEqual(['p1', 'v1', 'p2']);
+    expect(slides.map((slide) => slide.kind)).toEqual([
+      'image',
+      'video',
+      'image',
+    ]);
+  });
+
+  it('handles a memory with no clips', () => {
+    const slides = buildMemorySlides({ images: [image('p1', 0)], videos: [] });
+    expect(slides).toHaveLength(1);
+  });
+
+  it('tolerates a missing memory', () => {
+    expect(buildMemorySlides(null)).toEqual([]);
+    expect(buildMemorySlides(undefined)).toEqual([]);
+  });
+});
+
+describe('slideDurationMs', () => {
+  const clip = (duration: number | null) =>
+    ({ kind: 'video', duration }) as ReturnType<
+      typeof buildMemorySlides
+    >[number];
+
+  it('holds a still for the configured interval', () => {
+    const still = { kind: 'image' } as ReturnType<
+      typeof buildMemorySlides
+    >[number];
+    expect(slideDurationMs(still, 5000)).toBe(5000);
+  });
+
+  it('runs a clip for its own length', () => {
+    // Cutting away mid-shot, or holding a frozen last frame, both read as bugs.
+    expect(slideDurationMs(clip(8), 5000)).toBe(8000);
+  });
+
+  it('falls back when a clip has no known length', () => {
+    expect(slideDurationMs(clip(null), 5000)).toBe(5000);
+    expect(slideDurationMs(clip(0), 5000)).toBe(5000);
+  });
+
+  it('tolerates no slide at all', () => {
+    expect(slideDurationMs(undefined, 5000)).toBe(5000);
   });
 });

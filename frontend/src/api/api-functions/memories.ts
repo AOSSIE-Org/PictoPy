@@ -23,6 +23,18 @@ export interface MemoryImage {
   score: number | null;
 }
 
+/** A short clip curated into a memory, sharing the images' sort_order. */
+export interface MemoryVideo {
+  id: string;
+  path: string;
+  thumbnailPath: string | null;
+  captured_at: string | null;
+  duration: number | null;
+  isFavourite: boolean;
+  sort_order: number;
+  score: number | null;
+}
+
 /** Memory summary, without the image set. Backs the grid and filmstrip. */
 export interface MemoryCard {
   memory_id: string;
@@ -38,6 +50,7 @@ export interface MemoryCard {
   period_start: string | null;
   period_end: string | null;
   image_count: number;
+  video_count: number;
   cover_image_id: string | null;
   cover_thumbnail_path: string | null;
   score: number;
@@ -50,6 +63,11 @@ export interface MemoryCard {
 /** A memory with its full image set, for the story viewer. */
 export interface MemoryStory extends MemoryCard {
   images: MemoryImage[];
+  /**
+   * Separate from images because they are separate tables. sort_order runs
+   * across both, so the viewer merges them into one sequence.
+   */
+  videos: MemoryVideo[];
   signals: Record<string, number> | null;
 }
 

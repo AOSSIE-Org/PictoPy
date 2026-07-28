@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -35,6 +41,8 @@ import {
   formatMemoryDate,
   formatMemorySubtitle,
   getMemoryImageUrl,
+  buildMemorySlides,
+  slideDurationMs,
 } from '@/utils/memories';
 import { MemoryFilmstrip } from './MemoryFilmstrip';
 
@@ -68,18 +76,23 @@ export const MemoryStoryViewer: React.FC<MemoryStoryViewerProps> = ({
   const slideIndex = useAppSelector(selectSlideIndex);
   const isPlaying = useAppSelector(selectIsPlaying);
   const isMuted = useAppSelector(selectIsMuted);
-  const slideDurationMs = useAppSelector(selectSlideDurationMs);
+  const photoDurationMs = useAppSelector(selectSlideDurationMs);
 
   const { successData, isLoading, isError } = useMemory(memoryId);
   const { mutate: updateMemory } = useUpdateMemory();
 
   const memory = successData?.memory;
-  const images = memory?.images ?? [];
-  const total = images.length;
+  const slides = useMemo(() => buildMemorySlides(memory), [memory]);
+  const total = slides.length;
   const safeIndex = Math.min(slideIndex, Math.max(total - 1, 0));
-  const currentImage = images[safeIndex];
+  const currentSlide = slides[safeIndex];
+  const isVideoSlide = currentSlide?.kind === 'video';
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  // Clips start silent, as every gallery does. Unmuting one is a per-slide
+  // choice, so leaving the slide restores silence.
+  const [isClipAudible, setClipAudible] = useState(false);
   const markedViewedRef = useRef<string | null>(null);
 
   const handleClose = useCallback(() => {
@@ -108,10 +121,17 @@ export const MemoryStoryViewer: React.FC<MemoryStoryViewerProps> = ({
 
   const progress = useStoryProgress({
     index: safeIndex,
-    durationMs: slideDurationMs,
+    // A clip runs for its own length; cutting away mid-shot, or holding a
+    // frozen last frame, both read as a bug.
+    durationMs: slideDurationMs(currentSlide, photoDurationMs),
     isPlaying: isPlaying && total > 0,
     onComplete: goNext,
   });
+
+  // Silence follows the slide, not the story.
+  useEffect(() => {
+    setClipAudible(false);
+  }, [safeIndex, memoryId]);
 
   // Opening a memory clears its unread state. Guarded by id so a re-render or
   // a refetch does not fire the mutation repeatedly.
@@ -150,18 +170,32 @@ export const MemoryStoryViewer: React.FC<MemoryStoryViewerProps> = ({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [dispatch, goNext, goPrevious, handleClose]);
 
-  // Keep the audio element in sync with playback and mute state.
+  // Keep the theme in sync with playback and mute state. An audible clip
+  // silences it: two soundtracks at once is nobody's intent.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.muted = isMuted;
-    if (isPlaying && !isMuted) {
+    const shouldPlay = isPlaying && !isMuted && !isClipAudible;
+    audio.muted = isMuted || isClipAudible;
+    if (shouldPlay) {
       // Autoplay can be refused; the story should keep running regardless.
       void audio.play().catch(() => undefined);
     } else {
       audio.pause();
     }
-  }, [isPlaying, isMuted, memoryId]);
+  }, [isPlaying, isMuted, isClipAudible, memoryId]);
+
+  // Clips follow the story's own play/pause rather than offering controls.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !isClipAudible;
+    if (isPlaying) {
+      void video.play().catch(() => undefined);
+    } else {
+      video.pause();
+    }
+  }, [isPlaying, isClipAudible, safeIndex]);
 
   const touchStartX = useRef<number | null>(null);
 
@@ -289,19 +323,55 @@ export const MemoryStoryViewer: React.FC<MemoryStoryViewerProps> = ({
           </div>
         )}
 
-        {!isLoading && !isError && currentImage && (
+        {!isLoading && !isError && currentSlide && (
           <>
-            <img
-              key={currentImage.id}
-              src={getMemoryImageUrl(currentImage.path)}
-              alt=""
-              onError={handleImageError}
-              className="h-full w-full object-contain"
-            />
-            {currentImage.captured_at && (
+            {currentSlide.kind === 'video' ? (
+              // No controls: a story slide is not a video player, and every
+              // gallery treats clips this way. The story's own play/pause and
+              // the sound toggle are the whole interface.
+              <video
+                key={currentSlide.id}
+                ref={videoRef}
+                src={getMemoryImageUrl(currentSlide.path)}
+                poster={getMemoryImageUrl(
+                  currentSlide.thumbnailPath ?? currentSlide.path,
+                )}
+                autoPlay
+                muted={!isClipAudible}
+                playsInline
+                preload="auto"
+                data-testid="memory-story-video"
+                className="h-full w-full object-contain"
+              />
+            ) : (
+              <img
+                key={currentSlide.id}
+                src={getMemoryImageUrl(currentSlide.path)}
+                alt=""
+                onError={handleImageError}
+                className="h-full w-full object-contain"
+              />
+            )}
+            {currentSlide.captured_at && (
               <p className="absolute inset-x-0 bottom-4 text-center text-sm text-white/70 drop-shadow">
-                {formatMemoryDate(currentImage.captured_at)}
+                {formatMemoryDate(currentSlide.captured_at)}
               </p>
+            )}
+            {isVideoSlide && (
+              <button
+                type="button"
+                onClick={() => setClipAudible((audible) => !audible)}
+                aria-label={
+                  isClipAudible ? 'Mute this clip' : 'Unmute this clip'
+                }
+                className="absolute right-3 bottom-4 rounded-full bg-black/40 p-2 text-white/80 backdrop-blur-sm hover:bg-black/60 hover:text-white"
+              >
+                {isClipAudible ? (
+                  <Volume2 className="h-5 w-5" />
+                ) : (
+                  <VolumeX className="h-5 w-5" />
+                )}
+              </button>
             )}
           </>
         )}
@@ -312,7 +382,7 @@ export const MemoryStoryViewer: React.FC<MemoryStoryViewerProps> = ({
               type="button"
               onClick={goPrevious}
               disabled={safeIndex === 0}
-              aria-label="Previous photo"
+              aria-label="Previous slide"
               className={cn(
                 'absolute top-1/2 left-3 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white/80 backdrop-blur-sm hover:bg-black/60 hover:text-white',
                 safeIndex === 0 && 'pointer-events-none opacity-30',
@@ -323,7 +393,7 @@ export const MemoryStoryViewer: React.FC<MemoryStoryViewerProps> = ({
             <button
               type="button"
               onClick={goNext}
-              aria-label="Next photo"
+              aria-label="Next slide"
               className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white/80 backdrop-blur-sm hover:bg-black/60 hover:text-white"
             >
               <ChevronRight className="h-6 w-6" />
