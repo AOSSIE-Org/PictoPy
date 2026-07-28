@@ -16,6 +16,7 @@ from app.database.memories import (
     db_delete_memory,
     db_get_memory,
     db_get_memory_images,
+    db_get_memory_videos,
     db_get_memory_run,
     db_get_surfaceable_memory,
     db_is_indexing_busy,
@@ -40,6 +41,7 @@ from app.schemas.memories import (
     GetTodayMemoryResponse,
     MemoryCard,
     MemoryImageItem,
+    MemoryVideoItem,
     MemoryStatusData,
     MemoryStatusResponse,
     MemoryStory,
@@ -100,7 +102,9 @@ def _to_story(row: Dict[str, Any]) -> MemoryStory:
     if live_count is not None:
         data["image_count"] = live_count
     images = db_get_memory_images(data["memory_id"])
+    videos = db_get_memory_videos(data["memory_id"])
     data["images"] = [MemoryImageItem.model_validate(image) for image in images]
+    data["videos"] = [MemoryVideoItem.model_validate(video) for video in videos]
     return MemoryStory.model_validate(data)
 
 

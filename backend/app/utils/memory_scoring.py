@@ -58,6 +58,12 @@ MAD_TO_STD = 1.4826
 # renormalized out when their source is missing.
 ALWAYS_AVAILABLE = frozenset({"favourite", "known_people", "face_presence", "in_album"})
 
+# Nothing detects faces in a video and a video cannot be put in an album, so
+# for videos those are absent, not zero. Scoring a video as face-free and
+# album-less would rank every one of them below every photo — the same
+# mistake availability renormalization exists to prevent.
+UNAVAILABLE_FOR_VIDEO = frozenset({"known_people", "face_presence", "in_album"})
+
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Great-circle distance between two coordinates, in kilometres."""
@@ -135,6 +141,8 @@ def compute_signals(
     """
     values: Dict[str, float] = {}
     available: Set[str] = set(ALWAYS_AVAILABLE)
+    if row.get("media_type") == "video":
+        available -= UNAVAILABLE_FOR_VIDEO
 
     values["favourite"] = 1.0 if row.get("isFavourite") else 0.0
     values["in_album"] = 1.0 if row.get("in_album") else 0.0
@@ -377,6 +385,32 @@ def trim_incoherent(
         return list(candidates)
 
     return keep
+
+
+def interleave_by_time(
+    photos: Sequence[Dict[str, Any]], videos: Sequence[Dict[str, Any]]
+) -> Tuple[List[Tuple[str, int, float]], List[Tuple[str, int, float]]]:
+    """
+    Lay photos and videos into one chronological sequence.
+
+    They live in separate tables but play as a single story, so sort_order is
+    one shared sequence across both rather than two that restart. Returns the
+    join-table entries for each, already numbered.
+    """
+    combined = sorted(
+        [(photo, False) for photo in photos] + [(video, True) for video in videos],
+        key=lambda pair: (
+            pair[0].get("captured_at") or datetime.min,
+            -pair[0]["score"],
+        ),
+    )
+
+    image_entries: List[Tuple[str, int, float]] = []
+    video_entries: List[Tuple[str, int, float]] = []
+    for order, (item, is_video) in enumerate(combined):
+        target = video_entries if is_video else image_entries
+        target.append((item["id"], order, item["score"]))
+    return image_entries, video_entries
 
 
 def _chronological(candidates: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:

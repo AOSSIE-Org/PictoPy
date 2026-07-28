@@ -80,7 +80,7 @@ async def lifespan(app: FastAPI):
     db_create_albums_table()
     db_create_album_images_table()
     db_create_metadata_table()
-    db_create_memories_table()  # References images(id)
+    db_create_memories_table()  # References images(id) and videos(id)
     # Nothing is indexing or tagging yet, so anything still flagged busy is
     # left over from a previous session and would block memory generation.
     db_clear_stale_processing_flags()

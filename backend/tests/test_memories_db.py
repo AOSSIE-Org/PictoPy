@@ -7,6 +7,7 @@ from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple
 import pytest
 
 from app.database.folders import db_create_folders_table
+from app.database.videos import db_create_videos_table
 from app.database.images import db_create_images_table, db_delete_images_by_ids
 from app.database.memories import (
     db_count_unviewed_memories,
@@ -44,12 +45,14 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
 
     monkeypatch.setattr("app.config.settings.DATABASE_PATH", db_path)
     monkeypatch.setattr("app.database.images.DATABASE_PATH", db_path)
+    monkeypatch.setattr("app.database.videos.DATABASE_PATH", db_path)
     monkeypatch.setattr("app.database.folders.DATABASE_PATH", db_path)
     monkeypatch.setattr("app.database.yolo_mapping.DATABASE_PATH", db_path)
 
     db_create_YOLO_classes_table()
     db_create_folders_table()
     db_create_images_table()
+    db_create_videos_table()
     db_create_memories_table()
 
     yield db_path

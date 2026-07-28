@@ -48,8 +48,11 @@ class MemoriesPreferences(BaseModel):
     notifications_enabled: bool = True
     # The story viewer ships muted; the user opts into background audio.
     story_music_enabled: bool = False
-    # Seconds each photo is held before the story advances.
+    # Seconds each photo is held before the story advances. A video slide
+    # runs for its own length instead.
     slide_duration_seconds: float = Field(default=5.0, ge=1.0, le=30.0)
+    # Short clips shot during the same span, as punctuation between stills.
+    include_videos: bool = True
     min_images: int = Field(default=5, ge=2, le=50)
     max_images: int = Field(default=30, ge=5, le=100)
     weights: MemoryScoringWeights = Field(default_factory=MemoryScoringWeights)
@@ -108,6 +111,7 @@ class MemoriesPreferencesUpdate(BaseModel):
     notifications_enabled: Optional[bool] = None
     story_music_enabled: Optional[bool] = None
     slide_duration_seconds: Optional[float] = Field(default=None, ge=1.0, le=30.0)
+    include_videos: Optional[bool] = None
     min_images: Optional[int] = Field(default=None, ge=2, le=50)
     max_images: Optional[int] = Field(default=None, ge=5, le=100)
     weights: Optional[MemoryScoringWeightsUpdate] = None

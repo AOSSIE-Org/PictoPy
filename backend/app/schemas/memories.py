@@ -21,6 +21,19 @@ class MemoryImageItem(BaseModel):
     score: Optional[float] = None
 
 
+class MemoryVideoItem(BaseModel):
+    """A short clip curated into a memory, sharing the images' sort_order."""
+
+    id: str
+    path: str
+    thumbnailPath: Optional[str] = None
+    captured_at: Optional[str] = None
+    duration: Optional[float] = None
+    isFavourite: bool = False
+    sort_order: int
+    score: Optional[float] = None
+
+
 class MemoryCard(BaseModel):
     """Memory summary, without the image set. Used by the history filmstrip."""
 
@@ -37,6 +50,7 @@ class MemoryCard(BaseModel):
     period_start: Optional[str] = None
     period_end: Optional[str] = None
     image_count: int = 0
+    video_count: int = 0
     cover_image_id: Optional[str] = None
     cover_thumbnail_path: Optional[str] = None
     score: float = 0.0
@@ -50,6 +64,9 @@ class MemoryStory(MemoryCard):
     """A memory with its full image set, for the story viewer."""
 
     images: List[MemoryImageItem] = Field(default_factory=list)
+    # Separate from images because they are separate tables; sort_order runs
+    # across both, so the viewer merges them into one sequence.
+    videos: List[MemoryVideoItem] = Field(default_factory=list)
     # Per-signal breakdown kept for debugging why an image was selected. Not
     # surfaced in the UI.
     signals: Optional[Dict[str, Any]] = None

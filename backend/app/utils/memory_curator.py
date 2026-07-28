@@ -29,6 +29,8 @@ from app.database.image_embeddings import (
 )
 from app.database.memories import (
     db_delete_stale_memories,
+    db_get_video_candidates_in_period,
+    db_get_video_scoring_signals,
     db_finish_memory_run,
     db_get_anniversary_candidates,
     db_get_event_label_hits,
@@ -52,6 +54,7 @@ from app.utils.memory_scoring import (
     aggregate_memory_score,
     cohesion_baseline,
     detect_home_location,
+    interleave_by_time,
     mean_pairwise_cohesion,
     parse_captured_at,
     score_candidates,
@@ -122,6 +125,20 @@ EVENT_MERGE_OVERLAP = 0.60
 # imminent; otherwise it is a rediscovery and surfaces today.
 EVENT_ANNIVERSARY_LOOKAHEAD_DAYS = 3
 MAX_SEMANTIC_MEMORIES = 3
+
+# --- Videos ----------------------------------------------------------------
+
+# A story is mostly stills; clips are punctuation. One per nine photos means
+# seven photos earn one and eighteen earn two.
+PHOTOS_PER_VIDEO = 9
+MAX_VIDEOS_PER_MEMORY = 3
+
+# Per clip, and across the whole memory. The budget matters as much as the
+# count: three clips at the per-clip limit would outlast the photos between
+# them. 15s covers most of a real library; the long ones are recordings, not
+# moments.
+MAX_VIDEO_SECONDS = 15.0
+MAX_VIDEO_SECONDS_PER_MEMORY = 30.0
 
 # --- Shared ----------------------------------------------------------------
 
@@ -345,8 +362,17 @@ def _build_memory(
     if rename is not None:
         title, subtitle = rename([c["id"] for c in selected])
 
+    # Cover stays a still: a cover is a poster frame, and photos are the
+    # things chosen for being good ones.
     cover = max(selected, key=lambda c: c["score"])
     timestamps = [c["captured_at"] for c in selected if c.get("captured_at")]
+
+    videos = (
+        _select_videos(context, selected)
+        if timestamps and context.preferences.include_videos
+        else []
+    )
+    ordered = interleave_by_time(selected, videos)
 
     db_upsert_memory(
         {
@@ -361,17 +387,90 @@ def _build_memory(
             "period_end": max(timestamps).isoformat() if timestamps else None,
             "cover_image_id": cover["id"],
             "image_count": len(selected),
+            "video_count": len(videos),
             "score": aggregate_memory_score(selected),
             # Kept for debugging why a given photo made the cut. Not shown.
             "signals": cover["signals"],
             "params_signature": context.params_signature,
         },
-        [
-            (candidate["id"], order, candidate["score"])
-            for order, candidate in enumerate(selected)
-        ],
+        *ordered,
     )
     return True
+
+
+def video_quota(photo_count: int) -> int:
+    """
+    How many clips a memory of this size can carry.
+
+    A story is mostly stills; videos are punctuation. One per nine photos,
+    rounded, so seven photos earn one and eighteen earn two, and never more
+    than the cap however long the memory runs.
+    """
+    if photo_count <= 0:
+        return 0
+    return min(MAX_VIDEOS_PER_MEMORY, max(1, round(photo_count / PHOTOS_PER_VIDEO)))
+
+
+def select_videos_within_budget(
+    candidates: Sequence[Dict[str, Any]], quota: int, budget_seconds: float
+) -> List[Dict[str, Any]]:
+    """
+    Take the best clips that fit, best first, shortest wins a tie.
+
+    The budget is what stops the cap alone from tripling a story's length:
+    three clips at the per-clip limit would outlast the photos they punctuate.
+    """
+    if quota <= 0:
+        return []
+
+    ranked = sorted(candidates, key=lambda v: (-v["score"], v.get("duration") or 0.0))
+
+    chosen: List[Dict[str, Any]] = []
+    spent = 0.0
+    for candidate in ranked:
+        duration = candidate.get("duration") or 0.0
+        if len(chosen) >= quota or spent + duration > budget_seconds:
+            continue
+        chosen.append(candidate)
+        spent += duration
+    return chosen
+
+
+def _select_videos(
+    context: _CurationContext, selected: Sequence[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Pick the clips that belong to the span the photos already cover."""
+    timestamps = [c["captured_at"] for c in selected if c.get("captured_at")]
+    if not timestamps:
+        return []
+
+    try:
+        candidates = db_get_video_candidates_in_period(
+            min(timestamps).isoformat(),
+            max(timestamps).isoformat(),
+            MAX_VIDEO_SECONDS,
+        )
+        if not candidates:
+            return []
+
+        signal_rows = db_get_video_scoring_signals([v["id"] for v in candidates])
+        if not signal_rows:
+            return []
+
+        scored = score_candidates(signal_rows, context.weights, context.home)
+        durations = {v["id"]: v.get("duration") for v in candidates}
+        for candidate in scored:
+            candidate["duration"] = durations.get(candidate["id"])
+
+        return select_videos_within_budget(
+            scored,
+            video_quota(len(selected)),
+            MAX_VIDEO_SECONDS_PER_MEMORY,
+        )
+    except Exception:
+        # A story of photos is still a story; never lose one over its clips.
+        logger.error("Failed to select videos for a memory", exc_info=True)
+        return []
 
 
 # ##############################

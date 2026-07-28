@@ -23,6 +23,7 @@ from app.database.image_embeddings import (
     db_create_image_embeddings_table,
     db_get_embeddings_for_image_ids,
 )
+from app.database.videos import db_create_videos_table
 from app.database.images import db_create_images_table
 from app.database.memories import (
     db_create_memories_table,
@@ -75,6 +76,7 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
         "app.database.albums",
         "app.database.faces",
         "app.database.face_clusters",
+        "app.database.videos",
     ):
         monkeypatch.setattr(f"{module}.DATABASE_PATH", db_path)
 
@@ -87,6 +89,7 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
     db_create_faces_table()
     db_create_semantic_labels_table()
     db_create_image_embeddings_table()
+    db_create_videos_table()
     db_create_memories_table()
 
     yield db_path

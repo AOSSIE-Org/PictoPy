@@ -12,6 +12,7 @@ logger = get_logger(__name__)
 
 MemoryId = str
 ImageId = str
+VideoId = str
 
 EVENT_TYPES = ("anniversary", "import_event", "semantic_event")
 MEMORY_STATUSES = ("pending", "complete", "failed", "empty")
@@ -19,6 +20,7 @@ RUN_STATUSES = ("running", "complete", "failed")
 
 # (image_id, sort_order, score)
 MemoryImageEntry = Tuple[ImageId, int, Optional[float]]
+MemoryVideoEntry = Tuple[VideoId, int, Optional[float]]
 
 # Columns settable by db_upsert_memory. memory_id, viewed_at, notified_at and
 # dismissed are deliberately excluded: re-curation replaces contents without
@@ -36,6 +38,7 @@ _UPSERT_COLUMNS = (
     "period_end",
     "cover_image_id",
     "image_count",
+    "video_count",
     "score",
     "signals",
     "params_signature",
@@ -121,6 +124,33 @@ def db_create_memories_table() -> None:
             """
         )
 
+        # Videos get their own table rather than a media_type column on
+        # memory_images: the real cascade is the reason that table exists, and
+        # one id column cannot reference two parents. sort_order is shared
+        # across both, so a story still reads in one chronological sequence.
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS memory_videos (
+                memory_id TEXT NOT NULL,
+                video_id TEXT NOT NULL,
+                sort_order INTEGER NOT NULL,
+                score REAL,
+                PRIMARY KEY (memory_id, video_id),
+                FOREIGN KEY (memory_id) REFERENCES memories(memory_id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (video_id) REFERENCES videos(id) ON DELETE CASCADE
+            )
+            """
+        )
+
+        # Guarded ALTER because shipped databases predate the column and
+        # CREATE IF NOT EXISTS will not add it.
+        cursor.execute("PRAGMA table_info(memories)")
+        if "video_count" not in {row[1] for row in cursor.fetchall()}:
+            cursor.execute(
+                "ALTER TABLE memories ADD COLUMN video_count INTEGER NOT NULL DEFAULT 0"
+            )
+
         # One row per curation run. "Zero memories today" is a legitimate
         # outcome, so "did I already run?" is unanswerable from memories alone.
         cursor.execute(
@@ -157,6 +187,10 @@ def db_create_memories_table() -> None:
             "CREATE INDEX IF NOT EXISTS ix_memory_images_image_id "
             "ON memory_images(image_id)"
         )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS ix_memory_videos_video_id "
+            "ON memory_videos(video_id)"
+        )
 
         conn.commit()
     finally:
@@ -180,7 +214,9 @@ def _row_to_memory(row: sqlite3.Row) -> Dict[str, Any]:
 
 
 def db_upsert_memory(
-    memory: MemoryRecord, images: Sequence[MemoryImageEntry]
+    memory: MemoryRecord,
+    images: Sequence[MemoryImageEntry],
+    videos: Sequence[MemoryVideoEntry] = (),
 ) -> Optional[MemoryId]:
     """
     Insert or replace a memory and its image set in one transaction.
@@ -210,6 +246,7 @@ def db_upsert_memory(
         "period_end": memory.get("period_end"),
         "cover_image_id": memory.get("cover_image_id"),
         "image_count": memory.get("image_count", len(images)),
+        "video_count": memory.get("video_count", len(videos)),
         "score": memory.get("score", 0.0),
         "signals": json.dumps(signals) if signals is not None else None,
         "params_signature": memory.get("params_signature"),
@@ -253,6 +290,17 @@ def db_upsert_memory(
                 [
                     (resolved_id, image_id, sort_order, score)
                     for image_id, sort_order, score in images
+                ],
+            )
+
+        cursor.execute("DELETE FROM memory_videos WHERE memory_id = ?", (resolved_id,))
+        if videos:
+            cursor.executemany(
+                "INSERT INTO memory_videos (memory_id, video_id, sort_order, score) "
+                "VALUES (?, ?, ?, ?)",
+                [
+                    (resolved_id, video_id, sort_order, score)
+                    for video_id, sort_order, score in videos
                 ],
             )
 
@@ -443,6 +491,144 @@ def db_get_memory_images(memory_id: MemoryId) -> List[Dict[str, Any]]:
             image["isFavourite"] = bool(image.get("isFavourite"))
             images.append(image)
         return images
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def db_get_memory_videos(memory_id: MemoryId) -> List[Dict[str, Any]]:
+    """A memory's curated videos, in the same sort_order sequence as images."""
+    conn = None
+    try:
+        conn = _connect()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT v.id, v.path, v.thumbnailPath, v.captured_at, v.metadata,
+                   v.isFavourite, mv.sort_order, mv.score
+            FROM memory_videos mv
+            JOIN videos v ON v.id = mv.video_id
+            WHERE mv.memory_id = ?
+            ORDER BY mv.sort_order ASC
+            """,
+            (memory_id,),
+        )
+        videos = []
+        for row in cursor.fetchall():
+            video = dict(row)
+            video["isFavourite"] = bool(video.get("isFavourite"))
+            video["duration"] = _metadata_duration(video.pop("metadata", None))
+            videos.append(video)
+        return videos
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def _metadata_duration(raw: Optional[str]) -> Optional[float]:
+    """Pull the clip length out of the stored metadata blob."""
+    if not raw:
+        return None
+    try:
+        duration = json.loads(raw).get("duration")
+        return float(duration) if duration is not None else None
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def db_get_video_candidates_in_period(
+    period_start: str, period_end: str, max_seconds: float
+) -> List[Dict[str, Any]]:
+    """
+    Videos shot inside a memory's span that are short enough to sit in one.
+
+    Length is filtered in Python rather than SQL because it lives in the
+    metadata JSON blob; the period bound does the work of narrowing first.
+    """
+    conn = None
+    try:
+        conn = _connect()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT id, path, thumbnailPath, captured_at, metadata, isFavourite
+            FROM videos
+            WHERE captured_at IS NOT NULL
+              AND datetime(captured_at) >= datetime(?)
+              AND datetime(captured_at) <= datetime(?)
+            ORDER BY datetime(captured_at)
+            """,
+            (period_start, period_end),
+        )
+        candidates = []
+        for row in cursor.fetchall():
+            video = dict(row)
+            duration = _metadata_duration(video.pop("metadata", None))
+            # An unknown length could be the 16-minute one; do not gamble a
+            # story on it.
+            if duration is None or not 0 < duration <= max_seconds:
+                continue
+            video["duration"] = duration
+            video["isFavourite"] = bool(video.get("isFavourite"))
+            candidates.append(video)
+        return candidates
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def db_get_video_scoring_signals(video_ids: Sequence[VideoId]) -> List[Dict[str, Any]]:
+    """
+    Signal rows for videos, shaped like db_get_scoring_signals.
+
+    A video carries far less: no faces are detected in one and it cannot be
+    added to an album, so those signals are *absent* rather than zero. Saying
+    zero would mark every video as face-free and album-less and rank it below
+    every photo, which is the availability rule the GPS signal already relies
+    on. `media_type` is what tells the scorer to leave them out.
+    """
+    if not video_ids:
+        return []
+
+    conn = None
+    try:
+        conn = _connect()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        rows: List[Dict[str, Any]] = []
+        for start in range(0, len(video_ids), 500):
+            chunk = list(video_ids[start : start + 500])
+            placeholders = ", ".join("?" * len(chunk))
+            cursor.execute(
+                f"""
+                SELECT v.id, v.isFavourite, v.captured_at, v.metadata,
+                       (SELECT MAX(vc.score) FROM video_classes vc
+                         WHERE vc.video_id = v.id
+                           AND vc.class_id >= {SEMANTIC_CLASS_ID_OFFSET}
+                       ) AS top_semantic_score,
+                       (SELECT MAX(vc.score) FROM video_classes vc
+                          JOIN semantic_labels sl ON sl.class_id = vc.class_id
+                         WHERE vc.video_id = v.id AND sl.category = 'event'
+                       ) AS top_event_score,
+                       (SELECT MAX(vfe.scored_signature) FROM video_frames vf
+                          JOIN video_frame_embeddings vfe ON vfe.frame_id = vf.id
+                         WHERE vf.video_id = v.id
+                       ) AS scored_signature
+                FROM videos v
+                WHERE v.id IN ({placeholders})
+                """,
+                chunk,
+            )
+            for row in cursor.fetchall():
+                signal = dict(row)
+                signal["duration"] = _metadata_duration(signal.pop("metadata", None))
+                signal["media_type"] = "video"
+                signal["latitude"] = None
+                signal["longitude"] = None
+                rows.append(signal)
+        return rows
     finally:
         if conn is not None:
             conn.close()

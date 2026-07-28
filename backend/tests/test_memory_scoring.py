@@ -14,6 +14,7 @@ from app.utils.memory_scoring import (
     compute_signals,
     detect_home_location,
     haversine_km,
+    interleave_by_time,
     mean_pairwise_cohesion,
     parse_captured_at,
     resolve_weights,
@@ -664,3 +665,101 @@ class TestTrimIncoherent:
         candidates, embeddings = self.group(tight=9, outliers=2)
         sparse = {k: v for k, v in list(embeddings.items())[:2]}
         assert len(trim_incoherent(candidates, sparse, min_keep=5)) == len(candidates)
+
+
+# ##############################
+# Videos in a memory
+# ##############################
+
+
+class TestVideoSignalAvailability:
+    """
+    Nothing detects faces in a video and a video cannot be put in an album.
+    Scoring those as measured zeros would rank every clip below every photo —
+    the mistake availability renormalization exists to prevent.
+    """
+
+    def video_row(self, **overrides):
+        row = {
+            "id": "vid-1",
+            "media_type": "video",
+            "isFavourite": False,
+            "scored_signature": "sig",
+            "top_semantic_score": 0.4,
+            "top_event_score": 0.6,
+        }
+        row.update(overrides)
+        return row
+
+    def test_face_and_album_signals_are_absent_not_zero(self):
+        _, available = compute_signals(self.video_row(), HOME)
+        assert not {"known_people", "face_presence", "in_album"} & available
+
+    def test_favourite_still_counts(self):
+        _, available = compute_signals(self.video_row(), HOME)
+        assert "favourite" in available
+
+    def test_semantic_signals_still_count(self):
+        _, available = compute_signals(self.video_row(), HOME)
+        assert {"semantic_confidence", "event_strength"} <= available
+
+    def test_a_photo_keeps_all_of_them(self):
+        row = self.video_row(media_type=None)
+        _, available = compute_signals(row, HOME)
+        assert {"known_people", "face_presence", "in_album"} <= available
+
+    def test_a_faceless_video_is_not_beaten_by_a_faceless_photo(self):
+        """
+        Both have no faces. Only the photo has actually been looked at, so
+        only the photo's zero is a measurement.
+        """
+        photo = compute_signals(
+            {
+                "id": "img-1",
+                "face_count": 0,
+                "named_people": 0,
+                "in_album": False,
+                "isFavourite": True,
+                "scored_signature": "sig",
+                "top_semantic_score": 0.4,
+                "top_event_score": 0.6,
+            },
+            HOME,
+        )
+        video = compute_signals(self.video_row(isFavourite=True), HOME)
+
+        assert composite_score(*video, WEIGHTS) > composite_score(*photo, WEIGHTS)
+
+
+class TestInterleaveByTime:
+    def item(self, item_id, minute, score=1.0):
+        return {
+            "id": item_id,
+            "score": score,
+            "captured_at": T0 + timedelta(minutes=minute),
+        }
+
+    def test_sort_order_is_one_sequence_across_both(self):
+        """
+        They live in separate tables but play as a single story, so the
+        orders must not restart at zero for videos.
+        """
+        images, videos = interleave_by_time(
+            [self.item("p1", 0), self.item("p2", 10)], [self.item("v1", 5)]
+        )
+        assert images == [("p1", 0, 1.0), ("p2", 2, 1.0)]
+        assert videos == [("v1", 1, 1.0)]
+
+    def test_a_story_still_reads_forwards(self):
+        images, videos = interleave_by_time(
+            [self.item("p1", 30), self.item("p2", 0)], [self.item("v1", 15)]
+        )
+        orders = dict((entry[0], entry[1]) for entry in images + videos)
+        assert orders["p2"] < orders["v1"] < orders["p1"]
+
+    def test_without_videos_nothing_changes(self):
+        images, videos = interleave_by_time(
+            [self.item("p1", 0), self.item("p2", 5)], []
+        )
+        assert [entry[1] for entry in images] == [0, 1]
+        assert videos == []

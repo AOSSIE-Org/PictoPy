@@ -115,6 +115,8 @@ def run_curator(
     expansion: Optional[List[Dict[str, Any]]] = None,
     top_event_label: Optional[Any] = None,
     embeddings: Optional[Dict[str, np.ndarray]] = None,
+    video_candidates: Optional[List[Dict[str, Any]]] = None,
+    video_signals: Optional[List[Dict[str, Any]]] = None,
     recently_used: Optional[set] = None,
     own_images: Optional[set] = None,
     signals: Any = signals_for,
@@ -132,8 +134,8 @@ def run_curator(
     upserts: List[Dict[str, Any]] = []
     collected = mocks if mocks is not None else {}
 
-    def capture(memory, images):
-        upserts.append({"memory": memory, "images": images})
+    def capture(memory, images, videos=()):
+        upserts.append({"memory": memory, "images": images, "videos": list(videos)})
         return memory["memory_id"]
 
     pool = uncurated or []
@@ -162,6 +164,8 @@ def run_curator(
             ),
         )
         m("db_get_embeddings_for_image_ids", return_value=embeddings or {})
+        m("db_get_video_candidates_in_period", return_value=video_candidates or [])
+        m("db_get_video_scoring_signals", return_value=video_signals or [])
         m("db_get_scoring_signals", side_effect=signals)
         m(
             "db_upsert_memory",
@@ -360,7 +364,7 @@ class TestAnniversaryCuration:
         candidates = make_anniversary_images(2024, 6) + make_anniversary_images(2023, 5)
         seen: List[str] = []
 
-        def flaky(memory, images):
+        def flaky(memory, images, videos=()):
             seen.append(memory["dedupe_key"])
             if memory["dedupe_key"] == "anniv:07-26:2024":
                 raise RuntimeError("boom")
@@ -828,6 +832,145 @@ class TestOutlierTrimming:
             image_id for image_id, _, _ in of_type(upserts, "anniversary")[0]["images"]
         }
         assert outliers <= kept
+
+
+class TestVideoGuardrails:
+    """
+    A story is mostly stills. Clips are punctuation, and the guardrails are
+    what stop a memory turning into a playlist.
+    """
+
+    @pytest.mark.parametrize(
+        "photos, expected",
+        [(0, 0), (4, 1), (7, 1), (9, 1), (18, 2), (27, 3), (30, 3), (100, 3)],
+    )
+    def test_quota_scales_with_the_memory(self, photos, expected):
+        assert memory_curator.video_quota(photos) == expected
+
+    def clip(self, clip_id, score, duration):
+        return {"id": clip_id, "score": score, "duration": duration}
+
+    def test_takes_the_best_clips_first(self):
+        chosen = memory_curator.select_videos_within_budget(
+            [self.clip("a", 0.2, 5), self.clip("b", 0.9, 5), self.clip("c", 0.5, 5)],
+            quota=2,
+            budget_seconds=30.0,
+        )
+        assert [c["id"] for c in chosen] == ["b", "c"]
+
+    def test_the_budget_outranks_the_quota(self):
+        """
+        Three clips at the per-clip limit would outlast the photos between
+        them, so the seconds budget is the binding constraint, not the count.
+        """
+        chosen = memory_curator.select_videos_within_budget(
+            [self.clip(str(i), 0.9 - i * 0.1, 14.0) for i in range(3)],
+            quota=3,
+            budget_seconds=30.0,
+        )
+        assert len(chosen) == 2
+
+    def test_a_shorter_clip_still_fits_after_a_long_one(self):
+        chosen = memory_curator.select_videos_within_budget(
+            [self.clip("long", 0.9, 28.0), self.clip("short", 0.5, 2.0)],
+            quota=3,
+            budget_seconds=30.0,
+        )
+        assert [c["id"] for c in chosen] == ["long", "short"]
+
+    def test_a_quota_of_zero_takes_nothing(self):
+        chosen = memory_curator.select_videos_within_budget(
+            [self.clip("a", 0.9, 1.0)], quota=0, budget_seconds=30.0
+        )
+        assert chosen == []
+
+    def test_shortest_wins_a_tie(self):
+        chosen = memory_curator.select_videos_within_budget(
+            [self.clip("long", 0.5, 12.0), self.clip("short", 0.5, 3.0)],
+            quota=1,
+            budget_seconds=30.0,
+        )
+        assert chosen[0]["id"] == "short"
+
+
+class TestVideoCuration:
+    def candidates(self, count, duration=5.0):
+        return [
+            {
+                "id": f"vid-{i}",
+                "path": f"/videos/{i}.mp4",
+                "thumbnailPath": None,
+                "captured_at": (T0 + timedelta(minutes=5 + i)).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+                "duration": duration,
+                "isFavourite": False,
+            }
+            for i in range(count)
+        ]
+
+    def signals(self, count):
+        return [
+            {
+                "id": f"vid-{i}",
+                "media_type": "video",
+                "isFavourite": False,
+                "scored_signature": "sig",
+                "top_semantic_score": 0.5,
+                "top_event_score": 0.5,
+                "latitude": None,
+                "longitude": None,
+                "captured_at": (T0 + timedelta(minutes=5 + i)).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+            }
+            for i in range(count)
+        ]
+
+    def test_clips_join_a_memory(self):
+        upserts = run_curator(
+            uncurated=make_images("trip", 9, step=timedelta(minutes=20)),
+            video_candidates=self.candidates(3),
+            video_signals=self.signals(3),
+        )
+        assert len(upserts[0]["videos"]) == 1
+        assert upserts[0]["memory"]["video_count"] == 1
+
+    def test_the_preference_turns_them_off(self):
+        with patch.object(
+            memory_curator,
+            "memory_curator_get_preferences",
+            return_value=MemoriesPreferences(min_images=3, include_videos=False),
+        ):
+            upserts = run_curator(
+                uncurated=make_images("trip", 9, step=timedelta(minutes=20)),
+                video_candidates=self.candidates(3),
+                video_signals=self.signals(3),
+            )
+        assert upserts[0]["videos"] == []
+
+    def test_a_failure_choosing_clips_still_leaves_a_memory(self):
+        """A story of photos is still a story."""
+        with patch.object(
+            memory_curator,
+            "db_get_video_candidates_in_period",
+            side_effect=Exception("no videos table"),
+        ):
+            upserts = run_curator(
+                uncurated=make_images("trip", 9, step=timedelta(minutes=20))
+            )
+        assert upserts and upserts[0]["videos"] == []
+
+    def test_clips_share_the_sort_order_sequence(self):
+        upserts = run_curator(
+            uncurated=make_images("trip", 9, step=timedelta(minutes=20)),
+            video_candidates=self.candidates(1),
+            video_signals=self.signals(1),
+        )
+        orders = [entry[1] for entry in upserts[0]["images"]] + [
+            entry[1] for entry in upserts[0]["videos"]
+        ]
+        assert sorted(orders) == list(range(len(orders)))
 
 
 class TestRunOrchestration:

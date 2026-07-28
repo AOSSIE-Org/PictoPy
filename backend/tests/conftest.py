@@ -38,7 +38,7 @@ def setup_before_all_tests():
         db_create_image_embeddings_table()
         db_create_video_frames_tables()
         db_create_metadata_table()
-        db_create_memories_table()  # References images(id)
+        db_create_memories_table()  # References images(id) and videos(id)
         print("All database tables created successfully")
     except Exception as e:
         print(f"Error creating database tables: {e}")
