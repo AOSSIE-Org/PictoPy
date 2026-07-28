@@ -100,6 +100,10 @@ class MemoryStatusData(BaseModel):
 
     run_date: str
     run_status: Optional[RunStatus] = None
+    # Identifies *which* run is being reported. Without it a caller cannot
+    # tell its own queued run from one that finished earlier the same day,
+    # since run_date is only ever today.
+    run_started_at: Optional[str] = None
     indexing_busy: bool = False
     unviewed_count: int = 0
     latest_memory_id: Optional[str] = None

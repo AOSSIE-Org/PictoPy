@@ -74,6 +74,8 @@ export interface MemoryStory extends MemoryCard {
 export interface MemoryStatusData {
   run_date: string;
   run_status: MemoryRunStatus | null;
+  /** Identifies which run is being reported; run_date is only ever today. */
+  run_started_at: string | null;
   indexing_busy: boolean;
   unviewed_count: number;
   latest_memory_id: string | null;

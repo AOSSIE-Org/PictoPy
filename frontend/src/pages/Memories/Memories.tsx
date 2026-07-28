@@ -9,11 +9,7 @@ import { ROUTES } from '@/constants/routes';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
-import {
-  useGenerateMemories,
-  useMemories,
-  useMemoryStatus,
-} from '@/hooks/useMemories';
+import { useMemories, useRefreshMemories } from '@/hooks/useMemories';
 import {
   openMemory,
   selectActiveMemoryId,
@@ -41,13 +37,12 @@ export const Memories: React.FC = () => {
   const activeMemoryId = useAppSelector(selectActiveMemoryId);
 
   const memoriesQuery = useMemories({ limit: 60 });
-  const statusQuery = useMemoryStatus();
-  const { mutate: generate, isPending } = useGenerateMemories();
+  const { refresh, isRefreshing, status: statusQuery } = useRefreshMemories();
   const { memoriesPreferences } = useUserPreferences();
 
   const memories = memoriesQuery.successData?.memories ?? [];
   const status = statusQuery.successData;
-  const isGenerating = isPending || status?.run_status === 'running';
+  const isGenerating = isRefreshing;
 
   // The slide interval is a user preference; mirror it into the slice the
   // viewer reads from.
@@ -82,7 +77,7 @@ export const Memories: React.FC = () => {
       );
       return;
     }
-    generate({ force: true });
+    refresh();
   };
 
   return (

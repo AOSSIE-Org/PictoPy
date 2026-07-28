@@ -206,6 +206,7 @@ def get_memory_status():
             data=MemoryStatusData(
                 run_date=run_date,
                 run_status=run["status"] if run else None,
+                run_started_at=run["started_at"] if run else None,
                 indexing_busy=db_is_indexing_busy(),
                 unviewed_count=db_count_unviewed_memories(run_date),
                 latest_memory_id=latest["memory_id"] if latest else None,

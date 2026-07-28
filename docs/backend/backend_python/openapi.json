@@ -4313,6 +4313,17 @@
             ],
             "title": "Run Status"
           },
+          "run_started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Started At"
+          },
           "indexing_busy": {
             "type": "boolean",
             "title": "Indexing Busy",
