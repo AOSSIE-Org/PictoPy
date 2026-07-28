@@ -130,6 +130,25 @@ MAX_SEMANTIC_MEMORIES = 3
 RECENT_USE_WINDOW_DAYS = 30
 RECENT_USE_PENALTY = 0.35
 
+# Stand-ins for a memory nothing recognised. A bare date is a poor title for
+# something whose whole job is to invite a second look, and there is no
+# captioning model here to write a real one. The date is not lost: it moves to
+# the subtitle, which the cards and the story viewer both render.
+GENERIC_TITLES_ONE_DAY = (
+    "Remember this day?",
+    "Revisit this day",
+    "A day worth keeping",
+    "Spotlight on a day",
+    "Look back on this day",
+)
+GENERIC_TITLES_MANY_DAYS = (
+    "Remember these days?",
+    "Revisit these moments",
+    "Days worth keeping",
+    "A few days to remember",
+    "Look back on these days",
+)
+
 # Labels whose title-cased form reads wrong.
 EVENT_DISPLAY_NAMES = {
     "valentines day": "Valentine's Day",
@@ -180,6 +199,23 @@ def _anniversary_window(reference: date) -> List[str]:
 
 def _display_event_name(label: str) -> str:
     return EVENT_DISPLAY_NAMES.get(label, label.title())
+
+
+def _generic_title(dedupe_key: str, start: datetime, end: datetime) -> str:
+    """
+    Name a memory no label described well enough to name.
+
+    Picked from the dedupe key, not at random: a rebuild must not rename a
+    memory the user has already been shown. Singular or plural to match the
+    span, so a fortnight does not get called a day.
+    """
+    pool = (
+        GENERIC_TITLES_ONE_DAY
+        if start.date() == end.date()
+        else GENERIC_TITLES_MANY_DAYS
+    )
+    digest = hashlib.sha256(dedupe_key.encode("utf-8")).digest()
+    return pool[digest[0] % len(pool)]
 
 
 def _format_period_label(start: datetime, end: datetime) -> str:
@@ -491,11 +527,18 @@ def _curate_import_events(context: _CurationContext) -> int:
             start, end = min(timestamps), max(timestamps)
             period_label = _format_period_label(start, end)
 
+            dedupe_key = f"import:{start.date()}..{end.date()}"
+
             # Name it after what the AI recognised, when it recognised
-            # anything; otherwise the dates are the most useful label. Deferred
-            # until the set is final, so a trimmed photo cannot name the rest.
+            # anything; otherwise a stand-in, with the dates as the subtitle.
+            # Deferred until the set is final, so a photo trimmed for not
+            # belonging cannot name the rest.
             def name_from_labels(
-                selected_ids: List[str], period_label: str = period_label
+                selected_ids: List[str],
+                dedupe_key: str = dedupe_key,
+                period_label: str = period_label,
+                start: datetime = start,
+                end: datetime = end,
             ) -> Tuple[str, Optional[str]]:
                 top_label = db_get_top_memory_label(
                     selected_ids,
@@ -505,13 +548,13 @@ def _curate_import_events(context: _CurationContext) -> int:
                     TITLE_MIN_IMAGES,
                 )
                 if top_label is None:
-                    return period_label, None
+                    return _generic_title(dedupe_key, start, end), period_label
                 return _display_event_name(top_label[1]), period_label
 
             if _build_memory(
                 context,
                 image_ids=image_ids,
-                dedupe_key=f"import:{start.date()}..{end.date()}",
+                dedupe_key=dedupe_key,
                 event_type="import_event",
                 title=period_label,
                 subtitle=None,

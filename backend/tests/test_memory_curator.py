@@ -219,6 +219,42 @@ class TestDisplayNames:
         assert memory_curator._display_event_name(label) == expected
 
 
+class TestGenericTitle:
+    """
+    A memory nothing recognised still has to invite a second look, and there
+    is no captioning model here to write it a real title.
+    """
+
+    ONE_DAY = (datetime(2026, 7, 11, 15, 0), datetime(2026, 7, 11, 23, 0))
+    MANY_DAYS = (datetime(2026, 7, 17, 22, 0), datetime(2026, 7, 18, 10, 0))
+
+    def test_is_stable_for_a_given_memory(self):
+        """A rebuild must not rename a memory the user has already seen."""
+        first = memory_curator._generic_title("import:a..a", *self.ONE_DAY)
+        second = memory_curator._generic_title("import:a..a", *self.ONE_DAY)
+        assert first == second
+
+    def test_differs_between_memories(self):
+        titles = {
+            memory_curator._generic_title(f"import:{i}", *self.ONE_DAY)
+            for i in range(40)
+        }
+        assert len(titles) == len(memory_curator.GENERIC_TITLES_ONE_DAY)
+
+    def test_a_single_day_reads_singular(self):
+        assert (
+            memory_curator._generic_title("import:a..a", *self.ONE_DAY)
+            in memory_curator.GENERIC_TITLES_ONE_DAY
+        )
+
+    def test_a_span_reads_plural(self):
+        """A fortnight should not be called a day."""
+        assert (
+            memory_curator._generic_title("import:a..b", *self.MANY_DAYS)
+            in memory_curator.GENERIC_TITLES_MANY_DAYS
+        )
+
+
 class TestParamsSignature:
     def test_is_stable_for_equal_preferences(self):
         first = memory_curator.memory_curator_params_signature(MemoriesPreferences())
@@ -427,10 +463,17 @@ class TestImportEventCuration:
         assert upserts[0]["memory"]["title"] == "Birthday"
         assert upserts[0]["memory"]["subtitle"] == "26 July 2024"
 
-    def test_falls_back_to_the_dates_without_a_recognised_event(self):
+    def test_falls_back_to_a_stand_in_without_a_recognised_event(self):
+        """
+        A bare date is a poor title for something meant to invite a second
+        look. The date is not lost - it becomes the subtitle.
+        """
         pool = make_images("misc", 6, step=timedelta(minutes=20))
         upserts = of_type(run_curator(uncurated=pool), "import_event")
-        assert upserts[0]["memory"]["title"] == "26 July 2024"
+
+        memory = upserts[0]["memory"]
+        assert memory["title"] in memory_curator.GENERIC_TITLES_ONE_DAY
+        assert memory["subtitle"] == "26 July 2024"
 
     def test_recently_used_images_are_excluded_outright(self):
         """The import pool is large, so there is no reason to repeat photos."""
