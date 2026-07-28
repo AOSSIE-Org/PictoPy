@@ -3735,6 +3735,11 @@
             "title": "Slide Duration Seconds",
             "default": 5.0
           },
+          "include_videos": {
+            "type": "boolean",
+            "title": "Include Videos",
+            "default": true
+          },
           "min_images": {
             "type": "integer",
             "maximum": 50.0,
@@ -3804,6 +3809,17 @@
               }
             ],
             "title": "Slide Duration Seconds"
+          },
+          "include_videos": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Videos"
           },
           "min_images": {
             "anyOf": [
@@ -3952,6 +3968,11 @@
           "image_count": {
             "type": "integer",
             "title": "Image Count",
+            "default": 0
+          },
+          "video_count": {
+            "type": "integer",
+            "title": "Video Count",
             "default": 0
           },
           "cover_image_id": {
@@ -4461,6 +4482,11 @@
             "title": "Image Count",
             "default": 0
           },
+          "video_count": {
+            "type": "integer",
+            "title": "Video Count",
+            "default": 0
+          },
           "cover_image_id": {
             "anyOf": [
               {
@@ -4533,6 +4559,13 @@
             "type": "array",
             "title": "Images"
           },
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryVideoItem"
+            },
+            "type": "array",
+            "title": "Videos"
+          },
           "signals": {
             "anyOf": [
               {
@@ -4556,6 +4589,79 @@
         ],
         "title": "MemoryStory",
         "description": "A memory with its full image set, for the story viewer."
+      },
+      "MemoryVideoItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "thumbnailPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnailpath"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite",
+            "default": false
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "sort_order"
+        ],
+        "title": "MemoryVideoItem",
+        "description": "A short clip curated into a memory, sharing the images' sort_order."
       },
       "MetadataModel": {
         "properties": {
