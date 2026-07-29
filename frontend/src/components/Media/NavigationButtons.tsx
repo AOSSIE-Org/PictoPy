@@ -10,13 +10,8 @@ interface NavigationButtonsProps {
   disableNext?: boolean;
 }
 
-// Scrim chip so the arrow stays visible over any image. In dark mode we keep a
-// persistent black/50 background to match the other viewer controls, otherwise a
-// white chevron disappears on a fully white image. See PictoPy#1422.
 const chipBase =
   'flex items-center justify-center rounded-full bg-white/80 p-3 shadow-md backdrop-blur-md transition-all duration-200 dark:bg-black/50 dark:shadow-none';
-// Hover only on enabled arrows. Darken the dark scrim on hover rather than
-// lightening it, so the chevron never loses contrast over a bright image.
 const chipHover =
   'group-hover:bg-white group-hover:shadow-lg dark:group-hover:bg-black/70 dark:group-hover:shadow-lg';
 
