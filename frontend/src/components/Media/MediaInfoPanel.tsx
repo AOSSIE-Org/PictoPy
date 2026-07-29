@@ -155,14 +155,14 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
                   Tags
                 </p>
                 {currentImage?.tags?.length ? (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1">
                     {(showAllTags
                       ? currentImage.tags
                       : currentImage.tags.slice(0, 3)
                     ).map((tag, i) => (
                       <span
                         key={i}
-                        className="rounded-full border border-blue-500/30 bg-blue-500/20 px-2 py-1 text-xs text-blue-600 dark:text-blue-300"
+                        className="rounded-full border border-black/20 px-2 py-0.5 text-xs text-gray-800 dark:border-white/30 dark:text-white"
                       >
                         {tag}
                       </span>
@@ -171,7 +171,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
                       <button
                         type="button"
                         onClick={() => setShowAllTags((prev) => !prev)}
-                        className="focus-visible:ring-ring/50 inline-flex items-center gap-1.5 rounded-md bg-blue-500/20 px-2 py-1 text-xs font-medium whitespace-nowrap text-blue-600 shadow-xs transition-all outline-none hover:bg-blue-500/30 focus-visible:ring-[3px] dark:text-blue-300 dark:hover:bg-blue-500/30"
+                        className="focus-visible:ring-ring/50 inline-flex items-center gap-1.5 rounded-full bg-black/10 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-800 shadow-xs transition-all outline-none hover:bg-black/15 focus-visible:ring-[3px] dark:bg-white/15 dark:text-white dark:hover:bg-white/20"
                       >
                         {showAllTags ? (
                           <Minus

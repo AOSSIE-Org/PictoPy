@@ -164,7 +164,7 @@ export const VideoInfoPanel: React.FC<VideoInfoPanelProps> = ({
                       <button
                         type="button"
                         onClick={() => setShowAllTags((prev) => !prev)}
-                        className="focus-visible:ring-ring/50 inline-flex items-center gap-1.5 rounded-md bg-black/10 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-800 shadow-xs transition-all outline-none hover:bg-black/15 focus-visible:ring-[3px] dark:bg-white/15 dark:text-white dark:hover:bg-white/20"
+                        className="focus-visible:ring-ring/50 inline-flex items-center gap-1.5 rounded-full bg-black/10 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-800 shadow-xs transition-all outline-none hover:bg-black/15 focus-visible:ring-[3px] dark:bg-white/15 dark:text-white dark:hover:bg-white/20"
                       >
                         {showAllTags ? (
                           <Minus
