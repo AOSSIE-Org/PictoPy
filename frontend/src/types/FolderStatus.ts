@@ -6,6 +6,9 @@ export interface FolderTaggingInfo {
   total_images: number;
   tagged_images: number;
   embedded_images: number;
+  total_videos: number;
+  tagged_videos: number;
+  embedded_videos: number;
   ai_tagging: boolean;
 }
 

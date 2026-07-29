@@ -1,6 +1,7 @@
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 import numpy as np
 from app.database.connection import get_db_connection
+from app.database.images import SQLITE_ID_CHUNK
 
 
 def db_create_image_embeddings_table():
@@ -81,6 +82,59 @@ def db_get_all_embeddings(model_version: str) -> Tuple[List[str], np.ndarray]:
 
     matrix = np.vstack(embeddings_list)
     return image_ids, matrix
+
+
+def db_get_embeddings_for_image_ids(
+    image_ids: List[str], model_version: str
+) -> Dict[str, np.ndarray]:
+    """
+    Embeddings for an explicit id list, keyed by image id.
+
+    Memory curation only ever compares a single candidate set, so it loads
+    those rows rather than the whole table: db_get_all_embeddings on a large
+    library materializes hundreds of megabytes in the worker process.
+    """
+    if not image_ids:
+        return {}
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        found: Dict[str, np.ndarray] = {}
+        # Chunked to stay under SQLite's variable limit, as elsewhere.
+        for start in range(0, len(image_ids), SQLITE_ID_CHUNK):
+            chunk = image_ids[start : start + SQLITE_ID_CHUNK]
+            placeholders = ", ".join("?" * len(chunk))
+            cursor.execute(
+                f"""
+                SELECT image_id, embedding FROM image_embeddings
+                WHERE model_version = ? AND image_id IN ({placeholders})
+                """,
+                [model_version, *chunk],
+            )
+            for image_id, blob in cursor.fetchall():
+                found[image_id] = np.frombuffer(blob, dtype=np.float32)
+        return found
+
+
+def db_get_embedding_sample(model_version: str, limit: int) -> List[np.ndarray]:
+    """
+    A slice of the library's embeddings, for measuring its own baseline.
+
+    Ordered by image id rather than sampled randomly so a run is
+    reproducible; ids are UUIDs, so that is already an arbitrary slice.
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT embedding FROM image_embeddings
+            WHERE model_version = ?
+            ORDER BY image_id
+            LIMIT ?
+            """,
+            (model_version, limit),
+        )
+        return [np.frombuffer(row[0], dtype=np.float32) for row in cursor.fetchall()]
 
 
 def db_get_embeddings_needing_scoring(

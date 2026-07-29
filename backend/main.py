@@ -20,14 +20,20 @@ from app.database.face_clusters import db_create_clusters_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 from app.database.albums import db_create_albums_table
 from app.database.albums import db_create_album_images_table
-from app.database.folders import db_create_folders_table
+from app.database.folders import (
+    db_create_folders_table,
+    db_clear_stale_processing_flags,
+)
 from app.database.metadata import db_create_metadata_table
 from app.database.semantic_labels import db_create_semantic_labels_table
 from app.database.image_embeddings import db_create_image_embeddings_table
+from app.database.video_frames import db_create_video_frames_tables
+from app.database.memories import db_create_memories_table
 from app.utils.semantic_labels import (
     semantic_util_sync_vocabulary,
     semantic_util_build_label_embeddings,
     semantic_util_score_images,
+    semantic_util_score_videos,
 )
 
 from app.routes.folders import router as folders_router
@@ -67,12 +73,17 @@ async def lifespan(app: FastAPI):
     db_create_videos_table()
     db_create_semantic_labels_table()
     db_create_image_embeddings_table()
+    db_create_video_frames_tables()
     db_create_YOLO_classes_table()
     db_create_clusters_table()  # Create clusters table first since faces references it
     db_create_faces_table()
     db_create_albums_table()
     db_create_album_images_table()
     db_create_metadata_table()
+    db_create_memories_table()  # References images(id) and videos(id)
+    # Nothing is indexing or tagging yet, so anything still flagged busy is
+    # left over from a previous session and would block memory generation.
+    db_clear_stale_processing_flags()
     # Needs the mappings table (created above): semantic labels register
     # there as class_ids >= SEMANTIC_CLASS_ID_OFFSET
     semantic_util_sync_vocabulary()
@@ -83,6 +94,7 @@ async def lifespan(app: FastAPI):
     # order: the scoring sweep needs the label embeddings.
     app.state.executor.submit(semantic_util_build_label_embeddings)
     app.state.executor.submit(semantic_util_score_images)
+    app.state.executor.submit(semantic_util_score_videos)
 
     # Start the SSE model download cleanup task
     cleanup_task = asyncio.create_task(_cleanup_stale_tasks())
@@ -166,9 +178,7 @@ app.include_router(
 app.include_router(
     user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
 )
-app.include_router(
-    memories_router
-)  # Memories router (prefix already defined in router)
+app.include_router(memories_router, prefix="/memories", tags=["Memories"])
 app.include_router(shutdown_router, tags=["Shutdown"])
 app.include_router(models_router, prefix="/models", tags=["Models"])
 

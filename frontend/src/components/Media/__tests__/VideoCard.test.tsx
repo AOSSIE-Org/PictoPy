@@ -132,4 +132,22 @@ describe('VideoCard', () => {
     fireEvent.click(favourite);
     expect(mockToggleFavourite).not.toHaveBeenCalled();
   });
+
+  test('shows a tag count badge for tagged videos, and the tags on hover', async () => {
+    render(<VideoCard video={makeVideo({ tags: ['beach', 'sunset'] })} />);
+
+    // Collapsed: just the count.
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.queryByText('beach')).not.toBeInTheDocument();
+
+    fireEvent.mouseEnter(screen.getByText('2'));
+    expect(await screen.findByText('beach')).toBeInTheDocument();
+    expect(screen.getByText('sunset')).toBeInTheDocument();
+  });
+
+  test('renders no tag badge when the video has no tags', () => {
+    render(<VideoCard video={makeVideo()} />);
+
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+  });
 });
