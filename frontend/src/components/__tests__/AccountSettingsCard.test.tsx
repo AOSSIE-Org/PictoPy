@@ -1,4 +1,5 @@
 import { render, screen, act } from '@/test-utils';
+import { within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef } from 'react';
 import AccountSettingsCard, {
@@ -122,7 +123,9 @@ describe('Unsaved-changes leave guard - AccountSettingsCard', () => {
     act(() => {
       ref.current?.requestLeave(onLeave);
     });
-    await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+
+    const dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
 
     expect(onLeave).not.toHaveBeenCalled();
     expect(ref.current?.hasUnsavedChanges).toBe(true);

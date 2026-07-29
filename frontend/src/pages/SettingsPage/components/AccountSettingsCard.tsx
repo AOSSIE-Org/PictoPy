@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { setAvatar, setName } from '@/features/onboardingSlice';
 import { showGlobalAlert } from '@/features/globalAlertSlice';
-import { User, Pencil } from 'lucide-react';
+import { User, Pencil, Check } from 'lucide-react';
 import SettingsCard from './SettingsCard';
 import { avatars } from '@/constants/avatars';
 import { CardContent } from '@/components/ui/card';
@@ -206,118 +206,157 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
         title="Account Information"
         description="Manage your account details and profile information."
       >
-        <CardContent className="flex flex-1 flex-col items-center space-y-6 overflow-y-hidden p-2 text-center">
-          <button
-            type="button"
-            onClick={handleUploadClick}
-            aria-label="Change profile avatar"
-            className="group relative inline-flex h-28 w-28 items-center justify-center rounded-full"
-          >
-            {selectedAvatar ? (
-              <img
-                src={selectedAvatar}
-                alt="Current avatar"
-                className="h-28 w-28 rounded-full object-cover"
-              />
-            ) : (
-              <div className="bg-muted text-muted-foreground flex h-28 w-28 items-center justify-center rounded-full">
-                <User className="h-9 w-9" />
-              </div>
-            )}
-            <span className="border-background absolute right-0 bottom-0 flex h-8 w-8 items-center justify-center rounded-full border-2 bg-blue-500 text-white transition-transform group-hover:scale-105">
-              <Pencil className="h-4 w-4" />
-            </span>
-          </button>
-
-          <div className="flex flex-col items-center gap-2">
-            {isEditingName ? (
-              <>
-                <Input
-                  aria-label="Name"
-                  autoFocus
-                  placeholder={
-                    nameError ? "Name can't be empty" : 'Enter your name'
-                  }
-                  value={nameDraft}
-                  onChange={(e) => handleNameDraftChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleSaveNameEdit();
-                    } else if (e.key === 'Escape') {
-                      e.preventDefault();
-                      handleCancelNameEdit();
-                    }
-                  }}
-                  className={`h-10 w-56 text-center text-sm placeholder:text-sm ${
-                    nameError
-                      ? 'border-red-500 placeholder:text-red-500/80 focus-visible:ring-red-500'
-                      : ''
-                  }`}
+        <CardContent className="p-0">
+          <div className="grid gap-8 border-t border-white/5 p-6 md:grid-cols-[minmax(0,280px)_1fr] md:gap-10 md:p-8">
+            {/* LEFT: identity */}
+            <div className="flex flex-col items-center md:items-start">
+              <button
+                type="button"
+                onClick={handleUploadClick}
+                aria-label="Change profile avatar"
+                className="group relative inline-flex h-40 w-40 items-center justify-center rounded-full"
+              >
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-0 rounded-full bg-black/30 blur-xl transition-opacity group-hover:opacity-100"
                 />
-                {longWordError && (
-                  <p className="text-xs text-red-500">
-                    A single word in your name cannot exceed 30 characters.
-                  </p>
-                )}
-                <p className="text-muted-foreground text-xs">
-                  Press Enter to save • Esc to cancel
-                </p>
-              </>
-            ) : (
-              <div className="flex items-center gap-2">
-                <span className="w-4" aria-hidden="true" />
-                <span className="text-lg font-medium">
-                  {name || 'Add your name'}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleStartEditName}
-                  aria-label="Edit name"
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="w-full px-[20%]">
-            <Label className="mb-3 block text-base font-medium">Avatar</Label>
-            <div className="grid grid-cols-4 place-items-center gap-4">
-              {avatars.map((avatar) => {
-                const isSelected = selectedAvatar === avatar;
-                return (
-                  <button
-                    type="button"
-                    key={avatar}
-                    onClick={() => handleAvatarSelect(avatar)}
-                    className={`bg-background relative inline-flex h-16 w-16 items-center justify-center rounded-full transition-all duration-300 ${
-                      isSelected
-                        ? 'ring-offset-background scale-90 ring-2 ring-blue-500 ring-offset-4'
-                        : 'hover:ring-4 hover:ring-blue-500 hover:ring-offset-4'
-                    }`}
-                  >
+                <span className="relative inline-flex h-40 w-40 items-center justify-center rounded-full ring-2 ring-black ring-offset-4 ring-offset-transparent">
+                  {selectedAvatar ? (
                     <img
-                      src={avatar}
-                      alt="Avatar"
-                      className={`h-16 w-16 rounded-full object-cover transition-all duration-300 ${
-                        isSelected ? 'brightness-110' : ''
+                      src={selectedAvatar}
+                      alt="Current avatar"
+                      className="h-40 w-40 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="bg-muted text-muted-foreground flex h-40 w-40 items-center justify-center rounded-full">
+                      <User className="h-12 w-12" />
+                    </div>
+                  )}
+                </span>
+                <span className="absolute right-2 bottom-2 flex h-9 w-9 items-center justify-center rounded-full bg-neutral-800/90 text-white shadow-lg ring-1 ring-white/10 transition-transform group-hover:scale-105">
+                  <Pencil className="h-4 w-4" />
+                </span>
+              </button>
+
+              <div className="mt-8 w-full space-y-2">
+                <Label className="text-muted-foreground text-xs font-semibold tracking-[0.15em]">
+                  DISPLAY NAME
+                </Label>
+                {isEditingName ? (
+                  <>
+                    <Input
+                      aria-label="Name"
+                      autoFocus
+                      placeholder={
+                        nameError ? "Name can't be empty" : 'Enter your name'
+                      }
+                      value={nameDraft}
+                      onChange={(e) => handleNameDraftChange(e.target.value)}
+                      onBlur={handleSaveNameEdit}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSaveNameEdit();
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault();
+                          handleCancelNameEdit();
+                        }
+                      }}
+                      className={`h-10 w-full rounded-none border-0 border-b bg-transparent px-0 text-lg shadow-none focus-visible:ring-0 ${
+                        nameError
+                          ? 'border-red-500 placeholder:text-red-500/80'
+                          : 'border-white/20 focus-visible:border-blue-500'
                       }`}
                     />
+                    {longWordError ? (
+                      <p className="text-xs text-red-500">
+                        A single word in your name cannot exceed 30 characters.
+                      </p>
+                    ) : (
+                      <p className="text-muted-foreground text-xs">
+                        Press Enter to save • Esc to cancel
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleStartEditName}
+                    aria-label="Edit name"
+                    className="group flex w-full items-center justify-between border-b border-white/20 pb-2 text-left transition-colors hover:border-white/40"
+                  >
+                    <span className="text-lg font-medium">
+                      {name || 'Add your name'}
+                    </span>
+                    <Pencil className="text-muted-foreground group-hover:text-foreground h-4 w-4 transition-colors" />
                   </button>
-                );
-              })}
+                )}
+              </div>
+            </div>
+
+            {/* RIGHT: avatar picker */}
+            <div>
+              <Label className="text-muted-foreground text-xs font-semibold tracking-[0.15em]">
+                CHOOSE AVATAR
+              </Label>
+              <div className="mt-8 grid grid-cols-4 gap-3 sm:gap-4">
+                {avatars.map((avatar) => {
+                  const isSelected = selectedAvatar === avatar;
+                  return (
+                    <button
+                      type="button"
+                      key={avatar}
+                      onClick={() => handleAvatarSelect(avatar)}
+                      className={`group relative aspect-square w-22.5 overflow-hidden rounded-full transition-all duration-200 ${
+                        isSelected
+                          ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-transparent'
+                          : 'ring-1 ring-white/5 hover:-translate-y-0.5 hover:ring-white/20'
+                      }`}
+                    >
+                      <img
+                        src={avatar}
+                        alt="Avatar"
+                        className="h-full w-full object-cover"
+                      />
+                      {isSelected && (
+                        <span className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-md">
+                          <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
-          <Button
-            className="mt-4 w-auto bg-blue-500 px-6 py-2 text-sm font-medium text-white hover:bg-blue-600"
-            onClick={handleSave}
-            disabled={!selectedAvatar || longWordError}
-          >
-            Save Changes
-          </Button>
+          {/* FOOTER */}
+          <div className="flex flex-col-reverse items-stretch gap-3 border-t border-white/5 px-6 py-4 sm:flex-row sm:items-center sm:justify-between md:px-8">
+            <p className="text-muted-foreground text-xs">
+              {hasUnsavedChanges
+                ? 'You have unsaved changes'
+                : 'All changes saved'}
+            </p>
+            <div className="flex gap-2 sm:justify-end">
+              <Button
+                variant="outline"
+                onClick={handleDiscardChanges}
+                disabled={!hasUnsavedChanges}
+                className="flex-1 sm:flex-none"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={
+                  !selectedAvatar || longWordError || !hasUnsavedChanges
+                }
+                className="flex-1 bg-blue-500 text-white hover:bg-blue-600 sm:flex-none"
+              >
+                Save Changes
+              </Button>
+            </div>
+          </div>
         </CardContent>
 
         <AvatarCropDialog
