@@ -113,8 +113,8 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
   return (
     <>
-      <Card className="flex max-h-full w-1/2 flex-col gap-3 border p-4">
-        <CardHeader className="p-3">
+      <Card className="flex max-h-full w-1/2 flex-col gap-3 border p-6">
+        <CardHeader className="px-0 pt-1 pb-1!">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
               Step {currentStepDisplayIndex + 1} of {totalSteps}
@@ -139,54 +139,57 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="flex-1 space-y-6 overflow-y-auto p-1 px-2">
-          {/* Current Profile Image */}
-          <div className="mb-5">
-            <Label className="mb-2 block text-sm">Current Profile Image</Label>
+        <CardContent className="flex-1 space-y-5 overflow-y-auto p-1 px-2">
+          {/* Avatar + Name row */}
+          <div className="flex items-center gap-3 rounded-lg border p-3">
             <button
               type="button"
               onClick={handleUploadClick}
               aria-label="Change profile avatar"
-              className="group relative inline-flex h-24 w-24 items-center justify-center rounded-full"
+              className="group relative inline-flex h-18 w-18 shrink-0 items-center justify-center rounded-full"
             >
               {selectedAvatar ? (
                 <img
                   src={selectedAvatar}
                   alt="Current avatar"
-                  className="h-24 w-24 rounded-full object-cover"
+                  className="h-20 w-20 rounded-full object-cover"
                 />
               ) : (
-                <div className="bg-muted text-muted-foreground flex h-24 w-24 items-center justify-center rounded-full">
-                  <User className="h-8 w-8" />
+                <div className="bg-muted text-muted-foreground flex h-20 w-20 items-center justify-center rounded-full">
+                  <User className="h-7 w-7" />
                 </div>
               )}
               <span className="border-background absolute right-0 bottom-0 flex h-7 w-7 items-center justify-center rounded-full border-2 bg-blue-500 text-white transition-transform group-hover:scale-105">
                 <Pencil className="h-3.5 w-3.5" />
               </span>
             </button>
-          </div>
 
-          <div className="mb-5">
-            <Label htmlFor="name" className="mb-1 block text-sm">
-              Your Name
-            </Label>
-            <Input
-              id="name"
-              placeholder="Enter your name"
-              value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              className="h-8 text-sm placeholder:text-sm"
-            />
-            {longWordError && (
-              <p className="mt-2 text-xs text-red-500">
-                A single word in your name cannot exceed 30 characters.
-              </p>
-            )}
+            <div className="min-w-0 flex-1">
+              <Label htmlFor="name" className="mb-1.5 block text-sm">
+                Your Name
+              </Label>
+              <Input
+                id="name"
+                placeholder="Enter your name"
+                value={name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                className="h-10 text-sm placeholder:text-sm"
+                style={{ backgroundColor: '#181818' }} // 14px
+              />
+              {longWordError && (
+                <p className="mt-1.5 text-xs text-red-500">
+                  A single word in your name cannot exceed 30 characters.
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Avatar Grid */}
-          <div className="mb-5">
-            <Label className="mb-2 block text-sm">Choose Your Avatar</Label>
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <Label className="text-sm">Choose Your Avatar</Label>
+              <span className="text-foreground text-xs">8 Options</span>
+            </div>
             <div className="grid grid-cols-4 gap-3">
               {avatars.map((avatar) => {
                 const isSelected = selectedAvatar === avatar;
@@ -195,7 +198,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                     type="button"
                     key={avatar}
                     onClick={() => handleAvatarSelect(avatar)}
-                    className={`bg-background relative inline-flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300 ${
+                    className={`bg-background relative inline-flex h-15 w-15 items-center justify-center rounded-full transition-all duration-300 ${
                       isSelected
                         ? 'border-primary ring-primary ring-offset-background ring-2 ring-offset-2'
                         : 'border-muted'
@@ -204,7 +207,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                     <img
                       src={avatar}
                       alt="Avatar"
-                      className={`h-20 w-20 rounded-full object-cover transition-all duration-300 ${
+                      className={`h-15 w-15 rounded-full object-cover transition-all duration-300 ${
                         isSelected ? 'scale-105' : ''
                       }`}
                     />
@@ -215,7 +218,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
           </div>
         </CardContent>
 
-        <CardFooter className="flex justify-end p-3">
+        <CardFooter className="flex justify-end p-1">
           <Button
             className="cursor-pointer px-4 py-1 text-sm"
             onClick={handleNextClick}

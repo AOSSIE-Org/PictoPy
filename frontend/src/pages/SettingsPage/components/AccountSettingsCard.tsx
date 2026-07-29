@@ -207,7 +207,7 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
         description="Manage your account details and profile information."
       >
         <CardContent className="p-0">
-          <div className="grid gap-8 border-t border-white/5 p-6 md:grid-cols-[minmax(0,280px)_1fr] md:gap-10 md:p-8">
+          <div className="grid gap-8 border-white/5 p-6 md:grid-cols-[minmax(0,280px)_1fr] md:gap-10 md:p-8">
             {/* LEFT: identity */}
             <div className="flex flex-col items-center md:items-start">
               <button
