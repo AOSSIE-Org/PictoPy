@@ -482,13 +482,36 @@ class TestFaceClustersAPI:
         mock_folders.return_value = ["/allowed/folder"]
         mock_perform.return_value = {"success": True, "data": []}
 
-        with patch("os.path.isfile", return_value=True):
+        from unittest.mock import mock_open
+
+        with patch("os.path.isfile", return_value=True), patch(
+            "os.open", return_value=123
+        ), patch("builtins.open", mock_open(read_data=b"fakeimagebytes")):
             response = client.post(
                 "/face_clusters/face-search?input_type=path",
                 json={"path": "/allowed/folder/family.jpg", "base64_data": ""},
             )
         assert response.status_code == 200
         mock_perform.assert_called_once()
+
+    @patch("app.routes.face_clusters.perform_face_search")
+    def test_face_search_base64_allowed(self, mock_perform):
+        """Test that base64 images are processed entirely in memory and allowed."""
+        mock_perform.return_value = {"success": True, "data": []}
+
+        # 1x1 transparent GIF base64
+        gif_b64 = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+        response = client.post(
+            "/face_clusters/face-search?input_type=base64",
+            json={"path": "", "base64_data": gif_b64},
+        )
+        assert response.status_code == 200
+        mock_perform.assert_called_once()
+        # Verify that perform_face_search was called with image_bytes (not image_path)
+        called_kwargs = mock_perform.call_args.kwargs
+        assert "image_bytes" in called_kwargs
+        assert called_kwargs["image_bytes"] is not None
+        assert called_kwargs.get("image_path") is None
 
 
 # ============================================================================

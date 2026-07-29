@@ -3,7 +3,6 @@ from binascii import Error as Base64Error
 import base64
 from concurrent.futures import CancelledError, Future, ProcessPoolExecutor
 from typing import Annotated
-import uuid
 import os
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.database.face_clusters import (
@@ -290,8 +289,6 @@ def face_tagging(
         InputType, Query(description="Choose input type: 'path' or 'base64'")
     ] = InputType.path,
 ):
-    image_path = None
-
     if input_type == InputType.path:
         local_file_path = payload.path
 
@@ -322,7 +319,26 @@ def face_tagging(
                     message="The provided path is not a valid file",
                 ).model_dump(),
             )
-        image_path = payload.path
+
+        try:
+            flags = os.O_RDONLY
+            if hasattr(os, "O_NOFOLLOW"):
+                flags |= os.O_NOFOLLOW
+            fd_handle = os.open(local_file_path, flags)
+            with open(fd_handle, "rb") as f:
+                image_bytes = f.read()
+        except Exception as e:
+            logger.error(f"Failed to securely open path {local_file_path}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Access Denied",
+                    message="Cannot read the specified path.",
+                ).model_dump(),
+            )
+
+        return perform_face_search(image_bytes=image_bytes)
 
     elif input_type == InputType.base64:
         base64_data = payload.base64_data
@@ -358,29 +374,7 @@ def face_tagging(
                 ).model_dump(),
             )
 
-        format_match = (
-            base64_data.split(";")[0].split("/")[-1] if ";" in base64_data else "jpeg"
-        )
-        extension = (
-            format_match
-            if format_match in ["jpeg", "jpg", "png", "gif", "webp"]
-            else "jpeg"
-        )
-        image_id = str(uuid.uuid4())[:8]
-        temp_dir = "temp_uploads"
-        os.makedirs(temp_dir, exist_ok=True)
-        local_image_path = os.path.join(temp_dir, f"{image_id}.{extension}")
-
-        with open(local_image_path, "wb") as f:
-            f.write(image_bytes)
-
-        image_path = local_image_path
-
-    try:
-        return perform_face_search(image_path)
-    finally:
-        if input_type == InputType.base64 and image_path and os.path.exists(image_path):
-            os.remove(image_path)
+        return perform_face_search(image_bytes=image_bytes)
 
 
 @router.post(
