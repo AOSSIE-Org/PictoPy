@@ -51,6 +51,9 @@ const FolderManagementCard: React.FC = () => {
     visibleFolders.every((folder: FolderDetails) =>
       selectedFolderIds.has(folder.folder_id),
     );
+  const someVisibleSelected = visibleFolders.some((folder: FolderDetails) =>
+    selectedFolderIds.has(folder.folder_id),
+  );
 
   const handleViewMore = () => {
     setVisibleFoldersCount((prevCount) => prevCount + 5);
@@ -113,10 +116,16 @@ const FolderManagementCard: React.FC = () => {
               <input
                 type="checkbox"
                 checked={allVisibleSelected}
+                ref={(el) => {
+                  if (el) {
+                    el.indeterminate =
+                      someVisibleSelected && !allVisibleSelected;
+                  }
+                }}
                 onChange={toggleSelectAllVisible}
                 className="border-border h-4 w-4 shrink-0 cursor-pointer rounded"
               />
-              Select all
+              Select all shown
             </label>
 
             {selectedFolders.length > 0 && (
