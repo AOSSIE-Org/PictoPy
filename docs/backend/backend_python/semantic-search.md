@@ -120,7 +120,7 @@ Notes on this flow, confirmed against the actual implementation
 (`backend/app/routes/images.py::semantic_search_images`, `frontend/src/pages/SearchResults/SearchResults.tsx`):
 
 - **The frontend never re-sorts.** `matched_pairs.sort(key=lambda x: x[1], reverse=True)`
-  is the *only* place sort order is established, inside the route handler.
+  is the _only_ place sort order is established, inside the route handler.
   Everything downstream (`matched_ids`, the `db_get_images_by_ids` call, the
   final response) just follows that order through — the response is built by
   iterating `db_get_images_by_ids`'s return value directly, in whatever order
@@ -129,7 +129,7 @@ Notes on this flow, confirmed against the actual implementation
   be changed without also touching this endpoint.
 - **Empty tag results vs. a tag-search error are handled differently.**
   A successful tag search with zero results triggers the semantic fallback.
-  A tag-search *error* surfaces directly as an error — it does not fall back.
+  A tag-search _error_ surfaces directly as an error — it does not fall back.
 - **A 404 from `/semantic-search`** (text model or tokenizer file missing)
   is treated as "feature unavailable," not a generic error — the frontend
   detects it by HTTP status code (`error.response.status === 404`), not by
@@ -182,7 +182,7 @@ called out explicitly:
   and re-enters `db_get_unembedded_images()` on the next pass. This
   deliberately does **not** follow the YOLO/face pipeline's
   mark-processed-regardless-of-outcome convention: that convention exists to
-  avoid re-running *expensive* inference on images that will never classify
+  avoid re-running _expensive_ inference on images that will never classify
   differently, but SigLIP2 preprocessing failure is a cheap check (PIL
   failing to open/decode), so the retry cost is low — and it means a file
   that becomes readable later (a transient lock, a restored backup) still
@@ -194,7 +194,14 @@ called out explicitly:
   embedding and no record of the gap.
 - **Where it's wired in:** `post_AI_tagging_enabled_sequence()` and
   `post_sync_folder_sequence()` in `backend/app/routes/folders.py`, both
-  calling it *last*, after YOLO/face clustering. Gating is inherent in the
+  calling it after YOLO tagging and face clustering. It is _not_ the last
+  step in either sequence any more. The full tail of both is
+  `image_util_process_unembedded_images()` → `semantic_util_score_images()`
+  → `_curate_memories(trigger)` → the video pass
+  (`video_util_process_untagged_videos()`,
+  `video_util_process_unembedded_frames()`, `semantic_util_score_videos()`),
+  so memory curation runs against the semantic tags this pass and the
+  scoring sweep just wrote. Gating is inherent in the
   `AI_Tagging` join in the SQL query itself — non-AI-tagging folders never
   produce a single row from `db_get_unembedded_images()`, so no special-case
   code exists for "user has this feature off."
@@ -293,8 +300,11 @@ results as **regular tags**: labels register as `mappings` rows at
 scoring pass writes plain `image_classes` rows with a `score`. Tag search,
 tag chips, and person-view tag lists pick them up with no consumer changes.
 The planned `image_semantic_labels` table was dropped in favor of this
-reuse. Free-text search is unaffected — this layer is a cache/browse
-feature, not a search gatekeeper.
+reuse. Free-text search is unaffected — this layer is not a search
+gatekeeper. `semantic_labels` and the scored `image_classes` rows it
+produces are both live, populated tables: beyond tag search and chips, the
+`semantic_event` memory trigger reads them (see
+[Downstream consumers: memory curation](#downstream-consumers-memory-curation)).
 
 `semantic_labels` itself is a definition + cache table:
 
@@ -342,6 +352,51 @@ Key behaviors (all in `backend/app/utils/semantic_labels.py` and
     `image_embeddings.scored_signature`) that check column presence
     before altering.
 
+## Downstream consumers: memory curation
+
+Smart Memories reads both halves of what this feature produces — the stored
+image embeddings and the curated event labels. Nothing is recomputed for
+curation; a run only reads what the embedding pass and the scoring sweep
+already wrote, and both reads filter on `model_version` exactly as search
+does. The curation logic itself is documented in [Memories](memories.md);
+what follows is only the SigLIP2 surface it depends on.
+
+**Stored embeddings** are loaded by two helpers in
+`backend/app/database/image_embeddings.py`, called from
+`backend/app/utils/memory_curator.py`:
+
+- `db_get_embeddings_for_image_ids(image_ids, model_version)` returns the
+  vectors for one explicit candidate set, keyed by image id. They feed
+  near-duplicate suppression (`suppress_near_duplicates` drops a photo only
+  when cosine ≥ `DUP_COSINE` = `0.90` **and** the two capture times are
+  within `DUP_WINDOW_SECONDS` = `120` s) and the cohesion gate that decides
+  whether a group of photos really looks like one occasion.
+- `db_get_embedding_sample(model_version, limit)` reads an ordered slice of
+  the library's own embeddings (`COHESION_SAMPLE_SIZE` = 500) once per run.
+  SigLIP2 embeddings occupy a narrow cone, so cohesion is expressed as a
+  margin over that measured baseline (`EVENT_COHESION_MARGIN` = `0.15`)
+  rather than as an absolute cosine.
+
+**Event labels** drive the `semantic_event` trigger. `db_get_event_labels()`
+(`backend/app/database/memories.py`) reads the `category = 'event'`,
+`active = 1` rows straight out of `semantic_labels`, so a vocabulary edit
+reaches curation without a code change. `db_get_event_label_hits()` then
+selects the images where such a label is genuinely the subject **by rank,
+not by raw score**, using two SQL window functions over the
+`class_id >= 1000` rows in `image_classes`:
+
+| Window function                                              | Partition | Question it answers                                                                         |
+| ------------------------------------------------------------ | --------- | ------------------------------------------------------------------------------------------- |
+| `RANK() OVER (PARTITION BY image_id ORDER BY score DESC)`    | per image | Is this label among the top few this image matched at all?                                  |
+| `PERCENT_RANK() OVER (PARTITION BY class_id ORDER BY score)` | per label | Is this image a strong example of the label, relative to every other image that matched it? |
+
+A row must clear both cuts — `image_rank <= EVENT_LABEL_TOP_N` (`2`) and
+`label_rank >= EVENT_LABEL_PERCENTILE` (`0.50`). This is the same
+absolute-scores-run-low property described in the
+[score-range table](#scoring-metadata), handled in SQL: scores are not
+comparable _across_ labels either, so an absolute cut would fire on the
+handful of labels that ever score high and silence the rest of the ~395.
+
 ## Model distribution and checkpoints
 
 SigLIP2 ships as three separate files per checkpoint — a vision-tower ONNX
@@ -349,11 +404,11 @@ graph, a text-tower ONNX graph, and a tokenizer JSON — following the same
 `MODEL_REGISTRY` + GitHub Release + SHA-256 verification pattern already used
 for YOLO/FaceNet, not a new distribution mechanism.
 
-| Checkpoint | Status | Vision size | Text size | Tier |
-| --- | --- | --- | --- | --- |
-| `base` | **Shipped** (`models-v1.0` release) | 354.5 MB | 1077.1 MB | `semantic` |
-| `large` | Placeholder (`PLACEHOLDER_URL`/`PLACEHOLDER_SHA256`) | — | — | `medium` |
-| `so400m` | Placeholder (`PLACEHOLDER_URL`/`PLACEHOLDER_SHA256`) | — | — | `manual` |
+| Checkpoint | Status                                               | Vision size | Text size | Tier       |
+| ---------- | ---------------------------------------------------- | ----------- | --------- | ---------- |
+| `base`     | **Shipped** (`models-v1.0` release)                  | 354.5 MB    | 1077.1 MB | `semantic` |
+| `large`    | Placeholder (`PLACEHOLDER_URL`/`PLACEHOLDER_SHA256`) | —           | —         | `medium`   |
+| `so400m`   | Placeholder (`PLACEHOLDER_URL`/`PLACEHOLDER_SHA256`) | —           | —         | `manual`   |
 
 Only `base` has real registry entries (URL, SHA-256, size). `large` and
 `so400m` are deliberately kept **out of `TIER_MODELS`** with placeholder
@@ -388,11 +443,11 @@ Each checkpoint has its own calibration constants in
 directly from the checkpoint (not tunable in the sense that changing them
 would require re-deriving from the model, not just picking a new number):
 
-| Checkpoint | `logit_scale` | `logit_bias` | `model_version` | `input_resolution` |
-| --- | --- | --- | --- | --- |
-| `base` | 4.724453449249268 | -16.771724700927734 | `siglip2-base-patch16-224` | 224 |
-| `large` | 4.6823530197143555 | -16.347614288330078 | `siglip2-large-patch16-384` | 384 |
-| `so400m` | 4.699519157409668 | -15.932647705078125 | `siglip2-so400m-patch14-384` | 384 |
+| Checkpoint | `logit_scale`      | `logit_bias`        | `model_version`              | `input_resolution` |
+| ---------- | ------------------ | ------------------- | ---------------------------- | ------------------ |
+| `base`     | 4.724453449249268  | -16.771724700927734 | `siglip2-base-patch16-224`   | 224                |
+| `large`    | 4.6823530197143555 | -16.347614288330078 | `siglip2-large-patch16-384`  | 384                |
+| `so400m`   | 4.699519157409668  | -15.932647705078125 | `siglip2-so400m-patch14-384` | 384                |
 
 Scoring formula (`backend/app/routes/images.py`):
 
@@ -403,7 +458,7 @@ score = sigmoid(scaled_logits) = 1 / (1 + exp(-scaled_logits))
 
 This is SigLIP2's own learned scale/bias (the sigmoid-loss calibration
 baked into the model), applied to a **raw cosine similarity** (both vectors
-are unit-norm, so the dot product *is* the cosine similarity) — not the
+are unit-norm, so the dot product _is_ the cosine similarity) — not the
 `pipeline()` API's opaque scoring, which was one of the first things ruled
 out early in this feature's design because it hides reusable embeddings and
 only exposes a top-1 label.
@@ -412,11 +467,11 @@ only exposes a top-1 label.
 SigLIP2 community phenomenon (consistent with the sigmoid loss's negative
 bias initialization), not a bug. Empirically, on a real production library:
 
-| Score range | Meaning |
-| --- | --- |
-| 0.6 – 0.9 | Strong match (descriptive phrases hit this range easily) |
+| Score range | Meaning                                                                      |
+| ----------- | ---------------------------------------------------------------------------- |
+| 0.6 – 0.9   | Strong match (descriptive phrases hit this range easily)                     |
 | 0.01 – 0.05 | Weak-but-real match (common for bare-noun queries on thumbnail-grade images) |
-| < 0.005 | Noise |
+| < 0.005     | Noise                                                                        |
 
 `SIGLIP2_MATCH_THRESHOLD` defaults to `0.01` (moved down from an initially
 measured `0.02`, which was empirically cutting true positives at that low
@@ -429,14 +484,14 @@ overridable via the project's existing `_get_env_str`/`_get_env_int`/`_get_env_f
 helpers (which log a warning and fall back to the default on an invalid or
 out-of-range value, rather than crashing):
 
-| Setting | Default | Notes |
-| --- | --- | --- |
-| `SIGLIP2_ACTIVE_CHECKPOINT` | `"base"` | Falls back to `"base"` with a logged warning if set to anything not in `SIGLIP2_SCORING_METADATA`. |
-| `SIGLIP2_QUERY_TEMPLATE` | `"This is a photo of {query}."` | Applied to every query before tokenizing — see [Preprocessing and calibration](#preprocessing-and-calibration-the-part-that-must-not-drift) below. |
-| `SIGLIP2_EMBED_BATCH_SIZE` | `8` | Minimum enforced at `1`. Matches the batch size validated during the original PoC benchmarking. |
-| `SIGLIP2_TEXT_MAX_LENGTH` | `64` | Fixed at export time (the ONNX text graph's sequence dimension is a **fixed** 64, not dynamic) — changing this constant without re-exporting the model produces a shape-mismatch error, not silently wrong numbers. |
-| `SIGLIP2_TOKENIZER_PAD_ID` / `SIGLIP2_TOKENIZER_PAD_TOKEN` | `0` / `"<pad>"` | Padding config passed to the `tokenizers` library. |
-| `SIGLIP2_MATCH_THRESHOLD` | `0.01` | See the score-range table above. |
+| Setting                                                    | Default                         | Notes                                                                                                                                                                                                               |
+| ---------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SIGLIP2_ACTIVE_CHECKPOINT`                                | `"base"`                        | Falls back to `"base"` with a logged warning if set to anything not in `SIGLIP2_SCORING_METADATA`.                                                                                                                  |
+| `SIGLIP2_QUERY_TEMPLATE`                                   | `"This is a photo of {query}."` | Applied to every query before tokenizing — see [Preprocessing and calibration](#preprocessing-and-calibration-the-part-that-must-not-drift) below.                                                                  |
+| `SIGLIP2_EMBED_BATCH_SIZE`                                 | `8`                             | Minimum enforced at `1`. Matches the batch size validated during the original PoC benchmarking.                                                                                                                     |
+| `SIGLIP2_TEXT_MAX_LENGTH`                                  | `64`                            | Fixed at export time (the ONNX text graph's sequence dimension is a **fixed** 64, not dynamic) — changing this constant without re-exporting the model produces a shape-mismatch error, not silently wrong numbers. |
+| `SIGLIP2_TOKENIZER_PAD_ID` / `SIGLIP2_TOKENIZER_PAD_TOKEN` | `0` / `"<pad>"`                 | Padding config passed to the `tokenizers` library.                                                                                                                                                                  |
+| `SIGLIP2_MATCH_THRESHOLD`                                  | `0.01`                          | See the score-range table above.                                                                                                                                                                                    |
 
 ## Preprocessing and calibration (the part that must not drift)
 
@@ -463,7 +518,7 @@ Measured specifics, from real debugging of a production quality regression:
   does not reproduce exactly. Shipping bit-exact HF parity would require
   bundling `transformers`, which was judged not worth it: production is
   internally consistent (images and queries share the same preprocessing
-  path), and the threshold/scale/bias are all calibrated against *that*
+  path), and the threshold/scale/bias are all calibrated against _that_
   path, not against HF's.
 - **Any preprocessing change invalidates existing embeddings.** After the
   `cv2` → PIL switch, every previously stored embedding was stale and had to
@@ -473,7 +528,7 @@ Measured specifics, from real debugging of a production quality regression:
   `strip()`'d and `lower()`'d before templating. Skipping this caused two
   reproducible bugs during development: (1) `"Beach"` scored very
   differently from `"beach"` because the SentencePiece tokenizer is
-  case-sensitive *and* a capitalized noun mid-template reads like a proper
+  case-sensitive _and_ a capitalized noun mid-template reads like a proper
   noun ("This is a photo of Beach." ≈ a place name); (2) un-templated raw
   queries land outside the calibration regime entirely, since every
   threshold/scale/bias number here was derived using the
@@ -490,7 +545,7 @@ concurrency bug was found and fixed once it was consolidated.
 
 **Contract subclasses must follow:** `get_session()` must snapshot
 `self._session` and any tensor-name attributes into **local variables**
-*before* releasing `_lock`, then return those locals — never re-read
+_before_ releasing `_lock`, then return those locals — never re-read
 `self.*` after the lock is released. The bug this prevents: a concurrent
 `close()` can null those attributes between an in-lock check and an
 out-of-lock return, handing a caller a valid session object paired with a
@@ -501,7 +556,7 @@ simultaneously.
 **Registration-leak bug (fixed):** `close()`'s cleanup used to be gated on
 `self._session is not None`. But `get_session()` can register a session
 (via `mark_model_session_active`, incrementing `session_registry`'s active
-count) and *then* null `self._session` on a tensor-name validation failure,
+count) and _then_ null `self._session` on a tensor-name validation failure,
 while `_session_registered` stays `True`. With the old gate, `close()` would
 see `self._session is None` and skip the entire cleanup block — including
 the `mark_model_session_inactive` call — leaking the registration forever
@@ -538,14 +593,14 @@ verified end-to-end against the real ONNX models during development.
 [API Reference](api.md) (Swagger UI) for the full request/response schema.
 Summary of behavior not obvious from the schema alone:
 
-| Condition | Response |
-| --- | --- |
-| Text model file missing | `404`, `message` mentions "text model not installed" |
-| Tokenizer file missing | `404`, `message` mentions "tokenizer not installed" (checked independently of the text model) |
+| Condition                                             | Response                                                                                                                                                                                |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Text model file missing                               | `404`, `message` mentions "text model not installed"                                                                                                                                    |
+| Tokenizer file missing                                | `404`, `message` mentions "tokenizer not installed" (checked independently of the text model)                                                                                           |
 | Query is empty after `strip()` (e.g. whitespace-only) | `400` — note `min_length=1` on the FastAPI `Query` param only checks raw string length, so a whitespace-only string passes that check and is caught by this separate normalization step |
-| No embeddings exist yet for the active checkpoint | `200`, empty result, friendly message ("No images have been embedded yet.") |
-| Embeddings exist but none clear the threshold | `200`, empty result, message includes the threshold value used |
-| Matches found | `200`, images sorted descending by score, each score rounded to 4 decimal places |
+| No embeddings exist yet for the active checkpoint     | `200`, empty result, friendly message ("No images have been embedded yet.")                                                                                                             |
+| Embeddings exist but none clear the threshold         | `200`, empty result, message includes the threshold value used                                                                                                                          |
+| Matches found                                         | `200`, images sorted descending by score, each score rounded to 4 decimal places                                                                                                        |
 
 ## Maintenance: `scripts/reset_embeddings.py`
 
@@ -565,12 +620,12 @@ developer runs deliberately.
 
 ## Test coverage
 
-| File | Covers |
-| --- | --- |
-| `tests/test_image_embeddings.py` | `image_embeddings` table CRUD: round-trip storage/retrieval, `model_version` filtering, upsert-overwrites-existing-row, FK cascade delete. Runs against a disposable per-test SQLite file (see note below), not the real database. |
+| File                                  | Covers                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/test_image_embeddings.py`      | `image_embeddings` table CRUD: round-trip storage/retrieval, `model_version` filtering, upsert-overwrites-existing-row, FK cascade delete. Runs against a disposable per-test SQLite file (see note below), not the real database.                                                                                                                                           |
 | `tests/test_semantic_search_route.py` | The `/semantic-search` endpoint: 404s (text model / tokenizer missing, checked independently), 400 on a whitespace-only query, friendly empty-result responses, and — critically — descending sort order verified with two results that both clear the threshold (an earlier version of this test only had one matching result, which couldn't have detected a broken sort). |
-| `tests/test_embedding_pipeline.py` | `image_util_process_unembedded_images`: skips cleanly with no vision model installed, batches per `SIGLIP2_EMBED_BATCH_SIZE`, excludes corrupt images from both the embeddings upsert and the embedded-marking (so they're retried on a later pass), always closes the vision session even if scoring raises mid-batch. |
-| `tests/test_onnx_session_base.py` | `ONNXSessionBase.close()`: normal decrement, the registration-leak regression scenario, no-op-when-never-opened, idempotency. Fully mocks `onnxruntime.InferenceSession` and `os.path.exists` — does not depend on the real (multi-hundred-MB, not checked into git) ONNX files existing on disk. |
+| `tests/test_embedding_pipeline.py`    | `image_util_process_unembedded_images`: skips cleanly with no vision model installed, batches per `SIGLIP2_EMBED_BATCH_SIZE`, excludes corrupt images from both the embeddings upsert and the embedded-marking (so they're retried on a later pass), always closes the vision session even if scoring raises mid-batch.                                                      |
+| `tests/test_onnx_session_base.py`     | `ONNXSessionBase.close()`: normal decrement, the registration-leak regression scenario, no-op-when-never-opened, idempotency. Fully mocks `onnxruntime.InferenceSession` and `os.path.exists` — does not depend on the real (multi-hundred-MB, not checked into git) ONNX files existing on disk.                                                                            |
 
 !!! warning "Local test runs and the real database"
     `DATABASE_PATH` only redirects to a throwaway SQLite file when the

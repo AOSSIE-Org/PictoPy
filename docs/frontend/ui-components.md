@@ -11,30 +11,30 @@ PictoPy’s frontend uses a mix of shared primitives (based on ShadCN) and app-s
 
 These are the base components used across the app:
 
-| Component      | Role                                             |
-|----------------|--------------------------------------------------|
-| `button`       | Buttons with variants (default, outline, ghost)  |
-| `card`         | Card container with header, content, footer      |
-| `dialog`       | Modal dialogs                                    |
-| `input`        | Text inputs                                      |
-| `label`        | Form labels                                      |
-| `textarea`     | Multi-line text input                            |
-| `badge`        | Tags and status badges                           |
-| `alert`        | Inline alerts and messages                       |
-| `avatar`       | User or entity avatars                           |
-| `dropdown-menu`| Dropdown menus                                   |
-| `scroll-area`  | Custom scrollable areas                          |
-| `sidebar`      | App sidebar layout                               |
-| `sheet`        | Slide-out panels                                 |
-| `separator`    | Visual dividers                                  |
-| `slider`       | Slider for volume, video-duration, etc.          |
-| `switch`       | Toggle switches                                  |
-| `radio-group`  | Radio button groups                              |
-| `pagination`   | Pagination controls                              |
-| `progress`     | Progress bars                                    |
-| `skeleton`     | Loading skeletons                                |
-| `tooltip`      | Hover tooltips                                   |
-| `aspect-ratio` | Fixed aspect-ratio wrapper                       |
+| Component       | Role                                            |
+| --------------- | ----------------------------------------------- |
+| `button`        | Buttons with variants (default, outline, ghost) |
+| `card`          | Card container with header, content, footer     |
+| `dialog`        | Modal dialogs                                   |
+| `input`         | Text inputs                                     |
+| `label`         | Form labels                                     |
+| `textarea`      | Multi-line text input                           |
+| `badge`         | Tags and status badges                          |
+| `alert`         | Inline alerts and messages                      |
+| `avatar`        | User or entity avatars                          |
+| `dropdown-menu` | Dropdown menus                                  |
+| `scroll-area`   | Custom scrollable areas                         |
+| `sidebar`       | App sidebar layout                              |
+| `sheet`         | Slide-out panels                                |
+| `separator`     | Visual dividers                                 |
+| `slider`        | Slider for volume, video-duration, etc.         |
+| `switch`        | Toggle switches                                 |
+| `radio-group`   | Radio button groups                             |
+| `pagination`    | Pagination controls                             |
+| `progress`      | Progress bars                                   |
+| `skeleton`      | Loading skeletons                               |
+| `tooltip`       | Hover tooltips                                  |
+| `aspect-ratio`  | Fixed aspect-ratio wrapper                      |
 
 App-specific UI pieces in the same area:
 
@@ -98,6 +98,68 @@ These implement specific features and often use the primitives above:
     `SEMANTIC_BUNDLE_TITLE`/`LABEL`/`DESCRIPTION`) rather than duplicating
     them per-component.
 
+### Memories
+
+Story-style browsing of curated memories. The pages own layout and data
+fetching; the components under `components/Memories/` are presentational and
+take everything they render as props.
+
+- **Memories** (`pages/Memories/Memories.tsx`) – The grid page. Loads cards
+  with `useMemories({ limit: 60 })` and renders a responsive grid (2 columns
+  up to 5 at `xl`), with pulsing skeletons while loading and an empty state
+  otherwise. A "Refresh" button calls `useRefreshMemories`; when
+  `/memories/status` reports `indexing_busy` it shows an info dialog instead of
+  starting a run. A gear button routes to `memories/settings`. It mirrors the
+  `slide_duration_seconds` preference into the Redux slice as milliseconds, and
+  mounts `MemoryStoryViewer` whenever `activeMemoryId` is set.
+- **MemorySettings** (`pages/Memories/MemorySettings.tsx`) – Settings page for
+  the `memories` user preferences, read and written through
+  `useUserPreferences`. A local `ToggleRow` renders the switches ("Generate
+  memories", "Desktop notifications", "Background music"); sliders cover
+  seconds per photo (1–15), minimum photos (2–20) and maximum photos (5–100,
+  in steps of 5). The two size sliders clamp each other so the minimum can
+  never be committed above the maximum. Every control writes on
+  `onValueCommit` and is disabled while a save is in flight.
+- **MemoryCard** (`components/Memories/MemoryCard.tsx`) – Grid tile, props
+  `{ memory: MemoryCard; onOpen: (memoryId: string) => void }`. A 4:5 button
+  showing the cover with a gradient scrim, an event-type `badge`, a dot when
+  `viewed_at` is `null`, the title, subtitle and photo count. The cover scales
+  and the caption lifts on hover.
+- **MemoryStoryViewer** (`components/Memories/MemoryStoryViewer.tsx`) –
+  Full-screen viewer, props
+  `{ memoryId: string; memories: MemoryCard[]; musicEnabled: boolean }`.
+  Fetches the story with `useMemory` and merges its stills and clips into one
+  chronological slide list via `buildMemorySlides`. Highlights:
+  - Segmented progress bars, one per slide, with the active bar filling live
+    from `useStoryProgress`.
+  - Navigation by arrow buttons, `ArrowLeft`/`ArrowRight`, and pointer swipe
+    (50 px of horizontal travel counts as a swipe rather than a tap). `Space`
+    toggles play/pause, `Escape` closes. Advancing past the last slide closes
+    the viewer rather than looping.
+  - Image slides render as `<img>`; video slides render as a `<video autoPlay
+muted playsInline>` with no native controls, following the story's own
+    play/pause. A per-clip sound button unmutes the current clip only — the
+    slide reverts to silent when you move on.
+  - Opening a memory marks it viewed once, through `useUpdateMemory`.
+  - It embeds `MemoryFilmstrip` so you can jump between memories in place.
+  - `musicEnabled` (the `story_music_enabled` preference) gates the mute
+    button and a looping `<audio>` element. No soundtrack file ships with the
+    app, so that element currently produces no sound.
+- **MemoryFilmstrip** (`components/Memories/MemoryFilmstrip.tsx`) – Horizontal
+  strip of circular covers, props
+  `{ memories: MemoryCard[]; activeMemoryId: string | null; onSelect: (memoryId: string) => void }`.
+  Renders as a `tablist`; the ring around each cover marks the active memory,
+  an unviewed one, or neither. Renders nothing when the list is empty.
+- **useStoryProgress** (`hooks/useStoryProgress.ts`) – The hook driving the
+  progress bars. Takes `{ index, durationMs, isPlaying, onComplete }` and
+  returns progress through the current slide as a number from 0 to 1. It runs
+  on `requestAnimationFrame`, resets whenever `index` changes, and preserves
+  elapsed time across a pause so resuming does not restart the slide.
+
+Viewer state (`activeMemoryId`, `slideIndex`, `isPlaying`, `isMuted`,
+`slideDurationMs`) lives in `features/memoriesSlice.ts`; the memories
+themselves come from React Query.
+
 ### Other
 
 - **FolderPicker/** – Folder selection and related dialogs (e.g. `DeleteImageDialog`)
@@ -114,5 +176,6 @@ UI components are styled with **Tailwind CSS**. Shared look and behaviour (inclu
 ## Related documentation
 
 - [Gallery View](gallery-view.md) – How the main gallery is built from these components
+- [Memories](memories.md) – The memories pages, hooks and API layer in full
 - [State Management](state-management.md) – How components connect to Redux
 - [Screenshots](screenshots.md) – Screenshots of the app using these components

@@ -31,11 +31,19 @@ For natural-language photo search, we additionally run [SigLIP2](https://hugging
 (also via ONNX Runtime, following the same distribution pattern as YOLO/FaceNet) to generate a reusable embedding per photo in the background,
 and to embed search queries live at request time. See [Semantic Search](../backend/backend_python/semantic-search.md) for the full architecture.
 
+Memories are curated by a background subsystem that shares the same worker as the rest of our library processing. A curation run is submitted to the
+single-worker process pool executor, so it serializes behind indexing and semantic scoring instead of racing them for CPU. Runs are triggered from the
+folder add, folder sync and AI tagging pipelines, and each run writes its scored collections into sqlite, which the UI then reads back.
+See [Memories](../backend/backend_python/memories.md) for the triggers, scoring signals and schema.
+
+!!! note "Diagram"
+    The backend architecture image above predates the memories subsystem and does not show it yet.
+
 !!! note "Note"
-We discuss all of the features and configuration of our application in further sections of the documentation. They can be used for both developers
-as well as users who want to use the app. A postman collection has also been added which can be found in our API section.
-<br>
-<br>
+    We discuss all of the features and configuration of our application in further sections of the documentation. They can be used for both developers
+    as well as users who want to use the app. A postman collection has also been added which can be found in our API section.
+    <br>
+    <br>
 
 ## Backend rust (via Tauri)
 
