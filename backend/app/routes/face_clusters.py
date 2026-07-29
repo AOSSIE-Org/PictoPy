@@ -2,7 +2,7 @@ import logging
 from binascii import Error as Base64Error
 import base64
 from concurrent.futures import CancelledError, Future, ProcessPoolExecutor
-from typing import Annotated
+from typing import Annotated, Optional
 import os
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.database.face_clusters import (
@@ -42,9 +42,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def is_safe_path(target_path: str) -> bool:
-    """Validate that target_path is within one of the registered folders or temp_uploads."""
-
+def get_safe_root(target_path: str) -> Optional[str]:
+    """Validate that target_path is within one of the registered folders or temp_uploads
+    and return the matching resolved folder root.
+    """
     real_target = os.path.realpath(target_path)
     try:
         allowed_folders = db_get_all_folders()
@@ -58,10 +59,15 @@ def is_safe_path(target_path: str) -> bool:
         real_folder = os.path.realpath(folder)
         try:
             if os.path.commonpath([real_folder, real_target]) == real_folder:
-                return True
+                return real_folder
         except ValueError:
             continue
-    return False
+    return None
+
+
+def is_safe_path(target_path: str) -> bool:
+    """Validate that target_path is within one of the registered folders or temp_uploads."""
+    return get_safe_root(target_path) is not None
 
 
 def _log_rescore_outcome(cluster_id: str, done: "Future[int]") -> None:
@@ -301,7 +307,8 @@ def face_tagging(
                     message="image path is required.",
                 ).model_dump(),
             )
-        if not is_safe_path(local_file_path):
+        allowed_root = get_safe_root(local_file_path)
+        if not allowed_root:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=ErrorResponse(
@@ -320,23 +327,107 @@ def face_tagging(
                 ).model_dump(),
             )
 
-        try:
-            flags = os.O_RDONLY
-            if hasattr(os, "O_NOFOLLOW"):
-                flags |= os.O_NOFOLLOW
-            fd_handle = os.open(local_file_path, flags)
-            with open(fd_handle, "rb") as f:
-                image_bytes = f.read()
-        except Exception as e:
-            logger.error(f"Failed to securely open path {local_file_path}: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=ErrorResponse(
-                    success=False,
-                    error="Access Denied",
-                    message="Cannot read the specified path.",
-                ).model_dump(),
-            )
+        from pathlib import Path
+
+        canonical_root = os.path.realpath(allowed_root)
+        canonical_target = os.path.realpath(local_file_path)
+        rel_path = os.path.relpath(canonical_target, canonical_root)
+        components = Path(rel_path).parts
+
+        dir_fd_supported = os.open in os.supports_dir_fd
+
+        if dir_fd_supported:
+            fd = None
+            try:
+                # Open the allowed root directory
+                fd = os.open(canonical_root, os.O_RDONLY | os.O_DIRECTORY)
+
+                # Walk through the subdirectories resolving relative components
+                for comp in components[:-1]:
+                    if comp == "." or not comp:
+                        continue
+                    next_fd = os.open(
+                        comp, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd
+                    )
+                    os.close(fd)
+                    fd = next_fd
+
+                # Open the final file component with O_NOFOLLOW
+                final_comp = components[-1]
+                file_flags = os.O_RDONLY | os.O_NOFOLLOW
+                file_fd = os.open(final_comp, file_flags, dir_fd=fd)
+                os.close(fd)
+                fd = None  # fd is closed, only file_fd remains open
+
+                # Verify that it is a regular file
+                stat_result = os.fstat(file_fd)
+                import stat
+
+                if not stat.S_ISREG(stat_result.st_mode):
+                    os.close(file_fd)
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=ErrorResponse(
+                            success=False,
+                            error="Invalid file",
+                            message="The target path is not a regular file.",
+                        ).model_dump(),
+                    )
+
+                with open(file_fd, "rb") as f:
+                    image_bytes = f.read()
+            except Exception as e:
+                if fd is not None:
+                    try:
+                        os.close(fd)
+                    except Exception:
+                        pass
+                logger.error(
+                    f"Failed to securely walk and open path {local_file_path}: {e}"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=ErrorResponse(
+                        success=False,
+                        error="Access Denied",
+                        message="Cannot read the specified path.",
+                    ).model_dump(),
+                )
+        else:
+            # Fallback for platforms where dir_fd is not supported (Windows)
+            try:
+                flags = os.O_RDONLY
+                if hasattr(os, "O_NOFOLLOW"):
+                    flags |= os.O_NOFOLLOW
+                fd_handle = os.open(local_file_path, flags)
+
+                # Verify regular file using fstat on the opened fd
+                stat_result = os.fstat(fd_handle)
+                import stat
+
+                if not stat.S_ISREG(stat_result.st_mode):
+                    os.close(fd_handle)
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=ErrorResponse(
+                            success=False,
+                            error="Invalid file",
+                            message="The target path is not a regular file.",
+                        ).model_dump(),
+                    )
+
+                with open(fd_handle, "rb") as f:
+                    image_bytes = f.read()
+            except Exception as e:
+                logger.error(f"Failed to securely open path {local_file_path}: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=ErrorResponse(
+                        success=False,
+                        error="Access Denied",
+                        message="Cannot read the specified path.",
+                    ).model_dump(),
+                )
 
         return perform_face_search(image_bytes=image_bytes)
 

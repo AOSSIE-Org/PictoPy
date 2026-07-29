@@ -37,7 +37,7 @@ class FaceDetector:
         image_path: Optional[str] = None,
         forSearch: bool = False,
         image_bytes: Optional[bytes] = None,
-    ):
+    ) -> Optional[dict]:
         if image_bytes is not None:
             img = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
         elif image_path is not None:

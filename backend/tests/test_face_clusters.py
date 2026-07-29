@@ -482,17 +482,36 @@ class TestFaceClustersAPI:
         mock_folders.return_value = ["/allowed/folder"]
         mock_perform.return_value = {"success": True, "data": []}
 
-        from unittest.mock import mock_open
+        from unittest.mock import mock_open, MagicMock
+        import os
+
+        mock_stat = MagicMock()
+        mock_stat.st_mode = 32768  # S_IFREG
 
         with patch("os.path.isfile", return_value=True), patch(
             "os.open", return_value=123
-        ), patch("builtins.open", mock_open(read_data=b"fakeimagebytes")):
+        ) as mock_os_open, patch("os.fstat", return_value=mock_stat), patch(
+            "builtins.open", mock_open(read_data=b"fakeimagebytes")
+        ):
             response = client.post(
                 "/face_clusters/face-search?input_type=path",
                 json={"path": "/allowed/folder/family.jpg", "base64_data": ""},
             )
         assert response.status_code == 200
         mock_perform.assert_called_once()
+        # Assert perform_face_search receives exactly b"fakeimagebytes"
+        called_kwargs = mock_perform.call_args.kwargs
+        assert called_kwargs.get("image_bytes") == b"fakeimagebytes"
+        # Assert os.open includes O_NOFOLLOW when supported
+        if hasattr(os, "O_NOFOLLOW"):
+            assert mock_os_open.called
+            nofollow_flag_used = False
+            for call in mock_os_open.call_args_list:
+                flags = call[0][1] if len(call[0]) > 1 else call[1].get("flags", 0)
+                if flags & os.O_NOFOLLOW:
+                    nofollow_flag_used = True
+                    break
+            assert nofollow_flag_used, "os.open was not called with O_NOFOLLOW flag"
 
     @patch("app.routes.face_clusters.perform_face_search")
     def test_face_search_base64_allowed(self, mock_perform):
@@ -507,10 +526,12 @@ class TestFaceClustersAPI:
         )
         assert response.status_code == 200
         mock_perform.assert_called_once()
-        # Verify that perform_face_search was called with image_bytes (not image_path)
+        # Decode the fixture and assert perform_face_search receives those exact bytes
+        import base64
+
+        expected_bytes = base64.b64decode(gif_b64.split(",")[-1])
         called_kwargs = mock_perform.call_args.kwargs
-        assert "image_bytes" in called_kwargs
-        assert called_kwargs["image_bytes"] is not None
+        assert called_kwargs.get("image_bytes") == expected_bytes
         assert called_kwargs.get("image_path") is None
 
 
