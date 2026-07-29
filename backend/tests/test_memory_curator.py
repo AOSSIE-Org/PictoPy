@@ -24,6 +24,29 @@ REFERENCE = "2026-07-26"
 COHERENT = np.eye(8, dtype=np.float32)[0]
 SCATTER_BASIS = np.eye(8, dtype=np.float32)
 
+# What a random pair of photos in this library already scores, measured on the
+# real one. Every cohesion test is a margin over it, so a run that reads no
+# baseline at all judges nothing - which is why it is stubbed rather than left
+# to whatever embeddings happen to be in the database.
+LIBRARY_BASELINE = 0.58
+
+
+def library_sample(pairwise: float = LIBRARY_BASELINE, count: int = 4) -> List[Any]:
+    """
+    Stand-in for the library's own embeddings, with an exact pairwise cosine.
+
+    Each vector is `sqrt(1-p)` along its own axis plus `sqrt(p)` along one they
+    share, so every pair scores exactly `pairwise` and the unit length holds.
+    """
+    vectors = []
+    for index in range(count):
+        vector = np.zeros(count + 1, dtype=np.float32)
+        vector[index] = np.sqrt(1.0 - pairwise)
+        vector[count] = np.sqrt(pairwise)
+        vectors.append(vector)
+    return vectors
+
+
 # ##############################
 # Pytest Fixtures
 # ##############################
@@ -118,6 +141,7 @@ def run_curator(
     expansion: Optional[List[Dict[str, Any]]] = None,
     top_event_label: Optional[Any] = None,
     embeddings: Optional[Dict[str, np.ndarray]] = None,
+    cohesion_sample: Optional[Sequence[Any]] = None,
     video_candidates: Optional[List[Dict[str, Any]]] = None,
     video_signals: Optional[List[Dict[str, Any]]] = None,
     recently_used: Optional[set] = None,
@@ -167,6 +191,15 @@ def run_curator(
             ),
         )
         m("db_get_embeddings_for_image_ids", return_value=embeddings or {})
+        # Unstubbed this reads the real database, which on a developer machine
+        # is their photo library and in CI is empty - and an empty sample means
+        # no baseline, which makes the cohesion gate accept everything.
+        m(
+            "db_get_embedding_sample",
+            return_value=(
+                library_sample() if cohesion_sample is None else list(cohesion_sample)
+            ),
+        )
         m("db_get_video_candidates_in_period", return_value=video_candidates or [])
         m("db_get_video_scoring_signals", return_value=video_signals or [])
         m("db_get_scoring_signals", side_effect=signals)

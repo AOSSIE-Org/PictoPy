@@ -116,7 +116,10 @@ def _write_image(path, exif_date=None):
     image = Image.new("RGB", (4, 4), "white")
     if exif_date:
         exif = image.getexif()
-        exif.get_ifd(EXIF_IFD_POINTER)[DATE_TIME_ORIGINAL] = exif_date
+        # Assigned as a dict, not by mutating get_ifd(): only newer Pillow
+        # serializes a sub-IFD reached that way, so on the pinned 10.3 the
+        # date was silently dropped and every one of these read as filesystem.
+        exif[EXIF_IFD_POINTER] = {DATE_TIME_ORIGINAL: exif_date}
         image.save(path, exif=exif)
     else:
         image.save(path)
