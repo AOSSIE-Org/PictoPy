@@ -11,7 +11,9 @@ DATABASE_PATH = settings.DATABASE_PATH
 
 
 def get_database_path() -> str:
-    """Resolve the active database path dynamically, supporting various test patching styles."""
+    """Resolve the active database path dynamically, supporting
+    various test patching styles.
+    """
     if DATABASE_PATH != ORIGINAL_DATABASE_PATH:
         return DATABASE_PATH
     return settings.DATABASE_PATH

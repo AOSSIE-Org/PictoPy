@@ -482,16 +482,18 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
         return True
 
     try:
+        total_deleted = 0
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            # Create placeholders for the IN clause
-            placeholders = ",".join("?" for _ in image_ids)
-            cursor.execute(
-                f"DELETE FROM images WHERE id IN ({placeholders})",
-                image_ids,
-            )
-            row_count = cursor.rowcount
-        logger.info(f"Deleted {row_count} obsolete image(s) from database")
+            for start in range(0, len(image_ids), SQLITE_ID_CHUNK):
+                chunk = image_ids[start : start + SQLITE_ID_CHUNK]
+                placeholders = ",".join("?" for _ in chunk)
+                cursor.execute(
+                    f"DELETE FROM images WHERE id IN ({placeholders})",
+                    chunk,
+                )
+                total_deleted += cursor.rowcount
+        logger.info(f"Deleted {total_deleted} obsolete image(s) from database")
         return True
     except sqlite3.Error as e:
         logger.error(f"Error deleting images: {e}")
