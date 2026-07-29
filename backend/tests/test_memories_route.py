@@ -1,3 +1,4 @@
+from concurrent.futures import Future
 from datetime import date
 from typing import Any, Dict, Iterator
 from unittest.mock import MagicMock, patch
@@ -225,6 +226,93 @@ class TestGenerateMemories:
 
         assert response.json()["data"]["queued"] is True
         assert executor.submit.call_count == 1
+
+    def test_releases_the_claim_when_the_hand_off_fails(
+        self, client: TestClient, executor: MagicMock
+    ):
+        """
+        The run is claimed before it is submitted. A claim nobody finishes
+        blocks generation for the whole staleness window.
+        """
+        executor.submit.side_effect = RuntimeError("executor is shutting down")
+
+        with (
+            patch.object(memories_route, "db_reap_stale_memory_runs", return_value=0),
+            # Nothing on record, then the claim this route just made.
+            patch.object(
+                memories_route,
+                "db_get_memory_run",
+                side_effect=[None, make_run("running")],
+            ),
+            patch.object(memories_route, "db_start_memory_run", return_value=True),
+            patch.object(memories_route, "db_finish_memory_run") as finish,
+        ):
+            response = client.post("/memories/generate", json={})
+
+        assert response.status_code == 500
+        assert finish.call_args[0][:3] == (date.today().isoformat(), "failed", 0)
+
+    def test_releases_the_claim_when_the_worker_dies(
+        self, client: TestClient, executor: MagicMock
+    ):
+        """A worker's exception reaches nobody except through its Future."""
+        future: Future = Future()
+        executor.submit.return_value = future
+
+        with (
+            patch.object(memories_route, "db_reap_stale_memory_runs", return_value=0),
+            patch.object(
+                memories_route,
+                "db_get_memory_run",
+                side_effect=[None, make_run("running")],
+            ),
+            patch.object(memories_route, "db_start_memory_run", return_value=True),
+            patch.object(memories_route, "db_finish_memory_run") as finish,
+        ):
+            assert client.post("/memories/generate", json={}).status_code == 200
+            future.set_exception(RuntimeError("worker died"))
+
+        assert finish.call_args[0][:3] == (date.today().isoformat(), "failed", 0)
+
+    def test_does_not_report_an_already_finished_run_as_failed(
+        self, client: TestClient, executor: MagicMock
+    ):
+        """A worker can die after writing its own terminal state."""
+        future: Future = Future()
+        executor.submit.return_value = future
+
+        with (
+            patch.object(memories_route, "db_reap_stale_memory_runs", return_value=0),
+            patch.object(
+                memories_route,
+                "db_get_memory_run",
+                side_effect=[None, make_run("complete")],
+            ),
+            patch.object(memories_route, "db_start_memory_run", return_value=True),
+            patch.object(memories_route, "db_finish_memory_run") as finish,
+        ):
+            client.post("/memories/generate", json={})
+            future.set_exception(RuntimeError("died after finishing"))
+
+        finish.assert_not_called()
+
+    def test_leaves_a_healthy_run_to_close_itself(
+        self, client: TestClient, executor: MagicMock
+    ):
+        """The curator writes its own terminal state; the route must not race it."""
+        future: Future = Future()
+        executor.submit.return_value = future
+
+        with (
+            patch.object(memories_route, "db_reap_stale_memory_runs", return_value=0),
+            patch.object(memories_route, "db_get_memory_run", return_value=None),
+            patch.object(memories_route, "db_start_memory_run", return_value=True),
+            patch.object(memories_route, "db_finish_memory_run") as finish,
+        ):
+            client.post("/memories/generate", json={})
+            future.set_result(3)
+
+        finish.assert_not_called()
 
     @pytest.mark.parametrize("status", ["failed", "running"])
     def test_reaping_runs_before_deciding(self, client: TestClient, status: str):

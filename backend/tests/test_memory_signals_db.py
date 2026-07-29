@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import tempfile
+from concurrent.futures import Future
 from contextlib import ExitStack
 from types import SimpleNamespace
 from typing import Iterator, List
@@ -16,6 +17,7 @@ from app.database.face_clusters import db_create_clusters_table
 from app.database.faces import db_create_faces_table
 from app.database.folders import (
     db_clear_stale_processing_flags,
+    db_update_folder_indexing_status,
     db_create_folders_table,
     db_set_tagging_completed,
 )
@@ -628,6 +630,32 @@ class TestTaggingCompletedLifecycle:
         conn.close()
         assert status == "interrupted"
 
+    def test_an_unknown_indexing_status_is_refused(self, test_db: str):
+        """A typo would persist as a status nothing recognises."""
+        with pytest.raises(ValueError):
+            db_update_folder_indexing_status("f-1", "in-progress")
+
+    def test_a_folder_stale_on_both_counts_is_counted_once(self, test_db: str):
+        """One folder is one correction, however many flags it left behind."""
+        conn = sqlite3.connect(test_db)
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path, last_modified_time, "
+            "AI_Tagging, taggingCompleted, indexing_status) VALUES "
+            "('f-both', '/both', 0, 1, 0, 'in_progress')"
+        )
+        conn.commit()
+        conn.close()
+
+        assert db_clear_stale_processing_flags() == 1
+
+        conn = sqlite3.connect(test_db)
+        tagging, indexing = conn.execute(
+            "SELECT taggingCompleted, indexing_status FROM folders "
+            "WHERE folder_id = 'f-both'"
+        ).fetchone()
+        conn.close()
+        assert (tagging, indexing) == (1, "interrupted")
+
     def test_startup_is_idempotent_and_spares_untagged_folders(self, test_db: str):
         conn = sqlite3.connect(test_db)
         conn.execute(
@@ -800,6 +828,36 @@ class TestRescoreAfterRename:
 
         broken = SimpleNamespace(executor=None)
         face_clusters._rescore_memories_for_cluster(broken, "c-mum")  # must not raise
+
+    def test_rename_route_reports_a_rescore_that_died_in_the_worker(self):
+        """A submitted job's exception surfaces only through its Future."""
+        from app.routes import face_clusters
+
+        future: Future = Future()
+        state = SimpleNamespace(executor=MagicMock())
+        state.executor.submit.return_value = future
+
+        face_clusters._rescore_memories_for_cluster(state, "c-mum")
+
+        with patch.object(face_clusters.logger, "error") as error:
+            future.set_exception(RuntimeError("worker died"))
+
+        assert error.call_count == 1
+        assert "c-mum" in error.call_args[0][0]
+
+    def test_rename_route_stays_quiet_when_the_rescore_succeeds(self):
+        from app.routes import face_clusters
+
+        future: Future = Future()
+        state = SimpleNamespace(executor=MagicMock())
+        state.executor.submit.return_value = future
+
+        face_clusters._rescore_memories_for_cluster(state, "c-mum")
+
+        with patch.object(face_clusters.logger, "error") as error:
+            future.set_result(2)
+
+        error.assert_not_called()
 
 
 # ##############################

@@ -1,7 +1,7 @@
 import logging
 from binascii import Error as Base64Error
 import base64
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import CancelledError, Future, ProcessPoolExecutor
 from typing import Annotated
 import uuid
 import os
@@ -42,7 +42,22 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _rescore_memories_for_cluster(app_state, cluster_id: str) -> None:
+def _log_rescore_outcome(cluster_id: str, done: "Future[int]") -> None:
+    """
+    Report a rescore that died in the worker.
+
+    A submitted job's exception surfaces only through its Future, so without
+    this a failed rescore is silent. The rename itself already stands.
+    """
+    try:
+        done.result()
+    except CancelledError:
+        logger.info(f"Memory rescore for cluster {cluster_id} was cancelled")
+    except Exception:
+        logger.error(f"Memory rescore for cluster {cluster_id} failed", exc_info=True)
+
+
+def _rescore_memories_for_cluster(app_state: State, cluster_id: str) -> None:
     """
     Queue a rescore of memories containing this cluster.
 
@@ -53,7 +68,8 @@ def _rescore_memories_for_cluster(app_state, cluster_id: str) -> None:
         from app.utils.memory_curator import memory_curator_rescore_for_cluster
 
         executor: ProcessPoolExecutor = app_state.executor
-        executor.submit(memory_curator_rescore_for_cluster, cluster_id)
+        future = executor.submit(memory_curator_rescore_for_cluster, cluster_id)
+        future.add_done_callback(lambda done: _log_rescore_outcome(cluster_id, done))
     except Exception as e:
         logger.error(f"Failed to queue memory rescore for cluster {cluster_id}: {e}")
 

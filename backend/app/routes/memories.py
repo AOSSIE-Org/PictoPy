@@ -5,7 +5,7 @@ Serves persisted, curated memories: the story viewer payload, the history
 filmstrip, and the scheduler-facing status and generate endpoints.
 """
 
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import CancelledError, Future, ProcessPoolExecutor
 from datetime import date
 from typing import Any, Dict, Optional
 
@@ -15,6 +15,7 @@ from starlette.datastructures import State
 from app.database.memories import (
     db_count_unviewed_memories,
     db_delete_memory,
+    db_finish_memory_run,
     db_get_memory,
     db_get_memory_images,
     db_get_memory_videos,
@@ -84,6 +85,43 @@ def _not_found(memory_id: str) -> HTTPException:
     )
 
 
+def _release_run(run_date: str, reason: str) -> None:
+    """
+    Close a claimed run that nothing is going to finish.
+
+    Only a run still 'running' is touched: a worker can die after writing its
+    own terminal state, and reporting a finished run as failed would invite a
+    pointless regeneration. Recorded failed rather than complete, so the next
+    attempt is free to run rather than being told the date is already done.
+    """
+    try:
+        run = db_get_memory_run(run_date)
+        if run and run["status"] == "running":
+            db_finish_memory_run(run_date, "failed", 0, reason)
+    except Exception:
+        logger.error(f"Failed to release the claimed run for {run_date}", exc_info=True)
+
+
+def _release_run_if_the_worker_died(run_date: str, future: "Future[int]") -> None:
+    """
+    Release the claim if the submitted run never reached its own bookkeeping.
+
+    A worker's exception surfaces only through its Future, so a process that
+    dies mid-curation would otherwise leave the run 'running' until the
+    staleness window reaps it.
+    """
+
+    def on_done(done: "Future[int]") -> None:
+        try:
+            error = done.exception()
+        except CancelledError:
+            error = "the run was cancelled"
+        if error is not None:
+            _release_run(run_date, f"Curation did not finish: {error}")
+
+    future.add_done_callback(on_done)
+
+
 def _with_live_count(row: Dict[str, Any]) -> Dict[str, Any]:
     """Copy a memories row, preferring the live image count to the stored one."""
     data = dict(row)
@@ -115,7 +153,7 @@ def _to_story(row: Dict[str, Any]) -> MemoryStory:
 )
 def generate_memories(
     request: GenerateMemoriesRequest, app_state: State = Depends(get_state)
-):
+) -> GenerateMemoriesResponse:
     """
     Queue a curation run.
 
@@ -180,8 +218,16 @@ def generate_memories(
         # a duplicate pass.
         db_start_memory_run(run_date, memory_curator_params_signature(preferences))
 
-        executor: ProcessPoolExecutor = app_state.executor
-        executor.submit(memory_curator_run, run_date, request.force, "api")
+        try:
+            executor: ProcessPoolExecutor = app_state.executor
+            future = executor.submit(memory_curator_run, run_date, request.force, "api")
+        except Exception as e:
+            # Nothing owns the run if the hand-off failed, and a claim nobody
+            # finishes blocks generation for the whole staleness window.
+            _release_run(run_date, f"Could not queue the curation run: {e}")
+            raise
+
+        _release_run_if_the_worker_died(run_date, future)
 
         return GenerateMemoriesResponse(
             success=True,
@@ -200,7 +246,7 @@ def generate_memories(
     response_model=MemoryStatusResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
-def get_memory_status():
+def get_memory_status() -> MemoryStatusResponse:
     """
     Report scheduler state.
 
@@ -238,7 +284,7 @@ def get_memory_status():
     response_model=GetTodayMemoryResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
-def get_today_memory():
+def get_today_memory() -> GetTodayMemoryResponse:
     """
     Get the memory to surface now, or null if there is nothing to show.
 
@@ -276,7 +322,7 @@ def list_memories(
     ),
     include_viewed: bool = Query(True, description="Include already-viewed memories"),
     include_dismissed: bool = Query(False, description="Include dismissed memories"),
-):
+) -> GetMemoriesResponse:
     """List memory cards, newest first. Backs the history filmstrip and grid."""
     try:
         rows, total_count = db_list_memories(
@@ -303,7 +349,7 @@ def list_memories(
     response_model=GetMemoryResponse,
     responses={code: {"model": ErrorResponse} for code in [404, 500]},
 )
-def get_memory(memory_id: str):
+def get_memory(memory_id: str) -> GetMemoryResponse:
     """Get a single memory with its full image set."""
     try:
         row = db_get_memory(memory_id)
@@ -326,7 +372,7 @@ def get_memory(memory_id: str):
     response_model=UpdateMemoryResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 404, 500]},
 )
-def update_memory(memory_id: str, request: UpdateMemoryRequest):
+def update_memory(memory_id: str, request: UpdateMemoryRequest) -> UpdateMemoryResponse:
     """Update a memory's viewed, dismissed or notified state."""
     try:
         if (
@@ -374,7 +420,7 @@ def update_memory(memory_id: str, request: UpdateMemoryRequest):
     response_model=DeleteMemoryResponse,
     responses={code: {"model": ErrorResponse} for code in [404, 500]},
 )
-def delete_memory(memory_id: str):
+def delete_memory(memory_id: str) -> DeleteMemoryResponse:
     """Delete a memory. Its curated image list cascades; the photos remain."""
     try:
         if not db_delete_memory(memory_id):

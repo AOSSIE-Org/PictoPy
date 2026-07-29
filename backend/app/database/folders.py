@@ -526,16 +526,26 @@ def db_clear_stale_processing_flags() -> int:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
+        # One statement, not two: a folder that is both mid-tagging and
+        # mid-index is one folder, and counting each flag would report two.
         cursor.execute(
-            "UPDATE folders SET taggingCompleted = 1 "
-            "WHERE AI_Tagging = 1 AND IFNULL(taggingCompleted, 0) = 0"
+            """
+            UPDATE folders
+               SET taggingCompleted = CASE
+                       WHEN AI_Tagging = 1 AND IFNULL(taggingCompleted, 0) = 0
+                       THEN 1
+                       ELSE taggingCompleted
+                   END,
+                   indexing_status = CASE
+                       WHEN indexing_status = ? THEN ?
+                       ELSE indexing_status
+                   END
+             WHERE (AI_Tagging = 1 AND IFNULL(taggingCompleted, 0) = 0)
+                OR indexing_status = ?
+            """,
+            (INDEXING_IN_PROGRESS, INDEXING_INTERRUPTED, INDEXING_IN_PROGRESS),
         )
         corrected = cursor.rowcount
-        cursor.execute(
-            f"UPDATE folders SET indexing_status = '{INDEXING_INTERRUPTED}' "
-            f"WHERE indexing_status = '{INDEXING_IN_PROGRESS}'"
-        )
-        corrected += cursor.rowcount
         conn.commit()
         if corrected:
             logger.info(f"Cleared stale processing flags on {corrected} folder(s)")
@@ -549,7 +559,15 @@ def db_clear_stale_processing_flags() -> int:
 
 
 def db_update_folder_indexing_status(folder_id: str, status: str) -> None:
-    """Update the indexing_status of a specific folder."""
+    """
+    Update the indexing_status of a specific folder.
+
+    The column has no CHECK constraint, so a typo would otherwise persist as a
+    status nothing recognises and the folder would read as busy forever.
+    """
+    if status not in INDEXING_STATUSES:
+        raise ValueError(f"unknown indexing status: {status}")
+
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
