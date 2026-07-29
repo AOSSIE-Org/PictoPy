@@ -4,7 +4,7 @@ import json
 import sqlite3
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple, TypedDict
 
-from app.database.images import _connect
+from app.database.images import SQLITE_ID_CHUNK, _connect
 from app.database.semantic_labels import SEMANTIC_CLASS_ID_OFFSET
 from app.logging.setup_logging import get_logger
 
@@ -17,6 +17,18 @@ VideoId = str
 EVENT_TYPES = ("anniversary", "import_event", "semantic_event")
 MEMORY_STATUSES = ("pending", "complete", "failed", "empty")
 RUN_STATUSES = ("running", "complete", "failed")
+
+
+def _check_in(column: str, values: Sequence[str]) -> str:
+    """
+    CHECK clause built from the tuples above, so the two cannot drift apart.
+
+    The values are module constants, never user input, so interpolating them
+    into the DDL is safe.
+    """
+    quoted = ", ".join(f"'{value}'" for value in values)
+    return f"CHECK ({column} IN ({quoted}))"
+
 
 # (image_id, sort_order, score)
 MemoryImageEntry = Tuple[ImageId, int, Optional[float]]
@@ -63,6 +75,7 @@ class MemoryRecord(TypedDict, total=False):
     period_end: Optional[str]
     cover_image_id: Optional[ImageId]
     image_count: int
+    video_count: int
     score: float
     signals: Optional[Dict[str, Any]]
     params_signature: Optional[str]
@@ -76,15 +89,14 @@ def db_create_memories_table() -> None:
         conn = _connect()
         cursor = conn.cursor()
         cursor.execute(
-            """
+            f"""
             CREATE TABLE IF NOT EXISTS memories (
                 memory_id TEXT PRIMARY KEY,
                 dedupe_key TEXT NOT NULL UNIQUE,
                 event_type TEXT NOT NULL
-                    CHECK (event_type IN
-                        ('anniversary', 'import_event', 'semantic_event')),
+                    {_check_in("event_type", EVENT_TYPES)},
                 status TEXT NOT NULL DEFAULT 'pending'
-                    CHECK (status IN ('pending', 'complete', 'failed', 'empty')),
+                    {_check_in("status", MEMORY_STATUSES)},
                 title TEXT NOT NULL,
                 subtitle TEXT,
                 place_label TEXT,
@@ -95,6 +107,7 @@ def db_create_memories_table() -> None:
                 period_end DATETIME,
                 cover_image_id TEXT,
                 image_count INTEGER NOT NULL DEFAULT 0,
+                video_count INTEGER NOT NULL DEFAULT 0,
                 score REAL NOT NULL DEFAULT 0,
                 signals TEXT,
                 params_signature TEXT,
@@ -143,8 +156,8 @@ def db_create_memories_table() -> None:
             """
         )
 
-        # Guarded ALTER because shipped databases predate the column and
-        # CREATE IF NOT EXISTS will not add it.
+        # Legacy databases only: they predate the column above, and
+        # CREATE IF NOT EXISTS will not add it to a table that already exists.
         cursor.execute("PRAGMA table_info(memories)")
         if "video_count" not in {row[1] for row in cursor.fetchall()}:
             cursor.execute(
@@ -154,11 +167,11 @@ def db_create_memories_table() -> None:
         # One row per curation run. "Zero memories today" is a legitimate
         # outcome, so "did I already run?" is unanswerable from memories alone.
         cursor.execute(
-            """
+            f"""
             CREATE TABLE IF NOT EXISTS memory_runs (
                 run_date DATE PRIMARY KEY,
                 status TEXT NOT NULL
-                    CHECK (status IN ('running', 'complete', 'failed')),
+                    {_check_in("status", RUN_STATUSES)},
                 params_signature TEXT,
                 generated_count INTEGER NOT NULL DEFAULT 0,
                 error TEXT,
@@ -598,8 +611,8 @@ def db_get_video_scoring_signals(video_ids: Sequence[VideoId]) -> List[Dict[str,
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         rows: List[Dict[str, Any]] = []
-        for start in range(0, len(video_ids), 500):
-            chunk = list(video_ids[start : start + 500])
+        for start in range(0, len(video_ids), SQLITE_ID_CHUNK):
+            chunk = list(video_ids[start : start + SQLITE_ID_CHUNK])
             placeholders = ", ".join("?" * len(chunk))
             cursor.execute(
                 f"""
@@ -1034,8 +1047,8 @@ def db_get_images_by_ids_for_memories(
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         rows: List[Dict[str, Any]] = []
-        for start in range(0, len(image_ids), 500):
-            chunk = list(image_ids[start : start + 500])
+        for start in range(0, len(image_ids), SQLITE_ID_CHUNK):
+            chunk = list(image_ids[start : start + SQLITE_ID_CHUNK])
             placeholders = ", ".join("?" * len(chunk))
             cursor.execute(
                 f"""
@@ -1138,8 +1151,8 @@ def db_get_scoring_signals(image_ids: Sequence[ImageId]) -> List[Dict[str, Any]]
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         rows: List[Dict[str, Any]] = []
-        for start in range(0, len(image_ids), 500):
-            chunk = list(image_ids[start : start + 500])
+        for start in range(0, len(image_ids), SQLITE_ID_CHUNK):
+            chunk = list(image_ids[start : start + SQLITE_ID_CHUNK])
             placeholders = ", ".join("?" * len(chunk))
             cursor.execute(
                 f"""
@@ -1369,8 +1382,8 @@ def db_get_top_memory_label(
         cursor = conn.cursor()
         # class_id -> (name, category, summed percentile, images matched)
         totals: Dict[int, Tuple[str, str, float, int]] = {}
-        for start in range(0, len(image_ids), 500):
-            chunk = list(image_ids[start : start + 500])
+        for start in range(0, len(image_ids), SQLITE_ID_CHUNK):
+            chunk = list(image_ids[start : start + SQLITE_ID_CHUNK])
             placeholders = ", ".join("?" * len(chunk))
             cursor.execute(
                 f"""
@@ -1472,8 +1485,8 @@ def db_get_memory_ids_for_images(image_ids: Iterable[ImageId]) -> Set[MemoryId]:
         conn = _connect()
         cursor = conn.cursor()
         found: Set[MemoryId] = set()
-        for start in range(0, len(ids), 500):
-            chunk = ids[start : start + 500]
+        for start in range(0, len(ids), SQLITE_ID_CHUNK):
+            chunk = ids[start : start + SQLITE_ID_CHUNK]
             placeholders = ", ".join("?" * len(chunk))
             cursor.execute(
                 f"SELECT DISTINCT memory_id FROM memory_images "

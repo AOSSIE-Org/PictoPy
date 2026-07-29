@@ -1,6 +1,6 @@
 from typing import Dict, List, Tuple
 import numpy as np
-from app.database.images import _connect
+from app.database.images import SQLITE_ID_CHUNK, _connect
 
 
 def db_create_image_embeddings_table():
@@ -121,8 +121,8 @@ def db_get_embeddings_for_image_ids(
         cursor = conn.cursor()
         found: Dict[str, np.ndarray] = {}
         # Chunked to stay under SQLite's variable limit, as elsewhere.
-        for start in range(0, len(image_ids), 500):
-            chunk = image_ids[start : start + 500]
+        for start in range(0, len(image_ids), SQLITE_ID_CHUNK):
+            chunk = image_ids[start : start + SQLITE_ID_CHUNK]
             placeholders = ", ".join("?" * len(chunk))
             cursor.execute(
                 f"""

@@ -262,13 +262,13 @@ def suppress_near_duplicates(
     survivor_vectors: List[Tuple[np.ndarray, Optional[datetime]]] = []
 
     for candidate in candidates:
-        vector = embeddings.get(candidate["id"])
+        raw = embeddings.get(candidate["id"])
+        vector = _unit(raw) if raw is not None else None
         timestamp = candidate.get("captured_at")
 
         # Without an embedding or a timestamp the pair test cannot be
         # satisfied, so the image is not a duplicate. Keep it.
         if vector is not None and timestamp is not None:
-            vector = _unit(vector)
             is_duplicate = False
             for kept_vector, kept_time in survivor_vectors:
                 if kept_time is None or kept_vector is None:
@@ -283,9 +283,7 @@ def suppress_near_duplicates(
                 continue
 
         survivors.append(candidate)
-        survivor_vectors.append(
-            (_unit(vector) if vector is not None else None, timestamp)
-        )
+        survivor_vectors.append((vector, timestamp))
 
     return survivors
 

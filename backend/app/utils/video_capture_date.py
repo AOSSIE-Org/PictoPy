@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import datetime
 import struct
-from typing import Iterator, Optional, Tuple
+from typing import BinaryIO, Iterator, Optional, Tuple
 
 from app.logging.setup_logging import get_logger
 
@@ -31,7 +31,7 @@ FUTURE_TOLERANCE = datetime.timedelta(days=2)
 MAX_METADATA_KEYS = 512
 
 
-def _boxes(handle, end: int) -> Iterator[Tuple[bytes, int, int]]:
+def _boxes(handle: BinaryIO, end: int) -> Iterator[Tuple[bytes, int, int]]:
     """Walk sibling boxes, yielding (type, payload_start, box_end)."""
     while handle.tell() < end:
         start = handle.tell()
@@ -54,7 +54,9 @@ def _boxes(handle, end: int) -> Iterator[Tuple[bytes, int, int]]:
         handle.seek(start + size)
 
 
-def _find(handle, want: bytes, start: int, end: int) -> Optional[Tuple[int, int]]:
+def _find(
+    handle: BinaryIO, want: bytes, start: int, end: int
+) -> Optional[Tuple[int, int]]:
     handle.seek(start)
     for kind, payload_start, box_end in _boxes(handle, end):
         if kind == want:
@@ -62,7 +64,7 @@ def _find(handle, want: bytes, start: int, end: int) -> Optional[Tuple[int, int]
     return None
 
 
-def _meta_children_start(handle, start: int) -> int:
+def _meta_children_start(handle: BinaryIO, start: int) -> int:
     """
     QuickTime writes `meta` as a plain container; ISO adds version and flags.
 
@@ -103,7 +105,7 @@ def _parse_iso(value: str) -> Optional[datetime.datetime]:
     return None
 
 
-def _quicktime_creation_date(handle, meta: Tuple[int, int]) -> Optional[str]:
+def _quicktime_creation_date(handle: BinaryIO, meta: Tuple[int, int]) -> Optional[str]:
     """Read moov/meta the way the format actually stores it: keys then ilst."""
     children = _meta_children_start(handle, meta[0])
     keys = _find(handle, b"keys", children, meta[1])
@@ -141,7 +143,7 @@ def _quicktime_creation_date(handle, meta: Tuple[int, int]) -> Optional[str]:
     return None
 
 
-def _mvhd_creation_time(handle, moov: Tuple[int, int]) -> Optional[str]:
+def _mvhd_creation_time(handle: BinaryIO, moov: Tuple[int, int]) -> Optional[str]:
     """
     Read moov/mvhd, which counts seconds from 1904 in UTC.
 

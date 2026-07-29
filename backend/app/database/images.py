@@ -20,6 +20,10 @@ ImagePath = str
 FolderId = str
 ClassId = int
 
+# SQLite caps host parameters per statement (999 before 3.32), so callers bind
+# long id lists in chunks rather than in one IN clause.
+SQLITE_ID_CHUNK = 500
+
 
 class ImageRecord(TypedDict, total=False):
     """Represents the full images table structure"""
