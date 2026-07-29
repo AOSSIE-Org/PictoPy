@@ -60,6 +60,9 @@ coverage.xml
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+# Written by the test suite when GITHUB_ACTIONS=true, which is how CI is
+# reproduced locally.
+test_db.sqlite3
 
 # Flask stuff:
 instance/

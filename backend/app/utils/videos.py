@@ -20,6 +20,15 @@ from app.database.videos import (
     db_get_videos_by_folder_ids,
     db_delete_videos_by_ids,
 )
+from app.utils.extract_location_metadata import (
+    DATE_SOURCE_CONTAINER,
+    DATE_SOURCE_FILESYSTEM,
+    DATE_SOURCE_SIDECAR,
+    DATE_SOURCE_UNKNOWN,
+    TRUSTED_DATE_SOURCES,
+)
+from app.utils.takeout_sidecar import takeout_sidecar_read
+from app.utils.video_capture_date import video_capture_date_candidates
 from app.utils.images import (
     image_util_find_folder_id_for_image,
     image_util_parse_metadata,
@@ -157,10 +166,14 @@ def video_util_source_is_unchanged(
     if stored_metadata.get("file_size") != stats.st_size:
         return False
 
-    return (
-        stored_metadata.get("date_created")
-        == datetime.datetime.fromtimestamp(stats.st_mtime).isoformat()
-    )
+    # Rows written before capture dates were read have no file_modified, and
+    # their date_created is an mtime standing in for one. Treat them as
+    # changed so the container gets read once and the date corrected.
+    recorded_mtime = stored_metadata.get("file_modified")
+    if recorded_mtime is None:
+        return False
+
+    return recorded_mtime == datetime.datetime.fromtimestamp(stats.st_mtime).isoformat()
 
 
 def video_util_prepare_video_records(
@@ -221,7 +234,13 @@ def video_util_prepare_video_records(
                 "thumbnailPath": thumbnail_path,
                 "metadata": json.dumps(metadata),
                 "isTagged": False,
-                "captured_at": metadata.get("date_created"),
+                # Only a real capture time, never the mtime standing in for
+                # one. date_created keeps that so the UI still has a date.
+                "captured_at": (
+                    metadata.get("date_created")
+                    if metadata.get("date_source") in TRUSTED_DATE_SOURCES
+                    else None
+                ),
             }
         )
 
@@ -316,6 +335,33 @@ def video_util_generate_thumbnail(
             cap.release()
 
 
+def _resolve_capture_date(video_path: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Best available capture time for a video, and where it came from.
+
+    Ordered by what each source actually claims. The QuickTime creation date
+    is the shutter time and carries its own UTC offset. A Takeout sidecar
+    records when the video was taken, and survives a re-encode. The movie
+    header only says when this file was written, so an edit overwrites it —
+    still far better than an mtime, which a plain copy overwrites.
+    """
+    recorded, file_created = video_capture_date_candidates(video_path)
+    if recorded:
+        return recorded, DATE_SOURCE_CONTAINER
+
+    sidecar, _, _ = takeout_sidecar_read(video_path)
+    if sidecar:
+        try:
+            parsed = datetime.datetime.strptime(sidecar, "%Y:%m:%d %H:%M:%S")
+            return parsed.isoformat(), DATE_SOURCE_SIDECAR
+        except ValueError:
+            pass
+
+    if file_created:
+        return file_created, DATE_SOURCE_CONTAINER
+    return None, None
+
+
 def video_util_extract_metadata(
     video_path: str, capture: Optional[cv2.VideoCapture] = None
 ) -> dict:
@@ -326,6 +372,8 @@ def video_util_extract_metadata(
     metadata = {
         "name": os.path.basename(video_path),
         "date_created": None,
+        "date_source": DATE_SOURCE_UNKNOWN,
+        "file_modified": None,
         "width": 0,
         "height": 0,
         "duration": None,
@@ -338,12 +386,20 @@ def video_util_extract_metadata(
     try:
         stats = os.stat(video_path)
         metadata["file_size"] = stats.st_size
-        metadata["date_created"] = datetime.datetime.fromtimestamp(
+        # Kept in its own field. date_created used to double as the mtime
+        # record, which meant a real capture date could not live there.
+        metadata["file_modified"] = datetime.datetime.fromtimestamp(
             stats.st_mtime
         ).isoformat()
     except OSError as e:
         logger.error(f"Error reading file stats for {video_path}: {e}")
         return metadata
+
+    captured_at, source = _resolve_capture_date(video_path)
+    if captured_at is None:
+        captured_at, source = metadata["file_modified"], DATE_SOURCE_FILESYSTEM
+    metadata["date_created"] = captured_at
+    metadata["date_source"] = source
 
     owns_capture = capture is None
     cap = capture
