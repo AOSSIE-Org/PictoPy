@@ -57,7 +57,7 @@ ImageClassPair = Tuple[ImageId, ClassId]
 
 
 def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(connection_module.DATABASE_PATH)
+    conn = sqlite3.connect(connection_module.get_database_path())
     # Ensure ON DELETE CASCADE and other FKs are enforced
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
