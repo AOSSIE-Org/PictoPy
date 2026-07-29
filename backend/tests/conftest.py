@@ -13,6 +13,7 @@ from app.database.metadata import db_create_metadata_table
 from app.database.semantic_labels import db_create_semantic_labels_table
 from app.database.image_embeddings import db_create_image_embeddings_table
 from app.database.video_frames import db_create_video_frames_tables
+from app.database.memories import db_create_memories_table
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -37,6 +38,7 @@ def setup_before_all_tests():
         db_create_image_embeddings_table()
         db_create_video_frames_tables()
         db_create_metadata_table()
+        db_create_memories_table()  # References images(id) and videos(id)
         print("All database tables created successfully")
     except Exception as e:
         print(f"Error creating database tables: {e}")

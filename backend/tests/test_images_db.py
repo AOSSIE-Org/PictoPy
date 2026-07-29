@@ -1,7 +1,6 @@
 import os
 import sqlite3
 import tempfile
-from datetime import datetime
 from typing import Any, Dict, Iterator
 
 import pytest
@@ -20,11 +19,6 @@ from app.database.images import (
     db_get_image_by_id,
     db_search_images_by_tag,
     db_get_images_by_ids,
-    db_get_images_by_date_range,
-    db_get_images_near_location,
-    db_get_images_by_year_month,
-    db_get_images_with_location,
-    db_get_all_images_for_memories,
     db_mark_images_embedded,
 )
 from app.database.folders import db_create_folders_table
@@ -390,76 +384,6 @@ class TestSearchAndGetByIds:
 
 
 # ##############################
-# Memories: location and time
-# ##############################
-
-
-class TestMemoriesQueries:
-    def _seed_memory_images(self, folder, test_db):
-        db_bulk_insert_images(
-            [
-                make_image_record(
-                    "img-near",
-                    "/photos/near.jpg",
-                    folder,
-                    latitude=40.001,
-                    longitude=-74.001,
-                    captured_at="2024-06-15 12:00:00",
-                ),
-                make_image_record(
-                    "img-far",
-                    "/photos/far.jpg",
-                    folder,
-                    latitude=41.0,
-                    longitude=-75.0,
-                    captured_at="2024-07-15 12:00:00",
-                ),
-                make_image_record(
-                    "img-nogps",
-                    "/photos/nogps.jpg",
-                    folder,
-                    captured_at="2024-06-20 09:00:00",
-                ),
-            ]
-        )
-
-    def test_by_date_range(self, folder, test_db):
-        self._seed_memory_images(folder, test_db)
-        results = db_get_images_by_date_range(
-            datetime(2024, 6, 1), datetime(2024, 6, 30)
-        )
-        assert {img["id"] for img in results} == {"img-near", "img-nogps"}
-
-    def test_by_date_range_favorites_only(self, folder, test_db):
-        self._seed_memory_images(folder, test_db)
-        db_toggle_image_favourite_status("img-near")
-        results = db_get_images_by_date_range(
-            datetime(2024, 6, 1), datetime(2024, 6, 30), include_favorites_only=True
-        )
-        assert [img["id"] for img in results] == ["img-near"]
-
-    def test_near_location_excludes_far_and_null(self, folder, test_db):
-        self._seed_memory_images(folder, test_db)
-        results = db_get_images_near_location(40.0, -74.0, radius_km=5.0)
-        assert [img["id"] for img in results] == ["img-near"]
-
-    def test_by_year_month(self, folder, test_db):
-        self._seed_memory_images(folder, test_db)
-        results = db_get_images_by_year_month(2024, 6)
-        assert {img["id"] for img in results} == {"img-near", "img-nogps"}
-
-    def test_with_location_only_returns_geotagged(self, folder, test_db):
-        self._seed_memory_images(folder, test_db)
-        results = db_get_images_with_location()
-        assert {img["id"] for img in results} == {"img-near", "img-far"}
-
-    def test_all_for_memories_returns_everything(self, folder, test_db):
-        self._seed_memory_images(folder, test_db)
-        results = db_get_all_images_for_memories()
-        assert {img["id"] for img in results} == {"img-near", "img-far", "img-nogps"}
-
-
-# ##############################
 # Marking embedded
 # ##############################
 
@@ -489,13 +413,6 @@ class TestErrorHandling:
         "call",
         [
             lambda: db_get_all_images(),
-            lambda: db_get_images_by_date_range(
-                datetime(2024, 1, 1), datetime(2024, 12, 31)
-            ),
-            lambda: db_get_images_near_location(0.0, 0.0),
-            lambda: db_get_images_by_year_month(2024, 1),
-            lambda: db_get_images_with_location(),
-            lambda: db_get_all_images_for_memories(),
         ],
     )
     def test_view_read_errors_return_empty(self, test_db, call):
