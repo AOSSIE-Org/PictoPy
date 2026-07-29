@@ -604,3 +604,16 @@ defaults rather than failing the run.
 `MemoryScoringWeightsUpdate` deliberately does **not** normalize — rescaling a
 single slider to 1.0 would wipe out the others. Stored values stay raw, and
 `resolve_weights()` normalizes them on read.
+
+## Test coverage
+
+| File                               | Covers                                                                                                                                                                         |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tests/test_memories_db.py`        | Table creation and indexes, upserts, the cascades from both parents, marking and pruning, stale-memory deletion, listing and surfacing, dedupe keys, recent use, and run rows. |
+| `tests/test_memories_route.py`     | Every endpoint: generate (including the disabled and forced paths, and the run-claim release), today, list, detail, update, delete, and status.                                |
+| `tests/test_memory_curator.py`     | All three triggers end to end, plus segmentation, occurrence grouping and merging, the coherence gate, outlier trimming, titling, video guardrails, and run orchestration.     |
+| `tests/test_memory_scoring.py`     | Signal computation and weight resolution, composite scoring, near-duplicate suppression, time spreading and interleaving, cohesion, trimming, and home detection.              |
+| `tests/test_memory_signals_db.py`  | The signal and event-label queries, the GPS histogram, the tagging-completed lifecycle, rescore-after-rename, and the curation hook.                                           |
+| `tests/test_image_capture_date.py` | EXIF sub-IFD reads, the `date_source` values, and the refusal to store a guessed date in `captured_at`.                                                                        |
+| `tests/test_takeout_sidecar.py`    | Sidecar spellings, the shutter-time preference, coordinates, album-file rejection, and the lazy directory listing.                                                             |
+| `tests/test_video_capture_date.py` | The container-box candidates and the resolution order between QuickTime, sidecar and `mvhd` dates.                                                                             |

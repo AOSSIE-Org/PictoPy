@@ -226,7 +226,9 @@ resets the index and starts playback; `closeMemory` clears the id and index.
 ## Testing
 
 - `components/Memories/__tests__/MemoryStoryViewer.test.tsx`
+- `features/__tests__/memoriesSlice.test.ts`
 - `hooks/__tests__/useRefreshMemories.test.tsx`
+- `utils/__tests__/memories.test.ts`
 
 ## Related Documentation
 

@@ -118,8 +118,9 @@ take everything they render as props.
   memories", "Desktop notifications", "Background music"); sliders cover
   seconds per photo (1–15), minimum photos (2–20) and maximum photos (5–100,
   in steps of 5). The two size sliders clamp each other so the minimum can
-  never be committed above the maximum. Every control writes on
-  `onValueCommit` and is disabled while a save is in flight.
+  never be committed above the maximum. Switches write on change; sliders write
+  on `onValueCommit`, so dragging one does not fire a request per step. Every
+  control is disabled while a save is in flight.
 - **MemoryCard** (`components/Memories/MemoryCard.tsx`) – Grid tile, props
   `{ memory: MemoryCard; onOpen: (memoryId: string) => void }`. A 4:5 button
   showing the cover with a gradient scrim, an event-type `badge`, a dot when

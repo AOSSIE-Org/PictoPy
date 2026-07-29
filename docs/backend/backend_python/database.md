@@ -167,8 +167,12 @@ table that a pre-existing database already has.
 
 `images.captured_at` (and `videos.captured_at`) is a distinct column from the
 `date_created` value stored inside the `metadata` JSON blob. `date_created`
-drives gallery display; `captured_at` is consumed only by memories, and every
-memories query filters on `captured_at IS NOT NULL`.
+drives gallery display; `captured_at` is consumed only by memories. The
+candidate queries that gather media for a run filter on
+`captured_at IS NOT NULL`, so media without a trusted capture date is never
+curated. Reads of already-generated memories go through the `memories` table
+instead, which has no `captured_at` of its own and is queried on fields such
+as `surface_date` and `status`.
 
 `metadata` also carries `date_source`, recording where the date came from:
 `exif`, `sidecar`, `container`, `filesystem` or `unknown`. Only the first

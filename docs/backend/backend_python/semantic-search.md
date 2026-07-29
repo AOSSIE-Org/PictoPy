@@ -357,9 +357,11 @@ Key behaviors (all in `backend/app/utils/semantic_labels.py` and
 Smart Memories reads both halves of what this feature produces — the stored
 image embeddings and the curated event labels. Nothing is recomputed for
 curation; a run only reads what the embedding pass and the scoring sweep
-already wrote, and both reads filter on `model_version` exactly as search
-does. The curation logic itself is documented in [Memories](memories.md);
-what follows is only the SigLIP2 surface it depends on.
+already wrote. The embedding reads filter on `model_version` exactly as search
+does; the event-label reads do not take a `model_version` at all, selecting
+instead from the active vocabulary and the scored `image_classes` rows. The
+curation logic itself is documented in [Memories](memories.md); what follows
+is only the SigLIP2 surface it depends on.
 
 **Stored embeddings** are loaded by two helpers in
 `backend/app/database/image_embeddings.py`, called from
@@ -624,7 +626,7 @@ developer runs deliberately.
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `tests/test_image_embeddings.py`      | `image_embeddings` table CRUD: round-trip storage/retrieval, `model_version` filtering, upsert-overwrites-existing-row, FK cascade delete. Runs against a disposable per-test SQLite file (see note below), not the real database.                                                                                                                                           |
 | `tests/test_semantic_search_route.py` | The `/semantic-search` endpoint: 404s (text model / tokenizer missing, checked independently), 400 on a whitespace-only query, friendly empty-result responses, and — critically — descending sort order verified with two results that both clear the threshold (an earlier version of this test only had one matching result, which couldn't have detected a broken sort). |
-| `tests/test_embedding_pipeline.py`    | `image_util_process_unembedded_images`: skips cleanly with no vision model installed, batches per `SIGLIP2_EMBED_BATCH_SIZE`, excludes corrupt images from both the embeddings upsert and the embedded-marking (so they're retried on a later pass), always closes the vision session even if scoring raises mid-batch.                                                      |
+| `tests/test_embedding_pipeline.py`    | `image_util_process_unembedded_images`: skips cleanly with no vision model installed, batches per `SIGLIP2_EMBED_BATCH_SIZE`, excludes corrupt images from both the embeddings upsert and the embedded-marking (so they're retried on a later pass), always closes the vision session even if embedding inference raises mid-batch.                                          |
 | `tests/test_onnx_session_base.py`     | `ONNXSessionBase.close()`: normal decrement, the registration-leak regression scenario, no-op-when-never-opened, idempotency. Fully mocks `onnxruntime.InferenceSession` and `os.path.exists` — does not depend on the real (multi-hundred-MB, not checked into git) ONNX files existing on disk.                                                                            |
 
 !!! warning "Local test runs and the real database"
