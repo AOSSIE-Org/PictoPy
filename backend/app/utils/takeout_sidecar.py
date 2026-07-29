@@ -10,9 +10,9 @@ copied, not when the photo was taken.
 from __future__ import annotations
 
 import datetime
-import glob
 import json
-from typing import Any, Dict, Optional, Tuple
+import os
+from typing import Any, Dict, Iterator, Optional, Tuple
 
 from app.logging.setup_logging import get_logger
 
@@ -27,16 +27,62 @@ SIDECAR_SUFFIXES = (".supplemental-metadata.json", ".json")
 ALBUM_METADATA_KEYS = frozenset({"entries", "albumData"})
 
 
-def _candidate_paths(image_path: str) -> list:
-    """Sidecar paths to try for an image, most likely first."""
-    candidates = [image_path + suffix for suffix in SIDECAR_SUFFIXES]
+# The last directory listing, reused across its images. A sidecar lookup runs
+# for every photo missing EXIF GPS, so scanning per photo made an N-file folder
+# cost N scans of N entries. The stamp is read as one tuple, so a concurrent
+# write can only cost a rescan, never a wrong answer.
+_LISTING_CACHE: Tuple[Optional[str], float, Tuple[str, ...]] = (None, 0.0, ())
+
+
+def _sidecar_names(directory: str) -> Tuple[str, ...]:
+    """JSON filenames in a directory, re-read only once the directory changes."""
+    global _LISTING_CACHE
+    try:
+        stamp = os.stat(directory).st_mtime
+    except OSError:
+        return ()
+
+    cached_directory, cached_stamp, names = _LISTING_CACHE
+    if cached_directory == directory and cached_stamp == stamp:
+        return names
+
+    try:
+        with os.scandir(directory) as entries:
+            names = tuple(sorted(e.name for e in entries if e.name.endswith(".json")))
+    except OSError:
+        names = ()
+
+    _LISTING_CACHE = (directory, stamp, names)
+    return names
+
+
+def _candidate_paths(image_path: str) -> Iterator[str]:
+    """
+    Sidecar paths to try for an image, most likely first.
+
+    A generator on purpose: the exact spellings cost a stat each, and the
+    directory listing behind the rarer ones is only touched if none of them
+    produced a usable sidecar.
+    """
+    seen = set()
+    for suffix in SIDECAR_SUFFIXES:
+        candidate = image_path + suffix
+        if os.path.exists(candidate):
+            seen.add(candidate)
+            yield candidate
 
     # Catches the duplicate-index spelling (`.supplemental-metadata(1).json`)
     # and any variant Takeout has used that is not listed above.
-    candidates += sorted(glob.glob(glob.escape(image_path) + ".*.json"))
-
-    seen = set()
-    return [c for c in candidates if not (c in seen or seen.add(c))]
+    directory, basename = os.path.split(image_path)
+    prefix = basename + "."
+    for name in _sidecar_names(directory or "."):
+        if not name.startswith(prefix):
+            continue
+        # Rebuilt off image_path rather than joined, so the separator matches
+        # the caller's and the paths above dedupe exactly.
+        candidate = image_path + name[len(basename) :]
+        if candidate not in seen:
+            yield candidate
 
 
 def _load(path: str) -> Optional[Dict[str, Any]]:

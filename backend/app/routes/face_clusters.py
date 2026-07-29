@@ -5,7 +5,7 @@ from concurrent.futures import ProcessPoolExecutor
 from typing import Annotated
 import uuid
 import os
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.database.face_clusters import (
     db_get_cluster_by_id,
     db_update_cluster,
@@ -13,6 +13,9 @@ from app.database.face_clusters import (
     db_get_images_by_cluster_id,
     db_get_images_by_face_clusters,
 )
+from starlette.datastructures import State
+
+from app.routes.dependencies import get_state
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.schemas.face_clusters import (
     RenameClusterRequest,
@@ -39,10 +42,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def get_state(request: Request):
-    return request.app.state
-
-
 def _rescore_memories_for_cluster(app_state, cluster_id: str) -> None:
     """
     Queue a rescore of memories containing this cluster.
@@ -65,7 +64,9 @@ def _rescore_memories_for_cluster(app_state, cluster_id: str) -> None:
     responses={code: {"model": ErrorResponse} for code in [400, 404, 500]},
 )
 def rename_cluster(
-    cluster_id: str, request: RenameClusterRequest, app_state=Depends(get_state)
+    cluster_id: str,
+    request: RenameClusterRequest,
+    app_state: State = Depends(get_state),
 ):
     """Rename a face cluster by its ID."""
     try:

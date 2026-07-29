@@ -132,7 +132,12 @@ class TestCreateMemoriesTable:
             )
         }
         conn.close()
-        assert {"memories", "memory_images", "memory_runs"} <= tables
+        assert {
+            "memories",
+            "memory_images",
+            "memory_videos",
+            "memory_runs",
+        } <= tables
 
     @pytest.mark.parametrize(
         "index_name",
@@ -141,6 +146,7 @@ class TestCreateMemoriesTable:
             "ix_memories_status_surface",
             "ix_memories_surfaceable",
             "ix_memory_images_image_id",
+            "ix_memory_videos_video_id",
         ],
     )
     def test_indexes_exist(self, test_db: str, index_name: str):

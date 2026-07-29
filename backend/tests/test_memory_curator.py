@@ -2,6 +2,7 @@ from contextlib import ExitStack
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, Iterator, List, Optional, Sequence
 from unittest.mock import patch
+from zlib import crc32
 
 import numpy as np
 import pytest
@@ -98,9 +99,11 @@ def signals_for(image_ids: Sequence[str]) -> List[Dict[str, Any]]:
             "latitude": None,
             "longitude": None,
             # Spread timestamps so time-bucketing has something to work with.
-            "captured_at": (T0 + timedelta(hours=hash(image_id) % 24)).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ),
+            # crc32, not hash(): str hashing is salted per process, so the
+            # spread - and anything ordered by it - would differ every run.
+            "captured_at": (
+                T0 + timedelta(hours=crc32(image_id.encode()) % 24)
+            ).strftime("%Y-%m-%d %H:%M:%S"),
         }
         for image_id in image_ids
     ]
@@ -1054,6 +1057,43 @@ class TestEnablement:
         ):
             assert memory_curator.memory_curator_run() == 0
             candidates.assert_not_called()
+
+    def test_declining_a_run_closes_a_claim_someone_else_made(self):
+        """
+        The route claims the run before handing off. If the preference is
+        turned off in between, nobody else would ever close that row.
+        """
+        with (
+            patch.object(
+                memory_curator,
+                "memory_curator_get_preferences",
+                return_value=MemoriesPreferences(enabled=False),
+            ),
+            patch.object(
+                memory_curator,
+                "db_get_memory_run",
+                return_value={"run_date": REFERENCE, "status": "running"},
+            ),
+            patch.object(memory_curator, "db_finish_memory_run") as finish,
+        ):
+            memory_curator.memory_curator_run(reference_date=REFERENCE)
+
+        # Failed, not complete: re-enabling must still be able to generate today.
+        finish.assert_called_once_with(REFERENCE, "failed", 0, "Memories are disabled")
+
+    def test_declining_a_run_nobody_claimed_writes_nothing(self):
+        with (
+            patch.object(
+                memory_curator,
+                "memory_curator_get_preferences",
+                return_value=MemoriesPreferences(enabled=False),
+            ),
+            patch.object(memory_curator, "db_get_memory_run", return_value=None),
+            patch.object(memory_curator, "db_finish_memory_run") as finish,
+        ):
+            memory_curator.memory_curator_run(reference_date=REFERENCE)
+
+        finish.assert_not_called()
 
     def test_force_overrides_the_disabled_flag(self):
         with patch.object(

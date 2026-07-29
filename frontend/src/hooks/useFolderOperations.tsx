@@ -9,7 +9,7 @@ import {
 } from '@/api/api-functions';
 import { selectAllFolders } from '@/features/folderSelectors';
 import { setFolders, setTaggingStatus } from '@/features/folderSlice';
-import { FolderDetails } from '@/types/Folder';
+import { FolderDetails, isIndexingPending } from '@/types/Folder';
 import { useMutationFeedback } from './useMutationFeedback';
 import { getFoldersTaggingStatus } from '@/api/api-functions/folders';
 
@@ -26,7 +26,7 @@ export const useFolderOperations = () => {
     queryKey: ['folders'],
     queryFn: getAllFolders,
     refetchInterval: folders.some(
-      (f) => f.AI_Tagging && f.indexing_status !== 'completed',
+      (f) => f.AI_Tagging && isIndexingPending(f.indexing_status),
     )
       ? 1000
       : false,

@@ -101,7 +101,9 @@ export const MemoryStoryViewer: React.FC<MemoryStoryViewerProps> = ({
 
   const goTo = useCallback(
     (index: number) => {
-      if (index < 0) return;
+      // Nothing to navigate while loading or after an error, and without this
+      // an arrow key or a swipe would read as "past the end" and close.
+      if (total === 0 || index < 0) return;
       if (index >= total) {
         // Reaching the end closes the story rather than looping, so the user
         // lands back in the grid instead of being stuck in a cycle.

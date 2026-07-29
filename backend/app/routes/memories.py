@@ -9,7 +9,8 @@ from concurrent.futures import ProcessPoolExecutor
 from datetime import date
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from starlette.datastructures import State
 
 from app.database.memories import (
     db_count_unviewed_memories,
@@ -26,6 +27,7 @@ from app.database.memories import (
     db_start_memory_run,
 )
 from app.logging.setup_logging import get_logger
+from app.routes.dependencies import get_state
 from app.schemas.memories import (
     DeleteMemoryData,
     DeleteMemoryResponse,
@@ -62,10 +64,6 @@ logger = get_logger(__name__)
 STALE_RUN_MINUTES = 30
 
 
-def get_state(request: Request):
-    return request.app.state
-
-
 def _internal_error(message: str) -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -86,21 +84,23 @@ def _not_found(memory_id: str) -> HTTPException:
     )
 
 
-def _to_card(row: Dict[str, Any]) -> MemoryCard:
-    """Map a memories row to a card, preferring the live image count."""
+def _with_live_count(row: Dict[str, Any]) -> Dict[str, Any]:
+    """Copy a memories row, preferring the live image count to the stored one."""
     data = dict(row)
     live_count = data.pop("live_image_count", None)
     if live_count is not None:
         data["image_count"] = live_count
-    return MemoryCard.model_validate(data)
+    return data
+
+
+def _to_card(row: Dict[str, Any]) -> MemoryCard:
+    """Map a memories row to a card."""
+    return MemoryCard.model_validate(_with_live_count(row))
 
 
 def _to_story(row: Dict[str, Any]) -> MemoryStory:
     """Map a memories row plus its images to a full story payload."""
-    data = dict(row)
-    live_count = data.pop("live_image_count", None)
-    if live_count is not None:
-        data["image_count"] = live_count
+    data = _with_live_count(row)
     images = db_get_memory_images(data["memory_id"])
     videos = db_get_memory_videos(data["memory_id"])
     data["images"] = [MemoryImageItem.model_validate(image) for image in images]
@@ -113,7 +113,9 @@ def _to_story(row: Dict[str, Any]) -> MemoryStory:
     response_model=GenerateMemoriesResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
-def generate_memories(request: GenerateMemoriesRequest, app_state=Depends(get_state)):
+def generate_memories(
+    request: GenerateMemoriesRequest, app_state: State = Depends(get_state)
+):
     """
     Queue a curation run.
 
@@ -160,10 +162,22 @@ def generate_memories(request: GenerateMemoriesRequest, app_state=Depends(get_st
                 ),
             )
 
+        preferences = memory_curator_get_preferences()
+        if not preferences.enabled and not request.force:
+            # Claiming a run the curator is going to decline would leave the
+            # row 'running' until the staleness window reaps it, blocking
+            # every attempt in between.
+            return GenerateMemoriesResponse(
+                success=True,
+                message="Memories are disabled",
+                data=GenerateMemoriesData(
+                    run_date=run_date, status="complete", queued=False
+                ),
+            )
+
         # Claim the run before handing off, so a second caller arriving while
         # the executor is still starting sees 'running' rather than queueing
         # a duplicate pass.
-        preferences = memory_curator_get_preferences()
         db_start_memory_run(run_date, memory_curator_params_signature(preferences))
 
         executor: ProcessPoolExecutor = app_state.executor

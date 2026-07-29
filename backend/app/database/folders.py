@@ -15,6 +15,19 @@ FolderData = Tuple[FolderId, FolderPath, Optional[FolderId], int, bool, Optional
 FolderMap = Dict[FolderPath, Tuple[FolderId, Optional[FolderId]]]
 FolderIdPath = Tuple[FolderId, str]
 
+# indexing_status vocabulary. Only 'in_progress' counts as busy; 'interrupted'
+# means a walk stopped partway and the folder needs a sync to finish.
+INDEXING_NOT_STARTED = "not_started"
+INDEXING_IN_PROGRESS = "in_progress"
+INDEXING_COMPLETED = "completed"
+INDEXING_INTERRUPTED = "interrupted"
+INDEXING_STATUSES = (
+    INDEXING_NOT_STARTED,
+    INDEXING_IN_PROGRESS,
+    INDEXING_COMPLETED,
+    INDEXING_INTERRUPTED,
+)
+
 
 def db_create_folders_table() -> None:
     conn = None
@@ -503,6 +516,11 @@ def db_clear_stale_processing_flags() -> int:
     folder still marked busy was interrupted, or predates the code that
     finishes the flag. Either way it would block memory generation forever.
 
+    An interrupted walk becomes 'interrupted', not 'completed': it stopped
+    partway, so the folder's images are incomplete and it still needs a sync.
+    Not 'not_started' either, which reads as queued and would leave the UI
+    waiting on a walk nobody is going to run.
+
     Returns the number of folders corrected.
     """
     conn = sqlite3.connect(DATABASE_PATH)
@@ -514,8 +532,8 @@ def db_clear_stale_processing_flags() -> int:
         )
         corrected = cursor.rowcount
         cursor.execute(
-            "UPDATE folders SET indexing_status = 'completed' "
-            "WHERE indexing_status = 'in_progress'"
+            f"UPDATE folders SET indexing_status = '{INDEXING_INTERRUPTED}' "
+            f"WHERE indexing_status = '{INDEXING_IN_PROGRESS}'"
         )
         corrected += cursor.rowcount
         conn.commit()

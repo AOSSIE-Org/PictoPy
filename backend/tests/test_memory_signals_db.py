@@ -618,6 +618,16 @@ class TestTaggingCompletedLifecycle:
         assert db_clear_stale_processing_flags() == 1
         assert db_is_indexing_busy() is False
 
+        # The walk stopped partway, so the folder still needs one. 'completed'
+        # would claim an index that never finished; 'not_started' reads as
+        # queued and leaves the UI waiting on a walk nobody will run.
+        conn = sqlite3.connect(test_db)
+        status = conn.execute(
+            "SELECT indexing_status FROM folders WHERE folder_id = 'f-killed'"
+        ).fetchone()[0]
+        conn.close()
+        assert status == "interrupted"
+
     def test_startup_is_idempotent_and_spares_untagged_folders(self, test_db: str):
         conn = sqlite3.connect(test_db)
         conn.execute(
@@ -878,14 +888,15 @@ class TestCurationHook:
         ):
             folders._curate_memories("test")  # must not raise
 
-    def test_forces_regeneration(self):
+    def test_curates_without_forcing(self):
         with patch(
             "app.utils.memory_curator.memory_curator_run", return_value=2
         ) as run:
             folders._curate_memories("ai_tagging")
 
-        # New photos arrived, so existing memories must be re-evaluated.
-        run.assert_called_once_with(force=True, trigger="ai_tagging")
+        # force is what overrides the user's memories preference, so an
+        # import hook must not pass it: a disabled user gets no memories.
+        run.assert_called_once_with(trigger="ai_tagging")
 
     def test_ai_tagging_pipeline_curates_after_scoring_before_videos(self):
         """

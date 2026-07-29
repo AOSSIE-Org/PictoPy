@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Folder, Trash2, Check, Loader2 } from 'lucide-react';
+import { AlertTriangle, Folder, Trash2, Check, Loader2 } from 'lucide-react';
 
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 
 import { useFolderOperations } from '@/hooks/useFolderOperations';
 import { useLibraryProcessingStatus } from '@/hooks/useLibraryProcessingStatus';
-import { FolderDetails } from '@/types/Folder';
+import { FolderDetails, isIndexingPending } from '@/types/Folder';
 import SettingsCard from './SettingsCard';
 
 /**
@@ -94,11 +94,20 @@ const FolderManagementCard: React.FC = () => {
 
                 {folder.AI_Tagging && (
                   <div className="mt-3">
-                    {folder.indexing_status !== 'completed' ? (
+                    {isIndexingPending(folder.indexing_status) ? (
                       <div className="flex items-center gap-4 [--radius:1.2rem]">
                         <Badge className="bg-zinc-900 text-white hover:bg-black/90">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Indexing Folder...
+                        </Badge>
+                      </div>
+                    ) : folder.indexing_status === 'interrupted' ? (
+                      // A previous session died mid-walk, so nothing is
+                      // running and the folder is only partly indexed.
+                      <div className="flex items-center gap-4 [--radius:1.2rem]">
+                        <Badge variant="outline" className="text-amber-600">
+                          <AlertTriangle className="h-4 w-4" />
+                          Indexing was interrupted - sync to finish
                         </Badge>
                       </div>
                     ) : !folder.image_count && !folder.video_count ? (

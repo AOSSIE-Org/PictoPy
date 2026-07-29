@@ -88,6 +88,20 @@ def make_image_row(index: int) -> Dict[str, Any]:
     }
 
 
+def make_video_row(index: int) -> Dict[str, Any]:
+    return {
+        "id": f"vid-{index}",
+        "path": f"/videos/{index}.mp4",
+        "thumbnailPath": f"/thumbs/v{index}.jpg",
+        "captured_at": "2024-07-26 10:01:00",
+        "duration": 8.5,
+        "isFavourite": False,
+        # Clips share one sequence with the images, so they sort after them.
+        "sort_order": 3 + index,
+        "score": 0.6,
+    }
+
+
 def make_run(status: str) -> Dict[str, Any]:
     return {
         "run_date": date.today().isoformat(),
@@ -162,6 +176,48 @@ class TestGenerateMemories:
             patch.object(memories_route, "db_reap_stale_memory_runs", return_value=0),
             patch.object(
                 memories_route, "db_get_memory_run", return_value=make_run("complete")
+            ),
+            patch.object(memories_route, "db_start_memory_run", return_value=True),
+        ):
+            response = client.post("/memories/generate", json={"force": True})
+
+        assert response.json()["data"]["queued"] is True
+        assert executor.submit.call_count == 1
+
+    def test_disabled_memories_do_not_claim_a_run(
+        self, client: TestClient, executor: MagicMock
+    ):
+        """
+        The curator declines a disabled run without finishing it, so claiming
+        one here would leave it 'running' until the staleness window reaps it.
+        """
+        with (
+            patch.object(memories_route, "db_reap_stale_memory_runs", return_value=0),
+            patch.object(memories_route, "db_get_memory_run", return_value=None),
+            patch.object(
+                memories_route,
+                "memory_curator_get_preferences",
+                return_value=MemoriesPreferences(enabled=False),
+            ),
+            patch.object(memories_route, "db_start_memory_run") as start,
+        ):
+            response = client.post("/memories/generate", json={})
+
+        assert response.json()["data"]["queued"] is False
+        start.assert_not_called()
+        assert executor.submit.call_count == 0
+
+    def test_force_generates_even_when_disabled(
+        self, client: TestClient, executor: MagicMock
+    ):
+        """Forcing is the user asking explicitly, which the preference does not veto."""
+        with (
+            patch.object(memories_route, "db_reap_stale_memory_runs", return_value=0),
+            patch.object(memories_route, "db_get_memory_run", return_value=None),
+            patch.object(
+                memories_route,
+                "memory_curator_get_preferences",
+                return_value=MemoriesPreferences(enabled=False),
             ),
             patch.object(memories_route, "db_start_memory_run", return_value=True),
         ):
@@ -254,6 +310,11 @@ class TestTodayMemory:
                 "db_get_memory_images",
                 return_value=[make_image_row(i) for i in range(3)],
             ),
+            patch.object(
+                memories_route,
+                "db_get_memory_videos",
+                return_value=[make_video_row(0)],
+            ),
         ):
             response = client.get("/memories/today")
 
@@ -264,6 +325,39 @@ class TestTodayMemory:
             "img-1",
             "img-2",
         ]
+        # Two tables, two arrays: sort_order is the single sequence across both.
+        assert memory["videos"] == [
+            {
+                "id": "vid-0",
+                "path": "/videos/0.mp4",
+                "thumbnailPath": "/thumbs/v0.jpg",
+                "captured_at": "2024-07-26 10:01:00",
+                "duration": 8.5,
+                "isFavourite": False,
+                "sort_order": 3,
+                "score": 0.6,
+            }
+        ]
+
+    def test_returns_an_empty_video_array_for_a_story_of_stills(
+        self, client: TestClient
+    ):
+        with (
+            patch.object(
+                memories_route,
+                "db_get_surfaceable_memory",
+                return_value=make_memory_row(),
+            ),
+            patch.object(
+                memories_route,
+                "db_get_memory_images",
+                return_value=[make_image_row(0)],
+            ),
+            patch.object(memories_route, "db_get_memory_videos", return_value=[]),
+        ):
+            response = client.get("/memories/today")
+
+        assert response.json()["data"]["memory"]["videos"] == []
 
     def test_returns_500_when_the_database_fails(self, client: TestClient):
         with patch.object(

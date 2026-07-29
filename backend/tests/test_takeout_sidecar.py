@@ -1,8 +1,11 @@
 import datetime
 import json
+import os
+from unittest.mock import patch
 
 import pytest
 
+from app.utils import takeout_sidecar
 from app.utils.takeout_sidecar import takeout_sidecar_read
 
 
@@ -58,6 +61,50 @@ class TestTakeoutSidecarRead:
             photoTakenTime={"timestamp": _epoch("2025:09:13 12:28:39")},
         )
         assert takeout_sidecar_read(str(image))[0] == "2025:09:13 12:28:39"
+
+    def test_finds_a_rare_spelling_through_a_posix_style_path(self, image):
+        """Callers hand over whatever separator they hold; both must resolve."""
+        write_sidecar(
+            image,
+            suffix=".supplemental-metadata(1).json",
+            photoTakenTime={"timestamp": _epoch("2025:09:13 12:28:39")},
+        )
+        posix_path = str(image).replace(os.sep, "/")
+
+        assert takeout_sidecar_read(posix_path)[0] == "2025:09:13 12:28:39"
+
+    def test_a_known_spelling_never_reaches_the_directory_listing(self, image):
+        """
+        This runs for every photo missing EXIF GPS, so a listing per photo made
+        an N-file folder cost N scans of N entries.
+        """
+        write_sidecar(
+            image, photoTakenTime={"timestamp": _epoch("2025:12:18 21:19:07")}
+        )
+
+        with patch.object(takeout_sidecar, "_sidecar_names") as listing:
+            assert takeout_sidecar_read(str(image))[0] == "2025:12:18 21:19:07"
+
+        listing.assert_not_called()
+
+    def test_one_listing_serves_every_image_in_a_directory(self, tmp_path):
+        """Only the rare spellings need a listing, and then once per folder."""
+        images = []
+        for index in range(3):
+            path = tmp_path / f"IMG_{index}.jpg"
+            path.write_bytes(b"not a real jpeg")
+            write_sidecar(
+                path,
+                suffix=".supplemental-metadata(1).json",
+                photoTakenTime={"timestamp": _epoch("2025:09:13 12:28:39")},
+            )
+            images.append(path)
+
+        with patch.object(os, "scandir", side_effect=os.scandir) as scandir:
+            for path in images:
+                assert takeout_sidecar_read(str(path))[0] == "2025:09:13 12:28:39"
+
+        assert scandir.call_count == 1
 
     def test_reads_coordinates(self, image):
         write_sidecar(image, geoData={"latitude": 28.4504, "longitude": 77.5847})

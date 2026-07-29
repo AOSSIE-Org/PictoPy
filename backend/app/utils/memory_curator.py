@@ -39,6 +39,7 @@ from app.database.memories import (
     db_get_memory_ids_for_cluster,
     db_get_memory_image_ids_by_dedupe_key,
     db_get_memory_images,
+    db_get_memory_run,
     db_get_recently_used_image_ids,
     db_get_scoring_signals,
     db_get_top_memory_label,
@@ -54,6 +55,7 @@ from app.utils.memory_scoring import (
     aggregate_memory_score,
     cohesion_baseline,
     detect_home_location,
+    haversine_km,
     interleave_by_time,
     mean_pairwise_cohesion,
     parse_captured_at,
@@ -259,8 +261,6 @@ def _format_period_label(start: datetime, end: datetime) -> str:
 
 def _haversine_km(a: Dict[str, Any], b: Dict[str, Any]) -> Optional[float]:
     """Distance between two image rows, or None if either lacks GPS."""
-    from app.utils.memory_scoring import haversine_km
-
     if (
         a.get("latitude") is None
         or a.get("longitude") is None
@@ -950,6 +950,23 @@ def memory_curator_rescore_for_cluster(cluster_id: str) -> int:
     return memory_curator_rescore(db_get_memory_ids_for_cluster(cluster_id))
 
 
+def _release_claimed_run(run_date: str) -> None:
+    """
+    Close a run a caller claimed before handing off to this process.
+
+    The API route claims it so a concurrent caller sees 'running'. Declining
+    the run without closing the row would block generation until the staleness
+    window reaps it. Recorded failed, not complete, so a user who re-enables
+    memories can still generate today.
+    """
+    try:
+        run = db_get_memory_run(run_date)
+        if run and run["status"] == "running":
+            db_finish_memory_run(run_date, "failed", 0, "Memories are disabled")
+    except Exception:
+        logger.error(f"Failed to release the claimed run for {run_date}", exc_info=True)
+
+
 def memory_curator_run(
     reference_date: Optional[str] = None,
     force: bool = False,
@@ -968,6 +985,7 @@ def memory_curator_run(
     preferences = memory_curator_get_preferences()
     if not preferences.enabled and not force:
         logger.info("Memories are disabled; skipping curation")
+        _release_claimed_run(run_date)
         return 0
 
     params_signature = memory_curator_params_signature(preferences)

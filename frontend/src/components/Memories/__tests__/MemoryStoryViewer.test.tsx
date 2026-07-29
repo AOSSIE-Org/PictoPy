@@ -181,3 +181,33 @@ describe('MemoryStoryViewer with clips', () => {
     expect(screen.queryByLabelText('Unmute this clip')).toBeNull();
   });
 });
+
+describe('MemoryStoryViewer before its slides arrive', () => {
+  // With no slides every index is past the end, so navigating used to read as
+  // "reached the last one" and dismissed the whole viewer.
+  beforeEach(() => {
+    mockStory = null;
+  });
+
+  it.each(['ArrowRight', 'ArrowLeft'])('ignores %s', (key) => {
+    const { store } = renderViewer();
+    fireEvent.keyDown(window, { key });
+    expect(store.getState().memories.activeMemoryId).toBe('mem-1');
+  });
+
+  it('ignores a swipe', () => {
+    const { store } = renderViewer();
+    const dialog = screen.getByRole('dialog');
+
+    fireEvent.pointerDown(dialog, { clientX: 300 });
+    fireEvent.pointerUp(dialog, { clientX: 20 });
+
+    expect(store.getState().memories.activeMemoryId).toBe('mem-1');
+  });
+
+  it('still closes on Escape', () => {
+    const { store } = renderViewer();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(store.getState().memories.activeMemoryId).toBeNull();
+  });
+});
