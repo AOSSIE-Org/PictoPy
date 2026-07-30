@@ -141,7 +141,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
         <CardContent className="flex-1 space-y-5 overflow-y-auto p-1 px-2">
           {/* Avatar + Name row */}
-          <div className="flex items-center gap-3 rounded-lg border p-3">
+          <div className="flex items-center gap-3 rounded-lg border p-3 bg-gray-950">
             <button
               type="button"
               onClick={handleUploadClick}
@@ -174,7 +174,6 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
                 className="h-10 text-sm placeholder:text-sm"
-                style={{ backgroundColor: '#181818' }} // 14px
               />
               {longWordError && (
                 <p className="mt-1.5 text-xs text-red-500">
