@@ -487,6 +487,7 @@ const UserPreferencesCard: React.FC = () => {
                       id="memories-duration"
                       variant="outline"
                       className="w-32 cursor-pointer justify-between"
+                      disabled={isUpdating}
                     >
                       {memoriesPreferences.slide_duration_seconds}s
                       <ChevronDown className="h-4 w-4" />
@@ -528,6 +529,7 @@ const UserPreferencesCard: React.FC = () => {
                       id="memories-min"
                       variant="outline"
                       className="w-32 cursor-pointer justify-between"
+                      disabled={isUpdating}
                     >
                       {memoriesPreferences.min_images} photos
                       <ChevronDown className="h-4 w-4" />
@@ -577,6 +579,7 @@ const UserPreferencesCard: React.FC = () => {
                       id="memories-max"
                       variant="outline"
                       className="w-32 cursor-pointer justify-between"
+                      disabled={isUpdating}
                     >
                       {memoriesPreferences.max_images} photos
                       <ChevronDown className="h-4 w-4" />
