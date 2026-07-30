@@ -11,7 +11,7 @@ import { useMutationFeedback } from './useMutationFeedback';
 
 export const DEFAULT_MEMORIES_PREFERENCES: MemoriesPreferences = {
   enabled: true,
-  notifications_enabled: true,
+  notifications_enabled: false,
   story_music_enabled: false,
   slide_duration_seconds: 5,
   min_images: 5,
