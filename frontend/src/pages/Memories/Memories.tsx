@@ -108,7 +108,7 @@ export const Memories: React.FC = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate(`/${ROUTES.MEMORIES_SETTINGS}`)}
+              onClick={() => navigate(`/${ROUTES.SETTINGS}`)}
               aria-label="Memory settings"
             >
               <Settings className="h-4 w-4" />
