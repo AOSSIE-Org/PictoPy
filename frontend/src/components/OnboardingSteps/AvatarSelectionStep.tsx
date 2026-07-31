@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Pencil } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { avatars } from '@/constants/avatars';
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
 import { RootState } from '@/app/store';
@@ -146,26 +146,31 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
               type="button"
               onClick={handleUploadClick}
               aria-label="Change profile avatar"
-              className="group relative inline-flex h-18 w-18 shrink-0 items-center justify-center rounded-full"
+              className="group relative inline-flex h-20 w-20 shrink-0 items-center justify-center rounded-full"
             >
               {selectedAvatar ? (
                 <img
                   src={selectedAvatar}
                   alt="Current avatar"
-                  className="h-20 w-20 rounded-full object-cover"
+                  className="h-20 w-20 rounded-full object-cover ring-2 ring-blue-500"
                 />
               ) : (
-                <div className="bg-muted text-muted-foreground flex h-20 w-20 items-center justify-center rounded-full">
-                  <User className="h-7 w-7" />
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-neutral-800 ring-2 ring-blue-500">
+                  <span className="text-[10px] font-medium tracking-wide text-neutral-500 uppercase select-none">
+                    Preview
+                  </span>
                 </div>
               )}
               <span className="border-background absolute right-0 bottom-0 flex h-7 w-7 items-center justify-center rounded-full border-2 bg-blue-500 text-white transition-transform group-hover:scale-105">
-                <Pencil className="h-3.5 w-3.5" />
+                <Pencil className="h-4 w-4" aria-hidden="true" />
               </span>
             </button>
 
             <div className="min-w-0 flex-1">
-              <Label htmlFor="name" className="mb-1.5 block text-sm">
+              <Label
+                htmlFor="name"
+                className="mb-1 block text-xs font-medium tracking-wide text-neutral-500"
+              >
                 Your Name
               </Label>
               <Input
@@ -173,11 +178,11 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                 placeholder="Enter your name"
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                className="h-10 text-sm placeholder:text-sm"
+                className="placeholder:text-md h-11 border-0 bg-transparent py-0 pr-0 pl-2 text-lg font-normal tracking-tight shadow-none placeholder:font-normal placeholder:tracking-normal placeholder:text-neutral-500 focus-visible:ring-0"
               />
               {longWordError && (
                 <p className="mt-1.5 text-xs text-red-500">
-                  A single word in your name cannot exceed 30 characters.
+                  A single word cannot exceed 30 characters.
                 </p>
               )}
             </div>
@@ -187,7 +192,6 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
           <div>
             <div className="mb-3 flex items-center justify-between">
               <Label className="text-sm">Choose Your Avatar</Label>
-              <span className="text-foreground text-xs">8 Options</span>
             </div>
             <div className="grid grid-cols-4 gap-3">
               {avatars.map((avatar) => {
