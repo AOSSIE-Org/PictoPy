@@ -141,7 +141,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
         <CardContent className="flex-1 space-y-5 overflow-y-auto p-1 px-2">
           {/* Avatar + Name row */}
-          <div className="flex items-center gap-3 rounded-lg border bg-gray-950 p-3">
+          <div className="flex items-center gap-3 rounded-lg border bg-neutral-900 p-3">
             <button
               type="button"
               onClick={handleUploadClick}
