@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Folder, Trash2, Check, Loader2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Folder,
+  Loader2,
+  Trash2,
+} from 'lucide-react';
 
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -15,9 +23,108 @@ import { useLibraryProcessingStatus } from '@/hooks/useLibraryProcessingStatus';
 import { FolderDetails, isIndexingPending } from '@/types/Folder';
 import SettingsCard from './SettingsCard';
 
-/**
- * Component for managing folder operations in settings
- */
+type TaggingStatus = RootState['folders']['taggingStatus'];
+
+// A single labeled progress bar with a percentage.
+
+const ProgressRow: React.FC<{ label: string; percentage: number }> = ({
+  label,
+  percentage,
+}) => {
+  const isComplete = percentage >= 100;
+
+  return (
+    <div>
+      <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
+        <span>{label}</span>
+        <span
+          className={
+            isComplete
+              ? 'flex items-center gap-1 text-green-500'
+              : 'text-muted-foreground'
+          }
+        >
+          {isComplete && <Check className="h-3 w-3" />}
+          {Math.round(percentage)}%
+        </span>
+      </div>
+      <Progress
+        value={percentage}
+        indicatorClassName={isComplete ? 'bg-green-500' : 'bg-blue-500'}
+      />
+    </div>
+  );
+};
+
+//Progress display for a single folder.
+
+const FolderProgress: React.FC<{
+  folder: FolderDetails;
+  taggingStatus: TaggingStatus;
+  semanticAvailable: boolean;
+  isExpanded: boolean;
+  onToggleExpanded: () => void;
+}> = ({
+  folder,
+  taggingStatus,
+  semanticAvailable,
+  isExpanded,
+  onToggleExpanded,
+}) => {
+  const taggingPercentage =
+    taggingStatus[folder.folder_id]?.tagging_percentage ?? 0;
+
+  if (!semanticAvailable) {
+    return (
+      <ProgressRow label="AI Tagging Progress" percentage={taggingPercentage} />
+    );
+  }
+
+  const embeddingPercentage =
+    taggingStatus[folder.folder_id]?.embedding_percentage ?? 0;
+  const combinedPercentage = (taggingPercentage + embeddingPercentage) / 2;
+
+  return (
+    <>
+      <ProgressRow label="Overall Progress" percentage={combinedPercentage} />
+
+      <button
+        type="button"
+        onClick={onToggleExpanded}
+        aria-expanded={isExpanded}
+        className="text-muted-foreground hover:text-foreground mt-2 flex cursor-pointer items-center gap-1 text-xs transition-colors"
+      >
+        {isExpanded ? (
+          <>
+            <ChevronUp className="h-3 w-3" />
+            Hide details
+          </>
+        ) : (
+          <>
+            <ChevronDown className="h-3 w-3" />
+            Show details
+          </>
+        )}
+      </button>
+
+      {isExpanded && (
+        <div className="border-border mt-3 space-y-3 border-t pt-3">
+          <ProgressRow
+            label="AI Tagging Progress"
+            percentage={taggingPercentage}
+          />
+          <ProgressRow
+            label="Semantic Indexing"
+            percentage={embeddingPercentage}
+          />
+        </div>
+      )}
+    </>
+  );
+};
+
+//  Component for managing folder operations in settings
+
 const FolderManagementCard: React.FC = () => {
   const {
     folders,
@@ -35,9 +142,24 @@ const FolderManagementCard: React.FC = () => {
   const { semanticAvailable } = useLibraryProcessingStatus();
 
   const [visibleFoldersCount, setVisibleFoldersCount] = useState(6);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set(),
+  );
 
   const handleViewMore = () => {
     setVisibleFoldersCount((prevCount) => prevCount + 5);
+  };
+
+  const toggleFolderExpanded = (folderId: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
+      }
+      return next;
+    });
   };
 
   return (
@@ -115,79 +237,15 @@ const FolderManagementCard: React.FC = () => {
                         Folder is empty
                       </div>
                     ) : (
-                      <>
-                        <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
-                          <span>AI Tagging Progress</span>
-                          <span
-                            className={
-                              (taggingStatus[folder.folder_id]
-                                ?.tagging_percentage ?? 0) >= 100
-                                ? 'flex items-center gap-1 text-green-500'
-                                : 'text-muted-foreground'
-                            }
-                          >
-                            {(taggingStatus[folder.folder_id]
-                              ?.tagging_percentage ?? 0) >= 100 && (
-                              <Check className="h-3 w-3" />
-                            )}
-                            {Math.round(
-                              taggingStatus[folder.folder_id]
-                                ?.tagging_percentage ?? 0,
-                            )}
-                            %
-                          </span>
-                        </div>
-                        <Progress
-                          value={
-                            taggingStatus[folder.folder_id]
-                              ?.tagging_percentage ?? 0
-                          }
-                          indicatorClassName={
-                            (taggingStatus[folder.folder_id]
-                              ?.tagging_percentage ?? 0) >= 100
-                              ? 'bg-green-500'
-                              : 'bg-blue-500'
-                          }
-                        />
-
-                        {semanticAvailable && (
-                          <>
-                            <div className="text-muted-foreground mt-3 mb-1 flex items-center justify-between text-xs">
-                              <span>Semantic Indexing</span>
-                              <span
-                                className={
-                                  (taggingStatus[folder.folder_id]
-                                    ?.embedding_percentage ?? 0) >= 100
-                                    ? 'flex items-center gap-1 text-green-500'
-                                    : 'text-muted-foreground'
-                                }
-                              >
-                                {(taggingStatus[folder.folder_id]
-                                  ?.embedding_percentage ?? 0) >= 100 && (
-                                  <Check className="h-3 w-3" />
-                                )}
-                                {Math.round(
-                                  taggingStatus[folder.folder_id]
-                                    ?.embedding_percentage ?? 0,
-                                )}
-                                %
-                              </span>
-                            </div>
-                            <Progress
-                              value={
-                                taggingStatus[folder.folder_id]
-                                  ?.embedding_percentage ?? 0
-                              }
-                              indicatorClassName={
-                                (taggingStatus[folder.folder_id]
-                                  ?.embedding_percentage ?? 0) >= 100
-                                  ? 'bg-green-500'
-                                  : 'bg-blue-500'
-                              }
-                            />
-                          </>
-                        )}
-                      </>
+                      <FolderProgress
+                        folder={folder}
+                        taggingStatus={taggingStatus}
+                        semanticAvailable={semanticAvailable}
+                        isExpanded={expandedFolders.has(folder.folder_id)}
+                        onToggleExpanded={() =>
+                          toggleFolderExpanded(folder.folder_id)
+                        }
+                      />
                     )}
                   </div>
                 )}
