@@ -12,7 +12,7 @@ tauri-build = { version = "2.0.6", features = [] }
 
 [dependencies]
 tauri = { version = "2.9.1", features = ["protocol-asset", "devtools"] }
-reqwest = { version = "0.12", features = ["blocking"] }
+reqwest = { version = "0.12", features = ["blocking", "json"] }
 walkdir = "2.3"
 sysinfo = "0.37.2"
 serde = { version = "1.0", features = ["derive"] }
@@ -21,7 +21,7 @@ anyhow = "1.0"
 image = "0.24.6"
 ring = "0.16.20"
 data-encoding = "2.3.2"
-tokio = { version = "1", features = ["macros"] }
+tokio = { version = "1", features = ["macros", "time"] }
 tempfile = "3"
 arrayref = "0.3.6"
 directories = "4.0"
@@ -37,6 +37,7 @@ tauri-plugin-process = "2.3.1"
 tauri-plugin-store = "2.4.1"
 tauri-plugin-updater = "2.9.0"
 tauri-plugin-opener = "2.5.2"
+tauri-plugin-notification = "2.3.3"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

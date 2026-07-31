@@ -94,6 +94,12 @@ jest.mock('@tauri-apps/plugin-shell', () => ({
   open: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('@tauri-apps/plugin-notification', () => ({
+  isPermissionGranted: jest.fn().mockResolvedValue(true),
+  requestPermission: jest.fn().mockResolvedValue('granted'),
+  sendNotification: jest.fn(),
+}));
+
 jest.mock('@tauri-apps/plugin-store', () => ({
   Store: jest.fn().mockImplementation(() => ({
     get: jest.fn().mockResolvedValue(null),
