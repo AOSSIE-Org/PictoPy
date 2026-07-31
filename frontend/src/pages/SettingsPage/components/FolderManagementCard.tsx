@@ -32,8 +32,8 @@ const ProgressRow: React.FC<{ label: string; percentage: number }> = ({
   label,
   percentage,
 }) => {
-  const isComplete = percentage >= 100;
-
+  const roundedPercentage = Math.round(percentage);
+  const isComplete = roundedPercentage >= 100;
   return (
     <div>
       <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
@@ -46,7 +46,7 @@ const ProgressRow: React.FC<{ label: string; percentage: number }> = ({
           }
         >
           {isComplete && <Check className="h-3 w-3" />}
-          {Math.round(percentage)}%
+          {roundedPercentage}%
         </span>
       </div>
       <Progress
@@ -155,17 +155,16 @@ const FolderManagementCard: React.FC = () => {
       // so semanticAvailable becomes false immediately when coming back from minimizing/another window
       queryClient.invalidateQueries();
     };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', () => {
+    const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         handleFocus();
       }
-    });
-
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [queryClient]);
 
