@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertTriangle,
   Check,
@@ -8,6 +8,7 @@ import {
   Loader2,
   Trash2,
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -126,6 +127,7 @@ const FolderProgress: React.FC<{
 //  Component for managing folder operations in settings
 
 const FolderManagementCard: React.FC = () => {
+  const queryClient = useQueryClient();
   const {
     folders,
     toggleAITagging,
@@ -145,6 +147,27 @@ const FolderManagementCard: React.FC = () => {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set(),
   );
+
+   // --- NEW: Force data refresh when window regains focus or visibility ---
+  useEffect(() => {
+    const handleFocus = () => {
+      // Invalidating queries forces useLibraryProcessingStatus() to fetch fresh data instantly
+      // so semanticAvailable becomes false immediately when coming back from minimizing/another window
+      queryClient.invalidateQueries(); 
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        handleFocus();
+      }
+    });
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, [queryClient]);
 
   const handleViewMore = () => {
     setVisibleFoldersCount((prevCount) => prevCount + 5);
