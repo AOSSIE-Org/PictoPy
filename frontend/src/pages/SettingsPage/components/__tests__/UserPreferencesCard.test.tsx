@@ -3,6 +3,13 @@ import userEvent from '@testing-library/user-event';
 
 import UserPreferencesCard from '../UserPreferencesCard';
 import type { MemoriesPreferences } from '@/api/api-functions/user_preferences';
+import {
+  isPermissionGranted,
+  requestPermission,
+} from '@tauri-apps/plugin-notification';
+
+const mockIsPermissionGranted = jest.mocked(isPermissionGranted);
+const mockRequestPermission = jest.mocked(requestPermission);
 
 const mockUpdateMemoriesPreferences = jest.fn().mockResolvedValue(undefined);
 let mockMemories: MemoriesPreferences;
@@ -69,6 +76,8 @@ const choose = async (
 
 beforeEach(() => {
   mockUpdateMemoriesPreferences.mockClear();
+  mockIsPermissionGranted.mockReset().mockResolvedValue(true);
+  mockRequestPermission.mockReset().mockResolvedValue('granted');
   mockMemories = memoriesWith();
   mockIsUpdating = false;
 });
@@ -97,6 +106,71 @@ describe('UserPreferencesCard memories panel', () => {
     expect(
       screen.getByRole('switch', { name: /Desktop Notifications/i }),
     ).toBeDisabled();
+  });
+
+  it('asks the OS for permission when notifications are turned on', async () => {
+    mockIsPermissionGranted.mockResolvedValue(false);
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openPanel(user);
+
+    await user.click(
+      screen.getByRole('switch', { name: /Desktop Notifications/i }),
+    );
+
+    expect(mockUpdateMemoriesPreferences).toHaveBeenCalledWith({
+      notifications_enabled: true,
+    });
+    expect(mockRequestPermission).toHaveBeenCalled();
+  });
+
+  it('does not ask again once permission is held', async () => {
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openPanel(user);
+
+    await user.click(
+      screen.getByRole('switch', { name: /Desktop Notifications/i }),
+    );
+
+    expect(mockIsPermissionGranted).toHaveBeenCalled();
+    expect(mockRequestPermission).not.toHaveBeenCalled();
+  });
+
+  it('turns notifications off without touching the OS', async () => {
+    mockMemories = memoriesWith({ notifications_enabled: true });
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openPanel(user);
+
+    await user.click(
+      screen.getByRole('switch', { name: /Desktop Notifications/i }),
+    );
+
+    expect(mockUpdateMemoriesPreferences).toHaveBeenCalledWith({
+      notifications_enabled: false,
+    });
+    expect(mockIsPermissionGranted).not.toHaveBeenCalled();
+  });
+
+  // A refused or unavailable prompt is the OS having the last word, not a
+  // reason to lose the preference the user just set.
+  it('keeps the preference when the permission call fails', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockIsPermissionGranted.mockRejectedValue(new Error('unavailable'));
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openPanel(user);
+
+    await user.click(
+      screen.getByRole('switch', { name: /Desktop Notifications/i }),
+    );
+
+    expect(mockUpdateMemoriesPreferences).toHaveBeenCalledWith({
+      notifications_enabled: true,
+    });
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it('raises the maximum when a larger minimum is chosen', async () => {
