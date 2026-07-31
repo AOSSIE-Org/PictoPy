@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 use serde::Deserialize;
 use serde_json::json;
 use tauri::{AppHandle, Emitter, Manager};
-use tauri_plugin_notification::{NotificationExt, PermissionState};
+use tauri_plugin_notification::NotificationExt;
 use tokio::time::sleep;
 
 const BACKEND_URL: &str = "http://localhost:52123";
@@ -175,15 +175,25 @@ async fn run(app: &AppHandle) {
     surface(app, &client, &status).await;
 }
 
-/// Emit the result and, if the user asked for them, raise a system notification.
+/// Announce the memory, once, through the card and the notification centre.
 async fn surface(app: &AppHandle, client: &reqwest::Client, status: &StatusData) {
     let memory = match get_today(client).await {
         Some(memory) => memory,
         None => return,
     };
 
-    // Emitted whether or not we notify, so the in-app card is the reliable
-    // path: desktop notification clicks are not dependable across platforms.
+    // notified_at covers the card as well as the notification, since both say
+    // the same thing. `/today` keeps returning a memory until it is viewed or
+    // dismissed, so without this guard every launch and every resume announces
+    // it again.
+    if memory.notified_at.is_some() {
+        return;
+    }
+
+    // Not gated on notifications_enabled: that preference is about OS alerts,
+    // and it ships off. Emitted whether or not the notification lands, because
+    // desktop notification clicks are not dependable across platforms, so the
+    // card is the path that always works.
     let _ = app.emit(
         "memory:pending",
         json!({
@@ -195,53 +205,32 @@ async fn surface(app: &AppHandle, client: &reqwest::Client, status: &StatusData)
         }),
     );
 
-    // notified_at is what stops a memory being announced twice across launches.
-    if !status.notifications_enabled || memory.notified_at.is_some() {
-        return;
+    if status.notifications_enabled {
+        notify(app, &memory);
     }
 
-    if notify(app, &memory) {
-        mark_notified(client, &memory.memory_id).await;
-    }
+    // Recorded even when the notification failed: the card still went out.
+    mark_notified(client, &memory.memory_id).await;
 }
 
-fn notify(app: &AppHandle, memory: &MemorySummary) -> bool {
-    if !has_permission(app) {
-        return false;
-    }
-
+fn notify(app: &AppHandle, memory: &MemorySummary) {
     let count = memory.image_count + memory.video_count;
     let body = match memory.subtitle.as_deref() {
         Some(subtitle) => format!("{} · {} · {} items", memory.title, subtitle, count),
         None => format!("{} · {} items", memory.title, count),
     };
 
-    match app
+    // No permission check: the plugin's desktop implementation returns Granted
+    // unconditionally, and the prompt that does exist is the webview one the
+    // settings switch raises. A mobile target would need one here.
+    if let Err(e) = app
         .notification()
         .builder()
         .title("Your Daily Memory is Ready")
         .body(body)
         .show()
     {
-        Ok(()) => true,
-        Err(e) => {
-            eprintln!("[MEMORIES] Could not show the notification: {e}");
-            false
-        }
-    }
-}
-
-fn has_permission(app: &AppHandle) -> bool {
-    match app.notification().permission_state() {
-        Ok(PermissionState::Granted) => true,
-        Ok(_) => matches!(
-            app.notification().request_permission(),
-            Ok(PermissionState::Granted)
-        ),
-        Err(e) => {
-            eprintln!("[MEMORIES] Could not read the notification permission: {e}");
-            false
-        }
+        eprintln!("[MEMORIES] Could not show the notification: {e}");
     }
 }
 
