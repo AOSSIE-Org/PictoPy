@@ -151,9 +151,13 @@ const FolderManagementCard: React.FC = () => {
   // --- NEW: Force data refresh when window regains focus or visibility ---
   useEffect(() => {
     const handleFocus = () => {
-      // Invalidating queries forces useLibraryProcessingStatus() to fetch fresh data instantly
-      // so semanticAvailable becomes false immediately when coming back from minimizing/another window
-      queryClient.invalidateQueries();
+      // Invalidating targeted queries forces useLibraryProcessingStatus() and folder hooks
+      // to fetch fresh data instantly without invalidating the entire app cache
+      queryClient.invalidateQueries({ queryKey: ['models', 'status'] });
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      queryClient.invalidateQueries({
+        queryKey: ['folders', 'tagging-status'],
+      });
     };
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
