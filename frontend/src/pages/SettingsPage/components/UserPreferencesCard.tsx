@@ -24,6 +24,10 @@ import { Button } from '@/components/ui/button';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import {
+  isPermissionGranted,
+  requestPermission,
+} from '@tauri-apps/plugin-notification';
 
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import type { UpdateUserPreferencesRequest } from '@/api/api-functions/user_preferences';
@@ -75,6 +79,24 @@ const UserPreferencesCard: React.FC = () => {
       void updateMemoriesPreferences(update).catch(console.warn);
     },
     [updateMemoriesPreferences],
+  );
+
+  // macOS and Linux gate notifications behind an OS prompt, and switching this
+  // on is the only moment a user expects one. The OS stays the final say: the
+  // desktop task re-checks the permission before every notification.
+  const toggleMemoryNotifications = useCallback(
+    async (checked: boolean) => {
+      patchMemories({ notifications_enabled: checked });
+      if (!checked) return;
+      try {
+        if (!(await isPermissionGranted())) {
+          await requestPermission();
+        }
+      } catch (err) {
+        console.warn('Could not request notification permission', err);
+      }
+    },
+    [patchMemories],
   );
 
   const handlePurgeFrameCache = useCallback(async () => {
@@ -460,9 +482,7 @@ const UserPreferencesCard: React.FC = () => {
                     id="memories-notifications"
                     checked={memoriesPreferences.notifications_enabled}
                     disabled={isUpdating || !memoriesPreferences.enabled}
-                    onCheckedChange={(checked) =>
-                      patchMemories({ notifications_enabled: checked })
-                    }
+                    onCheckedChange={toggleMemoryNotifications}
                   />
                 </div>
               </div>
