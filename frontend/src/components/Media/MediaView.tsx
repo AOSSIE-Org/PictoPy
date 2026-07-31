@@ -208,6 +208,8 @@ export function MediaView({
         <NavigationButtons
           onPrevious={handlePreviousImage}
           onNext={handleNextImage}
+          disablePrevious={currentViewIndex <= 0}
+          disableNext={currentViewIndex >= images.length - 1}
         />
       </div>
 

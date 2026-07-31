@@ -93,7 +93,10 @@ def db_bulk_insert_videos(video_records: List[VideoRecord]) -> bool:
                     WHEN excluded.isTagged THEN 1
                     ELSE videos.isTagged
                 END,
-                captured_at=COALESCE(excluded.captured_at, videos.captured_at)
+                -- Not COALESCE: every record comes from a full re-read of
+                -- the file, so NULL means "no capture date exists" and has to
+                -- overwrite a bad one a previous extractor guessed.
+                captured_at=excluded.captured_at
             """,
             video_records,
         )

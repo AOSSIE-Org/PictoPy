@@ -15,6 +15,19 @@ FolderData = Tuple[FolderId, FolderPath, Optional[FolderId], int, bool, Optional
 FolderMap = Dict[FolderPath, Tuple[FolderId, Optional[FolderId]]]
 FolderIdPath = Tuple[FolderId, str]
 
+# indexing_status vocabulary. Only 'in_progress' counts as busy; 'interrupted'
+# means a walk stopped partway and the folder needs a sync to finish.
+INDEXING_NOT_STARTED = "not_started"
+INDEXING_IN_PROGRESS = "in_progress"
+INDEXING_COMPLETED = "completed"
+INDEXING_INTERRUPTED = "interrupted"
+INDEXING_STATUSES = (
+    INDEXING_NOT_STARTED,
+    INDEXING_IN_PROGRESS,
+    INDEXING_COMPLETED,
+    INDEXING_INTERRUPTED,
+)
+
 
 def db_create_folders_table() -> None:
     conn = None
@@ -468,8 +481,93 @@ def db_get_direct_child_folders(parent_folder_id: str) -> List[Tuple[str, str]]:
         conn.close()
 
 
+def db_set_tagging_completed(completed: bool) -> int:
+    """
+    Mark every AI-tagged folder as finished tagging, or back to pending.
+
+    The column exists on the folders table but nothing used to write it after
+    insert, so anything reading it saw every AI-tagged folder as permanently
+    mid-tagging. The tagging sequences now clear it on entry and set it on
+    exit. Returns the number of folders updated.
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE folders SET taggingCompleted = ? WHERE AI_Tagging = 1",
+            (1 if completed else 0,),
+        )
+        conn.commit()
+        return cursor.rowcount
+    except sqlite3.Error as e:
+        logger.error(f"Error updating tagging completion: {e}")
+        conn.rollback()
+        return 0
+    finally:
+        conn.close()
+
+
+def db_clear_stale_processing_flags() -> int:
+    """
+    Clear processing flags left behind by a previous session.
+
+    Call only at startup. Indexing and tagging both run in the executor and
+    are only ever started by a request, so nothing can be in flight yet: any
+    folder still marked busy was interrupted, or predates the code that
+    finishes the flag. Either way it would block memory generation forever.
+
+    An interrupted walk becomes 'interrupted', not 'completed': it stopped
+    partway, so the folder's images are incomplete and it still needs a sync.
+    Not 'not_started' either, which reads as queued and would leave the UI
+    waiting on a walk nobody is going to run.
+
+    Returns the number of folders corrected.
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        # One statement, not two: a folder that is both mid-tagging and
+        # mid-index is one folder, and counting each flag would report two.
+        cursor.execute(
+            """
+            UPDATE folders
+               SET taggingCompleted = CASE
+                       WHEN AI_Tagging = 1 AND IFNULL(taggingCompleted, 0) = 0
+                       THEN 1
+                       ELSE taggingCompleted
+                   END,
+                   indexing_status = CASE
+                       WHEN indexing_status = ? THEN ?
+                       ELSE indexing_status
+                   END
+             WHERE (AI_Tagging = 1 AND IFNULL(taggingCompleted, 0) = 0)
+                OR indexing_status = ?
+            """,
+            (INDEXING_IN_PROGRESS, INDEXING_INTERRUPTED, INDEXING_IN_PROGRESS),
+        )
+        corrected = cursor.rowcount
+        conn.commit()
+        if corrected:
+            logger.info(f"Cleared stale processing flags on {corrected} folder(s)")
+        return corrected
+    except sqlite3.Error as e:
+        logger.error(f"Error clearing stale processing flags: {e}")
+        conn.rollback()
+        return 0
+    finally:
+        conn.close()
+
+
 def db_update_folder_indexing_status(folder_id: str, status: str) -> None:
-    """Update the indexing_status of a specific folder."""
+    """
+    Update the indexing_status of a specific folder.
+
+    The column has no CHECK constraint, so a typo would otherwise persist as a
+    status nothing recognises and the folder would read as busy forever.
+    """
+    if status not in INDEXING_STATUSES:
+        raise ValueError(f"unknown indexing status: {status}")
+
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
