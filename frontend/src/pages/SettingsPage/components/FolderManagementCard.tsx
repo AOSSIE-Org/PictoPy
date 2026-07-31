@@ -148,12 +148,12 @@ const FolderManagementCard: React.FC = () => {
     new Set(),
   );
 
-   // --- NEW: Force data refresh when window regains focus or visibility ---
+  // --- NEW: Force data refresh when window regains focus or visibility ---
   useEffect(() => {
     const handleFocus = () => {
       // Invalidating queries forces useLibraryProcessingStatus() to fetch fresh data instantly
       // so semanticAvailable becomes false immediately when coming back from minimizing/another window
-      queryClient.invalidateQueries(); 
+      queryClient.invalidateQueries();
     };
 
     window.addEventListener('focus', handleFocus);
