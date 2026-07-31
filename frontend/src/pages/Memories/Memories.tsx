@@ -1,11 +1,9 @@
 import React, { useEffect } from 'react';
-import { RefreshCw, Settings } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { MemoryCard } from '@/components/Memories/MemoryCard';
 import { MemoryStoryViewer } from '@/components/Memories/MemoryStoryViewer';
-import { ROUTES } from '@/constants/routes';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
@@ -33,7 +31,6 @@ const EmptyState: React.FC<{ isGenerating: boolean }> = ({ isGenerating }) => (
 
 export const Memories: React.FC = () => {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const activeMemoryId = useAppSelector(selectActiveMemoryId);
 
   const memoriesQuery = useMemories({ limit: 60 });
@@ -103,15 +100,7 @@ export const Memories: React.FC = () => {
               <RefreshCw
                 className={`mr-2 h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`}
               />
-              {isGenerating ? 'Generating…' : 'Refresh'}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(`/${ROUTES.SETTINGS}`)}
-              aria-label="Memory settings"
-            >
-              <Settings className="h-4 w-4" />
+              {isGenerating ? 'Generating…' : 'Regenerate'}
             </Button>
           </div>
         </div>
