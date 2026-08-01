@@ -22,6 +22,38 @@ export interface Image {
   bboxes?: { x: number; y: number; width: number; height: number }[];
 }
 
+export interface ScoredImage extends Image {
+  score: number;
+}
+
+export interface VideoMetadata {
+  name: string;
+  date_created: string | null;
+  width: number;
+  height: number;
+  duration?: number | null;
+  fps?: number | null;
+  file_location: string;
+  file_size: number;
+  item_type: string;
+}
+
+export interface Video {
+  id: string;
+  path: string;
+  thumbnailPath: string | null;
+  folder_id: string;
+  metadata?: VideoMetadata;
+  isFavourite?: boolean;
+  tags?: string[];
+}
+
+export interface ScoredVideo extends Video {
+  score: number;
+  /** Timestamp (seconds) of the keyframe that matched best. */
+  best_frame_timestamp?: number | null;
+}
+
 export interface ImageGalleryProps {
   mediaItems: Image[];
   title?: string;

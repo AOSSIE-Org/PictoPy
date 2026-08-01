@@ -9,6 +9,8 @@ import {
   Tag,
   Info,
   SquareArrowOutUpRight,
+  Plus,
+  Minus,
 } from 'lucide-react';
 import { Image } from '@/types/Media';
 
@@ -27,6 +29,15 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
   currentIndex,
   totalImages,
 }) => {
+  const [showAllTags, setShowAllTags] = React.useState(false);
+
+  const tagResetKey = `${show}:${currentImage?.id ?? ''}`;
+  const [prevTagResetKey, setPrevTagResetKey] = React.useState(tagResetKey);
+  if (tagResetKey !== prevTagResetKey) {
+    setPrevTagResetKey(tagResetKey);
+    setShowAllTags(false);
+  }
+
   const getFormattedDate = () => {
     if (currentImage?.metadata?.date_created) {
       return new Date(currentImage.metadata.date_created).toLocaleDateString(
@@ -66,13 +77,15 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ type: 'spring', stiffness: 260, damping: 25 }}
-          className="absolute top-10 left-6 z-50 w-[350px] rounded-xl border border-white/10 bg-black/60 p-6 shadow-xl backdrop-blur-lg"
+          className="absolute top-10 left-6 z-50 w-[350px] rounded-xl border border-black/10 bg-white/80 p-6 shadow-xl backdrop-blur-lg dark:border-white/10 dark:bg-black/60"
         >
-          <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
-            <h3 className="text-xl font-medium text-white">Image Details</h3>
+          <div className="mb-4 flex items-center justify-between border-b border-black/10 pb-3 dark:border-white/10">
+            <h3 className="text-xl font-medium text-gray-900 dark:text-white">
+              Image Details
+            </h3>
             <button
               onClick={onClose}
-              className="text-white/70 hover:text-white"
+              className="text-gray-500 hover:text-gray-900 dark:text-white/70 dark:hover:text-white"
               aria-label="Close info panel"
             >
               <X className="h-5 w-5" />
@@ -81,13 +94,13 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
 
           <div className="space-y-4 text-sm">
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-white/10 p-2">
-                <ImageLucide className="h-5 w-5 text-blue-400" />
+              <div className="rounded-lg bg-black/5 p-2 dark:bg-white/10">
+                <ImageLucide className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-white/50">Name</p>
+                <p className="text-xs text-gray-500 dark:text-white/50">Name</p>
                 <p
-                  className="truncate font-medium text-white"
+                  className="truncate font-medium text-gray-900 dark:text-white"
                   title={getImageName()}
                 >
                   {getImageName()}
@@ -96,33 +109,37 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-white/10 p-2">
-                <Calendar className="h-5 w-5 text-emerald-400" />
+              <div className="rounded-lg bg-black/5 p-2 dark:bg-white/10">
+                <Calendar className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
-                <p className="text-xs text-white/50">Date</p>
-                <p className="font-medium text-white">{getFormattedDate()}</p>
+                <p className="text-xs text-gray-500 dark:text-white/50">Date</p>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {getFormattedDate()}
+                </p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-white/10 p-2">
-                <MapPin className="h-5 w-5 text-red-400" />
+              <div className="rounded-lg bg-black/5 p-2 dark:bg-white/10">
+                <MapPin className="h-5 w-5 text-red-600 dark:text-red-400" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-white/50">Location</p>
+                <p className="text-xs text-gray-500 dark:text-white/50">
+                  Location
+                </p>
                 {currentImage?.metadata?.latitude &&
                 currentImage?.metadata?.longitude ? (
                   <button
                     type="button"
                     onClick={handleLocationClick}
-                    className="flex w-full items-center truncate text-left font-medium text-white hover:underline"
+                    className="flex w-full items-center truncate text-left font-medium text-gray-900 hover:underline dark:text-white"
                   >
                     {`Lat: ${currentImage.metadata.latitude.toFixed(4)}, Lon: ${currentImage.metadata.longitude.toFixed(4)}`}
                     <SquareArrowOutUpRight className="ml-1 h-[14px] w-[14px]" />
                   </button>
                 ) : (
-                  <p className="font-medium text-white">
+                  <p className="font-medium text-gray-900 dark:text-white">
                     Location not available
                   </p>
                 )}
@@ -130,43 +147,72 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-white/10 p-2">
-                <Tag className="h-5 w-5 text-purple-400" />
+              <div className="rounded-lg bg-black/5 p-2 dark:bg-white/10">
+                <Tag className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div className="flex-1">
-                <p className="mb-1 text-xs text-white/50">Tags</p>
+                <p className="mb-1 text-xs text-gray-500 dark:text-white/50">
+                  Tags
+                </p>
                 {currentImage?.tags?.length ? (
-                  <div className="flex flex-wrap gap-2">
-                    {currentImage.tags.map((tag, i) => (
+                  <div className="flex flex-wrap gap-1">
+                    {(showAllTags
+                      ? currentImage.tags
+                      : currentImage.tags.slice(0, 3)
+                    ).map((tag, i) => (
                       <span
                         key={i}
-                        className="rounded-full border border-blue-500/30 bg-blue-500/20 px-2 py-1 text-xs text-blue-300"
+                        className="rounded-full border border-black/20 px-2 py-0.5 text-xs text-gray-800 dark:border-white/30 dark:text-white"
                       >
                         {tag}
                       </span>
                     ))}
+                    {currentImage.tags.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllTags((prev) => !prev)}
+                        className="focus-visible:ring-ring/50 inline-flex items-center gap-1.5 rounded-full bg-black/10 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-800 shadow-xs transition-all outline-none hover:bg-black/15 focus-visible:ring-[3px] dark:bg-white/15 dark:text-white dark:hover:bg-white/20"
+                      >
+                        {showAllTags ? (
+                          <Minus
+                            className="h-2.5 w-2.5 shrink-0"
+                            strokeWidth={2.5}
+                          />
+                        ) : (
+                          <Plus
+                            className="h-2.5 w-2.5 shrink-0"
+                            strokeWidth={2.5}
+                          />
+                        )}
+                        <span>{showAllTags ? 'show less' : 'show more'}</span>
+                      </button>
+                    )}
                   </div>
                 ) : (
-                  <p className="text-white/60">No tags available</p>
+                  <p className="text-gray-500 dark:text-white/60">
+                    No tags available
+                  </p>
                 )}
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-white/10 p-2">
-                <Info className="h-5 w-5 text-amber-400" />
+              <div className="rounded-lg bg-black/5 p-2 dark:bg-white/10">
+                <Info className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-xs text-white/50">Position</p>
-                <p className="font-medium text-white">
+                <p className="text-xs text-gray-500 dark:text-white/50">
+                  Position
+                </p>
+                <p className="font-medium text-gray-900 dark:text-white">
                   {currentIndex + 1} of {totalImages}
                 </p>
               </div>
             </div>
 
-            <div className="mt-4 border-t border-white/10 pt-3">
+            <div className="mt-4 border-t border-black/10 pt-3 dark:border-white/10">
               <button
-                className="w-full rounded-lg bg-white/10 py-2 text-white hover:bg-white/20"
+                className="w-full rounded-lg bg-black/5 py-2 text-gray-900 hover:bg-black/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                 onClick={(e) => {
                   e.preventDefault();
                   // Button disabled - does nothing

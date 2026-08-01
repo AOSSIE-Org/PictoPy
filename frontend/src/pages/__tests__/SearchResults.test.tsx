@@ -1,0 +1,221 @@
+import { render, screen, waitFor } from '@/test-utils';
+import { SearchResults } from '../SearchResults/SearchResults';
+import { searchImagesByTag, searchVideosByTag } from '@/api/api-functions';
+
+// Mock the API functions. fetchModelStatus must resolve to a well-formed
+// response even in tests that don't care about it -- the "no tag matches"
+// auto-mode path calls it to decide whether to fall back to semantic search.
+jest.mock('@/api/api-functions', () => ({
+  searchImagesByTag: jest.fn(),
+  semanticSearchImages: jest.fn(),
+  searchVideosByTag: jest.fn(),
+  semanticSearchVideos: jest.fn(),
+  fetchModelStatus: jest.fn().mockResolvedValue({ success: true, data: {} }),
+}));
+
+jest.mock('@tauri-apps/api/core', () => ({
+  convertFileSrc: (path: string) => path,
+}));
+
+describe('SearchResults Page', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Videos default to no matches; the tests that care override this.
+    (searchVideosByTag as jest.Mock).mockResolvedValue({
+      success: true,
+      data: [],
+    });
+  });
+
+  const renderWithQuery = (queryValue: string) => {
+    // MemoryRouter in test-utils defaults to initialEntries=['/']
+    // We can pass initialRoutes via options to inject search params
+    return render(<SearchResults />, {
+      initialRoutes: [`/search?value=${encodeURIComponent(queryValue)}`],
+    });
+  };
+
+  test('renders empty state when no query is provided', async () => {
+    renderWithQuery('');
+
+    // Neither search runs when there's no query
+    expect(searchImagesByTag).not.toHaveBeenCalled();
+    expect(searchVideosByTag).not.toHaveBeenCalled();
+
+    // Check for empty state message
+    expect(
+      screen.getByText(/Please enter a search term to find/i),
+    ).toBeInTheDocument();
+  });
+
+  test('renders loading and success state with images', async () => {
+    // Mock successful API response
+    (searchImagesByTag as jest.Mock).mockResolvedValue({
+      success: true,
+      data: [
+        {
+          id: '1',
+          path: '/img1.jpg',
+          thumbnailPath: '/thumb1.jpg',
+          tags: ['cat'],
+        },
+        {
+          id: '2',
+          path: '/img2.jpg',
+          thumbnailPath: '/thumb2.jpg',
+          tags: ['cat'],
+        },
+      ],
+    });
+
+    renderWithQuery('cat');
+
+    // API should be called
+    expect(searchImagesByTag).toHaveBeenCalledWith({ tag: 'cat' });
+
+    // Header should reflect the query
+    expect(screen.getByText('Results for "cat"')).toBeInTheDocument();
+
+    // Wait for images to render
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/No photos or videos found matching your search/i),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Please enter a search term/i),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  test('renders matching videos in their own section', async () => {
+    (searchImagesByTag as jest.Mock).mockResolvedValue({
+      success: true,
+      data: [],
+    });
+    (searchVideosByTag as jest.Mock).mockResolvedValue({
+      success: true,
+      data: [
+        {
+          id: 'v1',
+          path: '/clip.mp4',
+          thumbnailPath: '/clip-thumb.jpg',
+          folder_id: '1',
+          tags: ['beach'],
+          metadata: { name: 'clip.mp4' },
+        },
+      ],
+    });
+
+    renderWithQuery('beach');
+
+    expect(searchVideosByTag).toHaveBeenCalledWith({ tag: 'beach' });
+
+    await waitFor(() => {
+      expect(screen.getByText('Videos')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Play clip.mp4/i)).toBeInTheDocument();
+    });
+  });
+
+  test('renders no results state when both APIs return empty arrays', async () => {
+    (searchImagesByTag as jest.Mock).mockResolvedValue({
+      success: true,
+      data: [],
+    });
+
+    renderWithQuery('unicorn');
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/No photos or videos found matching your search/i),
+      ).toBeInTheDocument();
+    });
+  });
+
+  test('a photo-search error is shown inline and does not hide video results', async () => {
+    (searchImagesByTag as jest.Mock).mockRejectedValue(
+      new Error('Network Error'),
+    );
+    (searchVideosByTag as jest.Mock).mockResolvedValue({
+      success: true,
+      data: [
+        {
+          id: 'v1',
+          path: '/clip.mp4',
+          thumbnailPath: '/clip-thumb.jpg',
+          folder_id: '1',
+          tags: ['beach'],
+          metadata: { name: 'clip.mp4' },
+        },
+      ],
+    });
+
+    renderWithQuery('dog');
+
+    await waitFor(
+      () => {
+        // Inline photo error, not the full-screen takeover...
+        expect(
+          screen.getByText(/Couldn't load photo results/i),
+        ).toBeInTheDocument();
+        expect(screen.queryByText(/^Search Failed$/i)).not.toBeInTheDocument();
+        // ...and the videos still render.
+        expect(screen.getByText('Videos')).toBeInTheDocument();
+        expect(screen.getByLabelText(/Play clip.mp4/i)).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  test('a video-search error is shown inline and does not hide photo results', async () => {
+    (searchImagesByTag as jest.Mock).mockResolvedValue({
+      success: true,
+      data: [
+        {
+          id: '1',
+          path: '/img1.jpg',
+          thumbnailPath: '/thumb1.jpg',
+          tags: ['cat'],
+        },
+      ],
+    });
+    (searchVideosByTag as jest.Mock).mockRejectedValue(
+      new Error('Network Error'),
+    );
+
+    renderWithQuery('cat');
+
+    await waitFor(
+      () => {
+        // Inline video error, not the full-screen takeover...
+        expect(
+          screen.getByText(/Couldn't load video results/i),
+        ).toBeInTheDocument();
+        expect(screen.queryByText(/^Search Failed$/i)).not.toBeInTheDocument();
+        // ...and the photos still render.
+        expect(
+          screen.queryByText(/Couldn't load photo results/i),
+        ).not.toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  test('the Search Failed takeover appears only when both searches fail', async () => {
+    (searchImagesByTag as jest.Mock).mockRejectedValue(
+      new Error('Network Error'),
+    );
+    (searchVideosByTag as jest.Mock).mockRejectedValue(
+      new Error('Network Error'),
+    );
+
+    renderWithQuery('dog');
+
+    await waitFor(
+      () => {
+        expect(screen.getByText(/Search Failed/i)).toBeInTheDocument();
+        expect(screen.getByText(/Network Error/i)).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+  });
+});

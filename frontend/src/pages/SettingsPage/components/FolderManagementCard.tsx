@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Folder, Trash2, Check } from 'lucide-react';
+import { AlertTriangle, Folder, Trash2, Check, Loader2 } from 'lucide-react';
 
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -8,8 +8,11 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/app/store';
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
 
+import { Badge } from '@/components/ui/badge';
+
 import { useFolderOperations } from '@/hooks/useFolderOperations';
-import { FolderDetails } from '@/types/Folder';
+import { useLibraryProcessingStatus } from '@/hooks/useLibraryProcessingStatus';
+import { FolderDetails, isIndexingPending } from '@/types/Folder';
 import SettingsCard from './SettingsCard';
 
 /**
@@ -28,6 +31,8 @@ const FolderManagementCard: React.FC = () => {
   const taggingStatus = useSelector(
     (state: RootState) => state.folders.taggingStatus,
   );
+
+  const { semanticAvailable } = useLibraryProcessingStatus();
 
   const [visibleFoldersCount, setVisibleFoldersCount] = useState(6);
 
@@ -53,7 +58,7 @@ const FolderManagementCard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-3">
-                      <Folder className="h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
+                      <Folder className="h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400" />
                       <span className="text-foreground truncate">
                         {folder.folder_path}
                       </span>
@@ -89,7 +94,23 @@ const FolderManagementCard: React.FC = () => {
 
                 {folder.AI_Tagging && (
                   <div className="mt-3">
-                    {!folder.image_count ? (
+                    {isIndexingPending(folder.indexing_status) ? (
+                      <div className="flex items-center gap-4 [--radius:1.2rem]">
+                        <Badge className="bg-zinc-900 text-white hover:bg-black/90">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Indexing Folder...
+                        </Badge>
+                      </div>
+                    ) : folder.indexing_status === 'interrupted' ? (
+                      // A previous session died mid-walk, so nothing is
+                      // running and the folder is only partly indexed.
+                      <div className="flex items-center gap-4 [--radius:1.2rem]">
+                        <Badge variant="outline" className="text-amber-600">
+                          <AlertTriangle className="h-4 w-4" />
+                          Indexing was interrupted - sync to finish
+                        </Badge>
+                      </div>
+                    ) : !folder.image_count && !folder.video_count ? (
                       <div className="text-muted-foreground text-sm italic">
                         Folder is empty
                       </div>
@@ -128,6 +149,44 @@ const FolderManagementCard: React.FC = () => {
                               : 'bg-blue-500'
                           }
                         />
+
+                        {semanticAvailable && (
+                          <>
+                            <div className="text-muted-foreground mt-3 mb-1 flex items-center justify-between text-xs">
+                              <span>Semantic Indexing</span>
+                              <span
+                                className={
+                                  (taggingStatus[folder.folder_id]
+                                    ?.embedding_percentage ?? 0) >= 100
+                                    ? 'flex items-center gap-1 text-green-500'
+                                    : 'text-muted-foreground'
+                                }
+                              >
+                                {(taggingStatus[folder.folder_id]
+                                  ?.embedding_percentage ?? 0) >= 100 && (
+                                  <Check className="h-3 w-3" />
+                                )}
+                                {Math.round(
+                                  taggingStatus[folder.folder_id]
+                                    ?.embedding_percentage ?? 0,
+                                )}
+                                %
+                              </span>
+                            </div>
+                            <Progress
+                              value={
+                                taggingStatus[folder.folder_id]
+                                  ?.embedding_percentage ?? 0
+                              }
+                              indicatorClassName={
+                                (taggingStatus[folder.folder_id]
+                                  ?.embedding_percentage ?? 0) >= 100
+                                  ? 'bg-green-500'
+                                  : 'bg-blue-500'
+                              }
+                            />
+                          </>
+                        )}
                       </>
                     )}
                   </div>

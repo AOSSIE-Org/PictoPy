@@ -3,6 +3,7 @@ import loaderReducer from '@/features/loaderSlice';
 import onboardingReducer from '@/features/onboardingSlice';
 import searchReducer from '@/features/searchSlice';
 import imageReducer from '@/features/imageSlice';
+import videoReducer from '@/features/videoSlice';
 import faceClustersReducer from '@/features/faceClustersSlice';
 import infoDialogReducer from '@/features/infoDialogSlice';
 import globalAlertReducer from '@/features/globalAlertSlice';
@@ -13,6 +14,7 @@ export const rootReducer = combineReducers({
   loader: loaderReducer,
   onboarding: onboardingReducer,
   images: imageReducer,
+  videos: videoReducer,
   faceClusters: faceClustersReducer,
   infoDialog: infoDialogReducer,
   globalAlert: globalAlertReducer,

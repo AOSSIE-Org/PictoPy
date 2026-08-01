@@ -9,6 +9,8 @@ use tauri::path::BaseDirectory;
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, Window, WindowEvent};
 use tauri_plugin_autostart::ManagerExt;
+#[cfg(feature = "ci")]
+use tauri_plugin_shell::ShellExt;
 use tauri_plugin_store::StoreExt;
 
 const STORE_PATH: &str = "settings.json";
@@ -51,7 +53,12 @@ fn is_process_alive() -> bool {
 
 fn on_window_event(window: &Window, event: &WindowEvent) {
     if let WindowEvent::CloseRequested { api, .. } = event {
-        // Always take control of the close event.
+        // Secondary windows (e.g. model-manager) close normally.
+        if window.label() != "main" {
+            return;
+        }
+
+        // Take control of the main window's close event.
         api.prevent_close();
 
         let app = window.app_handle().clone();
@@ -65,6 +72,9 @@ fn on_window_event(window: &Window, event: &WindowEvent) {
         if close_to_tray {
             let _ = window.hide();
         } else {
+            if let Some(manager) = app.get_webview_window("model-manager") {
+                let _ = manager.close();
+            }
             let _ = kill_process_tree();
             app.exit(0);
         }
@@ -209,6 +219,27 @@ fn prod(_app: &tauri::AppHandle, _resource_path: &std::path::Path) -> Result<(),
 }
 
 #[tauri::command]
+async fn open_model_manager(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("model-manager") {
+        let _ = window.show();
+        let _ = window.set_focus();
+        return Ok(());
+    }
+
+    tauri::WebviewWindowBuilder::new(
+        &app,
+        "model-manager",
+        tauri::WebviewUrl::App("index.html?route=/model-manager".into()),
+    )
+    .title("Settings - Model Manager")
+    .inner_size(800.0, 600.0)
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
 fn enable_autostart(app: tauri::AppHandle) -> Result<(), String> {
     app.autolaunch().enable().map_err(|e| e.to_string())
 }
@@ -315,6 +346,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             services::get_resources_folder_path,
+            open_model_manager,
             enable_autostart,
             disable_autostart,
             is_autostart_enabled,

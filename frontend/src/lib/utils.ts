@@ -6,23 +6,62 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function getErrorMessage(error: unknown): string {
-  if (!error) return 'Something went wrong';
+export function getErrorMessage(
+  error: unknown,
+  fallback: string = 'Something went wrong',
+): string {
+  let extracted: string | null = null;
 
-  // Check if error is an AxiosError
-  if ((error as AxiosError).isAxiosError) {
-    const axiosErr = error as AxiosError<any>;
-    const resData = axiosErr.response?.data;
+  if (error) {
+    if ((error as AxiosError).isAxiosError) {
+      const axiosErr = error as AxiosError<any>;
+      const resData = axiosErr.response?.data;
 
-    // Case 1: Response exists and contains error/message fields
-    if (resData && (resData.error || resData.message)) {
-      return [resData.error, resData.message].filter(Boolean).join(' - ');
+      if (resData) {
+        if (resData.detail !== undefined) {
+          if (typeof resData.detail === 'string') {
+            extracted = resData.detail;
+          } else if (Array.isArray(resData.detail)) {
+            const msgs = resData.detail
+              .map((err: any) => err?.msg)
+              .filter(Boolean);
+            if (msgs.length > 0) extracted = msgs.join(' - ');
+          } else if (
+            typeof resData.detail === 'object' &&
+            resData.detail !== null
+          ) {
+            const detailObj = resData.detail as any;
+            if (detailObj.error || detailObj.message) {
+              extracted = [detailObj.error, detailObj.message]
+                .filter(Boolean)
+                .join(' - ');
+            }
+          }
+        } else if (resData.error || resData.message) {
+          extracted = [resData.error, resData.message]
+            .filter(Boolean)
+            .join(' - ');
+        }
+
+        if (extracted === null && axiosErr.message) {
+          extracted = `${axiosErr.code || 'ERROR'}: ${axiosErr.message}`;
+        }
+      } else {
+        extracted = `${axiosErr.code || 'ERROR'}: ${axiosErr.message}`;
+      }
+    } else if (error instanceof Error) {
+      extracted = error.message;
     }
-
-    // Case 2: Response missing error/message, fallback to Axios error details
-    return `${axiosErr.code || 'ERROR'}: ${axiosErr.message}`;
   }
 
-  // Fallback for non-Axios errors
-  return (error as Error).message || 'Something went wrong';
+  const finalResult = extracted !== null ? extracted : fallback;
+
+  if (typeof finalResult !== 'string' || finalResult.trim() === '') {
+    return fallback;
+  }
+
+  return finalResult;
 }
+
+export const formatTierLabel = (tier: string) =>
+  tier.charAt(0).toUpperCase() + tier.slice(1);

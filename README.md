@@ -34,22 +34,14 @@
 </p>
 
 <p align="center">
-  <strong>Download:</strong>
-  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_x64-setup.exe" >
-    <img src="docs/assets/readme-assets/btn-windows.svg" alt="Windows download button" style="height:34px;width:auto;" />
-  </a>
+  <strong>Download:</strong>&nbsp;&nbsp;&nbsp;
+  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_x64-setup.exe"><img src="docs/assets/readme-assets/btn-windows.svg" alt="Windows download button" height="34" align="absmiddle" /></a>
   &nbsp;&nbsp;
-  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_aarch64.app.tar.gz">
-    <img src="docs/assets/readme-assets/btn-macos.svg" alt="macOS download button" style="height:34px;width:auto;" />
-  </a>
+  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_aarch64.app.tar.gz"><img src="docs/assets/readme-assets/btn-macos.svg" alt="macOS download button" height="34" align="absmiddle" /></a>
   &nbsp;&nbsp;
-  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_amd64.deb">
-    <img src="docs/assets/readme-assets/btn-debian.svg" alt="Debian download button" style="height:34px;width:auto;" />
-  </a>
+  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest/download/PictoPy_1.1.0_amd64.deb"><img src="docs/assets/readme-assets/btn-debian.svg" alt="Debian download button" height="34" align="absmiddle" /></a>
   &nbsp;&nbsp;
-  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest">
-    <img src="docs/assets/readme-assets/btn-github.svg" alt="GitHub Releases button" style="height:34px;width:auto;" />
-  </a>
+  <a href="https://github.com/AOSSIE-Org/PictoPy/releases/latest"><img src="docs/assets/readme-assets/btn-github.svg" alt="GitHub Releases button" height="34" align="absmiddle" /></a>
 </p>
 
 # PictoPy

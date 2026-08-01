@@ -49,7 +49,11 @@ markdown_extensions:
       generic: true
   - footnotes
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.mark
   - attr_list
 
@@ -74,6 +78,7 @@ nav:
       - Python Backend Database: backend/backend_python/database.md
       - Python Backend Directory Structure: backend/backend_python/directory-structure.md
       - Python Backend Image Processing: backend/backend_python/image-processing.md
+      - Python Backend Semantic Search: backend/backend_python/semantic-search.md
       - Rust Backend API: backend/backend_rust/api.md
 
   - Frontend:

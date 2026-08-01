@@ -18,7 +18,9 @@
   "paths": {
     "/health": {
       "get": {
-        "tags": ["Health"],
+        "tags": [
+          "Health"
+        ],
         "summary": "Root",
         "operationId": "root_health_get",
         "responses": {
@@ -35,7 +37,9 @@
     },
     "/folders/add-folder": {
       "post": {
-        "tags": ["Folders"],
+        "tags": [
+          "Folders"
+        ],
         "summary": "Add Folder",
         "operationId": "add_folder_folders_add_folder_post",
         "requestBody": {
@@ -114,7 +118,9 @@
     },
     "/folders/enable-ai-tagging": {
       "post": {
-        "tags": ["Folders"],
+        "tags": [
+          "Folders"
+        ],
         "summary": "Enable Ai Tagging",
         "description": "Enable AI tagging for multiple folders.",
         "operationId": "enable_ai_tagging_folders_enable_ai_tagging_post",
@@ -174,7 +180,9 @@
     },
     "/folders/disable-ai-tagging": {
       "post": {
-        "tags": ["Folders"],
+        "tags": [
+          "Folders"
+        ],
         "summary": "Disable Ai Tagging",
         "description": "Disable AI tagging for multiple folders.",
         "operationId": "disable_ai_tagging_folders_disable_ai_tagging_post",
@@ -234,7 +242,9 @@
     },
     "/folders/delete-folders": {
       "delete": {
-        "tags": ["Folders"],
+        "tags": [
+          "Folders"
+        ],
         "summary": "Delete Folders",
         "description": "Delete multiple folders by their IDs.",
         "operationId": "delete_folders_folders_delete_folders_delete",
@@ -294,7 +304,9 @@
     },
     "/folders/sync-folder": {
       "post": {
-        "tags": ["Folders"],
+        "tags": [
+          "Folders"
+        ],
         "summary": "Sync Folder",
         "description": "Sync a folder by comparing filesystem folders with database entries and removing extra DB entries.",
         "operationId": "sync_folder_folders_sync_folder_post",
@@ -364,7 +376,9 @@
     },
     "/folders/all-folders": {
       "get": {
-        "tags": ["Folders"],
+        "tags": [
+          "Folders"
+        ],
         "summary": "Get All Folders",
         "description": "Get details of all folders in the database.",
         "operationId": "get_all_folders_folders_all_folders_get",
@@ -394,7 +408,9 @@
     },
     "/albums/": {
       "get": {
-        "tags": ["Albums"],
+        "tags": [
+          "Albums"
+        ],
         "summary": "Get Albums",
         "operationId": "get_albums_albums__get",
         "parameters": [
@@ -433,7 +449,9 @@
         }
       },
       "post": {
-        "tags": ["Albums"],
+        "tags": [
+          "Albums"
+        ],
         "summary": "Create Album",
         "operationId": "create_album_albums__post",
         "requestBody": {
@@ -472,7 +490,9 @@
     },
     "/albums/{album_id}": {
       "get": {
-        "tags": ["Albums"],
+        "tags": [
+          "Albums"
+        ],
         "summary": "Get Album",
         "operationId": "get_album_albums__album_id__get",
         "parameters": [
@@ -510,7 +530,9 @@
         }
       },
       "put": {
-        "tags": ["Albums"],
+        "tags": [
+          "Albums"
+        ],
         "summary": "Update Album",
         "operationId": "update_album_albums__album_id__put",
         "parameters": [
@@ -558,7 +580,9 @@
         }
       },
       "delete": {
-        "tags": ["Albums"],
+        "tags": [
+          "Albums"
+        ],
         "summary": "Delete Album",
         "operationId": "delete_album_albums__album_id__delete",
         "parameters": [
@@ -598,7 +622,9 @@
     },
     "/albums/{album_id}/images/get": {
       "post": {
-        "tags": ["Albums"],
+        "tags": [
+          "Albums"
+        ],
         "summary": "Get Album Images",
         "operationId": "get_album_images_albums__album_id__images_get_post",
         "parameters": [
@@ -648,7 +674,9 @@
     },
     "/albums/{album_id}/images": {
       "post": {
-        "tags": ["Albums"],
+        "tags": [
+          "Albums"
+        ],
         "summary": "Add Images To Album",
         "operationId": "add_images_to_album_albums__album_id__images_post",
         "parameters": [
@@ -696,7 +724,9 @@
         }
       },
       "delete": {
-        "tags": ["Albums"],
+        "tags": [
+          "Albums"
+        ],
         "summary": "Remove Images From Album",
         "operationId": "remove_images_from_album_albums__album_id__images_delete",
         "parameters": [
@@ -746,7 +776,9 @@
     },
     "/albums/{album_id}/images/{image_id}": {
       "delete": {
-        "tags": ["Albums"],
+        "tags": [
+          "Albums"
+        ],
         "summary": "Remove Image From Album",
         "operationId": "remove_image_from_album_albums__album_id__images__image_id__delete",
         "parameters": [
@@ -795,7 +827,9 @@
     },
     "/images/": {
       "get": {
-        "tags": ["Images"],
+        "tags": [
+          "Images"
+        ],
         "summary": "Get All Images",
         "description": "Get all images from the database.",
         "operationId": "get_all_images_images__get",
@@ -853,9 +887,162 @@
         }
       }
     },
+    "/images/search": {
+      "get": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Search Images By Tag",
+        "description": "Search images by tag name.",
+        "operationId": "search_images_by_tag_images_search_get",
+        "parameters": [
+          {
+            "name": "tag",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Tag name to search for",
+              "title": "Tag"
+            },
+            "description": "Tag name to search for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAllImagesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/images/semantic-search": {
+      "get": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Semantic Search Images",
+        "description": "Semantic search images by query text using SigLIP2.",
+        "operationId": "semantic_search_images_images_semantic_search_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Query text to search for",
+              "title": "Query"
+            },
+            "description": "Query text to search for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__routes__images__SemanticSearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/images/toggle-favourite": {
       "post": {
-        "tags": ["Images"],
+        "tags": [
+          "Images"
+        ],
         "summary": "Toggle Favourite",
         "description": "Toggle the favorite status of an image.",
         "operationId": "toggle_favourite_images_toggle_favourite_post",
@@ -863,7 +1050,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ToggleFavouriteRequest"
+                "$ref": "#/components/schemas/app__routes__images__ToggleFavouriteRequest"
               }
             }
           },
@@ -891,9 +1078,278 @@
         }
       }
     },
+    "/videos/": {
+      "get": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Get All Videos",
+        "description": "Get all videos from the database.",
+        "operationId": "get_all_videos_videos__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAllVideosResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/search": {
+      "get": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Search Videos By Tag",
+        "description": "Search videos by tag name.",
+        "operationId": "search_videos_by_tag_videos_search_get",
+        "parameters": [
+          {
+            "name": "tag",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Tag name to search for",
+              "title": "Tag"
+            },
+            "description": "Tag name to search for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAllVideosResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/semantic-search": {
+      "get": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Semantic Search Videos",
+        "description": "Semantic search videos by query text using SigLIP2 keyframe embeddings.",
+        "operationId": "semantic_search_videos_videos_semantic_search_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Query text to search for",
+              "title": "Query"
+            },
+            "description": "Query text to search for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__routes__videos__SemanticSearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/purge-frame-cache": {
+      "post": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Purge Frame Cache",
+        "description": "Delete the sampled keyframe JPEGs. Tags and semantic search survive:\nonly the on-disk frames are removed, not their embeddings.",
+        "operationId": "purge_frame_cache_videos_purge_frame_cache_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurgeFrameCacheResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/toggle-favourite": {
+      "post": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Toggle Favourite",
+        "description": "Toggle the favorite status of a video.",
+        "operationId": "toggle_favourite_videos_toggle_favourite_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__routes__videos__ToggleFavouriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToggleFavouriteResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/face-clusters/{cluster_id}": {
       "put": {
-        "tags": ["Face Clusters"],
+        "tags": [
+          "Face Clusters"
+        ],
         "summary": "Rename Cluster",
         "description": "Rename a face cluster by its ID.",
         "operationId": "rename_cluster_face_clusters__cluster_id__put",
@@ -974,7 +1430,9 @@
     },
     "/face-clusters/": {
       "get": {
-        "tags": ["Face Clusters"],
+        "tags": [
+          "Face Clusters"
+        ],
         "summary": "Get All Clusters",
         "description": "Get metadata for all face clusters including face counts.",
         "operationId": "get_all_clusters_face_clusters__get",
@@ -1004,7 +1462,9 @@
     },
     "/face-clusters/{cluster_id}/images": {
       "get": {
-        "tags": ["Face Clusters"],
+        "tags": [
+          "Face Clusters"
+        ],
         "summary": "Get Cluster Images",
         "description": "Get all images that contain faces belonging to a specific cluster.",
         "operationId": "get_cluster_images_face_clusters__cluster_id__images_get",
@@ -1065,7 +1525,9 @@
     },
     "/face-clusters/face-search": {
       "post": {
-        "tags": ["Face Clusters"],
+        "tags": [
+          "Face Clusters"
+        ],
         "summary": "Face Tagging",
         "operationId": "face_tagging_face_clusters_face_search_post",
         "parameters": [
@@ -1074,9 +1536,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/InputType",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/InputType"
+                }
+              ],
               "description": "Choose input type: 'path' or 'base64'",
-              "default": "path"
+              "default": "path",
+              "title": "Input Type"
             },
             "description": "Choose input type: 'path' or 'base64'"
           }
@@ -1135,7 +1602,9 @@
     },
     "/face-clusters/global-recluster": {
       "post": {
-        "tags": ["Face Clusters"],
+        "tags": [
+          "Face Clusters"
+        ],
         "summary": "Trigger Global Reclustering",
         "description": "Manually trigger global face reclustering.\nThis forces full reclustering regardless of the 24-hour rule.",
         "operationId": "trigger_global_reclustering_face_clusters_global_recluster_post",
@@ -1237,7 +1706,9 @@
     },
     "/user-preferences/": {
       "get": {
-        "tags": ["User Preferences"],
+        "tags": [
+          "User Preferences"
+        ],
         "summary": "Get User Preferences",
         "description": "Get user preferences from metadata.",
         "operationId": "get_user_preferences_user_preferences__get",
@@ -1265,7 +1736,9 @@
         }
       },
       "put": {
-        "tags": ["User Preferences"],
+        "tags": [
+          "User Preferences"
+        ],
         "summary": "Update User Preferences",
         "description": "Update user preferences in metadata.",
         "operationId": "update_user_preferences_user_preferences__put",
@@ -1323,62 +1796,52 @@
         }
       }
     },
-    "/api/memories/generate": {
+    "/memories/generate": {
       "post": {
-        "tags": ["memories"],
+        "tags": [
+          "Memories"
+        ],
         "summary": "Generate Memories",
-        "description": "SIMPLIFIED: Generate memories from ALL images.\n- GPS images \u2192 location-based memories\n- Non-GPS images \u2192 monthly date-based memories\n\nReturns simple breakdown: {location_count, date_count, total}",
-        "operationId": "generate_memories_api_memories_generate_post",
-        "parameters": [
-          {
-            "name": "location_radius_km",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "maximum": 100,
-              "minimum": 0.1,
-              "description": "Location clustering radius in km",
-              "default": 5.0,
-              "title": "Location Radius Km"
-            },
-            "description": "Location clustering radius in km"
+        "description": "Queue a curation run.\n\nReturns immediately; the run itself goes to the shared single-worker\nexecutor so it serializes behind indexing and semantic scoring rather than\nracing them.",
+        "operationId": "generate_memories_memories_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateMemoriesRequest"
+              }
+            }
           },
-          {
-            "name": "date_tolerance_days",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 30,
-              "minimum": 1,
-              "description": "Date tolerance in days",
-              "default": 3,
-              "title": "Date Tolerance Days"
-            },
-            "description": "Date tolerance in days"
-          },
-          {
-            "name": "min_images",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 10,
-              "minimum": 1,
-              "description": "Minimum images per memory",
-              "default": 2,
-              "title": "Min Images"
-            },
-            "description": "Minimum images per memory"
-          }
-        ],
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateMemoriesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
               }
             }
           },
@@ -1395,54 +1858,147 @@
         }
       }
     },
-    "/api/memories/timeline": {
+    "/memories/status": {
       "get": {
-        "tags": ["memories"],
-        "summary": "Get Timeline",
-        "description": "Get memories from the past N days as a timeline.\n\nThis endpoint:\n1. Calculates date range (today - N days to today)\n2. Fetches images within that date range\n3. Clusters them into memories\n4. Returns timeline of memories\n\nArgs:\n    days: Number of days to look back (default: 365 = 1 year)\n    location_radius_km: Location clustering radius (default: 5km)\n    date_tolerance_days: Date tolerance for temporal clustering (default: 3)\n\nReturns:\n    TimelineResponse with memories ordered by date\n\nRaises:\n    HTTPException: If database query fails",
-        "operationId": "get_timeline_api_memories_timeline_get",
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Get Memory Status",
+        "description": "Report scheduler state.\n\nPolled by the Tauri background task, which is why indexing_busy is computed\nhere: the desktop shell never opens the database itself.",
+        "operationId": "get_memory_status_memories_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryStatusResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/today": {
+      "get": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Get Today Memory",
+        "description": "Get the memory to surface now, or null if there is nothing to show.\n\nHaving nothing to surface is a normal state for a small or new library, so\nthis returns 200 with a null payload rather than a 404.",
+        "operationId": "get_today_memory_memories_today_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTodayMemoryResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories": {
+      "get": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "List Memories",
+        "description": "List memory cards, newest first. Backs the history filmstrip and grid.",
+        "operationId": "list_memories_memories_get",
         "parameters": [
           {
-            "name": "days",
+            "name": "limit",
             "in": "query",
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 3650,
-              "minimum": 1,
-              "description": "Number of days to look back",
-              "default": 365,
-              "title": "Days"
-            },
-            "description": "Number of days to look back"
-          },
-          {
-            "name": "location_radius_km",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
               "maximum": 100,
-              "minimum": 0.1,
-              "description": "Location clustering radius in km",
-              "default": 5.0,
-              "title": "Location Radius Km"
+              "minimum": 1,
+              "description": "Maximum memories to return",
+              "default": 30,
+              "title": "Limit"
             },
-            "description": "Location clustering radius in km"
+            "description": "Maximum memories to return"
           },
           {
-            "name": "date_tolerance_days",
+            "name": "offset",
             "in": "query",
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 30,
-              "minimum": 1,
-              "description": "Date tolerance in days",
-              "default": 3,
-              "title": "Date Tolerance Days"
+              "minimum": 0,
+              "description": "Number of memories to skip",
+              "default": 0,
+              "title": "Offset"
             },
-            "description": "Date tolerance in days"
+            "description": "Number of memories to skip"
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by anniversary, import_event or semantic_event",
+              "title": "Event Type"
+            },
+            "description": "Filter by anniversary, import_event or semantic_event"
+          },
+          {
+            "name": "include_viewed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include already-viewed memories",
+              "default": true,
+              "title": "Include Viewed"
+            },
+            "description": "Include already-viewed memories"
+          },
+          {
+            "name": "include_dismissed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include dismissed memories",
+              "default": false,
+              "title": "Include Dismissed"
+            },
+            "description": "Include dismissed memories"
           }
         ],
         "responses": {
@@ -1450,9 +2006,21 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/GetMemoriesResponse"
+                }
               }
             }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1467,58 +2035,23 @@
         }
       }
     },
-    "/api/memories/on-this-day": {
+    "/memories/{memory_id}": {
       "get": {
-        "tags": ["memories"],
-        "summary": "Get On This Day",
-        "description": "Get photos taken on this date in previous years.\n\nThis endpoint:\n1. Gets current month and day\n2. Searches for images from this month-day in all previous years\n3. Groups by year\n4. Returns images sorted by year (most recent first)\n\nReturns:\n    OnThisDayResponse with images from this date in previous years\n\nRaises:\n    HTTPException: If database query fails",
-        "operationId": "get_on_this_day_api_memories_on_this_day_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/memories/locations": {
-      "get": {
-        "tags": ["memories"],
-        "summary": "Get Locations",
-        "description": "Get all unique locations where photos were taken.\n\nThis endpoint:\n1. Fetches all images with GPS coordinates\n2. Clusters them by location\n3. Returns location clusters with photo counts\n4. Includes sample images for each location\n\nArgs:\n    location_radius_km: Location clustering radius (default: 5km)\n    max_sample_images: Maximum sample images per location (default: 5)\n\nReturns:\n    LocationsResponse with list of location clusters\n\nRaises:\n    HTTPException: If database query fails",
-        "operationId": "get_locations_api_memories_locations_get",
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Get Memory",
+        "description": "Get a single memory with its full image set.",
+        "operationId": "get_memory_memories__memory_id__get",
         "parameters": [
           {
-            "name": "location_radius_km",
-            "in": "query",
-            "required": false,
+            "name": "memory_id",
+            "in": "path",
+            "required": true,
             "schema": {
-              "type": "number",
-              "maximum": 100,
-              "minimum": 0.1,
-              "description": "Location clustering radius in km",
-              "default": 5.0,
-              "title": "Location Radius Km"
-            },
-            "description": "Location clustering radius in km"
-          },
-          {
-            "name": "max_sample_images",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 20,
-              "minimum": 1,
-              "description": "Max sample images per location",
-              "default": 5,
-              "title": "Max Sample Images"
-            },
-            "description": "Max sample images per location"
+              "type": "string",
+              "title": "Memory Id"
+            }
           }
         ],
         "responses": {
@@ -1526,9 +2059,173 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/GetMemoryResponse"
+                }
               }
             }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Update Memory",
+        "description": "Update a memory's viewed, dismissed or notified state.",
+        "operationId": "update_memory_memories__memory_id__patch",
+        "parameters": [
+          {
+            "name": "memory_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Memory Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateMemoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Delete Memory",
+        "description": "Delete a memory. Its curated image list cascades; the photos remain.",
+        "operationId": "delete_memory_memories__memory_id__delete",
+        "parameters": [
+          {
+            "name": "memory_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Memory Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteMemoryResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__memories__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1545,7 +2242,10 @@
     },
     "/shutdown": {
       "post": {
-        "tags": ["Shutdown", "Shutdown"],
+        "tags": [
+          "Shutdown",
+          "Shutdown"
+        ],
         "summary": "Shutdown",
         "description": "Gracefully shutdown the PictoPy backend.\n\nThis endpoint schedules backend server termination after response is sent.\nThe frontend is responsible for shutting down the sync service separately.\n\nReturns:\n    ShutdownResponse with status and message",
         "operationId": "shutdown_shutdown_post",
@@ -1565,7 +2265,9 @@
     },
     "/models/status": {
       "get": {
-        "tags": ["Models"],
+        "tags": [
+          "Models"
+        ],
         "summary": "Get Model Status",
         "description": "Returns the installation status of all models in the registry.",
         "operationId": "get_model_status_models_status_get",
@@ -1583,7 +2285,9 @@
     },
     "/models/hardware": {
       "get": {
-        "tags": ["Models"],
+        "tags": [
+          "Models"
+        ],
         "summary": "Get Hardware Recommendation",
         "description": "Returns hardware specs and the recommended model tier.",
         "operationId": "get_hardware_recommendation_models_hardware_get",
@@ -1601,7 +2305,9 @@
     },
     "/models/{model_key}": {
       "delete": {
-        "tags": ["Models"],
+        "tags": [
+          "Models"
+        ],
         "summary": "Delete Model",
         "description": "Deletes a specific model from disk.",
         "operationId": "delete_model_models__model_key__delete",
@@ -1640,7 +2346,9 @@
     },
     "/models/setup": {
       "post": {
-        "tags": ["Models"],
+        "tags": [
+          "Models"
+        ],
         "summary": "Setup Models",
         "description": "Initializes setup by starting downloads for a specific tier + required models.\nReturns a single task_id to track overall progress.",
         "operationId": "setup_models_models_setup_post",
@@ -1678,7 +2386,9 @@
     },
     "/models/download/{model_key}": {
       "post": {
-        "tags": ["Models"],
+        "tags": [
+          "Models"
+        ],
         "summary": "Start Download Model",
         "description": "Starts download for a specific model by key. Returns a task_id.",
         "operationId": "start_download_model_models_download__model_key__post",
@@ -1717,7 +2427,9 @@
     },
     "/models/download/{task_id}/progress": {
       "get": {
-        "tags": ["Models"],
+        "tags": [
+          "Models"
+        ],
         "summary": "Download Progress",
         "description": "Streams SSE progress for a given download task_id.",
         "operationId": "download_progress_models_download__task_id__progress_get",
@@ -1769,7 +2481,10 @@
           }
         },
         "type": "object",
-        "required": ["folder_id", "folder_path"],
+        "required": [
+          "folder_id",
+          "folder_path"
+        ],
         "title": "AddFolderData"
       },
       "AddFolderRequest": {
@@ -1803,7 +2518,9 @@
           }
         },
         "type": "object",
-        "required": ["folder_path"],
+        "required": [
+          "folder_path"
+        ],
         "title": "AddFolderRequest"
       },
       "AddFolderResponse": {
@@ -1846,7 +2563,9 @@
           }
         },
         "type": "object",
-        "required": ["success"],
+        "required": [
+          "success"
+        ],
         "title": "AddFolderResponse"
       },
       "Album": {
@@ -1869,7 +2588,12 @@
           }
         },
         "type": "object",
-        "required": ["album_id", "album_name", "description", "is_hidden"],
+        "required": [
+          "album_id",
+          "album_name",
+          "description",
+          "is_hidden"
+        ],
         "title": "Album"
       },
       "ClusterMetadata": {
@@ -1951,7 +2675,9 @@
           }
         },
         "type": "object",
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "title": "CreateAlbumRequest"
       },
       "CreateAlbumResponse": {
@@ -1966,7 +2692,10 @@
           }
         },
         "type": "object",
-        "required": ["success", "album_id"],
+        "required": [
+          "success",
+          "album_id"
+        ],
         "title": "CreateAlbumResponse"
       },
       "DeleteFoldersData": {
@@ -1984,7 +2713,10 @@
           }
         },
         "type": "object",
-        "required": ["deleted_count", "folder_ids"],
+        "required": [
+          "deleted_count",
+          "folder_ids"
+        ],
         "title": "DeleteFoldersData"
       },
       "DeleteFoldersRequest": {
@@ -1998,7 +2730,9 @@
           }
         },
         "type": "object",
-        "required": ["folder_ids"],
+        "required": [
+          "folder_ids"
+        ],
         "title": "DeleteFoldersRequest"
       },
       "DeleteFoldersResponse": {
@@ -2041,8 +2775,46 @@
           }
         },
         "type": "object",
-        "required": ["success"],
+        "required": [
+          "success"
+        ],
         "title": "DeleteFoldersResponse"
+      },
+      "DeleteMemoryData": {
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "title": "Memory Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory_id"
+        ],
+        "title": "DeleteMemoryData",
+        "description": "Outcome of a delete call."
+      },
+      "DeleteMemoryResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DeleteMemoryData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "DeleteMemoryResponse"
       },
       "FaceSearchRequest": {
         "properties": {
@@ -2116,6 +2888,23 @@
             "type": "integer",
             "title": "Image Count",
             "default": 0
+          },
+          "video_count": {
+            "type": "integer",
+            "title": "Video Count",
+            "default": 0
+          },
+          "indexing_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indexing Status",
+            "default": "completed"
           }
         },
         "type": "object",
@@ -2126,6 +2915,80 @@
           "AI_Tagging"
         ],
         "title": "FolderDetails"
+      },
+      "GenerateMemoriesData": {
+        "properties": {
+          "run_date": {
+            "type": "string",
+            "title": "Run Date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "complete",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "queued": {
+            "type": "boolean",
+            "title": "Queued"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_date",
+          "status",
+          "queued"
+        ],
+        "title": "GenerateMemoriesData",
+        "description": "Outcome of a generate call."
+      },
+      "GenerateMemoriesRequest": {
+        "properties": {
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "default": false
+          },
+          "reference_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Date"
+          }
+        },
+        "type": "object",
+        "title": "GenerateMemoriesRequest",
+        "description": "Request model for triggering a curation run."
+      },
+      "GenerateMemoriesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/GenerateMemoriesData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GenerateMemoriesResponse"
       },
       "GetAlbumImagesRequest": {
         "properties": {
@@ -2159,7 +3022,10 @@
           }
         },
         "type": "object",
-        "required": ["success", "image_ids"],
+        "required": [
+          "success",
+          "image_ids"
+        ],
         "title": "GetAlbumImagesResponse"
       },
       "GetAlbumResponse": {
@@ -2173,7 +3039,10 @@
           }
         },
         "type": "object",
-        "required": ["success", "data"],
+        "required": [
+          "success",
+          "data"
+        ],
         "title": "GetAlbumResponse"
       },
       "GetAlbumsResponse": {
@@ -2191,7 +3060,10 @@
           }
         },
         "type": "object",
-        "required": ["success", "albums"],
+        "required": [
+          "success",
+          "albums"
+        ],
         "title": "GetAlbumsResponse"
       },
       "GetAllFoldersData": {
@@ -2209,7 +3081,10 @@
           }
         },
         "type": "object",
-        "required": ["folders", "total_count"],
+        "required": [
+          "folders",
+          "total_count"
+        ],
         "title": "GetAllFoldersData"
       },
       "GetAllFoldersResponse": {
@@ -2252,7 +3127,9 @@
           }
         },
         "type": "object",
-        "required": ["success"],
+        "required": [
+          "success"
+        ],
         "title": "GetAllFoldersResponse"
       },
       "GetAllImagesResponse": {
@@ -2274,8 +3151,38 @@
           }
         },
         "type": "object",
-        "required": ["success", "message", "data"],
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
         "title": "GetAllImagesResponse"
+      },
+      "GetAllVideosResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/VideoData"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetAllVideosResponse"
       },
       "GetClusterImagesData": {
         "properties": {
@@ -2307,7 +3214,11 @@
           }
         },
         "type": "object",
-        "required": ["cluster_id", "images", "total_images"],
+        "required": [
+          "cluster_id",
+          "images",
+          "total_images"
+        ],
         "title": "GetClusterImagesData",
         "description": "Data model for cluster images response."
       },
@@ -2351,7 +3262,9 @@
           }
         },
         "type": "object",
-        "required": ["success"],
+        "required": [
+          "success"
+        ],
         "title": "GetClusterImagesResponse",
         "description": "Response model for getting images in a cluster."
       },
@@ -2366,7 +3279,9 @@
           }
         },
         "type": "object",
-        "required": ["clusters"],
+        "required": [
+          "clusters"
+        ],
         "title": "GetClustersData"
       },
       "GetClustersResponse": {
@@ -2409,8 +3324,125 @@
           }
         },
         "type": "object",
-        "required": ["success"],
+        "required": [
+          "success"
+        ],
         "title": "GetClustersResponse"
+      },
+      "GetMemoriesData": {
+        "properties": {
+          "memories": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryCard"
+            },
+            "type": "array",
+            "title": "Memories"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "GetMemoriesData",
+        "description": "Paginated memory cards."
+      },
+      "GetMemoriesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/GetMemoriesData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetMemoriesResponse"
+      },
+      "GetMemoryData": {
+        "properties": {
+          "memory": {
+            "$ref": "#/components/schemas/MemoryStory"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory"
+        ],
+        "title": "GetMemoryData",
+        "description": "A single memory story."
+      },
+      "GetMemoryResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/GetMemoryData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetMemoryResponse"
+      },
+      "GetTodayMemoryData": {
+        "properties": {
+          "memory": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemoryStory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "GetTodayMemoryData",
+        "description": "The memory to surface now, if any.\n\n`memory` is null rather than a 404 when nothing qualifies: this endpoint is\npolled, and an empty library is a normal state, not an error."
+      },
+      "GetTodayMemoryResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/GetTodayMemoryData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "GetTodayMemoryResponse"
       },
       "GetUserPreferencesResponse": {
         "properties": {
@@ -2427,7 +3459,11 @@
           }
         },
         "type": "object",
-        "required": ["success", "message", "user_preferences"],
+        "required": [
+          "success",
+          "message",
+          "user_preferences"
+        ],
         "title": "GetUserPreferencesResponse",
         "description": "Response model for getting user preferences"
       },
@@ -2499,7 +3535,9 @@
           }
         },
         "type": "object",
-        "required": ["success"],
+        "required": [
+          "success"
+        ],
         "title": "GlobalReclusterResponse"
       },
       "HTTPValidationError": {
@@ -2582,7 +3620,9 @@
           }
         },
         "type": "object",
-        "required": ["image_ids"],
+        "required": [
+          "image_ids"
+        ],
         "title": "ImageIdsRequest"
       },
       "ImageInCluster": {
@@ -2609,7 +3649,6 @@
           "metadata": {
             "anyOf": [
               {
-                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -2656,14 +3695,984 @@
           }
         },
         "type": "object",
-        "required": ["id", "path", "face_id"],
+        "required": [
+          "id",
+          "path",
+          "face_id"
+        ],
         "title": "ImageInCluster",
         "description": "Represents an image that contains faces from a specific cluster."
       },
       "InputType": {
         "type": "string",
-        "enum": ["path", "base64"],
+        "enum": [
+          "path",
+          "base64"
+        ],
         "title": "InputType"
+      },
+      "MemoriesPreferences": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "notifications_enabled": {
+            "type": "boolean",
+            "title": "Notifications Enabled",
+            "default": true
+          },
+          "story_music_enabled": {
+            "type": "boolean",
+            "title": "Story Music Enabled",
+            "default": false
+          },
+          "slide_duration_seconds": {
+            "type": "number",
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Slide Duration Seconds",
+            "default": 5.0
+          },
+          "include_videos": {
+            "type": "boolean",
+            "title": "Include Videos",
+            "default": true
+          },
+          "min_images": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 2.0,
+            "title": "Min Images",
+            "default": 5
+          },
+          "max_images": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 5.0,
+            "title": "Max Images",
+            "default": 30
+          },
+          "weights": {
+            "$ref": "#/components/schemas/MemoryScoringWeights"
+          }
+        },
+        "type": "object",
+        "title": "MemoriesPreferences",
+        "description": "Memory generation and delivery preferences."
+      },
+      "MemoriesPreferencesUpdate": {
+        "properties": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "notifications_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notifications Enabled"
+          },
+          "story_music_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Story Music Enabled"
+          },
+          "slide_duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 30.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slide Duration Seconds"
+          },
+          "include_videos": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Videos"
+          },
+          "min_images": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 50.0,
+                "minimum": 2.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Images"
+          },
+          "max_images": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 5.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Images"
+          },
+          "weights": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemoryScoringWeightsUpdate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "MemoriesPreferencesUpdate",
+        "description": "Partial update for memories preferences; every field is optional."
+      },
+      "MemoryCard": {
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "title": "Memory Id"
+          },
+          "dedupe_key": {
+            "type": "string",
+            "title": "Dedupe Key"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "anniversary",
+              "import_event",
+              "semantic_event"
+            ],
+            "title": "Event Type"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "complete",
+              "failed",
+              "empty"
+            ],
+            "title": "Status"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "subtitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtitle"
+          },
+          "place_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Label"
+          },
+          "center_lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Center Lat"
+          },
+          "center_lon": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Center Lon"
+          },
+          "surface_date": {
+            "type": "string",
+            "title": "Surface Date"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count",
+            "default": 0
+          },
+          "video_count": {
+            "type": "integer",
+            "title": "Video Count",
+            "default": 0
+          },
+          "cover_image_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Id"
+          },
+          "cover_thumbnail_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Thumbnail Path"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "default": 0.0
+          },
+          "notified_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notified At"
+          },
+          "viewed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewed At"
+          },
+          "dismissed": {
+            "type": "boolean",
+            "title": "Dismissed",
+            "default": false
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory_id",
+          "dedupe_key",
+          "event_type",
+          "status",
+          "title",
+          "surface_date"
+        ],
+        "title": "MemoryCard",
+        "description": "Memory summary, without the image set. Used by the history filmstrip."
+      },
+      "MemoryImageItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "thumbnailPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnailpath"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite",
+            "default": false
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "sort_order"
+        ],
+        "title": "MemoryImageItem",
+        "description": "A single curated image within a memory."
+      },
+      "MemoryScoringWeights": {
+        "properties": {
+          "favourite": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Favourite",
+            "default": 0.22
+          },
+          "known_people": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Known People",
+            "default": 0.2
+          },
+          "event_strength": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Event Strength",
+            "default": 0.18
+          },
+          "face_presence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Face Presence",
+            "default": 0.12
+          },
+          "semantic_confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Semantic Confidence",
+            "default": 0.1
+          },
+          "gps_novelty": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Gps Novelty",
+            "default": 0.1
+          },
+          "in_album": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "In Album",
+            "default": 0.08
+          }
+        },
+        "type": "object",
+        "title": "MemoryScoringWeights",
+        "description": "Relative importance of each memory scoring signal.\n\nWeights are normalized to sum to 1.0 on validation, so a UI slider set\nnever has to land on an exact total."
+      },
+      "MemoryScoringWeightsUpdate": {
+        "properties": {
+          "favourite": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favourite"
+          },
+          "known_people": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Known People"
+          },
+          "event_strength": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Strength"
+          },
+          "face_presence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Face Presence"
+          },
+          "semantic_confidence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Semantic Confidence"
+          },
+          "gps_novelty": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gps Novelty"
+          },
+          "in_album": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "In Album"
+          }
+        },
+        "type": "object",
+        "title": "MemoryScoringWeightsUpdate",
+        "description": "Partial update for scoring weights.\n\nDeliberately does not normalize: rescaling a single slider to 1.0 would\nwipe out the others. Stored values stay raw and are normalized on read."
+      },
+      "MemoryStatusData": {
+        "properties": {
+          "run_date": {
+            "type": "string",
+            "title": "Run Date"
+          },
+          "run_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "running",
+                  "complete",
+                  "failed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Status"
+          },
+          "run_started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Started At"
+          },
+          "indexing_busy": {
+            "type": "boolean",
+            "title": "Indexing Busy",
+            "default": false
+          },
+          "unviewed_count": {
+            "type": "integer",
+            "title": "Unviewed Count",
+            "default": 0
+          },
+          "latest_memory_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Memory Id"
+          },
+          "memories_enabled": {
+            "type": "boolean",
+            "title": "Memories Enabled",
+            "default": true
+          },
+          "notifications_enabled": {
+            "type": "boolean",
+            "title": "Notifications Enabled",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_date"
+        ],
+        "title": "MemoryStatusData",
+        "description": "Scheduler-facing snapshot. Polled by the Tauri background task."
+      },
+      "MemoryStatusResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MemoryStatusData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "MemoryStatusResponse"
+      },
+      "MemoryStory": {
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "title": "Memory Id"
+          },
+          "dedupe_key": {
+            "type": "string",
+            "title": "Dedupe Key"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "anniversary",
+              "import_event",
+              "semantic_event"
+            ],
+            "title": "Event Type"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "complete",
+              "failed",
+              "empty"
+            ],
+            "title": "Status"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "subtitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtitle"
+          },
+          "place_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Label"
+          },
+          "center_lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Center Lat"
+          },
+          "center_lon": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Center Lon"
+          },
+          "surface_date": {
+            "type": "string",
+            "title": "Surface Date"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count",
+            "default": 0
+          },
+          "video_count": {
+            "type": "integer",
+            "title": "Video Count",
+            "default": 0
+          },
+          "cover_image_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Id"
+          },
+          "cover_thumbnail_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Thumbnail Path"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "default": 0.0
+          },
+          "notified_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notified At"
+          },
+          "viewed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewed At"
+          },
+          "dismissed": {
+            "type": "boolean",
+            "title": "Dismissed",
+            "default": false
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryImageItem"
+            },
+            "type": "array",
+            "title": "Images"
+          },
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryVideoItem"
+            },
+            "type": "array",
+            "title": "Videos"
+          },
+          "signals": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory_id",
+          "dedupe_key",
+          "event_type",
+          "status",
+          "title",
+          "surface_date"
+        ],
+        "title": "MemoryStory",
+        "description": "A memory with its full image set, for the story viewer."
+      },
+      "MemoryVideoItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "thumbnailPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnailpath"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite",
+            "default": false
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "sort_order"
+        ],
+        "title": "MemoryVideoItem",
+        "description": "A short clip curated into a memory, sharing the images' sort_order."
       },
       "MetadataModel": {
         "properties": {
@@ -2885,6 +4894,29 @@
         ],
         "title": "MultiPersonSearchResponse"
       },
+      "PurgeFrameCacheResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "bytes_reclaimed": {
+            "type": "integer",
+            "title": "Bytes Reclaimed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "bytes_reclaimed"
+        ],
+        "title": "PurgeFrameCacheResponse"
+      },
       "RenameClusterData": {
         "properties": {
           "cluster_id": {
@@ -2897,7 +4929,10 @@
           }
         },
         "type": "object",
-        "required": ["cluster_id", "cluster_name"],
+        "required": [
+          "cluster_id",
+          "cluster_name"
+        ],
         "title": "RenameClusterData"
       },
       "RenameClusterRequest": {
@@ -2908,7 +4943,9 @@
           }
         },
         "type": "object",
-        "required": ["cluster_name"],
+        "required": [
+          "cluster_name"
+        ],
         "title": "RenameClusterRequest"
       },
       "RenameClusterResponse": {
@@ -2951,8 +4988,145 @@
           }
         },
         "type": "object",
-        "required": ["success"],
+        "required": [
+          "success"
+        ],
         "title": "RenameClusterResponse"
+      },
+      "ScoredVideoData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          },
+          "thumbnailPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnailpath"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/VideoMetadataModel"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "best_frame_timestamp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Frame Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "folder_id",
+          "thumbnailPath",
+          "metadata",
+          "isFavourite",
+          "score"
+        ],
+        "title": "ScoredVideoData"
+      },
+      "SemanticSearchImage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          },
+          "thumbnailPath": {
+            "type": "string",
+            "title": "Thumbnailpath"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/MetadataModel"
+          },
+          "isTagged": {
+            "type": "boolean",
+            "title": "Istagged"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "folder_id",
+          "thumbnailPath",
+          "metadata",
+          "isTagged",
+          "isFavourite",
+          "score"
+        ],
+        "title": "SemanticSearchImage"
       },
       "SetupRequest": {
         "properties": {
@@ -2962,7 +5136,9 @@
           }
         },
         "type": "object",
-        "required": ["tier"],
+        "required": [
+          "tier"
+        ],
         "title": "SetupRequest"
       },
       "ShutdownResponse": {
@@ -2977,7 +5153,10 @@
           }
         },
         "type": "object",
-        "required": ["status", "message"],
+        "required": [
+          "status",
+          "message"
+        ],
         "title": "ShutdownResponse",
         "description": "Response model for shutdown endpoint."
       },
@@ -2993,7 +5172,10 @@
           }
         },
         "type": "object",
-        "required": ["success", "msg"],
+        "required": [
+          "success",
+          "msg"
+        ],
         "title": "SuccessResponse"
       },
       "SyncFolderData": {
@@ -3052,7 +5234,10 @@
           }
         },
         "type": "object",
-        "required": ["folder_path", "folder_id"],
+        "required": [
+          "folder_path",
+          "folder_id"
+        ],
         "title": "SyncFolderRequest"
       },
       "SyncFolderResponse": {
@@ -3095,19 +5280,33 @@
           }
         },
         "type": "object",
-        "required": ["success"],
+        "required": [
+          "success"
+        ],
         "title": "SyncFolderResponse"
       },
-      "ToggleFavouriteRequest": {
+      "ToggleFavouriteResponse": {
         "properties": {
-          "image_id": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "video_id": {
             "type": "string",
-            "title": "Image Id"
+            "title": "Video Id"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
           }
         },
         "type": "object",
-        "required": ["image_id"],
-        "title": "ToggleFavouriteRequest"
+        "required": [
+          "success",
+          "video_id",
+          "isFavourite"
+        ],
+        "title": "ToggleFavouriteResponse"
       },
       "UpdateAITaggingData": {
         "properties": {
@@ -3124,7 +5323,10 @@
           }
         },
         "type": "object",
-        "required": ["updated_count", "folder_ids"],
+        "required": [
+          "updated_count",
+          "folder_ids"
+        ],
         "title": "UpdateAITaggingData"
       },
       "UpdateAITaggingRequest": {
@@ -3138,7 +5340,9 @@
           }
         },
         "type": "object",
-        "required": ["folder_ids"],
+        "required": [
+          "folder_ids"
+        ],
         "title": "UpdateAITaggingRequest"
       },
       "UpdateAITaggingResponse": {
@@ -3181,7 +5385,9 @@
           }
         },
         "type": "object",
-        "required": ["success"],
+        "required": [
+          "success"
+        ],
         "title": "UpdateAITaggingResponse"
       },
       "UpdateAlbumRequest": {
@@ -3230,8 +5436,73 @@
           }
         },
         "type": "object",
-        "required": ["name", "is_hidden"],
+        "required": [
+          "name",
+          "is_hidden"
+        ],
         "title": "UpdateAlbumRequest"
+      },
+      "UpdateMemoryRequest": {
+        "properties": {
+          "viewed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewed"
+          },
+          "dismissed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dismissed"
+          },
+          "notified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notified"
+          }
+        },
+        "type": "object",
+        "title": "UpdateMemoryRequest",
+        "description": "Request model for updating a memory's user-facing state."
+      },
+      "UpdateMemoryResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/GetMemoryData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "UpdateMemoryResponse"
       },
       "UpdateUserPreferencesRequest": {
         "properties": {
@@ -3239,7 +5510,11 @@
             "anyOf": [
               {
                 "type": "string",
-                "enum": ["nano", "small", "medium"]
+                "enum": [
+                  "nano",
+                  "small",
+                  "medium"
+                ]
               },
               {
                 "type": "null"
@@ -3257,6 +5532,29 @@
               }
             ],
             "title": "Gpu Acceleration"
+          },
+          "Video_Frame_Interval": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 300.0,
+                "minimum": 0.5
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Frame Interval"
+          },
+          "memories": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemoriesPreferencesUpdate"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -3278,7 +5576,11 @@
           }
         },
         "type": "object",
-        "required": ["success", "message", "user_preferences"],
+        "required": [
+          "success",
+          "message",
+          "user_preferences"
+        ],
         "title": "UpdateUserPreferencesResponse",
         "description": "Response model for updating user preferences"
       },
@@ -3286,7 +5588,11 @@
         "properties": {
           "YOLO_model_size": {
             "type": "string",
-            "enum": ["nano", "small", "medium"],
+            "enum": [
+              "nano",
+              "small",
+              "medium"
+            ],
             "title": "Yolo Model Size",
             "default": "small"
           },
@@ -3294,6 +5600,16 @@
             "type": "boolean",
             "title": "Gpu Acceleration",
             "default": true
+          },
+          "Video_Frame_Interval": {
+            "type": "number",
+            "maximum": 300.0,
+            "minimum": 0.5,
+            "title": "Video Frame Interval",
+            "default": 5.0
+          },
+          "memories": {
+            "$ref": "#/components/schemas/MemoriesPreferences"
           }
         },
         "type": "object",
@@ -3326,8 +5642,254 @@
           }
         },
         "type": "object",
-        "required": ["loc", "msg", "type"],
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
         "title": "ValidationError"
+      },
+      "VideoData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          },
+          "thumbnailPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnailpath"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/VideoMetadataModel"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "folder_id",
+          "thumbnailPath",
+          "metadata",
+          "isFavourite"
+        ],
+        "title": "VideoData"
+      },
+      "VideoMetadataModel": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "date_created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Created"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "fps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fps"
+          },
+          "file_location": {
+            "type": "string",
+            "title": "File Location"
+          },
+          "file_size": {
+            "type": "integer",
+            "title": "File Size"
+          },
+          "item_type": {
+            "type": "string",
+            "title": "Item Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "date_created",
+          "width",
+          "height",
+          "file_location",
+          "file_size",
+          "item_type"
+        ],
+        "title": "VideoMetadataModel"
+      },
+      "app__routes__images__SemanticSearchData": {
+        "properties": {
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/SemanticSearchImage"
+            },
+            "type": "array",
+            "title": "Images"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "images",
+          "total"
+        ],
+        "title": "SemanticSearchData"
+      },
+      "app__routes__images__SemanticSearchResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/app__routes__images__SemanticSearchData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "SemanticSearchResponse"
+      },
+      "app__routes__images__ToggleFavouriteRequest": {
+        "properties": {
+          "image_id": {
+            "type": "string",
+            "title": "Image Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_id"
+        ],
+        "title": "ToggleFavouriteRequest"
+      },
+      "app__routes__videos__SemanticSearchData": {
+        "properties": {
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/ScoredVideoData"
+            },
+            "type": "array",
+            "title": "Videos"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "videos",
+          "total"
+        ],
+        "title": "SemanticSearchData"
+      },
+      "app__routes__videos__SemanticSearchResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/app__routes__videos__SemanticSearchData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "SemanticSearchResponse"
+      },
+      "app__routes__videos__ToggleFavouriteRequest": {
+        "properties": {
+          "video_id": {
+            "type": "string",
+            "title": "Video Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video_id"
+        ],
+        "title": "ToggleFavouriteRequest"
       },
       "app__schemas__face_clusters__ErrorResponse": {
         "properties": {
@@ -3418,6 +5980,30 @@
         ],
         "title": "ErrorResponse"
       },
+      "app__schemas__memories__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "error",
+          "message"
+        ],
+        "title": "ErrorResponse",
+        "description": "Error response model"
+      },
       "app__schemas__user_preferences__ErrorResponse": {
         "properties": {
           "success": {
@@ -3441,6 +6027,29 @@
         ],
         "title": "ErrorResponse",
         "description": "Error response model"
+      },
+      "app__schemas__videos__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "error"
+        ],
+        "title": "ErrorResponse"
       }
     }
   }

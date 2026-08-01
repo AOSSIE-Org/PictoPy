@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { getErrorMessage } from '@/lib/utils';
 
 type MutationState = {
   isPending?: boolean;
@@ -114,7 +115,7 @@ export const useMutationFeedback = (
   // Handle error state
   useEffect(() => {
     if (isError && showError) {
-      const errorMsg = error instanceof Error ? error.message : errorMessage;
+      const errorMsg = getErrorMessage(error, errorMessage);
 
       dispatch(
         showInfoDialog({
