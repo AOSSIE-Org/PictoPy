@@ -84,8 +84,11 @@ export const SearchResults = () => {
     queryFn: fetchModelStatus,
   });
 
-  // Named clusters are needed before the query can be classified, so the
-  // tag/semantic searches wait on them rather than racing a people search.
+  // Auto mode has to classify the query before searching, so it waits on the
+  // named clusters rather than racing a people search. An explicit
+  // tag/semantic mode never consults them, so it must not pay for the fetch.
+  const isAutoMode = mode === 'auto';
+
   const {
     data: clustersData,
     isSuccess: isClustersSuccess,
@@ -93,10 +96,10 @@ export const SearchResults = () => {
   } = usePictoQuery({
     queryKey: ['clusters'],
     queryFn: fetchAllClusters,
-    enabled: !!query,
+    enabled: !!query && isAutoMode,
   });
 
-  const clustersSettled = isClustersSuccess || isClustersError;
+  const clustersSettled = !isAutoMode || isClustersSuccess || isClustersError;
 
   const peopleQuery = useMemo(() => {
     // An explicit mode=tag/semantic is the user opting out of people search.

@@ -316,7 +316,7 @@ describe('SearchResults Page', () => {
       expect(fetchMultiPersonSearch).not.toHaveBeenCalled();
     });
 
-    test('mode=tag opts out of people search', async () => {
+    test('mode=tag opts out of people search without fetching clusters', async () => {
       (searchImagesByTag as jest.Mock).mockResolvedValue({
         success: true,
         data: [],
@@ -325,6 +325,10 @@ describe('SearchResults Page', () => {
       render(<SearchResults />, {
         initialRoutes: ['/search?value=Person%20A%20and%20Person%20B&mode=tag'],
       });
+
+      // An explicit mode never consults the clusters, so it must not wait on
+      // (or pay for) the fetch.
+      expect(fetchAllClusters).not.toHaveBeenCalled();
 
       await waitFor(() =>
         expect(searchImagesByTag).toHaveBeenCalledWith({
