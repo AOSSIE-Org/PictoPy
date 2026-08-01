@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AxiosError } from 'axios';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 import { VideoCard } from '@/components/Media/VideoCard';
 import { VideoPlayerOverlay } from '@/components/VideoPlayer/VideoPlayerOverlay';
-import { Image, ScoredImage, ScoredVideo, Video } from '@/types/Media';
+import { Cluster, Image, ScoredImage, ScoredVideo, Video } from '@/types/Media';
 import { setCurrentViewIndex, setImages } from '@/features/imageSlice';
 import {
   setCurrentViewIndex as setCurrentVideoViewIndex,
@@ -22,6 +22,8 @@ import {
   searchVideosByTag,
   semanticSearchVideos,
   fetchModelStatus,
+  fetchAllClusters,
+  fetchMultiPersonSearch,
   SemanticSearchAPIResponse,
   SemanticSearchVideosAPIResponse,
 } from '@/api/api-functions';
@@ -31,7 +33,10 @@ import { isSemanticSearchAvailable } from '@/types/models';
 import { useNavigate, useSearchParams } from 'react-router';
 import { ROUTES } from '@/constants/routes';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, AlertCircle, Users } from 'lucide-react';
+import { resolvePeopleQuery } from '@/utils/peopleQuery';
+import { formatPeopleTitle, getPersonName } from '@/utils/personUtils';
 
 interface TagSearchResult extends APIResponse {
   resultType: 'tag';
@@ -70,10 +75,58 @@ export const SearchResults = () => {
   const displayVideos = useSelector(selectVideos);
 
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [peopleSearchError, setPeopleSearchError] = useState<string | null>(
+    null,
+  );
 
   const { data: statusData, isSuccess: isStatusSuccess } = usePictoQuery({
     queryKey: ['models', 'status'],
     queryFn: fetchModelStatus,
+  });
+
+  // Named clusters are needed before the query can be classified, so the
+  // tag/semantic searches wait on them rather than racing a people search.
+  const {
+    data: clustersData,
+    isSuccess: isClustersSuccess,
+    isError: isClustersError,
+  } = usePictoQuery({
+    queryKey: ['clusters'],
+    queryFn: fetchAllClusters,
+    enabled: !!query,
+  });
+
+  const clustersSettled = isClustersSuccess || isClustersError;
+
+  const peopleQuery = useMemo(() => {
+    // An explicit mode=tag/semantic is the user opting out of people search.
+    if (!clustersSettled || mode !== 'auto') return null;
+    const clusters = (clustersData?.data?.clusters ?? []) as Cluster[];
+    return resolvePeopleQuery(query, clusters);
+  }, [query, mode, clustersData, clustersSettled]);
+
+  const isPeopleQuery = peopleQuery !== null;
+
+  const peopleClusterIds = useMemo(
+    () => peopleQuery?.matched.map((cluster) => cluster.cluster_id) ?? [],
+    [peopleQuery],
+  );
+
+  const {
+    data: peopleData,
+    isLoading: isPeopleLoading,
+    isSuccess: isPeopleSuccess,
+    isError: isPeopleError,
+    error: peopleError,
+    errorMessage: peopleErrorMessage,
+  } = usePictoQuery({
+    queryKey: ['people-search', peopleClusterIds, peopleQuery?.matchMode],
+    queryFn: () =>
+      fetchMultiPersonSearch({
+        cluster_ids: peopleClusterIds,
+        match_mode: peopleQuery!.matchMode,
+      }),
+    enabled: isPeopleQuery,
   });
 
   const semanticAvailable =
@@ -114,7 +167,7 @@ export const SearchResults = () => {
 
         return { ...tagResponse, resultType: 'tag' };
       },
-      enabled: !!query,
+      enabled: !!query && clustersSettled && !isPeopleQuery,
     });
 
   // Videos run as their own query: they share the mode logic but a video
@@ -157,7 +210,7 @@ export const SearchResults = () => {
 
       return { ...tagResponse, resultType: 'tag' };
     },
-    enabled: !!query,
+    enabled: !!query && clustersSettled && !isPeopleQuery,
   });
 
   useEffect(() => {
@@ -188,6 +241,52 @@ export const SearchResults = () => {
     : null;
 
   const effectiveMode = data?.resultType || mode;
+
+  useEffect(() => {
+    if (!isPeopleQuery) return;
+
+    if (isPeopleLoading) {
+      setPeopleSearchError(null);
+      dispatch(showLoader('Searching people'));
+    } else if (isPeopleError) {
+      setPeopleSearchError(
+        getErrorMessage(peopleError, peopleErrorMessage) ||
+          'Failed to search for people',
+      );
+      dispatch(hideLoader());
+    } else if (isPeopleSuccess) {
+      setPeopleSearchError(null);
+      const images = (peopleData?.data?.images ?? []) as Array<
+        Partial<Image> & { id: string; path: string }
+      >;
+      dispatch(
+        setImages(
+          images.map((img) => ({
+            id: img.id,
+            path: img.path,
+            thumbnailPath: img.thumbnailPath || '',
+            metadata: img.metadata,
+            folder_id: '',
+            isTagged: true,
+          })) as Image[],
+        ),
+      );
+      dispatch(hideLoader());
+    }
+
+    return () => {
+      dispatch(hideLoader());
+    };
+  }, [
+    isPeopleQuery,
+    peopleData,
+    isPeopleLoading,
+    isPeopleSuccess,
+    isPeopleError,
+    peopleError,
+    peopleErrorMessage,
+    dispatch,
+  ]);
 
   useEffect(() => {
     if (isLoading) {
@@ -248,7 +347,52 @@ export const SearchResults = () => {
       </div>
       <h1 className="mb-6 text-2xl font-bold">Results for "{query}"</h1>
 
-      {isSuccess &&
+      {peopleQuery && (
+        <div className="border-primary/20 bg-primary/5 mb-4 rounded-lg border px-4 py-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Users className="text-muted-foreground h-4 w-4 shrink-0" />
+            <span className="text-muted-foreground text-sm">
+              {peopleQuery.matchMode === 'match_any'
+                ? 'Photos with any of:'
+                : 'Photos with all of:'}
+            </span>
+            {peopleQuery.matched.map((cluster) => (
+              <Badge
+                key={cluster.cluster_id}
+                variant="secondary"
+                className="text-xs"
+              >
+                {getPersonName(cluster)}
+              </Badge>
+            ))}
+          </div>
+          {peopleQuery.unmatched.length > 0 && (
+            <p className="text-muted-foreground mt-1.5 text-xs">
+              No one is named{' '}
+              {formatPeopleTitle(peopleQuery.unmatched, 'match_all')} — that
+              part of your search was ignored.
+            </p>
+          )}
+        </div>
+      )}
+
+      {isPeopleQuery ? (
+        <div className="mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            className="hover:bg-accent cursor-pointer rounded-full text-xs"
+            onClick={() =>
+              navigate(
+                `/${ROUTES.SEARCH}?value=${encodeURIComponent(query)}&mode=tag`,
+              )
+            }
+          >
+            Search this as text instead
+          </Button>
+        </div>
+      ) : (
+        isSuccess &&
         displayImages.length > 0 &&
         effectiveMode === 'tag' &&
         semanticAvailable && (
@@ -266,12 +410,47 @@ export const SearchResults = () => {
               Search by meaning instead
             </Button>
           </div>
-        )}
+        )
+      )}
 
       {!query ? (
         <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
           <p>Please enter a search term to find photos and videos.</p>
         </div>
+      ) : isPeopleQuery ? (
+        // People search is face-cluster backed, so it covers photos only.
+        peopleSearchError ? (
+          <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
+            <AlertCircle className="text-destructive mb-4 h-12 w-12" />
+            <h3 className="text-destructive mb-2 text-xl font-medium">
+              Search Failed
+            </h3>
+            <p>{peopleSearchError}</p>
+          </div>
+        ) : displayImages.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {displayImages.map((image, index) => (
+              <div key={image.id} className="group relative">
+                <ImageCard
+                  image={image}
+                  imageIndex={index}
+                  className="w-full transition-transform duration-200 group-hover:scale-105"
+                  onClick={() => dispatch(setCurrentViewIndex(index))}
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          isPeopleSuccess && (
+            <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
+              <p>
+                {peopleQuery?.matchMode === 'match_all'
+                  ? 'No photos found with all of these people in them.'
+                  : 'No photos found with these people in them.'}
+              </p>
+            </div>
+          )
+        )
       ) : searchError && videoSearchError ? (
         // Only a total failure (both media types) takes over the whole view.
         <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
