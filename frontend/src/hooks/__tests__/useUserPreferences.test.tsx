@@ -72,23 +72,41 @@ const mountLoaded = async () => {
 const sentBodies = () =>
   mockUpdateUserPreferences.mock.calls.map(([body]) => body);
 
+/** Mirrors the route's _deep_merge, so a patch behaves as the server does. */
+const deepMerge = (base: any, updates: any): any => {
+  const merged = { ...base };
+  for (const [key, value] of Object.entries(updates ?? {})) {
+    const isPlainObject = (v: unknown) =>
+      typeof v === 'object' && v !== null && !Array.isArray(v);
+    merged[key] =
+      isPlainObject(value) && isPlainObject(merged[key])
+        ? deepMerge(merged[key], value)
+        : value;
+  }
+  return merged;
+};
+
+/** Stands in for the stored blob so reads and writes agree. */
+let stored: UserPreferencesData;
+const payload = (user_preferences: UserPreferencesData) => ({
+  success: true,
+  message: 'ok',
+  user_preferences,
+});
+
 beforeEach(() => {
+  stored = JSON.parse(JSON.stringify(baseline));
+
   mockGetUserPreferences
     .mockReset()
-    // The refetch after a successful write would otherwise overwrite local
-    // state from the server and mask what optimistic apply and rollback did.
-    .mockResolvedValueOnce({
-      success: true,
-      message: 'ok',
-      user_preferences: baseline,
-    })
-    .mockImplementation(() => new Promise(() => {}));
+    .mockImplementation(async () => payload(stored));
 
-  mockUpdateUserPreferences.mockReset().mockResolvedValue({
-    success: true,
-    message: 'ok',
-    user_preferences: baseline,
-  });
+  mockUpdateUserPreferences
+    .mockReset()
+    .mockImplementation(async (request: UpdateUserPreferencesRequest) => {
+      stored = deepMerge(stored, request);
+      return payload(stored);
+    });
 });
 
 describe('useUserPreferences', () => {
@@ -128,7 +146,8 @@ describe('useUserPreferences', () => {
         if (request.Video_Frame_Interval !== undefined) {
           throw new Error('save failed');
         }
-        return { success: true, message: 'ok', user_preferences: baseline };
+        stored = deepMerge(stored, request);
+        return payload(stored);
       },
     );
 
@@ -168,6 +187,65 @@ describe('useUserPreferences', () => {
 
     // A rejection left unhandled in the queue would stall every later write.
     expect(result.current.preferences.Video_Frame_Interval).toBe(10);
+  });
+
+  it('ignores a load that lands while a write is pending', async () => {
+    const result = await mountLoaded();
+
+    // A read already in flight when the write starts. It carries someone
+    // else's change, so react-query does not dedupe it, and the pre-write
+    // value for the key the write is about to change.
+    mockGetUserPreferences.mockResolvedValue(
+      payload({
+        ...JSON.parse(JSON.stringify(baseline)),
+        YOLO_model_size: 'small',
+        Video_Frame_Interval: 5,
+      }),
+    );
+
+    let release = () => {};
+    mockUpdateUserPreferences.mockImplementationOnce(
+      async (request: UpdateUserPreferencesRequest) => {
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        stored = deepMerge(stored, request);
+        return payload(stored);
+      },
+    );
+
+    let write: Promise<unknown> = Promise.resolve();
+    await act(async () => {
+      write = result.current.updateVideoFrameInterval(30);
+      await result.current.refetch();
+    });
+
+    // Applying the load here would revert the optimistic value and hand the
+    // next queued write a stale base.
+    expect(result.current.preferences.Video_Frame_Interval).toBe(30);
+
+    await act(async () => {
+      release();
+      await write;
+    });
+
+    expect(result.current.preferences.Video_Frame_Interval).toBe(30);
+  });
+
+  it('adopts the merged result the server returns', async () => {
+    const result = await mountLoaded();
+
+    // The server normalizes weights on read, so the response is the truth
+    // rather than what was optimistically applied.
+    mockUpdateUserPreferences.mockImplementationOnce(async () =>
+      payload(deepMerge(stored, { Video_Frame_Interval: 2 })),
+    );
+
+    await act(async () => {
+      await result.current.updateVideoFrameInterval(30);
+    });
+
+    expect(result.current.preferences.Video_Frame_Interval).toBe(2);
   });
 
   it('merges a memories patch over the stored weights', async () => {

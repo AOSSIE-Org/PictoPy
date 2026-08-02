@@ -54,8 +54,15 @@ export const useUserPreferences = () => {
     queryFn: getUserPreferences,
   });
 
+  // Non-zero from the moment a write is queued until it settles. A load that
+  // was already in flight carries server state from before that write, so
+  // applying it would revert the change and hand the next queued write a stale
+  // base to build on.
+  const pendingWrites = useRef(0);
+
   // Update local state when preferences data changes
   useEffect(() => {
+    if (pendingWrites.current > 0) return;
     if (
       preferencesQuery.data?.success &&
       preferencesQuery.data.user_preferences
@@ -65,13 +72,11 @@ export const useUserPreferences = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preferencesQuery.data]);
 
-  // Mutation for updating user preferences
+  // Mutation for updating user preferences. It does not refetch on success:
+  // the response already carries the merged result, and reconciling inside the
+  // queue is what keeps a stale read from overtaking a newer write.
   const updatePreferencesMutation = usePictoMutation({
     mutationFn: updateUserPreferences,
-    onSuccess: () => {
-      // Invalidate and refetch preferences
-      preferencesQuery.refetch();
-    },
   });
 
   // Apply feedback to the update preferences mutation but hide loader and success dialog
@@ -105,15 +110,27 @@ export const useUserPreferences = () => {
       request: UpdateUserPreferencesRequest;
     },
   ) => {
+    // Counted here rather than in `send` so a load cannot slip in between the
+    // click and the write reaching the front of the queue.
+    pendingWrites.current += 1;
+
     const send = async () => {
       const current = preferencesRef.current;
       const { next, request } = build(current);
       applyPreferences(next);
       try {
-        return await updatePreferencesMutation.mutateAsync(request);
+        const response = await updatePreferencesMutation.mutateAsync(request);
+        // The PUT returns the merged, validated result. Adopting it here keeps
+        // reconciliation inside the queue, where nothing else is in flight.
+        if (response?.success && response.user_preferences) {
+          applyPreferences(response.user_preferences);
+        }
+        return response;
       } catch (err) {
         applyPreferences(current);
         throw err;
+      } finally {
+        pendingWrites.current -= 1;
       }
     };
 
