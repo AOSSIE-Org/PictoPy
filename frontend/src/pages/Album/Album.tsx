@@ -2,14 +2,7 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
-import {
-  Plus,
-  RefreshCw,
-  ArrowDownUp,
-  Grid2x2,
-  ChevronDown,
-  Check,
-} from 'lucide-react';
+import { Plus, RefreshCw, ArrowDownAZ, Images } from 'lucide-react';
 import { AlbumCard } from '@/components/Albums/AlbumCard';
 import { CreateAlbumDialog } from '@/components/Albums/CreateAlbumDialog';
 import { EditAlbumDialog } from '@/components/Albums/EditAlbumDialog';
@@ -25,11 +18,16 @@ import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { Album } from '@/types/Album';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  GallerySortDropdown,
+  type SortOption,
+} from '@/components/GallerySortDropdown';
+
+type AlbumSortValue = 'name' | 'photoCount';
+
+const ALBUM_SORT_OPTIONS: SortOption<AlbumSortValue>[] = [
+  { value: 'name', label: 'Name (A-Z)', icon: ArrowDownAZ },
+  { value: 'photoCount', label: 'Photo Count', icon: Images },
+];
 
 function Albums() {
   const dispatch = useDispatch();
@@ -42,7 +40,7 @@ function Albums() {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [albumToDelete, setAlbumToDelete] = useState<Album | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<'name' | 'photoCount'>('name');
+  const [sortBy, setSortBy] = useState<AlbumSortValue>('name');
 
   const {
     data: albumsData,
@@ -170,31 +168,11 @@ function Albums() {
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <ArrowDownUp className="mr-2 h-4 w-4" />
-                Sort by:
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onSelect={() => setSortBy('name')}>
-                <Grid2x2 className="mr-2 h-4 w-4" />
-                Name (A-Z){' '}
-                {sortBy === 'name' ? <Check className="ml-2 h-4 w-4" /> : ''}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setSortBy('photoCount')}>
-                <Grid2x2 className="mr-2 h-4 w-4" />
-                Photo Count{' '}
-                {sortBy === 'photoCount' ? (
-                  <Check className="ml-2 h-4 w-4" />
-                ) : (
-                  ''
-                )}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <GallerySortDropdown
+            value={sortBy}
+            onValueChange={setSortBy}
+            options={ALBUM_SORT_OPTIONS}
+          />
           <Button size="sm" onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Create Album
