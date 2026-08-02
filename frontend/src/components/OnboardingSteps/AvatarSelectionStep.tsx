@@ -110,36 +110,36 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
   ) {
     return null;
   }
+  const progressPercent = Math.round(
+    ((currentStepDisplayIndex + 1) / totalSteps) * 100,
+  );
 
   return (
     <>
-      <Card className="flex max-h-full w-1/2 flex-col gap-3 border p-6">
-        <CardHeader className="px-0 pt-1 pb-1!">
+      <Card className="flex max-h-full w-1/2 flex-col gap-3 border p-4">
+        <CardHeader className="p-3">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
               Step {currentStepDisplayIndex + 1} of {totalSteps}
             </span>
-            <span>
-              {Math.round(((currentStepDisplayIndex + 1) / totalSteps) * 100)}%
-            </span>
+            <span>{progressPercent}%</span>
           </div>
-          <div className="bg-muted mb-2 h-1.5 w-full rounded-full">
+          <div className="bg-muted mb-4 h-2 w-full rounded-full">
             <div
               className="bg-primary h-full rounded-full transition-all duration-300"
-              style={{
-                width: `${((currentStepDisplayIndex + 1) / totalSteps) * 100}%`,
-              }}
+              style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <CardTitle className="mt-1 text-xl font-semibold">
+
+          <CardTitle className="text-xl font-semibold">
             Welcome to PictoPy
           </CardTitle>
-          <CardDescription className="mt-1 text-base">
+          <CardDescription className="mt-2 text-base">
             Let's get to know you a little better
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="flex-1 space-y-5 overflow-y-auto p-1 px-2">
+        <CardContent className="flex-1 space-y-5 overflow-y-auto p-1 px-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* Avatar + Name row */}
           <div className="flex items-end gap-3 rounded-lg border bg-neutral-900 p-3">
             <button
@@ -221,7 +221,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
           </div>
         </CardContent>
 
-        <CardFooter className="flex justify-end p-1">
+        <CardFooter className="flex justify-end p-3">
           <Button
             className="cursor-pointer px-4 py-1 text-sm"
             onClick={handleNextClick}
