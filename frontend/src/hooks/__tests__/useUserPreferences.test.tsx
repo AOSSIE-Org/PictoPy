@@ -72,18 +72,33 @@ const mountLoaded = async () => {
 const sentBodies = () =>
   mockUpdateUserPreferences.mock.calls.map(([body]) => body);
 
+/**
+ * Let the query effect run.
+ *
+ * A response reaches the cache a tick before the effect that would apply it,
+ * so asserting straight after the request resolves reads state that has not
+ * been overwritten yet, whether or not anything guards it.
+ */
+const settle = async () => {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+};
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
 /** Mirrors the route's _deep_merge, so a patch behaves as the server does. */
-const deepMerge = (base: any, updates: any): any => {
-  const merged = { ...base };
-  for (const [key, value] of Object.entries(updates ?? {})) {
-    const isPlainObject = (v: unknown) =>
-      typeof v === 'object' && v !== null && !Array.isArray(v);
+const deepMerge = <T extends object>(base: T, updates: object): T => {
+  const merged = { ...base } as Record<string, unknown>;
+  for (const [key, value] of Object.entries(updates)) {
+    const existing = merged[key];
     merged[key] =
-      isPlainObject(value) && isPlainObject(merged[key])
-        ? deepMerge(merged[key], value)
+      isPlainObject(value) && isPlainObject(existing)
+        ? deepMerge(existing, value)
         : value;
   }
-  return merged;
+  return merged as T;
 };
 
 /** Stands in for the stored blob so reads and writes agree. */
@@ -228,8 +243,49 @@ describe('useUserPreferences', () => {
       release();
       await write;
     });
+    await settle();
 
     expect(result.current.preferences.Video_Frame_Interval).toBe(30);
+  });
+
+  it('ignores a load that started before a write but lands after it', async () => {
+    const result = await mountLoaded();
+
+    // Held open until the write has fully settled, so the pending-write guard
+    // is back to zero by the time the response arrives.
+    let releaseRead = () => {};
+    mockGetUserPreferences.mockImplementationOnce(async () => {
+      await new Promise<void>((resolve) => {
+        releaseRead = resolve;
+      });
+      return payload({
+        ...JSON.parse(JSON.stringify(baseline)),
+        YOLO_model_size: 'small',
+        Video_Frame_Interval: 5,
+      });
+    });
+
+    let read: Promise<unknown> = Promise.resolve();
+    await act(async () => {
+      read = result.current.refetch();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await result.current.updateVideoFrameInterval(30);
+    });
+    expect(result.current.preferences.Video_Frame_Interval).toBe(30);
+
+    await act(async () => {
+      releaseRead();
+      await read;
+    });
+    await settle();
+
+    // A read that starts first can still finish last, so arrival order alone
+    // cannot tell this response apart from a current one.
+    expect(result.current.preferences.Video_Frame_Interval).toBe(30);
+    expect(result.current.preferences.YOLO_model_size).toBe('medium');
   });
 
   it('adopts the merged result the server returns', async () => {

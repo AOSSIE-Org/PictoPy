@@ -48,21 +48,30 @@ export const useUserPreferences = () => {
     setPreferences(next);
   };
 
+  // Non-zero from the moment a write is queued until it settles.
+  const pendingWrites = useRef(0);
+  // Bumped when a write is queued. Any read already in flight at that point
+  // describes the server from before it, however late the response arrives,
+  // which is why this counts reads rather than timing them: a read that starts
+  // first can still finish last.
+  const writeEpoch = useRef(0);
+  const readEpoch = useRef(0);
+
   // Query for user preferences
   const preferencesQuery = usePictoQuery({
     queryKey: ['userPreferences'],
-    queryFn: getUserPreferences,
+    queryFn: () => {
+      readEpoch.current = writeEpoch.current;
+      return getUserPreferences();
+    },
   });
-
-  // Non-zero from the moment a write is queued until it settles. A load that
-  // was already in flight carries server state from before that write, so
-  // applying it would revert the change and hand the next queued write a stale
-  // base to build on.
-  const pendingWrites = useRef(0);
 
   // Update local state when preferences data changes
   useEffect(() => {
+    // Applying stale server state would revert the write and hand the next
+    // queued one a stale base to build on.
     if (pendingWrites.current > 0) return;
+    if (readEpoch.current !== writeEpoch.current) return;
     if (
       preferencesQuery.data?.success &&
       preferencesQuery.data.user_preferences
@@ -113,6 +122,7 @@ export const useUserPreferences = () => {
     // Counted here rather than in `send` so a load cannot slip in between the
     // click and the write reaching the front of the queue.
     pendingWrites.current += 1;
+    writeEpoch.current += 1;
 
     const send = async () => {
       const current = preferencesRef.current;
