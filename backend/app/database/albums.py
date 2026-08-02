@@ -21,6 +21,14 @@ def db_create_albums_table() -> None:
             )
             """
         )
+        # Shipped databases predate the is_hidden -> is_locked rename and the
+        # cover_image_path column, and CREATE IF NOT EXISTS won't add either.
+        cursor.execute("PRAGMA table_info(albums)")
+        columns = {row[1] for row in cursor.fetchall()}
+        if "is_locked" not in columns and "is_hidden" in columns:
+            cursor.execute("ALTER TABLE albums RENAME COLUMN is_hidden TO is_locked")
+        if "cover_image_path" not in columns:
+            cursor.execute("ALTER TABLE albums ADD COLUMN cover_image_path TEXT")
         conn.commit()
     finally:
         if conn is not None:

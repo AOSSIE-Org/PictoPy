@@ -103,6 +103,42 @@ class TestAlbumTables:
         db_create_albums_table()
         db_create_album_images_table()
 
+    def test_migrates_a_legacy_is_hidden_schema(self, test_db):
+        """Databases predating the rename must gain is_locked/cover_image_path.
+
+        CREATE IF NOT EXISTS is a no-op on an existing table, so without the
+        guarded ALTERs every shipped database 500s on the first album read.
+        """
+        conn = sqlite3.connect(test_db)
+        conn.execute("DROP TABLE albums")
+        conn.execute(
+            """
+            CREATE TABLE albums (
+                album_id TEXT PRIMARY KEY,
+                album_name TEXT UNIQUE,
+                description TEXT,
+                is_hidden BOOLEAN DEFAULT 0,
+                password_hash TEXT
+            )
+            """
+        )
+        conn.execute(
+            "INSERT INTO albums (album_id, album_name, is_hidden) VALUES (?, ?, ?)",
+            ("legacy-1", "Old", 1),
+        )
+        conn.commit()
+        conn.close()
+
+        db_create_albums_table()
+
+        conn = sqlite3.connect(test_db)
+        columns = [row[1] for row in conn.execute("PRAGMA table_info(albums)")]
+        conn.close()
+        assert "is_hidden" not in columns
+        assert {"is_locked", "cover_image_path"} <= set(columns)
+        # the legacy row survives, its flag carried over under the new name
+        assert [row[1:4] for row in db_get_all_albums()] == [("Old", None, 1)]
+
     @pytest.mark.parametrize(
         "create_table", [db_create_albums_table, db_create_album_images_table]
     )
