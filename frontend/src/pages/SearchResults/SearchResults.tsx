@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AxiosError } from 'axios';
 import { ImageCard } from '@/components/Media/ImageCard';
@@ -79,6 +79,21 @@ export const SearchResults = () => {
     null,
   );
 
+  // react-query only aborts a superseded query's signal from inside a
+  // useEffect (post-commit), so there's a brief window right after a new
+  // search starts where an older, still-running queryFn can reach its
+  // manual dispatch below with signal.aborted still false. This ref is
+  // updated synchronously during render -- no such window -- so it always
+  // reflects the truly current search, even before that effect runs.
+  const searchKey = `${query}::${mode}`;
+  const searchKeyRef = useRef<string | null>(null);
+  const searchGenerationRef = useRef(0);
+  if (searchKeyRef.current !== searchKey) {
+    searchKeyRef.current = searchKey;
+    searchGenerationRef.current += 1;
+  }
+  const currentSearchGeneration = searchGenerationRef.current;
+
   const { data: statusData, isSuccess: isStatusSuccess } = usePictoQuery({
     queryKey: ['models', 'status'],
     queryFn: fetchModelStatus,
@@ -137,41 +152,51 @@ export const SearchResults = () => {
       ? isSemanticSearchAvailable(statusData.data)
       : false;
 
-  const { data, isLoading, isSuccess, isError, errorMessage, error } =
-    usePictoQuery({
-      queryKey: ['search-results', query, mode],
-      queryFn: async (): Promise<SearchQueryResult> => {
-        if (mode === 'semantic') {
-          const res = await semanticSearchImages({ query });
-          return { ...res, resultType: 'semantic' };
-        }
-        if (mode === 'tag') {
-          const res = await searchImagesByTag({ tag: query });
-          return { ...res, resultType: 'tag' };
-        }
+  const {
+    data,
+    isLoading,
+    isFetching,
+    isSuccess,
+    isError,
+    errorMessage,
+    error,
+  } = usePictoQuery({
+    queryKey: ['search-results', query, mode],
+    queryFn: async (): Promise<SearchQueryResult> => {
+      const myGeneration = currentSearchGeneration;
+      if (mode === 'semantic') {
+        const res = await semanticSearchImages({ query });
+        return { ...res, resultType: 'semantic' };
+      }
+      if (mode === 'tag') {
+        const res = await searchImagesByTag({ tag: query });
+        return { ...res, resultType: 'tag' };
+      }
 
-        // auto mode
-        const tagResponse = await searchImagesByTag({ tag: query });
-        if (tagResponse.data && tagResponse.data.length > 0) {
-          return { ...tagResponse, resultType: 'tag' };
-        }
-
-        const statusRes = await fetchModelStatus();
-        const semAvailable =
-          statusRes.success && statusRes.data
-            ? isSemanticSearchAvailable(statusRes.data)
-            : false;
-
-        if (semAvailable) {
-          dispatch(showLoader('Searching by meaning...'));
-          const semResponse = await semanticSearchImages({ query });
-          return { ...semResponse, resultType: 'semantic' };
-        }
-
+      // auto mode
+      const tagResponse = await searchImagesByTag({ tag: query });
+      if (tagResponse.data && tagResponse.data.length > 0) {
         return { ...tagResponse, resultType: 'tag' };
-      },
-      enabled: !!query && clustersSettled && !isPeopleQuery,
-    });
+      }
+
+      const statusRes = await fetchModelStatus();
+      const semAvailable =
+        statusRes.success && statusRes.data
+          ? isSemanticSearchAvailable(statusRes.data)
+          : false;
+
+      if (semAvailable) {
+        if (myGeneration === searchGenerationRef.current) {
+          dispatch(showLoader('Searching by meaning...'));
+        }
+        const semResponse = await semanticSearchImages({ query });
+        return { ...semResponse, resultType: 'semantic' };
+      }
+
+      return { ...tagResponse, resultType: 'tag' };
+    },
+    enabled: !!query && clustersSettled && !isPeopleQuery,
+  });
 
   // Videos run as their own query: they share the mode logic but a video
   // failure (e.g. no frames embedded yet) must not blank the image results,
@@ -330,6 +355,7 @@ export const SearchResults = () => {
     isSuccess,
     isError,
     isLoading,
+    isFetching,
     errorMessage,
     error,
     mode,
