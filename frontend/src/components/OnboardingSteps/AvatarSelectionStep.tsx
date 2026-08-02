@@ -16,9 +16,13 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Pencil } from 'lucide-react';
 import { avatars } from '@/constants/avatars';
 import { AppFeatures } from '@/components/OnboardingSteps/AppFeatures';
 import { RootState } from '@/app/store';
+import { AvatarCropDialog } from '@/components/Dialog/avatarCropDialog';
+import { pickImageFile } from '@/utils/PFPutils/pickImagePFP';
+import { showGlobalAlert } from '@/features/globalAlertSlice';
 
 interface AvatarNameSelectionStepProps {
   stepIndex: number;
@@ -41,6 +45,8 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
     (state: RootState) => state.onboarding.isEditing,
   );
   const [longWordError, setLongWordError] = useState(false);
+  const [rawImage, setRawImage] = useState<string | null>(null);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
 
   useEffect(() => {
     if (
@@ -54,6 +60,28 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
   const handleAvatarSelect = (avatar: string) => {
     setLocalAvatar(avatar);
+  };
+
+  const handleUploadClick = async () => {
+    try {
+      const dataUrl = await pickImageFile();
+      if (!dataUrl) return;
+      setRawImage(dataUrl);
+      setCropDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to read selected image:', error);
+      dispatch(
+        showGlobalAlert({
+          title: 'Upload failed',
+          message: 'Could not read the selected image. Please try again.',
+        }),
+      );
+    }
+  };
+
+  const handleCropped = (dataUrl: string) => {
+    setLocalAvatar(dataUrl);
+    setRawImage(null);
   };
 
   const handleNameChange = (value: string) => {
@@ -82,6 +110,9 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
   ) {
     return null;
   }
+  const progressPercent = Math.round(
+    ((currentStepDisplayIndex + 1) / totalSteps) * 100,
+  );
 
   return (
     <>
@@ -91,49 +122,78 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
             <span>
               Step {currentStepDisplayIndex + 1} of {totalSteps}
             </span>
-            <span>
-              {Math.round(((currentStepDisplayIndex + 1) / totalSteps) * 100)}%
-            </span>
+            <span>{progressPercent}%</span>
           </div>
-          <div className="bg-muted mb-2 h-1.5 w-full rounded-full">
+          <div className="bg-muted mb-4 h-2 w-full rounded-full">
             <div
               className="bg-primary h-full rounded-full transition-all duration-300"
-              style={{
-                width: `${((currentStepDisplayIndex + 1) / totalSteps) * 100}%`,
-              }}
+              style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <CardTitle className="mt-1 text-xl font-semibold">
+
+          <CardTitle className="text-xl font-semibold">
             Welcome to PictoPy
           </CardTitle>
-          <CardDescription className="mt-1 text-base">
+          <CardDescription className="mt-2 text-base">
             Let's get to know you a little better
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="flex-1 space-y-6 overflow-y-hidden p-1 px-2">
-          <div className="mb-5">
-            <Label htmlFor="name" className="mb-1 block text-sm">
-              Your Name
-            </Label>
-            <Input
-              id="name"
-              placeholder="Enter your name"
-              value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              className="h-8 text-sm placeholder:text-sm"
-            />
-            {longWordError && (
-              <p className="mt-2 text-xs text-red-500">
-                A single word in your name cannot exceed 30 characters.
-              </p>
-            )}
+        <CardContent className="flex-1 space-y-5 overflow-y-auto p-1 px-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {/* Avatar + Name row */}
+          <div className="flex items-end gap-3 rounded-lg border bg-neutral-900 p-3">
+            <button
+              type="button"
+              onClick={handleUploadClick}
+              aria-label="Change profile avatar"
+              className="group relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
+            >
+              {selectedAvatar ? (
+                <img
+                  src={selectedAvatar}
+                  alt="Current avatar"
+                  className="h-14 w-14 rounded-full object-cover ring-2 ring-blue-500"
+                />
+              ) : (
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-neutral-800 ring-2 ring-blue-500">
+                  <span className="text-[9px] font-medium tracking-wide text-neutral-500 uppercase select-none">
+                    Preview
+                  </span>
+                </div>
+              )}
+              <span className="border-background absolute right-0 bottom-0 flex h-5 w-5 items-center justify-center rounded-full border-2 bg-blue-500 text-white transition-transform group-hover:scale-105">
+                <Pencil className="h-3 w-3" aria-hidden="true" />
+              </span>
+            </button>
+
+            <div className="min-w-0 flex-1">
+              <Label
+                htmlFor="name"
+                className="mb-1 block text-xs font-medium tracking-wide text-neutral-500"
+              >
+                Your Name
+              </Label>
+              <Input
+                id="name"
+                placeholder="Enter your name"
+                value={name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                className="placeholder:text-md h-11 border-0 bg-transparent py-0 pr-0 pl-2 text-lg font-normal tracking-tight shadow-none placeholder:font-normal placeholder:tracking-normal placeholder:text-neutral-500 focus-visible:ring-0"
+              />
+              {longWordError && (
+                <p className="mt-1.5 text-xs text-red-500">
+                  A single word cannot exceed 30 characters.
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Avatar Grid */}
-          <div className="mb-5">
-            <Label className="mb-2 block text-sm">Choose Your Avatar</Label>
-            <div className="grid grid-cols-4 gap-3">
+          <div>
+            <div className="mb-3 pl-2">
+              <Label className="text-sm">Choose Your Avatar</Label>
+            </div>
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
               {avatars.map((avatar) => {
                 const isSelected = selectedAvatar === avatar;
                 return (
@@ -141,7 +201,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                     type="button"
                     key={avatar}
                     onClick={() => handleAvatarSelect(avatar)}
-                    className={`bg-background relative inline-flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300 ${
+                    className={`bg-background relative inline-flex h-15 w-15 items-center justify-center rounded-full transition-all duration-300 ${
                       isSelected
                         ? 'border-primary ring-primary ring-offset-background ring-2 ring-offset-2'
                         : 'border-muted'
@@ -150,7 +210,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                     <img
                       src={avatar}
                       alt="Avatar"
-                      className={`h-20 w-20 rounded-full object-cover transition-all duration-300 ${
+                      className={`h-15 w-15 rounded-full object-cover transition-all duration-300 ${
                         isSelected ? 'scale-105' : ''
                       }`}
                     />
@@ -173,6 +233,13 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
       </Card>
 
       <AppFeatures />
+
+      <AvatarCropDialog
+        open={cropDialogOpen}
+        onOpenChange={setCropDialogOpen}
+        imageSrc={rawImage}
+        onCropped={handleCropped}
+      />
     </>
   );
 };
