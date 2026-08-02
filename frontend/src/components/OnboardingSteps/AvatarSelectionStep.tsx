@@ -141,28 +141,28 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
         <CardContent className="flex-1 space-y-5 overflow-y-auto p-1 px-2">
           {/* Avatar + Name row */}
-          <div className="flex items-center gap-3 rounded-lg border bg-neutral-900 p-3">
+          <div className="flex items-end gap-3 rounded-lg border bg-neutral-900 p-3">
             <button
               type="button"
               onClick={handleUploadClick}
               aria-label="Change profile avatar"
-              className="group relative inline-flex h-20 w-20 shrink-0 items-center justify-center rounded-full"
+              className="group relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
             >
               {selectedAvatar ? (
                 <img
                   src={selectedAvatar}
                   alt="Current avatar"
-                  className="h-20 w-20 rounded-full object-cover ring-2 ring-blue-500"
+                  className="h-14 w-14 rounded-full object-cover ring-2 ring-blue-500"
                 />
               ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-neutral-800 ring-2 ring-blue-500">
-                  <span className="text-[10px] font-medium tracking-wide text-neutral-500 uppercase select-none">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-neutral-800 ring-2 ring-blue-500">
+                  <span className="text-[9px] font-medium tracking-wide text-neutral-500 uppercase select-none">
                     Preview
                   </span>
                 </div>
               )}
-              <span className="border-background absolute right-0 bottom-0 flex h-7 w-7 items-center justify-center rounded-full border-2 bg-blue-500 text-white transition-transform group-hover:scale-105">
-                <Pencil className="h-4 w-4" aria-hidden="true" />
+              <span className="border-background absolute right-0 bottom-0 flex h-5 w-5 items-center justify-center rounded-full border-2 bg-blue-500 text-white transition-transform group-hover:scale-105">
+                <Pencil className="h-3 w-3" aria-hidden="true" />
               </span>
             </button>
 
@@ -190,10 +190,10 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
           {/* Avatar Grid */}
           <div>
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-3 pl-2">
               <Label className="text-sm">Choose Your Avatar</Label>
             </div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
               {avatars.map((avatar) => {
                 const isSelected = selectedAvatar === avatar;
                 return (
