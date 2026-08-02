@@ -1,129 +1,169 @@
 import { memoriesEndpoints } from '../apiEndpoints';
 import { apiClient } from '../axiosConfig';
-import { APIResponse } from '@/types/API';
-
-// Request Types
-export interface GenerateMemoriesRequest {
-  location_radius_km?: number;
-  date_tolerance_days?: number;
-  min_images?: number;
-}
+import type { BackendRes } from '@/hooks/useQueryExtension';
 
 // Data Types
-/**
- * Individual image within a memory
- */
+
+export type MemoryEventType = 'anniversary' | 'import_event' | 'semantic_event';
+
+export type MemoryStatus = 'pending' | 'complete' | 'failed' | 'empty';
+
+export type MemoryRunStatus = 'running' | 'complete' | 'failed';
+
+/** A single curated image within a memory. */
 export interface MemoryImage {
   id: string;
   path: string;
-  thumbnailPath: string;
+  thumbnailPath: string | null;
+  captured_at: string | null;
   latitude: number | null;
   longitude: number | null;
-  captured_at: string | null;
-  isFavourite?: boolean;
+  isFavourite: boolean;
+  sort_order: number;
+  score: number | null;
 }
 
-/**
- * Memory object representing a collection of photos
- */
-export interface Memory {
+/** A short clip curated into a memory, sharing the images' sort_order. */
+export interface MemoryVideo {
+  id: string;
+  path: string;
+  thumbnailPath: string | null;
+  captured_at: string | null;
+  duration: number | null;
+  isFavourite: boolean;
+  sort_order: number;
+  score: number | null;
+}
+
+/** Memory summary, without the image set. Backs the grid and filmstrip. */
+export interface MemoryCard {
   memory_id: string;
+  dedupe_key: string;
+  event_type: MemoryEventType;
+  status: MemoryStatus;
   title: string;
-  description: string;
-  location_name: string;
-  date_start: string | null;
-  date_end: string | null;
-  image_count: number;
-  images: MemoryImage[];
-  thumbnail_image_id: string;
+  subtitle: string | null;
+  place_label: string | null;
   center_lat: number | null;
   center_lon: number | null;
+  surface_date: string;
+  period_start: string | null;
+  period_end: string | null;
+  image_count: number;
+  video_count: number;
+  cover_image_id: string | null;
+  cover_thumbnail_path: string | null;
+  score: number;
+  notified_at: string | null;
+  viewed_at: string | null;
+  dismissed: boolean;
+  created_at: string | null;
 }
 
-/**
- * Location cluster with sample images
- */
-export interface LocationCluster {
-  location_name: string;
-  center_lat: number;
-  center_lon: number;
-  image_count: number;
-  sample_images: MemoryImage[];
+/** A memory with its full image set, for the story viewer. */
+export interface MemoryStory extends MemoryCard {
+  images: MemoryImage[];
+  /**
+   * Separate from images because they are separate tables. sort_order runs
+   * across both, so the viewer merges them into one sequence.
+   */
+  videos: MemoryVideo[];
+  signals: Record<string, number> | null;
+}
+
+export interface MemoryStatusData {
+  run_date: string;
+  run_status: MemoryRunStatus | null;
+  /** Identifies which run is being reported; run_date is only ever today. */
+  run_started_at: string | null;
+  indexing_busy: boolean;
+  unviewed_count: number;
+  latest_memory_id: string | null;
+  memories_enabled: boolean;
+  notifications_enabled: boolean;
+}
+
+export interface GenerateMemoriesRequest {
+  force?: boolean;
+  reference_date?: string;
+}
+
+export interface ListMemoriesParams {
+  limit?: number;
+  offset?: number;
+  event_type?: MemoryEventType;
+  include_viewed?: boolean;
+  include_dismissed?: boolean;
+}
+
+export interface UpdateMemoryRequest {
+  viewed?: boolean;
+  dismissed?: boolean;
+  notified?: boolean;
 }
 
 // API Functions
-/**
- * Generate all memories from images with location data
- */
+
+/** List memory cards, newest first. */
+export const getMemories = async (
+  params?: ListMemoriesParams,
+): Promise<BackendRes<{ memories: MemoryCard[]; total_count: number }>> => {
+  const response = await apiClient.get(memoriesEndpoints.list, { params });
+  return response.data;
+};
+
+/** Get the memory to surface now. `data.memory` is null when there is none. */
+export const getTodayMemory = async (): Promise<
+  BackendRes<{ memory: MemoryStory | null }>
+> => {
+  const response = await apiClient.get(memoriesEndpoints.today);
+  return response.data;
+};
+
+/** Get a single memory with its full image set. */
+export const getMemory = async (
+  memoryId: string,
+): Promise<BackendRes<{ memory: MemoryStory }>> => {
+  const response = await apiClient.get(memoriesEndpoints.byId(memoryId));
+  return response.data;
+};
+
+/** Queue a curation run. */
 export const generateMemories = async (
-  request?: GenerateMemoriesRequest,
-): Promise<APIResponse> => {
-  const params = new URLSearchParams();
-  if (request?.location_radius_km)
-    params.append('location_radius_km', request.location_radius_km.toString());
-  if (request?.date_tolerance_days)
-    params.append(
-      'date_tolerance_days',
-      request.date_tolerance_days.toString(),
-    );
-  if (request?.min_images)
-    params.append('min_images', request.min_images.toString());
-
-  const url = `${memoriesEndpoints.generate}${params.toString() ? '?' + params.toString() : ''}`;
-  const response = await apiClient.post<APIResponse>(url);
+  request: GenerateMemoriesRequest = {},
+): Promise<
+  BackendRes<{ run_date: string; status: MemoryRunStatus; queued: boolean }>
+> => {
+  const response = await apiClient.post(memoriesEndpoints.generate, request);
   return response.data;
 };
 
-/**
- * Get memories from the past N days as a timeline
- */
-export const getTimeline = async (
-  days: number = 365,
-  options?: {
-    location_radius_km?: number;
-    date_tolerance_days?: number;
-  },
-): Promise<APIResponse> => {
-  const params = new URLSearchParams();
-  params.append('days', days.toString());
-  if (options?.location_radius_km)
-    params.append('location_radius_km', options.location_radius_km.toString());
-  if (options?.date_tolerance_days)
-    params.append(
-      'date_tolerance_days',
-      options.date_tolerance_days.toString(),
-    );
+/** Get the scheduler snapshot. */
+export const getMemoryStatus = async (): Promise<
+  BackendRes<MemoryStatusData>
+> => {
+  const response = await apiClient.get(memoriesEndpoints.status);
+  return response.data;
+};
 
-  const response = await apiClient.get<APIResponse>(
-    `${memoriesEndpoints.timeline}?${params.toString()}`,
+/** Update a memory's viewed, dismissed or notified state. */
+export const patchMemory = async ({
+  memoryId,
+  ...request
+}: UpdateMemoryRequest & {
+  memoryId: string;
+}): Promise<BackendRes<{ memory: MemoryStory }>> => {
+  const response = await apiClient.patch(
+    memoriesEndpoints.byId(memoryId),
+    request,
   );
   return response.data;
 };
 
-/**
- * Get photos taken on this date in previous years
- */
-export const getOnThisDay = async (): Promise<APIResponse> => {
-  const response = await apiClient.get<APIResponse>(
-    memoriesEndpoints.onThisDay,
-  );
-  return response.data;
-};
-
-/**
- * Get all unique locations where photos were taken
- */
-export const getLocations = async (options?: {
-  location_radius_km?: number;
-  max_sample_images?: number;
-}): Promise<APIResponse> => {
-  const params = new URLSearchParams();
-  if (options?.location_radius_km)
-    params.append('location_radius_km', options.location_radius_km.toString());
-  if (options?.max_sample_images)
-    params.append('max_sample_images', options.max_sample_images.toString());
-
-  const url = `${memoriesEndpoints.locations}${params.toString() ? '?' + params.toString() : ''}`;
-  const response = await apiClient.get<APIResponse>(url);
+/** Delete a memory. The underlying photos are untouched. */
+export const deleteMemory = async (
+  memoryId: string,
+): Promise<BackendRes<{ memory_id: string }>> => {
+  const response = await apiClient.delete(memoriesEndpoints.byId(memoryId));
   return response.data;
 };

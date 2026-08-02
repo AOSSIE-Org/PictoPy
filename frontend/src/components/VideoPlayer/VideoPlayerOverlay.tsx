@@ -77,7 +77,7 @@ export function VideoPlayerOverlay({ videos }: VideoPlayerOverlayProps) {
   if (!currentVideo) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-lg">
+    <div className="fixed inset-0 z-50 flex flex-col bg-white/95 backdrop-blur-lg dark:bg-black/95">
       <VideoViewerControls
         showInfo={showInfo}
         onToggleInfo={() => setShowInfo((prev) => !prev)}
@@ -115,6 +115,8 @@ export function VideoPlayerOverlay({ videos }: VideoPlayerOverlayProps) {
             onNext={handleNext}
             previousLabel="Previous video"
             nextLabel="Next video"
+            disablePrevious={currentIndex <= 0}
+            disableNext={currentIndex >= videos.length - 1}
           />
         )}
       </div>

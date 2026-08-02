@@ -51,7 +51,8 @@ class SigLIP2Vision(ONNXSessionBase):
         side. Stored embeddings in image_embeddings are therefore
         unit-norm."""
         session, input_name, output_name = self.get_session()
-        result = session.run([output_name], {input_name: pixel_values})[0]
+        with self._inference_lock:
+            result = session.run([output_name], {input_name: pixel_values})[0]
         norms = np.linalg.norm(result, axis=1, keepdims=True)
         norms = np.where(norms > 0, norms, 1.0)
         return (result / norms).astype(np.float32)

@@ -9,6 +9,10 @@ export const imagesEndpoints = {
 export const videosEndpoints = {
   getAllVideos: '/videos/',
   setFavourite: '/videos/toggle-favourite',
+  searchByTag: (tag: string) => `/videos/search?tag=${encodeURIComponent(tag)}`,
+  semanticSearch: (query: string) =>
+    `/videos/semantic-search?query=${encodeURIComponent(query)}`,
+  purgeFrameCache: '/videos/purge-frame-cache',
 };
 
 export const faceClustersEndpoints = {
@@ -41,8 +45,9 @@ export const healthEndpoints = {
 };
 
 export const memoriesEndpoints = {
-  generate: '/api/memories/generate',
-  timeline: '/api/memories/timeline',
-  onThisDay: '/api/memories/on-this-day',
-  locations: '/api/memories/locations',
+  list: '/memories',
+  generate: '/memories/generate',
+  status: '/memories/status',
+  today: '/memories/today',
+  byId: (memoryId: string) => `/memories/${memoryId}`,
 };
