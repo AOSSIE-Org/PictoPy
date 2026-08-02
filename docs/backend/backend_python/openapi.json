@@ -3721,7 +3721,7 @@
           "notifications_enabled": {
             "type": "boolean",
             "title": "Notifications Enabled",
-            "default": true
+            "default": false
           },
           "story_music_enabled": {
             "type": "boolean",
@@ -4353,7 +4353,7 @@
           "notifications_enabled": {
             "type": "boolean",
             "title": "Notifications Enabled",
-            "default": true
+            "default": false
           }
         },
         "type": "object",

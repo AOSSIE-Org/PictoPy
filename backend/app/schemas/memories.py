@@ -108,7 +108,7 @@ class MemoryStatusData(BaseModel):
     unviewed_count: int = 0
     latest_memory_id: Optional[str] = None
     memories_enabled: bool = True
-    notifications_enabled: bool = True
+    notifications_enabled: bool = False
 
 
 class GetMemoriesData(BaseModel):
