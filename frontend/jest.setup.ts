@@ -130,6 +130,7 @@ jest.mock('axios', () => {
     put: jest.fn().mockResolvedValue({ data: {} }),
     patch: jest.fn().mockResolvedValue({ data: {} }),
     delete: jest.fn().mockResolvedValue({ data: {} }),
+    isAxiosError: jest.fn((error) => !!error?.isAxiosError),
     interceptors: {
       request: { use: jest.fn(), eject: jest.fn() },
       response: { use: jest.fn(), eject: jest.fn() },
