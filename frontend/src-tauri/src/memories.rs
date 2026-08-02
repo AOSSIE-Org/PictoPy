@@ -9,7 +9,7 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_notification::NotificationExt;
 use tokio::time::sleep;
@@ -33,6 +33,10 @@ const RESUME_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 pub struct MemoryTaskState {
     running: AtomicBool,
     last_check: Mutex<Option<Instant>>,
+    /// The last announcement, held until the frontend collects it. An event
+    /// with nobody listening is simply lost, and the listener mounts after
+    /// this task can already have emitted.
+    pending: Mutex<Option<Value>>,
 }
 
 impl MemoryTaskState {
@@ -191,19 +195,27 @@ async fn surface(app: &AppHandle, client: &reqwest::Client, status: &StatusData)
     }
 
     // Not gated on notifications_enabled: that preference is about OS alerts,
-    // and it ships off. Emitted whether or not the notification lands, because
-    // desktop notification clicks are not dependable across platforms, so the
-    // card is the path that always works.
-    let _ = app.emit(
-        "memory:pending",
-        json!({
-            "memory_id": memory.memory_id,
-            "title": memory.title,
-            "subtitle": memory.subtitle,
-            "image_count": memory.image_count,
-            "video_count": memory.video_count,
-        }),
-    );
+    // and it ships off. Announced whether or not the notification lands,
+    // because desktop notification clicks are not dependable across platforms,
+    // so the card is the path that always works.
+    let announcement = json!({
+        "memory_id": memory.memory_id,
+        "title": memory.title,
+        "subtitle": memory.subtitle,
+        "image_count": memory.image_count,
+        "video_count": memory.video_count,
+    });
+
+    // Stored before it is emitted, and collected by the listener on mount.
+    // On a launch where the backend is already up this whole task can finish
+    // before React has mounted, and the event alone would be lost while
+    // notified_at below still recorded it as delivered.
+    if let Some(state) = app.try_state::<MemoryTaskState>() {
+        if let Ok(mut pending) = state.pending.lock() {
+            *pending = Some(announcement.clone());
+        }
+    }
+    let _ = app.emit("memory:pending", announcement);
 
     if status.notifications_enabled {
         notify(app, &memory);
@@ -232,6 +244,16 @@ fn notify(app: &AppHandle, memory: &MemorySummary) {
     {
         eprintln!("[MEMORIES] Could not show the notification: {e}");
     }
+}
+
+/// Hand over an announcement the frontend was not yet listening for. Called by
+/// the listener on mount, which is what makes delivery independent of whether
+/// the webview beat the task.
+#[tauri::command]
+pub fn take_pending_memory(app: AppHandle) -> Option<Value> {
+    let state = app.try_state::<MemoryTaskState>()?;
+    let mut pending = state.pending.lock().ok()?;
+    pending.take()
 }
 
 /// Focus the window and route the app to a memory. Invoked by the in-app card,

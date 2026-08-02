@@ -71,6 +71,27 @@ describe('MemoryNotificationListener', () => {
     ).toBeInTheDocument();
   });
 
+  // The task can finish before React mounts, and an event with nobody
+  // listening is lost while notified_at still records it as delivered.
+  it('collects an announcement made before it mounted', async () => {
+    mockInvoke.mockImplementation((command: string) =>
+      Promise.resolve(command === 'take_pending_memory' ? pending : null),
+    );
+    renderListener();
+
+    expect(
+      await screen.findByText('Your Daily Memory is Ready'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows nothing when no announcement is waiting', async () => {
+    renderListener();
+    await act(async () => {});
+
+    expect(mockInvoke).toHaveBeenCalledWith('take_pending_memory');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('routes through the open_memory command when the card is clicked', () => {
     renderListener();
     emit('memory:pending', pending);

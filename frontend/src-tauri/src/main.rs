@@ -360,6 +360,7 @@ fn main() {
             services::get_resources_folder_path,
             open_model_manager,
             memories::open_memory,
+            memories::take_pending_memory,
             enable_autostart,
             disable_autostart,
             is_autostart_enabled,

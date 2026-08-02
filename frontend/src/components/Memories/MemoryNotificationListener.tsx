@@ -59,6 +59,8 @@ export const MemoryNotificationListener: React.FC = () => {
   );
 
   useEffect(() => {
+    let cancelled = false;
+
     const subscriptions = [
       listen<PendingMemory>('memory:pending', (event) =>
         setPending(event.payload),
@@ -68,7 +70,16 @@ export const MemoryNotificationListener: React.FC = () => {
       ),
     ];
 
+    // The task can finish before React mounts when the backend is already up,
+    // and an event with nobody listening is lost. Collect anything waiting.
+    void invoke<PendingMemory | null>('take_pending_memory')
+      .then((memory) => {
+        if (!cancelled && memory) setPending(memory);
+      })
+      .catch(() => {});
+
     return () => {
+      cancelled = true;
       subscriptions.forEach((subscription) => {
         void subscription.then((unlisten) => unlisten()).catch(() => {});
       });
