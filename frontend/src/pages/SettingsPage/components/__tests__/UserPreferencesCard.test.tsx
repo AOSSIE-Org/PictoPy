@@ -173,6 +173,26 @@ describe('UserPreferencesCard memories panel', () => {
     warn.mockRestore();
   });
 
+  it('keeps the preference when the prompt itself is refused', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockIsPermissionGranted.mockResolvedValue(false);
+    mockRequestPermission.mockRejectedValue(new Error('refused'));
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openPanel(user);
+
+    await user.click(
+      screen.getByRole('switch', { name: /Desktop Notifications/i }),
+    );
+
+    expect(mockRequestPermission).toHaveBeenCalled();
+    expect(mockUpdateMemoriesPreferences).toHaveBeenCalledWith({
+      notifications_enabled: true,
+    });
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it('raises the maximum when a larger minimum is chosen', async () => {
     // Reachable only from values the old sliders allowed; the dropdown
     // options alone cannot put min above max.
