@@ -8,6 +8,7 @@ import ApplicationControlsCard from './components/ApplicationControlsCard';
 import AccountSettingsCard, {
   AccountSettingsCardHandle,
 } from './components/AccountSettingsCard';
+import SystemSettingsCard from './components/SystemSettingsCard';
 
 /**
  * Settings page component
@@ -84,6 +85,7 @@ const Settings: React.FC = () => {
                 <FolderManagementCard />
                 <UserPreferencesCard />
                 <ApplicationControlsCard />
+                <SystemSettingsCard />
               </>
             )}
 
