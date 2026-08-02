@@ -51,20 +51,25 @@ export function MediaView({
 
   // Custom hooks
   const { viewState, handlers } = useImageViewControls();
+  const resetViewerState = useCallback(() => {
+    handlers.resetZoom();
+    setResetSignal((s) => s + 1);
+  }, [handlers]);
+
   // Navigation handlers
   const handleNextImage = useCallback(() => {
     if (currentViewIndex < images.length - 1) {
       dispatch(setCurrentViewIndex(currentViewIndex + 1));
-      handlers.resetZoom();
+      resetViewerState();
     }
-  }, [dispatch, handlers, currentViewIndex, images.length]);
+  }, [dispatch, resetViewerState, currentViewIndex, images.length]);
 
   const handlePreviousImage = useCallback(() => {
     if (currentViewIndex > 0) {
       dispatch(setCurrentViewIndex(currentViewIndex - 1));
-      handlers.resetZoom();
+      resetViewerState();
     }
-  }, [dispatch, handlers, currentViewIndex]);
+  }, [dispatch, resetViewerState, currentViewIndex]);
 
   const handleClose = useCallback(() => {
     dispatch(closeImageView());
@@ -74,9 +79,9 @@ export function MediaView({
   const handleThumbnailClick = useCallback(
     (index: number) => {
       dispatch(setCurrentViewIndex(index));
-      handlers.resetZoom();
+      resetViewerState();
     },
-    [dispatch, handlers],
+    [dispatch, resetViewerState],
   );
 
   const location = useLocation();
@@ -85,8 +90,8 @@ export function MediaView({
   // Loop to first image handler for slideshow
   const handleLoopToStart = useCallback(() => {
     dispatch(setCurrentViewIndex(0));
-    handlers.resetZoom();
-  }, [dispatch, handlers]);
+    resetViewerState();
+  }, [dispatch, resetViewerState]);
 
   // Slideshow functionality
   const { isSlideshowActive, toggleSlideshow } = useSlideshow(
@@ -142,9 +147,8 @@ export function MediaView({
 
   const handleResetZoom = useCallback(() => {
     imageViewerRef.current?.reset();
-    handlers.resetZoom();
-    setResetSignal((s) => s + 1);
-  }, [handlers]);
+    resetViewerState();
+  }, [resetViewerState]);
 
   // Keyboard navigation
   useKeyboardNavigation({
@@ -164,10 +168,11 @@ export function MediaView({
 
   // Safe variables
   const currentImagePath = currentImage.path;
+  const currentImageKey = currentImage.id || currentImage.path;
   // console.log(currentImage);
   const currentImageAlt = `image-${currentViewIndex}`;
   return (
-    <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-gradient-to-b from-black/95 to-black/98 backdrop-blur-lg">
+    <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-gradient-to-b from-white/95 to-white/98 backdrop-blur-lg dark:from-black/95 dark:to-black/98">
       {/* Controls */}
       <MediaViewControls
         showInfo={showInfo}
@@ -190,6 +195,7 @@ export function MediaView({
       >
         {type === 'image' && (
           <ImageViewer
+            key={currentImageKey}
             ref={imageViewerRef}
             imagePath={currentImagePath}
             alt={currentImageAlt}
@@ -202,6 +208,8 @@ export function MediaView({
         <NavigationButtons
           onPrevious={handlePreviousImage}
           onNext={handleNextImage}
+          disablePrevious={currentViewIndex <= 0}
+          disableNext={currentViewIndex >= images.length - 1}
         />
       </div>
 

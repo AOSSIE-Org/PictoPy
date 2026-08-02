@@ -1,16 +1,22 @@
 import logging
 from binascii import Error as Base64Error
 import base64
+from concurrent.futures import CancelledError, Future, ProcessPoolExecutor
 from typing import Annotated
 import uuid
 import os
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.database.face_clusters import (
     db_get_cluster_by_id,
     db_update_cluster,
     db_get_all_clusters_with_face_counts,
-    db_get_images_by_cluster_id,  # Add this import
+    db_get_images_by_cluster_id,
+    db_get_images_by_face_clusters,
 )
+from starlette.datastructures import State
+
+from app.routes.dependencies import get_state
+from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.schemas.face_clusters import (
     RenameClusterRequest,
     RenameClusterResponse,
@@ -24,6 +30,10 @@ from app.schemas.face_clusters import (
     GetClusterImagesResponse,
     GetClusterImagesData,
     ImageInCluster,
+    MultiPersonSearchRequest,
+    MultiPersonSearchResponse,
+    MultiPersonSearchData,
+    MultiPersonSearchImage,
 )
 from app.schemas.images import FaceSearchRequest, InputType
 from app.utils.faceSearch import perform_face_search
@@ -32,12 +42,48 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _log_rescore_outcome(cluster_id: str, done: "Future[int]") -> None:
+    """
+    Report a rescore that died in the worker.
+
+    A submitted job's exception surfaces only through its Future, so without
+    this a failed rescore is silent. The rename itself already stands.
+    """
+    try:
+        done.result()
+    except CancelledError:
+        logger.info(f"Memory rescore for cluster {cluster_id} was cancelled")
+    except Exception:
+        logger.error(f"Memory rescore for cluster {cluster_id} failed", exc_info=True)
+
+
+def _rescore_memories_for_cluster(app_state: State, cluster_id: str) -> None:
+    """
+    Queue a rescore of memories containing this cluster.
+
+    Offloaded to the shared executor and swallowed on failure: renaming a
+    person must succeed whether or not memories can be refreshed.
+    """
+    try:
+        from app.utils.memory_curator import memory_curator_rescore_for_cluster
+
+        executor: ProcessPoolExecutor = app_state.executor
+        future = executor.submit(memory_curator_rescore_for_cluster, cluster_id)
+        future.add_done_callback(lambda done: _log_rescore_outcome(cluster_id, done))
+    except Exception as e:
+        logger.error(f"Failed to queue memory rescore for cluster {cluster_id}: {e}")
+
+
 @router.put(
     "/{cluster_id}",
     response_model=RenameClusterResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 404, 500]},
 )
-def rename_cluster(cluster_id: str, request: RenameClusterRequest):
+def rename_cluster(
+    cluster_id: str,
+    request: RenameClusterRequest,
+    app_state: State = Depends(get_state),
+):
     """Rename a face cluster by its ID."""
     try:
         # Step 1: Data Validation
@@ -74,6 +120,11 @@ def rename_cluster(cluster_id: str, request: RenameClusterRequest):
                     message=f"Failed to update cluster '{cluster_id}'.",
                 ).model_dump(),
             )
+
+        # Naming a person raises the known_people signal for every photo they
+        # appear in, so memories already holding those photos are now ranked
+        # on stale inputs.
+        _rescore_memories_for_cluster(app_state, cluster_id)
 
         return RenameClusterResponse(
             success=True,
@@ -313,16 +364,17 @@ def trigger_global_reclustering():
     try:
         logger.info("Starting manual global face reclustering...")
 
-        # Use the smart clustering function with force flag set to True
-        from app.utils.face_clusters import cluster_util_face_clusters_sync
-
-        result = cluster_util_face_clusters_sync(force_full_reclustering=True)
+        result, total_faces_skipped = cluster_util_face_clusters_sync(
+            force_full_reclustering=True
+        )
 
         if result == 0:
             return GlobalReclusterResponse(
                 success=True,
                 message="No faces found to cluster",
-                data=GlobalReclusterData(clusters_created=0),
+                data=GlobalReclusterData(
+                    clusters_created=0, faces_skipped=total_faces_skipped
+                ),
             )
 
         logger.info("Global reclustering completed successfully")
@@ -330,7 +382,9 @@ def trigger_global_reclustering():
         return GlobalReclusterResponse(
             success=True,
             message="Global reclustering completed successfully.",
-            data=GlobalReclusterData(clusters_created=result),
+            data=GlobalReclusterData(
+                clusters_created=result, faces_skipped=total_faces_skipped
+            ),
         )
 
     except Exception as e:
@@ -341,5 +395,67 @@ def trigger_global_reclustering():
                 success=False,
                 error="Internal server error",
                 message=f"Global reclustering failed: {str(e)}",
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/multi-search",
+    response_model=MultiPersonSearchResponse,
+    responses={code: {"model": ErrorResponse} for code in [400, 404, 500]},
+)
+def search_images_by_multiple_faces(body: MultiPersonSearchRequest):
+    """Search for images containing multiple face identities, ranked by match count."""
+    try:
+        if not body.cluster_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Validation Error",
+                    message="cluster_ids cannot be empty.",
+                ).model_dump(),
+            )
+        if body.match_mode not in ("match_any", "match_all"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Validation Error",
+                    message="match_mode must be 'match_any' or 'match_all'.",
+                ).model_dump(),
+            )
+
+        rows = db_get_images_by_face_clusters(body.cluster_ids, body.match_mode)
+
+        images = [
+            MultiPersonSearchImage(
+                id=row["image_id"],
+                path=row["image_path"],
+                thumbnailPath=row["thumbnail_path"],
+                metadata=row["metadata"],
+                match_count=row["match_count"],
+            )
+            for row in rows
+        ]
+
+        return MultiPersonSearchResponse(
+            success=True,
+            message=f"Found {len(images)} image(s) matching the selected people.",
+            data=MultiPersonSearchData(
+                images=images,
+                total=len(images),
+                match_mode=body.match_mode,
+            ),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Multi-person search failed: {str(e)}",
             ).model_dump(),
         )

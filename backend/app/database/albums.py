@@ -43,6 +43,12 @@ def db_create_album_images_table() -> None:
             )
             """
         )
+        # The PK leads with album_id, so lookup by image alone needs its own
+        # index. The memory scorer does exactly that, per image.
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS ix_album_images_image_id "
+            "ON album_images(image_id)"
+        )
         conn.commit()
     finally:
         if conn is not None:

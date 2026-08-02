@@ -69,6 +69,35 @@ These implement specific features and often use the primitives above:
 - **Loader/** – `GlobalLoader`
 - **EmptyStates/** – `EmptyGalleryState`, `EmptyAITaggingState`
 
+### Search
+
+- **SearchResults** (`pages/SearchResults/`) – Single search results page for
+  both tag search and semantic search (no separate mode toggle in the UI).
+  Tries an exact tag match first; falls back to semantic search only when
+  that returns zero results and the feature is installed. Renders results
+  through the same `ImageCard`/`MediaView` components as the rest of the
+  gallery — a `ScoredImage` (an `Image` plus a `score`) carries the match
+  score end-to-end, but it is never rendered; sorting happens on the
+  backend before the response is returned.
+
+### Model Manager
+
+- **ModelManager** (`pages/ModelManager/`) – Install/uninstall UI for all
+  optional AI model tiers, including the ~1.5 GB "Semantic Search" (SigLIP2)
+  bundle alongside the existing YOLO/FaceNet tiers.
+  - **AvailableTab** – Shows tiers/bundles not yet fully installed, with
+    per-model download progress. The semantic bundle card only appears when
+    at least one of its three files is missing.
+  - **InstalledTab** – Shows fully installed tiers/bundles with
+    set-active/uninstall actions. Uninstalling the semantic bundle removes
+    all three files (vision, text, tokenizer) via `Promise.allSettled`, so a
+    partial failure lands back in "Available" with a "Needs Repair" badge
+    rather than silently losing track of the partial state.
+  - Both tabs derive the semantic bundle's model keys and display text from
+    shared constants in `types/models.ts` (`SEMANTIC_BUNDLE_KEYS`,
+    `SEMANTIC_BUNDLE_TITLE`/`LABEL`/`DESCRIPTION`) rather than duplicating
+    them per-component.
+
 ### Other
 
 - **FolderPicker/** – Folder selection and related dialogs (e.g. `DeleteImageDialog`)

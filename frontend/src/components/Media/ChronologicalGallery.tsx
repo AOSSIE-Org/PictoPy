@@ -17,6 +17,7 @@ type ChronologicalGalleryProps = {
   images: Image[];
   showTitle?: boolean;
   title?: string;
+  titleRight?: React.ReactNode;
   className?: string;
   onMonthOffsetsChange?: (markers: MonthMarker[]) => void;
   scrollContainerRef?: React.RefObject<HTMLElement | null>;
@@ -26,6 +27,7 @@ export const ChronologicalGallery = ({
   images,
   showTitle = false,
   title = 'Image Gallery',
+  titleRight,
   className = '',
   onMonthOffsetsChange,
   scrollContainerRef,
@@ -116,8 +118,9 @@ export const ChronologicalGallery = ({
       <div ref={galleryRef} className={`space-y-0 ${className}`}>
         {/* Title */}
         {showTitle && (
-          <div className="mb-6">
-            <h1 className="mt-6 text-2xl font-bold">{title}</h1>
+          <div className="mt-6 mb-6 flex items-center justify-between">
+            <h1 className="text-2xl font-bold">{title}</h1>
+            {titleRight && <div>{titleRight}</div>}
           </div>
         )}
 

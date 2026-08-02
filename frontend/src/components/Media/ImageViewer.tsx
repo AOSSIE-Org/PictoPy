@@ -18,11 +18,15 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
   ({ imagePath, alt, rotation, resetSignal }, ref) => {
     const zoomableImageRef = useRef<ZoomableImageRef>(null);
 
-    useImperativeHandle(ref, () => ({
-      zoomIn: () => zoomableImageRef.current?.zoomIn(),
-      zoomOut: () => zoomableImageRef.current?.zoomOut(),
-      reset: () => zoomableImageRef.current?.reset(),
-    }));
+    useImperativeHandle(
+      ref,
+      () => ({
+        zoomIn: () => zoomableImageRef.current?.zoomIn(),
+        zoomOut: () => zoomableImageRef.current?.zoomOut(),
+        reset: () => zoomableImageRef.current?.reset(),
+      }),
+      [],
+    );
 
     return (
       <ZoomableImage
@@ -35,3 +39,5 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(
     );
   },
 );
+
+ImageViewer.displayName = 'ImageViewer';

@@ -1,0 +1,563 @@
+{
+  "checkpoint": "siglip2-base-patch16-224",
+  "recommendations": {
+    "bucket_thresholds": {
+      "scene": 5e-05,
+      "object": 0.0001,
+      "event": 5e-05,
+      "attribute": 0.0001
+    },
+    "top_k": 15,
+    "display_cut": "top-5 per image (post-hoc, scores stored)",
+    "null_baseline_contrast": "not adopted: margin-vs-generic sweeps matched but never beat absolute thresholds at equal labels-per-image; revisit only if wins-by-default shows up in production",
+    "notes": "Sigmoid scores from ensembled label vectors sit ~2 orders of magnitude below the live-query path (SIGLIP2_MATCH_THRESHOLD=0.01); these thresholds are floors for candidate writes, precision comes from top-k plus the display cut. Eval: 151 Wikimedia Commons images, 9 mislabeled downloads removed after visual review."
+  },
+  "buckets": {
+    "scene": {
+      "images": 46,
+      "gt_score_percentiles": {
+        "p10": 1.922461649428442e-06,
+        "p25": 3.102959817624651e-05,
+        "p50": 0.001402928726747632,
+        "p75": 0.006839083624072373,
+        "p90": 0.03230307810008526
+      },
+      "neg_score_percentiles": {
+        "p50": 2.761727652123014e-10,
+        "p90": 5.771970279511153e-08,
+        "p99": 1.7730037670844496e-05
+      },
+      "gt_rank": {
+        "top1": 0.5217391304347826,
+        "top5": 0.8260869565217391,
+        "top10": 0.8695652173913043,
+        "top15": 0.9130434782608695,
+        "median_rank": 1.0
+      },
+      "threshold_sweep": [
+        {
+          "threshold": 1e-05,
+          "recall": 0.7608695652173914,
+          "labels_per_image": 5.782608695652174
+        },
+        {
+          "threshold": 5e-05,
+          "recall": 0.6956521739130435,
+          "labels_per_image": 3.0869565217391304
+        },
+        {
+          "threshold": 0.0001,
+          "recall": 0.6956521739130435,
+          "labels_per_image": 2.5652173913043477
+        },
+        {
+          "threshold": 0.0005,
+          "recall": 0.5869565217391305,
+          "labels_per_image": 1.2826086956521738
+        },
+        {
+          "threshold": 0.001,
+          "recall": 0.5217391304347826,
+          "labels_per_image": 1.0434782608695652
+        },
+        {
+          "threshold": 0.005,
+          "recall": 0.32608695652173914,
+          "labels_per_image": 0.5869565217391305
+        },
+        {
+          "threshold": 0.01,
+          "recall": 0.2391304347826087,
+          "labels_per_image": 0.41304347826086957
+        },
+        {
+          "threshold": 0.02,
+          "recall": 0.17391304347826086,
+          "labels_per_image": 0.2608695652173913
+        }
+      ],
+      "generic_baseline_margin_sweep": [
+        {
+          "factor": 1.0,
+          "recall": 0.6521739130434783,
+          "labels_per_image": 2.0217391304347827
+        },
+        {
+          "factor": 2.0,
+          "recall": 0.6304347826086957,
+          "labels_per_image": 1.4565217391304348
+        },
+        {
+          "factor": 5.0,
+          "recall": 0.5652173913043478,
+          "labels_per_image": 1.1521739130434783
+        },
+        {
+          "factor": 10.0,
+          "recall": 0.4782608695652174,
+          "labels_per_image": 0.9130434782608695
+        },
+        {
+          "factor": 25.0,
+          "recall": 0.30434782608695654,
+          "labels_per_image": 0.5434782608695652
+        }
+      ]
+    },
+    "object": {
+      "images": 48,
+      "gt_score_percentiles": {
+        "p10": 8.674582313688008e-05,
+        "p25": 0.0006071098032407463,
+        "p50": 0.005635681329295039,
+        "p75": 0.036805637180805206,
+        "p90": 0.07517253085970879
+      },
+      "neg_score_percentiles": {
+        "p50": 5.761034878315474e-11,
+        "p90": 7.285397929379661e-09,
+        "p99": 6.64170863728931e-07
+      },
+      "gt_rank": {
+        "top1": 0.8541666666666666,
+        "top5": 0.9791666666666666,
+        "top10": 1.0,
+        "top15": 1.0,
+        "median_rank": 1.0
+      },
+      "threshold_sweep": [
+        {
+          "threshold": 1e-05,
+          "recall": 0.9583333333333334,
+          "labels_per_image": 2.1041666666666665
+        },
+        {
+          "threshold": 5e-05,
+          "recall": 0.9375,
+          "labels_per_image": 1.4166666666666667
+        },
+        {
+          "threshold": 0.0001,
+          "recall": 0.8958333333333334,
+          "labels_per_image": 1.2708333333333333
+        },
+        {
+          "threshold": 0.0005,
+          "recall": 0.7708333333333334,
+          "labels_per_image": 0.9583333333333334
+        },
+        {
+          "threshold": 0.001,
+          "recall": 0.6875,
+          "labels_per_image": 0.8125
+        },
+        {
+          "threshold": 0.005,
+          "recall": 0.5208333333333334,
+          "labels_per_image": 0.5833333333333334
+        },
+        {
+          "threshold": 0.01,
+          "recall": 0.375,
+          "labels_per_image": 0.4375
+        },
+        {
+          "threshold": 0.02,
+          "recall": 0.375,
+          "labels_per_image": 0.4166666666666667
+        }
+      ],
+      "generic_baseline_margin_sweep": [
+        {
+          "factor": 1.0,
+          "recall": 0.8333333333333334,
+          "labels_per_image": 1.2083333333333333
+        },
+        {
+          "factor": 2.0,
+          "recall": 0.8125,
+          "labels_per_image": 1.0833333333333333
+        },
+        {
+          "factor": 5.0,
+          "recall": 0.75,
+          "labels_per_image": 0.9583333333333334
+        },
+        {
+          "factor": 10.0,
+          "recall": 0.7083333333333334,
+          "labels_per_image": 0.8541666666666666
+        },
+        {
+          "factor": 25.0,
+          "recall": 0.625,
+          "labels_per_image": 0.7083333333333334
+        }
+      ]
+    },
+    "event": {
+      "images": 33,
+      "gt_score_percentiles": {
+        "p10": 1.4697697224619336e-06,
+        "p25": 0.00015250127762556076,
+        "p50": 0.003921407740563154,
+        "p75": 0.016354281455278397,
+        "p90": 0.12086516618728645
+      },
+      "neg_score_percentiles": {
+        "p50": 1.9600323447610535e-10,
+        "p90": 3.2393316118373105e-08,
+        "p99": 8.511004907631993e-06
+      },
+      "gt_rank": {
+        "top1": 0.6363636363636364,
+        "top5": 0.8787878787878788,
+        "top10": 0.9090909090909091,
+        "top15": 0.9090909090909091,
+        "median_rank": 1.0
+      },
+      "threshold_sweep": [
+        {
+          "threshold": 1e-05,
+          "recall": 0.7878787878787878,
+          "labels_per_image": 4.393939393939394
+        },
+        {
+          "threshold": 5e-05,
+          "recall": 0.7878787878787878,
+          "labels_per_image": 2.606060606060606
+        },
+        {
+          "threshold": 0.0001,
+          "recall": 0.7575757575757576,
+          "labels_per_image": 2.0606060606060606
+        },
+        {
+          "threshold": 0.0005,
+          "recall": 0.696969696969697,
+          "labels_per_image": 1.2424242424242424
+        },
+        {
+          "threshold": 0.001,
+          "recall": 0.6666666666666666,
+          "labels_per_image": 1.121212121212121
+        },
+        {
+          "threshold": 0.005,
+          "recall": 0.48484848484848486,
+          "labels_per_image": 0.696969696969697
+        },
+        {
+          "threshold": 0.01,
+          "recall": 0.36363636363636365,
+          "labels_per_image": 0.5151515151515151
+        },
+        {
+          "threshold": 0.02,
+          "recall": 0.21212121212121213,
+          "labels_per_image": 0.36363636363636365
+        }
+      ],
+      "generic_baseline_margin_sweep": [
+        {
+          "factor": 1.0,
+          "recall": 0.7575757575757576,
+          "labels_per_image": 1.4848484848484849
+        },
+        {
+          "factor": 2.0,
+          "recall": 0.7575757575757576,
+          "labels_per_image": 1.4242424242424243
+        },
+        {
+          "factor": 5.0,
+          "recall": 0.696969696969697,
+          "labels_per_image": 1.1515151515151516
+        },
+        {
+          "factor": 10.0,
+          "recall": 0.6363636363636364,
+          "labels_per_image": 1.0
+        },
+        {
+          "factor": 25.0,
+          "recall": 0.48484848484848486,
+          "labels_per_image": 0.7575757575757576
+        }
+      ]
+    },
+    "attribute": {
+      "images": 24,
+      "gt_score_percentiles": {
+        "p10": 0.00022467100498033688,
+        "p25": 0.0019608679285738617,
+        "p50": 0.005120208952575922,
+        "p75": 0.027230489533394575,
+        "p90": 0.11005476191639897
+      },
+      "neg_score_percentiles": {
+        "p50": 3.0255171978854634e-10,
+        "p90": 8.65433342767119e-08,
+        "p99": 5.263684215606205e-05
+      },
+      "gt_rank": {
+        "top1": 0.6666666666666666,
+        "top5": 0.9583333333333334,
+        "top10": 1.0,
+        "top15": 1.0,
+        "median_rank": 1.0
+      },
+      "threshold_sweep": [
+        {
+          "threshold": 1e-05,
+          "recall": 1.0,
+          "labels_per_image": 7.75
+        },
+        {
+          "threshold": 5e-05,
+          "recall": 1.0,
+          "labels_per_image": 5.125
+        },
+        {
+          "threshold": 0.0001,
+          "recall": 1.0,
+          "labels_per_image": 3.6666666666666665
+        },
+        {
+          "threshold": 0.0005,
+          "recall": 0.8333333333333334,
+          "labels_per_image": 2.375
+        },
+        {
+          "threshold": 0.001,
+          "recall": 0.7916666666666666,
+          "labels_per_image": 1.9583333333333333
+        },
+        {
+          "threshold": 0.005,
+          "recall": 0.5,
+          "labels_per_image": 0.8333333333333334
+        },
+        {
+          "threshold": 0.01,
+          "recall": 0.375,
+          "labels_per_image": 0.6666666666666666
+        },
+        {
+          "threshold": 0.02,
+          "recall": 0.2916666666666667,
+          "labels_per_image": 0.4166666666666667
+        }
+      ],
+      "generic_baseline_margin_sweep": [
+        {
+          "factor": 1.0,
+          "recall": 0.875,
+          "labels_per_image": 3.1666666666666665
+        },
+        {
+          "factor": 2.0,
+          "recall": 0.8333333333333334,
+          "labels_per_image": 2.7083333333333335
+        },
+        {
+          "factor": 5.0,
+          "recall": 0.8333333333333334,
+          "labels_per_image": 2.0416666666666665
+        },
+        {
+          "factor": 10.0,
+          "recall": 0.75,
+          "labels_per_image": 1.5
+        },
+        {
+          "factor": 25.0,
+          "recall": 0.625,
+          "labels_per_image": 0.9583333333333334
+        }
+      ]
+    }
+  },
+  "worst_ranked_images": [
+    {
+      "file": "easter__0.jpg",
+      "gt_rank": 20,
+      "gt_score": 3.9649776795158687e-08,
+      "top_labels": [
+        "cheese",
+        "picnic basket",
+        "turkey",
+        "dessert",
+        "egg"
+      ]
+    },
+    {
+      "file": "lake__0.jpg",
+      "gt_rank": 20,
+      "gt_score": 1.549742137285648e-06,
+      "top_labels": [
+        "snowy mountain",
+        "hiking",
+        "glacier",
+        "mountain",
+        "snowfield"
+      ]
+    },
+    {
+      "file": "cricket__0.jpg",
+      "gt_rank": 19,
+      "gt_score": 1.1451775208115578e-06,
+      "top_labels": [
+        "street",
+        "parade",
+        "marathon",
+        "plaza",
+        "night"
+      ]
+    },
+    {
+      "file": "picnic__0.jpg",
+      "gt_rank": 19,
+      "gt_score": 5.164933440937602e-07,
+      "top_labels": [
+        "campsite",
+        "zoo",
+        "creek",
+        "cabin",
+        "porch"
+      ]
+    },
+    {
+      "file": "street__0.jpg",
+      "gt_rank": 16,
+      "gt_score": 5.143172074895119e-06,
+      "top_labels": [
+        "hallway",
+        "airport terminal",
+        "zoo",
+        "shopping mall",
+        "arena"
+      ]
+    },
+    {
+      "file": "street__1.jpg",
+      "gt_rank": 16,
+      "gt_score": 3.794107442445238e-06,
+      "top_labels": [
+        "city",
+        "bridge",
+        "skyscraper",
+        "ice rink",
+        "subway station"
+      ]
+    },
+    {
+      "file": "church__0.jpg",
+      "gt_rank": 16,
+      "gt_score": 1.689114128566871e-06,
+      "top_labels": [
+        "tower",
+        "palace",
+        "skyscraper",
+        "city",
+        "plaza"
+      ]
+    },
+    {
+      "file": "playground__1.jpg",
+      "gt_rank": 13,
+      "gt_score": 9.065108770300867e-07,
+      "top_labels": [
+        "courtyard",
+        "hotel",
+        "apartment building",
+        "parking lot",
+        "phone booth"
+      ]
+    },
+    {
+      "file": "forest__1.jpg",
+      "gt_rank": 11,
+      "gt_score": 3.932223989977501e-06,
+      "top_labels": [
+        "squirrel",
+        "tree",
+        "tree house",
+        "ruins",
+        "lizard"
+      ]
+    },
+    {
+      "file": "kitchen__1.jpg",
+      "gt_rank": 8,
+      "gt_score": 5.929802426862807e-08,
+      "top_labels": [
+        "convenience store",
+        "selfie",
+        "sunglasses",
+        "pantry",
+        "mirror"
+      ]
+    },
+    {
+      "file": "mosque__0.jpg",
+      "gt_rank": 7,
+      "gt_score": 2.155809170290013e-06,
+      "top_labels": [
+        "tower",
+        "lighthouse",
+        "aerial view",
+        "castle",
+        "palace"
+      ]
+    },
+    {
+      "file": "parade__0.jpg",
+      "gt_rank": 7,
+      "gt_score": 6.716193752254185e-07,
+      "top_labels": [
+        "ganesh chaturthi",
+        "durga puja",
+        "palace",
+        "temple",
+        "sculpture"
+      ]
+    },
+    {
+      "file": "tent__1.jpg",
+      "gt_rank": 6,
+      "gt_score": 3.207558734175109e-07,
+      "top_labels": [
+        "group photo",
+        "zoo",
+        "cabin",
+        "campsite",
+        "night"
+      ]
+    },
+    {
+      "file": "silhouette__0.jpg",
+      "gt_rank": 6,
+      "gt_score": 0.0002625813358463347,
+      "top_labels": [
+        "canoe",
+        "sunset",
+        "kayaking",
+        "sunrise",
+        "river"
+      ]
+    },
+    {
+      "file": "butterfly__0.jpg",
+      "gt_rank": 5,
+      "gt_score": 1.216795681102667e-06,
+      "top_labels": [
+        "flower",
+        "snake",
+        "bee",
+        "rainforest",
+        "butterfly"
+      ]
+    }
+  ]
+}

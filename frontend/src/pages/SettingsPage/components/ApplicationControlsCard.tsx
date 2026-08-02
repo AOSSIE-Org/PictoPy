@@ -12,6 +12,7 @@ import { showInfoDialog } from '@/features/infoDialogSlice';
 import { triggerGlobalReclustering } from '@/api/api-functions/face_clusters';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { showGlobalAlert } from '@/features/globalAlertSlice';
 
 /**
  * Component for application controls in settings
@@ -34,6 +35,18 @@ const ApplicationControlsCard: React.FC = () => {
   const reclusterMutation = usePictoMutation({
     mutationFn: triggerGlobalReclustering,
     autoInvalidateTags: ['clusters'],
+    onSuccess: (data) => {
+      const facesSkipped = data.data?.faces_skipped;
+
+      if (facesSkipped != null && facesSkipped > 0) {
+        dispatch(
+          showGlobalAlert({
+            title: 'Faces Skipped',
+            message: `${facesSkipped} face(s) were skipped during clustering due to invalid embeddings.`,
+          }),
+        );
+      }
+    },
   });
 
   const feedbackOptions = React.useMemo(

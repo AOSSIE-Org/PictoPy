@@ -1,19 +1,24 @@
-import { render, screen } from '@/test-utils';
+import { render, screen, act } from '@/test-utils';
+import { invoke } from '@tauri-apps/api/core';
 import userEvent from '@testing-library/user-event';
 import Settings from '../SettingsPage/Settings';
 
 describe('Settings Page', () => {
   // shared setup for all tests
-  const setupTest = () => {
+  const setupTest = async () => {
     const user = userEvent.setup();
     render(<Settings />);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await screen.findByRole('switch', { name: /launch at startup/i });
     return { user };
   };
 
   describe('Interaction Sanity', () => {
     describe('User Preferences Section', () => {
       test('YOLO model dropdown opens and shows options', async () => {
-        const { user } = setupTest();
+        const { user } = await setupTest();
 
         const dropdownTrigger = screen.getByRole('button', {
           name: /nano|small|medium/i,
@@ -21,21 +26,38 @@ describe('Settings Page', () => {
         await user.click(dropdownTrigger);
 
         const menuItems = screen.getAllByRole('menuitem');
-        expect(menuItems).toHaveLength(3);
+        expect(menuItems).toHaveLength(4);
         expect(menuItems[0]).toHaveTextContent('Nano');
         expect(menuItems[1]).toHaveTextContent('Small');
         expect(menuItems[2]).toHaveTextContent('Medium');
+        expect(menuItems[3]).toHaveTextContent('Configure...');
       });
 
       test('GPU Acceleration toggle changes state on click', async () => {
-        const { user } = setupTest();
+        const { user } = await setupTest();
 
-        const gpuSwitch = screen.getByRole('switch');
+        const gpuSwitch = screen.getByRole('switch', {
+          name: /gpu acceleration/i,
+        });
         expect(gpuSwitch).toHaveAttribute('aria-checked', 'false');
 
         await user.click(gpuSwitch);
 
         expect(gpuSwitch).toHaveAttribute('aria-checked', 'true');
+      });
+
+      test('launch at startup switch enables autostart', async () => {
+        const { user } = await setupTest();
+        const mockedInvoke = invoke as jest.MockedFunction<typeof invoke>;
+        mockedInvoke.mockClear();
+
+        const autostartSwitch = screen.getByRole('switch', {
+          name: /launch at startup/i,
+        });
+
+        await user.click(autostartSwitch);
+
+        expect(mockedInvoke).toHaveBeenCalledWith('enable_autostart');
       });
     });
 
@@ -49,7 +71,7 @@ describe('Settings Page', () => {
       test.each(buttonCases)(
         '$label button does not crash when clicked',
         async ({ name }) => {
-          const { user } = setupTest();
+          const { user } = await setupTest();
 
           const button = screen.getByRole('button', { name });
 
@@ -71,7 +93,7 @@ describe('Settings Page', () => {
       test.each(yoloSelectionCases)(
         'selecting $expectedText updates dropdown display',
         async ({ selectOption, expectedText }) => {
-          const { user } = setupTest();
+          const { user } = await setupTest();
 
           const dropdownTrigger = screen.getByRole('button', { name: /nano/i });
           expect(dropdownTrigger).toHaveTextContent('Nano');
@@ -88,7 +110,7 @@ describe('Settings Page', () => {
       );
 
       test('dropdown can be reopened after selection', async () => {
-        const { user } = setupTest();
+        const { user } = await setupTest();
 
         const dropdownTrigger = screen.getByRole('button', { name: /nano/i });
         await user.click(dropdownTrigger);
@@ -96,15 +118,31 @@ describe('Settings Page', () => {
 
         // reopen and verify options still available
         await user.click(dropdownTrigger);
-        expect(screen.getAllByRole('menuitem')).toHaveLength(3);
+        expect(screen.getAllByRole('menuitem')).toHaveLength(4);
+      });
+
+      test('clicking Configure... invokes open_model_manager Tauri command', async () => {
+        const { user } = await setupTest();
+
+        const dropdownTrigger = screen.getByRole('button', { name: /nano/i });
+        await user.click(dropdownTrigger);
+
+        const configureOption = screen.getByRole('menuitem', {
+          name: /configure/i,
+        });
+        await user.click(configureOption);
+
+        expect(invoke).toHaveBeenCalledWith('open_model_manager');
       });
     });
 
     describe('GPU Acceleration Toggle', () => {
       test('toggle cycles through ON/OFF states', async () => {
-        const { user } = setupTest();
+        const { user } = await setupTest();
 
-        const gpuSwitch = screen.getByRole('switch');
+        const gpuSwitch = screen.getByRole('switch', {
+          name: /gpu acceleration/i,
+        });
         expect(gpuSwitch).toHaveAttribute('aria-checked', 'false');
 
         await user.click(gpuSwitch);
