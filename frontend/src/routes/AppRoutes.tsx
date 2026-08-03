@@ -9,7 +9,8 @@ import { Videos } from '@/pages/VideosPage/Videos';
 import { MyFav } from '@/pages/Home/MyFav';
 import { AITagging } from '@/pages/AITagging/AITagging';
 import { PersonImages } from '@/pages/PersonImages/PersonImages';
-import { ComingSoon } from '@/pages/ComingSoon/ComingSoon';
+import Album from '@/pages/Album/Album';
+import AlbumDetail from '@/pages/Album/AlbumDetail';
 import { Memories } from '@/pages/Memories/Memories';
 import { ModelManager } from '@/pages/ModelManager/ModelManager';
 
@@ -26,7 +27,8 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.FAVOURITES} element={<MyFav />} />
         <Route path={ROUTES.SETTINGS} element={<Settings />} />
         <Route path={ROUTES.AI} element={<AITagging />} />
-        <Route path={ROUTES.ALBUMS} element={<ComingSoon />} />
+        <Route path={ROUTES.ALBUMS} element={<Album />} />
+        <Route path={ROUTES.ALBUM_DETAIL} element={<AlbumDetail />} />
         <Route path={ROUTES.MEMORIES} element={<Memories />} />
         <Route path={ROUTES.PERSON} element={<PersonImages />} />
         <Route path={ROUTES.SEARCH} element={<SearchResults />} />

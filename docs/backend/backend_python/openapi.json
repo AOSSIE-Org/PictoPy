@@ -412,19 +412,8 @@
           "Albums"
         ],
         "summary": "Get Albums",
+        "description": "Get all albums. Always returns both locked and unlocked albums.",
         "operationId": "get_albums_albums__get",
-        "parameters": [
-          {
-            "name": "show_hidden",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Show Hidden"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -432,16 +421,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GetAlbumsResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -455,14 +434,14 @@
         "summary": "Create Album",
         "operationId": "create_album_albums__post",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateAlbumRequest"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -801,6 +780,59 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/albums/{album_id}/cover": {
+      "put": {
+        "tags": [
+          "Albums"
+        ],
+        "summary": "Set Album Cover Image",
+        "description": "Set or update the cover image for an album",
+        "operationId": "set_album_cover_image_albums__album_id__cover_put",
+        "parameters": [
+          {
+            "name": "album_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Album Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCoverImageRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2582,9 +2614,25 @@
             "type": "string",
             "title": "Description"
           },
-          "is_hidden": {
+          "is_locked": {
             "type": "boolean",
-            "title": "Is Hidden"
+            "title": "Is Locked"
+          },
+          "cover_image_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Path"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count",
+            "default": 0
           }
         },
         "type": "object",
@@ -2592,7 +2640,7 @@
           "album_id",
           "album_name",
           "description",
-          "is_hidden"
+          "is_locked"
         ],
         "title": "Album"
       },
@@ -2657,9 +2705,9 @@
             "title": "Description",
             "default": ""
           },
-          "is_hidden": {
+          "is_locked": {
             "type": "boolean",
-            "title": "Is Hidden",
+            "title": "Is Locked",
             "default": false
           },
           "password": {
@@ -5128,6 +5176,20 @@
         ],
         "title": "SemanticSearchImage"
       },
+      "SetCoverImageRequest": {
+        "properties": {
+          "image_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Image Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_id"
+        ],
+        "title": "SetCoverImageRequest"
+      },
       "SetupRequest": {
         "properties": {
           "tier": {
@@ -5408,9 +5470,9 @@
             "title": "Description",
             "default": ""
           },
-          "is_hidden": {
+          "is_locked": {
             "type": "boolean",
-            "title": "Is Hidden"
+            "title": "Is Locked"
           },
           "current_password": {
             "anyOf": [
@@ -5438,7 +5500,7 @@
         "type": "object",
         "required": [
           "name",
-          "is_hidden"
+          "is_locked"
         ],
         "title": "UpdateAlbumRequest"
       },
