@@ -13,7 +13,6 @@ import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtension';
 import { getAllAlbums, deleteAlbum } from '@/api/api-functions';
 import { setAlbums } from '@/features/albumsSlice';
 import { selectAlbums } from '@/features/albumSelectors';
-import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { Album } from '@/types/Album';
@@ -58,6 +57,7 @@ function Albums() {
     data: albumsData,
     successData,
     isLoading,
+    isFetching,
     isSuccess,
     isError,
     refetch,
@@ -141,9 +141,7 @@ function Albums() {
   };
 
   const handleRefresh = async () => {
-    dispatch(showLoader('Refreshing albums...'));
     const result = await refetch();
-    dispatch(hideLoader());
 
     if (result.isError || result.error) {
       dispatch(
@@ -170,9 +168,16 @@ function Albums() {
       <div className="mt-1 mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Albums</h1>
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isFetching}
+          >
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`}
+            />
+            {isFetching ? 'Refreshing…' : 'Refresh'}
           </Button>
           <GallerySortDropdown
             value={sortBy}

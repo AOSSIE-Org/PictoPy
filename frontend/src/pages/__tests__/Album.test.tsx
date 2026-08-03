@@ -133,6 +133,35 @@ describe('Albums page', () => {
     expect(screen.queryAllByTestId('album-card-skeleton')).toHaveLength(0);
   }, 30000);
 
+  test('refreshes in place rather than blocking the window', async () => {
+    const user = userEvent.setup();
+    const { store } = render(<AlbumsWithGlobalOverlays />);
+
+    await screen.findByText('Trip');
+
+    let releaseRefresh: (value: unknown) => void = () => {};
+    mockGetAllAlbums.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseRefresh = resolve;
+        }),
+    );
+
+    await user.click(screen.getByRole('button', { name: /refresh/i }));
+
+    // The grid stays on screen and only the button reports the work.
+    const refreshButton = await screen.findByRole('button', {
+      name: /refreshing/i,
+    });
+    expect(refreshButton).toBeDisabled();
+    expect(screen.getByText('Trip')).toBeInTheDocument();
+    expect(store.getState().loader.loading).toBe(false);
+
+    releaseRefresh({ success: true, albums: serverAlbums });
+
+    await screen.findByRole('button', { name: /^refresh$/i });
+  }, 30000);
+
   // Deleting goes dropdown menu -> dialog. Both are Radix layers holding
   // module-level focus state, so a duplicated Radix copy in node_modules made
   // the two focus scopes trap each other and lock up the UI until reload.
