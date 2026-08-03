@@ -1,23 +1,23 @@
 import os
 import sqlite3
 import tempfile
-from typing import Iterator, List, Optional
+from collections.abc import Iterator
 from unittest.mock import MagicMock, patch
 
 import bcrypt
 import pytest
 
 from app.database.albums import (
-    db_create_albums_table,
     db_create_album_images_table,
-    db_get_all_albums,
-    db_get_album_by_name,
-    db_get_album,
-    db_insert_album,
-    db_update_album,
+    db_create_albums_table,
     db_delete_album,
+    db_get_album,
+    db_get_album_by_name,
     db_get_album_images,
+    db_get_all_albums,
+    db_insert_album,
     db_remove_images_from_album,
+    db_update_album,
     verify_album_password,
 )
 from app.database.images import db_create_images_table
@@ -34,7 +34,6 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
     os.close(db_fd)
 
     monkeypatch.setattr("app.config.settings.DATABASE_PATH", db_path)
-    monkeypatch.setattr("app.database.albums.DATABASE_PATH", db_path)
     monkeypatch.setattr("app.database.images.DATABASE_PATH", db_path)
     # db_delete_album goes through the shared get_db_connection helper
     monkeypatch.setattr("app.database.connection.DATABASE_PATH", db_path)
@@ -55,14 +54,14 @@ def make_album(
     name: str = "Trip",
     description: str = "",
     locked: bool = False,
-    password: Optional[str] = None,
+    password: str | None = None,
 ) -> str:
     """Insert an album and return its id."""
     db_insert_album(album_id, name, description, locked, password)
     return album_id
 
 
-def link_images(db_path: str, album_id: str, image_ids: List[str]) -> None:
+def link_images(db_path: str, album_id: str, image_ids: list[str]) -> None:
     """Seed album_images rows directly -- these reads don't need real images."""
     conn = sqlite3.connect(db_path)
     conn.executemany(
@@ -73,7 +72,7 @@ def link_images(db_path: str, album_id: str, image_ids: List[str]) -> None:
     conn.close()
 
 
-def stored_hash(db_path: str, album_id: str) -> Optional[str]:
+def stored_hash(db_path: str, album_id: str) -> str | None:
     """Read an album's raw password_hash straight from the table."""
     conn = sqlite3.connect(db_path)
     row = conn.execute(
@@ -148,7 +147,7 @@ class TestAlbumTables:
         Mocked deliberately: a real CREATE can't be made to fail while leaving
         the connection observable.
         """
-        with patch("app.database.albums.sqlite3.connect") as mock_connect:
+        with patch("app.database.connection.sqlite3.connect") as mock_connect:
             conn = MagicMock()
             conn.cursor.return_value.execute.side_effect = sqlite3.Error("fail")
             mock_connect.return_value = conn

@@ -1,11 +1,13 @@
-import sys
 import os
-import pytest
+import sys
+import uuid
+from unittest.mock import patch
+
 import bcrypt
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from unittest.mock import patch
-import uuid
+
 from app.routes import albums as albums_router
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -266,8 +268,8 @@ class TestAlbumRoutes:
                     "Locked Album",
                     "Secret",
                     1,
-                    bcrypt.hashpw("oldpass".encode(), bcrypt.gensalt()).decode(),
-                    0,
+                    bcrypt.hashpw(b"oldpass", bcrypt.gensalt()).decode(),
+                    None,
                 ),
                 {
                     "name": "Updated Locked Album",
@@ -286,8 +288,8 @@ class TestAlbumRoutes:
                     "Locked Album",
                     "Secret",
                     1,
-                    bcrypt.hashpw("correctpass".encode(), bcrypt.gensalt()).decode(),
-                    0,
+                    bcrypt.hashpw(b"correctpass", bcrypt.gensalt()).decode(),
+                    None,
                 ),
                 {
                     "name": "Invalid Attempt",
@@ -486,3 +488,17 @@ class TestAlbumImageManagement:
             mock_remove_bulk.assert_called_once_with(
                 album_id, image_ids_to_remove["image_ids"]
             )
+
+
+class TestAlbumRouteErrors:
+    """Test suite for verifying that album routes correctly handle exceptions."""
+
+    def test_unexpected_exceptions_mapped_to_500(self):
+        """Verify that an unexpected exception returns a 500 error."""
+        with patch("app.routes.albums.db_get_all_albums") as mock_get_all:
+            mock_get_all.side_effect = Exception("Database explosion")
+            response = client.get("/albums/")
+            assert response.status_code == 500
+            json_resp = response.json()
+            assert json_resp["detail"]["success"] is False
+            assert "unexpected error" in json_resp["detail"]["message"].lower()

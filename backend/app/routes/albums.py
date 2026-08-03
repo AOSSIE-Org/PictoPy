@@ -1,40 +1,75 @@
-from fastapi import APIRouter, HTTPException, status, Body, Path
+import sqlite3
 import uuid
-from app.schemas.album import (
-    GetAlbumsResponse,
-    CreateAlbumRequest,
-    CreateAlbumResponse,
-    GetAlbumResponse,
-    GetAlbumImagesRequest,
-    GetAlbumImagesResponse,
-    UpdateAlbumRequest,
-    SuccessResponse,
-    ErrorResponse,
-    ImageIdsRequest,
-    SetCoverImageRequest,
-    Album,
-)
+from functools import wraps
+
+from fastapi import APIRouter, Body, HTTPException, Path, status
+
 from app.database.albums import (
-    db_get_all_albums,
-    db_get_album_by_name,
-    db_get_album,
-    db_insert_album,
-    db_update_album,
-    db_delete_album,
-    db_get_album_images,
     db_add_images_to_album,
+    db_delete_album,
+    db_get_album,
+    db_get_album_by_name,
+    db_get_album_images,
+    db_get_all_albums,
+    db_get_image_path,
+    db_insert_album,
     db_remove_image_from_album,
     db_remove_images_from_album,
+    db_update_album,
     db_update_album_cover_image,
     verify_album_password,
-    db_get_image_path,
 )
+from app.logging.setup_logging import get_logger
+from app.schemas.album import (
+    Album,
+    CreateAlbumRequest,
+    CreateAlbumResponse,
+    ErrorResponse,
+    GetAlbumImagesRequest,
+    GetAlbumImagesResponse,
+    GetAlbumResponse,
+    GetAlbumsResponse,
+    ImageIdsRequest,
+    SetCoverImageRequest,
+    SuccessResponse,
+    UpdateAlbumRequest,
+)
+
+logger = get_logger(__name__)
+
+
+def handle_route_exceptions(error_title: str, error_message: str):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except HTTPException:
+                raise
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Error in {func.__name__} route: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=ErrorResponse(
+                        success=False,
+                        error=error_title,
+                        message=error_message,
+                    ).model_dump(),
+                )
+
+        return wrapper
+
+    return decorator
+
 
 router = APIRouter()
 
 
 # GET /albums/ - Get all albums (including locked ones)
 @router.get("/", response_model=GetAlbumsResponse)
+@handle_route_exceptions(
+    "Internal Server Error", "An unexpected error occurred while fetching albums."
+)
 def get_albums():
     """Get all albums. Always returns both locked and unlocked albums."""
     albums = db_get_all_albums()
@@ -58,7 +93,12 @@ def get_albums():
 
 
 # POST /albums/ - Create a new album
+
+
 @router.post("/", response_model=CreateAlbumResponse)
+@handle_route_exceptions(
+    "Internal Server Error", "An unexpected error occurred while creating the album."
+)
 def create_album(body: CreateAlbumRequest):
     existing_album = db_get_album_by_name(body.name)
     if existing_album:
@@ -76,20 +116,23 @@ def create_album(body: CreateAlbumRequest):
         db_insert_album(
             album_id, body.name, body.description, body.is_locked, body.password
         )
-        return CreateAlbumResponse(success=True, album_id=album_id)
-    except Exception as e:
+    except sqlite3.IntegrityError:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_409_CONFLICT,
             detail=ErrorResponse(
                 success=False,
-                error="Internal Server Error",
-                message=f"Failed to create album: {str(e)}",
+                error="Album Already Exists",
+                message=f"Album '{body.name}' is already in the database.",
             ).model_dump(),
         )
+    return CreateAlbumResponse(success=True, album_id=album_id)
 
 
 # GET /albums/{album_id} - Get specific album details
 @router.get("/{album_id}", response_model=GetAlbumResponse)
+@handle_route_exceptions(
+    "Internal Server Error", "An unexpected error occurred while fetching the album."
+)
 def get_album(album_id: str = Path(...)):
     album = db_get_album(album_id)
     if not album:
@@ -100,34 +143,31 @@ def get_album(album_id: str = Path(...)):
             ).model_dump(),
         )
 
-    try:
-        # Get image count for the album
-        image_ids = db_get_album_images(album_id)
-        image_count = len(image_ids)
+    # Get image count for the album
+    image_ids = db_get_album_images(album_id)
+    image_count = len(image_ids)
 
-        album_obj = Album(
-            album_id=album[0],
-            album_name=album[1],
-            description=album[2] or "",
-            is_locked=bool(album[3]),
-            cover_image_path=album[5] if len(album) > 5 else None,
-            image_count=image_count,
-        )
-        return GetAlbumResponse(success=True, data=album_obj)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False,
-                error="Internal Server Error",
-                message=f"Failed to fetch album: {str(e)}",
-            ).model_dump(),
-        )
+    album_obj = Album(
+        album_id=album[0],
+        album_name=album[1],
+        description=album[2] or "",
+        is_locked=bool(album[3]),
+        cover_image_path=album[5] if len(album) > 5 else None,
+        image_count=image_count,
+    )
+    return GetAlbumResponse(success=True, data=album_obj)
 
 
 # PUT /albums/{album_id} - Update Album
+
+
 @router.put("/{album_id}", response_model=SuccessResponse)
-def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)):
+@handle_route_exceptions(
+    "Failed to Update Album", "An unexpected error occurred while updating the album."
+)
+def update_album(
+    album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)  # noqa: B008
+):
     album = db_get_album(album_id)
     if not album:
         raise HTTPException(
@@ -172,18 +212,23 @@ def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)
         db_update_album(
             album_id, body.name, body.description, body.is_locked, body.password
         )
-        return SuccessResponse(success=True, msg="Album updated successfully")
-    except Exception as e:
+    except sqlite3.IntegrityError:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail=ErrorResponse(
-                success=False, error="Failed to Update Album", message=str(e)
+                success=False,
+                error="Album Already Exists",
+                message=f"Album '{body.name}' is already in the database.",
             ).model_dump(),
         )
+    return SuccessResponse(success=True, msg="Album updated successfully")
 
 
 # DELETE /albums/{album_id} - Delete an album
 @router.delete("/{album_id}", response_model=SuccessResponse)
+@handle_route_exceptions(
+    "Failed to Delete Album", "An unexpected error occurred while deleting the album."
+)
 def delete_album(album_id: str = Path(...)):
     album = db_get_album(album_id)
     if not album:
@@ -196,25 +241,17 @@ def delete_album(album_id: str = Path(...)):
             ).model_dump(),
         )
 
-    try:
-        db_delete_album(album_id)
-        return SuccessResponse(success=True, msg="Album deleted successfully")
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False, error="Failed to Delete Album", message=str(e)
-            ).model_dump(),
-        )
+    db_delete_album(album_id)
+    return SuccessResponse(success=True, msg="Album deleted successfully")
 
 
 # GET /albums/{album_id}/images - Get all images in an album
 @router.post("/{album_id}/images/get", response_model=GetAlbumImagesResponse)
-# GET requests do not accept a body by default.
-# Since we need to send a password securely, switching this to POST -- necessary.
-# Open to suggestions if better approach possible.
+@handle_route_exceptions(
+    "Failed to Retrieve Images", "An unexpected error occurred while retrieving images."
+)
 def get_album_images(
-    album_id: str = Path(...), body: GetAlbumImagesRequest = Body(...)
+    album_id: str = Path(...), body: GetAlbumImagesRequest = Body(...)  # noqa: B008
 ):
     album = db_get_album(album_id)
     if not album:
@@ -255,21 +292,20 @@ def get_album_images(
                 ).model_dump(),
             )
 
-    try:
-        image_ids = db_get_album_images(album_id)
-        return GetAlbumImagesResponse(success=True, image_ids=image_ids)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False, error="Failed to Retrieve Images", message=str(e)
-            ).model_dump(),
-        )
+    image_ids = db_get_album_images(album_id)
+    return GetAlbumImagesResponse(success=True, image_ids=image_ids)
 
 
 # POST /albums/{album_id}/images - Add images to an album
+
+
 @router.post("/{album_id}/images", response_model=SuccessResponse)
-def add_images_to_album(album_id: str = Path(...), body: ImageIdsRequest = Body(...)):
+@handle_route_exceptions(
+    "Failed to Add Images", "An unexpected error occurred while adding images."
+)
+def add_images_to_album(
+    album_id: str = Path(...), body: ImageIdsRequest = Body(...)  # noqa: B008
+):
     album = db_get_album(album_id)
     if not album:
         raise HTTPException(
@@ -293,20 +329,26 @@ def add_images_to_album(album_id: str = Path(...), body: ImageIdsRequest = Body(
 
     try:
         db_add_images_to_album(album_id, body.image_ids)
-        return SuccessResponse(
-            success=True, msg=f"Added {len(body.image_ids)} images to album"
-        )
-    except Exception as e:
+    except (ValueError, TypeError) as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=ErrorResponse(
                 success=False, error="Failed to Add Images", message=str(e)
             ).model_dump(),
         )
 
+    return SuccessResponse(
+        success=True, msg=f"Added {len(body.image_ids)} images to album"
+    )
+
 
 # DELETE /albums/{album_id}/images/{image_id} - Remove image from album
+
+
 @router.delete("/{album_id}/images/{image_id}", response_model=SuccessResponse)
+@handle_route_exceptions(
+    "Failed to Remove Image", "An unexpected error occurred while removing the image."
+)
 def remove_image_from_album(album_id: str = Path(...), image_id: str = Path(...)):
     album = db_get_album(album_id)
     if not album:
@@ -321,22 +363,26 @@ def remove_image_from_album(album_id: str = Path(...), image_id: str = Path(...)
 
     try:
         db_remove_image_from_album(album_id, image_id)
-        return SuccessResponse(
-            success=True, msg="Image removed from album successfully"
-        )
-    except Exception as e:
+    except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ErrorResponse(
                 success=False, error="Failed to Remove Image", message=str(e)
             ).model_dump(),
         )
 
+    return SuccessResponse(success=True, msg="Image removed from album successfully")
+
 
 # DELETE /albums/{album_id}/images - Remove multiple images from album
+
+
 @router.delete("/{album_id}/images", response_model=SuccessResponse)
+@handle_route_exceptions(
+    "Failed to Remove Images", "An unexpected error occurred while removing the images."
+)
 def remove_images_from_album(
-    album_id: str = Path(...), body: ImageIdsRequest = Body(...)
+    album_id: str = Path(...), body: ImageIdsRequest = Body(...)  # noqa: B008
 ):
     album = db_get_album(album_id)
     if not album:
@@ -359,24 +405,20 @@ def remove_images_from_album(
             ).model_dump(),
         )
 
-    try:
-        db_remove_images_from_album(album_id, body.image_ids)
-        return SuccessResponse(
-            success=True, msg=f"Removed {len(body.image_ids)} images from album"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False, error="Failed to Remove Images", message=str(e)
-            ).model_dump(),
-        )
+    db_remove_images_from_album(album_id, body.image_ids)
+    return SuccessResponse(
+        success=True, msg=f"Removed {len(body.image_ids)} images from album"
+    )
 
 
 # PUT /albums/{album_id}/cover - Set album cover image
 @router.put("/{album_id}/cover", response_model=SuccessResponse)
+@handle_route_exceptions(
+    "Failed to Set Cover Image",
+    "An unexpected error occurred while setting the cover image.",
+)
 def set_album_cover_image(
-    album_id: str = Path(...), body: SetCoverImageRequest = Body(...)
+    album_id: str = Path(...), body: SetCoverImageRequest = Body(...)  # noqa: B008
 ):
     """Set or update the cover image for an album"""
     album = db_get_album(album_id)
@@ -402,29 +444,19 @@ def set_album_cover_image(
             ).model_dump(),
         )
 
-    try:
-        # Get the image path from the database
-        image_path = db_get_image_path(body.image_id)
+    # Get the image path from the database
+    image_path = db_get_image_path(body.image_id)
 
-        if not image_path:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=ErrorResponse(
-                    success=False,
-                    error="Image Not Found",
-                    message="The specified image does not exist.",
-                ).model_dump(),
-            )
-
-        db_update_album_cover_image(album_id, image_path)
-
-        return SuccessResponse(
-            success=True, msg="Album cover image updated successfully"
-        )
-    except Exception as e:
+    if not image_path:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ErrorResponse(
-                success=False, error="Failed to Set Cover Image", message=str(e)
+                success=False,
+                error="Image Not Found",
+                message="The specified image does not exist.",
             ).model_dump(),
         )
+
+    db_update_album_cover_image(album_id, image_path)
+
+    return SuccessResponse(success=True, msg="Album cover image updated successfully")
