@@ -11,12 +11,19 @@ Both workflows trigger on `pull_request` against `main`.
 
 | Check | Local command |
 | --- | --- |
-| Markdown | `npx markdownlint-cli2 --config .github/.markdownlint-cli2.jsonc` |
-| Frontend lint | `cd frontend && npm run lint:check` |
-| Frontend format | `cd frontend && npm run format:check` |
+| Markdown | `npx markdownlint-cli2@0.22.1 --config .github/.markdownlint-cli2.jsonc` |
+| Frontend lint | `(cd frontend && npm run lint:check)` |
+| Frontend format | `(cd frontend && npm run format:check)` |
 | Python lint + format | `pre-commit run --config .pre-commit-config.yaml --all-files` |
 | Agent hook tests | `node scripts/agent-format-hook.test.mjs` |
-| Rust format | `cd frontend/src-tauri && cargo fmt -- --check` |
+| Rust format | `(cd frontend/src-tauri && cargo fmt -- --check)` |
+
+Every command above runs from the repository root, and each `cd` is wrapped in a subshell so
+it does not leak into the next one.
+
+The markdownlint version is pinned to match `markdownlint-cli2-action@v23`, which CI uses.
+Bare `npx markdownlint-cli2` resolves to the latest release instead, so it can disagree with
+CI over rules that changed between versions.
 
 CI installs the linters from `backend/requirements-lint.txt`, which pins `pre-commit`,
 `ruff`, and `black` — install from that file locally so your versions match the runner's.
