@@ -98,8 +98,6 @@ function Albums() {
         is_locked: Boolean(album.is_locked),
         cover_image_path: album.cover_image_path,
         image_count: album.image_count || 0,
-        created_at: album.created_at || new Date().toISOString(),
-        updated_at: album.updated_at || new Date().toISOString(),
       })) as Album[];
       dispatch(setAlbums(albumsList));
     }

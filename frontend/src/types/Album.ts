@@ -5,8 +5,6 @@ export interface Album {
   is_locked: boolean;
   cover_image_path?: string;
   image_count: number;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface AlbumFormData {
