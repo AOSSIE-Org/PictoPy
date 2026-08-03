@@ -42,22 +42,28 @@ def folder_util_cleanup_thumbnails(folder_ids: List[str]) -> int:
     # 1. Fetch images and delete thumbnails
     images = db_get_images_by_folder_ids(all_folder_ids_list)
     for _, _, thumbnail_path in images:
-        if thumbnail_path and os.path.exists(thumbnail_path):
+        if thumbnail_path:
             try:
                 os.remove(thumbnail_path)
                 deleted_count += 1
+            except FileNotFoundError:
+                pass
             except OSError as e:
                 logger.error(f"Error removing image thumbnail {thumbnail_path}: {e}")
+                raise e
 
     # 2. Fetch videos and delete thumbnails
     videos = db_get_videos_by_folder_ids(all_folder_ids_list)
     for _, _, thumbnail_path in videos:
-        if thumbnail_path and os.path.exists(thumbnail_path):
+        if thumbnail_path:
             try:
                 os.remove(thumbnail_path)
                 deleted_count += 1
+            except FileNotFoundError:
+                pass
             except OSError as e:
                 logger.error(f"Error removing video thumbnail {thumbnail_path}: {e}")
+                raise e
 
     if deleted_count > 0:
         logger.info(f"Cleaned up {deleted_count} thumbnail file(s) for folder deletion")

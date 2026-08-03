@@ -366,13 +366,15 @@ def db_get_folder_ids_by_path_prefix(root_path: str) -> List[FolderIdPath]:
     cursor = conn.cursor()
 
     try:
-        # Use path LIKE with wildcard to match all subfolders
+        # Escape literal wildcards so they are matched exactly, then append the real wildcard.
+        escaped_path = root_path.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        
         cursor.execute(
             """
             SELECT folder_id, folder_path FROM folders 
-            WHERE folder_path LIKE ? || '%'
+            WHERE folder_path LIKE ? || '%' ESCAPE '\\'
         """,
-            (root_path,),
+            (escaped_path,),
         )
 
         return cursor.fetchall()
