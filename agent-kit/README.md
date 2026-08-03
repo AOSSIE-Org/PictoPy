@@ -69,9 +69,14 @@ mechanically.
 ## Adopting a third-party skill
 
 ```bash
-npx skills add <owner>/<repo>
+npx skills@1.5.21 add <owner>/<repo>#<reviewed-tag-or-commit>
 ```
 
+Pin both halves. `npx skills` without a version runs whatever was published most recently,
+and a skill installed from a moving branch can change the instructions an agent follows
+after you reviewed them. Install from a tag or commit you have actually read.
+
 This installs into `.claude/skills/` or `.agents/skills/` and stays updatable with
-`npx skills update`. Leave it where the installer put it — moving it here breaks updates —
-and record what you adopted and why in `references/third-party-skills.md`.
+`npx skills@1.5.21 update`. Leave it where the installer put it — moving it here breaks
+updates — and record what you adopted, at which revision, and why in
+`references/third-party-skills.md`.
