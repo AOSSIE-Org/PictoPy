@@ -9,9 +9,9 @@ import { Videos } from '@/pages/VideosPage/Videos';
 import { MyFav } from '@/pages/Home/MyFav';
 import { AITagging } from '@/pages/AITagging/AITagging';
 import { PersonImages } from '@/pages/PersonImages/PersonImages';
-import { ComingSoon } from '@/pages/ComingSoon/ComingSoon';
+import Album from '@/pages/Album/Album';
+import AlbumDetail from '@/pages/Album/AlbumDetail';
 import { Memories } from '@/pages/Memories/Memories';
-import { MemorySettings } from '@/pages/Memories/MemorySettings';
 import { ModelManager } from '@/pages/ModelManager/ModelManager';
 
 import { SearchResults } from '@/pages/SearchResults/SearchResults';
@@ -27,10 +27,8 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTES.FAVOURITES} element={<MyFav />} />
         <Route path={ROUTES.SETTINGS} element={<Settings />} />
         <Route path={ROUTES.AI} element={<AITagging />} />
-        <Route path={ROUTES.ALBUMS} element={<ComingSoon />} />
-        {/* Declared before the index route so "memories/settings" is not
-            swallowed as a memory id. */}
-        <Route path={ROUTES.MEMORIES_SETTINGS} element={<MemorySettings />} />
+        <Route path={ROUTES.ALBUMS} element={<Album />} />
+        <Route path={ROUTES.ALBUM_DETAIL} element={<AlbumDetail />} />
         <Route path={ROUTES.MEMORIES} element={<Memories />} />
         <Route path={ROUTES.PERSON} element={<PersonImages />} />
         <Route path={ROUTES.SEARCH} element={<SearchResults />} />

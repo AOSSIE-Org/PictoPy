@@ -363,7 +363,7 @@ export const AvailableTab: React.FC<AvailableTabProps> = ({
       {availableTiers.length > 0 && (
         <section>
           <h2 className="mb-4 text-lg font-semibold">Standard Tiers</h2>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
             {availableTiers.map((bundle) => {
               if (!bundle) return null;
               const isRecommended =
@@ -389,7 +389,7 @@ export const AvailableTab: React.FC<AvailableTabProps> = ({
       {semanticBundle && (
         <section>
           <h2 className="mb-4 text-lg font-semibold">Additional Features</h2>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
             <TierCard
               tier={semanticBundle.tier}
               title={SEMANTIC_BUNDLE_LABEL}

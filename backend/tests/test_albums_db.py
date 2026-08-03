@@ -53,11 +53,11 @@ def make_album(
     album_id: str = "album-1",
     name: str = "Trip",
     description: str = "",
-    hidden: bool = False,
+    locked: bool = False,
     password: str | None = None,
 ) -> str:
     """Insert an album and return its id."""
-    db_insert_album(album_id, name, description, hidden, password)
+    db_insert_album(album_id, name, description, locked, password)
     return album_id
 
 
@@ -102,6 +102,42 @@ class TestAlbumTables:
         db_create_albums_table()
         db_create_album_images_table()
 
+    def test_migrates_a_legacy_is_hidden_schema(self, test_db):
+        """Databases predating the rename must gain is_locked/cover_image_path.
+
+        CREATE IF NOT EXISTS is a no-op on an existing table, so without the
+        guarded ALTERs every shipped database 500s on the first album read.
+        """
+        conn = sqlite3.connect(test_db)
+        conn.execute("DROP TABLE albums")
+        conn.execute(
+            """
+            CREATE TABLE albums (
+                album_id TEXT PRIMARY KEY,
+                album_name TEXT UNIQUE,
+                description TEXT,
+                is_hidden BOOLEAN DEFAULT 0,
+                password_hash TEXT
+            )
+            """
+        )
+        conn.execute(
+            "INSERT INTO albums (album_id, album_name, is_hidden) VALUES (?, ?, ?)",
+            ("legacy-1", "Old", 1),
+        )
+        conn.commit()
+        conn.close()
+
+        db_create_albums_table()
+
+        conn = sqlite3.connect(test_db)
+        columns = [row[1] for row in conn.execute("PRAGMA table_info(albums)")]
+        conn.close()
+        assert "is_hidden" not in columns
+        assert {"is_locked", "cover_image_path"} <= set(columns)
+        # the legacy row survives, its flag carried over under the new name
+        assert [row[1:4] for row in db_get_all_albums()] == [("Old", None, 1)]
+
     @pytest.mark.parametrize(
         "create_table", [db_create_albums_table, db_create_album_images_table]
     )
@@ -145,14 +181,14 @@ class TestAlbumCrud:
         with pytest.raises(sqlite3.IntegrityError):
             make_album("album-2", "Trip")
 
-    def test_get_all_albums_hides_hidden_by_default(self, test_db):
+    def test_get_all_albums_returns_locked_albums_too(self, test_db):
+        """Locked albums stay listed -- the password gates opening, not listing."""
         make_album("album-1", "Public")
-        make_album("album-2", "Secret", hidden=True, password="pw")
+        make_album("album-2", "Secret", locked=True, password="pw")
 
-        visible = [row[1] for row in db_get_all_albums(show_hidden=False)]
-        every = [row[1] for row in db_get_all_albums(show_hidden=True)]
-        assert visible == ["Public"]
-        assert sorted(every) == ["Public", "Secret"]
+        rows = db_get_all_albums()
+        assert sorted(row[1] for row in rows) == ["Public", "Secret"]
+        assert {row[1]: row[3] for row in rows} == {"Public": 0, "Secret": 1}
 
     def test_update_changes_fields(self, test_db):
         make_album("album-1", "Old", "Old desc")
@@ -202,7 +238,7 @@ class TestAlbumImages:
 
 class TestAlbumPassword:
     def test_password_is_stored_hashed(self, test_db):
-        make_album("album-1", "Secret", hidden=True, password="securepass")
+        make_album("album-1", "Secret", locked=True, password="securepass")
 
         hashed = stored_hash(test_db, "album-1")
         assert hashed is not None
@@ -210,7 +246,7 @@ class TestAlbumPassword:
         assert bcrypt.checkpw(b"securepass", hashed.encode())
 
     def test_verify_accepts_correct_and_rejects_wrong(self, test_db):
-        make_album("album-1", "Secret", hidden=True, password="securepass")
+        make_album("album-1", "Secret", locked=True, password="securepass")
 
         assert verify_album_password("album-1", "securepass") is True
         assert verify_album_password("album-1", "wrongpass") is False
@@ -223,7 +259,7 @@ class TestAlbumPassword:
         assert verify_album_password("nope", "anything") is False
 
     def test_update_replaces_the_password(self, test_db):
-        make_album("album-1", "Secret", hidden=True, password="oldpass")
+        make_album("album-1", "Secret", locked=True, password="oldpass")
 
         db_update_album("album-1", "Secret", "", True, "newpass")
 
@@ -231,7 +267,7 @@ class TestAlbumPassword:
         assert verify_album_password("album-1", "oldpass") is False
 
     def test_update_without_password_keeps_the_existing_one(self, test_db):
-        make_album("album-1", "Secret", hidden=True, password="oldpass")
+        make_album("album-1", "Secret", locked=True, password="oldpass")
         before = stored_hash(test_db, "album-1")
 
         db_update_album("album-1", "Renamed", "", True, None)

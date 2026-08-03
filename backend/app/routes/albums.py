@@ -15,7 +15,9 @@ from app.database.albums import (
     db_remove_image_from_album,
     db_remove_images_from_album,
     db_update_album,
+    db_update_album_cover_image,
     verify_album_password,
+    db_get_image_path,
 )
 from app.logging.setup_logging import get_logger
 from app.schemas.album import (
@@ -28,6 +30,7 @@ from app.schemas.album import (
     GetAlbumResponse,
     GetAlbumsResponse,
     ImageIdsRequest,
+    SetCoverImageRequest,
     SuccessResponse,
     UpdateAlbumRequest,
 )
@@ -61,23 +64,28 @@ def handle_route_exceptions(error_title: str, error_message: str):
 
 router = APIRouter()
 
-# GET /albums/ - Get all albums
-
-
+# GET /albums/ - Get all albums (including locked ones)
 @router.get("/", response_model=GetAlbumsResponse)
 @handle_route_exceptions(
     "Internal Server Error", "An unexpected error occurred while fetching albums."
 )
-def get_albums(show_hidden: bool = Query(False)):
-    albums = db_get_all_albums(show_hidden)
+def get_albums():
+    """Get all albums. Always returns both locked and unlocked albums."""
+    albums = db_get_all_albums()
     album_list = []
     for album in albums:
+        # Get image count for each album
+        image_ids = db_get_album_images(album[0])
+        image_count = len(image_ids)
+
         album_list.append(
             Album(
                 album_id=album[0],
                 album_name=album[1],
                 description=album[2] or "",
-                is_hidden=bool(album[3]),
+                is_locked=bool(album[3]),
+                cover_image_path=album[5] if len(album) > 5 else None,
+                image_count=image_count,
             )
         )
     return GetAlbumsResponse(success=True, albums=album_list)
@@ -105,7 +113,7 @@ def create_album(body: CreateAlbumRequest):
     album_id = str(uuid.uuid4())
     try:
         db_insert_album(
-            album_id, body.name, body.description, body.is_hidden, body.password
+            album_id, body.name, body.description, body.is_locked, body.password
         )
     except sqlite3.IntegrityError:
         raise HTTPException(
@@ -134,11 +142,17 @@ def get_album(album_id: str = Path(...)):
             ).model_dump(),
         )
 
+    # Get image count for the album
+    image_ids = db_get_album_images(album_id)
+    image_count = len(image_ids)
+
     album_obj = Album(
         album_id=album[0],
         album_name=album[1],
         description=album[2] or "",
-        is_hidden=bool(album[3]),
+        is_locked=bool(album[3]),
+        cover_image_path=album[5] if len(album) > 5 else None,
+        image_count=image_count,
     )
     return GetAlbumResponse(success=True, data=album_obj)
 
@@ -168,11 +182,11 @@ def update_album(
         "album_id": album[0],
         "album_name": album[1],
         "description": album[2],
-        "is_hidden": bool(album[3]),
+        "is_locked": bool(album[3]),
         "password_hash": album[4],
     }
 
-    if album_dict["password_hash"]:
+    if album_dict["is_locked"]:
         if not body.current_password:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -195,7 +209,7 @@ def update_album(
 
     try:
         db_update_album(
-            album_id, body.name, body.description, body.is_hidden, body.password
+            album_id, body.name, body.description, body.is_locked, body.password
         )
     except sqlite3.IntegrityError:
         raise HTTPException(
@@ -253,18 +267,18 @@ def get_album_images(
         "album_id": album[0],
         "album_name": album[1],
         "description": album[2],
-        "is_hidden": bool(album[3]),
+        "is_locked": bool(album[3]),
         "password_hash": album[4],
     }
 
-    if album_dict["is_hidden"]:
+    if album_dict["is_locked"]:
         if not body.password:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ErrorResponse(
                     success=False,
                     error="Password Required",
-                    message="Password is required to access this hidden album.",
+                    message="Password is required to access this locked album.",
                 ).model_dump(),
             )
         if not verify_album_password(album_id, body.password):
@@ -393,4 +407,56 @@ def remove_images_from_album(
     db_remove_images_from_album(album_id, body.image_ids)
     return SuccessResponse(
         success=True, msg=f"Removed {len(body.image_ids)} images from album"
+    )
+
+
+# PUT /albums/{album_id}/cover - Set album cover image
+@router.put("/{album_id}/cover", response_model=SuccessResponse)
+@handle_route_exceptions(
+    "Failed to Set Cover Image", "An unexpected error occurred while setting the cover image."
+)
+def set_album_cover_image(
+    album_id: str = Path(...), body: SetCoverImageRequest = Body(...)
+):
+    """Set or update the cover image for an album"""
+    album = db_get_album(album_id)
+    if not album:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ErrorResponse(
+                success=False,
+                error="Album Not Found",
+                message="No album exists with the provided ID.",
+            ).model_dump(),
+        )
+
+    # Verify the image exists in the album
+    album_image_ids = db_get_album_images(album_id)
+    if body.image_id not in album_image_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="Image Not In Album",
+                message="The specified image is not in this album.",
+            ).model_dump(),
+        )
+
+    # Get the image path from the database
+    image_path = db_get_image_path(body.image_id)
+
+    if not image_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ErrorResponse(
+                success=False,
+                error="Image Not Found",
+                message="The specified image does not exist.",
+            ).model_dump(),
+        )
+
+    db_update_album_cover_image(album_id, image_path)
+
+    return SuccessResponse(
+        success=True, msg="Album cover image updated successfully"
     )

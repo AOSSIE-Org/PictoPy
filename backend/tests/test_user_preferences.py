@@ -582,7 +582,8 @@ class TestMemoriesPreferences:
 
         memories = response.json()["user_preferences"]["memories"]
         assert memories["enabled"] is True
-        assert memories["notifications_enabled"] is True
+        # Desktop alerts are opt-in.
+        assert memories["notifications_enabled"] is False
         # The story viewer ships muted; audio is opt-in.
         assert memories["story_music_enabled"] is False
         assert memories["min_images"] == 5
