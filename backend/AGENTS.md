@@ -69,4 +69,9 @@ No virtualenv is committed. Create your own and
 ## Formatting
 
 **black**, 88 columns. Never `ruff format` — see the root `AGENTS.md` for why.
-Verify with `pre-commit run --config ../.pre-commit-config.yaml --all-files`.
+
+Verify from the repository root, like every other command in these files:
+
+```bash
+pre-commit run --config .pre-commit-config.yaml --all-files
+```

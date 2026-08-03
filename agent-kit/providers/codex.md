@@ -15,13 +15,15 @@ root file applying everywhere else. Explicit instructions in chat override both.
 stubs there are byte-identical to the ones in `.claude/skills/`; both point at
 `agent-kit/skills/`.
 
-`npx skills add <owner>/<repo>` installs into this directory. See
-`agent-kit/references/third-party-skills.md` before adopting anything.
+`npx skills@1.5.21 add <owner>/<repo>#<reviewed-tag-or-commit>` installs into this
+directory. See `agent-kit/references/third-party-skills.md` before adopting anything.
 
 ## Notes
 
-- Codex has no equivalent of Claude Code's hooks, so the automatic formatting does not
-  apply. Run the checks in `agent-kit/skills/pre-pr-check/SKILL.md` manually before
-  pushing — especially `pre-commit`, since nothing will have reformatted Python for you.
+- Codex supports hooks of its own, through `hooks.json` or an inline `[hooks]` table in
+  `config.toml`, but this repository does not wire any up. Only Claude Code gets the
+  automatic formatting here, so unless you add equivalent hooks yourself, run the checks in
+  `agent-kit/skills/pre-pr-check/SKILL.md` manually before pushing — especially
+  `pre-commit`, since nothing will have reformatted Python for you.
 - `disable-model-invocation` and `allowed-tools` in the stub frontmatter are Claude Code
   extensions. Codex ignores them harmlessly.
