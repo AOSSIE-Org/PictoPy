@@ -35,11 +35,18 @@ import {
   selectAlbumImages,
 } from '@/features/albumSelectors';
 import { selectIsImageViewOpen } from '@/features/imageSelectors';
-import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { Album } from '@/types/Album';
 import { Image } from '@/types/Media';
+
+// Matches an ImageCard's square tile so the grid does not resize on load.
+const ImageCardSkeleton: React.FC = () => (
+  <div
+    className="bg-muted aspect-square w-full animate-pulse rounded-lg"
+    data-testid="album-image-skeleton"
+  />
+);
 
 export const AlbumDetail = () => {
   const dispatch = useDispatch();
@@ -83,11 +90,15 @@ export const AlbumDetail = () => {
   });
 
   // Fetch all images to get full details
-  const { data: allImagesData } = usePictoQuery({
+  const { data: allImagesData, isLoading: isLoadingAllImages } = usePictoQuery({
     queryKey: ['images'],
     queryFn: () => fetchAllImages(),
     enabled: !!albumId && !!album,
   });
+
+  // The grid needs both responses: one names the album's images, the other
+  // carries their details.
+  const isLoadingContent = isLoadingImages || isLoadingAllImages;
 
   const removeImagesMutation = usePictoMutation({
     mutationFn: ({
@@ -97,6 +108,8 @@ export const AlbumDetail = () => {
       albumId: string;
       imageIds: string[];
     }) => removeMultipleImagesFromAlbum(albumId, { image_ids: imageIds }),
+    // The list page shows a photo count per album, so it is stale now too.
+    autoInvalidateTags: ['albums'],
   });
 
   useMutationFeedback(removeImagesMutation, {
@@ -115,6 +128,8 @@ export const AlbumDetail = () => {
   const setCoverImageMutation = usePictoMutation({
     mutationFn: ({ albumId, imageId }: { albumId: string; imageId: string }) =>
       setAlbumCoverImage(albumId, imageId),
+    // The list page renders this cover on the album card.
+    autoInvalidateTags: ['albums'],
   });
 
   useMutationFeedback(setCoverImageMutation, {
@@ -152,10 +167,7 @@ export const AlbumDetail = () => {
   }, [albumData, dispatch]);
 
   useEffect(() => {
-    if (isLoadingImages) {
-      dispatch(showLoader('Loading album images...'));
-    } else if (imagesError) {
-      dispatch(hideLoader());
+    if (imagesError) {
       dispatch(
         showInfoDialog({
           title: 'Error',
@@ -178,14 +190,12 @@ export const AlbumDetail = () => {
 
       dispatch(setAlbumImages(albumImages));
       dispatch(setImages(albumImages));
-      dispatch(hideLoader());
     }
   }, [
     imagesData,
     allImagesData,
     imagesSuccess,
     imagesError,
-    isLoadingImages,
     dispatch,
     navigate,
   ]);
@@ -328,7 +338,13 @@ export const AlbumDetail = () => {
 
       {/* Images Grid */}
       <div className="flex-1 overflow-y-auto pt-2">
-        {images.length === 0 ? (
+        {isLoadingContent ? (
+          <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {Array.from({ length: 12 }).map((_, index) => (
+              <ImageCardSkeleton key={index} />
+            ))}
+          </div>
+        ) : images.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
               <p className="text-muted-foreground mb-4">
