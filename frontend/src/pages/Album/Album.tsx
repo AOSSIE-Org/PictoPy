@@ -33,8 +33,8 @@ const ALBUM_SORT_OPTIONS: SortOption<AlbumSortValue>[] = [
 const AlbumCardSkeleton: React.FC = () => (
   <div className="animate-pulse" data-testid="album-card-skeleton">
     <div className="bg-muted aspect-4/5 w-full rounded-xl" />
-    <div className="space-y-2 p-4">
-      <div className="bg-muted h-4 w-2/3 rounded" />
+    <div className="space-y-1.5 p-3">
+      <div className="bg-muted h-3.5 w-2/3 rounded" />
       <div className="bg-muted h-3 w-1/3 rounded" />
     </div>
   </div>
@@ -190,7 +190,7 @@ function Albums() {
       </div>
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-4 pb-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {Array.from({ length: 10 }).map((_, index) => (
               <AlbumCardSkeleton key={index} />
             ))}
@@ -198,7 +198,7 @@ function Albums() {
         ) : albums.length === 0 ? (
           <EmptyAlbumsState />
         ) : (
-          <div className="grid grid-cols-2 gap-4 pb-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {sortedAlbums.map((album) => (
               <AlbumCard
                 key={album.id}
