@@ -2,7 +2,7 @@
 // Regression tests for the agent format hook.
 //
 // Run: node scripts/agent-format-hook.test.mjs
-// Also runs in CI, in the Linting job of .github/workflows/pr-check-tests.yml.
+// Also runs in CI, in the Linting job of .github/workflows/lint.yml.
 //
 // Two layers: the guard and exclusion helpers directly, then the real entrypoint
 // as a subprocess, because Claude Code depends on its exit codes (2 blocks, 0 allows).

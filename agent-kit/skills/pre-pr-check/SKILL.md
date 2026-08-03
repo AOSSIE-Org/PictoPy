@@ -7,9 +7,14 @@ allowed-tools: Bash Read Grep Glob
 
 # Pre-PR check
 
-Run the same checks CI runs, in the same order, and report each one. Do not stop at the
-first failure — run everything, then summarise, so the contributor sees the full picture in
-one pass.
+Run every check CI runs, in the same order, and report each one. Do not stop at the first
+failure — run everything, then summarise, so the contributor sees the full picture in one
+pass.
+
+Two things here are deliberately not a mirror of CI. `cargo test` is **extra**: no PR
+workflow runs it, but `CONTRIBUTING.md` asks for it on Rust changes. Everything else below
+is a gate CI will fail you on, including the two PyInstaller builds, which catch imports
+that work in development and break once frozen.
 
 `agent-kit/references/ci-gates.md` documents which workflow job each gate comes from. If
 you change this list, change that file too.
@@ -30,16 +35,19 @@ docs-only change does not need `cargo test`.
 Runs on every `.md` in the repository regardless of what changed.
 
 ```bash
-npx markdownlint-cli2 --config .github/.markdownlint-cli2.jsonc
+npx markdownlint-cli2@0.22.1 --config .github/.markdownlint-cli2.jsonc
 ```
+
+The version matches the action CI uses. Leave it pinned, or you will be linting against a
+different release than the one that decides your build.
 
 Errors from paths inside local virtualenvs (`.env/`, `.docs-env/`, `.sync-env/`,
 `site-packages/`) are pre-existing noise, not caused by the change. Ignore them and say so.
 
 ## 3. Agent hook tests
 
-Only needed if the diff touches `scripts/agent-format-hook*.mjs`, but it is fast and needs
-no dependencies.
+CI runs this on every PR, so run it on every PR too, whatever the diff touches. It needs no
+dependencies and finishes in under a second.
 
 ```bash
 node scripts/agent-format-hook.test.mjs
@@ -76,7 +84,20 @@ If the black hook reformats files, that is a pass with changes — re-stage them
 resolve a formatting disagreement by running `ruff format`; Ruff is configured at 300
 columns here and would reflow the entire codebase.
 
+Then the two frozen builds, which CI runs before the tests and which fail more often than
+the tests do. A dependency that is imported dynamically passes `pytest` and dies here.
+
+```bash
+(cd backend && pip install -r requirements.txt && pyinstaller main.py --name PictoPy_Server --onedir --distpath dist)
+(cd sync-microservice && pip install -r requirements.txt && pyinstaller main.py --name PictoPy_Sync_Microservice --onedir --distpath dist)
+```
+
+Skip these only for a change that touches no Python at all, and say that you skipped them.
+
 ## 6. Rust
+
+`cargo fmt` is a CI gate. `cargo test` is not run by any PR workflow, but `CONTRIBUTING.md`
+asks for it, so run it on any `src-tauri/` change.
 
 ```bash
 (cd frontend/src-tauri && cargo fmt -- --check)

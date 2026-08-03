@@ -81,6 +81,8 @@ the rendered output, not implementation details. Run with `npm test`.
 
 ## Before you finish
 
+From the repository root, so the `cd` does not leak into whatever you run next:
+
 ```bash
-npm run lint:check && npm run format:check && npm test
+(cd frontend && npm run lint:check && npm run format:check && npm test)
 ```

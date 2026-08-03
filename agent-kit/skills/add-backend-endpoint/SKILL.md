@@ -84,6 +84,15 @@ pre-commit run --config .pre-commit-config.yaml --all-files
 (cd frontend && npm run lint:check && npm run format:check && npm test)
 ```
 
+A new endpoint usually means a new import, and CI freezes both services with PyInstaller
+before it runs the tests. An import that only happens at runtime passes `pytest` and fails
+there, so build them too:
+
+```bash
+(cd backend && pyinstaller main.py --name PictoPy_Server --onedir --distpath dist)
+(cd sync-microservice && pyinstaller main.py --name PictoPy_Sync_Microservice --onedir --distpath dist)
+```
+
 Or run `/pre-pr-check`, which covers every area and is the single place the gate list is
 maintained.
 

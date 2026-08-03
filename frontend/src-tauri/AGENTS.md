@@ -23,11 +23,14 @@ Forgetting step 2 or 3 produces a runtime error with no compile-time warning. Ch
 
 ## Formatting and tests
 
-`cargo fmt` is CI-enforced as `cargo fmt -- --check`. Run it before pushing.
+`cargo fmt` is CI-enforced as `cargo fmt -- --check`. Run it before pushing. `cargo test` is
+not a CI gate, but `CONTRIBUTING.md` asks for it on any change here.
+
+From the repository root, so the `cd` does not leak into whatever you run next:
 
 ```bash
-cargo fmt
-cargo test
+(cd frontend/src-tauri && cargo fmt)
+(cd frontend/src-tauri && cargo test)
 ```
 
 ## Versioning

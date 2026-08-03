@@ -64,12 +64,15 @@ relevant file, or let it find them through `agent-kit/README.md`.
 The agent-skills ecosystem publishes installable skills, for example:
 
 ```bash
-npx skills add shadcn/ui
+npx skills@1.5.21 add shadcn/ui#<reviewed-tag-or-commit>
 ```
 
+Pin the installer and the skill. Left unpinned, both can change under you after you have
+read them, and a skill is a set of instructions an agent will follow on this codebase.
+
 This installs into `.claude/skills/` or `.agents/skills/` and stays updatable in place with
-`npx skills update`. **Leave it where the installer put it** — moving it into `agent-kit/`
-breaks updates. Record what you adopted and why in
+`npx skills@1.5.21 update`. **Leave it where the installer put it** — moving it into
+`agent-kit/` breaks updates. Record what you adopted, at which revision, and why in
 `agent-kit/references/third-party-skills.md`.
 
 ## Keeping it from rotting
