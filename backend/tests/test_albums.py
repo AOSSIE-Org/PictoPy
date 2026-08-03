@@ -184,6 +184,63 @@ class TestAlbumRoutes:
 
             mock_get_all.assert_called_once()
 
+    def test_locked_album_cover_is_withheld(self, mock_db_album, mock_db_locked_album):
+        """A locked album's cover would reveal the content the password gates."""
+        with patch("app.routes.albums.db_get_all_albums") as mock_get_all, patch(
+            "app.routes.albums.db_get_album_cover_path"
+        ) as mock_cover:
+            mock_get_all.return_value = [
+                (
+                    mock_db_album["album_id"],
+                    mock_db_album["album_name"],
+                    mock_db_album["description"],
+                    mock_db_album["is_locked"],
+                    mock_db_album["password_hash"],
+                    None,
+                ),
+                (
+                    mock_db_locked_album["album_id"],
+                    mock_db_locked_album["album_name"],
+                    mock_db_locked_album["description"],
+                    mock_db_locked_album["is_locked"],
+                    mock_db_locked_album["password_hash"],
+                    None,
+                ),
+            ]
+            mock_cover.return_value = "/photos/secret.jpg"
+
+            response = client.get("/albums/")
+            assert response.status_code == 200
+
+            covers = {
+                album["album_id"]: album["cover_image_path"]
+                for album in response.json()["albums"]
+            }
+            assert covers[mock_db_album["album_id"]] == "/photos/secret.jpg"
+            assert covers[mock_db_locked_album["album_id"]] is None
+            # The path is never even looked up for a locked album
+            mock_cover.assert_called_once_with(mock_db_album["album_id"])
+
+    def test_get_album_by_id_withholds_a_locked_cover(self, mock_db_locked_album):
+        """The single-album read must not leak what the listing hides."""
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_get_album_cover_path"
+        ) as mock_cover:
+            mock_get_album.return_value = (
+                mock_db_locked_album["album_id"],
+                mock_db_locked_album["album_name"],
+                mock_db_locked_album["description"],
+                mock_db_locked_album["is_locked"],
+                mock_db_locked_album["password_hash"],
+                None,
+            )
+            mock_cover.return_value = "/photos/secret.jpg"
+
+            response = client.get(f"/albums/{mock_db_locked_album['album_id']}")
+            assert response.status_code == 200
+            assert response.json()["data"]["cover_image_path"] is None
+            mock_cover.assert_not_called()
+
     def test_get_all_albums_empty_list(self):
         """
         Test fetching albums when none exist.

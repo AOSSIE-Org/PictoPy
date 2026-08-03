@@ -70,10 +70,6 @@ class ImageIdsRequest(BaseModel):
         return cleaned
 
 
-class SetCoverImageRequest(BaseModel):
-    image_id: str = Field(..., min_length=1)
-
-
 # ##############################
 # Response Handler
 # ##############################

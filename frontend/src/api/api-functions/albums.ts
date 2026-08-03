@@ -133,19 +133,3 @@ export const removeMultipleImagesFromAlbum = async (
   );
   return response.data;
 };
-
-/**
- * Set or update the cover image for an album
- * @param albumId - Album UUID
- * @param imageId - Image UUID to set as cover
- */
-export const setAlbumCoverImage = async (
-  albumId: string,
-  imageId: string,
-): Promise<APIResponse> => {
-  const response = await apiClient.put<APIResponse>(
-    albumsEndpoints.setAlbumCoverImage(albumId),
-    { image_id: imageId },
-  );
-  return response.data;
-};

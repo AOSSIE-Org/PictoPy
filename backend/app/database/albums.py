@@ -176,16 +176,24 @@ def db_delete_album(album_id: str):
         cursor.execute("DELETE FROM albums WHERE album_id = ?", (album_id,))
 
 
-def db_update_album_cover_image(album_id: str, cover_image_path: str):
-    """Update the cover image path for an album"""
+def db_get_album_cover_path(album_id: str) -> str | None:
+    """Path of the album's cover: its first image, by insertion order."""
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "UPDATE albums SET cover_image_path = ? WHERE album_id = ?",
-            (cover_image_path, album_id),
+            """
+            SELECT images.path
+            FROM album_images
+            JOIN images ON images.id = album_images.image_id
+            WHERE album_images.album_id = ?
+            ORDER BY album_images.rowid
+            LIMIT 1
+            """,
+            (album_id,),
         )
-        conn.commit()
+        result = cursor.fetchone()
+        return result[0] if result else None
     finally:
         conn.close()
 
@@ -285,17 +293,5 @@ def verify_album_password(album_id: str, password: str) -> bool:
         if not row or not row[0]:
             return False
         return bcrypt.checkpw(password.encode("utf-8"), row[0].encode("utf-8"))
-    finally:
-        conn.close()
-
-
-def db_get_image_path(image_id: str) -> str | None:
-    """Get the path of an image by its ID."""
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT path FROM images WHERE id = ?", (image_id,))
-        result = cursor.fetchone()
-        return result[0] if result else None
     finally:
         conn.close()

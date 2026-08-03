@@ -56,7 +56,6 @@ export const albumsEndpoints = {
     `/albums/${albumId}/images/${imageId}`,
   removeMultipleImagesFromAlbum: (albumId: string) =>
     `/albums/${albumId}/images`,
-  setAlbumCoverImage: (albumId: string) => `/albums/${albumId}/cover`,
 };
 
 export const memoriesEndpoints = {
