@@ -10,6 +10,7 @@ import pytest
 from app.database.albums import (
     db_create_albums_table,
     db_create_album_images_table,
+    db_create_album_with_images,
     db_get_all_albums,
     db_get_album_by_name,
     db_get_album,
@@ -242,6 +243,44 @@ class TestAlbumImages:
         db_remove_images_from_album("album-1", ["img-1", "img-3"])
 
         assert db_get_album_images("album-1") == ["img-2"]
+
+
+class TestCreateAlbumWithImages:
+    def test_creates_the_album_and_links_every_image(self, test_db):
+        make_images(test_db, ["img-1", "img-2"])
+
+        linked = db_create_album_with_images(
+            "album-1", "Paris 2022", "July 2022", ["img-1", "img-2"]
+        )
+
+        assert linked == 2
+        assert db_get_album_images("album-1") == ["img-1", "img-2"]
+        album = db_get_album("album-1")
+        assert album[1] == "Paris 2022"
+        assert album[2] == "July 2022"
+        # Always an open album: locking is done afterwards, from Edit Album.
+        assert bool(album[3]) is False
+        assert album[4] is None
+
+    def test_an_unknown_image_leaves_no_album_behind(self, test_db):
+        """The album and its links commit together, or not at all."""
+        make_images(test_db, ["img-1"])
+
+        with pytest.raises(sqlite3.IntegrityError):
+            db_create_album_with_images(
+                "album-1", "Paris 2022", "", ["img-1", "img-missing"]
+            )
+
+        assert db_get_album("album-1") is None
+
+    def test_a_duplicate_name_is_rejected(self, test_db):
+        make_album("album-1", "Paris 2022")
+        make_images(test_db, ["img-1"])
+
+        with pytest.raises(sqlite3.IntegrityError):
+            db_create_album_with_images("album-2", "Paris 2022", "", ["img-1"])
+
+        assert db_get_album("album-2") is None
 
 
 # ##############################

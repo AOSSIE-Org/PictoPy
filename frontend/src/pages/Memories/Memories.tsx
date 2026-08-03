@@ -1,13 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { MemoryCard } from '@/components/Memories/MemoryCard';
+import { ConvertMemoryToAlbumDialog } from '@/components/Memories/ConvertMemoryToAlbumDialog';
 import { MemoryStoryViewer } from '@/components/Memories/MemoryStoryViewer';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useMemories, useRefreshMemories } from '@/hooks/useMemories';
+import type { MemoryCard as MemoryCardType } from '@/api/api-functions/memories';
 import {
   openMemory,
   selectActiveMemoryId,
@@ -32,6 +34,10 @@ const EmptyState: React.FC<{ isGenerating: boolean }> = ({ isGenerating }) => (
 export const Memories: React.FC = () => {
   const dispatch = useAppDispatch();
   const activeMemoryId = useAppSelector(selectActiveMemoryId);
+
+  const [memoryToConvert, setMemoryToConvert] = useState<MemoryCardType | null>(
+    null,
+  );
 
   const memoriesQuery = useMemories({ limit: 60 });
   const { refresh, isRefreshing, status: statusQuery } = useRefreshMemories();
@@ -120,11 +126,18 @@ export const Memories: React.FC = () => {
                 key={memory.memory_id}
                 memory={memory}
                 onOpen={(id) => dispatch(openMemory(id))}
+                onConvertToAlbum={() => setMemoryToConvert(memory)}
               />
             ))}
           </div>
         )}
       </div>
+
+      <ConvertMemoryToAlbumDialog
+        memory={memoryToConvert}
+        isOpen={memoryToConvert !== null}
+        onClose={() => setMemoryToConvert(null)}
+      />
 
       {activeMemoryId && (
         <MemoryStoryViewer

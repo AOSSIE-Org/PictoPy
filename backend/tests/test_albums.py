@@ -32,6 +32,24 @@ def mock_db_album():
 
 
 @pytest.fixture
+def mock_memory():
+    """A memories row as db_get_memory returns it, trimmed to what the route reads."""
+    return {
+        "memory_id": str(uuid.uuid4()),
+        "title": "3 years ago in Paris",
+        "subtitle": "July 2022 · Paris",
+    }
+
+
+@pytest.fixture
+def mock_memory_images():
+    return [
+        {"id": str(uuid.uuid4()), "sort_order": 0},
+        {"id": str(uuid.uuid4()), "sort_order": 1},
+    ]
+
+
+@pytest.fixture
 def mock_db_locked_album():
     return {
         "album_id": str(uuid.uuid4()),
@@ -543,3 +561,92 @@ class TestAlbumImageManagement:
             mock_remove_bulk.assert_called_once_with(
                 album_id, image_ids_to_remove["image_ids"]
             )
+
+
+class TestCreateAlbumFromMemory:
+    """Test suite for converting a curated memory into an album."""
+
+    def test_create_album_from_memory_success(self, mock_memory, mock_memory_images):
+        with patch("app.routes.albums.db_get_memory") as mock_get_memory, patch(
+            "app.routes.albums.db_get_memory_images"
+        ) as mock_get_images, patch(
+            "app.routes.albums.db_get_album_by_name"
+        ) as mock_get_by_name, patch(
+            "app.routes.albums.db_create_album_with_images"
+        ) as mock_create:
+            mock_get_memory.return_value = mock_memory
+            mock_get_images.return_value = mock_memory_images
+            mock_get_by_name.return_value = None
+            mock_create.return_value = len(mock_memory_images)
+
+            response = client.post(
+                "/albums/from-memory",
+                json={"memory_id": mock_memory["memory_id"], "name": "Paris 2022"},
+            )
+            assert response.status_code == 200
+
+            json_response = response.json()
+            assert json_response["success"] is True
+            assert json_response["data"]["image_count"] == len(mock_memory_images)
+            uuid.UUID(json_response["data"]["album_id"])
+
+            # The memory's subtitle becomes the album description, and only the
+            # image ids are handed over - clips are left behind.
+            album_id, name, description, image_ids = mock_create.call_args.args
+            assert name == "Paris 2022"
+            assert description == mock_memory["subtitle"]
+            assert image_ids == [image["id"] for image in mock_memory_images]
+
+    def test_create_album_from_memory_not_found(self):
+        with patch("app.routes.albums.db_get_memory") as mock_get_memory:
+            mock_get_memory.return_value = None
+
+            response = client.post(
+                "/albums/from-memory",
+                json={"memory_id": str(uuid.uuid4()), "name": "Paris 2022"},
+            )
+            assert response.status_code == 404
+            assert response.json()["detail"]["error"] == "Memory Not Found"
+
+    def test_create_album_from_empty_memory(self, mock_memory):
+        """A memory with no photos cannot become an album."""
+        with patch("app.routes.albums.db_get_memory") as mock_get_memory, patch(
+            "app.routes.albums.db_get_memory_images"
+        ) as mock_get_images, patch(
+            "app.routes.albums.db_create_album_with_images"
+        ) as mock_create:
+            mock_get_memory.return_value = mock_memory
+            mock_get_images.return_value = []
+
+            response = client.post(
+                "/albums/from-memory",
+                json={"memory_id": mock_memory["memory_id"], "name": "Paris 2022"},
+            )
+            assert response.status_code == 400
+            assert response.json()["detail"]["error"] == "Empty Memory"
+            mock_create.assert_not_called()
+
+    def test_create_album_from_memory_duplicate_name(
+        self, mock_memory, mock_memory_images, mock_db_album
+    ):
+        with patch("app.routes.albums.db_get_memory") as mock_get_memory, patch(
+            "app.routes.albums.db_get_memory_images"
+        ) as mock_get_images, patch(
+            "app.routes.albums.db_get_album_by_name"
+        ) as mock_get_by_name, patch(
+            "app.routes.albums.db_create_album_with_images"
+        ) as mock_create:
+            mock_get_memory.return_value = mock_memory
+            mock_get_images.return_value = mock_memory_images
+            mock_get_by_name.return_value = tuple(mock_db_album.values())
+
+            response = client.post(
+                "/albums/from-memory",
+                json={
+                    "memory_id": mock_memory["memory_id"],
+                    "name": mock_db_album["album_name"],
+                },
+            )
+            assert response.status_code == 409
+            assert response.json()["detail"]["error"] == "Album Already Exists"
+            mock_create.assert_not_called()

@@ -21,6 +21,16 @@ export interface CreateAlbumRequest {
   password?: string;
 }
 
+export interface CreateAlbumFromMemoryRequest {
+  memory_id: string;
+  name: string;
+}
+
+export interface CreateAlbumFromMemoryData {
+  album_id: string;
+  image_count: number;
+}
+
 export interface UpdateAlbumRequest {
   name?: string;
   description?: string;

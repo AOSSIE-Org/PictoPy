@@ -1,9 +1,13 @@
 from fastapi import APIRouter, HTTPException, status, Body, Path
+import sqlite3
 import uuid
 from app.schemas.album import (
     GetAlbumsResponse,
     CreateAlbumRequest,
     CreateAlbumResponse,
+    CreateAlbumFromMemoryData,
+    CreateAlbumFromMemoryRequest,
+    CreateAlbumFromMemoryResponse,
     GetAlbumResponse,
     GetAlbumImagesRequest,
     GetAlbumImagesResponse,
@@ -18,6 +22,7 @@ from app.database.albums import (
     db_get_album_by_name,
     db_get_album,
     db_insert_album,
+    db_create_album_with_images,
     db_update_album,
     db_delete_album,
     db_get_album_images,
@@ -27,6 +32,7 @@ from app.database.albums import (
     db_get_album_cover_path,
     verify_album_password,
 )
+from app.database.memories import db_get_memory, db_get_memory_images
 
 router = APIRouter()
 
@@ -89,6 +95,90 @@ def create_album(body: CreateAlbumRequest):
                 message=f"Failed to create album: {str(e)}",
             ).model_dump(),
         )
+
+
+# POST /albums/from-memory - Create an album from a curated memory
+@router.post("/from-memory", response_model=CreateAlbumFromMemoryResponse)
+def create_album_from_memory(body: CreateAlbumFromMemoryRequest = Body(...)):
+    """
+    Copy a memory's photos into a new album.
+
+    The memory itself is left untouched, so the same one can be converted
+    again under a different name. Any clips are left behind: album_images
+    references images, and albums have no video support.
+    """
+    memory = db_get_memory(body.memory_id)
+    if not memory:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ErrorResponse(
+                success=False,
+                error="Memory Not Found",
+                message="No memory exists with the provided ID.",
+            ).model_dump(),
+        )
+
+    image_ids = [image["id"] for image in db_get_memory_images(body.memory_id)]
+    if not image_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="Empty Memory",
+                message="This memory has no photos to convert.",
+            ).model_dump(),
+        )
+
+    if db_get_album_by_name(body.name):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=ErrorResponse(
+                success=False,
+                error="Album Already Exists",
+                message=f"Album '{body.name}' is already in the database.",
+            ).model_dump(),
+        )
+
+    album_id = str(uuid.uuid4())
+    try:
+        image_count = db_create_album_with_images(
+            album_id, body.name, memory.get("subtitle") or "", image_ids
+        )
+    except sqlite3.IntegrityError as e:
+        # The name check above is not atomic. Re-check rather than assume a
+        # conflict: the same error covers an image that vanished mid-request.
+        if db_get_album_by_name(body.name):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Album Already Exists",
+                    message=f"Album '{body.name}' is already in the database.",
+                ).model_dump(),
+            )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal Server Error",
+                message=f"Failed to create album from memory: {str(e)}",
+            ).model_dump(),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal Server Error",
+                message=f"Failed to create album from memory: {str(e)}",
+            ).model_dump(),
+        )
+
+    return CreateAlbumFromMemoryResponse(
+        success=True,
+        message=f"Created album '{body.name}' with {image_count} photos",
+        data=CreateAlbumFromMemoryData(album_id=album_id, image_count=image_count),
+    )
 
 
 # GET /albums/{album_id} - Get specific album details

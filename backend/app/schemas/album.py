@@ -30,6 +30,11 @@ class CreateAlbumRequest(BaseModel):
         return value
 
 
+class CreateAlbumFromMemoryRequest(BaseModel):
+    memory_id: str = Field(..., min_length=1)
+    name: str = Field(..., min_length=1)
+
+
 class UpdateAlbumRequest(BaseModel):
     name: str
     description: Optional[str] = ""
@@ -83,6 +88,19 @@ class GetAlbumsResponse(BaseModel):
 class CreateAlbumResponse(BaseModel):
     success: bool
     album_id: str
+
+
+class CreateAlbumFromMemoryData(BaseModel):
+    album_id: str
+    image_count: int
+
+
+class CreateAlbumFromMemoryResponse(BaseModel):
+    # The {success, message, data} envelope the project standardised on, unlike
+    # the flat responses above that predate it.
+    success: bool
+    message: str
+    data: CreateAlbumFromMemoryData
 
 
 class GetAlbumResponse(BaseModel):

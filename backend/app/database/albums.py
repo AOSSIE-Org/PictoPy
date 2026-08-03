@@ -132,6 +132,34 @@ def db_insert_album(
         conn.close()
 
 
+def db_create_album_with_images(
+    album_id: str, album_name: str, description: str, image_ids: list[str]
+) -> int:
+    """
+    Create an album and link its images in a single transaction.
+
+    Both halves commit together, so a failed link never strands an empty album.
+    Takes image ids rather than the id of whatever they came from, so the
+    caller owns that choice. Returns the number of images actually linked.
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO albums (album_id, album_name, description, is_locked, password_hash)
+            VALUES (?, ?, ?, 0, NULL)
+            """,
+            (album_id, album_name, description),
+        )
+        # Foreign keys are on for this connection, so an image id that no
+        # longer exists rolls the album back with it rather than half-writing.
+        cursor.executemany(
+            "INSERT OR IGNORE INTO album_images (album_id, image_id) VALUES (?, ?)",
+            [(album_id, image_id) for image_id in image_ids],
+        )
+        return cursor.rowcount
+
+
 def db_update_album(
     album_id: str,
     album_name: str,
