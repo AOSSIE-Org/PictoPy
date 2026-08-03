@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Tuple
 from app.database.folders import (
     db_update_parent_ids_for_subtree,
@@ -10,8 +10,16 @@ from app.database.folders import (
     db_get_direct_child_folders,
     db_get_folder_ids_by_path_prefix,
     db_get_all_folder_details,
+    db_set_tagging_completed,
+    db_update_folder_indexing_status,
+    INDEXING_COMPLETED,
+    INDEXING_IN_PROGRESS,
+    INDEXING_INTERRUPTED,
 )
 from app.logging.setup_logging import get_logger
+from starlette.datastructures import State
+
+from app.routes.dependencies import get_state
 from app.schemas.folders import (
     AddFolderRequest,
     AddFolderResponse,
@@ -43,9 +51,16 @@ from app.utils.images import (
     image_util_process_untagged_images,
     image_util_process_unembedded_images,
 )
-from app.utils.videos import video_util_process_folder_videos
+from app.utils.videos import (
+    video_util_process_folder_videos,
+    video_util_process_untagged_videos,
+    video_util_process_unembedded_frames,
+)
 from app.utils.model_bootstrap import ensure_ai_tagging_models
-from app.utils.semantic_labels import semantic_util_score_images
+from app.utils.semantic_labels import (
+    semantic_util_score_images,
+    semantic_util_score_videos,
+)
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.utils.API import API_util_restart_sync_microservice_watcher
 
@@ -55,12 +70,31 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
+def _curate_memories(trigger: str) -> None:
+    """
+    Refresh memories after the library changed.
+
+    Imported late to keep the curator out of the module import graph, and
+    swallowed on failure: a curation problem must never fail an import.
+
+    Never forced: force is what overrides the user's memories preference, and
+    a background import is not the user asking for memories.
+    """
+    try:
+        from app.utils.memory_curator import memory_curator_run
+
+        memory_curator_run(trigger=trigger)
+    except Exception as e:
+        logger.error(f"Memory curation failed after {trigger}: {e}")
+
+
 def post_folder_add_sequence(folder_path: str, folder_id: int):
     """
     Post-addition sequence for a folder.
     This function is called after a folder is successfully added.
     It processes images in the folder and updates the database.
     """
+    folder_ids_and_paths = []
     try:
         # Get all folder IDs and paths that match the root path prefix
         folder_data = []
@@ -70,6 +104,8 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
         for folder_id_from_db, folder_path_from_db in folder_ids_and_paths:
             folder_data.append((folder_path_from_db, folder_id_from_db, False))
 
+            db_update_folder_indexing_status(folder_id_from_db, INDEXING_IN_PROGRESS)
+
         logger.info(f"Add folder: {folder_data}")
         # Process images and videos in all folders
         image_util_process_folder_images(folder_data)
@@ -78,10 +114,22 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
         # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()
 
+        for folder_id_from_db, _ in folder_ids_and_paths:
+            db_update_folder_indexing_status(folder_id_from_db, INDEXING_COMPLETED)
+
+        # No AI has run yet, so only the date-driven triggers can produce
+        # anything here. Semantic events appear once tagging is enabled and
+        # this runs again.
+        _curate_memories("folder_add")
+
     except Exception as e:
         logger.error(
             f"Error in post processing after folder {folder_path} was added: {e}"
         )
+        # The walk stopped partway, so the folder is not indexed. Clearing the
+        # busy flag as 'completed' would claim a file set that was never read.
+        for folder_id_from_db, _ in folder_ids_and_paths:
+            db_update_folder_indexing_status(folder_id_from_db, INDEXING_INTERRUPTED)
         return False
     return True
 
@@ -93,14 +141,26 @@ def post_AI_tagging_enabled_sequence():
     It processes untagged images in the database.
     """
     try:
+        db_set_tagging_completed(False)
         ensure_ai_tagging_models()
         image_util_process_untagged_images()
         cluster_util_face_clusters_sync()
         image_util_process_unembedded_images()
         semantic_util_score_images()
+        # Curate before the video pass: semantic labels are written by now,
+        # and the video pass can run for minutes.
+        _curate_memories("ai_tagging")
+        # Videos last: photos are the primary surface, so they finish first.
+        video_util_process_untagged_videos()
+        video_util_process_unembedded_frames()
+        semantic_util_score_videos()
     except Exception as e:
         logger.error(f"Error in post processing after AI tagging was enabled: {e}")
         return False
+    finally:
+        # Set even on failure. A folder that failed to tag is not still
+        # tagging, and leaving the flag clear would block memories forever.
+        db_set_tagging_completed(True)
     return True
 
 
@@ -122,6 +182,7 @@ def post_sync_folder_sequence(
             folder_data.append((added_folder_path, added_folder_id, False))
 
         logger.info(f"Sync folder: {folder_data}")
+        db_set_tagging_completed(False)
         # Process images and videos in all folders
         image_util_process_folder_images(folder_data)
         video_util_process_folder_videos(folder_data)
@@ -129,6 +190,10 @@ def post_sync_folder_sequence(
         cluster_util_face_clusters_sync()
         image_util_process_unembedded_images()
         semantic_util_score_images()
+        _curate_memories("sync_folder")
+        video_util_process_untagged_videos()
+        video_util_process_unembedded_frames()
+        semantic_util_score_videos()
 
         # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()
@@ -137,11 +202,9 @@ def post_sync_folder_sequence(
             f"Error in post processing after folder {folder_path} was synced: {e}"
         )
         return False
+    finally:
+        db_set_tagging_completed(True)
     return True
-
-
-def get_state(request: Request):
-    return request.app.state
 
 
 @router.post(
@@ -149,7 +212,7 @@ def get_state(request: Request):
     response_model=AddFolderResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 401, 409, 500]},
 )
-def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
+def add_folder(request: AddFolderRequest, app_state: State = Depends(get_state)):
     try:
         # Step 1: Data Validation
 
@@ -241,7 +304,9 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
     response_model=UpdateAITaggingResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
-def enable_ai_tagging(request: UpdateAITaggingRequest, app_state=Depends(get_state)):
+def enable_ai_tagging(
+    request: UpdateAITaggingRequest, app_state: State = Depends(get_state)
+):
     """Enable AI tagging for multiple folders."""
     try:
         if not request.folder_ids:
@@ -367,7 +432,7 @@ def delete_folders(request: DeleteFoldersRequest):
     response_model=SyncFolderResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 404, 500]},
 )
-def sync_folder(request: SyncFolderRequest, app_state=Depends(get_state)):
+def sync_folder(request: SyncFolderRequest, app_state: State = Depends(get_state)):
     """Sync a folder by comparing filesystem folders with database entries and removing extra DB entries."""
     try:
         # Step 1: Get current state from both sources
@@ -460,7 +525,9 @@ def get_all_folders():
                 last_modified_time,
                 ai_tagging,
                 tagging_completed,
+                indexing_status,
                 image_count,
+                video_count,
             ) = folder_data
             folders.append(
                 FolderDetails(
@@ -470,7 +537,9 @@ def get_all_folders():
                     last_modified_time=last_modified_time,
                     AI_Tagging=ai_tagging,
                     taggingCompleted=tagging_completed,
+                    indexing_status=indexing_status,
                     image_count=image_count,
+                    video_count=video_count,
                 )
             )
 

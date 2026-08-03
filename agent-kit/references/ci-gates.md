@@ -1,12 +1,13 @@
 # CI gates
 
 Every check that runs on a pull request, and how to reproduce it locally. Source of truth:
-`.github/workflows/pr-check-tests.yml`. **If that workflow changes, change this file and
-`agent-kit/skills/pre-pr-check/SKILL.md` with it.**
+`.github/workflows/lint.yml` (linting) and `.github/workflows/pr-check-tests.yml` (tests).
+**If either workflow changes, change this file and `agent-kit/skills/pre-pr-check/SKILL.md`
+with it.**
 
-Workflow triggers on `pull_request` against `main`.
+Both workflows trigger on `pull_request` against `main`.
 
-## Job: Linting
+## Job: Linting (`lint.yml`)
 
 | Check | Local command |
 | --- | --- |
@@ -17,11 +18,16 @@ Workflow triggers on `pull_request` against `main`.
 | Agent hook tests | `node scripts/agent-format-hook.test.mjs` |
 | Rust format | `cd frontend/src-tauri && cargo fmt -- --check` |
 
-CI installs `pre-commit ruff black` and runs pre-commit from inside `backend/` with
-`--config ../.pre-commit-config.yaml`. Running it from the repository root with
-`--config .pre-commit-config.yaml` is equivalent and covers `sync-microservice/` too.
+CI installs the linters from `backend/requirements-lint.txt`, which pins `pre-commit`,
+`ruff`, and `black` — install from that file locally so your versions match the runner's.
+It runs pre-commit from inside `backend/` with `--config ../.pre-commit-config.yaml`;
+running it from the repository root with `--config .pre-commit-config.yaml` is equivalent
+and covers `sync-microservice/` too.
 
-## Job: Frontend Tests
+The agent hook tests cover the formatting hook's guard, its path exclusions, and the
+entrypoint's exit codes. They need no dependencies, so the step runs before `npm ci`.
+
+## Job: Frontend Tests (`pr-check-tests.yml`)
 
 ```bash
 cd frontend && npm install && npm test
@@ -29,7 +35,7 @@ cd frontend && npm install && npm test
 
 Jest with `jest.config.ts`. Node 18 on the runner.
 
-## Job: Backend Tests
+## Job: Backend Tests (`pr-check-tests.yml`)
 
 Three steps, and the two build checks fail more often than the tests do:
 
@@ -46,10 +52,7 @@ The PyInstaller steps catch imports that work in development but break when froz
 dependency that is imported dynamically will pass `pytest` and fail here. Python 3.11 on
 the runner.
 
-The agent hook tests cover the formatting hook's guard, its path exclusions, and the
-entrypoint's exit codes. They need no dependencies, so the step runs before `npm install`.
-
-## Not in this workflow
+## Not in these workflows
 
 - `cargo test` is not run by `pr-check-tests.yml`, but `CONTRIBUTING.md` asks contributors
   to run it and `pr-check-build.yml` builds the Rust side. Run it for any `src-tauri/`

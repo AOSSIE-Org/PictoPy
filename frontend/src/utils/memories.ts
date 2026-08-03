@@ -1,251 +1,156 @@
 /**
- * Memories Utility Functions
+ * Memories utility functions.
  *
- * Pure utility functions for formatting and processing memory data.
+ * Pure formatting helpers for memory data.
  */
 
 import { convertFileSrc } from '@tauri-apps/api/core';
-import { Memory, MemoryImage } from '@/api/api-functions/memories';
+import type {
+  MemoryCard,
+  MemoryEventType,
+  MemoryImage,
+  MemoryStory,
+  MemoryVideo,
+} from '@/api/api-functions/memories';
 
-/**
- * Format a date string to human-readable format
- *
- * @param isoDate - ISO 8601 date string
- * @returns Formatted date (e.g., "November 25, 2025")
- */
+export const MEMORY_PLACEHOLDER_IMAGE = '/photo.png';
+
+/** Resolve a stored file path to something an `<img>` can load. */
+export const getMemoryImageUrl = (path: string | null | undefined): string => {
+  if (!path) return MEMORY_PLACEHOLDER_IMAGE;
+  return convertFileSrc(path);
+};
+
+/** Thumbnail URL for a curated image, falling back to the full-size path. */
+export const getThumbnailUrl = (image: MemoryImage): string =>
+  getMemoryImageUrl(image.thumbnailPath ?? image.path);
+
+/** Cover thumbnail URL for a memory card. */
+export const getCoverUrl = (memory: MemoryCard): string =>
+  getMemoryImageUrl(memory.cover_thumbnail_path);
+
+/** Format an ISO date as e.g. "26 July 2024". */
 export const formatMemoryDate = (isoDate: string | null): string => {
-  if (!isoDate) return 'Unknown date';
-
-  try {
-    const date = new Date(isoDate);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  } catch {
-    return 'Invalid date';
-  }
+  if (!isoDate) return '';
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 };
 
 /**
- * Format date range for memory display
- *
- * @param startDate - Start date ISO string
- * @param endDate - End date ISO string
- * @returns Formatted range (e.g., "Nov 25 - Nov 27, 2025")
+ * Format a memory's span, collapsing a single day and a single month.
  */
 export const formatDateRange = (
   startDate: string | null,
   endDate: string | null,
 ): string => {
-  if (!startDate || !endDate) return 'Unknown date';
+  if (!startDate) return '';
 
-  try {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+  const start = new Date(startDate);
+  if (Number.isNaN(start.getTime())) return '';
 
-    // Same day
-    if (start.toDateString() === end.toDateString()) {
-      return start.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    }
+  const end = endDate ? new Date(endDate) : start;
+  if (
+    Number.isNaN(end.getTime()) ||
+    start.toDateString() === end.toDateString()
+  )
+    return formatMemoryDate(startDate);
 
-    // Same month and year
-    if (
-      start.getMonth() === end.getMonth() &&
-      start.getFullYear() === end.getFullYear()
-    ) {
-      const monthYear = start.toLocaleDateString('en-US', {
-        month: 'long',
-        year: 'numeric',
-      });
-      return `${start.getDate()} - ${end.getDate()}, ${monthYear}`;
-    }
-
-    // Different months or years
-    const startFormatted = start.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
-    const endFormatted = end.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-    return `${startFormatted} - ${endFormatted}`;
-  } catch {
-    return 'Invalid date range';
-  }
-};
-
-/**
- * Format date range with relative time for recent dates
- *
- * @param startDate - Start date ISO string
- * @param endDate - End date ISO string
- * @returns Formatted range with relative dates like "Yesterday", "Last week", "2 months ago"
- */
-export const formatDateRangeRelative = (
-  startDate: string | null,
-  endDate: string | null,
-): string => {
-  if (!startDate || !endDate) return 'Unknown date';
-
-  try {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const now = new Date();
-
-    // Calculate days difference from end date
-    const daysDiff = Math.floor(
-      (now.getTime() - end.getTime()) / (1000 * 60 * 60 * 24),
-    );
-
-    // Today
-    if (daysDiff === 0) {
-      return 'Today';
-    }
-
-    // Yesterday
-    if (daysDiff === 1) {
-      return 'Yesterday';
-    }
-
-    // This week (2-6 days ago)
-    if (daysDiff >= 2 && daysDiff <= 6) {
-      return `${daysDiff} days ago`;
-    }
-
-    // Last week
-    if (daysDiff >= 7 && daysDiff <= 13) {
-      return 'Last week';
-    }
-
-    // This month (2-4 weeks ago)
-    if (daysDiff >= 14 && daysDiff <= 30) {
-      const weeks = Math.floor(daysDiff / 7);
-      return `${weeks} weeks ago`;
-    }
-
-    // Recent months (1-12 months ago)
-    const monthsDiff = Math.floor(daysDiff / 30);
-    if (monthsDiff >= 1 && monthsDiff <= 11) {
-      return monthsDiff === 1 ? 'Last month' : `${monthsDiff} months ago`;
-    }
-
-    // Over a year ago - show month and year
-    return start.toLocaleDateString('en-US', {
-      month: 'short',
-      year: 'numeric',
-    });
-  } catch {
-    return formatDateRange(startDate, endDate);
-  }
-};
-
-/**
- * Calculate years ago from a date
- *
- * @param isoDate - ISO date string
- * @returns Number of years ago
- */
-export const calculateYearsAgo = (isoDate: string): number => {
-  try {
-    const date = new Date(isoDate);
-    const now = new Date();
-    return now.getFullYear() - date.getFullYear();
-  } catch {
-    return 0;
-  }
-};
-
-/**
- * Format photo count
- *
- * @param count - Number of photos
- * @returns Formatted string (e.g., "1 photo" or "5 photos")
- */
-export const formatPhotoCount = (count: number): string => {
-  return count === 1 ? '1 photo' : `${count} photos`;
-};
-
-/**
- * Generate a human-readable title from location and date
- *
- * @param memory - Memory object with location and date info
- * @returns Better title like "Weekend in Jaipur", "Jaipur Trip", or "December 2024"
- */
-export const generateMemoryTitle = (memory: Memory): string => {
-  const location = memory.location_name;
-  const imageCount = memory.image_count;
-
-  // Check if it's a date-based memory (no GPS data)
-  if (location === 'Date-Based Memory') {
-    return memory.title;
-  }
-
-  // If location doesn't look like coordinates, use it
-  if (!location.includes('°') && !location.match(/^-?\d+\.\d+/)) {
-    const cityName = location.split(',')[0].trim();
-
-    if (imageCount >= 50) {
-      return `${cityName} Adventure`;
-    } else if (imageCount >= 20) {
-      return `${cityName} Trip`;
-    } else if (imageCount >= 10) {
-      return `Weekend in ${cityName}`;
-    } else {
-      return `${cityName} Memories`;
-    }
-  }
-
-  // Fallback: coordinates - try to make it cleaner
-  if (memory.date_start) {
-    const date = new Date(memory.date_start);
-    const monthYear = date.toLocaleDateString('en-US', {
+  if (
+    start.getFullYear() === end.getFullYear() &&
+    start.getMonth() === end.getMonth()
+  ) {
+    const monthYear = start.toLocaleDateString(undefined, {
       month: 'long',
       year: 'numeric',
     });
-    return `Memories from ${monthYear}`;
+    return `${start.getDate()}–${end.getDate()} ${monthYear}`;
   }
 
-  return memory.title || 'Photo Collection';
+  const startLabel = start.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
+  const endLabel = end.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  return `${startLabel} – ${endLabel}`;
+};
+
+/** Format a photo count for display. */
+export const formatPhotoCount = (count: number): string =>
+  count === 1 ? '1 photo' : `${count} photos`;
+
+const EVENT_TYPE_LABELS: Record<MemoryEventType, string> = {
+  anniversary: 'On this day',
+  import_event: 'Event',
+  semantic_event: 'Highlight',
+};
+
+/** Human-readable badge text for a memory's trigger. */
+export const formatEventType = (eventType: MemoryEventType): string =>
+  EVENT_TYPE_LABELS[eventType] ?? 'Memory';
+
+/**
+ * Build the subtitle line for a card: the memory's own subtitle when the
+ * curator set one, otherwise its date span.
+ */
+export const formatMemorySubtitle = (memory: MemoryCard): string =>
+  memory.subtitle ||
+  formatDateRange(memory.period_start, memory.period_end) ||
+  formatMemoryDate(memory.surface_date);
+
+/**
+ * One playable slide: a still, or a clip shot during the same span.
+ *
+ * A discriminated union rather than a widened image type — the viewer has to
+ * render two different elements and hold a video slide for its own length.
+ */
+export type MemorySlide =
+  | ({ kind: 'image' } & MemoryImage)
+  | ({ kind: 'video' } & MemoryVideo);
+
+/**
+ * Merge a memory's stills and clips into the order they were shot.
+ *
+ * They arrive as two arrays because they live in two tables, but sort_order
+ * is one sequence across both, so this is a merge rather than a concat.
+ */
+export const buildMemorySlides = (
+  memory: Pick<MemoryStory, 'images' | 'videos'> | null | undefined,
+): MemorySlide[] => {
+  if (!memory) return [];
+  const slides: MemorySlide[] = [
+    ...(memory.images ?? []).map((image) => ({
+      kind: 'image' as const,
+      ...image,
+    })),
+    ...(memory.videos ?? []).map((video) => ({
+      kind: 'video' as const,
+      ...video,
+    })),
+  ];
+  return slides.sort((a, b) => a.sort_order - b.sort_order);
 };
 
 /**
- * Format location name by removing coordinates if present
+ * How long a slide is held before the story advances.
  *
- * @param locationName - Raw location name from API
- * @returns Cleaned location name or empty string if only coordinates or date-based
+ * A still gets the configured interval; a clip runs for its own length, so
+ * the story never cuts away mid-shot or lingers on a frozen last frame.
  */
-export const formatLocationName = (locationName: string): string => {
-  if (locationName === 'Date-Based Memory') {
-    return '';
+export const slideDurationMs = (
+  slide: MemorySlide | undefined,
+  photoDurationMs: number,
+): number => {
+  if (slide?.kind === 'video' && slide.duration && slide.duration > 0) {
+    return slide.duration * 1000;
   }
-
-  if (
-    locationName.includes('°') ||
-    locationName.match(/^-?\d+\.\d+.*-?\d+\.\d+/)
-  ) {
-    return '';
-  }
-
-  return locationName;
-};
-
-/**
- * Get thumbnail URL with fallback
- *
- * @param image - Memory image object
- * @returns Thumbnail URL or placeholder
- */
-export const getThumbnailUrl = (image: MemoryImage): string => {
-  if (image.thumbnailPath) {
-    return convertFileSrc(image.thumbnailPath);
-  }
-  return '/photo.png';
+  return photoDurationMs;
 };

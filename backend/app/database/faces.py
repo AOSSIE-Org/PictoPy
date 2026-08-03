@@ -49,6 +49,10 @@ def db_create_faces_table() -> None:
             )
         """
         )
+        # Face counts are looked up per image by the memory scorer.
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS ix_faces_image_id ON faces(image_id)"
+        )
         conn.commit()
     finally:
         if conn is not None:
