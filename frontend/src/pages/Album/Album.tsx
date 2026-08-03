@@ -11,7 +11,7 @@ import { DeleteConfirmDialog } from '@/components/Albums/DeleteConfirmDialog';
 import { EmptyAlbumsState } from '@/components/EmptyStates/EmptyAlbumsState';
 import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtension';
 import { getAllAlbums, deleteAlbum } from '@/api/api-functions';
-import { setAlbums, removeAlbum } from '@/features/albumsSlice';
+import { setAlbums } from '@/features/albumsSlice';
 import { selectAlbums } from '@/features/albumSelectors';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
@@ -56,6 +56,7 @@ function Albums() {
 
   const deleteAlbumMutation = usePictoMutation({
     mutationFn: deleteAlbum,
+    autoInvalidateTags: ['albums'],
   });
 
   useMutationFeedback(deleteAlbumMutation, {
@@ -64,11 +65,6 @@ function Albums() {
     successMessage: 'Album deleted successfully!',
     errorTitle: 'Error',
     errorMessage: 'Failed to delete album. Please try again.',
-    onSuccess: () => {
-      // Close dialog and clear state after successful deletion
-      setIsDeleteDialogOpen(false);
-      setAlbumToDelete(null);
-    },
   });
 
   useEffect(() => {
@@ -127,11 +123,13 @@ function Albums() {
   };
 
   const confirmDelete = () => {
-    if (albumToDelete) {
-      const albumId = albumToDelete.id;
-      dispatch(removeAlbum(albumId));
-      deleteAlbumMutation.mutate(albumId);
-    }
+    if (!albumToDelete) return;
+    const albumId = albumToDelete.id;
+    // Close on confirm rather than on success: a failed delete would otherwise
+    // leave this dialog stacked underneath the error dialog.
+    setIsDeleteDialogOpen(false);
+    setAlbumToDelete(null);
+    deleteAlbumMutation.mutate(albumId);
   };
 
   const handleRefresh = async () => {
