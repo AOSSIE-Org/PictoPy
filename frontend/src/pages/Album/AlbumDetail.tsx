@@ -2,23 +2,16 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, Trash2, ImageIcon } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 import { AddImagesToAlbumDialog } from '@/components/Albums/AddImagesToAlbumDialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtension';
 import {
   getAlbumById,
   getAlbumImages,
   removeMultipleImagesFromAlbum,
   fetchAllImages,
-  setAlbumCoverImage,
 } from '@/api/api-functions';
 import {
   setSelectedAlbum,
@@ -61,16 +54,11 @@ export const AlbumDetail = () => {
   const [isAddImagesDialogOpen, setIsAddImagesDialogOpen] = useState(false);
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [contextMenuImage, setContextMenuImage] = useState<number | null>(null);
 
   // Get password from navigation state if album is locked
   const password = location.state?.password;
 
-  const {
-    data: albumData,
-    isLoading: isLoadingAlbum,
-    refetch: refetchAlbum,
-  } = usePictoQuery({
+  const { data: albumData, isLoading: isLoadingAlbum } = usePictoQuery({
     queryKey: ['album', albumId],
     queryFn: () => getAlbumById(albumId!),
     enabled: !!albumId,
@@ -122,24 +110,6 @@ export const AlbumDetail = () => {
       setSelectedImages(new Set());
       setIsSelectionMode(false);
       refetchImages();
-    },
-  });
-
-  const setCoverImageMutation = usePictoMutation({
-    mutationFn: ({ albumId, imageId }: { albumId: string; imageId: string }) =>
-      setAlbumCoverImage(albumId, imageId),
-    // The list page renders this cover on the album card.
-    autoInvalidateTags: ['albums'],
-  });
-
-  useMutationFeedback(setCoverImageMutation, {
-    loadingMessage: 'Setting album cover...',
-    successTitle: 'Success',
-    successMessage: 'Album cover image updated successfully!',
-    errorTitle: 'Error',
-    errorMessage: 'Failed to set cover image. Please try again.',
-    onSuccess: () => {
-      refetchAlbum();
     },
   });
 
@@ -227,13 +197,6 @@ export const AlbumDetail = () => {
     removeImagesMutation.mutate({
       albumId: albumId!,
       imageIds: Array.from(selectedImages),
-    });
-  };
-
-  const handleSetCoverImage = (imageId: string) => {
-    setCoverImageMutation.mutate({
-      albumId: albumId!,
-      imageId: imageId,
     });
   };
 
@@ -357,52 +320,24 @@ export const AlbumDetail = () => {
         ) : (
           <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {images.map((image, index) => (
-              <div key={image.id} className="relative">
-                <DropdownMenu
-                  open={contextMenuImage === index}
-                  onOpenChange={(open) => {
-                    if (!open) setContextMenuImage(null);
-                  }}
-                >
-                  <DropdownMenuTrigger asChild>
-                    <div
-                      className="cursor-pointer"
-                      onClick={() => handleImageClick(index)}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        if (!isSelectionMode) {
-                          setContextMenuImage(index);
-                        }
-                      }}
-                    >
-                      <ImageCard
-                        image={image}
-                        className={
-                          isSelectionMode && selectedImages.has(image.id)
-                            ? 'ring-primary ring-2 ring-offset-2'
-                            : ''
-                        }
-                      />
-                      {isSelectionMode && selectedImages.has(image.id) && (
-                        <div className="bg-primary text-primary-foreground absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full">
-                          ✓
-                        </div>
-                      )}
-                    </div>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSetCoverImage(image.id);
-                        setContextMenuImage(null);
-                      }}
-                    >
-                      <ImageIcon className="mr-2 h-4 w-4" />
-                      Set as Cover
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+              <div
+                key={image.id}
+                className="relative cursor-pointer"
+                onClick={() => handleImageClick(index)}
+              >
+                <ImageCard
+                  image={image}
+                  className={
+                    isSelectionMode && selectedImages.has(image.id)
+                      ? 'ring-primary ring-2 ring-offset-2'
+                      : ''
+                  }
+                />
+                {isSelectionMode && selectedImages.has(image.id) && (
+                  <div className="bg-primary text-primary-foreground absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full">
+                    ✓
+                  </div>
+                )}
               </div>
             ))}
           </div>

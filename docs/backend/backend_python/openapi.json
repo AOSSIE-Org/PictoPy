@@ -804,59 +804,6 @@
         }
       }
     },
-    "/albums/{album_id}/cover": {
-      "put": {
-        "tags": [
-          "Albums"
-        ],
-        "summary": "Set Album Cover Image",
-        "description": "Set or update the cover image for an album",
-        "operationId": "set_album_cover_image_albums__album_id__cover_put",
-        "parameters": [
-          {
-            "name": "album_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Album Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SetCoverImageRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/images/": {
       "get": {
         "tags": [
@@ -5175,20 +5122,6 @@
           "score"
         ],
         "title": "SemanticSearchImage"
-      },
-      "SetCoverImageRequest": {
-        "properties": {
-          "image_id": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Image Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "image_id"
-        ],
-        "title": "SetCoverImageRequest"
       },
       "SetupRequest": {
         "properties": {

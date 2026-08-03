@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@/test-utils';
+import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/store';
@@ -22,7 +23,6 @@ jest.mock('@/api/api-functions', () => ({
   getAlbumImages: jest.fn(),
   fetchAllImages: jest.fn(),
   removeMultipleImagesFromAlbum: jest.fn(),
-  setAlbumCoverImage: jest.fn(),
   addImagesToAlbum: jest.fn(),
 }));
 
@@ -110,5 +110,18 @@ describe('AlbumDetail', () => {
     unmount();
 
     expect(store.getState().loader.loading).toBe(false);
+  }, 30000);
+
+  // The cover is whatever image comes first in the album, so there is nothing
+  // to pick and no per-image menu left to pick it from.
+  test('offers no per-image cover menu', async () => {
+    const user = userEvent.setup();
+    renderDetail();
+
+    const tile = await screen.findByAltText('i1.jpg');
+    await user.pointer({ keys: '[MouseRight]', target: tile });
+
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.queryByText(/set as cover/i)).not.toBeInTheDocument();
   }, 30000);
 });

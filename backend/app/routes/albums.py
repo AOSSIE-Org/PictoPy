@@ -11,7 +11,6 @@ from app.schemas.album import (
     SuccessResponse,
     ErrorResponse,
     ImageIdsRequest,
-    SetCoverImageRequest,
     Album,
 )
 from app.database.albums import (
@@ -25,9 +24,8 @@ from app.database.albums import (
     db_add_images_to_album,
     db_remove_image_from_album,
     db_remove_images_from_album,
-    db_update_album_cover_image,
+    db_get_album_cover_path,
     verify_album_password,
-    db_get_image_path,
 )
 
 router = APIRouter()
@@ -50,7 +48,7 @@ def get_albums():
                 album_name=album[1],
                 description=album[2] or "",
                 is_locked=bool(album[3]),
-                cover_image_path=album[5] if len(album) > 5 else None,
+                cover_image_path=db_get_album_cover_path(album[0]),
                 image_count=image_count,
             )
         )
@@ -110,7 +108,7 @@ def get_album(album_id: str = Path(...)):
             album_name=album[1],
             description=album[2] or "",
             is_locked=bool(album[3]),
-            cover_image_path=album[5] if len(album) > 5 else None,
+            cover_image_path=db_get_album_cover_path(album_id),
             image_count=image_count,
         )
         return GetAlbumResponse(success=True, data=album_obj)
@@ -369,62 +367,5 @@ def remove_images_from_album(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
                 success=False, error="Failed to Remove Images", message=str(e)
-            ).model_dump(),
-        )
-
-
-# PUT /albums/{album_id}/cover - Set album cover image
-@router.put("/{album_id}/cover", response_model=SuccessResponse)
-def set_album_cover_image(
-    album_id: str = Path(...), body: SetCoverImageRequest = Body(...)
-):
-    """Set or update the cover image for an album"""
-    album = db_get_album(album_id)
-    if not album:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ErrorResponse(
-                success=False,
-                error="Album Not Found",
-                message="No album exists with the provided ID.",
-            ).model_dump(),
-        )
-
-    # Verify the image exists in the album
-    album_image_ids = db_get_album_images(album_id)
-    if body.image_id not in album_image_ids:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ErrorResponse(
-                success=False,
-                error="Image Not In Album",
-                message="The specified image is not in this album.",
-            ).model_dump(),
-        )
-
-    try:
-        # Get the image path from the database
-        image_path = db_get_image_path(body.image_id)
-
-        if not image_path:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=ErrorResponse(
-                    success=False,
-                    error="Image Not Found",
-                    message="The specified image does not exist.",
-                ).model_dump(),
-            )
-
-        db_update_album_cover_image(album_id, image_path)
-
-        return SuccessResponse(
-            success=True, msg="Album cover image updated successfully"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False, error="Failed to Set Cover Image", message=str(e)
             ).model_dump(),
         )

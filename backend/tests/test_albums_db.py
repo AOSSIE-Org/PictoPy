@@ -18,6 +18,7 @@ from app.database.albums import (
     db_delete_album,
     db_get_album_images,
     db_remove_images_from_album,
+    db_get_album_cover_path,
     verify_album_password,
 )
 from app.database.images import db_create_images_table
@@ -68,6 +69,17 @@ def link_images(db_path: str, album_id: str, image_ids: List[str]) -> None:
     conn.executemany(
         "INSERT INTO album_images (album_id, image_id) VALUES (?, ?)",
         [(album_id, image_id) for image_id in image_ids],
+    )
+    conn.commit()
+    conn.close()
+
+
+def make_images(db_path: str, image_ids: List[str]) -> None:
+    """Seed real image rows so cover lookups have something to join against."""
+    conn = sqlite3.connect(db_path)
+    conn.executemany(
+        "INSERT INTO images (id, path) VALUES (?, ?)",
+        [(image_id, f"/photos/{image_id}.jpg") for image_id in image_ids],
     )
     conn.commit()
     conn.close()
@@ -275,3 +287,43 @@ class TestAlbumPassword:
 
         assert stored_hash(test_db, "album-1") == before
         assert verify_album_password("album-1", "oldpass") is True
+
+
+# ##############################
+# Cover image
+# ##############################
+
+
+class TestAlbumCoverPath:
+    def test_uses_the_first_image_added(self, test_db):
+        make_album("album-1")
+        make_images(test_db, ["img-a", "img-b", "img-c"])
+        link_images(test_db, "album-1", ["img-b", "img-a", "img-c"])
+
+        assert db_get_album_cover_path("album-1") == "/photos/img-b.jpg"
+
+    def test_returns_none_for_an_empty_album(self, test_db):
+        make_album("album-1")
+
+        assert db_get_album_cover_path("album-1") is None
+
+    def test_returns_none_for_a_missing_album(self, test_db):
+        assert db_get_album_cover_path("nope") is None
+
+    def test_follows_the_album_when_the_first_image_is_removed(self, test_db):
+        make_album("album-1")
+        make_images(test_db, ["img-a", "img-b"])
+        link_images(test_db, "album-1", ["img-a", "img-b"])
+
+        db_remove_images_from_album("album-1", ["img-a"])
+
+        assert db_get_album_cover_path("album-1") == "/photos/img-b.jpg"
+
+    def test_ignores_images_in_other_albums(self, test_db):
+        make_album("album-1")
+        make_album("album-2", name="Other")
+        make_images(test_db, ["img-a", "img-b"])
+        link_images(test_db, "album-1", ["img-a"])
+        link_images(test_db, "album-2", ["img-b"])
+
+        assert db_get_album_cover_path("album-2") == "/photos/img-b.jpg"
