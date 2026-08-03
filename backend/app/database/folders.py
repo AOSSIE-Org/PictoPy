@@ -34,8 +34,7 @@ def db_create_folders_table() -> None:
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS folders (
                 folder_id TEXT PRIMARY KEY,
                 parent_folder_id TEXT,
@@ -46,8 +45,7 @@ def db_create_folders_table() -> None:
                 indexing_status TEXT DEFAULT 'not_started',
                 FOREIGN KEY (parent_folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
             )
-            """
-        )
+            """)
         conn.commit()
     finally:
         if conn is not None:
@@ -366,9 +364,10 @@ def db_get_folder_ids_by_path_prefix(root_path: str) -> List[FolderIdPath]:
     cursor = conn.cursor()
 
     try:
-        # Escape literal wildcards so they are matched exactly, then append the real wildcard.
-        escaped_path = root_path.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        
+        escaped_path = (
+            root_path.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )
+
         cursor.execute(
             """
             SELECT folder_id, folder_path FROM folders 
@@ -437,8 +436,7 @@ def db_get_all_folder_details() -> (
     try:
         # COUNT(DISTINCT ...) because joining both media tables multiplies the
         # rows: a folder with 3 images and 4 videos yields 12 join rows.
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT
                 f.folder_id,
                 f.folder_path,
@@ -454,8 +452,7 @@ def db_get_all_folder_details() -> (
             LEFT JOIN videos v ON f.folder_id = v.folder_id
             GROUP BY f.folder_id
             ORDER BY f.folder_path
-            """
-        )
+            """)
         return cursor.fetchall()
     finally:
         conn.close()
