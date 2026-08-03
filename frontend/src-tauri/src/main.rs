@@ -232,7 +232,8 @@ async fn open_model_manager(app: tauri::AppHandle) -> Result<(), String> {
         tauri::WebviewUrl::App("index.html?route=/model-manager".into()),
     )
     .title("Settings - Model Manager")
-    .inner_size(800.0, 600.0)
+    .inner_size(1023.0, 632.0)
+    .min_inner_size(1023.0, 632.0)
     .build()
     .map_err(|e| e.to_string())?;
 
