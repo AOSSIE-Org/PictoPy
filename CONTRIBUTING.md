@@ -55,6 +55,21 @@ To set up and run the docs website on your local machine:
    mkdocs build -f ../mkdocs.yml
    ```
 
+## Working with AI coding agents
+
+If you use Claude Code, Cursor, Copilot, Codex, or Gemini CLI, this repository ships
+committed configuration so your agent already knows our conventions — the formatting rules,
+the layering, and the checks CI runs. There is nothing to install.
+
+Start with `AGENTS.md` at the repository root. Ready-made playbooks for common tasks
+(adding an endpoint, adding a frontend feature, running every pre-PR check) live in
+`agent-kit/`.
+
+See [docs/ai-contributing.md](docs/ai-contributing.md) for the full explanation, including
+how to add rules and playbooks of your own.
+
+You remain the author of everything you submit — read your diff before opening a PR.
+
 ## Testing
 
 ### Frontend
