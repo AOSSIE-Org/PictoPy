@@ -45,7 +45,8 @@ class MemoriesPreferences(BaseModel):
     """Memory generation and delivery preferences."""
 
     enabled: bool = True
-    notifications_enabled: bool = True
+    # Desktop alerts are opt-in; the memory is waiting on the page regardless.
+    notifications_enabled: bool = False
     # The story viewer ships muted; the user opts into background audio.
     story_music_enabled: bool = False
     # Seconds each photo is held before the story advances. A video slide

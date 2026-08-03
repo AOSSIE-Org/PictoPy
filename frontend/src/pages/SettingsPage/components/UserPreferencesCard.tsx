@@ -6,6 +6,8 @@ import {
   Trash2,
   Clapperboard,
   HardDrive,
+  Sparkles,
+  Bell,
 } from 'lucide-react';
 
 import { Label } from '@/components/ui/label';
@@ -24,6 +26,7 @@ import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import { useUserPreferences } from '@/hooks/useUserPreferences';
+import type { UpdateUserPreferencesRequest } from '@/api/api-functions/user_preferences';
 import { purgeVideoFrameCache } from '@/api/api-functions';
 import SettingsCard from './SettingsCard';
 import { cn, formatTierLabel } from '@/lib/utils';
@@ -40,13 +43,20 @@ import {
  */
 // Coarse enough to be a meaningful cost tradeoff, fine enough to matter.
 const FRAME_INTERVAL_OPTIONS = [2, 5, 10, 30];
+// Story pacing: below 3s a photo barely registers, above 10s it drags.
+const SLIDE_DURATION_OPTIONS = [3, 5, 7, 10];
+const MIN_IMAGE_OPTIONS = [3, 5, 8, 10];
+const MAX_IMAGE_OPTIONS = [20, 30, 50, 100];
 
 const UserPreferencesCard: React.FC = () => {
   const {
     preferences,
+    memoriesPreferences,
     updateYoloModelSize,
     toggleGpuAcceleration,
     updateVideoFrameInterval,
+    updateMemoriesPreferences,
+    isUpdating,
     refetch,
   } = useUserPreferences();
   const [installedTiers, setInstalledTiers] = useState<ModelTier[]>([]);
@@ -58,6 +68,14 @@ const UserPreferencesCard: React.FC = () => {
   // Collapsed by default: video tagging is a niche setting, so it stays out
   // of the way until a user with videos goes looking for it.
   const [videoSettingsOpen, setVideoSettingsOpen] = useState(false);
+  const [memorySettingsOpen, setMemorySettingsOpen] = useState(false);
+
+  const patchMemories = useCallback(
+    (update: UpdateUserPreferencesRequest['memories']) => {
+      void updateMemoriesPreferences(update).catch(console.warn);
+    },
+    [updateMemoriesPreferences],
+  );
 
   const handlePurgeFrameCache = useCallback(async () => {
     setPurgeState('purging');
@@ -356,6 +374,237 @@ const UserPreferencesCard: React.FC = () => {
                         : 'Clear cache'}
                   </Button>
                 </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Memories: same collapsible treatment as video tagging, so the
+            two niche groups read as siblings. */}
+        <div className="border-border rounded-lg border">
+          <button
+            type="button"
+            aria-expanded={memorySettingsOpen}
+            aria-controls="memories-settings"
+            onClick={() => setMemorySettingsOpen((open) => !open)}
+            className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg p-4 text-left transition-colors"
+          >
+            <div className="flex items-start gap-3">
+              <Sparkles className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+              <div className="space-y-1">
+                <span className="text-foreground text-sm font-medium">
+                  Memories
+                </span>
+                <p className="text-muted-foreground text-xs">
+                  Control how memories are generated, delivered and paced.
+                </p>
+              </div>
+            </div>
+            <ChevronDown
+              className={cn(
+                'text-muted-foreground h-4 w-4 shrink-0 transition-transform',
+                memorySettingsOpen && 'rotate-180',
+              )}
+            />
+          </button>
+
+          {memorySettingsOpen && (
+            <div
+              id="memories-settings"
+              className="border-border space-y-6 border-t p-4"
+            >
+              {/* Generate Memories Setting */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="memories-enabled"
+                    className="text-foreground text-sm font-medium"
+                  >
+                    Generate Memories
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    Curate highlights from your library automatically.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-gray-500" />
+                  <Switch
+                    className="cursor-pointer"
+                    id="memories-enabled"
+                    checked={memoriesPreferences.enabled}
+                    disabled={isUpdating}
+                    onCheckedChange={(checked) =>
+                      patchMemories({ enabled: checked })
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Desktop Notifications Setting */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="memories-notifications"
+                    className="text-foreground text-sm font-medium"
+                  >
+                    Desktop Notifications
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    Get an alert when a new memory is ready.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Bell className="h-4 w-4 text-gray-500" />
+                  <Switch
+                    className="cursor-pointer"
+                    id="memories-notifications"
+                    checked={memoriesPreferences.notifications_enabled}
+                    disabled={isUpdating || !memoriesPreferences.enabled}
+                    onCheckedChange={(checked) =>
+                      patchMemories({ notifications_enabled: checked })
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Seconds Per Photo Setting */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="memories-duration"
+                    className="text-foreground text-sm font-medium"
+                  >
+                    Seconds Per Photo
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    How long each photo is held before the story advances. A
+                    video clip runs for its own length instead.
+                  </p>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      id="memories-duration"
+                      variant="outline"
+                      className="w-32 cursor-pointer justify-between"
+                      disabled={isUpdating}
+                    >
+                      {memoriesPreferences.slide_duration_seconds}s
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-32">
+                    {SLIDE_DURATION_OPTIONS.map((seconds) => (
+                      <DropdownMenuItem
+                        key={seconds}
+                        className="cursor-pointer"
+                        onClick={() =>
+                          patchMemories({ slide_duration_seconds: seconds })
+                        }
+                      >
+                        {seconds} seconds
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Minimum Photos Setting */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="memories-min"
+                    className="text-foreground text-sm font-medium"
+                  >
+                    Minimum Photos
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    Groups with fewer photos than this are skipped rather than
+                    turned into a memory.
+                  </p>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      id="memories-min"
+                      variant="outline"
+                      className="w-32 cursor-pointer justify-between"
+                      disabled={isUpdating}
+                    >
+                      {memoriesPreferences.min_images} photos
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-32">
+                    {MIN_IMAGE_OPTIONS.map((count) => (
+                      <DropdownMenuItem
+                        key={count}
+                        className="cursor-pointer"
+                        onClick={() =>
+                          patchMemories({
+                            min_images: count,
+                            // Keep the pair valid: the backend rejects a
+                            // minimum above the maximum, failing the save.
+                            max_images: Math.max(
+                              count,
+                              memoriesPreferences.max_images,
+                            ),
+                          })
+                        }
+                      >
+                        {count} photos
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Maximum Photos Setting */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="memories-max"
+                    className="text-foreground text-sm font-medium"
+                  >
+                    Maximum Photos
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    No memory shows more photos than this, however many the
+                    occasion produced.
+                  </p>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      id="memories-max"
+                      variant="outline"
+                      className="w-32 cursor-pointer justify-between"
+                      disabled={isUpdating}
+                    >
+                      {memoriesPreferences.max_images} photos
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-32">
+                    {MAX_IMAGE_OPTIONS.map((count) => (
+                      <DropdownMenuItem
+                        key={count}
+                        className="cursor-pointer"
+                        onClick={() =>
+                          patchMemories({
+                            max_images: count,
+                            min_images: Math.min(
+                              count,
+                              memoriesPreferences.min_images,
+                            ),
+                          })
+                        }
+                      >
+                        {count} photos
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           )}

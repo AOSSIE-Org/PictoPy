@@ -1,21 +1,21 @@
 name: Lint Check
 
 on:
-  pull_request_target:
+  pull_request:
     branches:
       - main
 
-permissions: {}
+permissions:
+  contents: read
 
 jobs:
   linting:
     runs-on: ubuntu-latest
     name: Linting
     steps:
-      - name: Checkout PR head
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
       - name: Markdown lint

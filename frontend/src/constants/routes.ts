@@ -8,7 +8,6 @@ export const ROUTES = {
   SETTINGS: 'settings',
   ALBUMS: 'albums',
   MEMORIES: 'memories',
-  MEMORIES_SETTINGS: 'memories/settings',
   PERSON: 'person/:clusterId',
   MODEL_MANAGER: 'model-manager',
   SEARCH: 'search',

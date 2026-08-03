@@ -291,7 +291,7 @@ export const MemoryStoryViewer: React.FC<MemoryStoryViewerProps> = ({
           )}
           <button
             type="button"
-            onClick={() => navigate(`/${ROUTES.MEMORIES_SETTINGS}`)}
+            onClick={() => navigate(`/${ROUTES.SETTINGS}`)}
             aria-label="Memory settings"
             className="rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white"
           >
