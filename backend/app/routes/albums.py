@@ -418,7 +418,7 @@ def remove_images_from_album(
     "An unexpected error occurred while setting the cover image.",
 )
 def set_album_cover_image(
-    album_id: str = Path(...), body: SetCoverImageRequest = Body(...)
+    album_id: str = Path(...), body: SetCoverImageRequest = Body(...)  # noqa: B008
 ):
     """Set or update the cover image for an album"""
     album = db_get_album(album_id)
