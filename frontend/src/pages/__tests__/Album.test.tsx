@@ -109,6 +109,26 @@ describe('Albums page', () => {
     );
   };
 
+  // The backend withholds cover_image_path for locked albums; the card has to
+  // fall back to the placeholder rather than render a broken or empty tile.
+  test('shows a placeholder instead of a cover for a locked album', async () => {
+    serverAlbums = [
+      {
+        album_id: 'a2',
+        album_name: 'Private',
+        description: '',
+        is_locked: true,
+        cover_image_path: null,
+        image_count: 4,
+      },
+    ];
+
+    render(<AlbumsWithGlobalOverlays />);
+
+    const cover = await screen.findByAltText('Private');
+    expect(cover.getAttribute('src')).toMatch(/placeholder-album/);
+  }, 30000);
+
   test('shows skeletons while loading instead of a blocking loader', async () => {
     let releaseAlbums: (value: unknown) => void = () => {};
     mockGetAllAlbums.mockImplementation(

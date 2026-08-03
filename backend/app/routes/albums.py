@@ -41,14 +41,19 @@ def get_albums():
         # Get image count for each album
         image_ids = db_get_album_images(album[0])
         image_count = len(image_ids)
+        is_locked = bool(album[3])
 
         album_list.append(
             Album(
                 album_id=album[0],
                 album_name=album[1],
                 description=album[2] or "",
-                is_locked=bool(album[3]),
-                cover_image_path=db_get_album_cover_path(album[0]),
+                is_locked=is_locked,
+                # A locked album's cover would show the very content the
+                # password is protecting, so never send it.
+                cover_image_path=(
+                    None if is_locked else db_get_album_cover_path(album[0])
+                ),
                 image_count=image_count,
             )
         )
@@ -103,12 +108,14 @@ def get_album(album_id: str = Path(...)):
         image_ids = db_get_album_images(album_id)
         image_count = len(image_ids)
 
+        is_locked = bool(album[3])
         album_obj = Album(
             album_id=album[0],
             album_name=album[1],
             description=album[2] or "",
-            is_locked=bool(album[3]),
-            cover_image_path=db_get_album_cover_path(album_id),
+            is_locked=is_locked,
+            # Same reasoning as the listing: the cover gives away the contents.
+            cover_image_path=(None if is_locked else db_get_album_cover_path(album_id)),
             image_count=image_count,
         )
         return GetAlbumResponse(success=True, data=album_obj)
