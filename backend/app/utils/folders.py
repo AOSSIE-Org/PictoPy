@@ -7,11 +7,62 @@ from app.database.folders import (
     db_insert_folders_batch,
     db_update_parent_ids_for_subtree,
     db_delete_folders_batch,
+    db_get_folder_path_from_id,
+    db_get_folder_ids_by_path_prefix,
 )
+from app.database.images import db_get_images_by_folder_ids
+from app.database.videos import db_get_videos_by_folder_ids
 from app.schemas.folders import ErrorResponse
 from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def folder_util_cleanup_thumbnails(folder_ids: List[str]) -> int:
+    """
+    Delete thumbnail files from disk for the given folders and all their subfolders.
+    Should be called before deleting folders from the database to prevent orphaned files.
+    """
+    if not folder_ids:
+        return 0
+
+    all_folder_ids = set()
+    for folder_id in folder_ids:
+        all_folder_ids.add(folder_id)
+        path = db_get_folder_path_from_id(folder_id)
+        if path:
+            # Find all subfolders by path prefix
+            subfolders = db_get_folder_ids_by_path_prefix(path + os.sep)
+            for sub_id, _ in subfolders:
+                all_folder_ids.add(sub_id)
+
+    all_folder_ids_list = list(all_folder_ids)
+    deleted_count = 0
+
+    # 1. Fetch images and delete thumbnails
+    images = db_get_images_by_folder_ids(all_folder_ids_list)
+    for _, _, thumbnail_path in images:
+        if thumbnail_path and os.path.exists(thumbnail_path):
+            try:
+                os.remove(thumbnail_path)
+                deleted_count += 1
+            except OSError as e:
+                logger.error(f"Error removing image thumbnail {thumbnail_path}: {e}")
+
+    # 2. Fetch videos and delete thumbnails
+    videos = db_get_videos_by_folder_ids(all_folder_ids_list)
+    for _, _, thumbnail_path in videos:
+        if thumbnail_path and os.path.exists(thumbnail_path):
+            try:
+                os.remove(thumbnail_path)
+                deleted_count += 1
+            except OSError as e:
+                logger.error(f"Error removing video thumbnail {thumbnail_path}: {e}")
+
+    if deleted_count > 0:
+        logger.info(f"Cleaned up {deleted_count} thumbnail file(s) for folder deletion")
+        
+    return deleted_count
 
 
 def folder_util_add_folder_tree(
@@ -127,6 +178,7 @@ def folder_util_delete_obsolete_folders(
     ]
 
     if folder_ids_to_delete:
+        folder_util_cleanup_thumbnails(folder_ids_to_delete)
         deleted_count = db_delete_folders_batch(folder_ids_to_delete)
         return deleted_count, list(folders_to_delete)
 
