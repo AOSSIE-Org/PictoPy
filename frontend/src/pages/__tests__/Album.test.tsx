@@ -109,6 +109,30 @@ describe('Albums page', () => {
     );
   };
 
+  test('shows skeletons while loading instead of a blocking loader', async () => {
+    let releaseAlbums: (value: unknown) => void = () => {};
+    mockGetAllAlbums.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseAlbums = resolve;
+        }),
+    );
+
+    const { store } = render(<AlbumsWithGlobalOverlays />);
+
+    expect(
+      await screen.findAllByTestId('album-card-skeleton'),
+    ).not.toHaveLength(0);
+    // The empty state must not flash before the first response arrives.
+    expect(screen.queryByText(/no albums/i)).not.toBeInTheDocument();
+    expect(store.getState().loader.loading).toBe(false);
+
+    releaseAlbums({ success: true, albums: serverAlbums });
+
+    await screen.findByText('Trip');
+    expect(screen.queryAllByTestId('album-card-skeleton')).toHaveLength(0);
+  }, 30000);
+
   // Deleting goes dropdown menu -> dialog. Both are Radix layers holding
   // module-level focus state, so a duplicated Radix copy in node_modules made
   // the two focus scopes trap each other and lock up the UI until reload.

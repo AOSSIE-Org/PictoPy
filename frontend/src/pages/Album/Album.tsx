@@ -29,6 +29,18 @@ const ALBUM_SORT_OPTIONS: SortOption<AlbumSortValue>[] = [
   { value: 'photoCount', label: 'Photo Count', icon: Images },
 ];
 
+// Mirrors an AlbumCard: the same 4/5 cover as a memory tile, plus the name and
+// count bars, so the grid does not jump when the real cards arrive.
+const AlbumCardSkeleton: React.FC = () => (
+  <div className="animate-pulse" data-testid="album-card-skeleton">
+    <div className="bg-muted aspect-4/5 w-full rounded-xl" />
+    <div className="space-y-2 p-4">
+      <div className="bg-muted h-4 w-2/3 rounded" />
+      <div className="bg-muted h-3 w-1/3 rounded" />
+    </div>
+  </div>
+);
+
 function Albums() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -68,10 +80,7 @@ function Albums() {
   });
 
   useEffect(() => {
-    if (isLoading) {
-      dispatch(showLoader('Loading albums...'));
-    } else if (isError) {
-      dispatch(hideLoader());
+    if (isError) {
       dispatch(
         showInfoDialog({
           title: 'Error',
@@ -93,9 +102,8 @@ function Albums() {
         updated_at: album.updated_at || new Date().toISOString(),
       })) as Album[];
       dispatch(setAlbums(albumsList));
-      dispatch(hideLoader());
     }
-  }, [albumsData, successData, isSuccess, isError, isLoading, dispatch]);
+  }, [albumsData, successData, isSuccess, isError, dispatch]);
 
   const handleAlbumClick = (album: Album) => {
     if (album.is_locked) {
@@ -178,10 +186,16 @@ function Albums() {
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
-        {albums.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-2 gap-4 pb-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {Array.from({ length: 10 }).map((_, index) => (
+              <AlbumCardSkeleton key={index} />
+            ))}
+          </div>
+        ) : albums.length === 0 ? (
           <EmptyAlbumsState />
         ) : (
-          <div className="grid grid-cols-1 gap-6 pb-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 pb-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {sortedAlbums.map((album) => (
               <AlbumCard
                 key={album.id}
