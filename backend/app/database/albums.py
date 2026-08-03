@@ -28,8 +28,7 @@ def logged_db_connection(action: str):
 def db_create_albums_table() -> None:
     with logged_db_connection("creating albums table") as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS albums (
                 album_id TEXT PRIMARY KEY,
                 album_name TEXT UNIQUE,
@@ -38,8 +37,7 @@ def db_create_albums_table() -> None:
                 password_hash TEXT,
                 cover_image_path TEXT
             )
-            """
-        )
+            """)
         # Shipped databases predate the is_hidden -> is_locked rename and the
         # cover_image_path column, and CREATE IF NOT EXISTS won't add either.
         cursor.execute("PRAGMA table_info(albums)")
@@ -53,8 +51,7 @@ def db_create_albums_table() -> None:
 def db_create_album_images_table() -> None:
     with logged_db_connection("creating album_images table") as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS album_images (
                 album_id TEXT,
                 image_id TEXT,
@@ -62,8 +59,7 @@ def db_create_album_images_table() -> None:
                 FOREIGN KEY (album_id) REFERENCES albums(album_id) ON DELETE CASCADE,
                 FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE
             )
-            """
-        )
+            """)
         # The PK leads with album_id, so lookup by image alone needs its own
         # index. The memory scorer does exactly that, per image.
         cursor.execute(
@@ -167,16 +163,12 @@ def db_delete_album(album_id: str):
 
 def db_update_album_cover_image(album_id: str, cover_image_path: str):
     """Update the cover image path for an album"""
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
+    with logged_db_connection(f"updating cover image for album '{album_id}'") as conn:
+        cursor = conn.cursor()
         cursor.execute(
             "UPDATE albums SET cover_image_path = ? WHERE album_id = ?",
             (cover_image_path, album_id),
         )
-        conn.commit()
-    finally:
-        conn.close()
 
 
 def db_get_album_images(album_id: str):
@@ -258,6 +250,7 @@ def verify_album_password(album_id: str, password: str) -> bool:
         if not row or not row[0]:
             return False
         return bcrypt.checkpw(password.encode("utf-8"), row[0].encode("utf-8"))
+
 
 def db_get_image_path(image_id: str) -> str | None:
     """Get the path of an image by its ID."""

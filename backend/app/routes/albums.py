@@ -2,7 +2,7 @@ import sqlite3
 import uuid
 from functools import wraps
 
-from fastapi import APIRouter, Body, HTTPException, Path, Query, status
+from fastapi import APIRouter, Body, HTTPException, Path, status
 
 from app.database.albums import (
     db_add_images_to_album,
@@ -11,13 +11,13 @@ from app.database.albums import (
     db_get_album_by_name,
     db_get_album_images,
     db_get_all_albums,
+    db_get_image_path,
     db_insert_album,
     db_remove_image_from_album,
     db_remove_images_from_album,
     db_update_album,
     db_update_album_cover_image,
     verify_album_password,
-    db_get_image_path,
 )
 from app.logging.setup_logging import get_logger
 from app.schemas.album import (
@@ -63,6 +63,7 @@ def handle_route_exceptions(error_title: str, error_message: str):
 
 
 router = APIRouter()
+
 
 # GET /albums/ - Get all albums (including locked ones)
 @router.get("/", response_model=GetAlbumsResponse)
@@ -413,7 +414,8 @@ def remove_images_from_album(
 # PUT /albums/{album_id}/cover - Set album cover image
 @router.put("/{album_id}/cover", response_model=SuccessResponse)
 @handle_route_exceptions(
-    "Failed to Set Cover Image", "An unexpected error occurred while setting the cover image."
+    "Failed to Set Cover Image",
+    "An unexpected error occurred while setting the cover image.",
 )
 def set_album_cover_image(
     album_id: str = Path(...), body: SetCoverImageRequest = Body(...)
@@ -457,6 +459,4 @@ def set_album_cover_image(
 
     db_update_album_cover_image(album_id, image_path)
 
-    return SuccessResponse(
-        success=True, msg="Album cover image updated successfully"
-    )
+    return SuccessResponse(success=True, msg="Album cover image updated successfully")
