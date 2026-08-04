@@ -142,6 +142,8 @@ class TestAlbumRoutes:
                     mock_db_album["is_locked"],
                     mock_db_album["password_hash"],
                     None,  # cover_image_path
+                    "2026-08-01 09:00:00",  # created_at
+                    "2026-08-05 09:00:00",  # updated_at
                 )
             ]
 
@@ -177,6 +179,8 @@ class TestAlbumRoutes:
                     mock_db_album["is_locked"],
                     mock_db_album["password_hash"],
                     None,  # cover_image_path
+                    "2026-08-01 09:00:00",  # created_at
+                    "2026-08-05 09:00:00",  # updated_at
                 ),
                 (
                     mock_db_locked_album["album_id"],
@@ -185,6 +189,8 @@ class TestAlbumRoutes:
                     mock_db_locked_album["is_locked"],
                     mock_db_locked_album["password_hash"],
                     None,  # cover_image_path
+                    "2026-08-02 09:00:00",  # created_at
+                    "2026-08-06 09:00:00",  # updated_at
                 ),
             ]
 
@@ -215,6 +221,8 @@ class TestAlbumRoutes:
                     mock_db_album["is_locked"],
                     mock_db_album["password_hash"],
                     None,
+                    "2026-08-01 09:00:00",
+                    "2026-08-05 09:00:00",
                 ),
                 (
                     mock_db_locked_album["album_id"],
@@ -223,6 +231,8 @@ class TestAlbumRoutes:
                     mock_db_locked_album["is_locked"],
                     mock_db_locked_album["password_hash"],
                     None,
+                    "2026-08-02 09:00:00",
+                    "2026-08-06 09:00:00",
                 ),
             ]
             mock_cover.return_value = "/photos/secret.jpg"
@@ -251,6 +261,8 @@ class TestAlbumRoutes:
                 mock_db_locked_album["is_locked"],
                 mock_db_locked_album["password_hash"],
                 None,
+                "2026-08-02 09:00:00",
+                "2026-08-06 09:00:00",
             )
             mock_cover.return_value = "/photos/secret.jpg"
 
@@ -287,6 +299,8 @@ class TestAlbumRoutes:
                 mock_db_album["is_locked"],
                 mock_db_album["password_hash"],
                 None,  # cover_image_path
+                "2026-08-01 09:00:00",  # created_at
+                "2026-08-05 09:00:00",  # updated_at
             )
 
             response = client.get(f"/albums/{mock_db_album['album_id']}")

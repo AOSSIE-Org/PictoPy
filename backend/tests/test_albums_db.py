@@ -18,6 +18,8 @@ from app.database.albums import (
     db_update_album,
     db_delete_album,
     db_get_album_images,
+    db_add_images_to_album,
+    db_remove_image_from_album,
     db_remove_images_from_album,
     db_get_album_cover_path,
     verify_album_password,
@@ -243,6 +245,144 @@ class TestAlbumImages:
         db_remove_images_from_album("album-1", ["img-1", "img-3"])
 
         assert db_get_album_images("album-1") == ["img-2"]
+
+
+class TestAlbumCreatedAt:
+    def test_insert_stamps_a_creation_time(self, test_db):
+        make_album("album-1", "Trip")
+
+        assert db_get_album("album-1")[6] is not None
+
+    def test_create_with_images_stamps_a_creation_time(self, test_db):
+        make_images(test_db, ["img-1"])
+
+        db_create_album_with_images("album-1", "Paris", "", ["img-1"])
+
+        assert db_get_album("album-1")[6] is not None
+
+    def test_edits_never_change_it(self, test_db):
+        """Renaming, re-describing or adding photos is not a new creation."""
+        make_album("album-1", "Trip")
+        make_images(test_db, ["img-1"])
+        created = db_get_album("album-1")[6]
+
+        db_update_album("album-1", "Trip Renamed", "A new description", False)
+        db_add_images_to_album("album-1", ["img-1"])
+
+        album = db_get_album("album-1")
+        assert album[6] == created
+        # ...but all of that does count as an update.
+        assert album[7] >= created
+
+    def test_listing_keeps_insertion_order(self, test_db):
+        """Albums predating created_at sort by when they were made."""
+        make_album("album-1", "First")
+        make_album("album-2", "Second")
+
+        assert [album[0] for album in db_get_all_albums()] == ["album-1", "album-2"]
+
+    def test_migration_adds_the_column_to_a_legacy_table(self, test_db):
+        """A database shipped before created_at existed still upgrades."""
+        conn = sqlite3.connect(test_db)
+        conn.execute("DROP TABLE albums")
+        conn.execute(
+            """
+            CREATE TABLE albums (
+                album_id TEXT PRIMARY KEY,
+                album_name TEXT UNIQUE,
+                description TEXT,
+                is_hidden BOOLEAN DEFAULT 0,
+                password_hash TEXT
+            )
+            """
+        )
+        conn.execute(
+            "INSERT INTO albums (album_id, album_name) VALUES ('old-1', 'Old')"
+        )
+        conn.commit()
+        conn.close()
+
+        db_create_albums_table()
+
+        old = db_get_album("old-1")
+        assert old[1] == "Old"
+        # Nothing to backfill it with, so it reads as oldest.
+        assert old[6] is None
+        # And the table still takes new albums.
+        make_album("album-1", "New")
+        assert db_get_album("album-1")[6] is not None
+
+
+class TestAlbumUpdatedAt:
+    """
+    updated_at is compared against a pinned earlier value rather than against
+    a timestamp taken during the test: CURRENT_TIMESTAMP has one-second
+    resolution, so two writes in the same second read as equal.
+    """
+
+    EARLIER = "2020-01-01 00:00:00"
+
+    def set_updated_at(self, db_path: str, album_id: str) -> None:
+        conn = sqlite3.connect(db_path)
+        conn.execute(
+            "UPDATE albums SET updated_at = ? WHERE album_id = ?",
+            (self.EARLIER, album_id),
+        )
+        conn.commit()
+        conn.close()
+
+    def test_insert_stamps_an_update_time(self, test_db):
+        make_album("album-1", "Trip")
+
+        assert db_get_album("album-1")[7] is not None
+
+    def test_editing_the_album_touches_it(self, test_db):
+        make_album("album-1", "Trip")
+        self.set_updated_at(test_db, "album-1")
+
+        db_update_album("album-1", "Trip Renamed", "", False)
+
+        assert db_get_album("album-1")[7] > self.EARLIER
+
+    def test_adding_images_touches_it(self, test_db):
+        """Adding photos is the commonest way an album changes."""
+        make_album("album-1", "Trip")
+        make_images(test_db, ["img-1"])
+        self.set_updated_at(test_db, "album-1")
+
+        db_add_images_to_album("album-1", ["img-1"])
+
+        assert db_get_album("album-1")[7] > self.EARLIER
+
+    def test_removing_an_image_touches_it(self, test_db):
+        make_album("album-1", "Trip")
+        make_images(test_db, ["img-1"])
+        db_add_images_to_album("album-1", ["img-1"])
+        self.set_updated_at(test_db, "album-1")
+
+        db_remove_image_from_album("album-1", "img-1")
+
+        assert db_get_album("album-1")[7] > self.EARLIER
+
+    def test_removing_images_in_bulk_touches_it(self, test_db):
+        make_album("album-1", "Trip")
+        make_images(test_db, ["img-1", "img-2"])
+        db_add_images_to_album("album-1", ["img-1", "img-2"])
+        self.set_updated_at(test_db, "album-1")
+
+        db_remove_images_from_album("album-1", ["img-1"])
+
+        assert db_get_album("album-1")[7] > self.EARLIER
+
+    def test_a_failed_removal_leaves_it_alone(self, test_db):
+        """The image was never in the album, so nothing about it changed."""
+        make_album("album-1", "Trip")
+        self.set_updated_at(test_db, "album-1")
+
+        with pytest.raises(ValueError):
+            db_remove_image_from_album("album-1", "img-missing")
+
+        assert db_get_album("album-1")[7] == self.EARLIER
 
 
 class TestCreateAlbumWithImages:

@@ -61,6 +61,8 @@ def get_albums():
                     None if is_locked else db_get_album_cover_path(album[0])
                 ),
                 image_count=image_count,
+                created_at=album[6],
+                updated_at=album[7],
             )
         )
     return GetAlbumsResponse(success=True, albums=album_list)
@@ -207,6 +209,8 @@ def get_album(album_id: str = Path(...)):
             # Same reasoning as the listing: the cover gives away the contents.
             cover_image_path=(None if is_locked else db_get_album_cover_path(album_id)),
             image_count=image_count,
+            created_at=album[6],
+            updated_at=album[7],
         )
         return GetAlbumResponse(success=True, data=album_obj)
     except Exception as e:

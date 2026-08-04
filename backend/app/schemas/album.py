@@ -10,6 +10,10 @@ class Album(BaseModel):
     is_locked: bool
     cover_image_path: Optional[str] = None
     image_count: int = 0
+    # Null for albums that predate these columns; they read as oldest.
+    created_at: Optional[str] = None
+    # Touched by metadata edits and by adding or removing photos.
+    updated_at: Optional[str] = None
 
 
 # ##############################

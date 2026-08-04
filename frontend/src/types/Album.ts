@@ -5,6 +5,10 @@ export interface Album {
   is_locked: boolean;
   cover_image_path?: string;
   image_count: number;
+  /** Null for albums that predate the backend recording these times. */
+  created_at: string | null;
+  /** Touched by metadata edits and by adding or removing photos. */
+  updated_at: string | null;
 }
 
 export interface AlbumFormData {
