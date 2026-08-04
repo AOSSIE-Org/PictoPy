@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import patch
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from app.database.albums import AlbumRow
 from app.routes import albums as albums_router
@@ -24,7 +24,7 @@ client = TestClient(app)
 
 
 def album_row(
-    album: Dict[str, Any],
+    album: dict[str, Any],
     cover_image_path: Optional[str] = None,
     created_at: Optional[str] = None,
     updated_at: Optional[str] = None,
@@ -59,7 +59,7 @@ def mock_db_album():
 
 
 @pytest.fixture
-def mock_memory():
+def mock_memory() -> dict[str, Any]:
     """A memories row as db_get_memory returns it, trimmed to what the route reads."""
     return {
         "memory_id": str(uuid.uuid4()),
@@ -69,7 +69,7 @@ def mock_memory():
 
 
 @pytest.fixture
-def mock_memory_images():
+def mock_memory_images() -> list[dict[str, Any]]:
     return [
         {"id": str(uuid.uuid4()), "sort_order": 0},
         {"id": str(uuid.uuid4()), "sort_order": 1},
@@ -562,7 +562,9 @@ class TestAlbumImageManagement:
 class TestCreateAlbumFromMemory:
     """Test suite for converting a curated memory into an album."""
 
-    def test_create_album_from_memory_success(self, mock_memory, mock_memory_images):
+    def test_create_album_from_memory_success(
+        self, mock_memory: dict[str, Any], mock_memory_images: list[dict[str, Any]]
+    ) -> None:
         with patch("app.utils.albums.db_get_memory") as mock_get_memory, patch(
             "app.utils.albums.db_get_memory_images"
         ) as mock_get_images, patch(
@@ -603,7 +605,9 @@ class TestCreateAlbumFromMemory:
             {"memory_id": "   ", "name": "Paris 2022"},
         ],
     )
-    def test_create_album_from_memory_rejects_blank_fields(self, payload):
+    def test_create_album_from_memory_rejects_blank_fields(
+        self, payload: dict[str, str]
+    ) -> None:
         """A name of spaces satisfies min_length but is not a name."""
         with patch("app.utils.albums.db_create_album_with_images") as mock_create:
             response = client.post("/albums/from-memory", json=payload)
@@ -612,8 +616,8 @@ class TestCreateAlbumFromMemory:
             mock_create.assert_not_called()
 
     def test_create_album_from_memory_trims_the_name(
-        self, mock_memory, mock_memory_images
-    ):
+        self, mock_memory: dict[str, Any], mock_memory_images: list[dict[str, Any]]
+    ) -> None:
         with patch("app.utils.albums.db_get_memory") as mock_get_memory, patch(
             "app.utils.albums.db_get_memory_images"
         ) as mock_get_images, patch(
@@ -634,7 +638,7 @@ class TestCreateAlbumFromMemory:
             assert response.status_code == 200
             assert mock_create.call_args.args[1] == "Paris"
 
-    def test_create_album_from_memory_not_found(self):
+    def test_create_album_from_memory_not_found(self) -> None:
         with patch("app.utils.albums.db_get_memory") as mock_get_memory:
             mock_get_memory.return_value = None
 
@@ -645,7 +649,7 @@ class TestCreateAlbumFromMemory:
             assert response.status_code == 404
             assert response.json()["detail"]["error"] == "Memory Not Found"
 
-    def test_create_album_from_empty_memory(self, mock_memory):
+    def test_create_album_from_empty_memory(self, mock_memory: dict[str, Any]) -> None:
         """A memory with no photos cannot become an album."""
         with patch("app.utils.albums.db_get_memory") as mock_get_memory, patch(
             "app.utils.albums.db_get_memory_images"
@@ -664,8 +668,11 @@ class TestCreateAlbumFromMemory:
             mock_create.assert_not_called()
 
     def test_create_album_from_memory_duplicate_name(
-        self, mock_memory, mock_memory_images, mock_db_album
-    ):
+        self,
+        mock_memory: dict[str, Any],
+        mock_memory_images: list[dict[str, Any]],
+        mock_db_album: dict[str, Any],
+    ) -> None:
         with patch("app.utils.albums.db_get_memory") as mock_get_memory, patch(
             "app.utils.albums.db_get_memory_images"
         ) as mock_get_images, patch(
