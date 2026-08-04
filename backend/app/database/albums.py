@@ -19,11 +19,23 @@ class AlbumRow(TypedDict):
     updated_at: Optional[str]
 
 
+def _connect() -> sqlite3.Connection:
+    conn = sqlite3.connect(DATABASE_PATH)
+    # Ensure ON DELETE CASCADE and other FKs are enforced
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+
 # Named once so the SELECTs and the mapper below cannot drift apart.
 _ALBUM_COLUMNS = (
     "album_id, album_name, description, is_locked, "
     "password_hash, cover_image_path, created_at, updated_at"
 )
+
+# Built once from the column list rather than interpolated at each call site.
+_SELECT_ALL_ALBUMS = f"SELECT {_ALBUM_COLUMNS} FROM albums ORDER BY rowid"
+_SELECT_ALBUM_BY_NAME = f"SELECT {_ALBUM_COLUMNS} FROM albums WHERE album_name = ?"
+_SELECT_ALBUM_BY_ID = f"SELECT {_ALBUM_COLUMNS} FROM albums WHERE album_id = ?"
 
 
 def _to_album_row(row: Tuple[Any, ...]) -> AlbumRow:
@@ -43,7 +55,7 @@ def _to_album_row(row: Tuple[Any, ...]) -> AlbumRow:
 def db_create_albums_table() -> None:
     conn = None
     try:
-        conn = sqlite3.connect(DATABASE_PATH)
+        conn = _connect()
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -85,7 +97,7 @@ def db_create_albums_table() -> None:
 def db_create_album_images_table() -> None:
     conn = None
     try:
-        conn = sqlite3.connect(DATABASE_PATH)
+        conn = _connect()
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -125,25 +137,22 @@ def _touch_album(cursor: sqlite3.Cursor, album_id: str) -> None:
 
 def db_get_all_albums() -> List[AlbumRow]:
     """Get all albums (both locked and unlocked)."""
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
     try:
         # Insertion order, so albums predating created_at keep the order they
         # were made in rather than an arbitrary one.
-        cursor.execute(f"SELECT {_ALBUM_COLUMNS} FROM albums ORDER BY rowid")
+        cursor.execute(_SELECT_ALL_ALBUMS)
         return [_to_album_row(row) for row in cursor.fetchall()]
     finally:
         conn.close()
 
 
 def db_get_album_by_name(name: str) -> Optional[AlbumRow]:
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
     try:
-        cursor.execute(
-            f"SELECT {_ALBUM_COLUMNS} FROM albums WHERE album_name = ?",
-            (name,),
-        )
+        cursor.execute(_SELECT_ALBUM_BY_NAME, (name,))
         album = cursor.fetchone()
         return _to_album_row(album) if album else None
     finally:
@@ -151,13 +160,10 @@ def db_get_album_by_name(name: str) -> Optional[AlbumRow]:
 
 
 def db_get_album(album_id: str) -> Optional[AlbumRow]:
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
     try:
-        cursor.execute(
-            f"SELECT {_ALBUM_COLUMNS} FROM albums WHERE album_id = ?",
-            (album_id,),
-        )
+        cursor.execute(_SELECT_ALBUM_BY_ID, (album_id,))
         album = cursor.fetchone()
         return _to_album_row(album) if album else None
     finally:
@@ -169,9 +175,9 @@ def db_insert_album(
     album_name: str,
     description: str = "",
     is_locked: bool = False,
-    password: str = None,
+    password: Optional[str] = None,
 ):
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
     try:
         password_hash = None
@@ -183,7 +189,10 @@ def db_insert_album(
         # database migrated with ALTER TABLE has no default to fall back on.
         cursor.execute(
             """
-            INSERT INTO albums (album_id, album_name, description, is_locked, password_hash, created_at, updated_at)
+            INSERT INTO albums (
+                album_id, album_name, description, is_locked,
+                password_hash, created_at, updated_at
+            )
             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """,
             (album_id, album_name, description, int(is_locked), password_hash),
@@ -207,7 +216,10 @@ def db_create_album_with_images(
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO albums (album_id, album_name, description, is_locked, password_hash, created_at, updated_at)
+            INSERT INTO albums (
+                album_id, album_name, description, is_locked,
+                password_hash, created_at, updated_at
+            )
             VALUES (?, ?, ?, 0, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """,
             (album_id, album_name, description),
@@ -226,9 +238,9 @@ def db_update_album(
     album_name: str,
     description: str,
     is_locked: bool,
-    password: str = None,
+    password: Optional[str] = None,
 ):
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
     try:
         if password is not None:
@@ -269,7 +281,7 @@ def db_delete_album(album_id: str):
 
 def db_get_album_cover_path(album_id: str) -> str | None:
     """Path of the album's cover: its first image, by insertion order."""
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
     try:
         cursor.execute(
@@ -290,7 +302,7 @@ def db_get_album_cover_path(album_id: str) -> str | None:
 
 
 def db_get_album_images(album_id: str):
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
     try:
         cursor.execute(
@@ -367,7 +379,7 @@ def db_remove_image_from_album(album_id: str, image_id: str):
 
 
 def db_remove_images_from_album(album_id: str, image_ids: list[str]):
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
     try:
         cursor.executemany(
@@ -383,7 +395,7 @@ def db_remove_images_from_album(album_id: str, image_ids: list[str]):
 
 
 def verify_album_password(album_id: str, password: str) -> bool:
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
     try:
         cursor.execute(

@@ -8,6 +8,7 @@ from app.schemas.album import (
     CreateAlbumFromMemoryData,
     CreateAlbumFromMemoryRequest,
     CreateAlbumFromMemoryResponse,
+    ErrorResponseEnvelope,
     GetAlbumResponse,
     GetAlbumImagesRequest,
     GetAlbumImagesResponse,
@@ -35,6 +36,26 @@ from app.database.albums import (
 from app.database.memories import db_get_memory, db_get_memory_images
 
 router = APIRouter()
+
+
+def _album_exists(name: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=ErrorResponse(
+            success=False,
+            error="Album Already Exists",
+            message=f"Album '{name}' is already in the database.",
+        ).model_dump(),
+    )
+
+
+def _internal_error(message: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=ErrorResponse(
+            success=False, error="Internal Server Error", message=message
+        ).model_dump(),
+    )
 
 
 # GET /albums/ - Get all albums (including locked ones)
@@ -73,14 +94,7 @@ def get_albums():
 def create_album(body: CreateAlbumRequest):
     existing_album = db_get_album_by_name(body.name)
     if existing_album:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=ErrorResponse(
-                success=False,
-                error="Album Already Exists",
-                message=f"Album '{body.name}' is already in the database.",
-            ).model_dump(),
-        )
+        raise _album_exists(body.name)
 
     album_id = str(uuid.uuid4())
     try:
@@ -89,21 +103,14 @@ def create_album(body: CreateAlbumRequest):
         )
         return CreateAlbumResponse(success=True, album_id=album_id)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False,
-                error="Internal Server Error",
-                message=f"Failed to create album: {str(e)}",
-            ).model_dump(),
-        )
+        raise _internal_error(f"Failed to create album: {e}") from e
 
 
 # POST /albums/from-memory - Create an album from a curated memory
 @router.post(
     "/from-memory",
     response_model=CreateAlbumFromMemoryResponse,
-    responses={code: {"model": ErrorResponse} for code in [400, 404, 409, 500]},
+    responses={code: {"model": ErrorResponseEnvelope} for code in [400, 404, 409, 500]},
 )
 def create_album_from_memory(
     body: CreateAlbumFromMemoryRequest,
@@ -138,14 +145,7 @@ def create_album_from_memory(
         )
 
     if db_get_album_by_name(body.name):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=ErrorResponse(
-                success=False,
-                error="Album Already Exists",
-                message=f"Album '{body.name}' is already in the database.",
-            ).model_dump(),
-        )
+        raise _album_exists(body.name)
 
     album_id = str(uuid.uuid4())
     try:
@@ -156,31 +156,10 @@ def create_album_from_memory(
         # The name check above is not atomic. Re-check rather than assume a
         # conflict: the same error covers an image that vanished mid-request.
         if db_get_album_by_name(body.name):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=ErrorResponse(
-                    success=False,
-                    error="Album Already Exists",
-                    message=f"Album '{body.name}' is already in the database.",
-                ).model_dump(),
-            )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False,
-                error="Internal Server Error",
-                message=f"Failed to create album from memory: {str(e)}",
-            ).model_dump(),
-        )
+            raise _album_exists(body.name) from e
+        raise _internal_error(f"Failed to create album from memory: {e}") from e
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                success=False,
-                error="Internal Server Error",
-                message=f"Failed to create album from memory: {str(e)}",
-            ).model_dump(),
-        )
+        raise _internal_error(f"Failed to create album from memory: {e}") from e
 
     return CreateAlbumFromMemoryResponse(
         success=True,

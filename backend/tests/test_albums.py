@@ -346,7 +346,7 @@ class TestAlbumRoutes:
                         "description": "Secret",
                         "is_locked": True,
                         "password_hash": bcrypt.hashpw(
-                            "oldpass".encode(), bcrypt.gensalt()
+                            b"oldpass", bcrypt.gensalt()
                         ).decode(),
                     }
                 ),
@@ -369,7 +369,7 @@ class TestAlbumRoutes:
                         "description": "Secret",
                         "is_locked": True,
                         "password_hash": bcrypt.hashpw(
-                            "correctpass".encode(), bcrypt.gensalt()
+                            b"correctpass", bcrypt.gensalt()
                         ).decode(),
                     }
                 ),

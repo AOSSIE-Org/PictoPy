@@ -501,7 +501,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/app__schemas__album__ErrorResponse"
+                  "$ref": "#/components/schemas/ErrorResponseEnvelope"
                 }
               }
             }
@@ -511,7 +511,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/app__schemas__album__ErrorResponse"
+                  "$ref": "#/components/schemas/ErrorResponseEnvelope"
                 }
               }
             }
@@ -521,7 +521,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/app__schemas__album__ErrorResponse"
+                  "$ref": "#/components/schemas/ErrorResponseEnvelope"
                 }
               }
             }
@@ -531,7 +531,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/app__schemas__album__ErrorResponse"
+                  "$ref": "#/components/schemas/ErrorResponseEnvelope"
                 }
               }
             }
@@ -1597,14 +1597,9 @@
             "in": "query",
             "required": false,
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/InputType"
-                }
-              ],
+              "$ref": "#/components/schemas/InputType",
               "description": "Choose input type: 'path' or 'base64'",
-              "default": "path",
-              "title": "Input Type"
+              "default": "path"
             },
             "description": "Choose input type: 'path' or 'base64'"
           }
@@ -2975,6 +2970,19 @@
         ],
         "title": "DeleteMemoryResponse"
       },
+      "ErrorResponseEnvelope": {
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/app__schemas__album__ErrorResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorResponseEnvelope",
+        "description": "How an ErrorResponse actually reaches the client.\n\nHTTPException nests whatever it is given under `detail`, so documenting\nErrorResponse alone would describe a shape no client ever receives."
+      },
       "FaceSearchRequest": {
         "properties": {
           "path": {
@@ -3808,6 +3816,7 @@
           "metadata": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -4739,6 +4748,7 @@
           "signals": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -4966,6 +4976,7 @@
           "metadata": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {

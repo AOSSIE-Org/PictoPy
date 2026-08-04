@@ -13,10 +13,10 @@ export function usePersistedSort<T extends string>(
   allowedValues: readonly T[],
 ): [T, (value: T) => void] {
   const [sort, setSort] = useState<T>(() => {
-    const stored = localStorage.getItem(storageKey) as T | null;
-    return stored !== null && allowedValues.includes(stored)
-      ? stored
-      : defaultValue;
+    // Matching against the allowed values narrows the stored string to T, so
+    // no cast is needed to trust what came out of storage.
+    const stored = localStorage.getItem(storageKey);
+    return allowedValues.find((value) => value === stored) ?? defaultValue;
   });
 
   const selectSort = useCallback(
