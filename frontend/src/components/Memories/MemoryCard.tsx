@@ -90,17 +90,20 @@ export const MemoryCard: React.FC<MemoryCardProps> = ({
         </div>
       </button>
 
-      {/* Actions menu, matching the album grid's affordance. */}
-      <div className="absolute top-3 right-3">
+      {/* Actions menu, matching the album grid's affordance - including how it
+          scales with the breakpoints that resize the cards. */}
+      <div className="absolute top-2 right-2 xl:top-3 xl:right-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
               aria-label={`Options for ${memory.title}`}
-              className="bg-background/80 hover:bg-background/90 h-9 w-9 rounded-full backdrop-blur-sm"
+              className="bg-background/80 hover:bg-background/90 size-7 rounded-full backdrop-blur-sm lg:size-8 xl:size-9"
             >
-              <MoreVertical className="h-5 w-5" />
+              {/* size-* rather than h-/w-: the button forces size-4 onto any
+                  svg that does not already carry a size- class. */}
+              <MoreVertical className="size-3.5 xl:size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">

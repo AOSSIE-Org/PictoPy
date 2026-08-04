@@ -55,21 +55,24 @@ export const AlbumCard: React.FC<AlbumCardProps> = ({
           />
           {/* Lock Icon for Locked Albums */}
           {album.is_locked && (
-            <div className="bg-background/90 absolute top-3 left-3 rounded-full p-2.5 shadow-lg backdrop-blur-md">
-              <Lock className="text-foreground h-5 w-5" />
+            <div className="bg-background/90 absolute top-2 left-2 rounded-full p-1.5 shadow-lg backdrop-blur-md lg:p-2 xl:top-3 xl:left-3 xl:p-2.5">
+              <Lock className="text-foreground size-4 xl:size-5" />
             </div>
           )}
-          {/* Actions Menu */}
-          <div className="absolute top-3 right-3">
+          {/* Actions Menu. Sized off the same breakpoints as the grid, so the
+              control keeps its proportions as the cards grow. */}
+          <div className="absolute top-2 right-2 xl:top-3 xl:right-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="bg-background/80 hover:bg-background/90 h-9 w-9 rounded-full backdrop-blur-sm"
+                  className="bg-background/80 hover:bg-background/90 size-7 rounded-full backdrop-blur-sm lg:size-8 xl:size-9"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <MoreVertical className="h-5 w-5" />
+                  {/* size-* rather than h-/w-: the button forces size-4 onto any
+                      svg that does not already carry a size- class. */}
+                  <MoreVertical className="size-3.5 xl:size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
