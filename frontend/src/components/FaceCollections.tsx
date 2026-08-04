@@ -141,9 +141,7 @@ export function FaceCollections({ onSearchActivated }: FaceCollectionsProps) {
               size="sm"
               className="cursor-pointer"
               disabled={currentPage === totalPages - 1}
-              onClick={() =>
-                setPage((p) => Math.min(totalPages - 1, p + 1))
-              }
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
