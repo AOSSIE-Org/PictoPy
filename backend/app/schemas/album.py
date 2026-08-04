@@ -10,6 +10,10 @@ class Album(BaseModel):
     is_locked: bool
     cover_image_path: Optional[str] = None
     image_count: int = 0
+    # Null for albums that predate these columns; they read as oldest.
+    created_at: Optional[str] = None
+    # Touched by metadata edits and by adding or removing photos.
+    updated_at: Optional[str] = None
 
 
 # ##############################
@@ -28,6 +32,20 @@ class CreateAlbumRequest(BaseModel):
         if info.data.get("is_locked") and not value:
             raise ValueError("Password is required for locked albums")
         return value
+
+
+class CreateAlbumFromMemoryRequest(BaseModel):
+    memory_id: str = Field(..., min_length=1)
+    name: str = Field(..., min_length=1)
+
+    @field_validator("memory_id", "name")
+    def check_not_blank(cls, value: str) -> str:
+        # min_length counts the spaces, so "   " would otherwise get through
+        # and create an album with a blank name.
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("must not be blank")
+        return cleaned
 
 
 class UpdateAlbumRequest(BaseModel):
@@ -85,6 +103,19 @@ class CreateAlbumResponse(BaseModel):
     album_id: str
 
 
+class CreateAlbumFromMemoryData(BaseModel):
+    album_id: str
+    image_count: int
+
+
+class CreateAlbumFromMemoryResponse(BaseModel):
+    # The {success, message, data} envelope the project standardised on, unlike
+    # the flat responses above that predate it.
+    success: bool
+    message: str
+    data: CreateAlbumFromMemoryData
+
+
 class GetAlbumResponse(BaseModel):
     success: bool
     data: Album
@@ -104,3 +135,14 @@ class ErrorResponse(BaseModel):
     success: bool = False
     message: str
     error: str
+
+
+class ErrorResponseEnvelope(BaseModel):
+    """
+    How an ErrorResponse actually reaches the client.
+
+    HTTPException nests whatever it is given under `detail`, so documenting
+    ErrorResponse alone would describe a shape no client ever receives.
+    """
+
+    detail: ErrorResponse

@@ -128,6 +128,8 @@ export const AlbumDetail = () => {
           is_locked: backendAlbum.is_locked || false,
           cover_image_path: backendAlbum.cover_image_path,
           image_count: backendAlbum.image_count || 0,
+          created_at: backendAlbum.created_at ?? null,
+          updated_at: backendAlbum.updated_at ?? null,
         };
         dispatch(setSelectedAlbum(albumInfo));
       }

@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
-import { Plus, RefreshCw, ArrowDownAZ, Images } from 'lucide-react';
+import {
+  Plus,
+  RefreshCw,
+  ArrowDownAZ,
+  CalendarClock,
+  History,
+  Images,
+} from 'lucide-react';
 import { AlbumCard } from '@/components/Albums/AlbumCard';
 import { CreateAlbumDialog } from '@/components/Albums/CreateAlbumDialog';
 import { EditAlbumDialog } from '@/components/Albums/EditAlbumDialog';
@@ -15,18 +22,36 @@ import { setAlbums } from '@/features/albumsSlice';
 import { selectAlbums } from '@/features/albumSelectors';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { usePersistedSort } from '@/hooks/usePersistedSort';
+import { MEDIA_GRID_CLASS } from '@/constants/layout';
+import { cn } from '@/lib/utils';
 import { Album } from '@/types/Album';
 import {
   GallerySortDropdown,
   type SortOption,
 } from '@/components/GallerySortDropdown';
 
-type AlbumSortValue = 'name' | 'photoCount';
+type AlbumSortValue = 'name' | 'photoCount' | 'dateCreated' | 'recentlyUpdated';
 
 const ALBUM_SORT_OPTIONS: SortOption<AlbumSortValue>[] = [
   { value: 'name', label: 'Name (A-Z)', icon: ArrowDownAZ },
   { value: 'photoCount', label: 'Photo Count', icon: Images },
+  { value: 'dateCreated', label: 'Date Created', icon: CalendarClock },
+  { value: 'recentlyUpdated', label: 'Recently Updated', icon: History },
 ];
+
+const ALBUM_SORT_STORAGE_KEY = 'pictopy-albums-sort';
+
+// Derived from the options above so a removed sort stops being restorable.
+const ALBUM_SORT_VALUES = ALBUM_SORT_OPTIONS.map((option) => option.value);
+
+/**
+ * Newest first. SQLite timestamps are zero-padded, so they compare correctly
+ * as strings. Albums predating these columns have no timestamp: they read as
+ * oldest and keep the insertion order the backend lists them in.
+ */
+const newestFirst = (a: string | null, b: string | null): number =>
+  (b ?? '').localeCompare(a ?? '');
 
 // Mirrors an AlbumCard: the same 4/5 cover as a memory tile, plus the name and
 // count bars, so the grid does not jump when the real cards arrive.
@@ -51,7 +76,11 @@ function Albums() {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [albumToDelete, setAlbumToDelete] = useState<Album | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<AlbumSortValue>('name');
+  const [sortBy, setSortBy] = usePersistedSort<AlbumSortValue>(
+    ALBUM_SORT_STORAGE_KEY,
+    'name',
+    ALBUM_SORT_VALUES,
+  );
 
   const {
     data: albumsData,
@@ -98,6 +127,8 @@ function Albums() {
         is_locked: Boolean(album.is_locked),
         cover_image_path: album.cover_image_path,
         image_count: album.image_count || 0,
+        created_at: album.created_at ?? null,
+        updated_at: album.updated_at ?? null,
       })) as Album[];
       dispatch(setAlbums(albumsList));
     }
@@ -157,6 +188,10 @@ function Albums() {
       return a.name.localeCompare(b.name);
     } else if (sortBy === 'photoCount') {
       return b.image_count - a.image_count;
+    } else if (sortBy === 'dateCreated') {
+      return newestFirst(a.created_at, b.created_at);
+    } else if (sortBy === 'recentlyUpdated') {
+      return newestFirst(a.updated_at, b.updated_at);
     }
     return 0;
   });
@@ -190,7 +225,7 @@ function Albums() {
       </div>
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className={cn(MEDIA_GRID_CLASS, 'pb-6')}>
             {Array.from({ length: 10 }).map((_, index) => (
               <AlbumCardSkeleton key={index} />
             ))}
@@ -198,7 +233,7 @@ function Albums() {
         ) : albums.length === 0 ? (
           <EmptyAlbumsState />
         ) : (
-          <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className={cn(MEDIA_GRID_CLASS, 'pb-6')}>
             {sortedAlbums.map((album) => (
               <AlbumCard
                 key={album.id}

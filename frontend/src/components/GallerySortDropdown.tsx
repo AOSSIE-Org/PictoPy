@@ -22,7 +22,7 @@ export interface SortOption<T extends string> {
 
 export type GallerySortValue = 'best_match' | 'date';
 
-const GALLERY_SORT_OPTIONS: SortOption<GallerySortValue>[] = [
+export const GALLERY_SORT_OPTIONS: SortOption<GallerySortValue>[] = [
   { value: 'best_match', label: 'Best match', icon: Star },
   { value: 'date', label: 'Date', icon: Calendar },
 ];

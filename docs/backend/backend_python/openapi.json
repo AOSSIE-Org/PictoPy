@@ -467,6 +467,88 @@
         }
       }
     },
+    "/albums/from-memory": {
+      "post": {
+        "tags": [
+          "Albums"
+        ],
+        "summary": "Create Album From Memory",
+        "description": "Copy a memory's photos into a new album.\n\nThe memory itself is left untouched, so the same one can be converted\nagain under a different name. Any clips are left behind: album_images\nreferences images, and albums have no video support.",
+        "operationId": "create_album_from_memory_albums_from_memory_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAlbumFromMemoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateAlbumFromMemoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/albums/{album_id}": {
       "get": {
         "tags": [
@@ -1515,14 +1597,9 @@
             "in": "query",
             "required": false,
             "schema": {
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/InputType"
-                }
-              ],
+              "$ref": "#/components/schemas/InputType",
               "description": "Choose input type: 'path' or 'base64'",
-              "default": "path",
-              "title": "Input Type"
+              "default": "path"
             },
             "description": "Choose input type: 'path' or 'base64'"
           }
@@ -2580,6 +2657,28 @@
             "type": "integer",
             "title": "Image Count",
             "default": 0
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
           }
         },
         "type": "object",
@@ -2632,6 +2731,66 @@
           "face_count"
         ],
         "title": "ClusterMetadata"
+      },
+      "CreateAlbumFromMemoryData": {
+        "properties": {
+          "album_id": {
+            "type": "string",
+            "title": "Album Id"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "album_id",
+          "image_count"
+        ],
+        "title": "CreateAlbumFromMemoryData"
+      },
+      "CreateAlbumFromMemoryRequest": {
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Memory Id"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory_id",
+          "name"
+        ],
+        "title": "CreateAlbumFromMemoryRequest"
+      },
+      "CreateAlbumFromMemoryResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/CreateAlbumFromMemoryData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "CreateAlbumFromMemoryResponse"
       },
       "CreateAlbumRequest": {
         "properties": {
@@ -2810,6 +2969,19 @@
           "data"
         ],
         "title": "DeleteMemoryResponse"
+      },
+      "ErrorResponseEnvelope": {
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/app__schemas__album__ErrorResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorResponseEnvelope",
+        "description": "How an ErrorResponse actually reaches the client.\n\nHTTPException nests whatever it is given under `detail`, so documenting\nErrorResponse alone would describe a shape no client ever receives."
       },
       "FaceSearchRequest": {
         "properties": {
@@ -3644,6 +3816,7 @@
           "metadata": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -4575,6 +4748,7 @@
           "signals": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -4802,6 +4976,7 @@
           "metadata": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -5885,6 +6060,29 @@
           "video_id"
         ],
         "title": "ToggleFavouriteRequest"
+      },
+      "app__schemas__album__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "error"
+        ],
+        "title": "ErrorResponse"
       },
       "app__schemas__face_clusters__ErrorResponse": {
         "properties": {

@@ -129,6 +129,68 @@ describe('Albums page', () => {
     expect(cover.getAttribute('src')).toMatch(/placeholder-album/);
   }, 30000);
 
+  const chooseSort = async (
+    user: ReturnType<typeof userEvent.setup>,
+    label: RegExp,
+  ) => {
+    await user.click(screen.getByRole('button', { name: /sort by/i }));
+    const menuItems = await screen.findAllByRole('menuitem');
+    const option = menuItems.find((item) => label.test(item.textContent || ''));
+    await user.click(option as HTMLElement);
+  };
+
+  const albumOrder = () =>
+    screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
+
+  // 'Legacy' predates both timestamp columns, so it carries neither.
+  const timestampedAlbums = [
+    { album_id: 'a1', album_name: 'Legacy', image_count: 1 },
+    {
+      album_id: 'a2',
+      album_name: 'MadeFirst',
+      image_count: 1,
+      created_at: '2026-07-01 10:00:00',
+      updated_at: '2026-08-09 10:00:00',
+    },
+    {
+      album_id: 'a3',
+      album_name: 'MadeLast',
+      image_count: 1,
+      created_at: '2026-08-01 10:00:00',
+      updated_at: '2026-08-02 10:00:00',
+    },
+  ];
+
+  test('sorts by creation date, newest first', async () => {
+    const user = userEvent.setup();
+    serverAlbums = timestampedAlbums;
+
+    render(<AlbumsWithGlobalOverlays />);
+    await screen.findByText('Legacy');
+
+    await chooseSort(user, /date created/i);
+
+    await waitFor(() =>
+      expect(albumOrder()).toEqual(['MadeLast', 'MadeFirst', 'Legacy']),
+    );
+  }, 30000);
+
+  // The album made first was edited most recently, so the two date sorts must
+  // not agree - otherwise this would pass against either field.
+  test('sorts by last update, most recent first', async () => {
+    const user = userEvent.setup();
+    serverAlbums = timestampedAlbums;
+
+    render(<AlbumsWithGlobalOverlays />);
+    await screen.findByText('Legacy');
+
+    await chooseSort(user, /recently updated/i);
+
+    await waitFor(() =>
+      expect(albumOrder()).toEqual(['MadeFirst', 'MadeLast', 'Legacy']),
+    );
+  }, 30000);
+
   test('shows skeletons while loading instead of a blocking loader', async () => {
     let releaseAlbums: (value: unknown) => void = () => {};
     mockGetAllAlbums.mockImplementation(
