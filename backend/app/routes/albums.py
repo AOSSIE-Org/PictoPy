@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, status, Body, Path
-import sqlite3
 import uuid
 from app.schemas.album import (
     GetAlbumsResponse,
@@ -23,7 +22,6 @@ from app.database.albums import (
     db_get_album_by_name,
     db_get_album,
     db_insert_album,
-    db_create_album_with_images,
     db_update_album,
     db_delete_album,
     db_get_album_images,
@@ -33,7 +31,12 @@ from app.database.albums import (
     db_get_album_cover_path,
     verify_album_password,
 )
-from app.database.memories import db_get_memory, db_get_memory_images
+from app.utils.albums import (
+    AlbumNameTakenError,
+    MemoryHasNoPhotosError,
+    MemoryNotFoundError,
+    album_util_create_from_memory,
+)
 
 router = APIRouter()
 
@@ -122,8 +125,9 @@ def create_album_from_memory(
     again under a different name. Any clips are left behind: album_images
     references images, and albums have no video support.
     """
-    memory = db_get_memory(body.memory_id)
-    if not memory:
+    try:
+        result = album_util_create_from_memory(body.memory_id, body.name)
+    except MemoryNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ErrorResponse(
@@ -131,10 +135,8 @@ def create_album_from_memory(
                 error="Memory Not Found",
                 message="No memory exists with the provided ID.",
             ).model_dump(),
-        )
-
-    image_ids = [image["id"] for image in db_get_memory_images(body.memory_id)]
-    if not image_ids:
+        ) from e
+    except MemoryHasNoPhotosError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ErrorResponse(
@@ -142,29 +144,16 @@ def create_album_from_memory(
                 error="Empty Memory",
                 message="This memory has no photos to convert.",
             ).model_dump(),
-        )
-
-    if db_get_album_by_name(body.name):
-        raise _album_exists(body.name)
-
-    album_id = str(uuid.uuid4())
-    try:
-        image_count = db_create_album_with_images(
-            album_id, body.name, memory.get("subtitle") or "", image_ids
-        )
-    except sqlite3.IntegrityError as e:
-        # The name check above is not atomic. Re-check rather than assume a
-        # conflict: the same error covers an image that vanished mid-request.
-        if db_get_album_by_name(body.name):
-            raise _album_exists(body.name) from e
-        raise _internal_error(f"Failed to create album from memory: {e}") from e
+        ) from e
+    except AlbumNameTakenError as e:
+        raise _album_exists(body.name) from e
     except Exception as e:
         raise _internal_error(f"Failed to create album from memory: {e}") from e
 
     return CreateAlbumFromMemoryResponse(
         success=True,
-        message=f"Created album '{body.name}' with {image_count} photos",
-        data=CreateAlbumFromMemoryData(album_id=album_id, image_count=image_count),
+        message=f"Created album '{body.name}' with {result['image_count']} photos",
+        data=CreateAlbumFromMemoryData(**result),
     )
 
 

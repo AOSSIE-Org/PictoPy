@@ -6,6 +6,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import patch
 import uuid
+from typing import Any, Dict, Optional
+
+from app.database.albums import AlbumRow
 from app.routes import albums as albums_router
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -20,18 +23,28 @@ client = TestClient(app)
 # ##############################
 
 
-def album_row(album: dict, cover_image_path=None, created_at=None, updated_at=None):
-    """An albums row as the database helpers return it."""
-    return {
-        "album_id": album["album_id"],
-        "album_name": album["album_name"],
-        "description": album["description"],
-        "is_locked": album["is_locked"],
-        "password_hash": album["password_hash"],
-        "cover_image_path": cover_image_path,
-        "created_at": created_at,
-        "updated_at": updated_at,
-    }
+def album_row(
+    album: Dict[str, Any],
+    cover_image_path: Optional[str] = None,
+    created_at: Optional[str] = None,
+    updated_at: Optional[str] = None,
+) -> AlbumRow:
+    """
+    An albums row as the database helpers return it.
+
+    Built as the production AlbumRow rather than a look-alike dict, so a
+    column added there fails here instead of drifting silently.
+    """
+    return AlbumRow(
+        album_id=album["album_id"],
+        album_name=album["album_name"],
+        description=album["description"],
+        is_locked=album["is_locked"],
+        password_hash=album["password_hash"],
+        cover_image_path=cover_image_path,
+        created_at=created_at,
+        updated_at=updated_at,
+    )
 
 
 @pytest.fixture
@@ -550,12 +563,12 @@ class TestCreateAlbumFromMemory:
     """Test suite for converting a curated memory into an album."""
 
     def test_create_album_from_memory_success(self, mock_memory, mock_memory_images):
-        with patch("app.routes.albums.db_get_memory") as mock_get_memory, patch(
-            "app.routes.albums.db_get_memory_images"
+        with patch("app.utils.albums.db_get_memory") as mock_get_memory, patch(
+            "app.utils.albums.db_get_memory_images"
         ) as mock_get_images, patch(
-            "app.routes.albums.db_get_album_by_name"
+            "app.utils.albums.db_get_album_by_name"
         ) as mock_get_by_name, patch(
-            "app.routes.albums.db_create_album_with_images"
+            "app.utils.albums.db_create_album_with_images"
         ) as mock_create:
             mock_get_memory.return_value = mock_memory
             mock_get_images.return_value = mock_memory_images
@@ -592,7 +605,7 @@ class TestCreateAlbumFromMemory:
     )
     def test_create_album_from_memory_rejects_blank_fields(self, payload):
         """A name of spaces satisfies min_length but is not a name."""
-        with patch("app.routes.albums.db_create_album_with_images") as mock_create:
+        with patch("app.utils.albums.db_create_album_with_images") as mock_create:
             response = client.post("/albums/from-memory", json=payload)
 
             assert response.status_code == 422
@@ -601,12 +614,12 @@ class TestCreateAlbumFromMemory:
     def test_create_album_from_memory_trims_the_name(
         self, mock_memory, mock_memory_images
     ):
-        with patch("app.routes.albums.db_get_memory") as mock_get_memory, patch(
-            "app.routes.albums.db_get_memory_images"
+        with patch("app.utils.albums.db_get_memory") as mock_get_memory, patch(
+            "app.utils.albums.db_get_memory_images"
         ) as mock_get_images, patch(
-            "app.routes.albums.db_get_album_by_name"
+            "app.utils.albums.db_get_album_by_name"
         ) as mock_get_by_name, patch(
-            "app.routes.albums.db_create_album_with_images"
+            "app.utils.albums.db_create_album_with_images"
         ) as mock_create:
             mock_get_memory.return_value = mock_memory
             mock_get_images.return_value = mock_memory_images
@@ -622,7 +635,7 @@ class TestCreateAlbumFromMemory:
             assert mock_create.call_args.args[1] == "Paris"
 
     def test_create_album_from_memory_not_found(self):
-        with patch("app.routes.albums.db_get_memory") as mock_get_memory:
+        with patch("app.utils.albums.db_get_memory") as mock_get_memory:
             mock_get_memory.return_value = None
 
             response = client.post(
@@ -634,10 +647,10 @@ class TestCreateAlbumFromMemory:
 
     def test_create_album_from_empty_memory(self, mock_memory):
         """A memory with no photos cannot become an album."""
-        with patch("app.routes.albums.db_get_memory") as mock_get_memory, patch(
-            "app.routes.albums.db_get_memory_images"
+        with patch("app.utils.albums.db_get_memory") as mock_get_memory, patch(
+            "app.utils.albums.db_get_memory_images"
         ) as mock_get_images, patch(
-            "app.routes.albums.db_create_album_with_images"
+            "app.utils.albums.db_create_album_with_images"
         ) as mock_create:
             mock_get_memory.return_value = mock_memory
             mock_get_images.return_value = []
@@ -653,12 +666,12 @@ class TestCreateAlbumFromMemory:
     def test_create_album_from_memory_duplicate_name(
         self, mock_memory, mock_memory_images, mock_db_album
     ):
-        with patch("app.routes.albums.db_get_memory") as mock_get_memory, patch(
-            "app.routes.albums.db_get_memory_images"
+        with patch("app.utils.albums.db_get_memory") as mock_get_memory, patch(
+            "app.utils.albums.db_get_memory_images"
         ) as mock_get_images, patch(
-            "app.routes.albums.db_get_album_by_name"
+            "app.utils.albums.db_get_album_by_name"
         ) as mock_get_by_name, patch(
-            "app.routes.albums.db_create_album_with_images"
+            "app.utils.albums.db_create_album_with_images"
         ) as mock_create:
             mock_get_memory.return_value = mock_memory
             mock_get_images.return_value = mock_memory_images
