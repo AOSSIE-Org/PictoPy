@@ -8,6 +8,7 @@ import { MemoryStoryViewer } from '@/components/Memories/MemoryStoryViewer';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { MEDIA_GRID_CLASS } from '@/constants/layout';
 import { useMemories, useRefreshMemories } from '@/hooks/useMemories';
 import type { MemoryCard as MemoryCardType } from '@/api/api-functions/memories';
 import {
@@ -112,7 +113,7 @@ export const Memories: React.FC = () => {
         </div>
 
         {memoriesQuery.isLoading ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className={MEDIA_GRID_CLASS}>
             {Array.from({ length: 10 }).map((_, index) => (
               <MemoryCardSkeleton key={index} />
             ))}
@@ -120,7 +121,7 @@ export const Memories: React.FC = () => {
         ) : memories.length === 0 ? (
           <EmptyState isGenerating={Boolean(isGenerating)} />
         ) : (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className={MEDIA_GRID_CLASS}>
             {memories.map((memory) => (
               <MemoryCard
                 key={memory.memory_id}

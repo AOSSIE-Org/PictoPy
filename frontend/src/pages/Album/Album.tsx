@@ -15,6 +15,8 @@ import { setAlbums } from '@/features/albumsSlice';
 import { selectAlbums } from '@/features/albumSelectors';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { MEDIA_GRID_CLASS } from '@/constants/layout';
+import { cn } from '@/lib/utils';
 import { Album } from '@/types/Album';
 import {
   GallerySortDropdown,
@@ -190,7 +192,7 @@ function Albums() {
       </div>
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className={cn(MEDIA_GRID_CLASS, 'pb-6')}>
             {Array.from({ length: 10 }).map((_, index) => (
               <AlbumCardSkeleton key={index} />
             ))}
@@ -198,7 +200,7 @@ function Albums() {
         ) : albums.length === 0 ? (
           <EmptyAlbumsState />
         ) : (
-          <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className={cn(MEDIA_GRID_CLASS, 'pb-6')}>
             {sortedAlbums.map((album) => (
               <AlbumCard
                 key={album.id}
