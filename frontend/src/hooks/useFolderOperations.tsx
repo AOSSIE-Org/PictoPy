@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useQueryClient } from '@tanstack/react-query';
 import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtension';
 import {
   enableAITagging,
@@ -19,6 +20,7 @@ import { getFoldersTaggingStatus } from '@/api/api-functions/folders';
  */
 export const useFolderOperations = () => {
   const dispatch = useDispatch();
+  const queryClient = useQueryClient();
   const folders = useSelector(selectAllFolders);
 
   // Query for folders
@@ -133,6 +135,13 @@ export const useFolderOperations = () => {
   const deleteFolderMutation = usePictoMutation({
     mutationFn: async (folder_ids: string[]) => deleteFolders({ folder_ids }),
     autoInvalidateTags: ['folders'],
+    // Deleting a folder cascades to its images and faces, so any cluster built from
+    // them is now stale. This has to be a separate call: autoInvalidateTags is passed
+    // through as a single queryKey and matches by prefix, so ['folders', 'clusters']
+    // would match neither query.
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clusters'] });
+    },
   });
 
   // Apply feedback to the delete folder mutation.

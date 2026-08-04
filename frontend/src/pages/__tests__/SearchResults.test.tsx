@@ -1,6 +1,11 @@
 import { render, screen, waitFor } from '@/test-utils';
 import { SearchResults } from '../SearchResults/SearchResults';
-import { searchImagesByTag, searchVideosByTag } from '@/api/api-functions';
+import {
+  searchImagesByTag,
+  searchVideosByTag,
+  fetchAllClusters,
+  fetchMultiPersonSearch,
+} from '@/api/api-functions';
 
 // Mock the API functions. fetchModelStatus must resolve to a well-formed
 // response even in tests that don't care about it -- the "no tag matches"
@@ -11,11 +16,18 @@ jest.mock('@/api/api-functions', () => ({
   searchVideosByTag: jest.fn(),
   semanticSearchVideos: jest.fn(),
   fetchModelStatus: jest.fn().mockResolvedValue({ success: true, data: {} }),
+  fetchAllClusters: jest.fn(),
+  fetchMultiPersonSearch: jest.fn(),
 }));
 
 jest.mock('@tauri-apps/api/core', () => ({
   convertFileSrc: (path: string) => path,
 }));
+
+const CLUSTERS = [
+  { cluster_id: 'c1', cluster_name: 'Person A', face_count: 5 },
+  { cluster_id: 'c2', cluster_name: 'Person B', face_count: 4 },
+];
 
 describe('SearchResults Page', () => {
   beforeEach(() => {
@@ -24,6 +36,11 @@ describe('SearchResults Page', () => {
     (searchVideosByTag as jest.Mock).mockResolvedValue({
       success: true,
       data: [],
+    });
+    // Every query waits on the cluster list to decide if it names people.
+    (fetchAllClusters as jest.Mock).mockResolvedValue({
+      success: true,
+      data: { clusters: CLUSTERS },
     });
   });
 
@@ -70,8 +87,10 @@ describe('SearchResults Page', () => {
 
     renderWithQuery('cat');
 
-    // API should be called
-    expect(searchImagesByTag).toHaveBeenCalledWith({ tag: 'cat' });
+    // API should be called once the cluster list has ruled out a people query
+    await waitFor(() =>
+      expect(searchImagesByTag).toHaveBeenCalledWith({ tag: 'cat' }),
+    );
 
     // Header should reflect the query
     expect(screen.getByText('Results for "cat"')).toBeInTheDocument();
@@ -108,7 +127,9 @@ describe('SearchResults Page', () => {
 
     renderWithQuery('beach');
 
-    expect(searchVideosByTag).toHaveBeenCalledWith({ tag: 'beach' });
+    await waitFor(() =>
+      expect(searchVideosByTag).toHaveBeenCalledWith({ tag: 'beach' }),
+    );
 
     await waitFor(() => {
       expect(screen.getByText('Videos')).toBeInTheDocument();
@@ -198,6 +219,140 @@ describe('SearchResults Page', () => {
       },
       { timeout: 3000 },
     );
+  });
+
+  describe('text-based multi-person search', () => {
+    test('a two-name query runs a match_all people search instead of tag search', async () => {
+      (fetchMultiPersonSearch as jest.Mock).mockResolvedValue({
+        success: true,
+        data: {
+          images: [
+            {
+              id: 'p1',
+              path: '/together.jpg',
+              thumbnailPath: '/together-thumb.jpg',
+              metadata: { name: 'together.jpg' },
+              match_count: 2,
+            },
+          ],
+          total: 1,
+          match_mode: 'match_all',
+        },
+      });
+
+      renderWithQuery('Person A and Person B');
+
+      await waitFor(() =>
+        expect(fetchMultiPersonSearch).toHaveBeenCalledWith({
+          cluster_ids: ['c1', 'c2'],
+          match_mode: 'match_all',
+        }),
+      );
+
+      expect(
+        await screen.findByText('Photos with all of:'),
+      ).toBeInTheDocument();
+      // The people path replaces tag/semantic search rather than joining it.
+      expect(searchImagesByTag).not.toHaveBeenCalled();
+      expect(searchVideosByTag).not.toHaveBeenCalled();
+    });
+
+    test('"or" between names searches for any of them', async () => {
+      (fetchMultiPersonSearch as jest.Mock).mockResolvedValue({
+        success: true,
+        data: { images: [], total: 0, match_mode: 'match_any' },
+      });
+
+      renderWithQuery('Person A or Person B');
+
+      await waitFor(() =>
+        expect(fetchMultiPersonSearch).toHaveBeenCalledWith({
+          cluster_ids: ['c1', 'c2'],
+          match_mode: 'match_any',
+        }),
+      );
+
+      expect(
+        await screen.findByText('Photos with any of:'),
+      ).toBeInTheDocument();
+      expect(
+        await screen.findByText(/No photos found with these people in them/i),
+      ).toBeInTheDocument();
+    });
+
+    test('an unknown name is called out and the known people are still searched', async () => {
+      (fetchMultiPersonSearch as jest.Mock).mockResolvedValue({
+        success: true,
+        data: { images: [], total: 0, match_mode: 'match_all' },
+      });
+
+      renderWithQuery('Person A, Zed, Person B');
+
+      await waitFor(() =>
+        expect(fetchMultiPersonSearch).toHaveBeenCalledWith({
+          cluster_ids: ['c1', 'c2'],
+          match_mode: 'match_all',
+        }),
+      );
+
+      expect(
+        await screen.findByText(/No one is named Zed/i),
+      ).toBeInTheDocument();
+    });
+
+    test('a query naming only one known person falls through to tag search', async () => {
+      (searchImagesByTag as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+
+      renderWithQuery('Person A and Zed');
+
+      await waitFor(() =>
+        expect(searchImagesByTag).toHaveBeenCalledWith({
+          tag: 'Person A and Zed',
+        }),
+      );
+      expect(fetchMultiPersonSearch).not.toHaveBeenCalled();
+    });
+
+    test('mode=tag opts out of people search without fetching clusters', async () => {
+      (searchImagesByTag as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+
+      render(<SearchResults />, {
+        initialRoutes: ['/search?value=Person%20A%20and%20Person%20B&mode=tag'],
+      });
+
+      // An explicit mode never consults the clusters, so it must not wait on
+      // (or pay for) the fetch.
+      expect(fetchAllClusters).not.toHaveBeenCalled();
+
+      await waitFor(() =>
+        expect(searchImagesByTag).toHaveBeenCalledWith({
+          tag: 'Person A and Person B',
+        }),
+      );
+      expect(fetchMultiPersonSearch).not.toHaveBeenCalled();
+    });
+
+    test('a failed people search shows the Search Failed takeover', async () => {
+      (fetchMultiPersonSearch as jest.Mock).mockRejectedValue(
+        new Error('Network Error'),
+      );
+
+      renderWithQuery('Person A and Person B');
+
+      await waitFor(
+        () => {
+          expect(screen.getByText(/Search Failed/i)).toBeInTheDocument();
+          expect(screen.getByText(/Network Error/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
+    });
   });
 
   test('the Search Failed takeover appears only when both searches fail', async () => {

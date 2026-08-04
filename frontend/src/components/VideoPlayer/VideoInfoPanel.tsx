@@ -1,6 +1,16 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Film, Calendar, Clock, Monitor, Info, Tag } from 'lucide-react';
+import {
+  X,
+  Film,
+  Calendar,
+  Clock,
+  Monitor,
+  Info,
+  Tag,
+  Plus,
+  Minus,
+} from 'lucide-react';
 import { Video } from '@/types/Media';
 import { formatDurationLabel } from '@/utils/durationUtils';
 
@@ -42,6 +52,14 @@ export const VideoInfoPanel: React.FC<VideoInfoPanelProps> = ({
   const resolution =
     width > 0 && height > 0 ? `${width} × ${height}` : 'Not available';
   const tags = video?.tags ?? [];
+  const [showAllTags, setShowAllTags] = React.useState(false);
+
+  const tagResetKey = `${show}:${video?.id ?? ''}`;
+  const [prevTagResetKey, setPrevTagResetKey] = React.useState(tagResetKey);
+  if (tagResetKey !== prevTagResetKey) {
+    setPrevTagResetKey(tagResetKey);
+    setShowAllTags(false);
+  }
 
   return (
     <AnimatePresence>
@@ -132,14 +150,36 @@ export const VideoInfoPanel: React.FC<VideoInfoPanelProps> = ({
                     Tags
                   </p>
                   <div className="mt-1 flex flex-wrap gap-1">
-                    {tags.map((tag, index) => (
-                      <span
-                        key={`${tag}-${index}`}
-                        className="rounded-full border border-black/20 px-2 py-0.5 text-xs text-gray-800 dark:border-white/30 dark:text-white"
+                    {(showAllTags ? tags : tags.slice(0, 3)).map(
+                      (tag, index) => (
+                        <span
+                          key={`${tag}-${index}`}
+                          className="rounded-full border border-black/20 px-2 py-0.5 text-xs text-gray-800 dark:border-white/30 dark:text-white"
+                        >
+                          {tag}
+                        </span>
+                      ),
+                    )}
+                    {tags.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllTags((prev) => !prev)}
+                        className="focus-visible:ring-ring/50 inline-flex items-center gap-1.5 rounded-full bg-black/10 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-800 shadow-xs transition-all outline-none hover:bg-black/15 focus-visible:ring-[3px] dark:bg-white/15 dark:text-white dark:hover:bg-white/20"
                       >
-                        {tag}
-                      </span>
-                    ))}
+                        {showAllTags ? (
+                          <Minus
+                            className="h-2.5 w-2.5 shrink-0"
+                            strokeWidth={2.5}
+                          />
+                        ) : (
+                          <Plus
+                            className="h-2.5 w-2.5 shrink-0"
+                            strokeWidth={2.5}
+                          />
+                        )}
+                        <span>{showAllTags ? 'show less' : 'show more'}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Query, Body, Path
+from fastapi import APIRouter, HTTPException, status, Body, Path
 import uuid
 from app.schemas.album import (
     GetAlbumsResponse,
@@ -24,24 +24,37 @@ from app.database.albums import (
     db_add_images_to_album,
     db_remove_image_from_album,
     db_remove_images_from_album,
+    db_get_album_cover_path,
     verify_album_password,
 )
 
 router = APIRouter()
 
 
-# GET /albums/ - Get all albums
+# GET /albums/ - Get all albums (including locked ones)
 @router.get("/", response_model=GetAlbumsResponse)
-def get_albums(show_hidden: bool = Query(False)):
-    albums = db_get_all_albums(show_hidden)
+def get_albums():
+    """Get all albums. Always returns both locked and unlocked albums."""
+    albums = db_get_all_albums()
     album_list = []
     for album in albums:
+        # Get image count for each album
+        image_ids = db_get_album_images(album[0])
+        image_count = len(image_ids)
+        is_locked = bool(album[3])
+
         album_list.append(
             Album(
                 album_id=album[0],
                 album_name=album[1],
                 description=album[2] or "",
-                is_hidden=bool(album[3]),
+                is_locked=is_locked,
+                # A locked album's cover would show the very content the
+                # password is protecting, so never send it.
+                cover_image_path=(
+                    None if is_locked else db_get_album_cover_path(album[0])
+                ),
+                image_count=image_count,
             )
         )
     return GetAlbumsResponse(success=True, albums=album_list)
@@ -64,7 +77,7 @@ def create_album(body: CreateAlbumRequest):
     album_id = str(uuid.uuid4())
     try:
         db_insert_album(
-            album_id, body.name, body.description, body.is_hidden, body.password
+            album_id, body.name, body.description, body.is_locked, body.password
         )
         return CreateAlbumResponse(success=True, album_id=album_id)
     except Exception as e:
@@ -91,11 +104,19 @@ def get_album(album_id: str = Path(...)):
         )
 
     try:
+        # Get image count for the album
+        image_ids = db_get_album_images(album_id)
+        image_count = len(image_ids)
+
+        is_locked = bool(album[3])
         album_obj = Album(
             album_id=album[0],
             album_name=album[1],
             description=album[2] or "",
-            is_hidden=bool(album[3]),
+            is_locked=is_locked,
+            # Same reasoning as the listing: the cover gives away the contents.
+            cover_image_path=(None if is_locked else db_get_album_cover_path(album_id)),
+            image_count=image_count,
         )
         return GetAlbumResponse(success=True, data=album_obj)
     except Exception as e:
@@ -127,11 +148,11 @@ def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)
         "album_id": album[0],
         "album_name": album[1],
         "description": album[2],
-        "is_hidden": bool(album[3]),
+        "is_locked": bool(album[3]),
         "password_hash": album[4],
     }
 
-    if album_dict["password_hash"]:
+    if album_dict["is_locked"]:
         if not body.current_password:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -154,7 +175,7 @@ def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)
 
     try:
         db_update_album(
-            album_id, body.name, body.description, body.is_hidden, body.password
+            album_id, body.name, body.description, body.is_locked, body.password
         )
         return SuccessResponse(success=True, msg="Album updated successfully")
     except Exception as e:
@@ -215,18 +236,18 @@ def get_album_images(
         "album_id": album[0],
         "album_name": album[1],
         "description": album[2],
-        "is_hidden": bool(album[3]),
+        "is_locked": bool(album[3]),
         "password_hash": album[4],
     }
 
-    if album_dict["is_hidden"]:
+    if album_dict["is_locked"]:
         if not body.password:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ErrorResponse(
                     success=False,
                     error="Password Required",
-                    message="Password is required to access this hidden album.",
+                    message="Password is required to access this locked album.",
                 ).model_dump(),
             )
         if not verify_album_password(album_id, body.password):

@@ -34,6 +34,10 @@ venv/
 frontend/dist
 env/
 
+# AI agent config — personal overrides, not shared with the team
+CLAUDE.local.md
+.claude/settings.local.json
+
 # semantic vocabulary source downloads (cache for scripts/build_semantic_vocabulary.py)
 backend/scripts/vocabulary/sources/
 backend/scripts/vocabulary/eval_images/

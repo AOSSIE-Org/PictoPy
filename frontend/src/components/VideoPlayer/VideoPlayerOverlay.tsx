@@ -115,6 +115,8 @@ export function VideoPlayerOverlay({ videos }: VideoPlayerOverlayProps) {
             onNext={handleNext}
             previousLabel="Previous video"
             nextLabel="Next video"
+            disablePrevious={currentIndex <= 0}
+            disableNext={currentIndex >= videos.length - 1}
           />
         )}
       </div>

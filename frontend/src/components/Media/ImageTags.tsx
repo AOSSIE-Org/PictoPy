@@ -69,11 +69,11 @@ export function ImageTags({
       )}
 
       {shouldShowTags && showTags && (
-        <div className="absolute bottom-0 left-0 z-10 flex max-h-24 max-w-[200px] flex-wrap gap-1 overflow-y-auto rounded-md bg-black/80 p-2 shadow-lg">
+        <div className="thin-scrollbar absolute bottom-0 left-0 z-10 flex max-h-24 max-w-[200px] flex-wrap gap-1 overflow-x-hidden overflow-y-auto rounded-md bg-black/80 p-2 shadow-lg">
           {tags.map((tag: any, index: number) => (
             <Badge
               key={tag.id || index}
-              className="border border-white/40 bg-transparent whitespace-nowrap text-white hover:bg-white/10"
+              className="border border-white/40 bg-transparent text-white hover:bg-white/10"
             >
               {tag.name || tag}
             </Badge>
