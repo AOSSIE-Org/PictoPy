@@ -467,6 +467,48 @@
         }
       }
     },
+    "/albums/from-memory": {
+      "post": {
+        "tags": [
+          "Albums"
+        ],
+        "summary": "Create Album From Memory",
+        "description": "Copy a memory's photos into a new album.\n\nThe memory itself is left untouched, so the same one can be converted\nagain under a different name. Any clips are left behind: album_images\nreferences images, and albums have no video support.",
+        "operationId": "create_album_from_memory_albums_from_memory_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAlbumFromMemoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateAlbumFromMemoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/albums/{album_id}": {
       "get": {
         "tags": [
@@ -2632,6 +2674,66 @@
           "face_count"
         ],
         "title": "ClusterMetadata"
+      },
+      "CreateAlbumFromMemoryData": {
+        "properties": {
+          "album_id": {
+            "type": "string",
+            "title": "Album Id"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "album_id",
+          "image_count"
+        ],
+        "title": "CreateAlbumFromMemoryData"
+      },
+      "CreateAlbumFromMemoryRequest": {
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Memory Id"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory_id",
+          "name"
+        ],
+        "title": "CreateAlbumFromMemoryRequest"
+      },
+      "CreateAlbumFromMemoryResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/CreateAlbumFromMemoryData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "CreateAlbumFromMemoryResponse"
       },
       "CreateAlbumRequest": {
         "properties": {
