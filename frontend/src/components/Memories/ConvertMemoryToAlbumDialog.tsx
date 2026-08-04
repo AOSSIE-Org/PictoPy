@@ -36,13 +36,14 @@ export const ConvertMemoryToAlbumDialog: React.FC<
   const [error, setError] = useState('');
 
   // One mounted dialog serves every tile, so the name follows the selected
-  // memory rather than the first render.
+  // memory rather than the first render. Keyed on opening as well, so a name
+  // typed and then abandoned does not come back the next time it opens.
   useEffect(() => {
-    if (memory) {
+    if (isOpen && memory) {
       setName(memory.title);
       setError('');
     }
-  }, [memory]);
+  }, [isOpen, memory]);
 
   const convertMutation = usePictoMutation({
     mutationFn: createAlbumFromMemory,

@@ -38,6 +38,15 @@ class CreateAlbumFromMemoryRequest(BaseModel):
     memory_id: str = Field(..., min_length=1)
     name: str = Field(..., min_length=1)
 
+    @field_validator("memory_id", "name")
+    def check_not_blank(cls, value: str) -> str:
+        # min_length counts the spaces, so "   " would otherwise get through
+        # and create an album with a blank name.
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("must not be blank")
+        return cleaned
+
 
 class UpdateAlbumRequest(BaseModel):
     name: str

@@ -20,6 +20,20 @@ client = TestClient(app)
 # ##############################
 
 
+def album_row(album: dict, cover_image_path=None, created_at=None, updated_at=None):
+    """An albums row as the database helpers return it."""
+    return {
+        "album_id": album["album_id"],
+        "album_name": album["album_name"],
+        "description": album["description"],
+        "is_locked": album["is_locked"],
+        "password_hash": album["password_hash"],
+        "cover_image_path": cover_image_path,
+        "created_at": created_at,
+        "updated_at": updated_at,
+    }
+
+
 @pytest.fixture
 def mock_db_album():
     return {
@@ -114,12 +128,14 @@ class TestAlbumRoutes:
         }
 
         with patch("app.routes.albums.db_get_album_by_name") as mock_get_by_name:
-            mock_get_by_name.return_value = (
-                "existing-id",
-                "Existing Album",
-                "desc",
-                0,
-                None,
+            mock_get_by_name.return_value = album_row(
+                {
+                    "album_id": "existing-id",
+                    "album_name": "Existing Album",
+                    "description": "desc",
+                    "is_locked": False,
+                    "password_hash": None,
+                }
             )
 
             response = client.post("/albums/", json=album_data)
@@ -135,15 +151,10 @@ class TestAlbumRoutes:
         """
         with patch("app.routes.albums.db_get_all_albums") as mock_get_all:
             mock_get_all.return_value = [
-                (
-                    mock_db_album["album_id"],
-                    mock_db_album["album_name"],
-                    mock_db_album["description"],
-                    mock_db_album["is_locked"],
-                    mock_db_album["password_hash"],
-                    None,  # cover_image_path
-                    "2026-08-01 09:00:00",  # created_at
-                    "2026-08-05 09:00:00",  # updated_at
+                album_row(
+                    mock_db_album,
+                    created_at="2026-08-01 09:00:00",
+                    updated_at="2026-08-05 09:00:00",
                 )
             ]
 
@@ -172,25 +183,15 @@ class TestAlbumRoutes:
         """
         with patch("app.routes.albums.db_get_all_albums") as mock_get_all:
             mock_get_all.return_value = [
-                (
-                    mock_db_album["album_id"],
-                    mock_db_album["album_name"],
-                    mock_db_album["description"],
-                    mock_db_album["is_locked"],
-                    mock_db_album["password_hash"],
-                    None,  # cover_image_path
-                    "2026-08-01 09:00:00",  # created_at
-                    "2026-08-05 09:00:00",  # updated_at
+                album_row(
+                    mock_db_album,
+                    created_at="2026-08-01 09:00:00",
+                    updated_at="2026-08-05 09:00:00",
                 ),
-                (
-                    mock_db_locked_album["album_id"],
-                    mock_db_locked_album["album_name"],
-                    mock_db_locked_album["description"],
-                    mock_db_locked_album["is_locked"],
-                    mock_db_locked_album["password_hash"],
-                    None,  # cover_image_path
-                    "2026-08-02 09:00:00",  # created_at
-                    "2026-08-06 09:00:00",  # updated_at
+                album_row(
+                    mock_db_locked_album,
+                    created_at="2026-08-02 09:00:00",
+                    updated_at="2026-08-06 09:00:00",
                 ),
             ]
 
@@ -214,25 +215,15 @@ class TestAlbumRoutes:
             "app.routes.albums.db_get_album_cover_path"
         ) as mock_cover:
             mock_get_all.return_value = [
-                (
-                    mock_db_album["album_id"],
-                    mock_db_album["album_name"],
-                    mock_db_album["description"],
-                    mock_db_album["is_locked"],
-                    mock_db_album["password_hash"],
-                    None,
-                    "2026-08-01 09:00:00",
-                    "2026-08-05 09:00:00",
+                album_row(
+                    mock_db_album,
+                    created_at="2026-08-01 09:00:00",
+                    updated_at="2026-08-05 09:00:00",
                 ),
-                (
-                    mock_db_locked_album["album_id"],
-                    mock_db_locked_album["album_name"],
-                    mock_db_locked_album["description"],
-                    mock_db_locked_album["is_locked"],
-                    mock_db_locked_album["password_hash"],
-                    None,
-                    "2026-08-02 09:00:00",
-                    "2026-08-06 09:00:00",
+                album_row(
+                    mock_db_locked_album,
+                    created_at="2026-08-02 09:00:00",
+                    updated_at="2026-08-06 09:00:00",
                 ),
             ]
             mock_cover.return_value = "/photos/secret.jpg"
@@ -254,15 +245,10 @@ class TestAlbumRoutes:
         with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
             "app.routes.albums.db_get_album_cover_path"
         ) as mock_cover:
-            mock_get_album.return_value = (
-                mock_db_locked_album["album_id"],
-                mock_db_locked_album["album_name"],
-                mock_db_locked_album["description"],
-                mock_db_locked_album["is_locked"],
-                mock_db_locked_album["password_hash"],
-                None,
-                "2026-08-02 09:00:00",
-                "2026-08-06 09:00:00",
+            mock_get_album.return_value = album_row(
+                mock_db_locked_album,
+                created_at="2026-08-02 09:00:00",
+                updated_at="2026-08-06 09:00:00",
             )
             mock_cover.return_value = "/photos/secret.jpg"
 
@@ -292,15 +278,10 @@ class TestAlbumRoutes:
         Test fetching a single album by its ID successfully.
         """
         with patch("app.routes.albums.db_get_album") as mock_get_album:
-            mock_get_album.return_value = (
-                mock_db_album["album_id"],
-                mock_db_album["album_name"],
-                mock_db_album["description"],
-                mock_db_album["is_locked"],
-                mock_db_album["password_hash"],
-                None,  # cover_image_path
-                "2026-08-01 09:00:00",  # created_at
-                "2026-08-05 09:00:00",  # updated_at
+            mock_get_album.return_value = album_row(
+                mock_db_album,
+                created_at="2026-08-01 09:00:00",
+                updated_at="2026-08-05 09:00:00",
             )
 
             response = client.get(f"/albums/{mock_db_album['album_id']}")
@@ -337,7 +318,15 @@ class TestAlbumRoutes:
         [
             # Case 1: Public album (no password protection)
             (
-                ("abc-123", "Old Name", "Old Desc", 0, None, 0),
+                album_row(
+                    {
+                        "album_id": "abc-123",
+                        "album_name": "Old Name",
+                        "description": "Old Desc",
+                        "is_locked": False,
+                        "password_hash": None,
+                    }
+                ),
                 {
                     "name": "Updated Public Album",
                     "description": "Updated description",
@@ -350,13 +339,16 @@ class TestAlbumRoutes:
             ),
             # Case 2: Locked album with correct current password
             (
-                (
-                    "abc-456",
-                    "Locked Album",
-                    "Secret",
-                    1,
-                    bcrypt.hashpw("oldpass".encode(), bcrypt.gensalt()).decode(),
-                    0,
+                album_row(
+                    {
+                        "album_id": "abc-456",
+                        "album_name": "Locked Album",
+                        "description": "Secret",
+                        "is_locked": True,
+                        "password_hash": bcrypt.hashpw(
+                            "oldpass".encode(), bcrypt.gensalt()
+                        ).decode(),
+                    }
                 ),
                 {
                     "name": "Updated Locked Album",
@@ -370,13 +362,16 @@ class TestAlbumRoutes:
             ),
             # Case 3: Locked album with incorrect current password
             (
-                (
-                    "abc-789",
-                    "Locked Album",
-                    "Secret",
-                    1,
-                    bcrypt.hashpw("correctpass".encode(), bcrypt.gensalt()).decode(),
-                    0,
+                album_row(
+                    {
+                        "album_id": "abc-789",
+                        "album_name": "Locked Album",
+                        "description": "Secret",
+                        "is_locked": True,
+                        "password_hash": bcrypt.hashpw(
+                            "correctpass".encode(), bcrypt.gensalt()
+                        ).decode(),
+                    }
                 ),
                 {
                     "name": "Invalid Attempt",
@@ -401,7 +396,9 @@ class TestAlbumRoutes:
             mock_get_album.return_value = album_data
             mock_verify.return_value = verify_password_return
 
-            response = client.put(f"/albums/{album_data[0]}", json=request_data)
+            response = client.put(
+                f"/albums/{album_data['album_id']}", json=request_data
+            )
             assert response.status_code == expected_status
 
             if expected_status == 200:
@@ -416,14 +413,7 @@ class TestAlbumRoutes:
         Test successfully deleting an existing album.
         """
         album_id = mock_db_album["album_id"]
-        album_tuple = (
-            album_id,
-            mock_db_album["album_name"],
-            mock_db_album["description"],
-            int(mock_db_album["is_locked"]),
-            mock_db_album["password_hash"],
-            0,  # image_count
-        )
+        album_tuple = album_row(mock_db_album)
 
         with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
             "app.routes.albums.db_delete_album"
@@ -458,14 +448,7 @@ class TestAlbumImageManagement:
             ]
         }
 
-        album_tuple = (
-            album_id,
-            mock_db_album["album_name"],
-            mock_db_album["description"],
-            int(mock_db_album["is_locked"]),
-            mock_db_album["password_hash"],
-            0,  # image_count
-        )
+        album_tuple = album_row(mock_db_album)
 
         with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
             "app.routes.albums.db_add_images_to_album"
@@ -494,14 +477,7 @@ class TestAlbumImageManagement:
             "2d4bff29-1111-43a4-9e76-b78504bea999",
         ]
 
-        album_tuple = (
-            album_id,
-            mock_db_album["album_name"],
-            mock_db_album["description"],
-            int(mock_db_album["is_locked"]),
-            mock_db_album["password_hash"],
-            0,  # image_count
-        )
+        album_tuple = album_row(mock_db_album)
 
         with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
             "app.routes.albums.db_get_album_images"
@@ -527,14 +503,7 @@ class TestAlbumImageManagement:
         album_id = mock_db_album["album_id"]
         image_id = "71abff29-27b4-43a4-9e76-b78504bea325"
 
-        album_tuple = (
-            album_id,
-            mock_db_album["album_name"],
-            mock_db_album["description"],
-            int(mock_db_album["is_locked"]),
-            mock_db_album["password_hash"],
-            0,  # image_count
-        )
+        album_tuple = album_row(mock_db_album)
 
         with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
             "app.routes.albums.db_remove_image_from_album"
@@ -563,7 +532,7 @@ class TestAlbumImageManagement:
         with patch("app.routes.albums.db_get_album") as mock_get, patch(
             "app.routes.albums.db_remove_images_from_album"
         ) as mock_remove_bulk:
-            mock_get.return_value = tuple(mock_db_album.values())
+            mock_get.return_value = album_row(mock_db_album)
             response = client.request(
                 "DELETE", f"/albums/{album_id}/images", json=image_ids_to_remove
             )
@@ -607,9 +576,50 @@ class TestCreateAlbumFromMemory:
             # The memory's subtitle becomes the album description, and only the
             # image ids are handed over - clips are left behind.
             album_id, name, description, image_ids = mock_create.call_args.args
+            # The id that was persisted has to be the one handed back, or the
+            # client navigates to an album that does not exist.
+            assert album_id == json_response["data"]["album_id"]
             assert name == "Paris 2022"
             assert description == mock_memory["subtitle"]
             assert image_ids == [image["id"] for image in mock_memory_images]
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {"memory_id": "mem-1", "name": "   "},
+            {"memory_id": "   ", "name": "Paris 2022"},
+        ],
+    )
+    def test_create_album_from_memory_rejects_blank_fields(self, payload):
+        """A name of spaces satisfies min_length but is not a name."""
+        with patch("app.routes.albums.db_create_album_with_images") as mock_create:
+            response = client.post("/albums/from-memory", json=payload)
+
+            assert response.status_code == 422
+            mock_create.assert_not_called()
+
+    def test_create_album_from_memory_trims_the_name(
+        self, mock_memory, mock_memory_images
+    ):
+        with patch("app.routes.albums.db_get_memory") as mock_get_memory, patch(
+            "app.routes.albums.db_get_memory_images"
+        ) as mock_get_images, patch(
+            "app.routes.albums.db_get_album_by_name"
+        ) as mock_get_by_name, patch(
+            "app.routes.albums.db_create_album_with_images"
+        ) as mock_create:
+            mock_get_memory.return_value = mock_memory
+            mock_get_images.return_value = mock_memory_images
+            mock_get_by_name.return_value = None
+            mock_create.return_value = len(mock_memory_images)
+
+            response = client.post(
+                "/albums/from-memory",
+                json={"memory_id": mock_memory["memory_id"], "name": "  Paris  "},
+            )
+
+            assert response.status_code == 200
+            assert mock_create.call_args.args[1] == "Paris"
 
     def test_create_album_from_memory_not_found(self):
         with patch("app.routes.albums.db_get_memory") as mock_get_memory:
@@ -652,7 +662,7 @@ class TestCreateAlbumFromMemory:
         ) as mock_create:
             mock_get_memory.return_value = mock_memory
             mock_get_images.return_value = mock_memory_images
-            mock_get_by_name.return_value = tuple(mock_db_album.values())
+            mock_get_by_name.return_value = album_row(mock_db_album)
 
             response = client.post(
                 "/albums/from-memory",

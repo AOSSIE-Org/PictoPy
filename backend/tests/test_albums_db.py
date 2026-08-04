@@ -152,7 +152,10 @@ class TestAlbumTables:
         assert "is_hidden" not in columns
         assert {"is_locked", "cover_image_path"} <= set(columns)
         # the legacy row survives, its flag carried over under the new name
-        assert [row[1:4] for row in db_get_all_albums()] == [("Old", None, 1)]
+        legacy = db_get_all_albums()
+        assert [
+            (row["album_name"], row["description"], row["is_locked"]) for row in legacy
+        ] == [("Old", None, True)]
 
     @pytest.mark.parametrize(
         "create_table", [db_create_albums_table, db_create_album_images_table]
@@ -184,7 +187,9 @@ class TestAlbumCrud:
         make_album("album-1", "Summer Trip", "Fun times")
 
         by_id = db_get_album("album-1")
-        assert by_id[:3] == ("album-1", "Summer Trip", "Fun times")
+        assert by_id["album_id"] == "album-1"
+        assert by_id["album_name"] == "Summer Trip"
+        assert by_id["description"] == "Fun times"
         assert db_get_album_by_name("Summer Trip") == by_id
 
     def test_missing_album_returns_none(self, test_db):
@@ -203,8 +208,11 @@ class TestAlbumCrud:
         make_album("album-2", "Secret", locked=True, password="pw")
 
         rows = db_get_all_albums()
-        assert sorted(row[1] for row in rows) == ["Public", "Secret"]
-        assert {row[1]: row[3] for row in rows} == {"Public": 0, "Secret": 1}
+        assert sorted(row["album_name"] for row in rows) == ["Public", "Secret"]
+        assert {row["album_name"]: row["is_locked"] for row in rows} == {
+            "Public": False,
+            "Secret": True,
+        }
 
     def test_update_changes_fields(self, test_db):
         make_album("album-1", "Old", "Old desc")
@@ -212,9 +220,9 @@ class TestAlbumCrud:
         db_update_album("album-1", "New", "New desc", True, None)
 
         album = db_get_album("album-1")
-        assert album[1] == "New"
-        assert album[2] == "New desc"
-        assert album[3] == 1
+        assert album["album_name"] == "New"
+        assert album["description"] == "New desc"
+        assert album["is_locked"] is True
 
     def test_delete_removes_the_row(self, test_db):
         make_album("album-1", "Trip")
@@ -251,35 +259,38 @@ class TestAlbumCreatedAt:
     def test_insert_stamps_a_creation_time(self, test_db):
         make_album("album-1", "Trip")
 
-        assert db_get_album("album-1")[6] is not None
+        assert db_get_album("album-1")["created_at"] is not None
 
     def test_create_with_images_stamps_a_creation_time(self, test_db):
         make_images(test_db, ["img-1"])
 
         db_create_album_with_images("album-1", "Paris", "", ["img-1"])
 
-        assert db_get_album("album-1")[6] is not None
+        assert db_get_album("album-1")["created_at"] is not None
 
     def test_edits_never_change_it(self, test_db):
         """Renaming, re-describing or adding photos is not a new creation."""
         make_album("album-1", "Trip")
         make_images(test_db, ["img-1"])
-        created = db_get_album("album-1")[6]
+        created = db_get_album("album-1")["created_at"]
 
         db_update_album("album-1", "Trip Renamed", "A new description", False)
         db_add_images_to_album("album-1", ["img-1"])
 
         album = db_get_album("album-1")
-        assert album[6] == created
+        assert album["created_at"] == created
         # ...but all of that does count as an update.
-        assert album[7] >= created
+        assert album["updated_at"] >= created
 
     def test_listing_keeps_insertion_order(self, test_db):
         """Albums predating created_at sort by when they were made."""
         make_album("album-1", "First")
         make_album("album-2", "Second")
 
-        assert [album[0] for album in db_get_all_albums()] == ["album-1", "album-2"]
+        assert [album["album_id"] for album in db_get_all_albums()] == [
+            "album-1",
+            "album-2",
+        ]
 
     def test_migration_adds_the_column_to_a_legacy_table(self, test_db):
         """A database shipped before created_at existed still upgrades."""
@@ -305,12 +316,12 @@ class TestAlbumCreatedAt:
         db_create_albums_table()
 
         old = db_get_album("old-1")
-        assert old[1] == "Old"
+        assert old["album_name"] == "Old"
         # Nothing to backfill it with, so it reads as oldest.
-        assert old[6] is None
+        assert old["created_at"] is None
         # And the table still takes new albums.
         make_album("album-1", "New")
-        assert db_get_album("album-1")[6] is not None
+        assert db_get_album("album-1")["created_at"] is not None
 
 
 class TestAlbumUpdatedAt:
@@ -334,7 +345,7 @@ class TestAlbumUpdatedAt:
     def test_insert_stamps_an_update_time(self, test_db):
         make_album("album-1", "Trip")
 
-        assert db_get_album("album-1")[7] is not None
+        assert db_get_album("album-1")["updated_at"] is not None
 
     def test_editing_the_album_touches_it(self, test_db):
         make_album("album-1", "Trip")
@@ -342,7 +353,7 @@ class TestAlbumUpdatedAt:
 
         db_update_album("album-1", "Trip Renamed", "", False)
 
-        assert db_get_album("album-1")[7] > self.EARLIER
+        assert db_get_album("album-1")["updated_at"] > self.EARLIER
 
     def test_adding_images_touches_it(self, test_db):
         """Adding photos is the commonest way an album changes."""
@@ -352,7 +363,7 @@ class TestAlbumUpdatedAt:
 
         db_add_images_to_album("album-1", ["img-1"])
 
-        assert db_get_album("album-1")[7] > self.EARLIER
+        assert db_get_album("album-1")["updated_at"] > self.EARLIER
 
     def test_removing_an_image_touches_it(self, test_db):
         make_album("album-1", "Trip")
@@ -362,7 +373,7 @@ class TestAlbumUpdatedAt:
 
         db_remove_image_from_album("album-1", "img-1")
 
-        assert db_get_album("album-1")[7] > self.EARLIER
+        assert db_get_album("album-1")["updated_at"] > self.EARLIER
 
     def test_removing_images_in_bulk_touches_it(self, test_db):
         make_album("album-1", "Trip")
@@ -372,7 +383,26 @@ class TestAlbumUpdatedAt:
 
         db_remove_images_from_album("album-1", ["img-1"])
 
-        assert db_get_album("album-1")[7] > self.EARLIER
+        assert db_get_album("album-1")["updated_at"] > self.EARLIER
+
+    def test_re_adding_the_same_images_leaves_it_alone(self, test_db):
+        """Nothing was inserted, so nothing about the album changed."""
+        make_album("album-1", "Trip")
+        make_images(test_db, ["img-1"])
+        db_add_images_to_album("album-1", ["img-1"])
+        self.set_updated_at(test_db, "album-1")
+
+        db_add_images_to_album("album-1", ["img-1"])
+
+        assert db_get_album("album-1")["updated_at"] == self.EARLIER
+
+    def test_bulk_removing_absent_images_leaves_it_alone(self, test_db):
+        make_album("album-1", "Trip")
+        self.set_updated_at(test_db, "album-1")
+
+        db_remove_images_from_album("album-1", ["img-missing"])
+
+        assert db_get_album("album-1")["updated_at"] == self.EARLIER
 
     def test_a_failed_removal_leaves_it_alone(self, test_db):
         """The image was never in the album, so nothing about it changed."""
@@ -382,7 +412,7 @@ class TestAlbumUpdatedAt:
         with pytest.raises(ValueError):
             db_remove_image_from_album("album-1", "img-missing")
 
-        assert db_get_album("album-1")[7] == self.EARLIER
+        assert db_get_album("album-1")["updated_at"] == self.EARLIER
 
 
 class TestCreateAlbumWithImages:
@@ -396,11 +426,11 @@ class TestCreateAlbumWithImages:
         assert linked == 2
         assert db_get_album_images("album-1") == ["img-1", "img-2"]
         album = db_get_album("album-1")
-        assert album[1] == "Paris 2022"
-        assert album[2] == "July 2022"
+        assert album["album_name"] == "Paris 2022"
+        assert album["description"] == "July 2022"
         # Always an open album: locking is done afterwards, from Edit Album.
-        assert bool(album[3]) is False
-        assert album[4] is None
+        assert album["is_locked"] is False
+        assert album["password_hash"] is None
 
     def test_an_unknown_image_leaves_no_album_behind(self, test_db):
         """The album and its links commit together, or not at all."""

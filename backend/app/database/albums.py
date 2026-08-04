@@ -1,7 +1,43 @@
 import sqlite3
+from typing import Any, List, Optional, Tuple, TypedDict
+
 import bcrypt
 from app.config.settings import DATABASE_PATH
 from app.database.connection import get_db_connection
+
+
+class AlbumRow(TypedDict):
+    """A row of the albums table, as the read helpers below return it."""
+
+    album_id: str
+    album_name: str
+    description: Optional[str]
+    is_locked: bool
+    password_hash: Optional[str]
+    cover_image_path: Optional[str]
+    created_at: Optional[str]
+    updated_at: Optional[str]
+
+
+# Named once so the SELECTs and the mapper below cannot drift apart.
+_ALBUM_COLUMNS = (
+    "album_id, album_name, description, is_locked, "
+    "password_hash, cover_image_path, created_at, updated_at"
+)
+
+
+def _to_album_row(row: Tuple[Any, ...]) -> AlbumRow:
+    """Map a SELECT of _ALBUM_COLUMNS onto a named record."""
+    return AlbumRow(
+        album_id=row[0],
+        album_name=row[1],
+        description=row[2],
+        is_locked=bool(row[3]),
+        password_hash=row[4],
+        cover_image_path=row[5],
+        created_at=row[6],
+        updated_at=row[7],
+    )
 
 
 def db_create_albums_table() -> None:
@@ -87,46 +123,43 @@ def _touch_album(cursor: sqlite3.Cursor, album_id: str) -> None:
     )
 
 
-def db_get_all_albums():
+def db_get_all_albums() -> List[AlbumRow]:
     """Get all albums (both locked and unlocked)."""
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
         # Insertion order, so albums predating created_at keep the order they
         # were made in rather than an arbitrary one.
-        cursor.execute(
-            "SELECT album_id, album_name, description, is_locked, password_hash, cover_image_path, created_at, updated_at FROM albums ORDER BY rowid"
-        )
-        albums = cursor.fetchall()
-        return albums
+        cursor.execute(f"SELECT {_ALBUM_COLUMNS} FROM albums ORDER BY rowid")
+        return [_to_album_row(row) for row in cursor.fetchall()]
     finally:
         conn.close()
 
 
-def db_get_album_by_name(name: str):
+def db_get_album_by_name(name: str) -> Optional[AlbumRow]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "SELECT album_id, album_name, description, is_locked, password_hash, cover_image_path, created_at, updated_at FROM albums WHERE album_name = ?",
+            f"SELECT {_ALBUM_COLUMNS} FROM albums WHERE album_name = ?",
             (name,),
         )
         album = cursor.fetchone()
-        return album if album else None
+        return _to_album_row(album) if album else None
     finally:
         conn.close()
 
 
-def db_get_album(album_id: str):
+def db_get_album(album_id: str) -> Optional[AlbumRow]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "SELECT album_id, album_name, description, is_locked, password_hash, cover_image_path, created_at, updated_at FROM albums WHERE album_id = ?",
+            f"SELECT {_ALBUM_COLUMNS} FROM albums WHERE album_id = ?",
             (album_id,),
         )
         album = cursor.fetchone()
-        return album if album else None
+        return _to_album_row(album) if album else None
     finally:
         conn.close()
 
@@ -305,7 +338,11 @@ def db_add_images_to_album(album_id: str, image_ids: list[str]):
             "INSERT OR IGNORE INTO album_images (album_id, image_id) VALUES (?, ?)",
             [(album_id, img_id) for img_id in valid_images],
         )
-        _touch_album(cursor, album_id)
+        # Every id may already be in the album, in which case OR IGNORE writes
+        # nothing and the album has not actually changed. Read before touching:
+        # the touch overwrites rowcount.
+        if cursor.rowcount:
+            _touch_album(cursor, album_id)
         conn.commit()
 
 
@@ -337,7 +374,9 @@ def db_remove_images_from_album(album_id: str, image_ids: list[str]):
             "DELETE FROM album_images WHERE album_id = ? AND image_id = ?",
             [(album_id, img_id) for img_id in image_ids],
         )
-        _touch_album(cursor, album_id)
+        # Same as the insert: ids that were not in the album delete nothing.
+        if cursor.rowcount:
+            _touch_album(cursor, album_id)
         conn.commit()
     finally:
         conn.close()

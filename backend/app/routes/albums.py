@@ -45,24 +45,24 @@ def get_albums():
     album_list = []
     for album in albums:
         # Get image count for each album
-        image_ids = db_get_album_images(album[0])
+        image_ids = db_get_album_images(album["album_id"])
         image_count = len(image_ids)
-        is_locked = bool(album[3])
+        is_locked = album["is_locked"]
 
         album_list.append(
             Album(
-                album_id=album[0],
-                album_name=album[1],
-                description=album[2] or "",
+                album_id=album["album_id"],
+                album_name=album["album_name"],
+                description=album["description"] or "",
                 is_locked=is_locked,
                 # A locked album's cover would show the very content the
                 # password is protecting, so never send it.
                 cover_image_path=(
-                    None if is_locked else db_get_album_cover_path(album[0])
+                    None if is_locked else db_get_album_cover_path(album["album_id"])
                 ),
                 image_count=image_count,
-                created_at=album[6],
-                updated_at=album[7],
+                created_at=album["created_at"],
+                updated_at=album["updated_at"],
             )
         )
     return GetAlbumsResponse(success=True, albums=album_list)
@@ -100,8 +100,14 @@ def create_album(body: CreateAlbumRequest):
 
 
 # POST /albums/from-memory - Create an album from a curated memory
-@router.post("/from-memory", response_model=CreateAlbumFromMemoryResponse)
-def create_album_from_memory(body: CreateAlbumFromMemoryRequest = Body(...)):
+@router.post(
+    "/from-memory",
+    response_model=CreateAlbumFromMemoryResponse,
+    responses={code: {"model": ErrorResponse} for code in [400, 404, 409, 500]},
+)
+def create_album_from_memory(
+    body: CreateAlbumFromMemoryRequest,
+) -> CreateAlbumFromMemoryResponse:
     """
     Copy a memory's photos into a new album.
 
@@ -200,17 +206,17 @@ def get_album(album_id: str = Path(...)):
         image_ids = db_get_album_images(album_id)
         image_count = len(image_ids)
 
-        is_locked = bool(album[3])
+        is_locked = album["is_locked"]
         album_obj = Album(
-            album_id=album[0],
-            album_name=album[1],
-            description=album[2] or "",
+            album_id=album["album_id"],
+            album_name=album["album_name"],
+            description=album["description"] or "",
             is_locked=is_locked,
             # Same reasoning as the listing: the cover gives away the contents.
             cover_image_path=(None if is_locked else db_get_album_cover_path(album_id)),
             image_count=image_count,
-            created_at=album[6],
-            updated_at=album[7],
+            created_at=album["created_at"],
+            updated_at=album["updated_at"],
         )
         return GetAlbumResponse(success=True, data=album_obj)
     except Exception as e:
@@ -238,15 +244,7 @@ def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)
             ).model_dump(),
         )
 
-    album_dict = {
-        "album_id": album[0],
-        "album_name": album[1],
-        "description": album[2],
-        "is_locked": bool(album[3]),
-        "password_hash": album[4],
-    }
-
-    if album_dict["is_locked"]:
+    if album["is_locked"]:
         if not body.current_password:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -326,15 +324,7 @@ def get_album_images(
             ).model_dump(),
         )
 
-    album_dict = {
-        "album_id": album[0],
-        "album_name": album[1],
-        "description": album[2],
-        "is_locked": bool(album[3]),
-        "password_hash": album[4],
-    }
-
-    if album_dict["is_locked"]:
+    if album["is_locked"]:
         if not body.password:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
