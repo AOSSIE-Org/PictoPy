@@ -33,6 +33,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
   onDurationChange,
 }) => {
   const [showSettings, setShowSettings] = useState(false);
+  const [isHoveringSlider, setIsHoveringSlider] = useState(false);
 
   // convert current duration (ms) to a step index (0,1,2) for the slider
   const currentStepIndex = DURATION_STEPS.indexOf(duration);
@@ -108,21 +109,32 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
 
           {showSettings && (
             <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2">
-              <div className="flex w-fit items-center gap-3 rounded-md border border-white/20 bg-black/85 px-3 py-1.5 text-xs text-white shadow-lg backdrop-blur-sm">
+              <div className="flex w-fit items-center gap-3 rounded-md border border-white/20 bg-black/85 px-4 py-3 text-xs text-white shadow-lg backdrop-blur-sm">
                 <span>2s</span>
-                <input
-                  type="range"
-                  min={0}
-                  max={2}
-                  step={1}
-                  value={sliderValue}
-                  onChange={handleSliderChange}
-                  aria-label="Slideshow duration"
-                  className="h-1.5 w-32 cursor-pointer appearance-none rounded-lg accent-indigo-500"
-                  style={{
-                    background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${(sliderValue / 2) * 100}%, rgba(255,255,255,0.2) ${(sliderValue / 2) * 100}%, rgba(255,255,255,0.2) 100%)`,
-                  }}
-                />
+                <div className="relative">
+                  {isHoveringSlider && (
+                    <div className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/20 bg-black px-2 py-1 text-xs font-medium text-white shadow-lg">
+                      {DURATION_STEPS[sliderValue] / 1000}s per image
+                    </div>
+                  )}
+                  <input
+                    type="range"
+                    min={0}
+                    max={2}
+                    step={1}
+                    value={sliderValue}
+                    onChange={handleSliderChange}
+                    onMouseEnter={() => setIsHoveringSlider(true)}
+                    onMouseLeave={() => setIsHoveringSlider(false)}
+                    onFocus={() => setIsHoveringSlider(true)}
+                    onBlur={() => setIsHoveringSlider(false)}
+                    aria-label="Slideshow duration"
+                    className="h-1.5 w-32 cursor-pointer appearance-none rounded-lg accent-indigo-500"
+                    style={{
+                      background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${(sliderValue / 2) * 100}%, rgba(255,255,255,0.2) ${(sliderValue / 2) * 100}%, rgba(255,255,255,0.2) 100%)`,
+                    }}
+                  />
+                </div>
                 <span>10s</span>
               </div>
             </div>
