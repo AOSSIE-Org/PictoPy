@@ -48,7 +48,7 @@ export function FaceCollections({ onSearchActivated }: FaceCollectionsProps) {
   const sortedClusters = useMemo(
     () =>
       [...(clusters ?? [])].sort(
-        (a: any, b: any) => (b.face_count ?? 0) - (a.face_count ?? 0),
+        (a: Cluster, b: Cluster) => (b.face_count ?? 0) - (a.face_count ?? 0),
       ),
     [clusters],
   );
@@ -57,6 +57,10 @@ export function FaceCollections({ onSearchActivated }: FaceCollectionsProps) {
   // the user is on a later page.
   const totalPages = Math.max(1, Math.ceil(sortedClusters.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages - 1);
+
+  useEffect(() => {
+    setPage((previousPage) => Math.min(previousPage, totalPages - 1));
+  }, [totalPages]);
 
   const handlePersonClick = (clusterId: string) => {
     navigate(`/person/${clusterId}`);
@@ -103,7 +107,7 @@ export function FaceCollections({ onSearchActivated }: FaceCollectionsProps) {
           to see all their photos.
         </p>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-          {visibleClusters.map((cluster: any) => (
+          {visibleClusters.map((cluster: Cluster) => (
             <div
               key={cluster.cluster_id}
               className="hover:bg-accent flex cursor-pointer flex-col items-center gap-2 rounded-lg p-4 transition-colors dark:hover:bg-white/10"
@@ -121,6 +125,21 @@ export function FaceCollections({ onSearchActivated }: FaceCollectionsProps) {
               </div>
             </div>
           ))}
+          {Array.from({ length: PAGE_SIZE - visibleClusters.length }).map(
+            (_, index) => (
+              <div
+                key={`placeholder-${index}`}
+                className="flex flex-col items-center gap-2 rounded-lg p-4"
+                inert
+              >
+                <div className="w-16 md:h-20 md:w-20" />
+                <div className="text-center">
+                  <p className="font-medium">&nbsp;</p>
+                  <p className="text-muted-foreground text-xs">&nbsp;</p>
+                </div>
+              </div>
+            ),
+          )}
         </div>
         {hasMultiplePages && (
           <div className="mt-4 flex items-center justify-center gap-4">
@@ -128,6 +147,7 @@ export function FaceCollections({ onSearchActivated }: FaceCollectionsProps) {
               variant="ghost"
               size="sm"
               className="cursor-pointer"
+              aria-label="Previous page"
               disabled={currentPage === 0}
               onClick={() => setPage((p) => Math.max(0, p - 1))}
             >
@@ -140,6 +160,7 @@ export function FaceCollections({ onSearchActivated }: FaceCollectionsProps) {
               variant="ghost"
               size="sm"
               className="cursor-pointer"
+              aria-label="Next page"
               disabled={currentPage === totalPages - 1}
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             >
