@@ -7,6 +7,7 @@ import { ImageCard } from '@/components/Media/ImageCard';
 import { DetailPageHeader } from '@/components/DetailPage/DetailPageHeader';
 import { MediaView } from '@/components/Media/MediaView';
 import { AddImagesToAlbumDialog } from '@/components/Albums/AddImagesToAlbumDialog';
+import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtension';
 import {
   getAlbumById,
@@ -34,7 +35,6 @@ import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { Album } from '@/types/Album';
 import { Image } from '@/types/Media';
 
-// Matches an ImageCard's square tile so the grid does not resize on load.
 const ImageCardSkeleton: React.FC = () => (
   <div
     className="bg-muted aspect-square w-full animate-pulse rounded-lg"
@@ -56,7 +56,6 @@ export const AlbumDetail = () => {
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
 
-  // Get password from navigation state if album is locked
   const password = location.state?.password;
 
   const { data: albumData, isLoading: isLoadingAlbum } = usePictoQuery({
@@ -78,15 +77,12 @@ export const AlbumDetail = () => {
     enabled: !!albumId && !!album,
   });
 
-  // Fetch all images to get full details
   const { data: allImagesData, isLoading: isLoadingAllImages } = usePictoQuery({
     queryKey: ['images'],
     queryFn: () => fetchAllImages(),
     enabled: !!albumId && !!album,
   });
 
-  // The grid needs both responses: one names the album's images, the other
-  // carries their details.
   const isLoadingContent = isLoadingImages || isLoadingAllImages;
 
   const removeImagesMutation = usePictoMutation({
@@ -97,7 +93,6 @@ export const AlbumDetail = () => {
       albumId: string;
       imageIds: string[];
     }) => removeMultipleImagesFromAlbum(albumId, { image_ids: imageIds }),
-    // The list page shows a photo count per album, so it is stale now too.
     autoInvalidateTags: ['albums'],
   });
 
@@ -116,12 +111,10 @@ export const AlbumDetail = () => {
 
   useEffect(() => {
     if (albumData) {
-      // Backend returns album data with album_id, album_name format
       const responseData = albumData.data as any;
       const backendAlbum = (responseData?.album || responseData) as any;
 
       if (backendAlbum && backendAlbum.album_id) {
-        // Transform backend format to frontend format
         const albumInfo: Album = {
           id: backendAlbum.album_id,
           name: backendAlbum.album_name,
@@ -149,14 +142,9 @@ export const AlbumDetail = () => {
       );
       navigate('/albums');
     } else if (imagesSuccess && imagesData && allImagesData) {
-      // Backend returns {"success":true,"image_ids":[...]} structure
       const responseData = imagesData as any;
       const imageIds = (responseData?.image_ids || []) as string[];
-
-      // Get full image data from all images
       const allImages = (allImagesData?.data || []) as Image[];
-
-      // Filter images that are in this album
       const albumImages = allImages.filter((img) => imageIds.includes(img.id));
 
       dispatch(setAlbumImages(albumImages));
@@ -183,11 +171,13 @@ export const AlbumDetail = () => {
     if (isSelectionMode) {
       const imageId = images[index].id;
       const newSelected = new Set(selectedImages);
+
       if (newSelected.has(imageId)) {
         newSelected.delete(imageId);
       } else {
         newSelected.add(imageId);
       }
+
       setSelectedImages(newSelected);
     } else {
       dispatch(setCurrentViewIndex(index));
@@ -219,7 +209,7 @@ export const AlbumDetail = () => {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Album not found</p>
+          <p className="mb-4 text-muted-foreground">Album not found</p>
           <Button onClick={handleBack}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Albums
@@ -231,7 +221,6 @@ export const AlbumDetail = () => {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
       <DetailPageHeader
         backLabel="Back to Albums"
         onBack={handleBack}
@@ -286,7 +275,6 @@ export const AlbumDetail = () => {
         }
       />
 
-      {/* Images Grid */}
       <div className="flex-1 overflow-y-auto pt-2">
         {isLoadingContent ? (
           <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -295,17 +283,17 @@ export const AlbumDetail = () => {
             ))}
           </div>
         ) : images.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center">
-              <p className="text-muted-foreground mb-4">
-                No images in this album yet
-              </p>
+          <EmptyGalleryState
+            title="No images in this album yet"
+            description="Add images to start organizing this album."
+            formatsHint=""
+            action={
               <Button onClick={() => setIsAddImagesDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Images
               </Button>
-            </div>
-          </div>
+            }
+          />
         ) : (
           <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {images.map((image, index) => (
@@ -318,12 +306,12 @@ export const AlbumDetail = () => {
                   image={image}
                   className={
                     isSelectionMode && selectedImages.has(image.id)
-                      ? 'ring-primary ring-2 ring-offset-2'
+                      ? 'ring-2 ring-primary ring-offset-2'
                       : ''
                   }
                 />
                 {isSelectionMode && selectedImages.has(image.id) && (
-                  <div className="bg-primary text-primary-foreground absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full">
+                  <div className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     ✓
                   </div>
                 )}
@@ -333,10 +321,8 @@ export const AlbumDetail = () => {
         )}
       </div>
 
-      {/* Media View */}
       {isImageViewOpen && <MediaView images={images} />}
 
-      {/* Add Images Dialog */}
       <AddImagesToAlbumDialog
         isOpen={isAddImagesDialogOpen}
         onClose={() => {
