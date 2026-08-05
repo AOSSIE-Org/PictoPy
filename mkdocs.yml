@@ -73,6 +73,9 @@ nav:
       - Manual Setup Guide: Manual_Setup_Guide.md
       - Script Setup Guide: Script_Setup_Guide.md
 
+  - Contributing:
+      - AI Coding Agents: ai-contributing.md
+
   - Backend:
       - Python Backend API: backend/backend_python/api.md
       - Python Backend Database: backend/backend_python/database.md

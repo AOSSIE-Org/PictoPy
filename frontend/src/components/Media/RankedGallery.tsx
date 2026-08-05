@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
+import { MEDIA_GRID_CLASS } from '@/constants/layout';
+import { cn } from '@/lib/utils';
 import { Image } from '@/types/Media';
 import { setCurrentViewIndex } from '@/features/imageSlice';
 import { MediaView } from './MediaView';
@@ -36,7 +38,7 @@ export function RankedGallery({
             {titleRight && <div>{titleRight}</div>}
           </div>
         )}
-        <div className="grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4 p-2">
+        <div className={cn(MEDIA_GRID_CLASS, 'p-2')}>
           {images.map((img) => (
             <div key={img.id} className="group relative">
               <ImageCard

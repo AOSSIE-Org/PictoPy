@@ -79,11 +79,12 @@ export function Navbar() {
 
   const handleSearchSubmit = () => {
     if (isClustersLoading) return;
-    const trimmed = searchQuery.trim();
-    if (!trimmed) return;
+    const normalized = searchQuery.trim().replace(/\s+/g, ' ');
+    if (!normalized) return;
 
     const match = clusters?.find(
-      (c: Cluster) => c.cluster_name?.toLowerCase() === trimmed.toLowerCase(),
+      (c: Cluster) =>
+        c.cluster_name?.toLowerCase() === normalized.toLowerCase(),
     );
 
     if (match) {
@@ -91,7 +92,7 @@ export function Navbar() {
         `/${ROUTES.PERSON.replace(':clusterId', String(match.cluster_id))}`,
       );
     } else {
-      navigate(`/${ROUTES.SEARCH}?value=${encodeURIComponent(trimmed)}`);
+      navigate(`/${ROUTES.SEARCH}?value=${encodeURIComponent(normalized)}`);
     }
 
     setIsExpanded(false);

@@ -5,7 +5,7 @@ import uuid
 import datetime
 import json
 import logging
-from typing import List, Tuple, Dict, Any, Mapping
+from typing import List, Optional, Tuple, Dict, Any, Mapping
 from PIL import Image, ExifTags
 from pathlib import Path
 
@@ -21,7 +21,14 @@ from app.database.images import (
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
 from app.logging.setup_logging import get_logger
-from app.utils.extract_location_metadata import MetadataExtractor
+from app.utils.extract_location_metadata import (
+    DATE_SOURCE_EXIF,
+    DATE_SOURCE_FILESYSTEM,
+    DATE_SOURCE_SIDECAR,
+    DATE_SOURCE_UNKNOWN,
+    MetadataExtractor,
+)
+from app.utils.takeout_sidecar import takeout_sidecar_read
 
 logger = get_logger(__name__)
 
@@ -217,7 +224,7 @@ def image_util_classify_and_face_detect_images(
                 db_insert_image_classes_batch(image_class_pairs)
 
             # Step 3: Detect faces if "person" class is present
-            if classes and 0 in classes and 0 < classes.count(0) < 7:
+            if classes and 0 in classes:
                 result = face_detector.detect_faces(image_id, image_path)
                 if result:
                     total_faces_skipped += result.get("faces_skipped", 0)
@@ -521,6 +528,62 @@ def _extract_gps_coordinates(exif_data: Any) -> Tuple[float | None, float | None
     return latitude, longitude
 
 
+# Pointer to the EXIF sub-IFD, where the capture timestamps actually live.
+EXIF_IFD_POINTER = 0x8769
+
+# Preference order. DateTimeOriginal is when the shutter fired; DateTime is
+# the file's own timestamp and can be a later edit, so it comes last.
+CAPTURE_DATE_TAGS = ("DateTimeOriginal", "DateTimeDigitized", "DateTime")
+
+
+def _extract_capture_datetime(exif_data: Any) -> Optional[str]:
+    """
+    Read the capture timestamp out of EXIF.
+
+    getexif() returns IFD0 only, and DateTimeOriginal lives in the EXIF
+    sub-IFD, so reading the top level alone finds nothing and every photo
+    silently falls back to the file's modification time. Both are searched
+    here, sub-IFD first.
+    """
+    # Identity check, not truthiness: an Exif object is a mapping over IFD0,
+    # so one whose dates live only in the sub-IFD is falsy while still
+    # carrying exactly the value being looked for.
+    if exif_data is None:
+        return None
+
+    tag_ids = {
+        name: tag_id
+        for tag_id, name in ExifTags.TAGS.items()
+        if name in CAPTURE_DATE_TAGS
+    }
+
+    sources = []
+    try:
+        sources.append(exif_data.get_ifd(EXIF_IFD_POINTER) or {})
+    except (AttributeError, KeyError, OSError, ValueError):
+        pass
+    try:
+        sources.append(dict(exif_data))
+    except (TypeError, ValueError):
+        pass
+
+    for name in CAPTURE_DATE_TAGS:
+        tag_id = tag_ids.get(name)
+        if tag_id is None:
+            continue
+        for source in sources:
+            value = source.get(tag_id)
+            if not value:
+                continue
+            if isinstance(value, (bytes, bytearray)):
+                value = value.decode("utf-8", "ignore")
+            value = str(value).strip().split("\x00", 1)[0]
+            if value:
+                return value
+
+    return None
+
+
 def image_util_extract_metadata(image_path: str) -> dict:
     """Extract metadata for a given image file with detailed debug logging."""
     logger.debug(f"image_util_extract_metadata called for: {image_path}")
@@ -529,6 +592,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
         return {
             "name": os.path.basename(image_path),
             "date_created": None,
+            "date_source": DATE_SOURCE_UNKNOWN,
             "width": 0,
             "height": 0,
             "file_location": image_path,
@@ -539,6 +603,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
     try:
         stats = os.stat(image_path)
         logger.debug(f"File exists. Size = {stats.st_size} bytes")
+        date_source = DATE_SOURCE_EXIF
 
         try:
             with Image.open(image_path) as img:
@@ -556,18 +621,20 @@ def image_util_extract_metadata(image_path: str) -> dict:
                 except Exception:
                     exif_data = None
 
-                exif = dict(exif_data) if exif_data else {}
-                dt_original = None
+                dt_original = _extract_capture_datetime(exif_data)
                 latitude, longitude = _extract_gps_coordinates(exif_data)
 
-                for k, v in exif.items():
-                    if ExifTags.TAGS.get(k) == "DateTimeOriginal":
-                        dt_original = (
-                            v.decode("utf-8", "ignore")
-                            if isinstance(v, (bytes, bytearray))
-                            else str(v)
-                        )
-                        break
+                # A Google Takeout export drops EXIF from part of its own
+                # library and keeps the real values in a sibling JSON file.
+                if not dt_original or latitude is None:
+                    sidecar_dt, sidecar_lat, sidecar_lon = takeout_sidecar_read(
+                        image_path
+                    )
+                    if not dt_original and sidecar_dt:
+                        dt_original = sidecar_dt
+                        date_source = DATE_SOURCE_SIDECAR
+                    if latitude is None and sidecar_lat is not None:
+                        latitude, longitude = sidecar_lat, sidecar_lon
 
                 # Safe parse; fall back to mtime without losing width/height
                 if dt_original:
@@ -580,14 +647,17 @@ def image_util_extract_metadata(image_path: str) -> dict:
                         date_created = datetime.datetime.fromtimestamp(
                             stats.st_mtime
                         ).isoformat()
+                        date_source = DATE_SOURCE_FILESYSTEM
                 else:
                     date_created = datetime.datetime.fromtimestamp(
                         stats.st_mtime
                     ).isoformat()
+                    date_source = DATE_SOURCE_FILESYSTEM
 
             metadata_dict = {
                 "name": os.path.basename(image_path),
                 "date_created": date_created,
+                "date_source": date_source,
                 "width": width,
                 "height": height,
                 "file_location": image_path,
@@ -608,6 +678,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
                 "date_created": datetime.datetime.fromtimestamp(
                     stats.st_mtime
                 ).isoformat(),
+                "date_source": DATE_SOURCE_FILESYSTEM,
                 "file_location": image_path,
                 "file_size": stats.st_size,
                 "width": 0,
@@ -619,6 +690,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
         return {
             "name": os.path.basename(image_path),
             "date_created": None,
+            "date_source": DATE_SOURCE_UNKNOWN,
             "width": 0,
             "height": 0,
             "file_location": image_path,

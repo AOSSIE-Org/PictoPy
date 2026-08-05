@@ -18,6 +18,20 @@ from app.logging.setup_logging import get_logger
 logger = get_logger(__name__)
 
 
+# Where a metadata date came from. Only the first two are real capture times;
+# a filesystem mtime is when the file was written, which for a copied library
+# is import day, so it must never reach images.captured_at.
+DATE_SOURCE_EXIF = "exif"
+DATE_SOURCE_SIDECAR = "sidecar"
+DATE_SOURCE_CONTAINER = "container"
+DATE_SOURCE_FILESYSTEM = "filesystem"
+DATE_SOURCE_UNKNOWN = "unknown"
+
+TRUSTED_DATE_SOURCES = frozenset(
+    {DATE_SOURCE_EXIF, DATE_SOURCE_SIDECAR, DATE_SOURCE_CONTAINER}
+)
+
+
 class MetadataExtractor:
     """
     Extracts location and datetime information from image metadata JSON.
@@ -118,6 +132,13 @@ class MetadataExtractor:
 
         try:
             if not isinstance(metadata, dict):
+                return None
+
+            # A date the extractor itself guessed from the filesystem is not a
+            # capture time. Saying "unknown" is what stops a bulk copy from
+            # looking like one long burst of photos on import day.
+            source = metadata.get("date_source")
+            if source is not None and source not in TRUSTED_DATE_SOURCES:
                 return None
 
             # Method 1: Check common top-level field names
