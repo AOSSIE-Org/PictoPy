@@ -88,6 +88,17 @@ def _curate_memories(trigger: str) -> None:
         logger.error(f"Memory curation failed after {trigger}: {e}")
 
 
+def _queue_post_index_tagging_sweep(app_state: State) -> None:
+    """
+    Runs after folder indexing completes to trigger a follow-up tagging sweep.
+    Prevents images indexed after an earlier tagging pass from being missed.
+    """
+    try:
+        app_state.executor.submit(post_AI_tagging_enabled_sequence)
+    except Exception as e:
+        logger.error(f"Failed to queue post-index tagging sweep: {e}")
+
+
 def post_folder_add_sequence(folder_path: str, folder_id: int):
     """
     Post-addition sequence for a folder.
@@ -265,9 +276,19 @@ def add_folder(request: AddFolderRequest, app_state: State = Depends(get_state))
         # Step 5: Update parent ids for the subtree
         db_update_parent_ids_for_subtree(request.folder_path, folder_map)
 
-        # Step 6: Call the post-addition sequence in a separate process
-        executor: ProcessPoolExecutor = app_state.executor
-        executor.submit(post_folder_add_sequence, request.folder_path, root_folder_id)
+        # Step 6: Call the post-addition sequence in a separate process.
+        # Own pool so this never waits on another folder's AI tagging.
+        indexing_executor: ProcessPoolExecutor = app_state.indexing_executor
+        index_future = indexing_executor.submit(
+            post_folder_add_sequence, request.folder_path, root_folder_id
+        )
+        # Also queue a catch-up tagging sweep for once indexing lands. Needed
+        # because indexing and tagging are now on separate pools: if the AI
+        # pool is free, a sweep can start (and finish, finding nothing) before
+        # this folder's images are even in the DB - see the callback docstring.
+        index_future.add_done_callback(
+            lambda _f: _queue_post_index_tagging_sweep(app_state)
+        )
 
         return AddFolderResponse(
             data=AddFolderData(
