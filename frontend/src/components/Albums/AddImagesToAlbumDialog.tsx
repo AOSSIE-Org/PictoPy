@@ -156,7 +156,7 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
                         src={convertFileSrc(image.thumbnailPath)}
                         alt={image.path.split('/').pop() || ''}
                         loading="lazy"
-                        className="max-h-full max-w-full object-contain transition-transform group-hover:scale-105"
+                        className="max-h-full max-w-full object-contain"
                         onError={(e) => {
                           const img = e.target as HTMLImageElement;
                           img.onerror = null;
