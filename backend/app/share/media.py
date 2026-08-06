@@ -11,7 +11,11 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from app.database.albums import db_get_album, db_get_album_images
+from app.database.albums import (
+    db_album_contains_image,
+    db_get_album,
+    db_get_album_images,
+)
 from app.database.images import db_get_image_by_id
 
 
@@ -37,7 +41,7 @@ def share_media_resolve_path(
     The file backing one image of a shared album, or None if it is not part of
     that album, is unknown, or has vanished from disk since indexing.
     """
-    if image_id not in set(db_get_album_images(album_id)):
+    if not db_album_contains_image(album_id, image_id):
         return None
 
     image = db_get_image_by_id(image_id)
