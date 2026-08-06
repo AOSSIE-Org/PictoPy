@@ -1,6 +1,8 @@
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.share.registry import PASSWORD_MAX_BYTES
 
 # ##############################
 # Request Handler
@@ -10,6 +12,16 @@ from pydantic import BaseModel, Field
 class CreateShareRequest(BaseModel):
     # None means the share lives until it is revoked or PictoPy closes.
     expires_in_minutes: Optional[int] = Field(default=None, gt=0)
+    # None leaves the album readable by anyone holding the link.
+    password: Optional[str] = Field(default=None, min_length=4)
+
+    @field_validator("password")
+    def check_password_length(cls, value: Optional[str]) -> Optional[str]:
+        # Measured in bytes because that is where bcrypt truncates; a longer
+        # password would be accepted and then quietly not be the one set.
+        if value is not None and len(value.encode("utf-8")) > PASSWORD_MAX_BYTES:
+            raise ValueError(f"Password must be at most {PASSWORD_MAX_BYTES} bytes")
+        return value
 
 
 # ##############################
@@ -44,6 +56,9 @@ class Share(BaseModel):
     port: int
     created_at: str
     expires_at: Optional[str] = None
+    # Whether a password stands between the link and the photos. The password
+    # itself and its hash never leave the backend.
+    is_protected: bool
     # One entry per candidate interface: which of them a phone can actually
     # reach depends on the network, so the caller picks.
     urls: List[ShareUrl]

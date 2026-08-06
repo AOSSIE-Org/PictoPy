@@ -40,6 +40,7 @@ class ShareDescription(TypedDict):
     port: int
     created_at: str
     expires_at: Optional[str]
+    is_protected: bool
     urls: List[ShareUrlRecord]
 
 
@@ -50,12 +51,16 @@ _orchestration_lock = asyncio.Lock()
 
 
 async def share_util_create(
-    album_id: str, expires_in_minutes: Optional[int] = None
+    album_id: str,
+    expires_in_minutes: Optional[int] = None,
+    password: Optional[str] = None,
 ) -> ShareEntry:
     """Issue a token for an album and make sure the listener is up."""
     async with _orchestration_lock:
         await share_server_start()
-        return share_registry_create(album_id, expires_in_minutes=expires_in_minutes)
+        return share_registry_create(
+            album_id, expires_in_minutes=expires_in_minutes, password=password
+        )
 
 
 async def share_util_revoke(token: str) -> bool:
@@ -90,6 +95,7 @@ def share_util_describe(entry: ShareEntry, port: int) -> ShareDescription:
         "port": port,
         "created_at": entry.created_at.isoformat(),
         "expires_at": entry.expires_at.isoformat() if entry.expires_at else None,
+        "is_protected": entry.is_protected,
         "urls": [
             {
                 "interface": candidate.interface,
