@@ -231,7 +231,7 @@ export const AlbumDetail = () => {
   return (
     <div className="flex h-full flex-col">
       {/* Header — same shape as the AI Tagging collection page */}
-      <div className="my-6 flex items-center justify-between">
+      <div className="my-6 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
         <Button
           variant="outline"
           onClick={handleBack}
@@ -241,7 +241,11 @@ export const AlbumDetail = () => {
           Back
         </Button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2 self-end sm:self-auto">
+          <p className="text-muted-foreground mr-1 text-sm">
+            {images.length} {images.length === 1 ? 'photo' : 'photos'}
+            {selectedImages.size > 0 && ` • ${selectedImages.size} selected`}
+          </p>
           {isSelectionMode ? (
             <>
               <Button
@@ -292,10 +296,6 @@ export const AlbumDetail = () => {
         {album.description && (
           <p className="text-muted-foreground text-sm">{album.description}</p>
         )}
-        <p className="text-muted-foreground text-sm">
-          {images.length} {images.length === 1 ? 'photo' : 'photos'}
-          {selectedImages.size > 0 && ` • ${selectedImages.size} selected`}
-        </p>
       </div>
 
       {/* Images Grid */}
