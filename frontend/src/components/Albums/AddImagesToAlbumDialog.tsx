@@ -19,6 +19,8 @@ import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { Image } from '@/types/Media';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { Search, Check } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
+import { cn } from '@/lib/utils';
 
 export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
   isOpen,
@@ -30,6 +32,12 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [allImages, setAllImages] = useState<Image[]>([]);
+
+  const { theme } = useTheme();
+  const isLightMode = theme === 'light';
+  const placeholderSrc = isLightMode
+    ? '/placeholder-album-light.svg'
+    : '/placeholder-album.svg';
 
   const { data: imagesData, isLoading } = usePictoQuery({
     queryKey: ['images'],
@@ -135,12 +143,12 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
                 {filteredImages.map((image) => (
                   <div
                     key={image.id}
-                    className="group hover:border-primary bg-muted relative aspect-square cursor-pointer overflow-hidden rounded-md border-2 transition-all"
-                    style={{
-                      borderColor: selectedImages.has(image.id)
-                        ? 'hsl(var(--primary))'
-                        : 'transparent',
-                    }}
+                    className={cn(
+                      'group bg-muted relative aspect-square cursor-pointer overflow-hidden rounded-md border-2 transition-all',
+                      selectedImages.has(image.id)
+                        ? 'border-primary'
+                        : 'hover:border-primary border-transparent',
+                    )}
                     onClick={() => handleImageToggle(image.id)}
                   >
                     <div className="bg-muted flex h-full w-full items-center justify-center">
@@ -152,12 +160,7 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
                         onError={(e) => {
                           const img = e.target as HTMLImageElement;
                           img.onerror = null;
-                          const placeholder = window.matchMedia(
-                            '(prefers-color-scheme: dark)',
-                          ).matches
-                            ? '/placeholder-album.svg'
-                            : '/placeholder-album-light.svg';
-                          img.src = placeholder;
+                          img.src = placeholderSrc;
                         }}
                       />
                     </div>
