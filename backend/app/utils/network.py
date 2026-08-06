@@ -47,14 +47,18 @@ class InterfaceCandidate:
     is_default_route: bool
     looks_virtual: bool
     is_up: bool
+    is_link_local: bool
 
     @property
     def rank(self) -> tuple:
-        # Lower sorts first.
+        # Lower sorts first. `is_up` outranks everything because an address on
+        # a downed adapter can never work, and Windows will happily keep a
+        # stale lease and default route on an adapter that has disconnected.
         return (
-            0 if self.is_default_route else 1,
             0 if self.is_up else 1,
+            0 if self.is_default_route else 1,
             1 if self.looks_virtual else 0,
+            1 if self.is_link_local else 0,
             self.interface.lower(),
         )
 
@@ -92,9 +96,11 @@ def network_util_list_candidates() -> List[InterfaceCandidate]:
             if addr.family != socket.AF_INET:
                 continue
             ip = addr.address
-            # Loopback cannot be reached from another device, and a 169.254
-            # address means DHCP never answered — a symptom, not an address.
-            if ip.startswith("127.") or ip.startswith("169.254."):
+            # Loopback is the only address no other device can ever reach.
+            # A 169.254 address usually means DHCP never answered, but two
+            # devices on the same link can still reach each other that way, so
+            # it is ranked last rather than dropped.
+            if ip.startswith("127."):
                 continue
             candidates.append(
                 InterfaceCandidate(
@@ -103,6 +109,7 @@ def network_util_list_candidates() -> List[InterfaceCandidate]:
                     is_default_route=(ip == route_ip),
                     looks_virtual=_looks_virtual(interface),
                     is_up=stats[interface].isup if interface in stats else False,
+                    is_link_local=ip.startswith("169.254."),
                 )
             )
 
