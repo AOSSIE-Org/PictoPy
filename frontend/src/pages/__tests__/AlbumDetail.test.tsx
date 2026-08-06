@@ -112,6 +112,21 @@ describe('AlbumDetail', () => {
     expect(store.getState().loader.loading).toBe(false);
   }, 30000);
 
+  // The header mirrors the AI Tagging collection page: a labelled Back button
+  // on its own row, with the album name as the heading underneath.
+  test('renders a labelled back button that returns to the albums list', async () => {
+    const user = userEvent.setup();
+    renderDetail();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Trip' }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(await screen.findByText('Albums list')).toBeInTheDocument();
+  }, 30000);
+
   // The cover is whatever image comes first in the album, so there is nothing
   // to pick and no per-image menu left to pick it from.
   test('offers no per-image cover menu', async () => {

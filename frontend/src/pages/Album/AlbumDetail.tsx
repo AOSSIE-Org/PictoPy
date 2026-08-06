@@ -230,73 +230,72 @@ export const AlbumDetail = () => {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="mb-4 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={handleBack}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold">{album.name}</h1>
-            {album.description && (
-              <p className="text-muted-foreground text-sm">
-                {album.description}
-              </p>
-            )}
-          </div>
-        </div>
+      {/* Header — same shape as the AI Tagging collection page */}
+      <div className="my-6 flex items-center justify-between">
+        <Button
+          variant="outline"
+          onClick={handleBack}
+          className="flex cursor-pointer items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
 
-        <div className="flex items-center justify-between">
-          <p className="text-muted-foreground text-sm">
-            {images.length} {images.length === 1 ? 'photo' : 'photos'}
-            {selectedImages.size > 0 && ` • ${selectedImages.size} selected`}
-          </p>
-
-          <div className="flex items-center gap-2">
-            {isSelectionMode ? (
-              <>
+        <div className="flex items-center gap-2">
+          {isSelectionMode ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsSelectionMode(false);
+                  setSelectedImages(new Set());
+                }}
+                className="cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleRemoveSelected}
+                disabled={selectedImages.size === 0}
+                className="cursor-pointer"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Remove Selected
+              </Button>
+            </>
+          ) : (
+            <>
+              {images.length > 0 && (
                 <Button
                   variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setIsSelectionMode(false);
-                    setSelectedImages(new Set());
-                  }}
+                  onClick={() => setIsSelectionMode(true)}
+                  className="cursor-pointer"
                 >
-                  Cancel
+                  Select Images
                 </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleRemoveSelected}
-                  disabled={selectedImages.size === 0}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Remove Selected
-                </Button>
-              </>
-            ) : (
-              <>
-                {images.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsSelectionMode(true)}
-                  >
-                    Select Images
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  onClick={() => setIsAddImagesDialogOpen(true)}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Images
-                </Button>
-              </>
-            )}
-          </div>
+              )}
+              <Button
+                onClick={() => setIsAddImagesDialogOpen(true)}
+                className="cursor-pointer"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Images
+              </Button>
+            </>
+          )}
         </div>
+      </div>
+
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">{album.name}</h1>
+        {album.description && (
+          <p className="text-muted-foreground text-sm">{album.description}</p>
+        )}
+        <p className="text-muted-foreground text-sm">
+          {images.length} {images.length === 1 ? 'photo' : 'photos'}
+          {selectedImages.size > 0 && ` • ${selectedImages.size} selected`}
+        </p>
       </div>
 
       {/* Images Grid */}
