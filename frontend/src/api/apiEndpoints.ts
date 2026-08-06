@@ -48,6 +48,7 @@ export const albumsEndpoints = {
   getAllAlbums: '/albums/',
   getAlbumById: (albumId: string) => `/albums/${albumId}`,
   createAlbum: '/albums/',
+  createAlbumFromMemory: '/albums/from-memory',
   updateAlbum: (albumId: string) => `/albums/${albumId}`,
   deleteAlbum: (albumId: string) => `/albums/${albumId}`,
   addImagesToAlbum: (albumId: string) => `/albums/${albumId}/images`,
@@ -56,7 +57,6 @@ export const albumsEndpoints = {
     `/albums/${albumId}/images/${imageId}`,
   removeMultipleImagesFromAlbum: (albumId: string) =>
     `/albums/${albumId}/images`,
-  setAlbumCoverImage: (albumId: string) => `/albums/${albumId}/cover`,
 };
 
 export const memoriesEndpoints = {

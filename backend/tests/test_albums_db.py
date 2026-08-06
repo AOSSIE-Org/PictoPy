@@ -10,6 +10,7 @@ import pytest
 from app.database.albums import (
     db_create_albums_table,
     db_create_album_images_table,
+    db_create_album_with_images,
     db_get_all_albums,
     db_get_album_by_name,
     db_get_album,
@@ -17,7 +18,10 @@ from app.database.albums import (
     db_update_album,
     db_delete_album,
     db_get_album_images,
+    db_add_images_to_album,
+    db_remove_image_from_album,
     db_remove_images_from_album,
+    db_get_album_cover_path,
     verify_album_password,
 )
 from app.database.images import db_create_images_table
@@ -68,6 +72,17 @@ def link_images(db_path: str, album_id: str, image_ids: List[str]) -> None:
     conn.executemany(
         "INSERT INTO album_images (album_id, image_id) VALUES (?, ?)",
         [(album_id, image_id) for image_id in image_ids],
+    )
+    conn.commit()
+    conn.close()
+
+
+def make_images(db_path: str, image_ids: List[str]) -> None:
+    """Seed real image rows so cover lookups have something to join against."""
+    conn = sqlite3.connect(db_path)
+    conn.executemany(
+        "INSERT INTO images (id, path) VALUES (?, ?)",
+        [(image_id, f"/photos/{image_id}.jpg") for image_id in image_ids],
     )
     conn.commit()
     conn.close()
@@ -137,7 +152,10 @@ class TestAlbumTables:
         assert "is_hidden" not in columns
         assert {"is_locked", "cover_image_path"} <= set(columns)
         # the legacy row survives, its flag carried over under the new name
-        assert [row[1:4] for row in db_get_all_albums()] == [("Old", None, 1)]
+        legacy = db_get_all_albums()
+        assert [
+            (row["album_name"], row["description"], row["is_locked"]) for row in legacy
+        ] == [("Old", None, True)]
 
     @pytest.mark.parametrize(
         "create_table", [db_create_albums_table, db_create_album_images_table]
@@ -169,7 +187,9 @@ class TestAlbumCrud:
         make_album("album-1", "Summer Trip", "Fun times")
 
         by_id = db_get_album("album-1")
-        assert by_id[:3] == ("album-1", "Summer Trip", "Fun times")
+        assert by_id["album_id"] == "album-1"
+        assert by_id["album_name"] == "Summer Trip"
+        assert by_id["description"] == "Fun times"
         assert db_get_album_by_name("Summer Trip") == by_id
 
     def test_missing_album_returns_none(self, test_db):
@@ -188,8 +208,11 @@ class TestAlbumCrud:
         make_album("album-2", "Secret", locked=True, password="pw")
 
         rows = db_get_all_albums()
-        assert sorted(row[1] for row in rows) == ["Public", "Secret"]
-        assert {row[1]: row[3] for row in rows} == {"Public": 0, "Secret": 1}
+        assert sorted(row["album_name"] for row in rows) == ["Public", "Secret"]
+        assert {row["album_name"]: row["is_locked"] for row in rows} == {
+            "Public": False,
+            "Secret": True,
+        }
 
     def test_update_changes_fields(self, test_db):
         make_album("album-1", "Old", "Old desc")
@@ -197,9 +220,9 @@ class TestAlbumCrud:
         db_update_album("album-1", "New", "New desc", True, None)
 
         album = db_get_album("album-1")
-        assert album[1] == "New"
-        assert album[2] == "New desc"
-        assert album[3] == 1
+        assert album["album_name"] == "New"
+        assert album["description"] == "New desc"
+        assert album["is_locked"] is True
 
     def test_delete_removes_the_row(self, test_db):
         make_album("album-1", "Trip")
@@ -230,6 +253,204 @@ class TestAlbumImages:
         db_remove_images_from_album("album-1", ["img-1", "img-3"])
 
         assert db_get_album_images("album-1") == ["img-2"]
+
+
+class TestAlbumCreatedAt:
+    def test_insert_stamps_a_creation_time(self, test_db):
+        make_album("album-1", "Trip")
+
+        assert db_get_album("album-1")["created_at"] is not None
+
+    def test_create_with_images_stamps_a_creation_time(self, test_db):
+        make_images(test_db, ["img-1"])
+
+        db_create_album_with_images("album-1", "Paris", "", ["img-1"])
+
+        assert db_get_album("album-1")["created_at"] is not None
+
+    def test_edits_never_change_it(self, test_db):
+        """Renaming, re-describing or adding photos is not a new creation."""
+        make_album("album-1", "Trip")
+        make_images(test_db, ["img-1"])
+        created = db_get_album("album-1")["created_at"]
+
+        db_update_album("album-1", "Trip Renamed", "A new description", False)
+        db_add_images_to_album("album-1", ["img-1"])
+
+        album = db_get_album("album-1")
+        assert album["created_at"] == created
+        # ...but all of that does count as an update.
+        assert album["updated_at"] >= created
+
+    def test_listing_keeps_insertion_order(self, test_db):
+        """Albums predating created_at sort by when they were made."""
+        make_album("album-1", "First")
+        make_album("album-2", "Second")
+
+        assert [album["album_id"] for album in db_get_all_albums()] == [
+            "album-1",
+            "album-2",
+        ]
+
+    def test_migration_adds_the_column_to_a_legacy_table(self, test_db):
+        """A database shipped before created_at existed still upgrades."""
+        conn = sqlite3.connect(test_db)
+        conn.execute("DROP TABLE albums")
+        conn.execute(
+            """
+            CREATE TABLE albums (
+                album_id TEXT PRIMARY KEY,
+                album_name TEXT UNIQUE,
+                description TEXT,
+                is_hidden BOOLEAN DEFAULT 0,
+                password_hash TEXT
+            )
+            """
+        )
+        conn.execute(
+            "INSERT INTO albums (album_id, album_name) VALUES ('old-1', 'Old')"
+        )
+        conn.commit()
+        conn.close()
+
+        db_create_albums_table()
+
+        old = db_get_album("old-1")
+        assert old["album_name"] == "Old"
+        # Nothing to backfill it with, so it reads as oldest.
+        assert old["created_at"] is None
+        # And the table still takes new albums.
+        make_album("album-1", "New")
+        assert db_get_album("album-1")["created_at"] is not None
+
+
+class TestAlbumUpdatedAt:
+    """
+    updated_at is compared against a pinned earlier value rather than against
+    a timestamp taken during the test: CURRENT_TIMESTAMP has one-second
+    resolution, so two writes in the same second read as equal.
+    """
+
+    EARLIER = "2020-01-01 00:00:00"
+
+    def set_updated_at(self, db_path: str, album_id: str) -> None:
+        conn = sqlite3.connect(db_path)
+        conn.execute(
+            "UPDATE albums SET updated_at = ? WHERE album_id = ?",
+            (self.EARLIER, album_id),
+        )
+        conn.commit()
+        conn.close()
+
+    def test_insert_stamps_an_update_time(self, test_db):
+        make_album("album-1", "Trip")
+
+        assert db_get_album("album-1")["updated_at"] is not None
+
+    def test_editing_the_album_touches_it(self, test_db):
+        make_album("album-1", "Trip")
+        self.set_updated_at(test_db, "album-1")
+
+        db_update_album("album-1", "Trip Renamed", "", False)
+
+        assert db_get_album("album-1")["updated_at"] > self.EARLIER
+
+    def test_adding_images_touches_it(self, test_db):
+        """Adding photos is the commonest way an album changes."""
+        make_album("album-1", "Trip")
+        make_images(test_db, ["img-1"])
+        self.set_updated_at(test_db, "album-1")
+
+        db_add_images_to_album("album-1", ["img-1"])
+
+        assert db_get_album("album-1")["updated_at"] > self.EARLIER
+
+    def test_removing_an_image_touches_it(self, test_db):
+        make_album("album-1", "Trip")
+        make_images(test_db, ["img-1"])
+        db_add_images_to_album("album-1", ["img-1"])
+        self.set_updated_at(test_db, "album-1")
+
+        db_remove_image_from_album("album-1", "img-1")
+
+        assert db_get_album("album-1")["updated_at"] > self.EARLIER
+
+    def test_removing_images_in_bulk_touches_it(self, test_db):
+        make_album("album-1", "Trip")
+        make_images(test_db, ["img-1", "img-2"])
+        db_add_images_to_album("album-1", ["img-1", "img-2"])
+        self.set_updated_at(test_db, "album-1")
+
+        db_remove_images_from_album("album-1", ["img-1"])
+
+        assert db_get_album("album-1")["updated_at"] > self.EARLIER
+
+    def test_re_adding_the_same_images_leaves_it_alone(self, test_db):
+        """Nothing was inserted, so nothing about the album changed."""
+        make_album("album-1", "Trip")
+        make_images(test_db, ["img-1"])
+        db_add_images_to_album("album-1", ["img-1"])
+        self.set_updated_at(test_db, "album-1")
+
+        db_add_images_to_album("album-1", ["img-1"])
+
+        assert db_get_album("album-1")["updated_at"] == self.EARLIER
+
+    def test_bulk_removing_absent_images_leaves_it_alone(self, test_db):
+        make_album("album-1", "Trip")
+        self.set_updated_at(test_db, "album-1")
+
+        db_remove_images_from_album("album-1", ["img-missing"])
+
+        assert db_get_album("album-1")["updated_at"] == self.EARLIER
+
+    def test_a_failed_removal_leaves_it_alone(self, test_db):
+        """The image was never in the album, so nothing about it changed."""
+        make_album("album-1", "Trip")
+        self.set_updated_at(test_db, "album-1")
+
+        with pytest.raises(ValueError):
+            db_remove_image_from_album("album-1", "img-missing")
+
+        assert db_get_album("album-1")["updated_at"] == self.EARLIER
+
+
+class TestCreateAlbumWithImages:
+    def test_creates_the_album_and_links_every_image(self, test_db):
+        make_images(test_db, ["img-1", "img-2"])
+
+        linked = db_create_album_with_images(
+            "album-1", "Paris 2022", "July 2022", ["img-1", "img-2"]
+        )
+
+        assert linked == 2
+        assert db_get_album_images("album-1") == ["img-1", "img-2"]
+        album = db_get_album("album-1")
+        assert album["album_name"] == "Paris 2022"
+        assert album["description"] == "July 2022"
+        # Always an open album: locking is done afterwards, from Edit Album.
+        assert album["is_locked"] is False
+        assert album["password_hash"] is None
+
+    def test_an_unknown_image_leaves_no_album_behind(self, test_db):
+        """The album and its links commit together, or not at all."""
+        make_images(test_db, ["img-1"])
+
+        with pytest.raises(sqlite3.IntegrityError):
+            db_create_album_with_images(
+                "album-1", "Paris 2022", "", ["img-1", "img-missing"]
+            )
+
+        assert db_get_album("album-1") is None
+
+    def test_a_duplicate_name_is_rejected(self, test_db):
+        make_album("album-1", "Paris 2022")
+        make_images(test_db, ["img-1"])
+
+        with pytest.raises(sqlite3.IntegrityError):
+            db_create_album_with_images("album-2", "Paris 2022", "", ["img-1"])
+
+        assert db_get_album("album-2") is None
 
 
 # ##############################
@@ -275,3 +496,43 @@ class TestAlbumPassword:
 
         assert stored_hash(test_db, "album-1") == before
         assert verify_album_password("album-1", "oldpass") is True
+
+
+# ##############################
+# Cover image
+# ##############################
+
+
+class TestAlbumCoverPath:
+    def test_uses_the_first_image_added(self, test_db):
+        make_album("album-1")
+        make_images(test_db, ["img-a", "img-b", "img-c"])
+        link_images(test_db, "album-1", ["img-b", "img-a", "img-c"])
+
+        assert db_get_album_cover_path("album-1") == "/photos/img-b.jpg"
+
+    def test_returns_none_for_an_empty_album(self, test_db):
+        make_album("album-1")
+
+        assert db_get_album_cover_path("album-1") is None
+
+    def test_returns_none_for_a_missing_album(self, test_db):
+        assert db_get_album_cover_path("nope") is None
+
+    def test_follows_the_album_when_the_first_image_is_removed(self, test_db):
+        make_album("album-1")
+        make_images(test_db, ["img-a", "img-b"])
+        link_images(test_db, "album-1", ["img-a", "img-b"])
+
+        db_remove_images_from_album("album-1", ["img-a"])
+
+        assert db_get_album_cover_path("album-1") == "/photos/img-b.jpg"
+
+    def test_ignores_images_in_other_albums(self, test_db):
+        make_album("album-1")
+        make_album("album-2", name="Other")
+        make_images(test_db, ["img-a", "img-b"])
+        link_images(test_db, "album-1", ["img-a"])
+        link_images(test_db, "album-2", ["img-b"])
+
+        assert db_get_album_cover_path("album-2") == "/photos/img-b.jpg"

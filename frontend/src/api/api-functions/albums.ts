@@ -1,8 +1,11 @@
 import { albumsEndpoints } from '../apiEndpoints';
 import { apiClient } from '../axiosConfig';
 import { APIResponse } from '@/types/API';
+import type { BackendRes } from '@/hooks/useQueryExtension';
 import {
   CreateAlbumRequest,
+  CreateAlbumFromMemoryData,
+  CreateAlbumFromMemoryRequest,
   UpdateAlbumRequest,
   AddImagesToAlbumRequest,
   GetAlbumImagesRequest,
@@ -39,6 +42,20 @@ export const createAlbum = async (
 ): Promise<APIResponse> => {
   const response = await apiClient.post<APIResponse>(
     albumsEndpoints.createAlbum,
+    data,
+  );
+  return response.data;
+};
+
+/**
+ * Create an album from a curated memory's photos
+ * @param data - Source memory and the new album's name
+ */
+export const createAlbumFromMemory = async (
+  data: CreateAlbumFromMemoryRequest,
+): Promise<BackendRes<CreateAlbumFromMemoryData>> => {
+  const response = await apiClient.post(
+    albumsEndpoints.createAlbumFromMemory,
     data,
   );
   return response.data;
@@ -130,22 +147,6 @@ export const removeMultipleImagesFromAlbum = async (
   const response = await apiClient.delete<APIResponse>(
     albumsEndpoints.removeMultipleImagesFromAlbum(albumId),
     { data },
-  );
-  return response.data;
-};
-
-/**
- * Set or update the cover image for an album
- * @param albumId - Album UUID
- * @param imageId - Image UUID to set as cover
- */
-export const setAlbumCoverImage = async (
-  albumId: string,
-  imageId: string,
-): Promise<APIResponse> => {
-  const response = await apiClient.put<APIResponse>(
-    albumsEndpoints.setAlbumCoverImage(albumId),
-    { image_id: imageId },
   );
   return response.data;
 };

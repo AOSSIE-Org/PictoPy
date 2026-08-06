@@ -89,15 +89,15 @@ export const AlbumCard: React.FC<AlbumCardProps> = ({
           </div>
         </div>
         {/* Album Info */}
-        <div className="space-y-1 p-4">
-          <h3 className="truncate text-base font-semibold">{album.name}</h3>
+        <div className="space-y-0.5 p-3">
+          <h3 className="truncate text-sm font-semibold">{album.name}</h3>
           {album.description && (
-            <p className="text-muted-foreground line-clamp-2 text-sm">
+            <p className="text-muted-foreground line-clamp-1 text-xs">
               {album.description}
             </p>
           )}
 
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-xs">
             {album.image_count} {album.image_count === 1 ? 'photo' : 'photos'}
           </p>
         </div>

@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
-import { Plus, RefreshCw, ArrowDownAZ, Images } from 'lucide-react';
+import {
+  Plus,
+  RefreshCw,
+  ArrowDownAZ,
+  CalendarClock,
+  History,
+  Images,
+} from 'lucide-react';
 import { AlbumCard } from '@/components/Albums/AlbumCard';
 import { CreateAlbumDialog } from '@/components/Albums/CreateAlbumDialog';
 import { EditAlbumDialog } from '@/components/Albums/EditAlbumDialog';
@@ -11,23 +18,52 @@ import { DeleteConfirmDialog } from '@/components/Albums/DeleteConfirmDialog';
 import { EmptyAlbumsState } from '@/components/EmptyStates/EmptyAlbumsState';
 import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtension';
 import { getAllAlbums, deleteAlbum } from '@/api/api-functions';
-import { setAlbums, removeAlbum } from '@/features/albumsSlice';
+import { setAlbums } from '@/features/albumsSlice';
 import { selectAlbums } from '@/features/albumSelectors';
-import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { usePersistedSort } from '@/hooks/usePersistedSort';
+import { MEDIA_GRID_CLASS } from '@/constants/layout';
+import { cn } from '@/lib/utils';
 import { Album } from '@/types/Album';
 import {
   GallerySortDropdown,
   type SortOption,
 } from '@/components/GallerySortDropdown';
 
-type AlbumSortValue = 'name' | 'photoCount';
+type AlbumSortValue = 'name' | 'photoCount' | 'dateCreated' | 'recentlyUpdated';
 
 const ALBUM_SORT_OPTIONS: SortOption<AlbumSortValue>[] = [
   { value: 'name', label: 'Name (A-Z)', icon: ArrowDownAZ },
   { value: 'photoCount', label: 'Photo Count', icon: Images },
+  { value: 'dateCreated', label: 'Date Created', icon: CalendarClock },
+  { value: 'recentlyUpdated', label: 'Recently Updated', icon: History },
 ];
+
+const ALBUM_SORT_STORAGE_KEY = 'pictopy-albums-sort';
+
+// Derived from the options above so a removed sort stops being restorable.
+const ALBUM_SORT_VALUES = ALBUM_SORT_OPTIONS.map((option) => option.value);
+
+/**
+ * Newest first. SQLite timestamps are zero-padded, so they compare correctly
+ * as strings. Albums predating these columns have no timestamp: they read as
+ * oldest and keep the insertion order the backend lists them in.
+ */
+const newestFirst = (a: string | null, b: string | null): number =>
+  (b ?? '').localeCompare(a ?? '');
+
+// Mirrors an AlbumCard: the same 4/5 cover as a memory tile, plus the name and
+// count bars, so the grid does not jump when the real cards arrive.
+const AlbumCardSkeleton: React.FC = () => (
+  <div className="animate-pulse" data-testid="album-card-skeleton">
+    <div className="bg-muted aspect-4/5 w-full rounded-xl" />
+    <div className="space-y-1.5 p-3">
+      <div className="bg-muted h-3.5 w-2/3 rounded" />
+      <div className="bg-muted h-3 w-1/3 rounded" />
+    </div>
+  </div>
+);
 
 function Albums() {
   const dispatch = useDispatch();
@@ -40,12 +76,17 @@ function Albums() {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [albumToDelete, setAlbumToDelete] = useState<Album | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<AlbumSortValue>('name');
+  const [sortBy, setSortBy] = usePersistedSort<AlbumSortValue>(
+    ALBUM_SORT_STORAGE_KEY,
+    'name',
+    ALBUM_SORT_VALUES,
+  );
 
   const {
     data: albumsData,
     successData,
     isLoading,
+    isFetching,
     isSuccess,
     isError,
     refetch,
@@ -56,6 +97,7 @@ function Albums() {
 
   const deleteAlbumMutation = usePictoMutation({
     mutationFn: deleteAlbum,
+    autoInvalidateTags: ['albums'],
   });
 
   useMutationFeedback(deleteAlbumMutation, {
@@ -64,18 +106,10 @@ function Albums() {
     successMessage: 'Album deleted successfully!',
     errorTitle: 'Error',
     errorMessage: 'Failed to delete album. Please try again.',
-    onSuccess: () => {
-      // Close dialog and clear state after successful deletion
-      setIsDeleteDialogOpen(false);
-      setAlbumToDelete(null);
-    },
   });
 
   useEffect(() => {
-    if (isLoading) {
-      dispatch(showLoader('Loading albums...'));
-    } else if (isError) {
-      dispatch(hideLoader());
+    if (isError) {
       dispatch(
         showInfoDialog({
           title: 'Error',
@@ -93,13 +127,12 @@ function Albums() {
         is_locked: Boolean(album.is_locked),
         cover_image_path: album.cover_image_path,
         image_count: album.image_count || 0,
-        created_at: album.created_at || new Date().toISOString(),
-        updated_at: album.updated_at || new Date().toISOString(),
+        created_at: album.created_at ?? null,
+        updated_at: album.updated_at ?? null,
       })) as Album[];
       dispatch(setAlbums(albumsList));
-      dispatch(hideLoader());
     }
-  }, [albumsData, successData, isSuccess, isError, isLoading, dispatch]);
+  }, [albumsData, successData, isSuccess, isError, dispatch]);
 
   const handleAlbumClick = (album: Album) => {
     if (album.is_locked) {
@@ -127,17 +160,17 @@ function Albums() {
   };
 
   const confirmDelete = () => {
-    if (albumToDelete) {
-      const albumId = albumToDelete.id;
-      dispatch(removeAlbum(albumId));
-      deleteAlbumMutation.mutate(albumId);
-    }
+    if (!albumToDelete) return;
+    const albumId = albumToDelete.id;
+    // Close on confirm rather than on success: a failed delete would otherwise
+    // leave this dialog stacked underneath the error dialog.
+    setIsDeleteDialogOpen(false);
+    setAlbumToDelete(null);
+    deleteAlbumMutation.mutate(albumId);
   };
 
   const handleRefresh = async () => {
-    dispatch(showLoader('Refreshing albums...'));
     const result = await refetch();
-    dispatch(hideLoader());
 
     if (result.isError || result.error) {
       dispatch(
@@ -155,6 +188,10 @@ function Albums() {
       return a.name.localeCompare(b.name);
     } else if (sortBy === 'photoCount') {
       return b.image_count - a.image_count;
+    } else if (sortBy === 'dateCreated') {
+      return newestFirst(a.created_at, b.created_at);
+    } else if (sortBy === 'recentlyUpdated') {
+      return newestFirst(a.updated_at, b.updated_at);
     }
     return 0;
   });
@@ -164,9 +201,16 @@ function Albums() {
       <div className="mt-1 mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Albums</h1>
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isFetching}
+          >
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`}
+            />
+            {isFetching ? 'Refreshing…' : 'Refresh'}
           </Button>
           <GallerySortDropdown
             value={sortBy}
@@ -180,10 +224,16 @@ function Albums() {
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
-        {albums.length === 0 ? (
+        {isLoading ? (
+          <div className={cn(MEDIA_GRID_CLASS, 'pb-6')}>
+            {Array.from({ length: 10 }).map((_, index) => (
+              <AlbumCardSkeleton key={index} />
+            ))}
+          </div>
+        ) : albums.length === 0 ? (
           <EmptyAlbumsState />
         ) : (
-          <div className="grid grid-cols-1 gap-6 pb-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className={cn(MEDIA_GRID_CLASS, 'pb-6')}>
             {sortedAlbums.map((album) => (
               <AlbumCard
                 key={album.id}

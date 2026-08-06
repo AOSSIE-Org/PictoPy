@@ -5,8 +5,10 @@ export interface Album {
   is_locked: boolean;
   cover_image_path?: string;
   image_count: number;
-  created_at: string;
-  updated_at: string;
+  /** Null for albums that predate the backend recording these times. */
+  created_at: string | null;
+  /** Touched by metadata edits and by adding or removing photos. */
+  updated_at: string | null;
 }
 
 export interface AlbumFormData {
@@ -21,6 +23,16 @@ export interface CreateAlbumRequest {
   description?: string;
   is_locked?: boolean;
   password?: string;
+}
+
+export interface CreateAlbumFromMemoryRequest {
+  memory_id: string;
+  name: string;
+}
+
+export interface CreateAlbumFromMemoryData {
+  album_id: string;
+  image_count: number;
 }
 
 export interface UpdateAlbumRequest {
