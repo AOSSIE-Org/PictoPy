@@ -329,17 +329,20 @@ export const AlbumDetail = () => {
       {/* Images Grid */}
       <div className="flex-1 overflow-y-auto pt-2">
         {images.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center">
-              <p className="text-muted-foreground mb-4">
-                No images in this album yet
-              </p>
-              <Button onClick={() => setIsAddImagesDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Images
-              </Button>
-            </div>
-          </div>
+          <div className="flex h-full justify-center pt-24">
+  <div className="text-center">
+    <ImageIcon className="mx-auto mb-6 h-20 w-20 text-muted-foreground/40" />
+
+    <p className="mb-4 text-muted-foreground">
+      No images in this album yet
+    </p>
+
+    <Button onClick={() => setIsAddImagesDialogOpen(true)}>
+      <Plus className="mr-2 h-4 w-4" />
+      Add Images
+    </Button>
+  </div>
+</div>
         ) : (
           <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {images.map((image, index) => (
