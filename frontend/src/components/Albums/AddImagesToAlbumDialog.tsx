@@ -135,7 +135,7 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
                 {filteredImages.map((image) => (
                   <div
                     key={image.id}
-                    className="group hover:border-primary relative aspect-square cursor-pointer overflow-hidden rounded-md border-2 transition-all"
+                    className="group hover:border-primary bg-muted relative aspect-square cursor-pointer overflow-hidden rounded-md border-2 transition-all"
                     style={{
                       borderColor: selectedImages.has(image.id)
                         ? 'hsl(var(--primary))'
@@ -143,21 +143,24 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
                     }}
                     onClick={() => handleImageToggle(image.id)}
                   >
-                    <img
-                      src={convertFileSrc(image.thumbnailPath)}
-                      alt=""
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        const img = e.target as HTMLImageElement;
-                        img.onerror = null;
-                        const placeholder = window.matchMedia(
-                          '(prefers-color-scheme: dark)',
-                        ).matches
-                          ? '/placeholder-album.svg'
-                          : '/placeholder-album-light.svg';
-                        img.src = placeholder;
-                      }}
-                    />
+                    <div className="bg-muted flex h-full w-full items-center justify-center">
+                      <img
+                        src={convertFileSrc(image.thumbnailPath)}
+                        alt={image.path.split('/').pop() || ''}
+                        loading="lazy"
+                        className="max-h-full max-w-full object-contain transition-transform group-hover:scale-105"
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          img.onerror = null;
+                          const placeholder = window.matchMedia(
+                            '(prefers-color-scheme: dark)',
+                          ).matches
+                            ? '/placeholder-album.svg'
+                            : '/placeholder-album-light.svg';
+                          img.src = placeholder;
+                        }}
+                      />
+                    </div>
 
                     {selectedImages.has(image.id) && (
                       <div className="bg-primary/20 absolute inset-0 flex items-center justify-center">
