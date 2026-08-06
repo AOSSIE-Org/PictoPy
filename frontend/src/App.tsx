@@ -10,7 +10,6 @@ import GlobalAlert from './components/GlobalAlert/GlobalAlert';
 import { LibraryProcessingIndicator } from './components/BackgroundTasks/LibraryProcessingIndicator';
 import { useSelector } from 'react-redux';
 import { RootState } from './app/store';
-
 const App: React.FC = () => {
   const { loading, message } = useSelector((state: RootState) => state.loader);
   const {
