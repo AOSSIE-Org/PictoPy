@@ -2319,6 +2319,173 @@
         }
       }
     },
+    "/share/interfaces": {
+      "get": {
+        "tags": [
+          "Share"
+        ],
+        "summary": "Get Interfaces",
+        "description": "Candidate addresses, best guess first.\n\nMachines with virtual adapters routinely surface several, so the caller is\nexpected to show this list rather than silently trust the first entry.",
+        "operationId": "get_interfaces_share_interfaces_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetInterfacesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/share/": {
+      "get": {
+        "tags": [
+          "Share"
+        ],
+        "summary": "Get Shares",
+        "operationId": "get_shares_share__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetSharesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/share/albums/{album_id}": {
+      "post": {
+        "tags": [
+          "Share"
+        ],
+        "summary": "Create Share",
+        "description": "Issue a share token and make sure the network listener is up.\n\nAn album's local lock is deliberately not consulted: locking protects the\nalbum inside PictoPy, while sharing carries its own authorization.",
+        "operationId": "create_share_share_albums__album_id__post",
+        "parameters": [
+          {
+            "name": "album_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Album Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShareRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateShareResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareErrorResponseEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareErrorResponseEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/share/{token}": {
+      "delete": {
+        "tags": [
+          "Share"
+        ],
+        "summary": "Revoke Share",
+        "operationId": "revoke_share_share__token__delete",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokeShareResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareErrorResponseEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/models/status": {
       "get": {
         "tags": [
@@ -2851,6 +3018,46 @@
           "album_id"
         ],
         "title": "CreateAlbumResponse"
+      },
+      "CreateShareRequest": {
+        "properties": {
+          "expires_in_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires In Minutes"
+          }
+        },
+        "type": "object",
+        "title": "CreateShareRequest"
+      },
+      "CreateShareResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Share"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "CreateShareResponse"
       },
       "DeleteFoldersData": {
         "properties": {
@@ -3496,6 +3703,27 @@
         ],
         "title": "GetClustersResponse"
       },
+      "GetInterfacesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ShareInterface"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "title": "GetInterfacesResponse"
+      },
       "GetMemoriesData": {
         "properties": {
           "memories": {
@@ -3571,6 +3799,27 @@
           "data"
         ],
         "title": "GetMemoryResponse"
+      },
+      "GetSharesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Share"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "title": "GetSharesResponse"
       },
       "GetTodayMemoryData": {
         "properties": {
@@ -5163,6 +5412,24 @@
         ],
         "title": "RenameClusterResponse"
       },
+      "RevokeShareResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "RevokeShareResponse"
+      },
       "ScoredVideoData": {
         "properties": {
           "id": {
@@ -5310,6 +5577,133 @@
           "tier"
         ],
         "title": "SetupRequest"
+      },
+      "Share": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "album_id": {
+            "type": "string",
+            "title": "Album Id"
+          },
+          "album_name": {
+            "type": "string",
+            "title": "Album Name"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count"
+          },
+          "port": {
+            "type": "integer",
+            "title": "Port"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "urls": {
+            "items": {
+              "$ref": "#/components/schemas/ShareUrl"
+            },
+            "type": "array",
+            "title": "Urls"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "album_id",
+          "album_name",
+          "image_count",
+          "port",
+          "created_at",
+          "urls"
+        ],
+        "title": "Share"
+      },
+      "ShareErrorResponseEnvelope": {
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/app__schemas__share__ErrorResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ShareErrorResponseEnvelope",
+        "description": "How an ErrorResponse actually reaches the client.\n\nHTTPException nests whatever it is given under `detail`, so documenting\nErrorResponse alone would describe a shape no client ever receives."
+      },
+      "ShareInterface": {
+        "properties": {
+          "interface": {
+            "type": "string",
+            "title": "Interface"
+          },
+          "ip": {
+            "type": "string",
+            "title": "Ip"
+          },
+          "is_default_route": {
+            "type": "boolean",
+            "title": "Is Default Route"
+          },
+          "looks_virtual": {
+            "type": "boolean",
+            "title": "Looks Virtual"
+          },
+          "is_up": {
+            "type": "boolean",
+            "title": "Is Up"
+          }
+        },
+        "type": "object",
+        "required": [
+          "interface",
+          "ip",
+          "is_default_route",
+          "looks_virtual",
+          "is_up"
+        ],
+        "title": "ShareInterface",
+        "description": "One address the share could be advertised on, best guess first."
+      },
+      "ShareUrl": {
+        "properties": {
+          "interface": {
+            "type": "string",
+            "title": "Interface"
+          },
+          "ip": {
+            "type": "string",
+            "title": "Ip"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "interface",
+          "ip",
+          "url"
+        ],
+        "title": "ShareUrl"
       },
       "ShutdownResponse": {
         "properties": {
@@ -6196,6 +6590,29 @@
         ],
         "title": "ErrorResponse",
         "description": "Error response model"
+      },
+      "app__schemas__share__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "error"
+        ],
+        "title": "ErrorResponse"
       },
       "app__schemas__user_preferences__ErrorResponse": {
         "properties": {
