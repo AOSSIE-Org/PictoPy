@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import socket
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import psutil
 
@@ -50,7 +50,7 @@ class InterfaceCandidate:
     is_link_local: bool
 
     @property
-    def rank(self) -> tuple:
+    def rank(self) -> Tuple[int, int, int, int, str]:
         # Lower sorts first. `is_up` outranks everything because an address on
         # a downed adapter can never work, and Windows will happily keep a
         # stale lease and default route on an adapter that has disconnected.

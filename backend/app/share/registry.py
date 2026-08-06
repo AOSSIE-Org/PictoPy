@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import secrets
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
@@ -27,7 +27,6 @@ class ShareEntry:
     album_id: str
     created_at: datetime
     expires_at: Optional[datetime] = None
-    unlock_tokens: set = field(default_factory=set)
 
     @property
     def is_expired(self) -> bool:

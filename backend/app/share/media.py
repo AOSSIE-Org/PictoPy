@@ -9,7 +9,7 @@ that check a share token would be a read handle over the whole images table.
 from __future__ import annotations
 
 import os
-from typing import Optional
+from typing import List, Optional
 
 from app.database.albums import (
     db_album_contains_image,
@@ -30,7 +30,7 @@ def share_media_album_name(album_id: str) -> Optional[str]:
     return album["album_name"] if album else None
 
 
-def share_media_image_ids(album_id: str) -> list[str]:
+def share_media_image_ids(album_id: str) -> List[str]:
     return db_get_album_images(album_id)
 
 
