@@ -18,6 +18,19 @@ from app.utils.share import share_util_revoke
 # asyncio.run cancels the serve task and clears the state on its way out.
 
 
+async def _wait_until_stopped(timeout: float = 2.0) -> None:
+    """
+    Give the done-callback time to run, without pinning a fixed delay.
+
+    A sleep long enough to be safe on a loaded CI box is far longer than this
+    ever needs locally, so poll the observable state and stop as soon as it
+    settles. Returning on timeout lets the assertion report the real state.
+    """
+    deadline = asyncio.get_running_loop().time() + timeout
+    while share_server_is_running() and asyncio.get_running_loop().time() < deadline:
+        await asyncio.sleep(0.01)
+
+
 @pytest.fixture(autouse=True)
 def clean_lifecycle() -> Iterator[None]:
     """
@@ -94,7 +107,7 @@ class TestSupervision:
 
         async def scenario() -> Tuple[Optional[int], bool]:
             await share_server_start()
-            await asyncio.sleep(0.05)  # let the failing task finish
+            await _wait_until_stopped()
             return share_server_port(), share_server_is_running()
 
         port, running = asyncio.run(scenario())
