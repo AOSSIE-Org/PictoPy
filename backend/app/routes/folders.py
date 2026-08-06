@@ -64,6 +64,8 @@ from app.utils.semantic_labels import (
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.utils.API import API_util_restart_sync_microservice_watcher
 
+from concurrent.futures import Future, ProcessPoolExecutor
+
 # Initialize logger
 logger = get_logger(__name__)
 
@@ -88,12 +90,17 @@ def _curate_memories(trigger: str) -> None:
         logger.error(f"Memory curation failed after {trigger}: {e}")
 
 
-def _queue_post_index_tagging_sweep(app_state: State) -> None:
+def _queue_post_index_tagging_sweep(index_future: Future, app_state: State) -> None:
     """
     Runs after folder indexing completes to trigger a follow-up tagging sweep.
     Prevents images indexed after an earlier tagging pass from being missed.
     """
     try:
+        if index_future.result() is not True:
+            logger.warning(
+                "Skipping post-index tagging sweep: indexing did not complete"
+            )
+            return
         app_state.executor.submit(post_AI_tagging_enabled_sequence)
     except Exception as e:
         logger.error(f"Failed to queue post-index tagging sweep: {e}")
@@ -287,7 +294,7 @@ def add_folder(request: AddFolderRequest, app_state: State = Depends(get_state))
         # pool is free, a sweep can start (and finish, finding nothing) before
         # this folder's images are even in the DB - see the callback docstring.
         index_future.add_done_callback(
-            lambda _f: _queue_post_index_tagging_sweep(app_state)
+            lambda future: _queue_post_index_tagging_sweep(future, app_state)
         )
 
         return AddFolderResponse(
