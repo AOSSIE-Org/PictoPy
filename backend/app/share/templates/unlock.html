@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Protected album · PictoPy</title>
+<script>
+  // Applied before first paint so a dark-theme viewer never flashes light.
+  (function () {
+    try {
+      var saved = localStorage.getItem('pictopy-share-theme') || 'auto';
+      var dark = saved === 'dark' || (saved === 'auto' &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.classList.toggle('dark', dark);
+    } catch (e) { /* private mode blocks localStorage; system theme still works */ }
+  })();
+</script>
+<style>
+  /* Only the tokens this page uses; the album view carries the full set. */
+  :root {
+    --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --radius: 0.675rem;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.3211 0 0);
+    --card: oklch(1 0 0);
+    --primary: oklch(0.6231 0.188 259.8145);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.967 0.0029 264.5419);
+    --muted-foreground: oklch(0.551 0.0234 264.3637);
+    --border: oklch(0.9276 0.0058 264.5313);
+    --destructive: oklch(0.5771 0.2152 27.325);
+    --shadow-lg: 0 1px 3px 0 hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+  }
+
+  html.dark {
+    --background: oklch(0.2046 0 0);
+    --foreground: oklch(0.9219 0 0);
+    --card: oklch(0.2686 0 0);
+    --secondary: oklch(0.2686 0 0);
+    --muted-foreground: oklch(0.7155 0 0);
+    --border: oklch(0.3715 0 0);
+    --destructive: oklch(0.7106 0.1661 22.2162);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { width: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    font-family: var(--font-sans);
+    background: var(--background);
+    color: var(--foreground);
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+  .brand svg { width: 1.5rem; height: 1.5rem; color: var(--primary); }
+  .brand .accent { color: var(--primary); }
+
+  .card {
+    width: 100%;
+    max-width: 24rem;
+    padding: 2rem 1.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+  }
+
+  .lock {
+    width: 3rem;
+    height: 3rem;
+    margin: 1.75rem auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--secondary);
+    color: var(--muted-foreground);
+  }
+  .lock svg { width: 1.5rem; height: 1.5rem; }
+
+  h1 {
+    margin: 0 0 0.375rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  .hint {
+    margin: 0 0 1.5rem;
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+  }
+
+  input[type="password"] {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    font: inherit;
+    font-size: 1rem;
+    color: var(--foreground);
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    outline: none;
+  }
+  input[type="password"]:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 25%, transparent);
+  }
+
+  button {
+    width: 100%;
+    margin-top: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--primary-foreground);
+    background: var(--primary);
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(1.08); }
+
+  .error {
+    margin: 0 0 0.75rem;
+    font-size: 0.875rem;
+    color: var(--destructive);
+  }
+</style>
+</head>
+<body>
+
+<main class="card">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+      <circle cx="8.5" cy="8.5" r="1.5"></circle>
+      <path d="m21 15-4.35-4.35a2 2 0 0 0-2.83 0L3 21"></path>
+    </svg>
+    <span><span class="accent">Picto</span>Py</span>
+  </div>
+
+  <div class="lock">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3" y="11" width="18" height="11" rx="2"></rect>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+    </svg>
+  </div>
+
+  <h1>This album is protected</h1>
+  <p class="hint">Enter the password you were given to view the photos.</p>
+
+  {% if error %}
+  <p class="error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  <form method="post" action="/s/{{ token }}/unlock">
+    <input type="password" name="password" required autofocus
+           autocomplete="current-password" aria-label="Password">
+    <button type="submit">View album</button>
+  </form>
+</main>
+
+</body>
+</html>
