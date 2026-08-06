@@ -1,32 +1,31 @@
-from fastapi import APIRouter, Body, HTTPException, Path, status
+from typing import Optional
 
-from app.database.albums import db_get_album, db_get_album_images
+from fastapi import APIRouter, HTTPException, Path, status
+
+from app.database.albums import db_get_album
 from app.logging.setup_logging import get_logger
 from app.schemas.share import (
     CreateShareRequest,
     CreateShareResponse,
     ErrorResponse,
-    ShareErrorResponseEnvelope,
     GetInterfacesResponse,
     GetSharesResponse,
-    Share,
-    ShareInterface,
-    ShareUrl,
     RevokeShareResponse,
+    Share,
+    ShareErrorResponseEnvelope,
+    ShareInterface,
 )
-from app.share.registry import (
-    ShareEntry,
-    share_registry_count,
-    share_registry_create,
-    share_registry_list,
-    share_registry_revoke,
-)
-from app.share.server import share_server_port, share_server_start, share_server_stop
+from app.share.registry import share_registry_list
+from app.share.server import share_server_port
 from app.utils.network import network_util_list_candidates
+from app.utils.share import share_util_create, share_util_describe, share_util_revoke
 
 logger = get_logger(__name__)
 
 router = APIRouter()
+
+_SERVER_ERROR = {500: {"model": ShareErrorResponseEnvelope}}
+_NOT_FOUND = {404: {"model": ShareErrorResponseEnvelope}}
 
 
 def _internal_error(message: str) -> HTTPException:
@@ -38,42 +37,17 @@ def _internal_error(message: str) -> HTTPException:
     )
 
 
-def _album_not_found() -> HTTPException:
+def _not_found(error: str, message: str) -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail=ErrorResponse(
-            success=False,
-            error="Album Not Found",
-            message="No album exists with the provided ID.",
-        ).model_dump(),
-    )
-
-
-def _to_share(entry: ShareEntry, port: int) -> Share:
-    album = db_get_album(entry.album_id)
-    return Share(
-        token=entry.token,
-        album_id=entry.album_id,
-        # An album deleted while shared leaves the token pointing at nothing;
-        # the viewer 404s, so say so here rather than failing the listing.
-        album_name=album["album_name"] if album else "(deleted album)",
-        image_count=len(db_get_album_images(entry.album_id)),
-        port=port,
-        created_at=entry.created_at.isoformat(),
-        expires_at=entry.expires_at.isoformat() if entry.expires_at else None,
-        urls=[
-            ShareUrl(
-                interface=candidate.interface,
-                ip=candidate.ip,
-                url=f"http://{candidate.ip}:{port}/s/{entry.token}",
-            )
-            for candidate in network_util_list_candidates()
-        ],
+        detail=ErrorResponse(success=False, error=error, message=message).model_dump(),
     )
 
 
 # GET /share/interfaces - Ranked LAN addresses the share could be reached on
-@router.get("/interfaces", response_model=GetInterfacesResponse)
+@router.get(
+    "/interfaces", response_model=GetInterfacesResponse, responses=_SERVER_ERROR
+)
 def get_interfaces() -> GetInterfacesResponse:
     """
     Candidate addresses, best guess first.
@@ -84,26 +58,23 @@ def get_interfaces() -> GetInterfacesResponse:
     return GetInterfacesResponse(
         success=True,
         data=[
-            ShareInterface(
-                interface=candidate.interface,
-                ip=candidate.ip,
-                is_default_route=candidate.is_default_route,
-                looks_virtual=candidate.looks_virtual,
-                is_up=candidate.is_up,
-            )
+            ShareInterface(**vars(candidate))
             for candidate in network_util_list_candidates()
         ],
     )
 
 
 # GET /share/ - List every active share
-@router.get("/", response_model=GetSharesResponse)
+@router.get("/", response_model=GetSharesResponse, responses=_SERVER_ERROR)
 def get_shares() -> GetSharesResponse:
     port = share_server_port()
     if port is None:
         return GetSharesResponse(success=True, data=[])
     return GetSharesResponse(
-        success=True, data=[_to_share(entry, port) for entry in share_registry_list()]
+        success=True,
+        data=[
+            Share(**share_util_describe(entry, port)) for entry in share_registry_list()
+        ],
     )
 
 
@@ -111,10 +82,10 @@ def get_shares() -> GetSharesResponse:
 @router.post(
     "/albums/{album_id}",
     response_model=CreateShareResponse,
-    responses={code: {"model": ShareErrorResponseEnvelope} for code in [404, 500]},
+    responses={**_NOT_FOUND, **_SERVER_ERROR},
 )
 async def create_share(
-    album_id: str = Path(...), body: CreateShareRequest = Body(default=None)
+    album_id: str = Path(...), body: Optional[CreateShareRequest] = None
 ) -> CreateShareResponse:
     """
     Issue a share token and make sure the network listener is up.
@@ -123,22 +94,24 @@ async def create_share(
     album inside PictoPy, while sharing carries its own authorization.
     """
     if not db_get_album(album_id):
-        raise _album_not_found()
+        raise _not_found("Album Not Found", "No album exists with the provided ID.")
 
     try:
-        port = await share_server_start()
+        entry = await share_util_create(
+            album_id, expires_in_minutes=body.expires_in_minutes if body else None
+        )
     except OSError as e:
         raise _internal_error(f"Could not start the share server: {e}") from e
 
-    entry = share_registry_create(
-        album_id, expires_in_minutes=body.expires_in_minutes if body else None
-    )
-    logger.info(f"Sharing album {album_id} on port {port}")
+    port = share_server_port()
+    if port is None:
+        raise _internal_error("The share server stopped before the share was served.")
 
+    logger.info(f"Sharing album {album_id} on port {port}")
     return CreateShareResponse(
         success=True,
         message="Album is now shared on the local network",
-        data=_to_share(entry, port),
+        data=Share(**share_util_describe(entry, port)),
     )
 
 
@@ -146,22 +119,11 @@ async def create_share(
 @router.delete(
     "/{token}",
     response_model=RevokeShareResponse,
-    responses={404: {"model": ShareErrorResponseEnvelope}},
+    responses={**_NOT_FOUND, **_SERVER_ERROR},
 )
 async def revoke_share(token: str = Path(...)) -> RevokeShareResponse:
-    if not share_registry_revoke(token):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ErrorResponse(
-                success=False,
-                error="Share Not Found",
-                message="No active share exists with the provided token.",
-            ).model_dump(),
+    if not await share_util_revoke(token):
+        raise _not_found(
+            "Share Not Found", "No active share exists with the provided token."
         )
-
-    # Nothing is being served any more, so stop listening rather than leaving a
-    # port open on the network.
-    if share_registry_count() == 0:
-        await share_server_stop()
-
     return RevokeShareResponse(success=True, message="Share revoked")

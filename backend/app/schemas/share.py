@@ -25,6 +25,9 @@ class ShareInterface(BaseModel):
     is_default_route: bool
     looks_virtual: bool
     is_up: bool
+    # A 169.254 address only works when both devices sit on the same link, so
+    # the picker can mark it as a last resort rather than a normal choice.
+    is_link_local: bool
 
 
 class ShareUrl(BaseModel):

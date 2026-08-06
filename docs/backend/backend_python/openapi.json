@@ -2337,6 +2337,16 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareErrorResponseEnvelope"
+                }
+              }
+            }
           }
         }
       }
@@ -2355,6 +2365,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GetSharesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareErrorResponseEnvelope"
                 }
               }
             }
@@ -2385,7 +2405,15 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateShareRequest"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CreateShareRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
               }
             }
           }
@@ -2472,6 +2500,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareErrorResponseEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -5669,6 +5707,10 @@
           "is_up": {
             "type": "boolean",
             "title": "Is Up"
+          },
+          "is_link_local": {
+            "type": "boolean",
+            "title": "Is Link Local"
           }
         },
         "type": "object",
@@ -5677,7 +5719,8 @@
           "ip",
           "is_default_route",
           "looks_virtual",
-          "is_up"
+          "is_up",
+          "is_link_local"
         ],
         "title": "ShareInterface",
         "description": "One address the share could be advertised on, best guess first."
