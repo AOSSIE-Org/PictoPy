@@ -100,6 +100,7 @@ class TestCandidateRanking:
             route_ip="10.170.93.60",
         )
         best = network_util_best_candidate()
+        assert best is not None
         assert best.ip == "10.170.93.60"
         assert best.is_default_route
 
@@ -116,6 +117,7 @@ class TestCandidateRanking:
             route_ip="10.170.93.60",
         )
         best = network_util_best_candidate()
+        assert best is not None
         assert best.ip == "10.168.36.61"
         assert best.is_up is True
 
@@ -169,7 +171,9 @@ class TestCandidateRanking:
                 "VMware Network Adapter VMnet1": FakeStats(True),
             },
         )
-        assert network_util_best_candidate().ip == "169.254.119.169"
+        best = network_util_best_candidate()
+        assert best is not None
+        assert best.ip == "169.254.119.169"
 
     def test_missing_stats_entry_is_not_fatal(
         self, fake_interfaces: InstallInterfaces

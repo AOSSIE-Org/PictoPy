@@ -263,13 +263,15 @@ class TestAlbumImageMembership:
     album per request turned one page view into a quadratic number of reads.
     """
 
-    def test_contains_image_finds_a_linked_image(self, test_db):
+    def test_contains_image_finds_a_linked_image(self, test_db: str) -> None:
         make_album("album-1", "Trip")
         link_images(test_db, "album-1", ["img-1", "img-2"])
 
         assert db_album_contains_image("album-1", "img-1") is True
 
-    def test_contains_image_rejects_an_image_from_another_album(self, test_db):
+    def test_contains_image_rejects_an_image_from_another_album(
+        self, test_db: str
+    ) -> None:
         make_album("album-1", "Trip")
         make_album("album-2", "Private")
         link_images(test_db, "album-1", ["img-1"])
@@ -277,17 +279,17 @@ class TestAlbumImageMembership:
 
         assert db_album_contains_image("album-1", "img-2") is False
 
-    def test_contains_image_rejects_an_unknown_image(self, test_db):
+    def test_contains_image_rejects_an_unknown_image(self, test_db: str) -> None:
         make_album("album-1", "Trip")
         assert db_album_contains_image("album-1", "nope") is False
 
-    def test_counts_images_without_reading_them(self, test_db):
+    def test_counts_images_without_reading_them(self, test_db: str) -> None:
         make_album("album-1", "Trip")
         link_images(test_db, "album-1", ["img-1", "img-2", "img-3"])
 
         assert db_count_album_images("album-1") == 3
 
-    def test_counts_zero_for_an_empty_album(self, test_db):
+    def test_counts_zero_for_an_empty_album(self, test_db: str) -> None:
         make_album("album-1", "Trip")
         assert db_count_album_images("album-1") == 0
 

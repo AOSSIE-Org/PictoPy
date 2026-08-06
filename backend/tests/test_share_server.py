@@ -1,5 +1,6 @@
 import asyncio
-from typing import Iterator, Tuple
+import socket
+from typing import Iterator, List, Optional, Tuple
 
 import pytest
 
@@ -64,7 +65,7 @@ class TestLifecycle:
         assert asyncio.run(scenario()) is False
 
     def test_stop_releases_the_port(self) -> None:
-        async def scenario() -> Tuple[object, bool]:
+        async def scenario() -> Tuple[Optional[int], bool]:
             await share_server_start()
             await share_server_stop()
             return share_server_port(), share_server_is_running()
@@ -83,12 +84,15 @@ class TestSupervision:
         share would be handed out for a socket nothing is accepting on.
         """
 
-        async def boom(self, sockets=None) -> None:
+        async def boom(
+            self: share_server._EmbeddedServer,
+            sockets: Optional[List[socket.socket]] = None,
+        ) -> None:
             raise RuntimeError("listener died")
 
         monkeypatch.setattr(share_server._EmbeddedServer, "serve", boom)
 
-        async def scenario() -> Tuple[object, bool]:
+        async def scenario() -> Tuple[Optional[int], bool]:
             await share_server_start()
             await asyncio.sleep(0.05)  # let the failing task finish
             return share_server_port(), share_server_is_running()
