@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterator, List, TypedDict
 
+import bcrypt
 import pytest
 from fastapi.testclient import TestClient
 
@@ -24,6 +25,14 @@ from app.share.registry import (
 
 JPEG_BYTES = b"\xff\xd8\xff\xe0fake-jpeg-body\xff\xd9"
 THUMB_BYTES = b"\xff\xd8\xff\xe0fake-thumb-body\xff\xd9"
+PASSWORD = "correct-horse-battery"
+
+
+@pytest.fixture(autouse=True)
+def cheap_hashing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """bcrypt's default work factor is the point in production, waste here."""
+    gensalt = bcrypt.gensalt
+    monkeypatch.setattr(bcrypt, "gensalt", lambda: gensalt(4))
 
 
 class ShareEnv(TypedDict):
@@ -219,6 +228,85 @@ class TestViewerChrome:
         body = share_env["client"].get(f"/s/{share_env['token']}").text
         assert "<script>alert(1)</script>" not in body
         assert "&lt;script&gt;" in body
+
+
+class TestPasswordGate:
+    def test_a_protected_share_asks_for_the_password(self, share_env: ShareEnv) -> None:
+        entry = share_registry_create("album-1", password=PASSWORD)
+        response = share_env["client"].get(f"/s/{entry.token}")
+        assert response.status_code == 200
+        assert 'name="password"' in response.text
+
+    def test_the_gate_says_nothing_about_the_album(self, share_env: ShareEnv) -> None:
+        """
+        A link that reaches the wrong person should tell them only that some
+        album exists — not its name, its size, or any of its photos.
+        """
+        entry = share_registry_create("album-1", password=PASSWORD)
+        body = share_env["client"].get(f"/s/{entry.token}").text
+        assert "Trip to Goa" not in body
+        assert "2 photos" not in body
+        assert "img-1" not in body
+
+    def test_media_is_refused_while_locked(self, share_env: ShareEnv) -> None:
+        entry = share_registry_create("album-1", password=PASSWORD)
+        client = share_env["client"]
+        assert client.get(f"/s/{entry.token}/thumb/img-1").status_code == 404
+        assert client.get(f"/s/{entry.token}/photo/img-1").status_code == 404
+
+    def test_the_right_password_opens_the_album(self, share_env: ShareEnv) -> None:
+        entry = share_registry_create("album-1", password=PASSWORD)
+        client = share_env["client"]
+
+        response = client.post(
+            f"/s/{entry.token}/unlock",
+            data={"password": PASSWORD},
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+        assert response.headers["location"] == f"/s/{entry.token}"
+
+        assert "Trip to Goa" in client.get(f"/s/{entry.token}").text
+        assert client.get(f"/s/{entry.token}/photo/img-1").status_code == 200
+
+    def test_the_wrong_password_is_refused(self, share_env: ShareEnv) -> None:
+        entry = share_registry_create("album-1", password=PASSWORD)
+        client = share_env["client"]
+
+        response = client.post(
+            f"/s/{entry.token}/unlock",
+            data={"password": "guess"},
+            follow_redirects=False,
+        )
+        assert response.status_code == 401
+        assert 'name="password"' in response.text
+        assert "Trip to Goa" not in client.get(f"/s/{entry.token}").text
+
+    def test_unlocking_one_share_leaves_the_others_locked(
+        self, share_env: ShareEnv
+    ) -> None:
+        opened = share_registry_create("album-1", password=PASSWORD)
+        other = share_registry_create("album-1", password=PASSWORD)
+        client = share_env["client"]
+
+        client.post(f"/s/{opened.token}/unlock", data={"password": PASSWORD})
+
+        assert 'name="password"' in client.get(f"/s/{other.token}").text
+        assert client.get(f"/s/{other.token}/photo/img-1").status_code == 404
+
+    def test_an_open_share_needs_no_unlocking(self, share_env: ShareEnv) -> None:
+        response = share_env["client"].post(
+            f"/s/{share_env['token']}/unlock",
+            data={"password": "anything"},
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+
+    def test_unlocking_an_unknown_token_is_404(self, share_env: ShareEnv) -> None:
+        response = share_env["client"].post(
+            "/s/made-up-token/unlock", data={"password": PASSWORD}
+        )
+        assert response.status_code == 404
 
 
 class TestSurface:
