@@ -48,7 +48,9 @@ from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
 from app.routes.memories import router as memories_router
 from app.routes.shutdown import router as shutdown_router
+from app.routes.share import router as share_router
 from app.routes.models import router as models_router, _cleanup_stale_tasks
+from app.share.server import share_server_stop
 from fastapi.openapi.utils import get_openapi
 from app.logging.setup_logging import (
     configure_uvicorn_logging,
@@ -111,6 +113,9 @@ async def lifespan(app: FastAPI):
         cleanup_task.cancel()
         await asyncio.gather(cleanup_task, return_exceptions=True)
         app.state.indexing_executor.shutdown(wait=True)
+        # Closes the only socket bound outside localhost; the in-memory share
+        # registry goes with the process.
+        await share_server_stop()
         app.state.executor.shutdown(wait=True)
 
 
@@ -187,6 +192,7 @@ app.include_router(
 )
 app.include_router(memories_router, prefix="/memories", tags=["Memories"])
 app.include_router(shutdown_router, tags=["Shutdown"])
+app.include_router(share_router, prefix="/share", tags=["Share"])
 app.include_router(models_router, prefix="/models", tags=["Models"])
 
 

@@ -314,6 +314,38 @@ def db_get_album_images(album_id: str):
         conn.close()
 
 
+def db_count_album_images(album_id: str) -> int:
+    """How many images an album holds, without reading every id."""
+    conn = _connect()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT COUNT(*) FROM album_images WHERE album_id = ?", (album_id,)
+        )
+        return int(cursor.fetchone()[0])
+    finally:
+        conn.close()
+
+
+def db_album_contains_image(album_id: str, image_id: str) -> bool:
+    """
+    Whether one image belongs to an album.
+
+    Kept separate from db_get_album_images because callers on a request path
+    need a single membership answer, not every id in the album.
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT 1 FROM album_images WHERE album_id = ? AND image_id = ? LIMIT 1",
+            (album_id, image_id),
+        )
+        return cursor.fetchone() is not None
+    finally:
+        conn.close()
+
+
 def db_add_images_to_album(album_id: str, image_ids: list[str]):
     """
     Safely adds images to an album using parameterized queries.

@@ -18,6 +18,10 @@ else:
 # Microservice URLs
 SYNC_MICROSERVICE_URL = "http://localhost:52124"
 
+# The album share listener. Unlike the two services above this one binds
+# 0.0.0.0, so it is reachable by anything that can route to this machine.
+SHARE_SERVER_PORT = 52125
+
 CONFIDENCE_PERCENT = 0.6
 # Object Detection Models:
 SMALL_OBJ_DETECTION_MODEL = f"{MODEL_EXPORTS_PATH}/YOLOv11_Small.onnx"
