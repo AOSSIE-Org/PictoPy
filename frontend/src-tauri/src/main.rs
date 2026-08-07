@@ -75,6 +75,9 @@ fn on_window_event(window: &Window, event: &WindowEvent) {
             if let Some(manager) = app.get_webview_window("model-manager") {
                 let _ = manager.close();
             }
+            // Before the backend goes: an orphaned tunnel would leave an album
+            // reachable from the internet.
+            services::tunnel::shutdown(&app);
             let _ = kill_process_tree();
             app.exit(0);
         }
@@ -285,6 +288,7 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
+        .manage(services::tunnel::TunnelState::new())
         .setup(|app| {
             let resource_path = app.path().resolve("resources", BaseDirectory::Resource)?;
             println!("Resource path: {:?}", resource_path);
@@ -321,6 +325,7 @@ fn main() {
                         }
                     }
                     "quit" => {
+                        services::tunnel::shutdown(app);
                         let _ = kill_process_tree();
                         app.exit(0);
                     }
@@ -347,6 +352,9 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             services::get_resources_folder_path,
+            services::tunnel::tunnel_start,
+            services::tunnel::tunnel_stop,
+            services::tunnel::tunnel_status,
             open_model_manager,
             enable_autostart,
             disable_autostart,
