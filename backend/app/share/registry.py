@@ -46,6 +46,9 @@ class ShareEntry:
     expires_at: Optional[datetime] = None
     password_hash: Optional[bytes] = None
     failed_unlocks: int = 0
+    # Attempts admitted but still being hashed; counted so concurrent requests
+    # cannot collectively overshoot the limit.
+    pending_unlocks: int = 0
     locked_until: Optional[datetime] = None
 
     @property
@@ -146,29 +149,72 @@ def share_registry_unlock(entry: ShareEntry, password: str) -> Optional[str]:
     """
     Check a password and, on success, mint the value for the unlock cookie.
 
-    None means the visitor stays locked out, whether the password was wrong or
-    too many attempts have already been made.
+    None means the visitor stays locked out, whether the password was wrong, was
+    longer than one could ever have been set, or too many attempts have already
+    been made.
     """
     if entry.password_hash is None:
         return None
-    if share_registry_is_throttled(entry):
+
+    candidate = password.encode("utf-8")
+    # Creating a share refuses anything longer, so this cannot be the password.
+    # Checking before hashing also keeps oversized form input away from bcrypt,
+    # which truncates at this limit here and rejects it outright in 4.x.
+    if len(candidate) > PASSWORD_MAX_BYTES:
         return None
 
-    # Deliberately outside the lock: bcrypt takes a few hundred milliseconds and
-    # holding the registry for that long would serialise every other request.
-    accepted = bcrypt.checkpw(password.encode("utf-8"), entry.password_hash)
+    if not _reserve_attempt(entry):
+        return None
 
-    with _lock:
-        if not accepted:
-            entry.failed_unlocks += 1
-            if entry.failed_unlocks >= _MAX_FAILED_UNLOCKS:
-                entry.failed_unlocks = 0
-                entry.locked_until = _now() + _UNLOCK_COOLDOWN
-            return None
-        entry.failed_unlocks = 0
-        entry.locked_until = None
+    accepted = False
+    try:
+        # Deliberately outside the lock: bcrypt takes a few hundred milliseconds
+        # and holding the registry that long would serialise every request.
+        accepted = bcrypt.checkpw(candidate, entry.password_hash)
+    finally:
+        _release_attempt(entry, accepted)
 
+    if not accepted:
+        return None
     return _unlock_signature(entry.token, entry.password_hash)
+
+
+def _reserve_attempt(entry: ShareEntry) -> bool:
+    """
+    Claim one of the share's unlock attempts, or refuse.
+
+    Admission is decided before the password is checked rather than after. Sync
+    handlers run in uvicorn's threadpool, so a burst of requests would otherwise
+    all read the same attempt count and hash concurrently, and the limit would
+    only bound how many rounds an attacker needs rather than how many guesses.
+    """
+    with _lock:
+        if entry.locked_until is not None:
+            if _now() < entry.locked_until:
+                return False
+            entry.locked_until = None
+            entry.failed_unlocks = 0
+        if entry.pending_unlocks + entry.failed_unlocks >= _MAX_FAILED_UNLOCKS:
+            return False
+        entry.pending_unlocks += 1
+        return True
+
+
+def _release_attempt(entry: ShareEntry, accepted: bool) -> None:
+    """
+    Record how a claimed attempt turned out.
+
+    Only failures count towards the cooldown, so a share stays open however many
+    people unlock it correctly.
+    """
+    with _lock:
+        entry.pending_unlocks -= 1
+        if accepted:
+            entry.failed_unlocks = 0
+            return
+        entry.failed_unlocks += 1
+        if entry.failed_unlocks >= _MAX_FAILED_UNLOCKS:
+            entry.locked_until = _now() + _UNLOCK_COOLDOWN
 
 
 def share_registry_is_unlocked(entry: ShareEntry, cookie: Optional[str]) -> bool:

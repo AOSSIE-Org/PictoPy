@@ -1,3 +1,5 @@
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Iterator
 
@@ -5,6 +7,7 @@ import bcrypt
 import pytest
 
 from app.share.registry import (
+    PASSWORD_MAX_BYTES,
     share_registry_clear,
     share_registry_count,
     share_registry_create,
@@ -178,6 +181,59 @@ class TestPassword:
         share_registry_unlock(entry, "guess")
         share_registry_unlock(entry, "guess")
         assert share_registry_is_throttled(entry) is False
+
+    def test_a_burst_of_attempts_cannot_outrun_the_limit(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        Sync handlers run in a threadpool, so the limit has to hold against
+        requests arriving together rather than one after another.
+        """
+        monkeypatch.setattr("app.share.registry._MAX_FAILED_UNLOCKS", 3)
+        entry = share_registry_create("album-1", password=PASSWORD)
+
+        checkpw = bcrypt.checkpw
+        hashed = threading.Semaphore(0)
+
+        def slow_checkpw(candidate: bytes, stored: bytes) -> bool:
+            hashed.release()
+            # Long enough that every thread is inside this call at once if the
+            # limit is not enforced before hashing starts.
+            time.sleep(0.05)
+            return checkpw(candidate, stored)
+
+        monkeypatch.setattr(bcrypt, "checkpw", slow_checkpw)
+
+        threads = [
+            threading.Thread(target=share_registry_unlock, args=(entry, "guess"))
+            for _ in range(12)
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        reached_bcrypt = sum(1 for _ in iter(lambda: hashed.acquire(False), False))
+        assert reached_bcrypt <= 3
+        assert share_registry_is_throttled(entry) is True
+
+    def test_a_password_too_long_to_have_been_set_is_refused(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        bcrypt truncates past its limit and raises in later releases, so an
+        oversized submission must never reach it.
+        """
+        entry = share_registry_create("album-1", password=PASSWORD)
+
+        def unreachable(candidate: bytes, stored: bytes) -> bool:
+            raise AssertionError("an over-long password reached bcrypt")
+
+        monkeypatch.setattr(bcrypt, "checkpw", unreachable)
+
+        assert share_registry_unlock(entry, "x" * (PASSWORD_MAX_BYTES + 1)) is None
+        # Refused for free, so it costs the visitor none of their attempts.
+        assert entry.failed_unlocks == 0
 
     def test_the_cooldown_expires(self) -> None:
         entry = share_registry_create("album-1", password=PASSWORD)
