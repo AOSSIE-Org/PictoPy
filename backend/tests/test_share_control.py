@@ -29,11 +29,15 @@ PORT = 52125
 
 
 @pytest.fixture(autouse=True)
-def album_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """One album in a throwaway database, which is all describing a share reads."""
+def cheap_hashing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """bcrypt's default work factor is the point in production, waste here."""
     gensalt = bcrypt.gensalt
     monkeypatch.setattr(bcrypt, "gensalt", lambda: gensalt(4))
 
+
+@pytest.fixture(autouse=True)
+def album_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """One album in a throwaway database, which is all describing a share reads."""
     db_fd, db_path = tempfile.mkstemp()
     os.close(db_fd)
     monkeypatch.setattr("app.database.albums.DATABASE_PATH", db_path)
