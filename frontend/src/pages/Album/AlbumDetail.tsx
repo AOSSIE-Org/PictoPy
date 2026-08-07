@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
+import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 import { AddImagesToAlbumDialog } from '@/components/Albums/AddImagesToAlbumDialog';
@@ -308,18 +309,17 @@ export const AlbumDetail = () => {
             ))}
           </div>
         ) : images.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="flex flex-col items-center text-center">
-              <ImageIcon className="mb-4 h-16 w-16 text-muted-foreground/50" />
-              <p className="mb-4 text-muted-foreground">
-                No images in this album yet
-              </p>
-              <Button onClick={() => setIsAddImagesDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Images
-              </Button>
-            </div>
-          </div>
+         <EmptyGalleryState
+  title="No images in this album yet"
+  description="Add images to start organizing this album."
+  formatsHint=""
+  action={
+    <Button onClick={() => setIsAddImagesDialogOpen(true)}>
+      <Plus className="mr-2 h-4 w-4" />
+      Add Images
+    </Button>
+  }
+/>
         ) : (
           <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {images.map((image, index) => (
