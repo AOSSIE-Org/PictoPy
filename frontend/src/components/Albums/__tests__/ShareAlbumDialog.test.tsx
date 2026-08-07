@@ -46,11 +46,11 @@ const share: Share = {
   ],
 };
 
-const renderDialog = (existing: Share | null = null, onChanged = jest.fn()) =>
+const renderDialog = (existing: Share[] = [], onChanged = jest.fn()) =>
   render(
     <ShareAlbumDialog
       album={album}
-      share={existing}
+      shares={existing}
       isOpen={true}
       onClose={jest.fn()}
       onChanged={onChanged}
@@ -120,7 +120,7 @@ describe('ShareAlbumDialog', () => {
   });
 
   it('shows the link once the share exists', async () => {
-    renderDialog(share);
+    renderDialog([share]);
 
     expect(screen.getByLabelText('Link')).toHaveValue(
       'http://192.168.1.5:52125/s/tok-1',
@@ -129,7 +129,7 @@ describe('ShareAlbumDialog', () => {
 
   it('switches the link to another address', async () => {
     const user = userEvent.setup();
-    renderDialog(share);
+    renderDialog([share]);
 
     await user.click(screen.getByRole('button', { name: /ethernet/i }));
 
@@ -139,7 +139,7 @@ describe('ShareAlbumDialog', () => {
   });
 
   it('says so when the machine has no network address', () => {
-    renderDialog({ ...share, urls: [] });
+    renderDialog([{ ...share, urls: [] }]);
 
     expect(
       screen.getByText(/no local network address was found/i),
@@ -149,11 +149,56 @@ describe('ShareAlbumDialog', () => {
   it('revokes the share and tells the parent', async () => {
     const user = userEvent.setup();
     const onChanged = jest.fn();
-    renderDialog(share, onChanged);
+    renderDialog([share], onChanged);
 
     await user.click(screen.getByRole('button', { name: /stop sharing/i }));
 
     await waitFor(() => expect(mockRevokeShare).toHaveBeenCalledWith('tok-1'));
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
+  });
+
+  // Creating a share leaves earlier ones valid, so stopping has to take down
+  // every token or the album stays reachable after the UI says it stopped.
+  it('stops every share the album has, not just the newest', async () => {
+    const user = userEvent.setup();
+    const older: Share = { ...share, token: 'tok-0' };
+    renderDialog([share, older]);
+
+    await user.click(screen.getByRole('button', { name: /stop sharing/i }));
+
+    await waitFor(() => expect(mockRevokeShare).toHaveBeenCalledTimes(2));
+    expect(mockRevokeShare).toHaveBeenCalledWith('tok-1');
+    expect(mockRevokeShare).toHaveBeenCalledWith('tok-0');
+  });
+
+  it('stops the share it just created along with any earlier one', async () => {
+    const user = userEvent.setup();
+    const older: Share = { ...share, token: 'tok-0' };
+    mockCreateShare.mockResolvedValue({
+      success: true,
+      data: { ...share, token: 'tok-new' },
+    });
+    const { rerender } = renderDialog([]);
+
+    await user.click(screen.getByRole('button', { name: /start sharing/i }));
+    await screen.findByLabelText('Link');
+
+    // What the parent does after the refetch: it hands down the shares the
+    // backend knows about, which need not yet include the one just made.
+    rerender(
+      <ShareAlbumDialog
+        album={album}
+        shares={[older]}
+        isOpen={true}
+        onClose={jest.fn()}
+        onChanged={jest.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /stop sharing/i }));
+
+    await waitFor(() => expect(mockRevokeShare).toHaveBeenCalledTimes(2));
+    expect(mockRevokeShare).toHaveBeenCalledWith('tok-new');
+    expect(mockRevokeShare).toHaveBeenCalledWith('tok-0');
   });
 });
