@@ -28,8 +28,11 @@ export interface CreateShareRequest {
 
 export interface ShareAlbumDialogProps {
   album: Album | null;
-  /** The album's existing share, if it is already being shared. */
-  share: Share | null;
+  /**
+   * Every live share for this album, newest first. An album can be shared more
+   * than once, and stopping has to account for all of them.
+   */
+  shares: Share[];
   isOpen: boolean;
   onClose: () => void;
   /** Called after a share is created or revoked, so the list can refetch. */

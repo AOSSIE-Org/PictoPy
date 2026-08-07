@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
-import { usePictoMutation } from '@/hooks/useQueryExtension';
+import { usePictoMutation, type BackendRes } from '@/hooks/useQueryExtension';
 import { createShare, revokeShare } from '@/api/api-functions';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { cn } from '@/lib/utils';
@@ -36,7 +36,7 @@ const formatExpiry = (expiresAt: string | null): string =>
 
 export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
   album,
-  share,
+  shares,
   isOpen,
   onClose,
   onChanged,
@@ -49,10 +49,20 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
   const [selectedUrl, setSelectedUrl] = useState('');
   const [copied, setCopied] = useState(false);
 
-  // The share this dialog is showing: the one just made, or one already running.
-  const activeShare = createdShare ?? share;
+  // The share this dialog is showing: the one just made, or the newest already
+  // running. Older ones stay out of the way until sharing is stopped.
+  const activeShare = createdShare ?? shares[0] ?? null;
   const urls = activeShare?.urls ?? [];
   const shareUrl = urls.find((entry) => entry.url === selectedUrl) ?? urls[0];
+
+  // Every token that would still serve this album. Creating leaves earlier
+  // shares valid, so stopping has to take them all down together.
+  const activeTokens = Array.from(
+    new Set([
+      ...(createdShare ? [createdShare.token] : []),
+      ...shares.map((entry) => entry.token),
+    ]),
+  );
 
   const createShareMutation = usePictoMutation({
     mutationFn: (variables: { albumId: string; password?: string }) =>
@@ -72,9 +82,13 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
   });
 
   const revokeShareMutation = usePictoMutation({
-    // Wrapped rather than passed directly: react-query hands the mutation
-    // function a context object as a second argument.
-    mutationFn: (token: string) => revokeShare(token),
+    // Takes every token rather than one, so "stop sharing" leaves nothing
+    // serving the album. Wrapped rather than passed straight through because
+    // react-query hands the mutation function a context as a second argument.
+    mutationFn: async (tokens: string[]): Promise<BackendRes<null>> => {
+      await Promise.all(tokens.map((token) => revokeShare(token)));
+      return { success: true };
+    },
     autoInvalidateTags: ['shares'],
   });
 
@@ -275,9 +289,7 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
                     type="button"
                     variant="outline"
                     className="text-destructive flex-1"
-                    onClick={() =>
-                      revokeShareMutation.mutate(activeShare.token)
-                    }
+                    onClick={() => revokeShareMutation.mutate(activeTokens)}
                     disabled={revokeShareMutation.isPending}
                   >
                     Stop sharing

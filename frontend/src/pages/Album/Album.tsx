@@ -114,12 +114,15 @@ function Albums() {
     queryFn: () => getShares(),
   });
 
-  const sharesByAlbum = new Map<string, Share>();
-  // An album can be shared more than once; the backend lists newest first, so
-  // the first one seen is the share to show.
+  // Every share an album has, not just its newest: an album can be shared more
+  // than once, and each token serves it until it is revoked.
+  const sharesByAlbum = new Map<string, Share[]>();
   (shares ?? []).forEach((share) => {
-    if (!sharesByAlbum.has(share.album_id)) {
-      sharesByAlbum.set(share.album_id, share);
+    const existing = sharesByAlbum.get(share.album_id);
+    if (existing) {
+      existing.push(share);
+    } else {
+      sharesByAlbum.set(share.album_id, [share]);
     }
   });
 
@@ -307,9 +310,7 @@ function Albums() {
       />
       <ShareAlbumDialog
         album={albumToShare}
-        share={
-          albumToShare ? (sharesByAlbum.get(albumToShare.id) ?? null) : null
-        }
+        shares={albumToShare ? (sharesByAlbum.get(albumToShare.id) ?? []) : []}
         isOpen={isShareDialogOpen}
         onClose={() => {
           setIsShareDialogOpen(false);
