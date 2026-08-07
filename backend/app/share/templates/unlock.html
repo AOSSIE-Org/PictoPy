@@ -116,11 +116,11 @@
     background: var(--background);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    outline: none;
   }
   input[type="password"]:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 25%, transparent);
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
   }
 
   button {
