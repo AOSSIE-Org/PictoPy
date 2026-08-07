@@ -16,6 +16,7 @@ class CreateShareRequest(BaseModel):
     password: Optional[str] = Field(default=None, min_length=4)
 
     @field_validator("password")
+    @classmethod
     def check_password_length(cls, value: Optional[str]) -> Optional[str]:
         # Measured in bytes because that is where bcrypt truncates; a longer
         # password would be accepted and then quietly not be the one set.
