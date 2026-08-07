@@ -229,9 +229,9 @@ export const AlbumDetail = () => {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
+      
       <div className="mb-6 flex items-start justify-between gap-4">
-        {/* Left section */}
+        
         <div>
           <h1 className="text-2xl font-bold">
             {album.name}
@@ -244,7 +244,7 @@ export const AlbumDetail = () => {
           )}
         </div>
 
-        {/* Right section */}
+        
         <div className="flex flex-col items-end gap-2">
           <div className="flex items-center gap-2">
             {isSelectionMode ? (
