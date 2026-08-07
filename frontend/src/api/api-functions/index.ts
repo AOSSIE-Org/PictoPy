@@ -7,4 +7,5 @@ export * from './user_preferences';
 export * from './health';
 export * from './albums';
 export * from './memories';
+export * from './share';
 export * from './models';

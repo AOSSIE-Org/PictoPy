@@ -87,4 +87,7 @@ export interface AlbumCardProps {
   onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onShare: () => void;
+  /** Whether this album is currently being served on the local network. */
+  isSharing: boolean;
 }
