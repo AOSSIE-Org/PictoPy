@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Separator } from '@/components/ui/separator';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { createShare, revokeShare } from '@/api/api-functions';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
@@ -159,7 +160,14 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent
+        className={cn(
+          // Nothing caps a dialog's height by default, so a tall one runs off
+          // the screen with its buttons out of reach.
+          'max-h-[90vh] overflow-y-auto',
+          activeShare ? 'sm:max-w-3xl' : 'sm:max-w-[480px]',
+        )}
+      >
         {activeShare ? (
           <>
             <DialogHeader>
@@ -170,100 +178,116 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid gap-4 py-4">
-              {shareUrl ? (
-                <>
-                  <div className="flex justify-center">
-                    {/* Always on white: a QR code needs the light quiet zone to
-                        stay scannable in dark mode. */}
-                    <div className="rounded-xl bg-white p-3 shadow-sm">
-                      <QRCodeSVG value={shareUrl.url} size={168} />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="share-link">Link</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="share-link"
-                        readOnly
-                        value={shareUrl.url}
-                        className="font-mono text-xs"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={handleCopy}
-                        aria-label="Copy link"
-                      >
-                        {copied ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {urls.length > 1 && (
-                    <div className="grid gap-2">
-                      <Label className="flex items-center gap-2">
-                        <Wifi className="text-primary h-4 w-4" />
-                        Address
-                      </Label>
-                      <p className="text-muted-foreground text-xs">
-                        This machine has more than one. If the first does not
-                        work, try another.
-                      </p>
-                      <div className="grid gap-1.5">
-                        {urls.map(renderAddress)}
+            {/* Two columns rather than one card taller than the window: what
+                you hand to someone on the left, what you manage on the right. */}
+            <div className="grid gap-6 py-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+              <div className="flex flex-col gap-4">
+                {shareUrl ? (
+                  <>
+                    <div className="flex justify-center">
+                      {/* Always on white: a QR code needs the light quiet zone
+                          to stay scannable in dark mode. */}
+                      <div className="rounded-xl bg-white p-3 shadow-sm">
+                        <QRCodeSVG value={shareUrl.url} size={168} />
                       </div>
                     </div>
-                  )}
-                </>
-              ) : (
-                <p className="text-muted-foreground text-sm">
-                  No local network address was found, so the album cannot be
-                  reached from another device. Connect to a network and share
-                  again.
-                </p>
-              )}
 
-              <div className="bg-muted grid gap-1 rounded-md p-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Photos</span>
-                  <span className="font-medium">{activeShare.image_count}</span>
+                    <div className="grid gap-2">
+                      <Label htmlFor="share-link">Link</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="share-link"
+                          readOnly
+                          value={shareUrl.url}
+                          className="font-mono text-xs"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={handleCopy}
+                          aria-label="Copy link"
+                        >
+                          {copied ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    No local network address was found, so the album cannot be
+                    reached from another device. Connect to a network and share
+                    again.
+                  </p>
+                )}
+                <div className="bg-muted grid gap-1 rounded-md p-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Photos</span>
+                    <span className="font-medium">
+                      {activeShare.image_count}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Expires</span>
+                    <span className="font-medium">
+                      {formatExpiry(activeShare.expires_at)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Password</span>
+                    <span className="font-medium">
+                      {activeShare.is_protected ? 'Required' : 'None'}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Expires</span>
-                  <span className="font-medium">
-                    {formatExpiry(activeShare.expires_at)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Password</span>
-                  <span className="font-medium">
-                    {activeShare.is_protected ? 'Required' : 'None'}
-                  </span>
+              </div>
+
+              <Separator orientation="vertical" className="hidden md:block" />
+
+              <div className="flex min-w-0 flex-col gap-4">
+                {urls.length > 1 && (
+                  <div className="grid gap-2">
+                    <Label className="flex items-center gap-2">
+                      <Wifi className="text-primary h-4 w-4" />
+                      Address
+                    </Label>
+                    <p className="text-muted-foreground text-xs">
+                      This machine has more than one. If the first does not
+                      work, try another.
+                    </p>
+                    {/* Scrolls on its own: a machine with a stack of virtual
+                        adapters can list a lot of these. Capped rather than
+                        fixed so two addresses do not sit in an empty box. */}
+                    <div className="grid max-h-62 gap-1.5 overflow-y-auto pr-1">
+                      {urls.map(renderAddress)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pushed down so the buttons line up with the bottom of the
+                    QR column instead of floating mid-panel. */}
+                <div className="mt-auto flex gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-destructive flex-1"
+                    onClick={() =>
+                      revokeShareMutation.mutate(activeShare.token)
+                    }
+                    disabled={revokeShareMutation.isPending}
+                  >
+                    Stop sharing
+                  </Button>
+                  <Button type="button" className="flex-1" onClick={onClose}>
+                    Done
+                  </Button>
                 </div>
               </div>
             </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                className="text-destructive"
-                onClick={() => revokeShareMutation.mutate(activeShare.token)}
-                disabled={revokeShareMutation.isPending}
-              >
-                Stop sharing
-              </Button>
-              <Button type="button" onClick={onClose}>
-                Done
-              </Button>
-            </DialogFooter>
           </>
         ) : (
           <form onSubmit={handleCreate}>
