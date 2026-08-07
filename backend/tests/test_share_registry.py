@@ -1,16 +1,25 @@
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Iterator
 
+import bcrypt
 import pytest
 
 from app.share.registry import (
+    PASSWORD_MAX_BYTES,
     share_registry_clear,
     share_registry_count,
     share_registry_create,
     share_registry_get,
+    share_registry_is_throttled,
+    share_registry_is_unlocked,
     share_registry_list,
     share_registry_revoke,
+    share_registry_unlock,
 )
+
+PASSWORD = "correct-horse-battery"
 
 
 @pytest.fixture(autouse=True)
@@ -19,6 +28,18 @@ def empty_registry() -> Iterator[None]:
     share_registry_clear()
     yield
     share_registry_clear()
+
+
+@pytest.fixture(autouse=True)
+def cheap_hashing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Hash at the minimum cost.
+
+    bcrypt's default work factor is the point in production and pure waste here,
+    where the tests only care that the algorithm is wired up correctly.
+    """
+    gensalt = bcrypt.gensalt
+    monkeypatch.setattr(bcrypt, "gensalt", lambda: gensalt(4))
 
 
 def expire(token: str) -> None:
@@ -88,6 +109,137 @@ class TestRevoke:
         drop = share_registry_create("album-2")
         share_registry_revoke(drop.token)
         assert share_registry_get(keep.token) is not None
+
+
+class TestPassword:
+    def test_a_share_is_open_by_default(self) -> None:
+        entry = share_registry_create("album-1")
+        assert entry.is_protected is False
+        assert share_registry_is_unlocked(entry, None) is True
+
+    def test_only_a_hash_is_kept(self) -> None:
+        """The plaintext must not survive anywhere on the entry."""
+        entry = share_registry_create("album-1", password=PASSWORD)
+        assert entry.is_protected is True
+        assert entry.password_hash is not None
+        assert PASSWORD.encode("utf-8") not in entry.password_hash
+
+    def test_the_right_password_opens_the_share(self) -> None:
+        entry = share_registry_create("album-1", password=PASSWORD)
+        cookie = share_registry_unlock(entry, PASSWORD)
+        assert cookie is not None
+        assert share_registry_is_unlocked(entry, cookie) is True
+
+    def test_the_wrong_password_does_not(self) -> None:
+        entry = share_registry_create("album-1", password=PASSWORD)
+        assert share_registry_unlock(entry, "guess") is None
+
+    def test_a_protected_share_is_locked_without_a_cookie(self) -> None:
+        entry = share_registry_create("album-1", password=PASSWORD)
+        assert share_registry_is_unlocked(entry, None) is False
+        assert share_registry_is_unlocked(entry, "forged") is False
+
+    def test_a_cookie_does_not_carry_to_another_share(self) -> None:
+        """
+        The invariant that keeps one unlocked album from unlocking the rest,
+        including a second share of the same album under the same password.
+        """
+        first = share_registry_create("album-1", password=PASSWORD)
+        second = share_registry_create("album-1", password=PASSWORD)
+        cookie = share_registry_unlock(first, PASSWORD)
+        assert share_registry_is_unlocked(second, cookie) is False
+
+    def test_an_open_share_cannot_be_unlocked(self) -> None:
+        """Nothing to check against, so no cookie should ever be minted."""
+        entry = share_registry_create("album-1")
+        assert share_registry_unlock(entry, PASSWORD) is None
+
+    def test_repeated_failures_stop_further_attempts(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("app.share.registry._MAX_FAILED_UNLOCKS", 3)
+        entry = share_registry_create("album-1", password=PASSWORD)
+
+        for _ in range(3):
+            assert share_registry_unlock(entry, "guess") is None
+
+        assert share_registry_is_throttled(entry) is True
+        # The cooldown has to bite regardless of what is guessed next, or it
+        # would only be slowing an attacker down between wrong answers.
+        assert share_registry_unlock(entry, PASSWORD) is None
+
+    def test_getting_it_right_clears_earlier_failures(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("app.share.registry._MAX_FAILED_UNLOCKS", 3)
+        entry = share_registry_create("album-1", password=PASSWORD)
+
+        share_registry_unlock(entry, "guess")
+        share_registry_unlock(entry, "guess")
+        assert share_registry_unlock(entry, PASSWORD) is not None
+
+        share_registry_unlock(entry, "guess")
+        share_registry_unlock(entry, "guess")
+        assert share_registry_is_throttled(entry) is False
+
+    def test_a_burst_of_attempts_cannot_outrun_the_limit(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        Sync handlers run in a threadpool, so the limit has to hold against
+        requests arriving together rather than one after another.
+        """
+        monkeypatch.setattr("app.share.registry._MAX_FAILED_UNLOCKS", 3)
+        entry = share_registry_create("album-1", password=PASSWORD)
+
+        checkpw = bcrypt.checkpw
+        hashed = threading.Semaphore(0)
+
+        def slow_checkpw(candidate: bytes, stored: bytes) -> bool:
+            hashed.release()
+            # Long enough that every thread is inside this call at once if the
+            # limit is not enforced before hashing starts.
+            time.sleep(0.05)
+            return checkpw(candidate, stored)
+
+        monkeypatch.setattr(bcrypt, "checkpw", slow_checkpw)
+
+        threads = [
+            threading.Thread(target=share_registry_unlock, args=(entry, "guess"))
+            for _ in range(12)
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        reached_bcrypt = sum(1 for _ in iter(lambda: hashed.acquire(False), False))
+        assert reached_bcrypt <= 3
+        assert share_registry_is_throttled(entry) is True
+
+    def test_a_password_too_long_to_have_been_set_is_refused(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        bcrypt truncates past its limit and raises in later releases, so an
+        oversized submission must never reach it.
+        """
+        entry = share_registry_create("album-1", password=PASSWORD)
+
+        def unreachable(candidate: bytes, stored: bytes) -> bool:
+            raise AssertionError("an over-long password reached bcrypt")
+
+        monkeypatch.setattr(bcrypt, "checkpw", unreachable)
+
+        assert share_registry_unlock(entry, "x" * (PASSWORD_MAX_BYTES + 1)) is None
+        # Refused for free, so it costs the visitor none of their attempts.
+        assert entry.failed_unlocks == 0
+
+    def test_the_cooldown_expires(self) -> None:
+        entry = share_registry_create("album-1", password=PASSWORD)
+        entry.locked_until = datetime.now(timezone.utc) - timedelta(seconds=1)
+        assert share_registry_is_throttled(entry) is False
+        assert share_registry_unlock(entry, PASSWORD) is not None
 
 
 class TestListing:

@@ -91,14 +91,17 @@ async def create_share(
     Issue a share token and make sure the network listener is up.
 
     An album's local lock is deliberately not consulted: locking protects the
-    album inside PictoPy, while sharing carries its own authorization.
+    album inside PictoPy, while sharing carries its own authorization — the
+    optional password on this request, which is hashed and never read back.
     """
     if not db_get_album(album_id):
         raise _not_found("Album Not Found", "No album exists with the provided ID.")
 
     try:
         entry = await share_util_create(
-            album_id, expires_in_minutes=body.expires_in_minutes if body else None
+            album_id,
+            expires_in_minutes=body.expires_in_minutes if body else None,
+            password=body.password if body else None,
         )
     except OSError as e:
         raise _internal_error(f"Could not start the share server: {e}") from e
