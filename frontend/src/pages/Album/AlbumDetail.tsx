@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { Button } from '@/components/ui/button';
+<<<<<<< HEAD
+=======
+import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
+>>>>>>> 7a0046d (Reuse EmptyGalleryState for empty album placeholder)
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { DetailPageHeader } from '@/components/DetailPage/DetailPageHeader';
@@ -283,17 +287,18 @@ export const AlbumDetail = () => {
             ))}
           </div>
         ) : images.length === 0 ? (
-          <EmptyGalleryState
-            title="No images in this album yet"
-            description="Add images to start organizing this album."
-            formatsHint=""
-            action={
-              <Button onClick={() => setIsAddImagesDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Images
-              </Button>
-            }
-          />
+<EmptyGalleryState
+  title="No images in this album yet"
+  description="Add images to start organizing this album."
+  formatsHint=""
+  action={
+    <Button onClick={() => setIsAddImagesDialogOpen(true)}>
+      <Plus className="mr-2 h-4 w-4" />
+      Add Images
+    </Button>
+  }
+/>
+ 7a0046d (Reuse EmptyGalleryState for empty album placeholder)
         ) : (
           <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {images.map((image, index) => (
