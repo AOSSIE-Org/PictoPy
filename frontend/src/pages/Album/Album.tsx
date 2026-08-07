@@ -15,9 +15,14 @@ import { CreateAlbumDialog } from '@/components/Albums/CreateAlbumDialog';
 import { EditAlbumDialog } from '@/components/Albums/EditAlbumDialog';
 import { AlbumPasswordDialog } from '@/components/Albums/AlbumPasswordDialog';
 import { DeleteConfirmDialog } from '@/components/Albums/DeleteConfirmDialog';
+import { ShareAlbumDialog } from '@/components/Albums/ShareAlbumDialog';
 import { EmptyAlbumsState } from '@/components/EmptyStates/EmptyAlbumsState';
-import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtension';
-import { getAllAlbums, deleteAlbum } from '@/api/api-functions';
+import {
+  usePictoQuery,
+  usePictoMutation,
+  type BackendRes,
+} from '@/hooks/useQueryExtension';
+import { getAllAlbums, deleteAlbum, getShares } from '@/api/api-functions';
 import { setAlbums } from '@/features/albumsSlice';
 import { selectAlbums } from '@/features/albumSelectors';
 import { showInfoDialog } from '@/features/infoDialogSlice';
@@ -26,6 +31,7 @@ import { usePersistedSort } from '@/hooks/usePersistedSort';
 import { MEDIA_GRID_CLASS } from '@/constants/layout';
 import { cn } from '@/lib/utils';
 import { Album } from '@/types/Album';
+import { Share } from '@/types/Share';
 import {
   GallerySortDropdown,
   type SortOption,
@@ -76,6 +82,8 @@ function Albums() {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [albumToDelete, setAlbumToDelete] = useState<Album | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [albumToShare, setAlbumToShare] = useState<Album | null>(null);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [sortBy, setSortBy] = usePersistedSort<AlbumSortValue>(
     ALBUM_SORT_STORAGE_KEY,
     'name',
@@ -93,6 +101,26 @@ function Albums() {
   } = usePictoQuery({
     queryKey: ['albums'],
     queryFn: () => getAllAlbums(),
+  });
+
+  // Shares live in memory in the backend, so this query is the only record of
+  // which albums are currently being served.
+  const { successData: shares, refetch: refetchShares } = usePictoQuery<
+    BackendRes<Share[]>,
+    unknown,
+    Share[]
+  >({
+    queryKey: ['shares'],
+    queryFn: () => getShares(),
+  });
+
+  const sharesByAlbum = new Map<string, Share>();
+  // An album can be shared more than once; the backend lists newest first, so
+  // the first one seen is the share to show.
+  (shares ?? []).forEach((share) => {
+    if (!sharesByAlbum.has(share.album_id)) {
+      sharesByAlbum.set(share.album_id, share);
+    }
   });
 
   const deleteAlbumMutation = usePictoMutation({
@@ -152,6 +180,11 @@ function Albums() {
   const handleEditAlbum = (album: Album) => {
     setSelectedAlbum(album);
     setIsEditDialogOpen(true);
+  };
+
+  const handleShareAlbum = (album: Album) => {
+    setAlbumToShare(album);
+    setIsShareDialogOpen(true);
   };
 
   const handleDeleteAlbum = (album: Album) => {
@@ -241,6 +274,8 @@ function Albums() {
                 onClick={() => handleAlbumClick(album)}
                 onEdit={() => handleEditAlbum(album)}
                 onDelete={() => handleDeleteAlbum(album)}
+                onShare={() => handleShareAlbum(album)}
+                isSharing={sharesByAlbum.has(album.id)}
               />
             ))}
           </div>
@@ -269,6 +304,18 @@ function Albums() {
         }}
         onSubmit={handlePasswordSubmit}
         albumName={albumToAccess?.name || ''}
+      />
+      <ShareAlbumDialog
+        album={albumToShare}
+        share={
+          albumToShare ? (sharesByAlbum.get(albumToShare.id) ?? null) : null
+        }
+        isOpen={isShareDialogOpen}
+        onClose={() => {
+          setIsShareDialogOpen(false);
+          setAlbumToShare(null);
+        }}
+        onChanged={refetchShares}
       />
       <DeleteConfirmDialog
         isOpen={isDeleteDialogOpen}
