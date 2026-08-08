@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { Button } from '@/components/ui/button';
+import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
@@ -218,7 +219,7 @@ export const AlbumDetail = () => {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Album not found</p>
+          <p className="mb-4 text-muted-foreground">Album not found</p>
           <Button onClick={handleBack}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Albums
@@ -230,28 +231,23 @@ export const AlbumDetail = () => {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="mb-4 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={handleBack}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold">{album.name}</h1>
-            {album.description && (
-              <p className="text-muted-foreground text-sm">
-                {album.description}
-              </p>
-            )}
-          </div>
+      
+      <div className="mb-6 flex items-start justify-between gap-4">
+        
+        <div>
+          <h1 className="text-2xl font-bold">
+            {album.name}
+          </h1>
+
+          {album.description && (
+            <p className="text-sm text-muted-foreground">
+              {album.description}
+            </p>
+          )}
         </div>
 
-        <div className="flex items-center justify-between">
-          <p className="text-muted-foreground text-sm">
-            {images.length} {images.length === 1 ? 'photo' : 'photos'}
-            {selectedImages.size > 0 && ` • ${selectedImages.size} selected`}
-          </p>
-
+        
+        <div className="flex flex-col items-end gap-2">
           <div className="flex items-center gap-2">
             {isSelectionMode ? (
               <>
@@ -265,6 +261,7 @@ export const AlbumDetail = () => {
                 >
                   Cancel
                 </Button>
+
                 <Button
                   variant="destructive"
                   size="sm"
@@ -286,6 +283,7 @@ export const AlbumDetail = () => {
                     Select Images
                   </Button>
                 )}
+
                 <Button
                   size="sm"
                   onClick={() => setIsAddImagesDialogOpen(true)}
@@ -296,6 +294,11 @@ export const AlbumDetail = () => {
               </>
             )}
           </div>
+
+          <p className="text-sm text-muted-foreground">
+            {images.length} {images.length === 1 ? 'photo' : 'photos'}
+            {selectedImages.size > 0 && ` • ${selectedImages.size} selected`}
+          </p>
         </div>
       </div>
 
@@ -308,17 +311,17 @@ export const AlbumDetail = () => {
             ))}
           </div>
         ) : images.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center">
-              <p className="text-muted-foreground mb-4">
-                No images in this album yet
-              </p>
-              <Button onClick={() => setIsAddImagesDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Images
-              </Button>
-            </div>
-          </div>
+         <EmptyGalleryState
+  title="No images in this album yet"
+  description="Add images to start organizing this album."
+  formatsHint=""
+  action={
+    <Button onClick={() => setIsAddImagesDialogOpen(true)}>
+      <Plus className="mr-2 h-4 w-4" />
+      Add Images
+    </Button>
+  }
+/>
         ) : (
           <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {images.map((image, index) => (
@@ -331,12 +334,12 @@ export const AlbumDetail = () => {
                   image={image}
                   className={
                     isSelectionMode && selectedImages.has(image.id)
-                      ? 'ring-primary ring-2 ring-offset-2'
+                      ? 'ring-2 ring-primary ring-offset-2'
                       : ''
                   }
                 />
                 {isSelectionMode && selectedImages.has(image.id) && (
-                  <div className="bg-primary text-primary-foreground absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full">
+                  <div className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     ✓
                   </div>
                 )}
