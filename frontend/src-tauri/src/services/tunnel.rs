@@ -17,6 +17,7 @@ use tauri::{AppHandle, Manager, State};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use tokio::sync::mpsc::Receiver;
+use tokio::sync::Mutex as AsyncMutex;
 use tokio::time::timeout;
 
 /// How long a provider gets to hand back a URL before we move on to the next.
@@ -48,14 +49,27 @@ const PROVIDERS: [Provider; 1] = [Provider {
 }];
 
 pub struct TunnelState {
+    /// Held across an entire start or stop, spawn included. Without it two
+    /// concurrent starts could both find no tunnel, both spawn a child, and
+    /// leave whichever installed first running with nothing holding its
+    /// handle — an ssh process nobody can stop.
+    lifecycle: AsyncMutex<()>,
     active: Mutex<Option<ActiveTunnel>>,
 }
 
 impl TunnelState {
     pub fn new() -> Self {
         Self {
+            lifecycle: AsyncMutex::new(()),
             active: Mutex::new(None),
         }
+    }
+
+    fn current_url(&self) -> Option<String> {
+        self.active
+            .lock()
+            .ok()
+            .and_then(|active| active.as_ref().map(|tunnel| tunnel.url.clone()))
     }
 }
 
@@ -74,7 +88,8 @@ struct ActiveTunnel {
 ///
 /// Split on whitespace rather than pattern-matching the sentence around it: the
 /// wording is the provider's to change, and one has already been observed
-/// printing something different from its own documentation.
+/// printing something different from its own documentation. Each event is a
+/// whole line, because the shell plugin frames process output with read_line.
 fn find_url(line: &str, suffix: &str) -> Option<String> {
     line.split_whitespace()
         .filter(|token| token.starts_with("https://"))
@@ -177,11 +192,11 @@ pub async fn tunnel_start(
     state: State<'_, TunnelState>,
     port: u16,
 ) -> Result<String, String> {
-    {
-        let active = state.active.lock().map_err(|_| "tunnel state lost")?;
-        if let Some(tunnel) = active.as_ref() {
-            return Ok(tunnel.url.clone());
-        }
+    let _lifecycle = state.lifecycle.lock().await;
+
+    // Re-checked while holding the lock, not before taking it.
+    if let Some(url) = state.current_url() {
+        return Ok(url);
     }
 
     let mut failures = Vec::new();
@@ -207,22 +222,32 @@ pub async fn tunnel_start(
 
 /// Close the tunnel. Safe to call when none is open.
 #[tauri::command]
-pub fn tunnel_stop(state: State<'_, TunnelState>) -> Result<(), String> {
-    let mut active = state.active.lock().map_err(|_| "tunnel state lost")?;
-    if let Some(tunnel) = active.take() {
-        tunnel
-            .child
-            .kill()
-            .map_err(|e| format!("could not stop the tunnel: {e}"))?;
-    }
-    Ok(())
+pub async fn tunnel_stop(state: State<'_, TunnelState>) -> Result<(), String> {
+    let _lifecycle = state.lifecycle.lock().await;
+
+    // CommandChild::kill consumes the handle, so it cannot be put back for a
+    // retry. The pid is captured first so a failure names the process that is
+    // still running rather than leaving nothing to act on.
+    let tunnel = {
+        let mut active = state.active.lock().map_err(|_| "tunnel state lost")?;
+        active.take()
+    };
+
+    let Some(tunnel) = tunnel else {
+        return Ok(());
+    };
+
+    let pid = tunnel.child.pid();
+    tunnel
+        .child
+        .kill()
+        .map_err(|e| format!("could not stop the tunnel (ssh pid {pid} may still be running): {e}"))
 }
 
 /// The public URL, if a tunnel is open.
 #[tauri::command]
 pub fn tunnel_status(state: State<'_, TunnelState>) -> Result<Option<String>, String> {
-    let active = state.active.lock().map_err(|_| "tunnel state lost")?;
-    Ok(active.as_ref().map(|tunnel| tunnel.url.clone()))
+    Ok(state.current_url())
 }
 
 /// Drop a tunnel from state, but only if it is still the current one.
@@ -240,6 +265,9 @@ fn forget(app: &AppHandle, url: &str) {
 }
 
 /// Kill the tunnel on the way out, from outside a command context.
+///
+/// Deliberately does not take the lifecycle lock: this runs on the exit path,
+/// where blocking on an in-flight start would be worse than racing it.
 pub fn shutdown(app: &AppHandle) {
     if let Some(state) = app.try_state::<TunnelState>() {
         if let Ok(mut active) = state.active.lock() {
