@@ -93,6 +93,9 @@
     "dialog:default",
     "store:default",
     "opener:allow-reveal-item-in-dir",
-    "opener:allow-open-url"
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "https://aossie-org.github.io/*" }]
+    }
   ]
 }
