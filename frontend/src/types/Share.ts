@@ -20,6 +20,12 @@ export interface Share {
   urls: ShareUrl[];
 }
 
+/**
+ * Where a share can be reached from. LAN keeps everything on the local network;
+ * internet opens a tunnel, which means the photos pass through a third party.
+ */
+export type ShareMode = 'lan' | 'internet';
+
 export interface CreateShareRequest {
   /** Omitted means the share lasts until it is revoked or PictoPy closes. */
   expires_in_minutes?: number;
