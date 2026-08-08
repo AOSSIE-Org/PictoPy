@@ -22,7 +22,10 @@ const Layout: React.FC = () => {
           <AppSidebar />
           {/* Contain scrolling here so Navbar's parent height never exceeds 100vh — now the navbar is stuck it will not go away.
               hide-scrollbar keeps overflow-y-auto (needed for the sticky navbar) from painting a second, default scrollbar on Windows/WebView2. */}
-          <div className="hide-scrollbar m-4 w-full overflow-y-auto">
+          <div
+            id="main-scroll-container"
+            className="hide-scrollbar m-4 w-full overflow-y-auto"
+          >
             <Outlet />
           </div>
         </div>
