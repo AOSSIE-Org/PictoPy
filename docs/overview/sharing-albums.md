@@ -2,9 +2,11 @@
 
 Hand someone a link to one of your albums. They open it in an ordinary browser — no account, no app, nothing to install.
 
-Your photos are never uploaded to PictoPy or to anyone else. They are read off your own disk and sent to whoever opens the link, for as long as you leave the share running.
+Your photos are never *stored* anywhere but your own machine. They are read off your disk and sent to whoever opens the link, for as long as you leave the share running. PictoPy uploads nothing, and keeps no copy on any server.
 
-Two things are true of every share, whichever mode you pick:
+Where they *travel* depends on which mode you pick. On your own network they go straight to the other device. Over the internet they pass through a relay run by someone else, which can read them on the way past — that mode is described in full below.
+
+Two things are true of every share:
 
 - **It only works while PictoPy is running.** Close the app and the link stops working immediately.
 - **Nothing is stored anywhere else.** There is no copy on a server to worry about.
@@ -15,8 +17,9 @@ When you share an album you choose where the link should work from.
 
 | | This network | Internet |
 | --- | --- | --- |
-| Who can open it | anyone on your Wi-Fi | anyone with the link |
-| Photos pass through | nothing — device to device | a relay service |
+| Who can open it | anyone on your Wi-Fi with the link | anyone with the link |
+| Photos pass through | nothing — device to device | a relay that can read them |
+| Connection | plain HTTP, not encrypted | HTTPS, but decrypted at the relay |
 | Needs internet | no | yes |
 | Speed | your Wi-Fi | your home upload speed |
 
@@ -34,7 +37,10 @@ flowchart LR
     R --> M["💻 Your machine<br/>PictoPy reads the photo"]
 ```
 
-This is as private as sharing gets. The only thing that ever sees your photos is the device you sent the link to.
+No outside company is involved, which is what makes this the private option. Two things are still worth knowing:
+
+- **Anyone on the network who has the link can open it.** The link is not tied to a person, so it works from any device that can reach your machine.
+- **The connection is plain HTTP, not encrypted.** On your own home Wi-Fi that is rarely a concern. On a shared or public network, someone able to watch the traffic could read the photos as they pass, so add a password or prefer a network you trust.
 
 The catch is that both devices must be on the same network, and **some networks refuse to let their own devices talk to each other**. Guest Wi-Fi almost always does this, and plenty of home routers do too. If the link never loads, that is usually why — see [When the link does not load](#when-the-link-does-not-load).
 

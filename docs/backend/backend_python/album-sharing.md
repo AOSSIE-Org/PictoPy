@@ -81,12 +81,12 @@ The response carries the token and one candidate URL per network interface:
   "success": true,
   "message": "Album is now shared on the local network",
   "data": {
-    "token": "DTlmfuroeSGItsAAFhd4zOPhjmuBmqQlhBrODb95_3s",
+    "token": "<share_token>",
     "album_name": "The Oddyseys",
     "image_count": 18,
     "port": 52125,
     "urls": [
-      { "interface": "Wi-Fi", "ip": "10.170.93.60", "url": "http://10.170.93.60:52125/s/DTlmf..." }
+      { "interface": "Wi-Fi", "ip": "10.170.93.60", "url": "http://10.170.93.60:52125/s/<share_token>" }
     ]
   }
 }
