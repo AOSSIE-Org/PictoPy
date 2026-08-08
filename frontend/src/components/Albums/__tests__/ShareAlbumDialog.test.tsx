@@ -177,6 +177,25 @@ describe('ShareAlbumDialog', () => {
       );
     });
 
+    // Failing quietly would leave nothing on screen and no way to reach the
+    // page, which is how a missing capability presented in the running app.
+    it('hands over the address when the browser cannot be opened', async () => {
+      const user = userEvent.setup();
+      mockOpenUrl.mockRejectedValue(new Error('opener.open_url not allowed'));
+      const { store } = renderDialog();
+
+      await user.click(
+        screen.getByRole('button', { name: /how sharing works/i }),
+      );
+
+      await waitFor(() =>
+        expect(store.getState().infoDialog.isOpen).toBe(true),
+      );
+      expect(store.getState().infoDialog.message).toContain(
+        'https://aossie-org.github.io/PictoPy/overview/sharing-albums/',
+      );
+    });
+
     it('closes the tunnel when the share is stopped', async () => {
       const user = userEvent.setup();
       mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { QRCodeSVG } from 'qrcode.react';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import {
@@ -28,6 +29,7 @@ import { Separator } from '@/components/ui/separator';
 import { usePictoMutation, type BackendRes } from '@/hooks/useQueryExtension';
 import { createShare, revokeShare } from '@/api/api-functions';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { showInfoDialog } from '@/features/infoDialogSlice';
 import { cn } from '@/lib/utils';
 import { startTunnel, stopTunnel, tunnelStatus } from '@/utils/tunnel';
 import {
@@ -70,6 +72,7 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
   onClose,
   onChanged,
 }) => {
+  const dispatch = useDispatch();
   const [mode, setMode] = useState<ShareMode>('lan');
   const [expiry, setExpiry] = useState<string>('1440');
   const [withPassword, setWithPassword] = useState(false);
@@ -251,11 +254,21 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
       size="icon"
       className="text-muted-foreground hover:text-foreground -mt-1 h-7 w-7 shrink-0"
       aria-label="How sharing works"
-      onClick={() =>
-        openUrl(mode === 'internet' ? DOCS_INTERNET_URL : DOCS_URL).catch(
-          () => undefined,
-        )
-      }
+      onClick={() => {
+        const url = mode === 'internet' ? DOCS_INTERNET_URL : DOCS_URL;
+        // Hand the address over rather than failing quietly: if the browser
+        // cannot be launched there is nothing else to tell the user what
+        // happened, and the page is still readable by other means.
+        openUrl(url).catch(() =>
+          dispatch(
+            showInfoDialog({
+              title: 'Could not open your browser',
+              message: `Open this page instead: ${url}`,
+              variant: 'error',
+            }),
+          ),
+        );
+      }}
     >
       <Info className="h-4 w-4" />
     </Button>
