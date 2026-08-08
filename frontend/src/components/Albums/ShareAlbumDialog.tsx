@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Check, Copy, Share2, Wifi } from 'lucide-react';
+import {
+  Check,
+  Copy,
+  Globe,
+  Loader2,
+  Share2,
+  TriangleAlert,
+  Wifi,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +27,22 @@ import { usePictoMutation, type BackendRes } from '@/hooks/useQueryExtension';
 import { createShare, revokeShare } from '@/api/api-functions';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { cn } from '@/lib/utils';
-import { Share, ShareAlbumDialogProps, ShareUrl } from '@/types/Share';
+import { startTunnel, stopTunnel, tunnelStatus } from '@/utils/tunnel';
+import {
+  Share,
+  ShareAlbumDialogProps,
+  ShareMode,
+  ShareUrl,
+} from '@/types/Share';
+
+const MODE_OPTIONS = [
+  { value: 'lan', label: 'This network', icon: Wifi },
+  { value: 'internet', label: 'Internet', icon: Globe },
+] as const satisfies ReadonlyArray<{
+  value: ShareMode;
+  label: string;
+  icon: typeof Wifi;
+}>;
 
 const EXPIRY_OPTIONS = [
   { value: '60', label: 'For 1 hour' },
@@ -41,18 +64,36 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
   onClose,
   onChanged,
 }) => {
+  const [mode, setMode] = useState<ShareMode>('lan');
   const [expiry, setExpiry] = useState<string>('1440');
   const [withPassword, setWithPassword] = useState(false);
   const [password, setPassword] = useState('');
+  // Kept apart from the password field's own validation message so a failed
+  // connection does not put a red border round an unrelated input.
   const [error, setError] = useState('');
+  const [tunnelError, setTunnelError] = useState('');
   const [createdShare, setCreatedShare] = useState<Share | null>(null);
   const [selectedUrl, setSelectedUrl] = useState('');
   const [copied, setCopied] = useState(false);
+  const [tunnelUrl, setTunnelUrl] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   // The share this dialog is showing: the one just made, or the newest already
   // running. Older ones stay out of the way until sharing is stopped.
   const activeShare = createdShare ?? shares[0] ?? null;
-  const urls = activeShare?.urls ?? [];
+
+  // A tunnel forwards the whole share port, so its address reaches the same
+  // album as the LAN ones. Showing it alone keeps the link the user asked for
+  // from competing with addresses that only work inside the house.
+  const urls: ShareUrl[] = tunnelUrl
+    ? [
+        {
+          interface: 'Internet',
+          ip: new URL(tunnelUrl).hostname,
+          url: `${tunnelUrl}/s/${activeShare?.token ?? ''}`,
+        },
+      ]
+    : (activeShare?.urls ?? []);
   const shareUrl = urls.find((entry) => entry.url === selectedUrl) ?? urls[0];
 
   // Every token that would still serve this album. Creating leaves earlier
@@ -72,11 +113,32 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
       }),
     // Handled here rather than through the feedback hook so the new share
     // arrives typed rather than as the hook's untyped success payload.
-    onSuccess: (response) => {
-      if (response.data) {
-        setCreatedShare(response.data);
+    onSuccess: async (response) => {
+      const share = response.data;
+      if (!share) {
+        return;
       }
-      onChanged();
+      if (mode === 'lan') {
+        setCreatedShare(share);
+        onChanged();
+        return;
+      }
+
+      setIsConnecting(true);
+      try {
+        setTunnelUrl(await startTunnel(share.port));
+        setCreatedShare(share);
+      } catch (cause) {
+        // The user asked for an internet share and did not get one, so undo
+        // the local half rather than leaving a share they did not ask for.
+        await revokeShare(share.token).catch(() => undefined);
+        setTunnelError(
+          `Could not open a connection: ${String(cause)} The album was not shared.`,
+        );
+      } finally {
+        setIsConnecting(false);
+        onChanged();
+      }
     },
     autoInvalidateTags: ['shares'],
   });
@@ -87,6 +149,12 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     // react-query hands the mutation function a context as a second argument.
     mutationFn: async (tokens: string[]): Promise<BackendRes<null>> => {
       await Promise.all(tokens.map((token) => revokeShare(token)));
+      if (tunnelUrl) {
+        // One tunnel serves the whole share port, so this closes any other
+        // internet share too. Acceptable while the dialog only ever creates
+        // one at a time, and better than leaving a tunnel to a dead port.
+        await stopTunnel().catch(() => undefined);
+      }
       return { success: true };
     },
     autoInvalidateTags: ['shares'],
@@ -118,14 +186,32 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     if (!isOpen) {
       return;
     }
+    setMode('lan');
     setExpiry('1440');
     setWithPassword(false);
     setPassword('');
     setError('');
+    setTunnelError('');
     setCreatedShare(null);
     setSelectedUrl('');
     setCopied(false);
+    setIsConnecting(false);
+    // A share made in an earlier session is still served by whatever tunnel is
+    // up, so ask rather than assume it was a LAN share.
+    setTunnelUrl(null);
+    tunnelStatus()
+      .then(setTunnelUrl)
+      .catch(() => undefined);
   }, [isOpen, album?.id]);
+
+  const handleModeChange = (next: ShareMode) => {
+    setMode(next);
+    setError('');
+    setTunnelError('');
+    // Anyone with the link can open it, and messaging apps fetch links to build
+    // previews. Starting protected is the safer default; it stays removable.
+    setWithPassword(next === 'internet');
+  };
 
   const handleCreate = (event: React.FormEvent) => {
     event.preventDefault();
@@ -182,7 +268,26 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
           activeShare ? 'sm:max-w-3xl' : 'sm:max-w-[480px]',
         )}
       >
-        {activeShare ? (
+        {isConnecting ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Starting a secure connection</DialogTitle>
+              <DialogDescription>
+                Opening a route to this machine so the album can be reached from
+                outside your network.
+              </DialogDescription>
+            </DialogHeader>
+            <div
+              className="flex flex-col items-center justify-center gap-3 py-10"
+              role="status"
+            >
+              <Loader2 className="text-primary h-8 w-8 animate-spin" />
+              <p className="text-muted-foreground text-sm">
+                This usually takes a few seconds.
+              </p>
+            </div>
+          </>
+        ) : activeShare ? (
           <>
             <DialogHeader>
               <DialogTitle>Sharing "{activeShare.album_name}"</DialogTitle>
@@ -306,12 +411,52 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
             <DialogHeader>
               <DialogTitle>Share "{album?.name}"</DialogTitle>
               <DialogDescription>
-                Serve this album to other devices on your network. The photos
-                stay on this machine.
+                {mode === 'lan'
+                  ? 'Serve this album to other devices on your network. The photos stay on this machine.'
+                  : 'Serve this album to anyone with the link, wherever they are.'}
               </DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-4 py-4">
+              {/* Full width, because this is the decision the rest of the form
+                  hangs off rather than one setting among several. */}
+              <div className="bg-muted grid w-full grid-cols-2 gap-1 rounded-lg p-1">
+                {MODE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={mode === option.value}
+                    onClick={() => handleModeChange(option.value)}
+                    className={cn(
+                      'flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                      mode === option.value
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    <option.icon className="h-4 w-4" />
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              {mode === 'internet' && (
+                <div className="border-destructive/40 bg-destructive/5 grid gap-1.5 rounded-md border p-3">
+                  <p className="flex items-center gap-2 text-sm font-medium">
+                    <TriangleAlert className="text-destructive h-4 w-4 shrink-0" />
+                    The link leaves your network
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Photos pass through a tunnel service, which can see them.
+                    Anyone holding the link can open the album, and chat apps
+                    such as WhatsApp and Slack fetch links automatically to
+                    build previews — a password stops those previews seeing
+                    anything.
+                  </p>
+                </div>
+              )}
+
               <div className="grid gap-2">
                 <Label>Keep sharing</Label>
                 <RadioGroup value={expiry} onValueChange={setExpiry}>
@@ -372,6 +517,12 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
                 </div>
               )}
             </div>
+
+            {tunnelError && (
+              <p className="text-destructive pb-2 text-sm" role="alert">
+                {tunnelError}
+              </p>
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
