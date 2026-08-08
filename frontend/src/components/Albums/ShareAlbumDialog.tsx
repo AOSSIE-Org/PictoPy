@@ -252,7 +252,7 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
       type="button"
       variant="ghost"
       size="icon"
-      className="text-muted-foreground hover:text-foreground -mt-1 h-7 w-7 shrink-0"
+      className="text-muted-foreground hover:text-foreground h-7 w-7 shrink-0"
       aria-label="How sharing works"
       onClick={() => {
         const url = mode === 'internet' ? DOCS_INTERNET_URL : DOCS_URL;
@@ -328,8 +328,10 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
         ) : activeShare ? (
           <>
             <DialogHeader>
-              <div className="flex items-start justify-between gap-2">
-                <DialogTitle>Sharing "{activeShare.album_name}"</DialogTitle>
+              <div className="flex items-center gap-1">
+                <DialogTitle className="truncate">
+                  Sharing "{activeShare.album_name}"
+                </DialogTitle>
                 {docsButton}
               </div>
               <DialogDescription>
@@ -450,8 +452,10 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
         ) : (
           <form onSubmit={handleCreate}>
             <DialogHeader>
-              <div className="flex items-start justify-between gap-2">
-                <DialogTitle>Share "{album?.name}"</DialogTitle>
+              <div className="flex items-center gap-1">
+                <DialogTitle className="truncate">
+                  Share "{album?.name}"
+                </DialogTitle>
                 {docsButton}
               </div>
               <DialogDescription>
