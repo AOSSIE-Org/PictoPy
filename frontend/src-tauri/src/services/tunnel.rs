@@ -147,9 +147,16 @@ async fn open(
 
     match timeout(URL_TIMEOUT, read_url(&mut events, provider.url_suffix)).await {
         Ok(Some(url)) => {
-            // Keep draining: providers print a banner and an ANSI QR code, and
-            // a full pipe would stall ssh once nobody is reading.
-            tauri::async_runtime::spawn(async move { while events.recv().await.is_some() {} });
+            let handle = app.clone();
+            let watched = url.clone();
+            tauri::async_runtime::spawn(async move {
+                // Keep draining: providers print a banner and an ANSI QR code,
+                // and a full pipe would stall ssh once nobody is reading.
+                while events.recv().await.is_some() {}
+                // The stream ends when ssh exits. Without this the status
+                // command would keep handing out a URL that is already dead.
+                forget(&handle, &watched);
+            });
             Ok((url, child))
         }
         Ok(None) => {
@@ -216,6 +223,20 @@ pub fn tunnel_stop(state: State<'_, TunnelState>) -> Result<(), String> {
 pub fn tunnel_status(state: State<'_, TunnelState>) -> Result<Option<String>, String> {
     let active = state.active.lock().map_err(|_| "tunnel state lost")?;
     Ok(active.as_ref().map(|tunnel| tunnel.url.clone()))
+}
+
+/// Drop a tunnel from state, but only if it is still the current one.
+///
+/// A tunnel that died after a newer one replaced it must not clear the newer
+/// one's URL, which is why this checks identity rather than blindly taking.
+fn forget(app: &AppHandle, url: &str) {
+    if let Some(state) = app.try_state::<TunnelState>() {
+        if let Ok(mut active) = state.active.lock() {
+            if active.as_ref().is_some_and(|tunnel| tunnel.url == url) {
+                *active = None;
+            }
+        }
+    }
 }
 
 /// Kill the tunnel on the way out, from outside a command context.
