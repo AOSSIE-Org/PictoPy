@@ -424,6 +424,123 @@ class TestFaceClustersAPI:
         response = client.request(method, endpoint)
         assert response.status_code == 405
 
+    @patch("app.routes.face_clusters.db_get_all_folders")
+    @patch("app.routes.face_clusters.perform_face_search")
+    def test_face_search_path_traversal_blocked(self, mock_perform, mock_folders):
+        """Test that paths outside allowed folders are blocked with 403."""
+        mock_folders.return_value = ["/allowed/folder"]
+        mock_perform.return_value = {"success": True, "data": []}
+
+        # Mock os.path.realpath to resolve the traversal path
+        def realpath_mock(path):
+            # Normalizing Windows drive prefixes or slashes for tests
+            cleaned = path.replace("\\", "/").lower()
+            if "../restricted" in cleaned or "/restricted" in cleaned:
+                return "/restricted/file.jpg"
+            if "/allowed/folder" in cleaned:
+                return "/allowed/folder"
+            return path
+
+        with patch("os.path.realpath", side_effect=realpath_mock), patch(
+            "os.path.isfile", return_value=True
+        ):
+            response = client.post(
+                "/face_clusters/face-search?input_type=path",
+                json={
+                    "path": "/allowed/folder/../restricted/file.jpg",
+                    "base64_data": "",
+                },
+            )
+        assert response.status_code == 403
+        assert response.json()["detail"]["error"] == "Access Denied"
+        mock_perform.assert_not_called()
+
+    @patch("app.routes.face_clusters.db_get_all_folders")
+    @patch("app.routes.face_clusters.perform_face_search")
+    def test_face_search_symlink_escape_blocked(self, mock_perform, mock_folders):
+        """Test that symlinks inside allowed folders pointing outside are rejected."""
+        mock_folders.return_value = ["/allowed/folder"]
+        mock_perform.return_value = {"success": True, "data": []}
+
+        # Simulating a symlink at "/allowed/folder/link.jpg" pointing to "/restricted/secret.jpg"
+        def realpath_mock(path):
+            cleaned = path.replace("\\", "/").lower()
+            if cleaned == "/allowed/folder/link.jpg":
+                return "/restricted/secret.jpg"
+            if cleaned == "/allowed/folder":
+                return "/allowed/folder"
+            return path
+
+        with patch("os.path.realpath", side_effect=realpath_mock), patch(
+            "os.path.isfile", return_value=True
+        ):
+            response = client.post(
+                "/face_clusters/face-search?input_type=path",
+                json={"path": "/allowed/folder/link.jpg", "base64_data": ""},
+            )
+        assert response.status_code == 403
+        assert response.json()["detail"]["error"] == "Access Denied"
+        mock_perform.assert_not_called()
+
+    @patch("app.routes.face_clusters.db_get_all_folders")
+    @patch("app.routes.face_clusters.perform_face_search")
+    def test_face_search_safe_path_allowed(self, mock_perform, mock_folders):
+        """Test that paths inside allowed folders are allowed."""
+        mock_folders.return_value = ["/allowed/folder"]
+        mock_perform.return_value = {"success": True, "data": []}
+
+        from unittest.mock import mock_open, MagicMock
+        import os
+
+        mock_stat = MagicMock()
+        mock_stat.st_mode = 32768  # S_IFREG
+
+        with patch("os.path.isfile", return_value=True), patch(
+            "os.open", return_value=123
+        ) as mock_os_open, patch("os.fstat", return_value=mock_stat), patch(
+            "builtins.open", mock_open(read_data=b"fakeimagebytes")
+        ):
+            response = client.post(
+                "/face_clusters/face-search?input_type=path",
+                json={"path": "/allowed/folder/family.jpg", "base64_data": ""},
+            )
+        assert response.status_code == 200
+        mock_perform.assert_called_once()
+        # Assert perform_face_search receives exactly b"fakeimagebytes"
+        called_kwargs = mock_perform.call_args.kwargs
+        assert called_kwargs.get("image_bytes") == b"fakeimagebytes"
+        # Assert os.open includes O_NOFOLLOW when supported
+        if hasattr(os, "O_NOFOLLOW"):
+            assert mock_os_open.called
+            nofollow_flag_used = False
+            for call in mock_os_open.call_args_list:
+                flags = call[0][1] if len(call[0]) > 1 else call[1].get("flags", 0)
+                if flags & os.O_NOFOLLOW:
+                    nofollow_flag_used = True
+                    break
+            assert nofollow_flag_used, "os.open was not called with O_NOFOLLOW flag"
+
+    @patch("app.routes.face_clusters.perform_face_search")
+    def test_face_search_base64_allowed(self, mock_perform):
+        """Test that base64 images are processed entirely in memory and allowed."""
+        mock_perform.return_value = {"success": True, "data": []}
+
+        # 1x1 transparent GIF base64
+        gif_b64 = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+        response = client.post(
+            "/face_clusters/face-search?input_type=base64",
+            json={"path": "", "base64_data": gif_b64},
+        )
+        assert response.status_code == 200
+        mock_perform.assert_called_once()
+        # Decode the fixture and assert perform_face_search receives those exact bytes
+        import base64
+
+        expected_bytes = base64.b64decode(gif_b64.split(",")[-1])
+        called_kwargs = mock_perform.call_args.kwargs
+        assert called_kwargs.get("image_bytes") == expected_bytes
+        assert called_kwargs.get("image_path") is None
+
 
 # ============================================================================
 # Algorithmic Logic Tests
