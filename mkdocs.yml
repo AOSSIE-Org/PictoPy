@@ -67,6 +67,7 @@ nav:
   - Overview:
       - Features: overview/features.md
       - Architecture: overview/architecture.md
+      - Sharing Albums: overview/sharing-albums.md
 
   - Setup:
       - Overview: setup.md
@@ -82,6 +83,7 @@ nav:
       - Python Backend Directory Structure: backend/backend_python/directory-structure.md
       - Python Backend Image Processing: backend/backend_python/image-processing.md
       - Python Backend Semantic Search: backend/backend_python/semantic-search.md
+      - Python Backend Album Sharing: backend/backend_python/album-sharing.md
       - Rust Backend API: backend/backend_rust/api.md
 
   - Frontend:
