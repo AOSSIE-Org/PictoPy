@@ -1,13 +1,13 @@
 # Sharing Albums
 
-PictoPy can hand someone a link to one of your albums. They open it in an ordinary browser — no account, no app, nothing to install.
+Hand someone a link to one of your albums. They open it in an ordinary browser — no account, no app, nothing to install.
 
 Your photos are never uploaded to PictoPy or to anyone else. They are read off your own disk and sent to whoever opens the link, for as long as you leave the share running.
 
 Two things are true of every share, whichever mode you pick:
 
 - **It only works while PictoPy is running.** Close the app and the link stops working immediately.
-- **Nothing is stored anywhere else.** There is no copy on a server to forget about.
+- **Nothing is stored anywhere else.** There is no copy on a server to worry about.
 
 ## The two modes
 
