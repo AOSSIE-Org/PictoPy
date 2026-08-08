@@ -37,6 +37,72 @@ as well as users who want to use the app. A postman collection has also been add
 <br>
 <br>
 
+## High Level System Flow
+
+The following diagram illustrates how different components of PictoPy interact with each other.
+
+```mermaid
+graph TD
+
+    User[User]
+
+    Frontend[React Frontend]
+    Tauri[Tauri Bridge]
+
+    Rust[Rust Backend]
+
+    FastAPI[FastAPI Backend]
+
+    SQLite[(SQLite Database)]
+
+    ONNX[ONNX Runtime]
+    YOLO[YOLO Detection Models]
+    FaceNet[FaceNet Embeddings]
+
+    User --> Frontend
+
+    Frontend --> Tauri
+
+    Tauri --> Rust
+
+    Rust --> FastAPI
+
+    FastAPI --> SQLite
+
+    FastAPI --> ONNX
+
+    ONNX --> YOLO
+    ONNX --> FaceNet
+```
+
+
+
+The diagram above illustrates the interaction between the frontend, Tauri bridge, Rust backend, Python backend, database, and AI models.
+
 ## Backend rust (via Tauri)
 
 The Rust backend, integrated through Tauri, is a core component of our application. It leverages Rust's performance and safety features to handle file system operations, provide a secure bridge between the frontend and the local system, and manage OS-level interactions. This backend efficiently manages tasks such as reading and writing image files, extracting metadata, and ensuring secure access to system resources. It communicates with the React frontend through an IPC mechanism, allowing for seamless integration of low-level functionalities with the user interface. This architecture enables high-performance, secure operations on the local system while maintaining a smooth user experience.
+
+## Image Processing Workflow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Rust
+    participant FastAPI
+    participant Models
+    participant Database
+
+    User->>Frontend: Select Images
+    Frontend->>Rust: Request Processing
+    Rust->>FastAPI: Send Processing Task
+    FastAPI->>Models: Run Detection & Recognition
+    Models-->>FastAPI: Return Results
+    FastAPI->>Database: Store Metadata
+    Database-->>FastAPI: Confirm Storage
+    FastAPI-->>Rust: Return Response
+    Rust-->>Frontend: Processed Results
+    Frontend-->>User: Display Results
+```
+This workflow shows how images are processed, analyzed, and stored before results are presented to the user.
