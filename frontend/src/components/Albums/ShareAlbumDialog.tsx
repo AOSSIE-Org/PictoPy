@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import {
   Check,
   Copy,
   Globe,
+  Info,
   Loader2,
   Share2,
   TriangleAlert,
@@ -53,6 +55,10 @@ const EXPIRY_OPTIONS = [
 
 // The backend hashes with bcrypt and refuses anything shorter.
 const MIN_PASSWORD_LENGTH = 4;
+
+const DOCS_URL =
+  'https://aossie-org.github.io/PictoPy/overview/sharing-albums/';
+const DOCS_INTERNET_URL = `${DOCS_URL}#internet-mode`;
 
 const formatExpiry = (expiresAt: string | null): string =>
   expiresAt ? new Date(expiresAt).toLocaleString() : 'Until you stop it';
@@ -236,6 +242,25 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     setCopied(true);
   };
 
+  // Deep links to the section covering whichever mode is selected, so someone
+  // weighing up internet mode lands on what it costs rather than the top.
+  const docsButton = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="text-muted-foreground hover:text-foreground -mt-1 h-7 w-7 shrink-0"
+      aria-label="How sharing works"
+      onClick={() =>
+        openUrl(mode === 'internet' ? DOCS_INTERNET_URL : DOCS_URL).catch(
+          () => undefined,
+        )
+      }
+    >
+      <Info className="h-4 w-4" />
+    </Button>
+  );
+
   const renderAddress = (entry: ShareUrl) => (
     <button
       key={entry.url}
@@ -290,7 +315,10 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
         ) : activeShare ? (
           <>
             <DialogHeader>
-              <DialogTitle>Sharing "{activeShare.album_name}"</DialogTitle>
+              <div className="flex items-start justify-between gap-2">
+                <DialogTitle>Sharing "{activeShare.album_name}"</DialogTitle>
+                {docsButton}
+              </div>
               <DialogDescription>
                 Anyone on this network can open the link while PictoPy is
                 running. Nothing is uploaded.
@@ -409,7 +437,10 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
         ) : (
           <form onSubmit={handleCreate}>
             <DialogHeader>
-              <DialogTitle>Share "{album?.name}"</DialogTitle>
+              <div className="flex items-start justify-between gap-2">
+                <DialogTitle>Share "{album?.name}"</DialogTitle>
+                {docsButton}
+              </div>
               <DialogDescription>
                 {mode === 'lan'
                   ? 'Serve this album to other devices on your network. The photos stay on this machine.'
