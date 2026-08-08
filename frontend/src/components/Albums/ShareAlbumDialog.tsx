@@ -31,7 +31,7 @@ import { createShare, revokeShare } from '@/api/api-functions';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { cn } from '@/lib/utils';
-import { startTunnel, stopTunnel, tunnelStatus } from '@/utils/tunnel';
+import { useShareTunnel } from '@/hooks/useShareTunnel';
 import {
   Share,
   ShareAlbumDialogProps,
@@ -84,8 +84,8 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
   const [createdShare, setCreatedShare] = useState<Share | null>(null);
   const [selectedUrl, setSelectedUrl] = useState('');
   const [copied, setCopied] = useState(false);
-  const [tunnelUrl, setTunnelUrl] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const tunnel = useShareTunnel();
+  const { url: tunnelUrl, isConnecting } = tunnel;
 
   // The share this dialog is showing: the one just made, or the newest already
   // running. Older ones stay out of the way until sharing is stopped.
@@ -133,19 +133,25 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
         return;
       }
 
-      setIsConnecting(true);
       try {
-        setTunnelUrl(await startTunnel(share.port));
+        await tunnel.open(share.port);
         setCreatedShare(share);
       } catch (cause) {
         // The user asked for an internet share and did not get one, so undo
         // the local half rather than leaving a share they did not ask for.
-        await revokeShare(share.token).catch(() => undefined);
-        setTunnelError(
-          `Could not open a connection: ${String(cause)} The album was not shared.`,
-        );
+        try {
+          await revokeShare(share.token);
+          setTunnelError(
+            `Could not open a connection: ${String(cause)} The album was not shared.`,
+          );
+        } catch {
+          // Saying "not shared" here would be untrue, and the share is live on
+          // the local network with nothing telling the user so.
+          setTunnelError(
+            `Could not open a connection: ${String(cause)} The album is still being shared on this network — reopen this dialog to stop it.`,
+          );
+        }
       } finally {
-        setIsConnecting(false);
         onChanged();
       }
     },
@@ -158,12 +164,10 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     // react-query hands the mutation function a context as a second argument.
     mutationFn: async (tokens: string[]): Promise<BackendRes<null>> => {
       await Promise.all(tokens.map((token) => revokeShare(token)));
-      if (tunnelUrl) {
-        // One tunnel serves the whole share port, so this closes any other
-        // internet share too. Acceptable while the dialog only ever creates
-        // one at a time, and better than leaving a tunnel to a dead port.
-        await stopTunnel().catch(() => undefined);
-      }
+      // Closed through the hook, which asks whether one is running rather than
+      // reading state this dialog may not have received yet. A failure here
+      // rejects the mutation, so nothing claims the cleanup finished.
+      await tunnel.close();
       return { success: true };
     },
     autoInvalidateTags: ['shares'],
@@ -181,9 +185,10 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
   useMutationFeedback(revokeShareMutation, {
     loadingMessage: 'Stopping the share...',
     successTitle: 'Sharing stopped',
-    successMessage: 'The album is no longer on the local network.',
+    successMessage: 'The album is no longer being shared.',
     errorTitle: 'Error',
-    errorMessage: 'Could not stop this share. Please try again.',
+    errorMessage:
+      'The share may still be running. Reopen this dialog and try stopping it again.',
     onSuccess: () => {
       onChanged();
       onClose();
@@ -204,14 +209,16 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     setCreatedShare(null);
     setSelectedUrl('');
     setCopied(false);
-    setIsConnecting(false);
-    // A share made in an earlier session is still served by whatever tunnel is
-    // up, so ask rather than assume it was a LAN share.
-    setTunnelUrl(null);
-    tunnelStatus()
-      .then(setTunnelUrl)
-      .catch(() => undefined);
-  }, [isOpen, album?.id]);
+    // A share made earlier is still served by whatever tunnel is up, so ask
+    // rather than assume it was a local one. The mode follows the answer:
+    // showing an internet link while the help button explains local sharing
+    // would describe the wrong thing.
+    tunnel.refresh().then((current) => {
+      if (current) {
+        setMode('internet');
+      }
+    });
+  }, [isOpen, album?.id, tunnel.refresh]);
 
   const handleModeChange = (next: ShareMode) => {
     setMode(next);
@@ -335,8 +342,9 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
                 {docsButton}
               </div>
               <DialogDescription>
-                Anyone on this network can open the link while PictoPy is
-                running. Nothing is uploaded.
+                {tunnelUrl
+                  ? 'Anyone with this link can open the album while PictoPy is running. It travels through a relay that can see the photos.'
+                  : 'Anyone on this network can open the link while PictoPy is running. Nothing is uploaded.'}
               </DialogDescription>
             </DialogHeader>
 
