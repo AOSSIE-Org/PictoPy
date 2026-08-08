@@ -1,6 +1,7 @@
 import userEvent from '@testing-library/user-event';
 import { render, screen, waitFor } from '@/test-utils';
 import { createShare, revokeShare } from '@/api/api-functions';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { startTunnel, stopTunnel, tunnelStatus } from '@/utils/tunnel';
 import { Album } from '@/types/Album';
 import { Share } from '@/types/Share';
@@ -9,6 +10,10 @@ import { ShareAlbumDialog } from '../ShareAlbumDialog';
 jest.mock('@/api/api-functions', () => ({
   createShare: jest.fn(),
   revokeShare: jest.fn(),
+}));
+
+jest.mock('@tauri-apps/plugin-opener', () => ({
+  openUrl: jest.fn(),
 }));
 
 jest.mock('@/utils/tunnel', () => ({
@@ -22,6 +27,7 @@ const mockRevokeShare = revokeShare as jest.Mock;
 const mockStartTunnel = startTunnel as jest.Mock;
 const mockStopTunnel = stopTunnel as jest.Mock;
 const mockTunnelStatus = tunnelStatus as jest.Mock;
+const mockOpenUrl = openUrl as jest.Mock;
 
 const internetToggle = () => screen.getByRole('radio', { name: /internet/i });
 
@@ -77,6 +83,7 @@ describe('ShareAlbumDialog', () => {
     mockStartTunnel.mockResolvedValue('https://abc123.lhr.life');
     mockStopTunnel.mockResolvedValue(undefined);
     mockTunnelStatus.mockResolvedValue(null);
+    mockOpenUrl.mockResolvedValue(undefined);
   });
 
   describe('internet mode', () => {
@@ -147,6 +154,27 @@ describe('ShareAlbumDialog', () => {
         expect(mockRevokeShare).toHaveBeenCalledWith('tok-1'),
       );
       expect(screen.queryByLabelText('Link')).not.toBeInTheDocument();
+    });
+
+    it('points the help button at whichever mode is selected', async () => {
+      const user = userEvent.setup();
+      renderDialog();
+
+      await user.click(
+        screen.getByRole('button', { name: /how sharing works/i }),
+      );
+      expect(mockOpenUrl).toHaveBeenLastCalledWith(
+        'https://aossie-org.github.io/PictoPy/overview/sharing-albums/',
+      );
+
+      await user.click(internetToggle());
+      await user.click(
+        screen.getByRole('button', { name: /how sharing works/i }),
+      );
+      // Someone weighing up internet mode should land on what it costs.
+      expect(mockOpenUrl).toHaveBeenLastCalledWith(
+        'https://aossie-org.github.io/PictoPy/overview/sharing-albums/#internet-mode',
+      );
     });
 
     it('closes the tunnel when the share is stopped', async () => {
