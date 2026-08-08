@@ -196,6 +196,69 @@ describe('ShareAlbumDialog', () => {
       );
     });
 
+    it('does not claim the album was withdrawn when undoing it failed', async () => {
+      const user = userEvent.setup();
+      mockStartTunnel.mockRejectedValue('no provider answered.');
+      mockRevokeShare.mockRejectedValue(new Error('backend unreachable'));
+      renderDialog();
+
+      await user.click(internetToggle());
+      await user.click(
+        screen.getByRole('switch', { name: /require a password/i }),
+      );
+      await user.click(screen.getByRole('button', { name: /start sharing/i }));
+
+      // The share is live on the local network; saying otherwise would send the
+      // user away believing nothing is being served.
+      expect(
+        await screen.findByText(/still being shared on this network/i),
+      ).toBeInTheDocument();
+    });
+
+    it('restores internet mode when a tunnel is already running', async () => {
+      const user = userEvent.setup();
+      mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
+      renderDialog([share]);
+
+      await waitFor(() =>
+        expect(screen.getByLabelText('Link')).toHaveValue(
+          'https://abc123.lhr.life/s/tok-1',
+        ),
+      );
+      await user.click(
+        screen.getByRole('button', { name: /how sharing works/i }),
+      );
+
+      // Showing an internet link while the help explains local sharing would
+      // describe the wrong thing entirely.
+      expect(mockOpenUrl).toHaveBeenLastCalledWith(
+        'https://aossie-org.github.io/PictoPy/overview/sharing-albums/#internet-mode',
+      );
+    });
+
+    it('reports a tunnel that would not close', async () => {
+      const user = userEvent.setup();
+      mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
+      // The wording the Rust command actually produces on a failed kill.
+      mockStopTunnel.mockRejectedValue(
+        new Error(
+          'could not stop the tunnel (ssh pid 900 may still be running): access denied',
+        ),
+      );
+      const { store } = renderDialog([share]);
+
+      await user.click(screen.getByRole('button', { name: /stop sharing/i }));
+
+      // usePictoMutation retries twice with a delay before it reports failure.
+      await waitFor(
+        () => expect(store.getState().infoDialog.variant).toBe('error'),
+        { timeout: 5000 },
+      );
+      expect(store.getState().infoDialog.message).toMatch(
+        /may still be running/i,
+      );
+    });
+
     it('closes the tunnel when the share is stopped', async () => {
       const user = userEvent.setup();
       mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
