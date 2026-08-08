@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod memories;
 mod services;
 
 use sysinfo::System;
@@ -52,6 +53,13 @@ fn is_process_alive() -> bool {
 }
 
 fn on_window_event(window: &Window, event: &WindowEvent) {
+    // Covers the app being left open across midnight, and coming back from the
+    // tray. Throttled inside.
+    if matches!(event, WindowEvent::Focused(true)) && window.label() == "main" {
+        memories::check_on_resume(window.app_handle().clone());
+        return;
+    }
+
     if let WindowEvent::CloseRequested { api, .. } = event {
         // Secondary windows (e.g. model-manager) close normally.
         if window.label() != "main" {
@@ -285,11 +293,15 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let resource_path = app.path().resolve("resources", BaseDirectory::Resource)?;
             println!("Resource path: {:?}", resource_path);
 
             prod(app.handle(), &resource_path)?;
+
+            app.manage(memories::MemoryTaskState::default());
+            memories::spawn_memory_task(app.handle().clone());
 
             // When auto-started at boot (--minimized flag), keep the window hidden
             if std::env::args().any(|a| a == "--minimized") {
@@ -348,6 +360,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             services::get_resources_folder_path,
             open_model_manager,
+            memories::open_memory,
+            memories::take_pending_memory,
             enable_autostart,
             disable_autostart,
             is_autostart_enabled,

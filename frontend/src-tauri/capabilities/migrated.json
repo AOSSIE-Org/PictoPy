@@ -92,6 +92,7 @@
     "fs:default",
     "dialog:default",
     "store:default",
-    "opener:allow-reveal-item-in-dir"
+    "opener:allow-reveal-item-in-dir",
+    "notification:default"
   ]
 }
