@@ -148,7 +148,7 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
           // Saying "not shared" here would be untrue, and the share is live on
           // the local network with nothing telling the user so.
           setTunnelError(
-            `Could not open a connection: ${String(cause)} The album is still being shared on this network — reopen this dialog to stop it.`,
+            `Could not open a connection: ${String(cause)} The album is still being shared on this network. Reopen this dialog to stop it.`,
           );
         }
       } finally {
@@ -507,7 +507,7 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
                     Photos pass through a tunnel service, which can see them.
                     Anyone holding the link can open the album, and chat apps
                     such as WhatsApp and Slack fetch links automatically to
-                    build previews — a password stops those previews seeing
+                    build previews, a password stops those previews seeing
                     anything.
                   </p>
                 </div>
