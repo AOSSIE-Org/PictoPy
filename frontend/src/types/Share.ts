@@ -32,6 +32,19 @@ export interface CreateShareRequest {
   password?: string;
 }
 
+/** The view of the tunnel that `useShareTunnel` hands its caller. */
+export interface ShareTunnel {
+  /** The public address, or null when no tunnel is running. */
+  url: string | null;
+  isConnecting: boolean;
+  /** Ask the owner what is running. Never throws. */
+  refresh: () => Promise<string | null>;
+  /** Open a tunnel to the share port. Rejects if no provider answers. */
+  open: (port: number) => Promise<string>;
+  /** Close any running tunnel. Rejects if it could not be closed. */
+  close: () => Promise<void>;
+}
+
 export interface ShareAlbumDialogProps {
   album: Album | null;
   /**

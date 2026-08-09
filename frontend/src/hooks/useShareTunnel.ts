@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { startTunnel, stopTunnel, tunnelStatus } from '@/utils/tunnel';
+import { ShareTunnel } from '@/types/Share';
 
 /**
  * The tunnel that makes the share server reachable off the LAN.
@@ -9,45 +10,60 @@ import { startTunnel, stopTunnel, tunnelStatus } from '@/utils/tunnel';
  * asks the Rust side rather than trusting what a dialog last saw: a share can
  * be stopped before the first status lookup has even resolved.
  */
-export const useShareTunnel = () => {
+export const useShareTunnel = (): ShareTunnel => {
   const [url, setUrl] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
 
-  /** The tunnel's current address, or null. Never throws. */
+  // Bumped whenever a tunnel is opened or closed. A status lookup started
+  // before one of those is describing a tunnel that has since been replaced,
+  // and applying its answer would wipe an address just obtained.
+  const revision = useRef(0);
+  const latest = useRef<string | null>(null);
+
+  const apply = useCallback((value: string | null) => {
+    latest.current = value;
+    setUrl(value);
+  }, []);
+
   const refresh = useCallback(async (): Promise<string | null> => {
+    const startedAt = revision.current;
     const current = await tunnelStatus().catch(() => null);
-    setUrl(current);
-    return current;
-  }, []);
-
-  /** Open a tunnel to the share port. Rejects if no provider answers. */
-  const open = useCallback(async (port: number): Promise<string> => {
-    setIsConnecting(true);
-    try {
-      const opened = await startTunnel(port);
-      setUrl(opened);
-      return opened;
-    } finally {
-      setIsConnecting(false);
+    if (revision.current !== startedAt) {
+      // Something newer finished while this was in flight; it knows better.
+      return latest.current;
     }
-  }, []);
+    apply(current);
+    return current;
+  }, [apply]);
 
-  /**
-   * Close the tunnel if one is running. Rejects if it could not be closed, so
-   * the caller can say so rather than reporting a cleanup that did not happen.
-   */
+  const open = useCallback(
+    async (port: number): Promise<string> => {
+      revision.current += 1;
+      setIsConnecting(true);
+      try {
+        const opened = await startTunnel(port);
+        apply(opened);
+        return opened;
+      } finally {
+        setIsConnecting(false);
+      }
+    },
+    [apply],
+  );
+
   const close = useCallback(async (): Promise<void> => {
+    revision.current += 1;
     // Asked fresh instead of read from state above. If the lookup itself
     // fails, attempt the stop anyway: leaving a tunnel up is the worse of the
     // two mistakes.
     const current = await tunnelStatus().catch(() => 'unknown');
     if (current === null) {
-      setUrl(null);
+      apply(null);
       return;
     }
     await stopTunnel();
-    setUrl(null);
-  }, []);
+    apply(null);
+  }, [apply]);
 
   return { url, isConnecting, refresh, open, close };
 };
