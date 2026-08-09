@@ -36,10 +36,8 @@ GPS_NOVELTY_SCALE_KM = 50.0
 HOME_CELL_PRECISION = 1
 MIN_IMAGES_FOR_HOME = 20
 
-# Near-duplicate rule. BOTH must hold: visual similarity alone would collapse
-# a daily-coffee photo, a revisited viewpoint, or an annual anniversary shot
-# into a single survivor. Those are near-identical and genuinely distinct.
-# Temporal proximity is necessary, never sufficient.
+# BOTH must hold. Visual similarity alone collapses a daily coffee or a revisited
+# viewpoint into one survivor -- near-identical, yet genuinely distinct photos.
 DUP_COSINE = 0.90
 DUP_WINDOW_SECONDS = 120.0
 
@@ -58,10 +56,8 @@ MAD_TO_STD = 1.4826
 # renormalized out when their source is missing.
 ALWAYS_AVAILABLE = frozenset({"favourite", "known_people", "face_presence", "in_album"})
 
-# Nothing detects faces in a video and a video cannot be put in an album, so
-# for videos those are absent, not zero. Scoring a video as face-free and
-# album-less would rank every one of them below every photo — the same
-# mistake availability renormalization exists to prevent.
+# For videos these are absent, not zero: nothing detects faces in one and it
+# cannot join an album. Scoring them zero ranks every video below every photo.
 UNAVAILABLE_FOR_VIDEO = frozenset({"known_people", "face_presence", "in_album"})
 
 

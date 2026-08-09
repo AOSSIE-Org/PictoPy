@@ -67,7 +67,6 @@ def get_albums():
     albums = db_get_all_albums()
     album_list = []
     for album in albums:
-        # Get image count for each album
         image_ids = db_get_album_images(album["album_id"])
         image_count = len(image_ids)
         is_locked = album["is_locked"]
@@ -166,7 +165,6 @@ def get_album(album_id: str = Path(...)):
         )
 
     try:
-        # Get image count for the album
         image_ids = db_get_album_images(album_id)
         image_count = len(image_ids)
 

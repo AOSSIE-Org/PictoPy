@@ -152,10 +152,8 @@ export const AlbumDetail = () => {
       const responseData = imagesData as any;
       const imageIds = (responseData?.image_ids || []) as string[];
 
-      // Get full image data from all images
       const allImages = (allImagesData?.data || []) as Image[];
 
-      // Filter images that are in this album
       const albumImages = allImages.filter((img) => imageIds.includes(img.id));
 
       dispatch(setAlbumImages(albumImages));

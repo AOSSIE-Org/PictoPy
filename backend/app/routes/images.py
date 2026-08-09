@@ -11,7 +11,6 @@ from app.database.images import (
 )
 from app.logging.setup_logging import get_logger
 
-# Initialize logger
 logger = get_logger(__name__)
 router = APIRouter()
 
@@ -75,7 +74,6 @@ def get_all_images(
         # Get all images with tags from database (single query with optional filter)
         images = db_get_all_images(tagged=tagged)
 
-        # Convert to response format
         image_data = [
             ImageData(
                 id=image["id"],
@@ -255,7 +253,6 @@ def semantic_search_images(
             if score >= match_threshold:
                 matched_pairs.append((img_id, score))
 
-        # Sort desc by score
         matched_pairs.sort(key=lambda x: x[1], reverse=True)
 
         if not matched_pairs:

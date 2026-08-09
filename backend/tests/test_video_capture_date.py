@@ -164,9 +164,7 @@ class TestVideoCaptureDateCandidates:
         assert video_capture_date_candidates(path)[0] is None
 
 
-# ##############################
 # How videos choose a capture date
-# ##############################
 
 
 def sidecar_for(path, exif_date: str):

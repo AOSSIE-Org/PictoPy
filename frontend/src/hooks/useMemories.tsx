@@ -25,13 +25,8 @@ export const MEMORIES_QUERY_KEY = ['memories'];
 /** How often the status endpoint is polled while a run is in flight. */
 const RUN_POLL_INTERVAL_MS = 2000;
 
-/**
- * How long to keep watching for a queued run to start.
- *
- * Curation shares one single-worker executor with indexing and semantic
- * scoring, so a run can sit queued for a while - but not indefinitely, and
- * watching forever would poll forever.
- */
+// Curation shares one single-worker executor, so a run can sit queued a while --
+// but watching forever would poll forever.
 const RUN_START_TIMEOUT_MS = 90_000;
 
 // usePictoQuery cannot infer its payload generic from the query function, so
@@ -68,14 +63,8 @@ export const useMemory = (memoryId?: string) => {
   });
 };
 
-/**
- * Scheduler snapshot. Polled while a run is in progress.
- *
- * `forcePolling` covers the gap before a run is visible: POST /generate
- * returns once the run is queued, which is earlier than the worker process
- * writing 'running', so waiting for that status to appear on its own can
- * mean never polling at all.
- */
+// `forcePolling` covers the gap before a run is visible: /generate returns at
+// queue time, before the worker writes 'running', so status alone never polls.
 export const useMemoryStatus = (
   enabled: boolean = true,
   forcePolling: boolean = false,
@@ -95,12 +84,8 @@ export const useMemoryStatus = (
   );
 };
 
-/**
- * POST /generate returns once the run is *queued*, minutes before it runs, so
- * invalidating on the response just refetches what is already on screen -- the
- * reason Refresh used to look like it did nothing. This follows the run
- * instead, refreshing as results land and once more when it settles.
- */
+// /generate returns at queue time, so invalidating on the response refetches
+// what is already on screen -- why Refresh looked dead. This follows the run.
 export const useRefreshMemories = () => {
   const queryClient = useQueryClient();
   const [isAwaitingRun, setIsAwaitingRun] = useState(false);
@@ -138,10 +123,8 @@ export const useRefreshMemories = () => {
     wasRunActive.current = isRunActive;
   }, [isRunActive, statusUpdatedAt, queryClient]);
 
-  // Stop force-polling once our run is on record. Keyed on the start time
-  // rather than on seeing 'running': a run over a small library can begin
-  // and finish between two polls, and waiting to catch it mid-flight left
-  // the button spinning long after the memories had landed.
+  // Keyed on start time, not on catching 'running': a small library can begin
+  // and finish between polls, leaving the button spinning after results landed.
   useEffect(() => {
     if (!isAwaitingRun) return;
 

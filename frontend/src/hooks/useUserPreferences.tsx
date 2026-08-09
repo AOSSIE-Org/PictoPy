@@ -46,10 +46,8 @@ export const useUserPreferences = () => {
 
   // Non-zero from the moment a write is queued until it settles.
   const pendingWrites = useRef(0);
-  // Bumped when a write is queued. Any read already in flight at that point
-  // describes the server from before it, however late the response arrives,
-  // which is why this counts reads rather than timing them: a read that starts
-  // first can still finish last.
+  // Counts reads rather than timing them: a read that starts first can still
+  // finish last, and describes the server from before the write either way.
   const writeEpoch = useRef(0);
   const readEpoch = useRef(0);
 
@@ -97,15 +95,9 @@ export const useUserPreferences = () => {
   // value rather than what is actually stored.
   const writeQueue = useRef<Promise<unknown>>(Promise.resolve());
 
-  /**
-   * Apply a change optimistically and send it, queued behind any write already
-   * running.
-   *
-   * `build` runs when the write reaches the front of the queue, not when it was
-   * requested, so a queued change is computed from what actually landed before
-   * it. It returns the full next state and the request body, which carries only
-   * the changed keys so a concurrent edit elsewhere in settings survives.
-   */
+  // `build` runs when the write reaches the front of the queue, not when it was
+  // requested, so it sees whatever actually landed first. Its request carries
+  // only changed keys, leaving a concurrent edit elsewhere in settings intact.
   const writePreferences = (
     build: (current: UserPreferencesData) => {
       next: UserPreferencesData;

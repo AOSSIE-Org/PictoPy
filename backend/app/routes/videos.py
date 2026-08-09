@@ -11,7 +11,6 @@ from app.database.videos import (
 from app.schemas.videos import ErrorResponse
 from app.logging.setup_logging import get_logger
 
-# Initialize logger
 logger = get_logger(__name__)
 router = APIRouter()
 

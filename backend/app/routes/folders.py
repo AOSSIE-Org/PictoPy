@@ -64,7 +64,6 @@ from app.utils.semantic_labels import (
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.utils.API import API_util_restart_sync_microservice_watcher
 
-# Initialize logger
 logger = get_logger(__name__)
 
 router = APIRouter()
@@ -100,18 +99,15 @@ def post_folder_add_sequence(folder_path: str, folder_id: int):
         folder_data = []
         folder_ids_and_paths = db_get_folder_ids_by_path_prefix(folder_path)
 
-        # Set all folders to non-recursive (False)
         for folder_id_from_db, folder_path_from_db in folder_ids_and_paths:
             folder_data.append((folder_path_from_db, folder_id_from_db, False))
 
             db_update_folder_indexing_status(folder_id_from_db, INDEXING_IN_PROGRESS)
 
         logger.info(f"Add folder: {folder_data}")
-        # Process images and videos in all folders
         image_util_process_folder_images(folder_data)
         video_util_process_folder_videos(folder_data)
 
-        # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()
 
         for folder_id_from_db, _ in folder_ids_and_paths:
@@ -173,7 +169,6 @@ def post_sync_folder_sequence(
     It processes images in the folder and updates the database.
     """
     try:
-        # Create folder data array
         folder_data = []
 
         folder_data.append((folder_path, folder_id, False))
@@ -183,7 +178,6 @@ def post_sync_folder_sequence(
 
         logger.info(f"Sync folder: {folder_data}")
         db_set_tagging_completed(False)
-        # Process images and videos in all folders
         image_util_process_folder_images(folder_data)
         video_util_process_folder_videos(folder_data)
         image_util_process_untagged_images()
@@ -195,7 +189,6 @@ def post_sync_folder_sequence(
         video_util_process_unembedded_frames()
         semantic_util_score_videos()
 
-        # Restart sync microservice watcher after processing images
         API_util_restart_sync_microservice_watcher()
     except Exception as e:
         logger.error(
@@ -214,7 +207,6 @@ def post_sync_folder_sequence(
 )
 def add_folder(request: AddFolderRequest, app_state: State = Depends(get_state)):
     try:
-        # Step 1: Data Validation
 
         if not os.path.isdir(request.folder_path):
             raise ValueError(
@@ -235,7 +227,6 @@ def add_folder(request: AddFolderRequest, app_state: State = Depends(get_state))
 
         request.folder_path = os.path.abspath(request.folder_path)
 
-        # Step 2: Check if folder already exists
         if db_folder_exists(request.folder_path):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -246,12 +237,10 @@ def add_folder(request: AddFolderRequest, app_state: State = Depends(get_state))
                 ).model_dump(),
             )
 
-        # Step 3: If parent_folder_id not provided, try to find it
         parent_folder_id = request.parent_folder_id
         if parent_folder_id is None:
             parent_folder_id = db_find_parent_folder_id(request.folder_path)
 
-        # Step 4: Add folder tree to database
         root_folder_id, folder_map = folder_util_add_folder_tree(
             root_path=request.folder_path,
             parent_folder_id=parent_folder_id,
@@ -259,10 +248,8 @@ def add_folder(request: AddFolderRequest, app_state: State = Depends(get_state))
             taggingCompleted=request.taggingCompleted,
         )
 
-        # Step 5: Update parent ids for the subtree
         db_update_parent_ids_for_subtree(request.folder_path, folder_map)
 
-        # Step 6: Call the post-addition sequence in a separate process
         executor: ProcessPoolExecutor = app_state.executor
         executor.submit(post_folder_add_sequence, request.folder_path, root_folder_id)
 
@@ -432,20 +419,17 @@ def delete_folders(request: DeleteFoldersRequest):
 def sync_folder(request: SyncFolderRequest, app_state: State = Depends(get_state)):
     """Sync a folder by comparing filesystem folders with database entries and removing extra DB entries."""
     try:
-        # Step 1: Get current state from both sources
         db_child_folders = db_get_direct_child_folders(request.folder_id)
         filesystem_folders = folder_util_get_filesystem_direct_child_folders(
             request.folder_path
         )
 
-        # Step 2: Compare and identify differences
         filesystem_folder_set = set(filesystem_folders)
         db_folder_paths = {folder_path for folder_id, folder_path in db_child_folders}
 
         folders_to_delete = db_folder_paths - filesystem_folder_set
         folders_to_add = filesystem_folder_set - db_folder_paths
 
-        # Step 3: Perform synchronization operations
         deleted_count, deleted_folders = folder_util_delete_obsolete_folders(
             db_child_folders, folders_to_delete
         )
@@ -453,7 +437,6 @@ def sync_folder(request: SyncFolderRequest, app_state: State = Depends(get_state
             folders_to_add, request.folder_id
         )
 
-        # Extract just the paths for the API response
         added_folders = [
             folder_path for folder_id, folder_path in added_folders_with_ids
         ]
@@ -465,7 +448,6 @@ def sync_folder(request: SyncFolderRequest, app_state: State = Depends(get_state
             request.folder_id,
             added_folders_with_ids,
         )
-        # Step 4: Return comprehensive response
         return SyncFolderResponse(
             data=SyncFolderData(
                 deleted_count=deleted_count,
@@ -512,7 +494,6 @@ def get_all_folders():
     try:
         folder_details_raw = db_get_all_folder_details()
 
-        # Convert raw tuples to FolderDetails objects
         folders = []
         for folder_data in folder_details_raw:
             (

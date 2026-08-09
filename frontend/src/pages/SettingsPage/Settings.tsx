@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
-// Import modular components
 import FolderManagementCard from './components/FolderManagementCard';
 import UserPreferencesCard from './components/UserPreferencesCard';
 import ApplicationControlsCard from './components/ApplicationControlsCard';

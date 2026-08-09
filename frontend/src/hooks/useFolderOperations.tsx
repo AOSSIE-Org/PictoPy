@@ -123,10 +123,8 @@ export const useFolderOperations = () => {
     mutationFn: async (folder_id: string) =>
       deleteFolders({ folder_ids: [folder_id] }),
     autoInvalidateTags: ['folders'],
-    // Deleting a folder cascades to its images and faces, so any cluster built from
-    // them is now stale. This has to be a separate call: autoInvalidateTags is passed
-    // through as a single queryKey and matches by prefix, so ['folders', 'clusters']
-    // would match neither query.
+    // Deleting a folder cascades to its images and faces, so clusters go stale.
+    // Separate call: autoInvalidateTags is one prefix-matched key, not a list.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clusters'] });
     },

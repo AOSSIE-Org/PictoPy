@@ -277,7 +277,6 @@ async def setup_models(request: SetupRequest, app_state: State = Depends(get_sta
             logger.error(f"Error during setup download: {e}")
             queue.put_nowait({"status": "error", "message": str(e)})
 
-    # Start the setup in the background
     task = asyncio.create_task(background_setup())
     download_tasks[task_id] = DownloadTaskEntry(queue=queue, task=task)
 
@@ -325,7 +324,6 @@ async def start_download_model(model_key: str, app_state: State = Depends(get_st
             logger.error(f"Error downloading model {model_key}: {e}")
             queue.put_nowait({"status": "error", "message": str(e)})
 
-    # Start the download in the background
     task = asyncio.create_task(background_download())
     download_tasks[task_id] = DownloadTaskEntry(queue=queue, task=task)
 

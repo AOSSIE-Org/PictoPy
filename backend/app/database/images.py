@@ -11,7 +11,6 @@ from app.config.settings import (
 )
 from app.logging.setup_logging import get_logger
 
-# Initialize logger
 logger = get_logger(__name__)
 
 # Type definitions
@@ -86,7 +85,6 @@ def db_create_images_table() -> None:
     """
     )
 
-    # Create indexes for Memories feature queries
     cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_latitude ON images(latitude)")
     cursor.execute(
         "CREATE INDEX IF NOT EXISTS ix_images_longitude ON images(longitude)"
@@ -98,7 +96,6 @@ def db_create_images_table() -> None:
         "CREATE INDEX IF NOT EXISTS ix_images_favourite_captured_at ON images(isFavourite, captured_at)"
     )
 
-    # Create new image_classes junction table
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS image_classes (
@@ -182,7 +179,6 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
     cursor = conn.cursor()
 
     try:
-        # Build the query with optional WHERE clause
         query = """
             SELECT 
                 i.id, 
@@ -253,14 +249,12 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
             if tag_name and tag_name not in images_dict[image_id]["tags"]:
                 images_dict[image_id]["tags"].append(tag_name)
 
-        # Convert to list and set tags to None if empty
         images = []
         for image_data in images_dict.values():
             if not image_data["tags"]:
                 image_data["tags"] = None
             images.append(image_data)
 
-        # Sort by path
         images.sort(key=lambda x: x["path"])
 
         return images
@@ -448,7 +442,6 @@ def db_get_images_by_folder_ids(
     cursor = conn.cursor()
 
     try:
-        # Create placeholders for the IN clause
         placeholders = ",".join("?" for _ in folder_ids)
         cursor.execute(
             f"""
@@ -484,7 +477,6 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
     cursor = conn.cursor()
 
     try:
-        # Create placeholders for the IN clause
         placeholders = ",".join("?" for _ in image_ids)
         cursor.execute(
             f"DELETE FROM images WHERE id IN ({placeholders})",

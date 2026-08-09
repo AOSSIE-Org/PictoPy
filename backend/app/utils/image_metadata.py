@@ -11,7 +11,6 @@ logger = get_logger(__name__)
 def extract_metadata(image_path):
     metadata = {}
 
-    # Check if file exists
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"File not found: {image_path}")
 
@@ -26,7 +25,6 @@ def extract_metadata(image_path):
                 }
                 metadata.update(info_dict)
 
-                # Extract EXIF data
                 exifdata = image.getexif()
                 for tag_id in exifdata:
                     tag = TAGS.get(tag_id, tag_id)

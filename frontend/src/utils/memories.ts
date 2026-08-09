@@ -1,9 +1,3 @@
-/**
- * Memories utility functions.
- *
- * Pure formatting helpers for memory data.
- */
-
 import { convertFileSrc } from '@tauri-apps/api/core';
 import type {
   MemoryCard,
@@ -97,31 +91,20 @@ const EVENT_TYPE_LABELS: Record<MemoryEventType, string> = {
 export const formatEventType = (eventType: MemoryEventType): string =>
   EVENT_TYPE_LABELS[eventType] ?? 'Memory';
 
-/**
- * Build the subtitle line for a card: the memory's own subtitle when the
- * curator set one, otherwise its date span.
- */
+/** The curator's subtitle when it set one, otherwise the date span. */
 export const formatMemorySubtitle = (memory: MemoryCard): string =>
   memory.subtitle ||
   formatDateRange(memory.period_start, memory.period_end) ||
   formatMemoryDate(memory.surface_date);
 
-/**
- * One playable slide: a still, or a clip shot during the same span.
- *
- * A discriminated union rather than a widened image type — the viewer has to
- * render two different elements and hold a video slide for its own length.
- */
+// A union, not a widened image type: the viewer renders two different elements
+// and holds a video slide for its own length.
 export type MemorySlide =
   | ({ kind: 'image' } & MemoryImage)
   | ({ kind: 'video' } & MemoryVideo);
 
-/**
- * Merge a memory's stills and clips into the order they were shot.
- *
- * They arrive as two arrays because they live in two tables, but sort_order
- * is one sequence across both, so this is a merge rather than a concat.
- */
+// Two arrays because they live in two tables, but sort_order is one sequence
+// across both -- so this merges rather than concatenates.
 export const buildMemorySlides = (
   memory: Pick<MemoryStory, 'images' | 'videos'> | null | undefined,
 ): MemorySlide[] => {
@@ -139,12 +122,8 @@ export const buildMemorySlides = (
   return slides.sort((a, b) => a.sort_order - b.sort_order);
 };
 
-/**
- * How long a slide is held before the story advances.
- *
- * A still gets the configured interval; a clip runs for its own length, so
- * the story never cuts away mid-shot or lingers on a frozen last frame.
- */
+// A clip runs for its own length, so the story never cuts away mid-shot or
+// lingers on a frozen last frame. A still gets the configured interval.
 export const slideDurationMs = (
   slide: MemorySlide | undefined,
   photoDurationMs: number,

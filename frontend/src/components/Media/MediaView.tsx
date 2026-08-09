@@ -150,7 +150,6 @@ export function MediaView({
     resetViewerState();
   }, [resetViewerState]);
 
-  // Keyboard navigation
   useKeyboardNavigation({
     onClose: handleClose,
     onNext: handleNextImage,

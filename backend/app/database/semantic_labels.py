@@ -18,21 +18,17 @@ def db_create_semantic_labels_table():
         conn = _connect()
         cursor = conn.cursor()
 
-        # Migrate the pre-vocabulary shell schema. It shipped with no writer,
-        # so the table is guaranteed empty: drop-and-recreate instead of
-        # ALTER. image_semantic_labels (also never written) is superseded by
-        # image_classes rows + image_classes.score.
+        # The pre-vocabulary schema shipped with no writer, so it is guaranteed
+        # empty: drop and recreate rather than ALTER.
         cursor.execute("PRAGMA table_info(semantic_labels)")
         columns = {row[1] for row in cursor.fetchall()}
         if columns and "descriptions" not in columns:
             cursor.execute("DROP TABLE semantic_labels")
         cursor.execute("DROP TABLE IF EXISTS image_semantic_labels")
 
-        # Definition + cache table for the curated vocabulary. class_id is
-        # shared with mappings so tag consumers (image_classes joins) treat
-        # semantic labels exactly like YOLO classes. descriptions (JSON
-        # array) are the source of truth; label_embedding caches their
-        # renormalized mean for embedding_model_version.
+        # class_id is shared with mappings so tag consumers treat semantic labels
+        # exactly like YOLO classes. descriptions are the source of truth;
+        # label_embedding just caches their renormalized mean.
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS semantic_labels (
@@ -48,11 +44,9 @@ def db_create_semantic_labels_table():
             """
         )
 
-        # Display cut: tag-list queries join this view instead of
-        # image_classes, so chips show all YOLO tags but only the
-        # top-SEMANTIC_DISPLAY_TOP_K semantic tags per image. Search
-        # matching still uses the full table (stored top-K). Recreated at
-        # startup so setting changes apply without re-scoring.
+        # Chips join this view so they show all YOLO tags but only the top few
+        # semantic ones; search still uses the full table. Recreated at startup so
+        # a setting change applies without re-scoring.
         from app.config.settings import SEMANTIC_DISPLAY_TOP_K
 
         cursor.execute("DROP VIEW IF EXISTS image_classes_display")

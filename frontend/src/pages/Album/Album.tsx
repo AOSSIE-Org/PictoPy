@@ -51,11 +51,8 @@ const ALBUM_SORT_STORAGE_KEY = 'pictopy-albums-sort';
 // Derived from the options above so a removed sort stops being restorable.
 const ALBUM_SORT_VALUES = ALBUM_SORT_OPTIONS.map((option) => option.value);
 
-/**
- * Newest first. SQLite timestamps are zero-padded, so they compare correctly
- * as strings. Albums predating these columns have no timestamp: they read as
- * oldest and keep the insertion order the backend lists them in.
- */
+// SQLite timestamps are zero-padded, so string comparison sorts them correctly.
+// Albums predating the column have none: they read as oldest, keeping insert order.
 const newestFirst = (a: string | null, b: string | null): number =>
   (b ?? '').localeCompare(a ?? '');
 

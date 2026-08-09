@@ -28,9 +28,7 @@ app.include_router(models_router, prefix="/models", tags=["models"])
 client = TestClient(app)
 
 
-# ##############################
 # Pytest Fixtures
-# ##############################
 
 
 @pytest.fixture
@@ -99,10 +97,8 @@ def mock_model_registry():
 
 @pytest.fixture
 def mock_model_registry_with_placeholder(mock_model_registry):
-    # Mirrors the real registry's not-yet-uploaded entries (e.g. siglip2_large_vision),
-    # which /status must exclude. Covered as three independent cases so a
-    # regression from `or` to `and` in the route's placeholder check would
-    # still be caught.
+    # Mirrors the registry's not-yet-uploaded entries, which /status must exclude.
+    # Three independent cases, so an `or` -> `and` regression is still caught.
     registry = dict(mock_model_registry)
     registry["siglip2_large_vision"] = {
         "filename": "SigLIP2_Large_Vision.onnx",
@@ -254,9 +250,7 @@ def download_facenet_response(mock_model_registry):
         return client.post("/models/download/facenet")
 
 
-# ##############################
 # Test Classes — endpoints not covered upstream
-# ##############################
 
 
 class TestModelStatus:
@@ -810,9 +804,7 @@ class TestStartDownloadModel:
             assert response.status_code == 200
 
 
-# ##############################
 # Test Classes — from upstream (verbatim)
-# ##############################
 
 
 class TestModelsAPI:

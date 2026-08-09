@@ -55,7 +55,6 @@ def video_util_process_folder_videos(folder_data: List[Tuple[str, int, bool]]) -
         bool: True if all folders processed successfully, False otherwise
     """
     try:
-        # Ensure thumbnail directory exists
         os.makedirs(THUMBNAIL_IMAGES_PATH, exist_ok=True)
 
         all_video_records: List[VideoRecord] = []
