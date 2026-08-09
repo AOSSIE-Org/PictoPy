@@ -39,9 +39,16 @@ export const useShareTunnel = (): ShareTunnel => {
   const open = useCallback(
     async (port: number): Promise<string> => {
       revision.current += 1;
+      const startedAt = revision.current;
       setIsConnecting(true);
       try {
         const opened = await startTunnel(port);
+        if (revision.current !== startedAt) {
+          // A close landed while this was starting. Honour it rather than
+          // handing back a live public address nobody asked to keep.
+          await stopTunnel().catch(() => undefined);
+          throw new Error('The connection was closed while it was starting.');
+        }
         apply(opened);
         return opened;
       } finally {
@@ -53,14 +60,10 @@ export const useShareTunnel = (): ShareTunnel => {
 
   const close = useCallback(async (): Promise<void> => {
     revision.current += 1;
-    // Asked fresh instead of read from state above. If the lookup itself
-    // fails, attempt the stop anyway: leaving a tunnel up is the worse of the
-    // two mistakes.
-    const current = await tunnelStatus().catch(() => 'unknown');
-    if (current === null) {
-      apply(null);
-      return;
-    }
+    // Asked for unconditionally rather than only when something is known to be
+    // running: a start still in flight has a child the owner can already kill,
+    // and asking first would read null and skip the stop entirely. Stopping
+    // when nothing is open is a no-op.
     await stopTunnel();
     apply(null);
   }, [apply]);
