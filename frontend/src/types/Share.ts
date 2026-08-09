@@ -20,10 +20,29 @@ export interface Share {
   urls: ShareUrl[];
 }
 
+/**
+ * Where a share can be reached from. LAN keeps everything on the local network;
+ * internet opens a tunnel, which means the photos pass through a third party.
+ */
+export type ShareMode = 'lan' | 'internet';
+
 export interface CreateShareRequest {
   /** Omitted means the share lasts until it is revoked or PictoPy closes. */
   expires_in_minutes?: number;
   password?: string;
+}
+
+/** The view of the tunnel that `useShareTunnel` hands its caller. */
+export interface ShareTunnel {
+  /** The public address, or null when no tunnel is running. */
+  url: string | null;
+  isConnecting: boolean;
+  /** Ask the owner what is running. Never throws. */
+  refresh: () => Promise<string | null>;
+  /** Open a tunnel to the share port. Rejects if no provider answers. */
+  open: (port: number) => Promise<string>;
+  /** Close any running tunnel. Rejects if it could not be closed. */
+  close: () => Promise<void>;
 }
 
 export interface ShareAlbumDialogProps {

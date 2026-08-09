@@ -1,6 +1,8 @@
 import userEvent from '@testing-library/user-event';
-import { render, screen, waitFor } from '@/test-utils';
+import { act, render, screen, waitFor } from '@/test-utils';
 import { createShare, revokeShare } from '@/api/api-functions';
+import { openUrl } from '@tauri-apps/plugin-opener';
+import { startTunnel, stopTunnel, tunnelStatus } from '@/utils/tunnel';
 import { Album } from '@/types/Album';
 import { Share } from '@/types/Share';
 import { ShareAlbumDialog } from '../ShareAlbumDialog';
@@ -10,8 +12,24 @@ jest.mock('@/api/api-functions', () => ({
   revokeShare: jest.fn(),
 }));
 
+jest.mock('@tauri-apps/plugin-opener', () => ({
+  openUrl: jest.fn(),
+}));
+
+jest.mock('@/utils/tunnel', () => ({
+  startTunnel: jest.fn(),
+  stopTunnel: jest.fn(),
+  tunnelStatus: jest.fn(),
+}));
+
 const mockCreateShare = createShare as jest.Mock;
 const mockRevokeShare = revokeShare as jest.Mock;
+const mockStartTunnel = startTunnel as jest.Mock;
+const mockStopTunnel = stopTunnel as jest.Mock;
+const mockTunnelStatus = tunnelStatus as jest.Mock;
+const mockOpenUrl = openUrl as jest.Mock;
+
+const internetToggle = () => screen.getByRole('radio', { name: /internet/i });
 
 const album: Album = {
   id: 'a1',
@@ -62,6 +80,230 @@ describe('ShareAlbumDialog', () => {
     jest.clearAllMocks();
     mockCreateShare.mockResolvedValue({ success: true, data: share });
     mockRevokeShare.mockResolvedValue({ success: true });
+    mockStartTunnel.mockResolvedValue('https://abc123.lhr.life');
+    mockStopTunnel.mockResolvedValue(undefined);
+    mockTunnelStatus.mockResolvedValue(null);
+    mockOpenUrl.mockResolvedValue(undefined);
+  });
+
+  describe('internet mode', () => {
+    it('shares on the local network unless asked otherwise', async () => {
+      const user = userEvent.setup();
+      renderDialog();
+
+      await user.click(screen.getByRole('button', { name: /start sharing/i }));
+
+      await waitFor(() => expect(mockCreateShare).toHaveBeenCalled());
+      expect(mockStartTunnel).not.toHaveBeenCalled();
+    });
+
+    it('asks for a password by default once the link leaves the network', async () => {
+      const user = userEvent.setup();
+      renderDialog();
+
+      expect(
+        screen.getByRole('switch', { name: /require a password/i }),
+      ).not.toBeChecked();
+
+      await user.click(internetToggle());
+
+      expect(
+        screen.getByRole('switch', { name: /require a password/i }),
+      ).toBeChecked();
+      expect(screen.getByText(/link leaves your network/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/fetch links automatically/i),
+      ).toBeInTheDocument();
+    });
+
+    it('opens a tunnel and shows only that address', async () => {
+      const user = userEvent.setup();
+      renderDialog();
+
+      await user.click(internetToggle());
+      await user.click(
+        screen.getByRole('switch', { name: /require a password/i }),
+      );
+      await user.click(screen.getByRole('button', { name: /start sharing/i }));
+
+      await waitFor(() => expect(mockStartTunnel).toHaveBeenCalledWith(52125));
+      expect(await screen.findByLabelText('Link')).toHaveValue(
+        'https://abc123.lhr.life/s/tok-1',
+      );
+      // The LAN addresses would only work inside the house, so offering them
+      // alongside the link the user asked for would be misleading.
+      expect(screen.queryByText('192.168.1.5')).not.toBeInTheDocument();
+    });
+
+    it('undoes the share when no tunnel can be opened', async () => {
+      const user = userEvent.setup();
+      mockStartTunnel.mockRejectedValue('no provider answered.');
+      renderDialog();
+
+      await user.click(internetToggle());
+      await user.click(
+        screen.getByRole('switch', { name: /require a password/i }),
+      );
+      await user.click(screen.getByRole('button', { name: /start sharing/i }));
+
+      expect(
+        await screen.findByText(/could not open a connection/i),
+      ).toBeInTheDocument();
+      // Leaving a share the user did not get would be worse than none at all.
+      await waitFor(() =>
+        expect(mockRevokeShare).toHaveBeenCalledWith('tok-1'),
+      );
+      expect(screen.queryByLabelText('Link')).not.toBeInTheDocument();
+    });
+
+    it('points the help button at whichever mode is selected', async () => {
+      const user = userEvent.setup();
+      renderDialog();
+
+      await user.click(
+        screen.getByRole('button', { name: /how sharing works/i }),
+      );
+      expect(mockOpenUrl).toHaveBeenLastCalledWith(
+        'https://aossie-org.github.io/PictoPy/overview/sharing-albums/',
+      );
+
+      await user.click(internetToggle());
+      await user.click(
+        screen.getByRole('button', { name: /how sharing works/i }),
+      );
+      // Someone weighing up internet mode should land on what it costs.
+      expect(mockOpenUrl).toHaveBeenLastCalledWith(
+        'https://aossie-org.github.io/PictoPy/overview/sharing-albums/#internet-mode',
+      );
+    });
+
+    // Failing quietly would leave nothing on screen and no way to reach the
+    // page, which is how a missing capability presented in the running app.
+    it('hands over the address when the browser cannot be opened', async () => {
+      const user = userEvent.setup();
+      mockOpenUrl.mockRejectedValue(new Error('opener.open_url not allowed'));
+      const { store } = renderDialog();
+
+      await user.click(
+        screen.getByRole('button', { name: /how sharing works/i }),
+      );
+
+      await waitFor(() =>
+        expect(store.getState().infoDialog.isOpen).toBe(true),
+      );
+      expect(store.getState().infoDialog.message).toContain(
+        'https://aossie-org.github.io/PictoPy/overview/sharing-albums/',
+      );
+    });
+
+    it('does not claim the album was withdrawn when undoing it failed', async () => {
+      const user = userEvent.setup();
+      mockStartTunnel.mockRejectedValue('no provider answered.');
+      mockRevokeShare.mockRejectedValue(new Error('backend unreachable'));
+      renderDialog();
+
+      await user.click(internetToggle());
+      await user.click(
+        screen.getByRole('switch', { name: /require a password/i }),
+      );
+      await user.click(screen.getByRole('button', { name: /start sharing/i }));
+
+      // The share is live on the local network; saying otherwise would send the
+      // user away believing nothing is being served.
+      expect(
+        await screen.findByText(/still being shared on this network/i),
+      ).toBeInTheDocument();
+    });
+
+    it('restores internet mode when a tunnel is already running', async () => {
+      const user = userEvent.setup();
+      mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
+      renderDialog([share]);
+
+      await waitFor(() =>
+        expect(screen.getByLabelText('Link')).toHaveValue(
+          'https://abc123.lhr.life/s/tok-1',
+        ),
+      );
+      await user.click(
+        screen.getByRole('button', { name: /how sharing works/i }),
+      );
+
+      // Showing an internet link while the help explains local sharing would
+      // describe the wrong thing entirely.
+      expect(mockOpenUrl).toHaveBeenLastCalledWith(
+        'https://aossie-org.github.io/PictoPy/overview/sharing-albums/#internet-mode',
+      );
+    });
+
+    it('reports a tunnel that would not close', async () => {
+      const user = userEvent.setup();
+      mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
+      // The wording the Rust command actually produces on a failed kill.
+      mockStopTunnel.mockRejectedValue(
+        new Error(
+          'could not stop the tunnel (ssh pid 900 may still be running): access denied',
+        ),
+      );
+      const { store } = renderDialog([share]);
+
+      await user.click(screen.getByRole('button', { name: /stop sharing/i }));
+
+      // usePictoMutation retries twice with a delay before it reports failure.
+      await waitFor(
+        () => expect(store.getState().infoDialog.variant).toBe('error'),
+        { timeout: 5000 },
+      );
+      expect(store.getState().infoDialog.message).toMatch(
+        /may still be running/i,
+      );
+    });
+
+    // The status lookup fired on open can resolve after a tunnel has been
+    // opened. Applying its stale answer would drop the address just obtained
+    // and quietly fall back to the local ones.
+    it('keeps a new tunnel when a slow status lookup answers late', async () => {
+      const user = userEvent.setup();
+      let settleStatus: (value: string | null) => void = () => undefined;
+      mockTunnelStatus.mockReturnValueOnce(
+        new Promise<string | null>((resolve) => {
+          settleStatus = resolve;
+        }),
+      );
+      renderDialog();
+
+      await user.click(internetToggle());
+      await user.click(
+        screen.getByRole('switch', { name: /require a password/i }),
+      );
+      await user.click(screen.getByRole('button', { name: /start sharing/i }));
+      await waitFor(() => expect(mockStartTunnel).toHaveBeenCalled());
+
+      await screen.findByLabelText('Link');
+      settleStatus(null);
+      // Flush the stale answer through before asserting, or this passes simply
+      // by looking too early.
+      await act(async () => undefined);
+
+      expect(screen.getByLabelText('Link')).toHaveValue(
+        'https://abc123.lhr.life/s/tok-1',
+      );
+    });
+
+    it('closes the tunnel when the share is stopped', async () => {
+      const user = userEvent.setup();
+      mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
+      renderDialog([share]);
+
+      await waitFor(() =>
+        expect(screen.getByLabelText('Link')).toHaveValue(
+          'https://abc123.lhr.life/s/tok-1',
+        ),
+      );
+      await user.click(screen.getByRole('button', { name: /stop sharing/i }));
+
+      await waitFor(() => expect(mockStopTunnel).toHaveBeenCalled());
+    });
   });
 
   it('shares without a password by default', async () => {

@@ -1,6 +1,17 @@
 import React, { useEffect, useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { QRCodeSVG } from 'qrcode.react';
-import { Check, Copy, Share2, Wifi } from 'lucide-react';
+import { openUrl } from '@tauri-apps/plugin-opener';
+import {
+  Check,
+  Copy,
+  Globe,
+  Info,
+  Loader2,
+  Share2,
+  TriangleAlert,
+  Wifi,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,8 +29,24 @@ import { Separator } from '@/components/ui/separator';
 import { usePictoMutation, type BackendRes } from '@/hooks/useQueryExtension';
 import { createShare, revokeShare } from '@/api/api-functions';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { showInfoDialog } from '@/features/infoDialogSlice';
 import { cn } from '@/lib/utils';
-import { Share, ShareAlbumDialogProps, ShareUrl } from '@/types/Share';
+import { useShareTunnel } from '@/hooks/useShareTunnel';
+import {
+  Share,
+  ShareAlbumDialogProps,
+  ShareMode,
+  ShareUrl,
+} from '@/types/Share';
+
+const MODE_OPTIONS = [
+  { value: 'lan', label: 'This network', icon: Wifi },
+  { value: 'internet', label: 'Internet', icon: Globe },
+] as const satisfies ReadonlyArray<{
+  value: ShareMode;
+  label: string;
+  icon: typeof Wifi;
+}>;
 
 const EXPIRY_OPTIONS = [
   { value: '60', label: 'For 1 hour' },
@@ -31,6 +58,10 @@ const EXPIRY_OPTIONS = [
 // The backend hashes with bcrypt and refuses anything shorter.
 const MIN_PASSWORD_LENGTH = 4;
 
+const DOCS_URL =
+  'https://aossie-org.github.io/PictoPy/overview/sharing-albums/';
+const DOCS_INTERNET_URL = `${DOCS_URL}#internet-mode`;
+
 const formatExpiry = (expiresAt: string | null): string =>
   expiresAt ? new Date(expiresAt).toLocaleString() : 'Until you stop it';
 
@@ -41,18 +72,37 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
   onClose,
   onChanged,
 }) => {
+  const dispatch = useDispatch();
+  const [mode, setMode] = useState<ShareMode>('lan');
   const [expiry, setExpiry] = useState<string>('1440');
   const [withPassword, setWithPassword] = useState(false);
   const [password, setPassword] = useState('');
+  // Kept apart from the password field's own validation message so a failed
+  // connection does not put a red border round an unrelated input.
   const [error, setError] = useState('');
+  const [tunnelError, setTunnelError] = useState('');
   const [createdShare, setCreatedShare] = useState<Share | null>(null);
   const [selectedUrl, setSelectedUrl] = useState('');
   const [copied, setCopied] = useState(false);
+  const tunnel = useShareTunnel();
+  const { url: tunnelUrl, isConnecting } = tunnel;
 
   // The share this dialog is showing: the one just made, or the newest already
   // running. Older ones stay out of the way until sharing is stopped.
   const activeShare = createdShare ?? shares[0] ?? null;
-  const urls = activeShare?.urls ?? [];
+
+  // A tunnel forwards the whole share port, so its address reaches the same
+  // album as the LAN ones. Showing it alone keeps the link the user asked for
+  // from competing with addresses that only work inside the house.
+  const urls: ShareUrl[] = tunnelUrl
+    ? [
+        {
+          interface: 'Internet',
+          ip: new URL(tunnelUrl).hostname,
+          url: `${tunnelUrl}/s/${activeShare?.token ?? ''}`,
+        },
+      ]
+    : (activeShare?.urls ?? []);
   const shareUrl = urls.find((entry) => entry.url === selectedUrl) ?? urls[0];
 
   // Every token that would still serve this album. Creating leaves earlier
@@ -72,11 +122,38 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
       }),
     // Handled here rather than through the feedback hook so the new share
     // arrives typed rather than as the hook's untyped success payload.
-    onSuccess: (response) => {
-      if (response.data) {
-        setCreatedShare(response.data);
+    onSuccess: async (response) => {
+      const share = response.data;
+      if (!share) {
+        return;
       }
-      onChanged();
+      if (mode === 'lan') {
+        setCreatedShare(share);
+        onChanged();
+        return;
+      }
+
+      try {
+        await tunnel.open(share.port);
+        setCreatedShare(share);
+      } catch (cause) {
+        // The user asked for an internet share and did not get one, so undo
+        // the local half rather than leaving a share they did not ask for.
+        try {
+          await revokeShare(share.token);
+          setTunnelError(
+            `Could not open a connection: ${String(cause)} The album was not shared.`,
+          );
+        } catch {
+          // Saying "not shared" here would be untrue, and the share is live on
+          // the local network with nothing telling the user so.
+          setTunnelError(
+            `Could not open a connection: ${String(cause)} The album is still being shared on this network. Reopen this dialog to stop it.`,
+          );
+        }
+      } finally {
+        onChanged();
+      }
     },
     autoInvalidateTags: ['shares'],
   });
@@ -87,6 +164,10 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     // react-query hands the mutation function a context as a second argument.
     mutationFn: async (tokens: string[]): Promise<BackendRes<null>> => {
       await Promise.all(tokens.map((token) => revokeShare(token)));
+      // Closed through the hook, which asks whether one is running rather than
+      // reading state this dialog may not have received yet. A failure here
+      // rejects the mutation, so nothing claims the cleanup finished.
+      await tunnel.close();
       return { success: true };
     },
     autoInvalidateTags: ['shares'],
@@ -104,9 +185,10 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
   useMutationFeedback(revokeShareMutation, {
     loadingMessage: 'Stopping the share...',
     successTitle: 'Sharing stopped',
-    successMessage: 'The album is no longer on the local network.',
+    successMessage: 'The album is no longer being shared.',
     errorTitle: 'Error',
-    errorMessage: 'Could not stop this share. Please try again.',
+    errorMessage:
+      'The share may still be running. Reopen this dialog and try stopping it again.',
     onSuccess: () => {
       onChanged();
       onClose();
@@ -118,14 +200,34 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     if (!isOpen) {
       return;
     }
+    setMode('lan');
     setExpiry('1440');
     setWithPassword(false);
     setPassword('');
     setError('');
+    setTunnelError('');
     setCreatedShare(null);
     setSelectedUrl('');
     setCopied(false);
-  }, [isOpen, album?.id]);
+    // A share made earlier is still served by whatever tunnel is up, so ask
+    // rather than assume it was a local one. The mode follows the answer:
+    // showing an internet link while the help button explains local sharing
+    // would describe the wrong thing.
+    tunnel.refresh().then((current) => {
+      if (current) {
+        setMode('internet');
+      }
+    });
+  }, [isOpen, album?.id, tunnel.refresh]);
+
+  const handleModeChange = (next: ShareMode) => {
+    setMode(next);
+    setError('');
+    setTunnelError('');
+    // Anyone with the link can open it, and messaging apps fetch links to build
+    // previews. Starting protected is the safer default; it stays removable.
+    setWithPassword(next === 'internet');
+  };
 
   const handleCreate = (event: React.FormEvent) => {
     event.preventDefault();
@@ -149,6 +251,35 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     await navigator.clipboard.writeText(shareUrl.url);
     setCopied(true);
   };
+
+  // Deep links to the section covering whichever mode is selected, so someone
+  // weighing up internet mode lands on what it costs rather than the top.
+  const docsButton = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="text-muted-foreground hover:text-foreground h-7 w-7 shrink-0"
+      aria-label="How sharing works"
+      onClick={() => {
+        const url = mode === 'internet' ? DOCS_INTERNET_URL : DOCS_URL;
+        // Hand the address over rather than failing quietly: if the browser
+        // cannot be launched there is nothing else to tell the user what
+        // happened, and the page is still readable by other means.
+        openUrl(url).catch(() =>
+          dispatch(
+            showInfoDialog({
+              title: 'Could not open your browser',
+              message: `Open this page instead: ${url}`,
+              variant: 'error',
+            }),
+          ),
+        );
+      }}
+    >
+      <Info className="h-4 w-4" />
+    </Button>
+  );
 
   const renderAddress = (entry: ShareUrl) => (
     <button
@@ -182,13 +313,38 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
           activeShare ? 'sm:max-w-3xl' : 'sm:max-w-[480px]',
         )}
       >
-        {activeShare ? (
+        {isConnecting ? (
           <>
             <DialogHeader>
-              <DialogTitle>Sharing "{activeShare.album_name}"</DialogTitle>
+              <DialogTitle>Starting a secure connection</DialogTitle>
               <DialogDescription>
-                Anyone on this network can open the link while PictoPy is
-                running. Nothing is uploaded.
+                Opening a route to this machine so the album can be reached from
+                outside your network.
+              </DialogDescription>
+            </DialogHeader>
+            <div
+              className="flex flex-col items-center justify-center gap-3 py-10"
+              role="status"
+            >
+              <Loader2 className="text-primary h-8 w-8 animate-spin" />
+              <p className="text-muted-foreground text-sm">
+                This usually takes a few seconds.
+              </p>
+            </div>
+          </>
+        ) : activeShare ? (
+          <>
+            <DialogHeader>
+              <div className="flex items-center gap-1">
+                <DialogTitle className="truncate">
+                  Sharing "{activeShare.album_name}"
+                </DialogTitle>
+                {docsButton}
+              </div>
+              <DialogDescription>
+                {tunnelUrl
+                  ? 'Anyone with this link can open the album while PictoPy is running. It travels through a relay that can see the photos.'
+                  : 'Anyone on this network can open the link while PictoPy is running. Nothing is uploaded.'}
               </DialogDescription>
             </DialogHeader>
 
@@ -304,14 +460,59 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
         ) : (
           <form onSubmit={handleCreate}>
             <DialogHeader>
-              <DialogTitle>Share "{album?.name}"</DialogTitle>
+              <div className="flex items-center gap-1">
+                <DialogTitle className="truncate">
+                  Share "{album?.name}"
+                </DialogTitle>
+                {docsButton}
+              </div>
               <DialogDescription>
-                Serve this album to other devices on your network. The photos
-                stay on this machine.
+                {mode === 'lan'
+                  ? 'Serve this album to other devices on your network. The photos stay on this machine.'
+                  : 'Serve this album to anyone with the link, wherever they are.'}
               </DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-4 py-4">
+              {/* Full width, because this is the decision the rest of the form
+                  hangs off rather than one setting among several. */}
+              <div className="bg-muted grid w-full grid-cols-2 gap-1 rounded-lg p-1">
+                {MODE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={mode === option.value}
+                    onClick={() => handleModeChange(option.value)}
+                    className={cn(
+                      'flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                      mode === option.value
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    <option.icon className="h-4 w-4" />
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              {mode === 'internet' && (
+                <div className="border-destructive/40 bg-destructive/5 grid gap-1.5 rounded-md border p-3">
+                  <p className="flex items-center gap-2 text-sm font-medium">
+                    <TriangleAlert className="text-destructive h-4 w-4 shrink-0" />
+                    The link leaves your network
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Photos pass through a tunnel service, which can see them.
+                    Anyone holding the link can open the album, and chat apps
+                    such as WhatsApp and Slack fetch links automatically to
+                    build previews, a password stops those previews seeing
+                    anything.
+                  </p>
+                </div>
+              )}
+
               <div className="grid gap-2">
                 <Label>Keep sharing</Label>
                 <RadioGroup value={expiry} onValueChange={setExpiry}>
@@ -372,6 +573,12 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
                 </div>
               )}
             </div>
+
+            {tunnelError && (
+              <p className="text-destructive pb-2 text-sm" role="alert">
+                {tunnelError}
+              </p>
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>

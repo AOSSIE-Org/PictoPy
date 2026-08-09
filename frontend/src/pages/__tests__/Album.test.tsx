@@ -295,7 +295,11 @@ describe('Albums page', () => {
     await screen.findByText('Trip');
     await openDeleteConfirmation(user);
 
-    const errorDialog = await screen.findByRole('dialog');
+    // usePictoMutation retries twice with a 500ms backoff before it reports
+    // failure, which is already past findBy's default one second wait.
+    const errorDialog = await screen.findByRole('dialog', undefined, {
+      timeout: 5000,
+    });
     expect(within(errorDialog).getByText('Error')).toBeInTheDocument();
 
     // Only the error dialog may be open — the confirmation must not still be
