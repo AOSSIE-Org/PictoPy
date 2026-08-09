@@ -48,16 +48,44 @@ const PROVIDERS: [Provider; 1] = [Provider {
     url_suffix: ".lhr.life",
 }];
 
-pub struct TunnelState {
+/// The part of a spawned process this module actually needs.
+///
+/// Named so the lifecycle can be exercised without spawning ssh; the real
+/// implementation is the shell plugin's child.
+pub trait TunnelChild: Send + 'static {
+    fn pid(&self) -> u32;
+    fn kill(self) -> Result<(), String>;
+}
+
+impl TunnelChild for CommandChild {
+    fn pid(&self) -> u32 {
+        CommandChild::pid(self)
+    }
+
+    fn kill(self) -> Result<(), String> {
+        CommandChild::kill(self).map_err(|e| e.to_string())
+    }
+}
+
+struct ActiveTunnel<C: TunnelChild> {
+    /// None until the provider announces one. The child is tracked before then
+    /// so that an exit during discovery still has something to kill.
+    url: Option<String>,
+    child: C,
+}
+
+pub struct TunnelStateOf<C: TunnelChild> {
     /// Held across an entire start or stop, spawn included. Without it two
     /// concurrent starts could both find no tunnel, both spawn a child, and
     /// leave whichever installed first running with nothing holding its
     /// handle — an ssh process nobody can stop.
     lifecycle: AsyncMutex<()>,
-    active: Mutex<Option<ActiveTunnel>>,
+    active: Mutex<Option<ActiveTunnel<C>>>,
 }
 
-impl TunnelState {
+pub type TunnelState = TunnelStateOf<CommandChild>;
+
+impl<C: TunnelChild> TunnelStateOf<C> {
     pub fn new() -> Self {
         Self {
             lifecycle: AsyncMutex::new(()),
@@ -69,19 +97,63 @@ impl TunnelState {
         self.active
             .lock()
             .ok()
-            .and_then(|active| active.as_ref().map(|tunnel| tunnel.url.clone()))
+            .and_then(|active| active.as_ref().and_then(|tunnel| tunnel.url.clone()))
+    }
+
+    /// Start tracking a child, before it has announced anything.
+    fn track(&self, child: C) -> Result<(), String> {
+        let mut active = self.active.lock().map_err(|_| "tunnel state lost")?;
+        *active = Some(ActiveTunnel { url: None, child });
+        Ok(())
+    }
+
+    fn announce(&self, url: &str) -> Result<(), String> {
+        let mut active = self.active.lock().map_err(|_| "tunnel state lost")?;
+        if let Some(tunnel) = active.as_mut() {
+            tunnel.url = Some(url.to_string());
+        }
+        Ok(())
+    }
+
+    /// Kill whatever is tracked and stop tracking it.
+    ///
+    /// The pid is read first because killing consumes the handle: it cannot be
+    /// put back for a retry, so a failure has to name the process instead.
+    fn stop(&self) -> Result<(), String> {
+        let tunnel = {
+            let mut active = self.active.lock().map_err(|_| "tunnel state lost")?;
+            active.take()
+        };
+        let Some(tunnel) = tunnel else {
+            return Ok(());
+        };
+        let pid = tunnel.child.pid();
+        tunnel.child.kill().map_err(|e| {
+            format!("could not stop the tunnel (ssh pid {pid} may still be running): {e}")
+        })
+    }
+
+    /// Drop a tunnel from state, but only if it is still the current one.
+    ///
+    /// A tunnel that died after a newer one replaced it must not clear the
+    /// newer one's URL, which is why this checks identity rather than taking.
+    fn forget(&self, url: &str) {
+        if let Ok(mut active) = self.active.lock() {
+            let matches = active
+                .as_ref()
+                .and_then(|tunnel| tunnel.url.as_deref())
+                .is_some_and(|current| current == url);
+            if matches {
+                *active = None;
+            }
+        }
     }
 }
 
-impl Default for TunnelState {
+impl<C: TunnelChild> Default for TunnelStateOf<C> {
     fn default() -> Self {
         Self::new()
     }
-}
-
-struct ActiveTunnel {
-    url: String,
-    child: CommandChild,
 }
 
 /// The public URL in a line of provider output, if there is one.
@@ -128,11 +200,11 @@ async fn read_url(events: &mut Receiver<CommandEvent>, suffix: &str) -> Option<S
     None
 }
 
-async fn open(
+fn spawn_ssh(
     app: &AppHandle,
     provider: Provider,
     port: u16,
-) -> Result<(String, CommandChild), String> {
+) -> Result<(Receiver<CommandEvent>, CommandChild), String> {
     let known_hosts = known_hosts_path(app)?;
     let args = vec![
         // No pty: this is not an interactive session, and a spawned child has
@@ -153,36 +225,11 @@ async fn open(
         provider.destination.to_string(),
     ];
 
-    let (mut events, child) = app
-        .shell()
+    app.shell()
         .command("ssh")
         .args(args)
         .spawn()
-        .map_err(|e| format!("could not start ssh: {e}"))?;
-
-    match timeout(URL_TIMEOUT, read_url(&mut events, provider.url_suffix)).await {
-        Ok(Some(url)) => {
-            let handle = app.clone();
-            let watched = url.clone();
-            tauri::async_runtime::spawn(async move {
-                // Keep draining: providers print a banner and an ANSI QR code,
-                // and a full pipe would stall ssh once nobody is reading.
-                while events.recv().await.is_some() {}
-                // The stream ends when ssh exits. Without this the status
-                // command would keep handing out a URL that is already dead.
-                forget(&handle, &watched);
-            });
-            Ok((url, child))
-        }
-        Ok(None) => {
-            let _ = child.kill();
-            Err("ssh exited before providing a URL".to_string())
-        }
-        Err(_) => {
-            let _ = child.kill();
-            Err(format!("no URL within {} seconds", URL_TIMEOUT.as_secs()))
-        }
-    }
+        .map_err(|e| format!("could not start ssh: {e}"))
 }
 
 /// Open a tunnel to the share server, or return the one already running.
@@ -201,16 +248,51 @@ pub async fn tunnel_start(
 
     let mut failures = Vec::new();
     for provider in PROVIDERS {
-        match open(&app, provider, port).await {
-            Ok((url, child)) => {
-                let mut active = state.active.lock().map_err(|_| "tunnel state lost")?;
-                *active = Some(ActiveTunnel {
-                    url: url.clone(),
-                    child,
+        let (mut events, child) = match spawn_ssh(&app, provider, port) {
+            Ok(spawned) => spawned,
+            Err(error) => {
+                failures.push(format!("{}: {error}", provider.name));
+                continue;
+            }
+        };
+
+        // Tracked before the URL arrives. If the app exits while we are still
+        // waiting, shutdown has a handle to kill instead of leaving an ssh
+        // child forwarding an album with nothing owning it.
+        state.track(child)?;
+
+        match timeout(URL_TIMEOUT, read_url(&mut events, provider.url_suffix)).await {
+            Ok(Some(url)) => {
+                state.announce(&url)?;
+                let handle = app.clone();
+                let watched = url.clone();
+                tauri::async_runtime::spawn(async move {
+                    // Keep draining: providers print a banner and an ANSI QR
+                    // code, and a full pipe would stall ssh once nobody reads.
+                    while events.recv().await.is_some() {}
+                    // The stream ends when ssh exits. Without this the status
+                    // command would keep handing out a URL that is already dead.
+                    if let Some(state) = handle.try_state::<TunnelState>() {
+                        state.forget(&watched);
+                    }
                 });
                 return Ok(url);
             }
-            Err(error) => failures.push(format!("{}: {error}", provider.name)),
+            Ok(None) => {
+                let _ = state.stop();
+                failures.push(format!(
+                    "{}: ssh exited before providing a URL",
+                    provider.name
+                ));
+            }
+            Err(_) => {
+                let _ = state.stop();
+                failures.push(format!(
+                    "{}: no URL within {} seconds",
+                    provider.name,
+                    URL_TIMEOUT.as_secs()
+                ));
+            }
         }
     }
 
@@ -224,63 +306,59 @@ pub async fn tunnel_start(
 #[tauri::command]
 pub async fn tunnel_stop(state: State<'_, TunnelState>) -> Result<(), String> {
     let _lifecycle = state.lifecycle.lock().await;
-
-    // CommandChild::kill consumes the handle, so it cannot be put back for a
-    // retry. The pid is captured first so a failure names the process that is
-    // still running rather than leaving nothing to act on.
-    let tunnel = {
-        let mut active = state.active.lock().map_err(|_| "tunnel state lost")?;
-        active.take()
-    };
-
-    let Some(tunnel) = tunnel else {
-        return Ok(());
-    };
-
-    let pid = tunnel.child.pid();
-    tunnel
-        .child
-        .kill()
-        .map_err(|e| format!("could not stop the tunnel (ssh pid {pid} may still be running): {e}"))
+    state.stop()
 }
 
-/// The public URL, if a tunnel is open.
+/// The public URL, if a tunnel is open and has announced one.
 #[tauri::command]
 pub fn tunnel_status(state: State<'_, TunnelState>) -> Result<Option<String>, String> {
     Ok(state.current_url())
 }
 
-/// Drop a tunnel from state, but only if it is still the current one.
-///
-/// A tunnel that died after a newer one replaced it must not clear the newer
-/// one's URL, which is why this checks identity rather than blindly taking.
-fn forget(app: &AppHandle, url: &str) {
-    if let Some(state) = app.try_state::<TunnelState>() {
-        if let Ok(mut active) = state.active.lock() {
-            if active.as_ref().is_some_and(|tunnel| tunnel.url == url) {
-                *active = None;
-            }
-        }
-    }
-}
-
 /// Kill the tunnel on the way out, from outside a command context.
 ///
 /// Deliberately does not take the lifecycle lock: this runs on the exit path,
-/// where blocking on an in-flight start would be worse than racing it.
+/// where blocking on an in-flight start would be worse than racing it. A start
+/// still in progress has already tracked its child, so there is one to kill.
 pub fn shutdown(app: &AppHandle) {
     if let Some(state) = app.try_state::<TunnelState>() {
-        if let Ok(mut active) = state.active.lock() {
-            if let Some(tunnel) = active.take() {
-                let _ = tunnel.child.kill();
-            }
-        }
+        let _ = state.stop();
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::find_url;
+    use super::{find_url, TunnelChild, TunnelStateOf};
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+
+    struct FakeChild {
+        pid: u32,
+        killed: Arc<AtomicBool>,
+        refuses: bool,
+    }
+
+    impl TunnelChild for FakeChild {
+        fn pid(&self) -> u32 {
+            self.pid
+        }
+
+        fn kill(self) -> Result<(), String> {
+            self.killed.store(true, Ordering::SeqCst);
+            if self.refuses {
+                return Err("access denied".to_string());
+            }
+            Ok(())
+        }
+    }
+
+    fn child(killed: &Arc<AtomicBool>, refuses: bool) -> FakeChild {
+        FakeChild {
+            pid: 4242,
+            killed: Arc::clone(killed),
+            refuses,
+        }
+    }
 
     // Verbatim from localhost.run, which prints its own docs and social links
     // before the tunnel URL. Matching the first https:// token would take the
@@ -318,5 +396,75 @@ mod tests {
     fn ignores_plain_http() {
         let line = "http://d9b8d37391ddfb.lhr.life";
         assert_eq!(find_url(line, ".lhr.life"), None);
+    }
+
+    #[test]
+    fn stopping_kills_the_child_and_clears_the_state() {
+        let killed = Arc::new(AtomicBool::new(false));
+        let state = TunnelStateOf::new();
+        state.track(child(&killed, false)).unwrap();
+        state.announce("https://one.lhr.life").unwrap();
+
+        assert!(state.stop().is_ok());
+        assert!(killed.load(Ordering::SeqCst));
+        assert_eq!(state.current_url(), None);
+    }
+
+    #[test]
+    fn stopping_nothing_is_not_an_error() {
+        let state: TunnelStateOf<FakeChild> = TunnelStateOf::new();
+        assert!(state.stop().is_ok());
+    }
+
+    // A child that refused to die is the one case worth naming: the handle is
+    // consumed by the attempt, so the pid is all the caller has left to act on.
+    #[test]
+    fn a_refused_kill_reports_the_process() {
+        let killed = Arc::new(AtomicBool::new(false));
+        let state = TunnelStateOf::new();
+        state.track(child(&killed, true)).unwrap();
+
+        let error = state.stop().unwrap_err();
+        assert!(error.contains("4242"), "{error}");
+        assert!(error.contains("may still be running"), "{error}");
+    }
+
+    // The gap that let an exit during startup orphan an ssh process.
+    #[test]
+    fn a_child_is_killable_before_it_announces_a_url() {
+        let killed = Arc::new(AtomicBool::new(false));
+        let state = TunnelStateOf::new();
+        state.track(child(&killed, false)).unwrap();
+
+        assert_eq!(state.current_url(), None, "nothing to advertise yet");
+        assert!(state.stop().is_ok());
+        assert!(killed.load(Ordering::SeqCst), "the child still gets killed");
+    }
+
+    #[test]
+    fn a_dead_tunnel_does_not_clear_the_one_that_replaced_it() {
+        let killed = Arc::new(AtomicBool::new(false));
+        let state = TunnelStateOf::new();
+        state.track(child(&killed, false)).unwrap();
+        state.announce("https://second.lhr.life").unwrap();
+
+        state.forget("https://first.lhr.life");
+
+        assert_eq!(
+            state.current_url().as_deref(),
+            Some("https://second.lhr.life")
+        );
+    }
+
+    #[test]
+    fn a_tunnel_forgets_itself_when_it_dies() {
+        let killed = Arc::new(AtomicBool::new(false));
+        let state = TunnelStateOf::new();
+        state.track(child(&killed, false)).unwrap();
+        state.announce("https://only.lhr.life").unwrap();
+
+        state.forget("https://only.lhr.life");
+
+        assert_eq!(state.current_url(), None);
     }
 }
