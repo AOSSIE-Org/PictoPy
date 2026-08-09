@@ -10,10 +10,6 @@ import AccountSettingsCard, {
 } from './components/AccountSettingsCard';
 import SystemSettingsCard from './components/SystemSettingsCard';
 
-/**
- * Settings page component
- * Acts as an orchestrator for the settings sections
- */
 const Settings: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();

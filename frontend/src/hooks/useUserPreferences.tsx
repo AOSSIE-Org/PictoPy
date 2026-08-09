@@ -27,10 +27,6 @@ export const DEFAULT_MEMORIES_PREFERENCES: MemoriesPreferences = {
   },
 };
 
-/**
- * Custom hook for user preferences
- * Manages preferences state and mutation operations
- */
 export const useUserPreferences = () => {
   const [preferences, setPreferences] = useState<UserPreferencesData>({
     YOLO_model_size: 'nano',
@@ -57,7 +53,6 @@ export const useUserPreferences = () => {
   const writeEpoch = useRef(0);
   const readEpoch = useRef(0);
 
-  // Query for user preferences
   const preferencesQuery = usePictoQuery({
     queryKey: ['userPreferences'],
     queryFn: () => {
@@ -66,7 +61,6 @@ export const useUserPreferences = () => {
     },
   });
 
-  // Update local state when preferences data changes
   useEffect(() => {
     // Applying stale server state would revert the write and hand the next
     // queued one a stale base to build on.
@@ -88,7 +82,6 @@ export const useUserPreferences = () => {
     mutationFn: updateUserPreferences,
   });
 
-  // Apply feedback to the update preferences mutation but hide loader and success dialog
   useMutationFeedback(updatePreferencesMutation, {
     showLoading: false, // Don't show the loading indicator to prevent flicker
     loadingMessage: 'Updating preferences',
@@ -150,18 +143,12 @@ export const useUserPreferences = () => {
     return result;
   };
 
-  /**
-   * Update YOLO model size
-   */
   const updateYoloModelSize = async (size: 'nano' | 'small' | 'medium') =>
     writePreferences((current) => ({
       next: { ...current, YOLO_model_size: size },
       request: { YOLO_model_size: size },
     }));
 
-  /**
-   * Toggle GPU acceleration
-   */
   const toggleGpuAcceleration = async () =>
     writePreferences((current) => {
       const GPU_Acceleration = !current.GPU_Acceleration;
@@ -171,18 +158,12 @@ export const useUserPreferences = () => {
       };
     });
 
-  /**
-   * Update the video keyframe sampling interval (seconds)
-   */
   const updateVideoFrameInterval = async (interval: number) =>
     writePreferences((current) => ({
       next: { ...current, Video_Frame_Interval: interval },
       request: { Video_Frame_Interval: interval },
     }));
 
-  /**
-   * Patch memories preferences.
-   */
   const updateMemoriesPreferences = async (
     patch: UpdateUserPreferencesRequest['memories'],
   ) =>

@@ -14,16 +14,11 @@ import { FolderDetails, isIndexingPending } from '@/types/Folder';
 import { useMutationFeedback } from './useMutationFeedback';
 import { getFoldersTaggingStatus } from '@/api/api-functions/folders';
 
-/**
- * Custom hook for folder operations
- * Manages folder queries, AI tagging mutations, and folder deletion
- */
 export const useFolderOperations = () => {
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
   const folders = useSelector(selectAllFolders);
 
-  // Query for folders
   const foldersQuery = usePictoQuery({
     queryKey: ['folders'],
     queryFn: getAllFolders,
@@ -47,7 +42,6 @@ export const useFolderOperations = () => {
     refetchOnWindowFocus: false, // Don't refetch when window gains focus
   });
 
-  // Apply feedback to the folders query
   useMutationFeedback(
     {
       isPending: foldersQuery.isLoading,
@@ -64,7 +58,6 @@ export const useFolderOperations = () => {
     },
   );
 
-  // Update Redux store when folders data changes
   useEffect(() => {
     if (foldersQuery.data?.data?.folders) {
       const folders = foldersQuery.data.data.folders as FolderDetails[];
@@ -72,7 +65,6 @@ export const useFolderOperations = () => {
     }
   }, [foldersQuery.data, dispatch]);
 
-  // Update Redux store with tagging status on each poll
   useEffect(() => {
     if (taggingStatusQuery.data?.success) {
       const raw = taggingStatusQuery.data.data as any;
@@ -98,14 +90,12 @@ export const useFolderOperations = () => {
     taggingStatusQuery.errorMessage,
   ]);
 
-  // Enable AI tagging mutation
   const enableAITaggingMutation = usePictoMutation({
     mutationFn: async (folder_id: string) =>
       enableAITagging({ folder_ids: [folder_id] }),
     autoInvalidateTags: ['folders'],
   });
 
-  // Apply feedback to the enable AI tagging mutation
   useMutationFeedback(enableAITaggingMutation, {
     showLoading: true,
     loadingMessage: 'Enabling AI tagging',
@@ -114,14 +104,12 @@ export const useFolderOperations = () => {
     errorMessage: 'Failed to enable AI tagging. Please try again.',
   });
 
-  // Disable AI tagging mutation
   const disableAITaggingMutation = usePictoMutation({
     mutationFn: async (folder_id: string) =>
       disableAITagging({ folder_ids: [folder_id] }),
     autoInvalidateTags: ['folders'],
   });
 
-  // Apply feedback to the disable AI tagging mutation
   useMutationFeedback(disableAITaggingMutation, {
     showLoading: true,
     loadingMessage: 'Disabling AI tagging',
@@ -131,7 +119,6 @@ export const useFolderOperations = () => {
     errorMessage: 'Failed to disable AI tagging. Please try again.',
   });
 
-  // Delete folder mutation
   const deleteFolderMutation = usePictoMutation({
     mutationFn: async (folder_id: string) =>
       deleteFolders({ folder_ids: [folder_id] }),
@@ -145,7 +132,6 @@ export const useFolderOperations = () => {
     },
   });
 
-  // Apply feedback to the delete folder mutation
   useMutationFeedback(deleteFolderMutation, {
     showLoading: true,
     loadingMessage: 'Deleting folder',
@@ -156,9 +142,6 @@ export const useFolderOperations = () => {
     errorMessage: 'Failed to delete the folder. Please try again.',
   });
 
-  /**
-   * Toggle AI tagging for a folder
-   */
   const toggleAITagging = (folder: FolderDetails) => {
     if (folder.AI_Tagging) {
       disableAITaggingMutation.mutate(folder.folder_id);
@@ -167,9 +150,6 @@ export const useFolderOperations = () => {
     }
   };
 
-  /**
-   * Delete a folder
-   */
   const deleteFolder = (folderId: string) => {
     deleteFolderMutation.mutate(folderId);
   };

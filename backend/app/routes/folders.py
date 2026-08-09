@@ -221,12 +221,9 @@ def add_folder(request: AddFolderRequest, app_state: State = Depends(get_state))
                 f"Error: '{request.folder_path}' is not a valid directory."
             )
 
-        if (
-            not os.access(request.folder_path, os.R_OK)
-            # Uncomment the following lines if you want to check for write and execute permissions
-            # or not os.access(request.folder_path, os.W_OK)
-            # or not os.access(request.folder_path, os.X_OK)
-        ):
+        # Read access is all indexing asks for, so a folder the user cannot
+        # write to is still perfectly usable.
+        if not os.access(request.folder_path, os.R_OK):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ErrorResponse(

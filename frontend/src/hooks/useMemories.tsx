@@ -96,14 +96,10 @@ export const useMemoryStatus = (
 };
 
 /**
- * Request a curation run and keep the grid in step with it.
- *
- * POST /generate returns as soon as the run is *queued*; the run itself
- * happens in another process seconds or minutes later. Invalidating on the
- * response therefore refetches the same memories that were already on
- * screen, which is why Refresh appeared to do nothing until the page was
- * reloaded by hand. This follows the run instead, refreshing the grid as
- * results land and once more when it settles.
+ * POST /generate returns once the run is *queued*, minutes before it runs, so
+ * invalidating on the response just refetches what is already on screen -- the
+ * reason Refresh used to look like it did nothing. This follows the run
+ * instead, refreshing as results land and once more when it settles.
  */
 export const useRefreshMemories = () => {
   const queryClient = useQueryClient();

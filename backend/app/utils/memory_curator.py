@@ -473,9 +473,7 @@ def _select_videos(
         return []
 
 
-# ##############################
 # Trigger 1: anniversary
-# ##############################
 
 
 def _curate_anniversaries(context: _CurationContext) -> int:
@@ -538,9 +536,7 @@ def _curate_anniversaries(context: _CurationContext) -> int:
     return generated
 
 
-# ##############################
 # Trigger 2: import event
-# ##############################
 
 
 def segment_by_time_and_place(
@@ -669,9 +665,7 @@ def _curate_import_events(context: _CurationContext) -> int:
     return generated
 
 
-# ##############################
 # Trigger 3: semantic event
-# ##############################
 
 
 def group_event_occurrences(
@@ -892,9 +886,7 @@ def _semantic_surface_date(reference: date, event_start: datetime) -> str:
     return reference.isoformat()
 
 
-# ##############################
 # Entry point
-# ##############################
 
 
 def memory_curator_rescore(memory_ids: Sequence[str]) -> int:

@@ -178,13 +178,10 @@ def image_util_process_unembedded_images() -> None:
                     embedded_count += len(good_arrays)
 
                 if good_ids:
-                    # Only mark images that actually got an embedding row.
-                    # Corrupt images stay isEmbedded=False and get retried on
-                    # the next pass -- unlike YOLO/FaceNet inference, preprocessing
-                    # is a cheap check (PIL failing to open/decode), so the retry
-                    # cost is low, and a file that becomes readable later (a
-                    # transient lock, a restored backup) eventually gets embedded
-                    # instead of being permanently excluded from semantic search.
+                    # Only the ids that actually embedded. The rest stay
+                    # isEmbedded=False and retry next pass -- cheap, since
+                    # preprocessing just fails on PIL, and a file readable later
+                    # (transient lock, restored backup) is not lost for good.
                     db_mark_images_embedded(good_ids)
 
             elapsed = time.time() - start_time
@@ -296,9 +293,8 @@ def image_util_prepare_image_records(
                 )
                 # Continue without GPS - don't fail the upload
 
-            # Build image record with GPS data
-            # ALWAYS include latitude, longitude, captured_at (even if None)
-            # to satisfy SQL INSERT statement named parameters
+            # latitude, longitude and captured_at are always present, None
+            # included: the INSERT binds them by name and fails if one is absent.
             image_record = {
                 "id": image_id,
                 "path": image_path,

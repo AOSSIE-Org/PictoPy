@@ -455,9 +455,7 @@ def video_util_remove_obsolete_videos(folder_id_list: List[int]) -> int:
     return len(obsolete_videos)
 
 
-# ============================================================================
-# KEYFRAME SAMPLING - AI tagging without per-frame inference
-# ============================================================================
+# Keyframe sampling: AI tagging without per-frame inference.
 
 
 def video_util_frame_directory(video_id: str) -> str:

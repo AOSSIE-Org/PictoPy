@@ -106,7 +106,6 @@ def YOLO_util_nms(boxes, scores, iou_threshold):
         # Remove boxes with IoU over the threshold
         keep_indices = np.where(ious < iou_threshold)[0]
 
-        # print(keep_indices.shape, sorted_indices.shape)
         sorted_indices = sorted_indices[keep_indices + 1]
 
     return keep_boxes

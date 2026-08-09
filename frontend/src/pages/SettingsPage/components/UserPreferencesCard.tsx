@@ -38,9 +38,6 @@ import {
   type ModelTier,
 } from '@/types/models';
 
-/**
- * Component for managing user preferences in settings
- */
 // Coarse enough to be a meaningful cost tradeoff, fine enough to matter.
 const FRAME_INTERVAL_OPTIONS = [2, 5, 10, 30];
 // Story pacing: below 3s a photo barely registers, above 10s it drags.

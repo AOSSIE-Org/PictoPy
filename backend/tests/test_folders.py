@@ -241,24 +241,25 @@ class TestFoldersAPI:
         assert data["detail"]["success"] is False
         assert data["detail"]["error"] == "Validation Error"
 
-    # @patch('app.routes.folders.os.access')
-    # def test_add_folder_permission_denied(self, mock_access, client, temp_folder_structure):
-    #     """Test adding folder without read permissions."""
-    #     mock_access.return_value = False  # Simulate no read permission
+    @patch("app.routes.folders.os.access")
+    def test_add_folder_permission_denied(
+        self, mock_access, client, temp_folder_structure
+    ):
+        """A folder the process cannot read is rejected with 401."""
+        mock_access.return_value = False
 
-    #     folder_path = temp_folder_structure["photos"]
-    #     request_data = {
-    #         "folder_path": folder_path,
-    #         "parent_folder_id": None,
-    #         "taggingCompleted": False
-    #     }
+        request_data = {
+            "folder_path": temp_folder_structure["photos"],
+            "parent_folder_id": None,
+            "taggingCompleted": False,
+        }
 
-    #     response = client.post("/folders/add-folder", json=request_data)
+        response = client.post("/folders/add-folder", json=request_data)
 
-    #     assert response.status_code == 401
-    #     data = response.json()
-    #     assert data["detail"]["success"] is False
-    #     assert data["detail"]["error"] == "Permission denied"
+        assert response.status_code == 401
+        data = response.json()
+        assert data["detail"]["success"] is False
+        assert data["detail"]["error"] == "Permission denied"
 
     @patch("app.routes.folders.folder_util_add_folder_tree")
     @patch("app.routes.folders.db_update_parent_ids_for_subtree")
