@@ -213,15 +213,15 @@ def add_folder(request: AddFolderRequest, app_state: State = Depends(get_state))
                 f"Error: '{request.folder_path}' is not a valid directory."
             )
 
-        # Read access is all indexing asks for, so a folder the user cannot
-        # write to is still perfectly usable.
-        if not os.access(request.folder_path, os.R_OK):
+        # Traversal as well as read: indexing walks the tree, and a directory
+        # that is readable but not searchable lists names and descends nowhere.
+        if not os.access(request.folder_path, os.R_OK | os.X_OK):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ErrorResponse(
                     success=False,
                     error="Permission denied",
-                    message="The app does not have read permission for the specified folder",
+                    message="The app does not have read and traversal permission for the specified folder",
                 ).model_dump(),
             )
 

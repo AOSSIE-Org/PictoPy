@@ -235,11 +235,12 @@ class TestFoldersAPI:
     def test_add_folder_permission_denied(
         self, mock_access, client, temp_folder_structure
     ):
-        """A folder the process cannot read is rejected with 401."""
+        """A folder the process cannot read and traverse is rejected with 401."""
         mock_access.return_value = False
 
+        folder_path = temp_folder_structure["photos"]
         request_data = {
-            "folder_path": temp_folder_structure["photos"],
+            "folder_path": folder_path,
             "parent_folder_id": None,
             "taggingCompleted": False,
         }
@@ -250,6 +251,10 @@ class TestFoldersAPI:
         data = response.json()
         assert data["detail"]["success"] is False
         assert data["detail"]["error"] == "Permission denied"
+
+        # The mask matters: os.walk needs X_OK, so R_OK alone would admit a
+        # readable-but-unsearchable folder and index nothing under it.
+        mock_access.assert_called_once_with(folder_path, os.R_OK | os.X_OK)
 
     @patch("app.routes.folders.folder_util_add_folder_tree")
     @patch("app.routes.folders.db_update_parent_ids_for_subtree")
