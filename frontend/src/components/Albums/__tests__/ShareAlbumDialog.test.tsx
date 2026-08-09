@@ -1,5 +1,5 @@
 import userEvent from '@testing-library/user-event';
-import { render, screen, waitFor } from '@/test-utils';
+import { act, render, screen, waitFor } from '@/test-utils';
 import { createShare, revokeShare } from '@/api/api-functions';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { startTunnel, stopTunnel, tunnelStatus } from '@/utils/tunnel';
@@ -256,6 +256,37 @@ describe('ShareAlbumDialog', () => {
       );
       expect(store.getState().infoDialog.message).toMatch(
         /may still be running/i,
+      );
+    });
+
+    // The status lookup fired on open can resolve after a tunnel has been
+    // opened. Applying its stale answer would drop the address just obtained
+    // and quietly fall back to the local ones.
+    it('keeps a new tunnel when a slow status lookup answers late', async () => {
+      const user = userEvent.setup();
+      let settleStatus: (value: string | null) => void = () => undefined;
+      mockTunnelStatus.mockReturnValueOnce(
+        new Promise<string | null>((resolve) => {
+          settleStatus = resolve;
+        }),
+      );
+      renderDialog();
+
+      await user.click(internetToggle());
+      await user.click(
+        screen.getByRole('switch', { name: /require a password/i }),
+      );
+      await user.click(screen.getByRole('button', { name: /start sharing/i }));
+      await waitFor(() => expect(mockStartTunnel).toHaveBeenCalled());
+
+      await screen.findByLabelText('Link');
+      settleStatus(null);
+      // Flush the stale answer through before asserting, or this passes simply
+      // by looking too early.
+      await act(async () => undefined);
+
+      expect(screen.getByLabelText('Link')).toHaveValue(
+        'https://abc123.lhr.life/s/tok-1',
       );
     });
 
