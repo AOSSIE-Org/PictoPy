@@ -74,13 +74,23 @@ struct ActiveTunnel<C: TunnelChild> {
     child: C,
 }
 
+/// The tracked child, and whether the app has begun shutting down.
+///
+/// Both live under one lock on purpose. Kept apart, a shutdown could land
+/// between a child being spawned and being tracked, find nothing to kill, and
+/// let the start install an ssh process that then outlives the application.
+struct Tracked<C: TunnelChild> {
+    tunnel: Option<ActiveTunnel<C>>,
+    closed: bool,
+}
+
 pub struct TunnelStateOf<C: TunnelChild> {
     /// Held across an entire start or stop, spawn included. Without it two
     /// concurrent starts could both find no tunnel, both spawn a child, and
     /// leave whichever installed first running with nothing holding its
     /// handle — an ssh process nobody can stop.
     lifecycle: AsyncMutex<()>,
-    active: Mutex<Option<ActiveTunnel<C>>>,
+    tracked: Mutex<Tracked<C>>,
 }
 
 pub type TunnelState = TunnelStateOf<CommandChild>;
@@ -89,27 +99,38 @@ impl<C: TunnelChild> TunnelStateOf<C> {
     pub fn new() -> Self {
         Self {
             lifecycle: AsyncMutex::new(()),
-            active: Mutex::new(None),
+            tracked: Mutex::new(Tracked {
+                tunnel: None,
+                closed: false,
+            }),
         }
     }
 
     fn current_url(&self) -> Option<String> {
-        self.active
+        self.tracked
             .lock()
             .ok()
-            .and_then(|active| active.as_ref().and_then(|tunnel| tunnel.url.clone()))
+            .and_then(|tracked| tracked.tunnel.as_ref().and_then(|t| t.url.clone()))
     }
 
     /// Start tracking a child, before it has announced anything.
+    ///
+    /// Refuses once shutdown has been requested, killing the child rather than
+    /// storing it: by then nothing will come back to stop it.
     fn track(&self, child: C) -> Result<(), String> {
-        let mut active = self.active.lock().map_err(|_| "tunnel state lost")?;
-        *active = Some(ActiveTunnel { url: None, child });
+        let mut tracked = self.tracked.lock().map_err(|_| "tunnel state lost")?;
+        if tracked.closed {
+            drop(tracked);
+            let _ = child.kill();
+            return Err("PictoPy is shutting down".to_string());
+        }
+        tracked.tunnel = Some(ActiveTunnel { url: None, child });
         Ok(())
     }
 
     fn announce(&self, url: &str) -> Result<(), String> {
-        let mut active = self.active.lock().map_err(|_| "tunnel state lost")?;
-        if let Some(tunnel) = active.as_mut() {
+        let mut tracked = self.tracked.lock().map_err(|_| "tunnel state lost")?;
+        if let Some(tunnel) = tracked.tunnel.as_mut() {
             tunnel.url = Some(url.to_string());
         }
         Ok(())
@@ -120,9 +141,21 @@ impl<C: TunnelChild> TunnelStateOf<C> {
     /// The pid is read first because killing consumes the handle: it cannot be
     /// put back for a retry, so a failure has to name the process instead.
     fn stop(&self) -> Result<(), String> {
+        self.take_and_kill(false)
+    }
+
+    /// Stop, and refuse to track anything spawned from here on.
+    fn close_permanently(&self) -> Result<(), String> {
+        self.take_and_kill(true)
+    }
+
+    fn take_and_kill(&self, closing: bool) -> Result<(), String> {
         let tunnel = {
-            let mut active = self.active.lock().map_err(|_| "tunnel state lost")?;
-            active.take()
+            let mut tracked = self.tracked.lock().map_err(|_| "tunnel state lost")?;
+            if closing {
+                tracked.closed = true;
+            }
+            tracked.tunnel.take()
         };
         let Some(tunnel) = tunnel else {
             return Ok(());
@@ -138,13 +171,14 @@ impl<C: TunnelChild> TunnelStateOf<C> {
     /// A tunnel that died after a newer one replaced it must not clear the
     /// newer one's URL, which is why this checks identity rather than taking.
     fn forget(&self, url: &str) {
-        if let Ok(mut active) = self.active.lock() {
-            let matches = active
+        if let Ok(mut tracked) = self.tracked.lock() {
+            let matches = tracked
+                .tunnel
                 .as_ref()
                 .and_then(|tunnel| tunnel.url.as_deref())
                 .is_some_and(|current| current == url);
             if matches {
-                *active = None;
+                tracked.tunnel = None;
             }
         }
     }
@@ -318,11 +352,13 @@ pub fn tunnel_status(state: State<'_, TunnelState>) -> Result<Option<String>, St
 /// Kill the tunnel on the way out, from outside a command context.
 ///
 /// Deliberately does not take the lifecycle lock: this runs on the exit path,
-/// where blocking on an in-flight start would be worse than racing it. A start
-/// still in progress has already tracked its child, so there is one to kill.
+/// where blocking on an in-flight start would be worse than racing it. Racing
+/// it is safe because the refusal is recorded under the same lock the start
+/// uses to track its child, so a child spawned but not yet tracked is killed
+/// by whichever of the two arrives second.
 pub fn shutdown(app: &AppHandle) {
     if let Some(state) = app.try_state::<TunnelState>() {
-        let _ = state.stop();
+        let _ = state.close_permanently();
     }
 }
 
@@ -427,6 +463,22 @@ mod tests {
         let error = state.stop().unwrap_err();
         assert!(error.contains("4242"), "{error}");
         assert!(error.contains("may still be running"), "{error}");
+    }
+
+    // Exit can land between ssh being spawned and the handle being tracked.
+    // Whichever arrives second has to kill it, or the process outlives the app
+    // with an album still forwarding.
+    #[test]
+    fn a_child_spawned_during_shutdown_is_killed_not_stored() {
+        let killed = Arc::new(AtomicBool::new(false));
+        let state = TunnelStateOf::new();
+
+        state.close_permanently().unwrap();
+        let refused = state.track(child(&killed, false));
+
+        assert!(refused.is_err(), "tracking must not succeed after shutdown");
+        assert!(killed.load(Ordering::SeqCst), "the child is killed instead");
+        assert_eq!(state.current_url(), None);
     }
 
     // The gap that let an exit during startup orphan an ssh process.
