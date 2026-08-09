@@ -1,9 +1,7 @@
 import { getTimeAgo, groupImagesByYearMonthFromMetadata } from '../dateUtils';
 import { Image, ImageMetadata } from '@/types/Media';
 
-/* ------------------------------------------------------------------ */
-/*  getTimeAgo                                                        */
-/* ------------------------------------------------------------------ */
+// getTimeAgo
 
 describe('getTimeAgo', () => {
   beforeEach(() => {
@@ -36,9 +34,7 @@ describe('getTimeAgo', () => {
   });
 });
 
-/* ------------------------------------------------------------------ */
-/*  groupImagesByYearMonthFromMetadata                                */
-/* ------------------------------------------------------------------ */
+// groupImagesByYearMonthFromMetadata
 
 const makeImage = (id: string, dateCreated: string | null): Image => ({
   id,

@@ -1,8 +1,6 @@
-//! Exposes the share server beyond the LAN through an SSH reverse tunnel.
-//!
-//! Uses the platform's own ssh rather than bundling a ~40MB binary pinned from
-//! unversioned URLs. The child is owned here so it dies with the app -- an
-//! orphaned tunnel leaves an album reachable from the internet.
+//! Exposes the share server beyond the LAN through an SSH reverse tunnel, using
+//! the platform's own ssh rather than a bundled ~40MB binary. The child is owned
+//! here so it dies with the app: an orphan leaves an album reachable publicly.
 
 use std::path::PathBuf;
 use std::sync::Mutex;
