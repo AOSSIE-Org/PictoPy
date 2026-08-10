@@ -35,7 +35,11 @@ def self_write_key(path: str) -> str:
 
 
 def _connect() -> sqlite3.Connection:
-    return sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
+    # This table stands alone, keyed by path, so nothing here depends on it
+    # today. Set anyway to match every other _connect() in this package.
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
 
 
 def db_create_self_writes_table() -> None:
