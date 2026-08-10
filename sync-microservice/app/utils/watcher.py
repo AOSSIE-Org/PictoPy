@@ -2,10 +2,11 @@ import os
 import threading
 import time
 import logging
-from typing import List, Tuple, Dict, Optional
+from typing import List, Set, Tuple, Dict, Optional
 from watchfiles import watch, Change
 import httpx
 from app.database.folders import db_get_all_folders_with_ids
+from app.database.self_writes import db_take_matching_self_writes
 from app.config.settings import PRIMARY_BACKEND_URL
 from app.logging.setup_logging import get_sync_logger
 
@@ -20,6 +21,10 @@ logging.getLogger("watchfiles.main").setLevel(
 logger = get_sync_logger(__name__)
 
 FolderIdPath = Tuple[str, str]
+
+# Mirrors backend/app/utils/self_write.py, which names its temp files this way
+# so they can be recognised here.
+SELF_WRITE_TEMP_PREFIX = ".pictopy-write-"
 
 # Global variables to track watcher state
 watcher_thread: Optional[threading.Thread] = None
@@ -49,6 +54,36 @@ def watcher_util_get_folder_id_if_watched(file_path: str) -> Optional[str]:
     return None
 
 
+def watcher_util_is_own_temp_file(file_path: str) -> bool:
+    """
+    True for the scratch file a PictoPy write leaves in the watched folder.
+
+    It has to be created beside its target for the rename to stay atomic, so the
+    watcher sees it appear and disappear. Prefix mirrors
+    backend/app/utils/self_write.py.
+    """
+    return os.path.basename(file_path).startswith(SELF_WRITE_TEMP_PREFIX)
+
+
+def watcher_util_drop_self_writes(file_paths: List[str]) -> Set[str]:
+    """
+    Of the given paths, those matching a write PictoPy just made itself.
+
+    Batched into one query because a metadata sync pass touches many files at
+    once.
+    """
+    observed = []
+    for file_path in file_paths:
+        try:
+            stats = os.stat(file_path)
+        except OSError:
+            # Gone or unreadable: not something we can claim as our own write.
+            continue
+        observed.append((file_path, stats.st_size, int(stats.st_mtime)))
+
+    return db_take_matching_self_writes(observed)
+
+
 def watcher_util_handle_file_changes(changes: set) -> None:
     """
     Handle file changes detected by watchfiles.
@@ -60,14 +95,30 @@ def watcher_util_handle_file_changes(changes: set) -> None:
 
     affected_folders = {}  # folder_path -> folder_id mapping
 
+    # PictoPy writing metadata into a photo is a file modification like any
+    # other, and resyncing the folder it lives in would undo the write's whole
+    # point. Both passes below run before anything is attributed to a folder.
+    surviving = [
+        (change, file_path)
+        for change, file_path in changes
+        if not watcher_util_is_own_temp_file(file_path)
+    ]
+    self_written = watcher_util_drop_self_writes(
+        [file_path for change, file_path in surviving if change != Change.deleted]
+    )
+    if self_written:
+        logger.debug(f"Ignoring {len(self_written)} change(s) PictoPy made itself")
+
     # First pass - count changes and identify affected folders
-    for change, file_path in changes:
+    for change, file_path in surviving:
         # Process deletions
         if change == Change.deleted:
             deleted_folder_id = watcher_util_get_folder_id_if_watched(file_path)
             if deleted_folder_id:
                 deleted_folder_ids.append(deleted_folder_id)
                 continue
+        elif file_path in self_written:
+            continue
 
         # Find affected folder
         closest_folder = watcher_util_find_closest_parent_folder(
