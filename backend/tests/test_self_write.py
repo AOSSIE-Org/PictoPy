@@ -90,14 +90,23 @@ class TestLedger:
 
         assert matched == {str(ours)}
 
-    def test_lookup_survives_a_differently_spelled_path(self, test_db, tmp_path):
-        """The watcher reports whatever the OS hands it; the key has to absorb that."""
+    def test_lookup_survives_a_differently_spelled_path(
+        self, test_db, tmp_path, monkeypatch
+    ):
+        """
+        The watcher reports whatever the OS hands it, so the two sides agree on a
+        normalised key rather than on the exact string. Case folding is part of
+        that on Windows but not on Linux, where paths really are case-sensitive;
+        absolute-vs-relative is the part that holds everywhere.
+        """
         photo = tmp_path / "a.jpg"
         photo.write_bytes(b"x" * 100)
-        path, size, mtime = _observe(str(photo))
-        db_record_self_write(path.upper(), size, mtime)
+        _, size, mtime = _observe(str(photo))
+        db_record_self_write(str(photo), size, mtime)
 
-        assert db_take_matching_self_writes([(path, size, mtime)]) == {path}
+        monkeypatch.chdir(tmp_path)
+
+        assert db_take_matching_self_writes([("a.jpg", size, mtime)]) == {"a.jpg"}
 
     def test_nothing_observed_queries_nothing(self, test_db):
         assert db_take_matching_self_writes([]) == set()
