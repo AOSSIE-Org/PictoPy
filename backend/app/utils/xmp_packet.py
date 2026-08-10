@@ -40,17 +40,6 @@ _PREFIXES = {
     "pictopy": NS_PICTOPY,
 }
 
-# Properties PictoPy considers its own. Anything else in the packet belongs to
-# another application and is copied through untouched.
-_OWNED = (
-    f"{{{NS_DC}}}subject",
-    f"{{{NS_LR}}}hierarchicalSubject",
-    f"{{{NS_XMP}}}Rating",
-    f"{{{NS_XMP}}}MetadataDate",
-    f"{{{NS_MWG_RS}}}Regions",
-    f"{{{NS_PICTOPY}}}WrittenAt",
-)
-
 _XMPMETA = re.compile(rb"<x:xmpmeta[^>]*>.*</x:xmpmeta>", re.S)
 # The xmpmeta wrapper is optional; some writers emit a bare rdf:RDF root.
 _BARE_RDF = re.compile(rb"<rdf:RDF[^>]*>.*</rdf:RDF>", re.S)
@@ -167,13 +156,37 @@ def xmp_packet_applied_dimensions(
     return raw_width, raw_height
 
 
-def _strip_owned(description: ET.Element) -> None:
-    """Drop PictoPy's own properties, in both the element and attribute spellings."""
+def _replaced_by(metadata: PhotoMetadata) -> Tuple[str, ...]:
+    """
+    The properties this particular write is responsible for.
+
+    Presence of the key is what counts, not whether it holds anything: an empty
+    keyword list means PictoPy owns the keywords and there are none left, while
+    an absent key means it is not ours to touch. Stripping everything we could
+    write would delete a rating the user set in another application.
+    """
+    replaced: List[str] = []
+    if "keywords" in metadata:
+        replaced.append(_qname(NS_DC, "subject"))
+    if "hierarchical_keywords" in metadata:
+        replaced.append(_qname(NS_LR, "hierarchicalSubject"))
+    if "rating" in metadata:
+        replaced.append(_qname(NS_XMP, "Rating"))
+    if "regions" in metadata:
+        replaced.append(_qname(NS_MWG_RS, "Regions"))
+    if "written_at" in metadata:
+        replaced.append(_qname(NS_XMP, "MetadataDate"))
+        replaced.append(_qname(NS_PICTOPY, "WrittenAt"))
+    return tuple(replaced)
+
+
+def _strip(description: ET.Element, properties: Tuple[str, ...]) -> None:
+    """Drop the given properties, in both the element and attribute spellings."""
     for child in list(description):
-        if child.tag in _OWNED:
+        if child.tag in properties:
             description.remove(child)
     for attribute in list(description.attrib):
-        if attribute in _OWNED:
+        if attribute in properties:
             del description.attrib[attribute]
 
 
@@ -274,9 +287,10 @@ def xmp_packet_build(
     if rdf is None:
         rdf = ET.SubElement(root, _qname(NS_RDF, "RDF"))
 
+    replaced = _replaced_by(metadata)
     descriptions = rdf.findall(_qname(NS_RDF, "Description"))
     for description in descriptions:
-        _strip_owned(description)
+        _strip(description, replaced)
 
     if descriptions:
         target = descriptions[0]

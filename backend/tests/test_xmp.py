@@ -190,6 +190,28 @@ class TestPacketMerging:
         assert xmp_packet_read(packet)["rating"] == 4
         assert b'xmp:Rating="1"' not in packet
 
+    def test_a_property_we_do_not_set_is_left_alone(self):
+        """
+        A photo rated in Lightroom that is not a PictoPy favourite still has a
+        rating, and writing keywords must not take it away.
+        """
+        packet = xmp_packet_build({"keywords": ["beach"]}, existing=self.EXISTING)
+
+        assert xmp_packet_read(packet)["rating"] == 2
+        assert xmp_packet_read(packet)["keywords"] == ["beach"]
+
+    def test_clearing_a_property_we_own_does_remove_it(self):
+        """
+        Absent and empty differ: the user removing every tag has to reach the
+        file, or the file keeps claiming tags that no longer exist.
+        """
+        packet = xmp_packet_build({"keywords": []}, existing=self.EXISTING)
+
+        assert "keywords" not in xmp_packet_read(packet)
+        assert b"old-tag" not in packet
+        # Still not ours to touch.
+        assert xmp_packet_read(packet)["rating"] == 2
+
     def test_a_bare_rdf_root_is_merged_not_discarded(self):
         """The xmpmeta wrapper is optional, and some writers leave it out."""
         existing = (
