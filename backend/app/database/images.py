@@ -479,7 +479,10 @@ def _as_int(value: Any) -> Optional[int]:
     """A metadata blob is whatever a past scan wrote; non-numeric means unknown."""
     try:
         return int(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
+        # OverflowError is not a ValueError: JSON reads 1e309 as inf, and this
+        # query runs once for every folder, so letting it escape would abort the
+        # whole scan rather than one file.
         return None
 
 

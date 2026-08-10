@@ -260,6 +260,33 @@ class TestSyncStateQuery:
             "file_mtime": 1700000000,
         }
 
+    def test_a_non_finite_size_does_not_abort_the_scan(self, folder, tmp_path):
+        """JSON reads 1e309 as inf, and int(inf) raises outside the ValueError family."""
+        path = str(tmp_path / "a.jpg")
+        db_bulk_insert_images(
+            [
+                {
+                    "id": "img-1",
+                    "path": path,
+                    "folder_id": folder,
+                    "thumbnailPath": "/thumbs/img-1.jpg",
+                    "metadata": '{"file_size": 1e309, "file_mtime": 1e309}',
+                    "isTagged": False,
+                    "isEmbedded": False,
+                    "latitude": None,
+                    "longitude": None,
+                    "captured_at": None,
+                }
+            ]
+        )
+
+        recorded = db_get_image_sync_state_by_folder_ids([folder])[
+            os.path.normcase(os.path.abspath(path))
+        ]
+
+        assert recorded["file_size"] is None
+        assert recorded["file_mtime"] is None
+
     def test_an_unreadable_blob_leaves_the_file_looking_changed(self, folder, tmp_path):
         path = str(tmp_path / "a.jpg")
         db_bulk_insert_images(
