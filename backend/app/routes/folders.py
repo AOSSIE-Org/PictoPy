@@ -46,6 +46,7 @@ from app.utils.folders import (
     folder_util_get_filesystem_direct_child_folders,
 )
 from concurrent.futures import ProcessPoolExecutor
+from app.utils.metadata_sync import metadata_util_sync_pending
 from app.utils.images import (
     image_util_process_folder_images,
     image_util_process_untagged_images,
@@ -150,6 +151,8 @@ def post_AI_tagging_enabled_sequence():
         # Curate before the video pass: semantic labels are written by now,
         # and the video pass can run for minutes.
         _curate_memories("ai_tagging")
+        # Last of the photo passes: it writes out what all of them produced.
+        metadata_util_sync_pending()
         # Videos last: photos are the primary surface, so they finish first.
         video_util_process_untagged_videos()
         video_util_process_unembedded_frames()
@@ -191,6 +194,7 @@ def post_sync_folder_sequence(
         image_util_process_unembedded_images()
         semantic_util_score_images()
         _curate_memories("sync_folder")
+        metadata_util_sync_pending()
         video_util_process_untagged_videos()
         video_util_process_unembedded_frames()
         semantic_util_score_videos()

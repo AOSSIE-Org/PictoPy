@@ -65,6 +65,14 @@ class MemoriesPreferences(BaseModel):
         return self
 
 
+class MetadataPreferences(BaseModel):
+    """Writing PictoPy's metadata into the photo files themselves."""
+
+    # Off unless asked for. Every other feature reads the user's files; this one
+    # rewrites them, and that is not a default worth assuming.
+    write_to_files: bool = False
+
+
 class UserPreferencesData(BaseModel):
     """User preferences data structure"""
 
@@ -78,6 +86,7 @@ class UserPreferencesData(BaseModel):
         le=VIDEO_FRAME_INTERVAL_MAX,
     )
     memories: MemoriesPreferences = Field(default_factory=MemoriesPreferences)
+    metadata: MetadataPreferences = Field(default_factory=MetadataPreferences)
 
 
 class GetUserPreferencesResponse(BaseModel):
@@ -118,6 +127,12 @@ class MemoriesPreferencesUpdate(BaseModel):
     weights: Optional[MemoryScoringWeightsUpdate] = None
 
 
+class MetadataPreferencesUpdate(BaseModel):
+    """Partial update for metadata preferences."""
+
+    write_to_files: Optional[bool] = None
+
+
 class UpdateUserPreferencesRequest(BaseModel):
     """Request model for updating user preferences"""
 
@@ -127,6 +142,7 @@ class UpdateUserPreferencesRequest(BaseModel):
         default=None, ge=VIDEO_FRAME_INTERVAL_MIN, le=VIDEO_FRAME_INTERVAL_MAX
     )
     memories: Optional[MemoriesPreferencesUpdate] = None
+    metadata: Optional[MetadataPreferencesUpdate] = None
 
 
 class UpdateUserPreferencesResponse(BaseModel):

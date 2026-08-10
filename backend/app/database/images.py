@@ -128,6 +128,14 @@ def db_create_images_table() -> None:
     if "score" not in {row[1] for row in cursor.fetchall()}:
         cursor.execute("ALTER TABLE image_classes ADD COLUMN score REAL")
 
+    # isMetadataSynced: whether the file on disk carries the metadata we hold.
+    # Guarded for the same reason as score -- shipped databases predate it.
+    cursor.execute("PRAGMA table_info(images)")
+    if "isMetadataSynced" not in {row[1] for row in cursor.fetchall()}:
+        cursor.execute(
+            "ALTER TABLE images ADD COLUMN isMetadataSynced BOOLEAN DEFAULT 0"
+        )
+
     conn.commit()
     conn.close()
 
@@ -159,6 +167,9 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
                 END,
                 latitude=COALESCE(excluded.latitude, images.latitude),
                 longitude=COALESCE(excluded.longitude, images.longitude),
+                -- Only changed files reach this branch, and a file that changed
+                -- underneath us may no longer carry the metadata we wrote.
+                isMetadataSynced=0,
                 -- Not COALESCE: every record here comes from a full re-read of
                 -- the file, so NULL means "no capture date exists" and has to
                 -- overwrite a bad one a previous extractor guessed.
@@ -586,7 +597,10 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         cursor.execute(
             """
             UPDATE images
-            SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
+            SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END,
+                -- The rating in the file no longer matches, so the photo goes
+                -- back in the queue for the next metadata pass.
+                isMetadataSynced = 0
             WHERE id = ?
             """,
             (image_id,),

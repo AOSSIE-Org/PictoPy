@@ -590,6 +590,22 @@ def _extract_gps_coordinates(exif_data: Any) -> Tuple[float | None, float | None
 # Pointer to the EXIF sub-IFD, where the capture timestamps actually live.
 EXIF_IFD_POINTER = 0x8769
 
+# How the camera was held. Face boxes are recorded in the undecoded pixel space,
+# so anything placing them against the displayed image needs this to undo it.
+ORIENTATION_TAG = 0x0112
+
+
+def _extract_orientation(exif_data: Any) -> int:
+    """Read the EXIF orientation flag, defaulting to upright."""
+    if exif_data is None:
+        return 1
+    try:
+        value = int(exif_data.get(ORIENTATION_TAG) or 1)
+    except (AttributeError, TypeError, ValueError):
+        return 1
+    return value if 1 <= value <= 8 else 1
+
+
 # Preference order. DateTimeOriginal is when the shutter fired; DateTime is
 # the file's own timestamp and can be a later edit, so it comes last.
 CAPTURE_DATE_TAGS = ("DateTimeOriginal", "DateTimeDigitized", "DateTime")
@@ -683,6 +699,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
 
                 dt_original = _extract_capture_datetime(exif_data)
                 latitude, longitude = _extract_gps_coordinates(exif_data)
+                orientation = _extract_orientation(exif_data)
 
                 # A Google Takeout export drops EXIF from part of its own
                 # library and keeps the real values in a sibling JSON file.
@@ -726,6 +743,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
                 # coarser mtime would otherwise never compare equal to its own
                 # float from a previous scan.
                 "file_mtime": int(stats.st_mtime),
+                "orientation": orientation,
                 "item_type": mime_type,
             }
 

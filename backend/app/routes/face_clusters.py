@@ -13,6 +13,7 @@ from app.database.face_clusters import (
     db_get_images_by_cluster_id,
     db_get_images_by_face_clusters,
 )
+from app.database.metadata_sync import db_mark_metadata_dirty_for_cluster
 from starlette.datastructures import State
 
 from app.routes.dependencies import get_state
@@ -125,6 +126,10 @@ def rename_cluster(
         # appear in, so memories already holding those photos are now ranked
         # on stale inputs.
         _rescore_memories_for_cluster(app_state, cluster_id)
+
+        # Same reach for the files themselves: the region written into every
+        # photo this person appears in still carries the old name.
+        db_mark_metadata_dirty_for_cluster(cluster_id)
 
         return RenameClusterResponse(
             success=True,

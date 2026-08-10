@@ -15,6 +15,11 @@ export const videosEndpoints = {
   purgeFrameCache: '/videos/purge-frame-cache',
 };
 
+export const metadataSyncEndpoints = {
+  status: '/metadata-sync/status',
+  run: '/metadata-sync/run',
+};
+
 export const faceClustersEndpoints = {
   getAllClusters: '/face-clusters/',
   searchForFaces: '/face-clusters/face-search?input_type=path',

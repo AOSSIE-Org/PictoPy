@@ -44,6 +44,7 @@ from app.routes.videos import router as videos_router
 from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
 from app.routes.memories import router as memories_router
+from app.routes.metadata_sync import router as metadata_sync_router
 from app.routes.shutdown import router as shutdown_router
 from app.routes.share import router as share_router
 from app.routes.models import router as models_router, _cleanup_stale_tasks
@@ -186,6 +187,9 @@ app.include_router(
     user_preferences_router, prefix="/user-preferences", tags=["User Preferences"]
 )
 app.include_router(memories_router, prefix="/memories", tags=["Memories"])
+app.include_router(
+    metadata_sync_router, prefix="/metadata-sync", tags=["Metadata Sync"]
+)
 app.include_router(shutdown_router, tags=["Shutdown"])
 app.include_router(share_router, prefix="/share", tags=["Share"])
 app.include_router(models_router, prefix="/models", tags=["Models"])
