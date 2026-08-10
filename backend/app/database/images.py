@@ -1,4 +1,5 @@
 # Standard library imports
+import os
 import sqlite3
 from typing import Any, Dict, List, Mapping, Tuple, TypedDict, Union, Optional
 import json
@@ -50,6 +51,14 @@ class UntaggedImageRecord(TypedDict):
     folder_id: FolderId
     thumbnailPath: str
     metadata: Mapping[str, Any]
+
+
+class ImageSyncState(TypedDict):
+    """What a rescan needs in order to tell an unchanged file from a new one."""
+
+    thumbnailPath: Optional[str]
+    file_size: Optional[int]
+    file_mtime: Optional[int]
 
 
 ImageClassPair = Tuple[ImageId, ClassId]
@@ -462,6 +471,69 @@ def db_get_images_by_folder_ids(
     except sqlite3.Error as e:
         logger.error(f"Error getting images by folder IDs: {e}")
         return []
+    finally:
+        conn.close()
+
+
+def _as_int(value: Any) -> Optional[int]:
+    """A metadata blob is whatever a past scan wrote; non-numeric means unknown."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def db_get_image_sync_state_by_folder_ids(
+    folder_ids: List[FolderId],
+) -> Dict[ImagePath, ImageSyncState]:
+    """
+    Map stored image paths to the size and mtime recorded when each was last read.
+
+    Keyed by normcased absolute path, because the caller matches against paths it
+    just walked off disk and Windows hands back inconsistent casing.
+    """
+    if not folder_ids:
+        return {}
+
+    conn = _connect()
+    cursor = conn.cursor()
+    state: Dict[ImagePath, ImageSyncState] = {}
+
+    try:
+        placeholders = ",".join("?" for _ in folder_ids)
+        cursor.execute(
+            f"""
+            SELECT path, thumbnailPath, metadata
+            FROM images
+            WHERE folder_id IN ({placeholders})
+            """,
+            folder_ids,
+        )
+
+        for path, thumbnail_path, metadata in cursor.fetchall():
+            if not path:
+                continue
+
+            parsed: Mapping[str, Any] = {}
+            if metadata:
+                try:
+                    loaded = json.loads(metadata)
+                    if isinstance(loaded, dict):
+                        parsed = loaded
+                except (json.JSONDecodeError, TypeError):
+                    # An unreadable blob just means this row gets re-read.
+                    pass
+
+            state[os.path.normcase(os.path.abspath(path))] = ImageSyncState(
+                thumbnailPath=thumbnail_path,
+                file_size=_as_int(parsed.get("file_size")),
+                file_mtime=_as_int(parsed.get("file_mtime")),
+            )
+
+        return state
+    except sqlite3.Error as e:
+        logger.error(f"Error getting image sync state by folder IDs: {e}")
+        return {}
     finally:
         conn.close()
 
