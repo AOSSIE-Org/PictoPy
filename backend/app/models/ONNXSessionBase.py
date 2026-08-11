@@ -35,8 +35,8 @@ class ONNXSessionBase:
         self._session: onnxruntime.InferenceSession | None = None
         self._lock = threading.Lock()
         # DirectML faults (0xC0000005) if two threads run one session at once,
-        # which parallel image+video search does. Separate from _lock so inference
-        # never blocks on session creation or close.
+        # which parallel image+video search does. Separate from _lock so a long
+        # run does not hold up session creation or close.
         self._inference_lock = threading.Lock()
 
     def _create_session(self) -> onnxruntime.InferenceSession:

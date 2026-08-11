@@ -122,8 +122,8 @@ export const buildMemorySlides = (
   return slides.sort((a, b) => a.sort_order - b.sort_order);
 };
 
-// A clip runs for its own length, so the story never cuts away mid-shot or
-// lingers on a frozen last frame. A still gets the configured interval.
+// A clip is held for its recorded length rather than cut off mid-shot or left
+// on a frozen last frame. A still gets the configured interval.
 export const slideDurationMs = (
   slide: MemorySlide | undefined,
   photoDurationMs: number,

@@ -57,7 +57,7 @@ MAD_TO_STD = 1.4826
 ALWAYS_AVAILABLE = frozenset({"favourite", "known_people", "face_presence", "in_album"})
 
 # For videos these are absent, not zero: nothing detects faces in one and it
-# cannot join an album. Scoring them zero ranks every video below every photo.
+# cannot join an album. Scoring them zero penalizes every video for the gap.
 UNAVAILABLE_FOR_VIDEO = frozenset({"known_people", "face_presence", "in_album"})
 
 

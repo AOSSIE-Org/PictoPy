@@ -17,8 +17,8 @@ real_get_preferences = memory_curator.memory_curator_get_preferences
 T0 = datetime(2024, 7, 26, 10, 0, 0)
 REFERENCE = "2026-07-26"
 
-# One shared direction stands in for a consistent set; scattered ones use
-# orthogonal bases, where mean cosine is 1/sqrt(N) -- eight clear the gate, two don't.
+# One shared direction stands in for a consistent set. Orthogonal ones score a
+# mean pairwise cosine of 0, well under any baseline, so the gate rejects them.
 COHERENT = np.eye(8, dtype=np.float32)[0]
 SCATTER_BASIS = np.eye(8, dtype=np.float32)
 

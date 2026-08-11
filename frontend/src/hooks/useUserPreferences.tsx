@@ -46,8 +46,8 @@ export const useUserPreferences = () => {
 
   // Non-zero from the moment a write is queued until it settles.
   const pendingWrites = useRef(0);
-  // Counts reads rather than timing them: a read that starts first can still
-  // finish last, and describes the server from before the write either way.
+  // Bumped when a write is queued. A read stamps the value it started under, so
+  // one overtaken by a write is discarded however late its response arrives.
   const writeEpoch = useRef(0);
   const readEpoch = useRef(0);
 

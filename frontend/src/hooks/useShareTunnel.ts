@@ -54,8 +54,8 @@ export const useShareTunnel = (): ShareTunnel => {
 
   const close = useCallback(async (): Promise<void> => {
     revision.current += 1;
-    // Unconditional: a start still in flight already has a killable child, and
-    // checking first would read null and skip the stop. A no-op when idle.
+    // Unconditional: checking first would read null while a start is in flight
+    // and skip the stop, which queues behind that start anyway. Idle is a no-op.
     await stopTunnel();
     apply(null);
   }, [apply]);

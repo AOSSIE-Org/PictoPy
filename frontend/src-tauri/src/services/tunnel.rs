@@ -29,8 +29,8 @@ struct Provider {
     url_suffix: &'static str,
 }
 
-/// Tried in order until one answers. A fallback matters because a provider can
-/// fail while looking healthy: one issued URLs for a tunnel it never routed to.
+/// Tried in order until one answers; srv.us is the intended second, pending a
+/// key of its own. A provider can look healthy while routing nothing it issues.
 const PROVIDERS: [Provider; 1] = [Provider {
     name: "localhost.run",
     destination: "nokey@localhost.run",
