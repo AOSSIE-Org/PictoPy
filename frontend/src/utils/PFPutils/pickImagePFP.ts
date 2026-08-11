@@ -8,9 +8,9 @@ const EXTENSION_TO_MIME: Record<string, string> = {
   jpeg: 'image/jpeg',
 };
 
-// Resolves a data URL rather than the path: react-easy-crop and canvas both
-// need something an <img> can load, and a Tauri file path is not that. Null
-// means the user cancelled.
+// A data URL rather than a path, because the crop step reads the canvas back
+// with toDataURL and a cross-origin asset:// source would taint it. Null means
+// the user cancelled.
 export async function pickImageFile(): Promise<string | null> {
   const selected = await open({
     multiple: false,
