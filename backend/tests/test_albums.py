@@ -702,6 +702,7 @@ class TestAlbumRouteErrors:
     def test_unexpected_exceptions_mapped_to_500(self):
         """Verify that an unexpected exception returns a 500 error."""
         from unittest.mock import patch
+
         with patch("app.routes.albums.db_get_all_albums") as mock_get_all:
             mock_get_all.side_effect = Exception("Database explosion")
             response = client.get("/albums/")
@@ -714,8 +715,12 @@ class TestAlbumRouteErrors:
         """Verify that a database IntegrityError returns a 409 conflict."""
         import sqlite3
         from unittest.mock import patch
+
         with patch("app.routes.albums.db_get_album_by_name", return_value=None):
-            with patch("app.routes.albums.db_insert_album", side_effect=sqlite3.IntegrityError("Unique constraint failed")):
+            with patch(
+                "app.routes.albums.db_insert_album",
+                side_effect=sqlite3.IntegrityError("Unique constraint failed"),
+            ):
                 response = client.post(
                     "/albums/",
                     json={"name": "Duplicate", "description": "This should fail"},
