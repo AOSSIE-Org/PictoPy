@@ -1,5 +1,5 @@
 import React from 'react';
-import { MoreVertical, Lock, Pencil, Trash2 } from 'lucide-react';
+import { MoreVertical, Lock, Pencil, Share2, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { AlbumCardProps } from '@/types/Album';
+import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
@@ -17,6 +18,8 @@ export const AlbumCard: React.FC<AlbumCardProps> = ({
   onClick,
   onEdit,
   onDelete,
+  onShare,
+  isSharing,
 }) => {
   const handleMenuAction = (e: React.MouseEvent, action: () => void): void => {
     e.stopPropagation();
@@ -37,7 +40,10 @@ export const AlbumCard: React.FC<AlbumCardProps> = ({
 
   return (
     <Card
-      className="group relative cursor-pointer overflow-hidden py-0 transition-all"
+      className={cn(
+        'group relative cursor-pointer overflow-hidden py-0 transition-all',
+        isSharing && 'ring-primary ring-2',
+      )}
       onClick={onClick}
     >
       <CardContent className="p-0">
@@ -59,6 +65,13 @@ export const AlbumCard: React.FC<AlbumCardProps> = ({
               <Lock className="text-foreground h-5 w-5" />
             </div>
           )}
+          {/* Sharing Badge */}
+          {isSharing && (
+            <div className="bg-primary text-primary-foreground absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium shadow-lg">
+              <Share2 className="h-3.5 w-3.5" />
+              Sharing
+            </div>
+          )}
           {/* Actions Menu */}
           <div className="absolute top-3 right-3">
             <DropdownMenu>
@@ -77,6 +90,10 @@ export const AlbumCard: React.FC<AlbumCardProps> = ({
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit Album
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => handleMenuAction(e, onShare)}>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  {isSharing ? 'Manage Share' : 'Share Album'}
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={(e) => handleMenuAction(e, onDelete)}
                   className="text-destructive focus:text-destructive"
@@ -89,15 +106,15 @@ export const AlbumCard: React.FC<AlbumCardProps> = ({
           </div>
         </div>
         {/* Album Info */}
-        <div className="space-y-1 p-4">
-          <h3 className="truncate text-base font-semibold">{album.name}</h3>
+        <div className="space-y-0.5 p-3">
+          <h3 className="truncate text-sm font-semibold">{album.name}</h3>
           {album.description && (
-            <p className="text-muted-foreground line-clamp-2 text-sm">
+            <p className="text-muted-foreground line-clamp-1 text-xs">
               {album.description}
             </p>
           )}
 
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-xs">
             {album.image_count} {album.image_count === 1 ? 'photo' : 'photos'}
           </p>
         </div>

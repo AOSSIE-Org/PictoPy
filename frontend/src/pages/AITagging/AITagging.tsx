@@ -18,13 +18,27 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatPeopleTitle } from '@/utils/personUtils';
 import { RankedGallery } from '@/components/Media/RankedGallery';
-import { GallerySortDropdown } from '@/components/GallerySortDropdown';
+import {
+  GALLERY_SORT_OPTIONS,
+  GallerySortDropdown,
+  type GallerySortValue,
+} from '@/components/GallerySortDropdown';
+import { usePersistedSort } from '@/hooks/usePersistedSort';
+
+const AI_TAGGING_SORT_STORAGE_KEY = 'pictopy-ai-tagging-sort';
+
+// Derived from the options above so a removed sort stops being restorable.
+const GALLERY_SORT_VALUES = GALLERY_SORT_OPTIONS.map((option) => option.value);
 
 export const AITagging = () => {
   const dispatch = useDispatch();
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
-  const [sortMode, setSortMode] = useState<'best_match' | 'date'>('best_match');
+  const [sortMode, setSortMode] = usePersistedSort<GallerySortValue>(
+    AI_TAGGING_SORT_STORAGE_KEY,
+    'best_match',
+    GALLERY_SORT_VALUES,
+  );
   const [searchState, setSearchState] = useState<{
     active: boolean;
     peopleNames: string[];

@@ -124,7 +124,9 @@ describe('useRefreshMemories', () => {
     await waitFor(() => expect(mockGetMemoryStatus).toHaveBeenCalled());
     const callsAfterMount = mockGetMemoryStatus.mock.calls.length;
 
-    await new Promise((resolve) => setTimeout(resolve, 2500));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+    });
 
     // An idle page should sit still rather than poll a settled scheduler.
     expect(mockGetMemoryStatus.mock.calls.length).toBe(callsAfterMount);
