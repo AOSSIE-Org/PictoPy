@@ -75,6 +75,7 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
         "app.database.images",
         "app.database.folders",
         "app.database.yolo_mapping",
+        "app.database.albums",
         "app.database.connection",
         "app.database.faces",
         "app.database.face_clusters",
