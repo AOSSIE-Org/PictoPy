@@ -21,9 +21,7 @@ if [[ $1 == "--test" ]]; then
         sleep 3
     done
 else
-    # Model-download and global-reclustering job tracking is in-memory and
-    # per-worker, so the server must run with a single worker; a job started in
-    # one worker would be invisible to others (missed status polls, duplicate
-    # jobs). Do not raise the worker count above 1.
+    # Model-download and reclustering jobs are tracked in memory, per worker, so
+    # a second worker would answer status polls it knows nothing about.
     hypercorn main:app --workers 1 --bind 0.0.0.0:8000
 fi

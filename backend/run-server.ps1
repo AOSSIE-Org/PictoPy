@@ -44,10 +44,8 @@ if ($args[0] -eq "--test") {
         Start-Sleep -Seconds 3
     }
 } else {
-    # Model-download and global-reclustering job tracking is in-memory and
-    # per-worker, so the server must run with a single worker; a job started in
-    # one worker would be invisible to others (missed status polls, duplicate
-    # jobs). Do not raise the worker count above 1.
+    # Model-download and reclustering jobs are tracked in memory, per worker, so
+    # a second worker would answer status polls it knows nothing about.
 
     # Start the Hypercorn server
     $process = Start-Process -FilePath "hypercorn" `
