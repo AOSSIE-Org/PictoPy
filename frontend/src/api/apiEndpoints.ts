@@ -61,6 +61,14 @@ export const albumsEndpoints = {
     `/albums/${albumId}/images`,
 };
 
+export const shareEndpoints = {
+  getShares: '/share/',
+  getInterfaces: '/share/interfaces',
+  createShare: (albumId: string) =>
+    `/share/albums/${encodeURIComponent(albumId)}`,
+  revokeShare: (token: string) => `/share/${encodeURIComponent(token)}`,
+};
+
 export const memoriesEndpoints = {
   list: '/memories',
   generate: '/memories/generate',

@@ -6,7 +6,7 @@ import { GlobalLoader } from '@/components/Loader/GlobalLoader';
 import { InfoDialog } from '@/components/Dialog/InfoDialog';
 import Albums from '../Album/Album';
 
-import { getAllAlbums, deleteAlbum } from '@/api/api-functions';
+import { getAllAlbums, deleteAlbum, getShares } from '@/api/api-functions';
 
 jest.mock('@/api/api-functions', () => ({
   getAllAlbums: jest.fn(),
@@ -15,10 +15,14 @@ jest.mock('@/api/api-functions', () => ({
   updateAlbum: jest.fn(),
   getAlbumImages: jest.fn(),
   addImagesToAlbum: jest.fn(),
+  getShares: jest.fn(),
+  createShare: jest.fn(),
+  revokeShare: jest.fn(),
 }));
 
 const mockGetAllAlbums = getAllAlbums as jest.Mock;
 const mockDeleteAlbum = deleteAlbum as jest.Mock;
+const mockGetShares = getShares as jest.Mock;
 
 // Mirrors App.tsx, which renders the page beneath the global loader and dialog.
 const AlbumsWithGlobalOverlays = () => {
@@ -73,6 +77,7 @@ describe('Albums page', () => {
       serverAlbums = serverAlbums.filter((a) => a.album_id !== albumId);
       return { success: true, msg: 'deleted' };
     });
+    mockGetShares.mockResolvedValue({ success: true, data: [] });
   });
 
   const openDeleteConfirmation = async (
@@ -290,7 +295,11 @@ describe('Albums page', () => {
     await screen.findByText('Trip');
     await openDeleteConfirmation(user);
 
-    const errorDialog = await screen.findByRole('dialog');
+    // usePictoMutation retries twice with a 500ms backoff before it reports
+    // failure, which is already past findBy's default one second wait.
+    const errorDialog = await screen.findByRole('dialog', undefined, {
+      timeout: 5000,
+    });
     expect(within(errorDialog).getByText('Error')).toBeInTheDocument();
 
     // Only the error dialog may be open — the confirmation must not still be
