@@ -23,7 +23,7 @@ export const faceClustersEndpoints = {
   getClusterImages: (clusterId: string) => `/face-clusters/${clusterId}/images`,
   globalRecluster: '/face-clusters/global-recluster',
   globalReclusterStatus: (taskId: string) =>
-    `/face-clusters/global-recluster/${taskId}`,
+    `/face-clusters/global-recluster/${encodeURIComponent(taskId)}`,
   multiPersonSearch: '/face-clusters/multi-search',
 };
 
