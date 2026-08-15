@@ -16,11 +16,10 @@ import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtension';
 import { addImagesToAlbum, fetchAllImages } from '@/api/api-functions';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Image } from '@/types/Media';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { Search, Check } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
-import { cn } from '@/lib/utils';
 
 export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
   isOpen,
@@ -32,12 +31,6 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [allImages, setAllImages] = useState<Image[]>([]);
-
-  const { theme } = useTheme();
-  const isLightMode = theme === 'light';
-  const placeholderSrc = isLightMode
-    ? '/placeholder-album-light.svg'
-    : '/placeholder-album.svg';
 
   const { data: imagesData, isLoading } = usePictoQuery({
     queryKey: ['images'],
@@ -106,7 +99,7 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden p-0 sm:max-w-[700px]">
+      <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden p-0 sm:max-w-[820px]">
         <DialogHeader className="px-6 pt-6">
           <DialogTitle>Add Images to "{albumName}"</DialogTitle>
           <DialogDescription>
@@ -143,35 +136,40 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
                 {filteredImages.map((image) => (
                   <div
                     key={image.id}
-                    className={cn(
-                      'group bg-muted relative aspect-square cursor-pointer overflow-hidden rounded-md border-2 transition-all',
-                      selectedImages.has(image.id)
-                        ? 'border-primary'
-                        : 'hover:border-primary border-transparent',
-                    )}
+                    className="group hover:border-primary relative cursor-pointer overflow-hidden rounded-md border-2 transition-all"
+                    style={{
+                      borderColor: selectedImages.has(image.id)
+                        ? 'hsl(var(--primary))'
+                        : 'transparent',
+                    }}
                     onClick={() => handleImageToggle(image.id)}
                   >
-                    <div className="bg-muted flex h-full w-full items-center justify-center">
+                    <AspectRatio ratio={1}>
                       <img
-                        src={convertFileSrc(image.thumbnailPath)}
-                        alt={image.path.split('/').pop() || ''}
+                        src={convertFileSrc(image.thumbnailPath || image.path)}
+                        alt=""
                         loading="lazy"
-                        className="max-h-full max-w-full object-contain"
+                        className="h-full w-full object-cover"
                         onError={(e) => {
                           const img = e.target as HTMLImageElement;
                           img.onerror = null;
-                          img.src = placeholderSrc;
+                          const placeholder = window.matchMedia(
+                            '(prefers-color-scheme: dark)',
+                          ).matches
+                            ? '/placeholder-album.svg'
+                            : '/placeholder-album-light.svg';
+                          img.src = placeholder;
                         }}
                       />
-                    </div>
 
-                    {selectedImages.has(image.id) && (
-                      <div className="bg-primary/20 absolute inset-0 flex items-center justify-center">
-                        <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
-                          <Check className="text-primary-foreground h-5 w-5" />
+                      {selectedImages.has(image.id) && (
+                        <div className="bg-primary/20 absolute inset-0 flex items-center justify-center">
+                          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+                            <Check className="text-primary-foreground h-5 w-5" />
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </AspectRatio>
                   </div>
                 ))}
               </div>
