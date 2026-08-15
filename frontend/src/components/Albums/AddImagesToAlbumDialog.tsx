@@ -156,7 +156,7 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
                         loading="lazy"
                         className="h-full w-full object-cover"
                         onError={(e) => {
-                          const img = e.target as HTMLImageElement;
+                          const img = e.currentTarget;
                           img.onerror = null;
                           const placeholder = window.matchMedia(
                             '(prefers-color-scheme: dark)',
