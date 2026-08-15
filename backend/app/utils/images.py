@@ -223,6 +223,13 @@ def image_util_classify_and_face_detect_images(
             # Step 1: Get classes
             classes = object_classifier.get_classes(image_path)
 
+            # None means OpenCV could not decode the file. Skip it: len(None)
+            # would raise and abort the pass, leaving every image after this
+            # one untagged and the folder stuck on "processing" forever.
+            if classes is None:
+                logger.warning(f"Skipping unreadable image: {image_path}")
+                continue
+
             # Step 2: Insert class-image pairs if classes were detected
             if len(classes) > 0:
                 # Create image-class pairs
