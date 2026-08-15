@@ -81,9 +81,10 @@ const SystemSettingsCard: React.FC = () => {
     loading || pendingStartMinimized || startMinimized === null;
   const startMinimizedChecked = startMinimized === true;
 
-  const autostartDescription = startMinimizedChecked
-    ? 'Automatically start PictoPy when you log in. The window starts minimized to the system tray.'
-    : 'Automatically start PictoPy when you log in. The main window opens directly on boot.';
+  const autostartDescription =
+    startMinimized === false
+      ? 'Automatically start PictoPy when you log in. The main window opens directly on boot.'
+      : 'Automatically start PictoPy when you log in. The window starts minimized to the system tray.';
 
   return (
     <SettingsCard
