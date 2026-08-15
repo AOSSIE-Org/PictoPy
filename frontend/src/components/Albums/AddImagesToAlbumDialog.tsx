@@ -134,9 +134,14 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
             ) : (
               <div className="grid grid-cols-4 gap-3 p-4">
                 {filteredImages.map((image) => (
-                  <div
+                  <button
                     key={image.id}
-                    className="group hover:border-primary relative cursor-pointer overflow-hidden rounded-md border-2 transition-all"
+                    type="button"
+                    aria-pressed={selectedImages.has(image.id)}
+                    aria-label={
+                      image.path.split(/[/\\]/).pop() || 'Untitled image'
+                    }
+                    className="group hover:border-primary focus-visible:ring-ring relative w-full cursor-pointer appearance-none overflow-hidden rounded-md border-2 bg-transparent p-0 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"
                     style={{
                       borderColor: selectedImages.has(image.id)
                         ? 'hsl(var(--primary))'
@@ -170,7 +175,7 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
                         </div>
                       )}
                     </AspectRatio>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
