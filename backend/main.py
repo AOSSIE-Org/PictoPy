@@ -7,7 +7,11 @@ import os
 import json
 import asyncio
 
-from app.config.settings import DATABASE_PATH, THUMBNAIL_IMAGES_PATH
+from app.config.settings import (
+    DATABASE_PATH,
+    THUMBNAIL_IMAGES_PATH,
+    INDEXING_MAX_WORKERS,
+)
 from uvicorn import Config, Server
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -44,7 +48,9 @@ from app.routes.face_clusters import router as face_clusters_router
 from app.routes.user_preferences import router as user_preferences_router
 from app.routes.memories import router as memories_router
 from app.routes.shutdown import router as shutdown_router
+from app.routes.share import router as share_router
 from app.routes.models import router as models_router, _cleanup_stale_tasks
+from app.share.server import share_server_stop
 from fastapi.openapi.utils import get_openapi
 from app.logging.setup_logging import (
     configure_uvicorn_logging,
@@ -87,6 +93,8 @@ async def lifespan(app: FastAPI):
     # Needs the mappings table (created above): semantic labels register
     # there as class_ids >= SEMANTIC_CLASS_ID_OFFSET
     semantic_util_sync_vocabulary()
+    # New pool, just for folder indexing, so it never queues behind AI tagging
+    app.state.indexing_executor = ProcessPoolExecutor(max_workers=INDEXING_MAX_WORKERS)
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor(max_workers=1)
     # Self-gating no-ops unless something is missing/stale (fresh install,
@@ -104,6 +112,10 @@ async def lifespan(app: FastAPI):
     finally:
         cleanup_task.cancel()
         await asyncio.gather(cleanup_task, return_exceptions=True)
+        app.state.indexing_executor.shutdown(wait=True)
+        # Closes the only socket bound outside localhost; the in-memory share
+        # registry goes with the process.
+        await share_server_stop()
         app.state.executor.shutdown(wait=True)
 
 
@@ -180,6 +192,7 @@ app.include_router(
 )
 app.include_router(memories_router, prefix="/memories", tags=["Memories"])
 app.include_router(shutdown_router, tags=["Shutdown"])
+app.include_router(share_router, prefix="/share", tags=["Share"])
 app.include_router(models_router, prefix="/models", tags=["Models"])
 
 

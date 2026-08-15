@@ -1,68 +1,68 @@
-from fastapi import APIRouter, HTTPException, status, Depends
-from typing import List, Tuple
+import os
+from concurrent.futures import Future, ProcessPoolExecutor
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from starlette.datastructures import State
+
 from app.database.folders import (
-    db_update_parent_ids_for_subtree,
-    db_folder_exists,
-    db_find_parent_folder_id,
-    db_enable_ai_tagging_batch,
-    db_disable_ai_tagging_batch,
-    db_delete_folders_batch,
-    db_get_direct_child_folders,
-    db_get_folder_ids_by_path_prefix,
-    db_get_all_folder_details,
-    db_set_tagging_completed,
-    db_update_folder_indexing_status,
     INDEXING_COMPLETED,
     INDEXING_IN_PROGRESS,
     INDEXING_INTERRUPTED,
+    db_delete_folders_batch,
+    db_disable_ai_tagging_batch,
+    db_enable_ai_tagging_batch,
+    db_find_parent_folder_id,
+    db_folder_exists,
+    db_get_all_folder_details,
+    db_get_direct_child_folders,
+    db_get_folder_ids_by_path_prefix,
+    db_set_tagging_completed,
+    db_update_folder_indexing_status,
+    db_update_parent_ids_for_subtree,
 )
 from app.logging.setup_logging import get_logger
-from starlette.datastructures import State
-
 from app.routes.dependencies import get_state
 from app.schemas.folders import (
+    AddFolderData,
     AddFolderRequest,
     AddFolderResponse,
-    AddFolderData,
-    ErrorResponse,
-    UpdateAITaggingRequest,
-    UpdateAITaggingResponse,
-    UpdateAITaggingData,
+    DeleteFoldersData,
     DeleteFoldersRequest,
     DeleteFoldersResponse,
-    DeleteFoldersData,
+    ErrorResponse,
+    FolderDetails,
+    GetAllFoldersData,
+    GetAllFoldersResponse,
+    SyncFolderData,
     SyncFolderRequest,
     SyncFolderResponse,
-    SyncFolderData,
-    GetAllFoldersResponse,
-    GetAllFoldersData,
-    FolderDetails,
+    UpdateAITaggingData,
+    UpdateAITaggingRequest,
+    UpdateAITaggingResponse,
 )
-import os
+from app.utils.API import API_util_restart_sync_microservice_watcher
+from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.utils.folders import (
     folder_util_add_folder_tree,
     folder_util_add_multiple_folder_trees,
     folder_util_delete_obsolete_folders,
     folder_util_get_filesystem_direct_child_folders,
 )
-from concurrent.futures import ProcessPoolExecutor
 from app.utils.images import (
     image_util_process_folder_images,
-    image_util_process_untagged_images,
     image_util_process_unembedded_images,
-)
-from app.utils.videos import (
-    video_util_process_folder_videos,
-    video_util_process_untagged_videos,
-    video_util_process_unembedded_frames,
+    image_util_process_untagged_images,
 )
 from app.utils.model_bootstrap import ensure_ai_tagging_models
 from app.utils.semantic_labels import (
     semantic_util_score_images,
     semantic_util_score_videos,
 )
-from app.utils.face_clusters import cluster_util_face_clusters_sync
-from app.utils.API import API_util_restart_sync_microservice_watcher
+from app.utils.videos import (
+    video_util_process_folder_videos,
+    video_util_process_unembedded_frames,
+    video_util_process_untagged_videos,
+)
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -86,6 +86,22 @@ def _curate_memories(trigger: str) -> None:
         memory_curator_run(trigger=trigger)
     except Exception as e:
         logger.error(f"Memory curation failed after {trigger}: {e}")
+
+
+def _queue_post_index_tagging_sweep(index_future: Future, app_state: State) -> None:
+    """
+    Runs after folder indexing completes to trigger a follow-up tagging sweep.
+    Prevents images indexed after an earlier tagging pass from being missed.
+    """
+    try:
+        if index_future.result() is not True:
+            logger.warning(
+                "Skipping post-index tagging sweep: indexing did not complete"
+            )
+            return
+        app_state.executor.submit(post_AI_tagging_enabled_sequence)
+    except Exception as e:
+        logger.error(f"Failed to queue post-index tagging sweep: {e}")
 
 
 def post_folder_add_sequence(folder_path: str, folder_id: int):
@@ -165,7 +181,7 @@ def post_AI_tagging_enabled_sequence():
 
 
 def post_sync_folder_sequence(
-    folder_path: str, folder_id: int, added_folders: List[Tuple[str, str]]
+    folder_path: str, folder_id: int, added_folders: list[tuple[str, str]]
 ):
     """
     Post-sync sequence for a folder.
@@ -265,9 +281,19 @@ def add_folder(request: AddFolderRequest, app_state: State = Depends(get_state))
         # Step 5: Update parent ids for the subtree
         db_update_parent_ids_for_subtree(request.folder_path, folder_map)
 
-        # Step 6: Call the post-addition sequence in a separate process
-        executor: ProcessPoolExecutor = app_state.executor
-        executor.submit(post_folder_add_sequence, request.folder_path, root_folder_id)
+        # Step 6: Call the post-addition sequence in a separate process.
+        # Own pool so this never waits on another folder's AI tagging.
+        indexing_executor: ProcessPoolExecutor = app_state.indexing_executor
+        index_future = indexing_executor.submit(
+            post_folder_add_sequence, request.folder_path, root_folder_id
+        )
+        # Also queue a catch-up tagging sweep for once indexing lands. Needed
+        # because indexing and tagging are now on separate pools: if the AI
+        # pool is free, a sweep can start (and finish, finding nothing) before
+        # this folder's images are even in the DB - see the callback docstring.
+        index_future.add_done_callback(
+            lambda future: _queue_post_index_tagging_sweep(future, app_state)
+        )
 
         return AddFolderResponse(
             data=AddFolderData(
@@ -294,7 +320,7 @@ def add_folder(request: AddFolderRequest, app_state: State = Depends(get_state))
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
-                message=f"Unable to add folder: {str(e)}",
+                message=f"Unable to add folder: {e!s}",
             ).model_dump(),
         )
 
@@ -340,7 +366,7 @@ def enable_ai_tagging(
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
-                message=f"Unable to enable AI tagging: {str(e)}",
+                message=f"Unable to enable AI tagging: {e!s}",
             ).model_dump(),
         )
 
@@ -381,7 +407,7 @@ def disable_ai_tagging(request: UpdateAITaggingRequest):
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
-                message=f"Unable to disable AI tagging: {str(e)}",
+                message=f"Unable to disable AI tagging: {e!s}",
             ).model_dump(),
         )
 
@@ -422,7 +448,7 @@ def delete_folders(request: DeleteFoldersRequest):
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
-                message=f"Unable to delete folders: {str(e)}",
+                message=f"Unable to delete folders: {e!s}",
             ).model_dump(),
         )
 
@@ -500,7 +526,7 @@ def sync_folder(request: SyncFolderRequest, app_state: State = Depends(get_state
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
-                message=f"Unable to sync folder: {str(e)}",
+                message=f"Unable to sync folder: {e!s}",
             ).model_dump(),
         )
 
@@ -555,6 +581,6 @@ def get_all_folders():
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
-                message=f"Unable to retrieve folders: {str(e)}",
+                message=f"Unable to retrieve folders: {e!s}",
             ).model_dump(),
         )
