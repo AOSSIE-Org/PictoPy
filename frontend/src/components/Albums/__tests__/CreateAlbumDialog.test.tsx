@@ -188,33 +188,85 @@ describe('CreateAlbumDialog', () => {
     expect(mockCreateAlbum).not.toHaveBeenCalled();
   });
 
-  it('clears password fields and visibility when lock toggle is turned off', async () => {
+  it('clears password fields, visibility, and validation errors when lock toggle is turned off', async () => {
     const user = userEvent.setup();
     renderDialog();
 
     await user.type(screen.getByLabelText(/album name/i), 'Family Trip');
     await user.click(screen.getByLabelText(/lock album/i));
     await user.type(screen.getByLabelText(/^password \*/i), 'secret123');
-    await user.type(screen.getByLabelText(/confirm password \*/i), 'secret123');
+    await user.type(
+      screen.getByLabelText(/confirm password \*/i),
+      'mismatchedpass',
+    );
+
+    // Show both passwords
+    await user.click(screen.getByRole('button', { name: /show password/i }));
+    await user.click(
+      screen.getByRole('button', { name: /show confirm password/i }),
+    );
+    expect(screen.getByLabelText(/^password \*/i)).toHaveAttribute(
+      'type',
+      'text',
+    );
+    expect(screen.getByLabelText(/confirm password \*/i)).toHaveAttribute(
+      'type',
+      'text',
+    );
+
+    // Trigger password validation errors
+    await user.click(screen.getByRole('button', { name: /create album/i }));
+    expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
 
     // Toggle off lock
     await user.click(screen.getByLabelText(/lock album/i));
     expect(screen.queryByLabelText(/^password/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Passwords do not match'),
+    ).not.toBeInTheDocument();
 
-    // Toggle on lock again — fields should be empty
+    // Toggle on lock again — fields should be empty, type="password", and have no errors
     await user.click(screen.getByLabelText(/lock album/i));
-    expect(screen.getByLabelText(/^password \*/i)).toHaveValue('');
-    expect(screen.getByLabelText(/confirm password \*/i)).toHaveValue('');
+    const passwordInput = screen.getByLabelText(/^password \*/i);
+    const confirmPasswordInput = screen.getByLabelText(/confirm password \*/i);
+    expect(passwordInput).toHaveValue('');
+    expect(passwordInput).toHaveAttribute('type', 'password');
+    expect(passwordInput).not.toHaveAttribute('aria-invalid', 'true');
+    expect(confirmPasswordInput).toHaveValue('');
+    expect(confirmPasswordInput).toHaveAttribute('type', 'password');
+    expect(confirmPasswordInput).not.toHaveAttribute('aria-invalid', 'true');
+    expect(
+      screen.queryByText('Passwords do not match'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /show password/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /show confirm password/i }),
+    ).toBeInTheDocument();
   });
 
-  it('resets all form state and sensitive data when closed and reopened', async () => {
+  it('resets all form state, visibility, and validation errors when closed and reopened', async () => {
     const user = userEvent.setup();
     const { rerender } = renderDialog(true);
 
     await user.type(screen.getByLabelText(/album name/i), 'Secret Trip');
     await user.click(screen.getByLabelText(/lock album/i));
     await user.type(screen.getByLabelText(/^password \*/i), 'secret123');
-    await user.type(screen.getByLabelText(/confirm password \*/i), 'secret123');
+    await user.type(
+      screen.getByLabelText(/confirm password \*/i),
+      'mismatchedpass',
+    );
+
+    // Show both passwords
+    await user.click(screen.getByRole('button', { name: /show password/i }));
+    await user.click(
+      screen.getByRole('button', { name: /show confirm password/i }),
+    );
+
+    // Trigger validation error
+    await user.click(screen.getByRole('button', { name: /create album/i }));
+    expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
 
     // Simulate closing externally
     rerender(
@@ -235,7 +287,30 @@ describe('CreateAlbumDialog', () => {
     );
 
     expect(screen.getByLabelText(/album name \*/i)).toHaveValue('');
+    expect(
+      screen.queryByText('Passwords do not match'),
+    ).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/^password/i)).not.toBeInTheDocument();
+
+    // Enable locking and assert visibility and error state are reset
+    await user.click(screen.getByLabelText(/lock album/i));
+    const passwordInput = screen.getByLabelText(/^password \*/i);
+    const confirmPasswordInput = screen.getByLabelText(/confirm password \*/i);
+    expect(passwordInput).toHaveValue('');
+    expect(passwordInput).toHaveAttribute('type', 'password');
+    expect(passwordInput).not.toHaveAttribute('aria-invalid', 'true');
+    expect(confirmPasswordInput).toHaveValue('');
+    expect(confirmPasswordInput).toHaveAttribute('type', 'password');
+    expect(confirmPasswordInput).not.toHaveAttribute('aria-invalid', 'true');
+    expect(
+      screen.queryByText('Passwords do not match'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /show password/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /show confirm password/i }),
+    ).toBeInTheDocument();
   });
 
   it('submits locked album successfully when passwords match', async () => {
