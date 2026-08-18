@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +33,25 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      is_locked: false,
+      password: '',
+      confirmPassword: '',
+    });
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setErrors({});
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
 
   const createAlbumMutation = usePictoMutation({
     mutationFn: (data: Parameters<typeof createAlbum>[0]) => createAlbum(data),
@@ -94,21 +113,12 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
   };
 
   const handleClose = () => {
-    setFormData({
-      name: '',
-      description: '',
-      is_locked: false,
-      password: '',
-      confirmPassword: '',
-    });
-    setShowPassword(false);
-    setShowConfirmPassword(false);
-    setErrors({});
+    resetForm();
     onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
@@ -131,10 +141,18 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? 'name-error' : undefined}
                 className={errors.name ? 'border-destructive' : ''}
               />
               {errors.name && (
-                <p className="text-destructive text-sm">{errors.name}</p>
+                <p
+                  id="name-error"
+                  className="text-destructive text-sm"
+                  role="alert"
+                >
+                  {errors.name}
+                </p>
               )}
             </div>
 
@@ -167,9 +185,23 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
               <Switch
                 id="locked"
                 checked={formData.is_locked}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, is_locked: checked })
-                }
+                onCheckedChange={(checked) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    is_locked: checked,
+                    ...(checked ? {} : { password: '', confirmPassword: '' }),
+                  }));
+                  if (!checked) {
+                    setShowPassword(false);
+                    setShowConfirmPassword(false);
+                    setErrors((prev) => {
+                      const updated = { ...prev };
+                      delete updated.password;
+                      delete updated.confirmPassword;
+                      return updated;
+                    });
+                  }
+                }}
               />
             </div>
 
@@ -189,6 +221,10 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
                       onChange={(e) =>
                         setFormData({ ...formData, password: e.target.value })
                       }
+                      aria-invalid={!!errors.password}
+                      aria-describedby={
+                        errors.password ? 'password-error' : undefined
+                      }
                       className={
                         errors.password ? 'border-destructive pr-10' : 'pr-10'
                       }
@@ -200,6 +236,7 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
                       aria-label={
                         showPassword ? 'Hide password' : 'Show password'
                       }
+                      aria-controls="password"
                     >
                       {showPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -209,7 +246,11 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
                     </button>
                   </div>
                   {errors.password && (
-                    <p className="text-destructive text-sm">
+                    <p
+                      id="password-error"
+                      className="text-destructive text-sm"
+                      role="alert"
+                    >
                       {errors.password}
                     </p>
                   )}
@@ -232,6 +273,12 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
                           confirmPassword: e.target.value,
                         })
                       }
+                      aria-invalid={!!errors.confirmPassword}
+                      aria-describedby={
+                        errors.confirmPassword
+                          ? 'confirm-password-error'
+                          : undefined
+                      }
                       className={
                         errors.confirmPassword
                           ? 'border-destructive pr-10'
@@ -249,6 +296,7 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
                           ? 'Hide confirm password'
                           : 'Show confirm password'
                       }
+                      aria-controls="confirm-password"
                     >
                       {showConfirmPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -258,7 +306,11 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
                     </button>
                   </div>
                   {errors.confirmPassword && (
-                    <p className="text-destructive text-sm">
+                    <p
+                      id="confirm-password-error"
+                      className="text-destructive text-sm"
+                      role="alert"
+                    >
                       {errors.confirmPassword}
                     </p>
                   )}
