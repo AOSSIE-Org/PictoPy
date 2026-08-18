@@ -16,6 +16,25 @@ flowchart TD
     D --> H[Pydantic Response Model]
     H -->|JSON Response| A
 ```
+## Image Retrieval API Flow
+
+The `GET /images/` endpoint provides a concrete example of the backend request/response flow. The request is routed to `get_all_images()`, which retrieves image records through `db_get_all_images()`. The database layer retrieves image and tag data from SQLite, while image metadata is parsed before the results are converted into the response model.
+
+```mermaid
+flowchart TD
+    A[Client] -->|GET /images/| B[FastAPI Application]
+    B --> C[Images Router]
+    C --> D[get_all_images]
+    D -->|tagged filter| E[db_get_all_images]
+    E --> F[(SQLite Database)]
+    F -->|Images + Tags| E
+    E --> D
+    D --> G[image_util_parse_metadata]
+    G --> D
+    D --> H[ImageData]
+    H --> I[GetAllImagesResponse]
+    I -->|JSON Response| A
+```
 <div class="api-500-wrapper">
 	<swagger-ui src="openapi.json"/>
 </div>
