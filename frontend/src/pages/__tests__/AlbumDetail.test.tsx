@@ -124,4 +124,40 @@ describe('AlbumDetail', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(screen.queryByText(/set as cover/i)).not.toBeInTheDocument();
   }, 30000);
+
+  test('places the album header controls before the album title', async () => {
+    mockGetAlbumById.mockResolvedValue({
+      success: true,
+      data: {
+        album: {
+          album_id: 'a1',
+          album_name: 'Trip',
+          description: 'Summer archive',
+          is_locked: false,
+          cover_image_path: null,
+          image_count: 1,
+        },
+      },
+    });
+
+    renderDetail();
+
+    const backButton = await screen.findByRole('button', {
+      name: /back to albums/i,
+    });
+    const albumTitle = await screen.findByRole('heading', { name: 'Trip' });
+
+    expect(
+      backButton.compareDocumentPosition(albumTitle) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getByText('Summer archive')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /select images/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /add images/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('1 photo')).toBeInTheDocument();
+  }, 30000);
 });
