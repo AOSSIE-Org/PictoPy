@@ -18,7 +18,7 @@ flowchart TD
 ```
 ## Image Retrieval API Flow
 
-The `GET /images/` endpoint provides a concrete example of the backend request/response flow. The request is routed to `get_all_images()`, which retrieves image records through `db_get_all_images()`. The database layer retrieves image and tag data from SQLite, while image metadata is parsed before the results are converted into the response model.
+The `GET /images/` endpoint provides a concrete example of the backend request/response flow. The request is routed to `get_all_images()`, which retrieves image records through `db_get_all_images()`. The database layer retrieves image and tag data from SQLite and parses stored metadata. `get_all_images()` invokes `image_util_parse_metadata()` again while constructing each `ImageData` item before returning the response model.
 
 ```mermaid
 flowchart TD
@@ -28,10 +28,11 @@ flowchart TD
     D -->|tagged filter| E[db_get_all_images]
     E --> F[(SQLite Database)]
     F -->|Images + Tags| E
+    E --> G1[image_util_parse_metadata]
+    G1 --> E
     E --> D
-    D --> G[image_util_parse_metadata]
-    G --> D
-    D --> H[ImageData]
+    D --> G2[image_util_parse_metadata]
+    G2 --> H[ImageData]
     H --> I[GetAllImagesResponse]
     I -->|JSON Response| A
 ```
