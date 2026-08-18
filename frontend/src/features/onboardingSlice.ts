@@ -23,10 +23,29 @@ interface OnboardingState {
   isEditing: boolean;
 }
 
+function getInitialStepStatus(): boolean[] {
+  const hasProfile = Boolean(
+    localStorage.getItem('name') && localStorage.getItem('avatar'),
+  );
+
+  return STEP_NAMES.map((stepName) => {
+    switch (stepName) {
+      case STEPS.AVATAR_SELECTION_STEP:
+        return hasProfile;
+      case STEPS.FOLDER_SETUP_STEP:
+        return localStorage.getItem('folderChosen') === 'true';
+      case STEPS.THEME_SELECTION_STEP:
+        return localStorage.getItem('themeChosen') === 'true';
+      default:
+        return false;
+    }
+  });
+}
+
 const initialState: OnboardingState = {
   currentStepIndex: 0,
   currentStepName: STEP_NAMES[0],
-  stepStatus: STEP_NAMES.map(() => false),
+  stepStatus: getInitialStepStatus(),
   avatar: localStorage.getItem('avatar'),
   name: localStorage.getItem('name') || '',
   isEditing: false,

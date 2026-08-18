@@ -17,7 +17,12 @@ export const selectFolderById = createSelector(
 export const selectFoldersByParentId = createSelector(
   [selectAllFolders, (_: RootState, parentId: string | null) => parentId],
   (folders, parentId) =>
-    folders.filter((folder) => folder.parent_folder_id === parentId),
+    folders.filter((folder) =>
+      parentId === null
+        ? folder.parent_folder_id === null ||
+          folder.parent_folder_id === undefined
+        : folder.parent_folder_id === parentId,
+    ),
 );
 
 // Get root folders (folders with no parent)
@@ -54,7 +59,12 @@ export const selectFolderHierarchy = createSelector(
       parentId: string | null = null,
     ): FolderDetails[] => {
       return folders
-        .filter((folder) => folder.parent_folder_id === parentId)
+        .filter((folder) =>
+          parentId === null
+            ? folder.parent_folder_id === null ||
+              folder.parent_folder_id === undefined
+            : folder.parent_folder_id === parentId,
+        )
         .map((folder) => ({
           ...folder,
           children: buildHierarchy(folder.folder_id),
