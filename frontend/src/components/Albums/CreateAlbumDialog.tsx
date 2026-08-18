@@ -256,7 +256,6 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
                   )}
                 </div>
 
-                {/* Confirm Password Field */}
                 <div className="grid gap-2">
                   <Label htmlFor="confirm-password">
                     Confirm Password <span className="text-destructive">*</span>
