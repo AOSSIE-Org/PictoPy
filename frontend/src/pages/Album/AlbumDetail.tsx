@@ -2,17 +2,24 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Share2, Trash2 } from 'lucide-react';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 import { AddImagesToAlbumDialog } from '@/components/Albums/AddImagesToAlbumDialog';
-import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtension';
+import { ShareAlbumDialog } from '@/components/Albums/ShareAlbumDialog';
+import {
+  usePictoQuery,
+  usePictoMutation,
+  type BackendRes,
+} from '@/hooks/useQueryExtension';
 import {
   getAlbumById,
   getAlbumImages,
+  getShares,
   removeMultipleImagesFromAlbum,
   fetchAllImages,
 } from '@/api/api-functions';
+import { Share } from '@/types/Share';
 import {
   setSelectedAlbum,
   setAlbumImages,
@@ -52,6 +59,7 @@ export const AlbumDetail = () => {
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
 
   const [isAddImagesDialogOpen, setIsAddImagesDialogOpen] = useState(false);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
 
@@ -87,6 +95,21 @@ export const AlbumDetail = () => {
   // The grid needs both responses: one names the album's images, the other
   // carries their details.
   const isLoadingContent = isLoadingImages || isLoadingAllImages;
+
+  // Shares are held in memory on the backend, so this is the source of truth
+  // for whether this album is currently being served on the local network.
+  const { successData: allShares, refetch: refetchShares } = usePictoQuery<
+    BackendRes<Share[]>,
+    unknown,
+    Share[]
+  >({
+    queryKey: ['shares'],
+    queryFn: () => getShares(),
+  });
+
+  const albumShares = (allShares ?? []).filter(
+    (share) => share.album_id === albumId,
+  );
 
   const removeImagesMutation = usePictoMutation({
     mutationFn: ({
@@ -287,6 +310,14 @@ export const AlbumDetail = () => {
                   </Button>
                 )}
                 <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsShareDialogOpen(true)}
+                >
+                  <Share2 className="mr-2 h-4 w-4" />
+                  {albumShares.length > 0 ? 'Manage Share' : 'Share'}
+                </Button>
+                <Button
                   size="sm"
                   onClick={() => setIsAddImagesDialogOpen(true)}
                 >
@@ -358,6 +389,15 @@ export const AlbumDetail = () => {
         }}
         albumId={albumId!}
         albumName={album.name}
+      />
+
+      {/* Share Dialog */}
+      <ShareAlbumDialog
+        album={album}
+        shares={albumShares}
+        isOpen={isShareDialogOpen}
+        onClose={() => setIsShareDialogOpen(false)}
+        onChanged={refetchShares}
       />
     </div>
   );
