@@ -58,7 +58,12 @@ Miss one of these and it silently half-works:
 ## Tests
 
 - `tests/test_<resource>.py`. Config in `pytest.ini`: `pythonpath = .`, `testpaths = tests`.
-- The session fixture in `conftest.py` creates every table and sets `TEST_MODE=true`.
+- `tests/db_isolation.py` sets `TEST_MODE=true` before any app import, which points
+  `DATABASE_PATH` at a throwaway `backend/test_db.sqlite3`. Never move that import
+  below the others in `conftest.py`, and never unset `TEST_MODE` mid-run: `settings.py`
+  resolves the path at import time, so either one sends the suite at the user's real
+  library, which it then drops and truncates.
+- The session fixture in `conftest.py` creates every table.
 - Run with `cd backend && pytest`.
 
 ## Environment
