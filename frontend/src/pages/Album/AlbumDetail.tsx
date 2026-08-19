@@ -98,11 +98,12 @@ export const AlbumDetail = () => {
 
   // Shares are held in memory on the backend, so this is the source of truth
   // for whether this album is currently being served on the local network.
-  const { successData: allShares, refetch: refetchShares } = usePictoQuery<
-    BackendRes<Share[]>,
-    unknown,
-    Share[]
-  >({
+  const {
+    successData: allShares,
+    isLoading: isLoadingShares,
+    isError: isSharesError,
+    refetch: refetchShares,
+  } = usePictoQuery<BackendRes<Share[]>, unknown, Share[]>({
     queryKey: ['shares'],
     queryFn: () => getShares(),
   });
@@ -313,6 +314,7 @@ export const AlbumDetail = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => setIsShareDialogOpen(true)}
+                  disabled={isLoadingShares || isSharesError}
                 >
                   <Share2 className="mr-2 h-4 w-4" />
                   {albumShares.length > 0 ? 'Manage Share' : 'Share'}

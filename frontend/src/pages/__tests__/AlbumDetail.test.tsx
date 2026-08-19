@@ -9,6 +9,7 @@ import AlbumDetail from '../Album/AlbumDetail';
 import {
   getAlbumById,
   getAlbumImages,
+  getShares,
   fetchAllImages,
 } from '@/api/api-functions';
 
@@ -21,6 +22,7 @@ jest.mock('@tauri-apps/api/core', () => ({
 jest.mock('@/api/api-functions', () => ({
   getAlbumById: jest.fn(),
   getAlbumImages: jest.fn(),
+  getShares: jest.fn(),
   fetchAllImages: jest.fn(),
   removeMultipleImagesFromAlbum: jest.fn(),
   addImagesToAlbum: jest.fn(),
@@ -28,6 +30,7 @@ jest.mock('@/api/api-functions', () => ({
 
 const mockGetAlbumById = getAlbumById as jest.Mock;
 const mockGetAlbumImages = getAlbumImages as jest.Mock;
+const mockGetShares = getShares as jest.Mock;
 const mockFetchAllImages = fetchAllImages as jest.Mock;
 
 const AlbumDetailWithLoader = () => {
@@ -63,10 +66,65 @@ describe('AlbumDetail', () => {
       },
     });
     mockGetAlbumImages.mockResolvedValue({ success: true, image_ids: ['i1'] });
+    mockGetShares.mockResolvedValue({ success: true, data: [] });
     mockFetchAllImages.mockResolvedValue({
       success: true,
       data: [{ id: 'i1', path: '/p/i1.jpg', thumbnailPath: '/p/i1.jpg' }],
     });
+  });
+
+  test('disables the share action until active shares resolve', async () => {
+    let releaseShares: (value: unknown) => void = () => {};
+    mockGetShares.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseShares = resolve;
+        }),
+    );
+
+    renderDetail();
+
+    await screen.findByText('Trip');
+    const shareButton = screen.getByRole('button', { name: /share/i });
+    expect(shareButton).toBeDisabled();
+
+    releaseShares({ success: true, data: [] });
+
+    await waitFor(() => expect(shareButton).toBeEnabled());
+  });
+
+  test('displays "Manage Share" when an active share exists for this album', async () => {
+    mockGetShares.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          token: 'tok-123',
+          album_id: 'a1',
+          album_name: 'Trip',
+          image_count: 1,
+          port: 52125,
+          created_at: '2026-08-19T00:00:00Z',
+          expires_at: null,
+          is_protected: false,
+          urls: [
+            {
+              interface: 'Wi-Fi',
+              ip: '192.168.1.5',
+              url: 'http://192.168.1.5:52125/s/tok-123',
+            },
+          ],
+        },
+      ],
+    });
+
+    renderDetail();
+
+    await screen.findByText('Trip');
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: /manage share/i }),
+      ).toBeInTheDocument(),
+    );
   });
 
   test('shows skeletons while images load instead of a blocking loader', async () => {
