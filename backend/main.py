@@ -7,7 +7,11 @@ import os
 import json
 import asyncio
 
-from app.config.settings import DATABASE_PATH, THUMBNAIL_IMAGES_PATH
+from app.config.settings import (
+    DATABASE_PATH,
+    THUMBNAIL_IMAGES_PATH,
+    INDEXING_MAX_WORKERS,
+)
 from uvicorn import Config, Server
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -89,7 +93,8 @@ async def lifespan(app: FastAPI):
     # Needs the mappings table (created above): semantic labels register
     # there as class_ids >= SEMANTIC_CLASS_ID_OFFSET
     semantic_util_sync_vocabulary()
-    # Create ProcessPoolExecutor and attach it to app.state
+    # Its own pool, so folder indexing never queues behind AI tagging.
+    app.state.indexing_executor = ProcessPoolExecutor(max_workers=INDEXING_MAX_WORKERS)
     app.state.executor = ProcessPoolExecutor(max_workers=1)
     # Self-gating no-ops unless something is missing/stale (fresh install,
     # checkpoint swap, edited seed). Single-worker executor runs them in
@@ -106,6 +111,7 @@ async def lifespan(app: FastAPI):
     finally:
         cleanup_task.cancel()
         await asyncio.gather(cleanup_task, return_exceptions=True)
+        app.state.indexing_executor.shutdown(wait=True)
         # Closes the only socket bound outside localhost; the in-memory share
         # registry goes with the process.
         await share_server_stop()

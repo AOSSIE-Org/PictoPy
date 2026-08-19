@@ -9,7 +9,7 @@ from unittest.mock import patch, MagicMock
 import tempfile
 import os
 import shutil
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import Future, ProcessPoolExecutor
 
 
 from app.routes.folders import router as folders_router
@@ -100,6 +100,7 @@ def app_with_state(test_db):
     app.include_router(folders_router, prefix="/folders")
 
     app.state.executor = MagicMock(spec=ProcessPoolExecutor)
+    app.state.indexing_executor = MagicMock(spec=ProcessPoolExecutor)
 
     return app
 
@@ -357,9 +358,51 @@ class TestFoldersAPI:
 
         assert response.status_code == 200
 
-        # Verify that the executor.submit was called for background processing
+        # Indexing pool used, AI/misc pool untouched
         # Access the app state through the client
         app_state = client.app.state
+        app_state.indexing_executor.submit.assert_called_once()
+        app_state.executor.submit.assert_not_called()
+
+    @patch("app.routes.folders.folder_util_add_folder_tree")
+    @patch("app.routes.folders.db_update_parent_ids_for_subtree")
+    @patch("app.routes.folders.db_find_parent_folder_id")
+    @patch("app.routes.folders.db_folder_exists")
+    def test_add_folder_queues_tagging_sweep_once_indexing_completes(
+        self,
+        mock_folder_exists,
+        mock_find_parent,
+        mock_update_parent_ids,
+        mock_add_folder_tree,
+        client,
+        temp_folder_structure,
+    ):
+        """A tagging sweep can start and finish before this folder's images
+        are indexed (see _queue_post_index_tagging_sweep). Once indexing's
+        future resolves, a catch-up sweep must be queued on the AI pool so
+        those images don't sit untagged forever."""
+        mock_folder_exists.return_value = False
+        mock_find_parent.return_value = None
+        mock_add_folder_tree.return_value = ("test-folder-id", {})
+        mock_update_parent_ids.return_value = None
+
+        app_state = client.app.state
+        index_future: Future = Future()
+        app_state.indexing_executor.submit.return_value = index_future
+
+        request_data = {
+            "folder_path": temp_folder_structure["photos"],
+            "parent_folder_id": None,
+            "taggingCompleted": False,
+        }
+        response = client.post("/folders/add-folder", json=request_data)
+        assert response.status_code == 200
+
+        # Indexing hasn't finished yet - no sweep queued yet
+        app_state.executor.submit.assert_not_called()
+
+        # Indexing finishes -> catch-up sweep must be queued now
+        index_future.set_result(True)
         app_state.executor.submit.assert_called_once()
 
     # POST /folders/enable-ai-tagging - Enable AI Tagging Tests
