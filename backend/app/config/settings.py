@@ -234,3 +234,7 @@ PICTO_CLUSTERING_BLUR_THRESHOLD = _get_env_float(
 PICTO_CLUSTERING_MIN_FACE_SIZE = _get_env_int(
     "PICTO_CLUSTERING_MIN_FACE_SIZE", 1000, min_value=1
 )
+
+
+# Separate pool for folder indexing so it never queues behind AI tagging.
+INDEXING_MAX_WORKERS = _get_env_int("INDEXING_MAX_WORKERS", 2, min_value=1, max_value=8)
