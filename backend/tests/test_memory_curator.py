@@ -1064,6 +1064,22 @@ class TestRunOrchestration:
             upserts = run_curator(anniversary=make_anniversary_images(2024, 5))
         assert len(of_type(upserts, "anniversary")) == 1
 
+    def test_empty_memories_are_pruned_with_the_configured_min_images(self):
+        """
+        Images deleted out from under a memory (a folder removal, say) leave
+        it with nothing to show; this is what makes it stop surfacing.
+        """
+        with patch.object(memory_curator, "db_prune_empty_memories") as prune:
+            run_curator(anniversary=make_anniversary_images(2024, 5))
+        prune.assert_called_once_with(3)  # stub_preferences sets min_images=3
+
+    def test_a_failing_empty_prune_does_not_stop_the_run(self):
+        with patch.object(
+            memory_curator, "db_prune_empty_memories", side_effect=Exception("locked")
+        ):
+            upserts = run_curator(anniversary=make_anniversary_images(2024, 5))
+        assert len(of_type(upserts, "anniversary")) == 1
+
     def test_recently_used_is_refreshed_between_triggers(self):
         """Later triggers must not reuse what an earlier one just claimed."""
         mocks: Dict[str, Any] = {}

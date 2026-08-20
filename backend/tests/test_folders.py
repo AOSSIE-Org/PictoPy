@@ -619,6 +619,27 @@ class TestFoldersAPI:
         mock_delete_batch.assert_called_once_with(["folder-1", "folder-2", "folder-3"])
 
     @patch("app.routes.folders.db_delete_folders_batch")
+    def test_delete_folders_background_processing_called(
+        self, mock_delete_batch, client
+    ):
+        """Test that memory re-curation is triggered after deleting folders."""
+        mock_delete_batch.return_value = 3
+
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["folder-1", "folder-2", "folder-3"]}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+
+        # Verify background processing was triggered, so memories left
+        # pointing at the deleted folder's images get pruned.
+        app_state = client.app.state
+        app_state.executor.submit.assert_called_once()
+
+    @patch("app.routes.folders.db_delete_folders_batch")
     def test_delete_folders_single_folder(self, mock_delete_batch, client):
         """Test deleting a single folder."""
         mock_delete_batch.return_value = 1

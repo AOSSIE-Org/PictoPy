@@ -29,6 +29,7 @@ from app.database.image_embeddings import (
 )
 from app.database.memories import (
     db_delete_stale_memories,
+    db_prune_empty_memories,
     db_get_video_candidates_in_period,
     db_get_video_scoring_signals,
     db_finish_memory_run,
@@ -1003,6 +1004,13 @@ def memory_curator_run(
                 logger.info(f"Dropped {stale} memories whose capture dates moved")
         except Exception:
             logger.error("Failed to drop stale memories", exc_info=True)
+
+        try:
+            emptied = db_prune_empty_memories(preferences.min_images)
+            if emptied:
+                logger.info(f"Marked {emptied} memories empty (images/folders removed)")
+        except Exception:
+            logger.error("Failed to prune empty memories", exc_info=True)
 
         context = _CurationContext(reference, preferences, params_signature)
 

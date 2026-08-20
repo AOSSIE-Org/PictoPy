@@ -417,13 +417,22 @@ def disable_ai_tagging(request: UpdateAITaggingRequest):
     response_model=DeleteFoldersResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
-def delete_folders(request: DeleteFoldersRequest):
+def delete_folders(
+    request: DeleteFoldersRequest, app_state: State = Depends(get_state)
+):
     """Delete multiple folders by their IDs."""
     try:
         if not request.folder_ids:
             raise ValueError("No folder IDs provided")
 
         deleted_count = db_delete_folders_batch(request.folder_ids)
+
+        # Deleted images/videos cascade out of memory_images/memory_videos,
+        # which can leave memories pointing at nothing. Re-curate so those
+        # get pruned instead of lingering in the grid until the next
+        # unrelated add/sync/tagging run.
+        executor: ProcessPoolExecutor = app_state.executor
+        executor.submit(_curate_memories, "folder_delete")
 
         return DeleteFoldersResponse(
             data=DeleteFoldersData(
