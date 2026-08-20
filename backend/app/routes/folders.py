@@ -419,7 +419,7 @@ def disable_ai_tagging(request: UpdateAITaggingRequest):
 )
 def delete_folders(
     request: DeleteFoldersRequest, app_state: State = Depends(get_state)
-):
+) -> DeleteFoldersResponse:
     """Delete multiple folders by their IDs."""
     try:
         if not request.folder_ids:
@@ -427,12 +427,12 @@ def delete_folders(
 
         deleted_count = db_delete_folders_batch(request.folder_ids)
 
-        # Deleted images/videos cascade out of memory_images/memory_videos,
-        # which can leave memories pointing at nothing. Re-curate so those
-        # get pruned instead of lingering in the grid until the next
-        # unrelated add/sync/tagging run.
+        # Best-effort: re-curate to prune memories orphaned by the delete; a failed submit shouldn't mask a delete that already succeeded.
         executor: ProcessPoolExecutor = app_state.executor
-        executor.submit(_curate_memories, "folder_delete")
+        try:
+            executor.submit(_curate_memories, "folder_delete")
+        except Exception as e:
+            logger.error(f"Failed to queue memory curation after folder delete: {e}")
 
         return DeleteFoldersResponse(
             data=DeleteFoldersData(
