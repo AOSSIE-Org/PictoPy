@@ -195,6 +195,20 @@ def memory_curator_get_preferences() -> MemoriesPreferences:
         return MemoriesPreferences()
 
 
+def memory_curator_prune_empty(min_images: Optional[int] = None) -> int:
+    """
+    Mark memories empty once their live image count drops below the
+    configured minimum -- e.g. a folder was deleted out from under one.
+
+    A single UPDATE, not a curation pass: safe to call synchronously from a
+    route. Pass min_images when the caller already has preferences loaded
+    (memory_curator_run); omit it to have this fetch its own.
+    """
+    if min_images is None:
+        min_images = memory_curator_get_preferences().min_images
+    return db_prune_empty_memories(min_images)
+
+
 def memory_curator_params_signature(preferences: MemoriesPreferences) -> str:
     """Fingerprint the inputs that determine curation output."""
     payload = {
@@ -1003,14 +1017,14 @@ def memory_curator_run(
             if stale:
                 logger.info(f"Dropped {stale} memories whose capture dates moved")
         except Exception:
-            logger.error("Failed to drop stale memories", exc_info=True)
+            logger.exception("Failed to drop stale memories")
 
         try:
-            emptied = db_prune_empty_memories(preferences.min_images)
+            emptied = memory_curator_prune_empty(preferences.min_images)
             if emptied:
                 logger.info(f"Marked {emptied} memories empty (images/folders removed)")
         except Exception:
-            logger.error("Failed to prune empty memories", exc_info=True)
+            logger.exception("Failed to prune empty memories")
 
         context = _CurationContext(reference, preferences, params_signature)
 
