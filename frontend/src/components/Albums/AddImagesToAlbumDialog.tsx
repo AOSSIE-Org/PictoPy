@@ -16,6 +16,7 @@ import { usePictoMutation, usePictoQuery } from '@/hooks/useQueryExtension';
 import { addImagesToAlbum, fetchAllImages } from '@/api/api-functions';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Image } from '@/types/Media';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { Search, Check } from 'lucide-react';
@@ -98,7 +99,7 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden p-0 sm:max-w-[700px]">
+      <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden p-0 sm:max-w-[820px]">
         <DialogHeader className="px-6 pt-6">
           <DialogTitle>Add Images to "{albumName}"</DialogTitle>
           <DialogDescription>
@@ -133,9 +134,14 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
             ) : (
               <div className="grid grid-cols-4 gap-3 p-4">
                 {filteredImages.map((image) => (
-                  <div
+                  <button
                     key={image.id}
-                    className="group hover:border-primary relative aspect-square cursor-pointer overflow-hidden rounded-md border-2 transition-all"
+                    type="button"
+                    aria-pressed={selectedImages.has(image.id)}
+                    aria-label={
+                      image.path.split(/[/\\]/).pop() || 'Untitled image'
+                    }
+                    className="group hover:border-primary focus-visible:ring-ring relative w-full cursor-pointer appearance-none overflow-hidden rounded-md border-2 bg-transparent p-0 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"
                     style={{
                       borderColor: selectedImages.has(image.id)
                         ? 'hsl(var(--primary))'
@@ -143,30 +149,33 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
                     }}
                     onClick={() => handleImageToggle(image.id)}
                   >
-                    <img
-                      src={convertFileSrc(image.thumbnailPath)}
-                      alt=""
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        const img = e.target as HTMLImageElement;
-                        img.onerror = null;
-                        const placeholder = window.matchMedia(
-                          '(prefers-color-scheme: dark)',
-                        ).matches
-                          ? '/placeholder-album.svg'
-                          : '/placeholder-album-light.svg';
-                        img.src = placeholder;
-                      }}
-                    />
+                    <AspectRatio ratio={1}>
+                      <img
+                        src={convertFileSrc(image.thumbnailPath || image.path)}
+                        alt=""
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          const img = e.currentTarget;
+                          img.onerror = null;
+                          const placeholder = window.matchMedia(
+                            '(prefers-color-scheme: dark)',
+                          ).matches
+                            ? '/placeholder-album.svg'
+                            : '/placeholder-album-light.svg';
+                          img.src = placeholder;
+                        }}
+                      />
 
-                    {selectedImages.has(image.id) && (
-                      <div className="bg-primary/20 absolute inset-0 flex items-center justify-center">
-                        <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
-                          <Check className="text-primary-foreground h-5 w-5" />
+                      {selectedImages.has(image.id) && (
+                        <div className="bg-primary/20 absolute inset-0 flex items-center justify-center">
+                          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+                            <Check className="text-primary-foreground h-5 w-5" />
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </AspectRatio>
+                  </button>
                 ))}
               </div>
             )}
