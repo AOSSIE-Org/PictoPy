@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { open } from '@tauri-apps/plugin-shell';
+import { openPath } from '@tauri-apps/plugin-opener';
 import {
   X,
   ImageIcon as ImageLucide,
@@ -129,7 +130,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
                   Location
                 </p>
                 {currentImage?.metadata?.latitude &&
-                currentImage?.metadata?.longitude ? (
+                  currentImage?.metadata?.longitude ? (
                   <button
                     type="button"
                     onClick={handleLocationClick}
@@ -213,9 +214,15 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
             <div className="mt-4 border-t border-black/10 pt-3 dark:border-white/10">
               <button
                 className="w-full rounded-lg bg-black/5 py-2 text-gray-900 hover:bg-black/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
-                onClick={(e) => {
+                onClick={async (e) => {
                   e.preventDefault();
-                  // Button disabled - does nothing
+                  if (currentImage?.path) {
+                    try {
+                      await openPath(currentImage.path);
+                    } catch (err) {
+                      console.error('Failed to open file:', err);
+                    }
+                  }
                 }}
               >
                 Open Original File

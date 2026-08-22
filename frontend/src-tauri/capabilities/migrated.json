@@ -2,7 +2,9 @@
   "identifier": "migrated",
   "description": "permissions that were migrated from v1",
   "local": true,
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:path:default",
     "core:event:default",
@@ -79,11 +81,15 @@
     "process:default",
     {
       "identifier": "fs:scope",
-      "allow": ["**"]
+      "allow": [
+        "**"
+      ]
     },
     {
       "identifier": "fs:read-all",
-      "allow": ["**"]
+      "allow": [
+        "**"
+      ]
     },
     "shell:default",
     "dialog:default",
@@ -94,8 +100,20 @@
     "store:default",
     "opener:allow-reveal-item-in-dir",
     {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
+    {
       "identifier": "opener:allow-open-url",
-      "allow": [{ "url": "https://aossie-org.github.io/*" }]
+      "allow": [
+        {
+          "url": "https://aossie-org.github.io/*"
+        }
+      ]
     }
   ]
 }
