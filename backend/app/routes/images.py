@@ -3,7 +3,7 @@ from starlette.datastructures import State
 from app.routes.dependencies import get_state, request_metadata_export
 from typing import List, Optional
 from app.database.images import db_get_all_images
-from app.schemas.images import ErrorResponse
+from app.schemas.images import ErrorResponse, ToggleFavouriteResponse
 from app.utils.images import image_util_parse_metadata, image_util_delete_images
 from pydantic import BaseModel
 from app.database.images import (
@@ -326,7 +326,11 @@ class ToggleFavouriteRequest(BaseModel):
     image_id: str
 
 
-@router.post("/toggle-favourite")
+@router.post(
+    "/toggle-favourite",
+    response_model=ToggleFavouriteResponse,
+    responses={code: {"model": ErrorResponse} for code in [404, 500]},
+)
 def toggle_favourite(
     req: ToggleFavouriteRequest, app_state: State = Depends(get_state)
 ):
@@ -339,7 +343,11 @@ def toggle_favourite(
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Image not found or failed to toggle",
+                detail=ErrorResponse(
+                    success=False,
+                    error="Image not found",
+                    message=f"No image with id '{image_id}' could be toggled",
+                ).model_dump(),
             )
         request_metadata_export(app_state)
         # Fetch updated status to return
@@ -347,7 +355,11 @@ def toggle_favourite(
         if not image:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Image not found after toggle",
+                detail=ErrorResponse(
+                    success=False,
+                    error="Image not found",
+                    message=f"Image '{image_id}' disappeared after toggling",
+                ).model_dump(),
             )
         return {
             "success": True,
@@ -360,7 +372,11 @@ def toggle_favourite(
         logger.error(f"error in /toggle-favourite route: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal server error: {e}",
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Unable to toggle favourite: {str(e)}",
+            ).model_dump(),
         )
 
 
