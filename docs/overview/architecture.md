@@ -1,5 +1,6 @@
 # Architecture
 
+<!-- markdownlint-disable MD033 -->
 <div class="architecture-diagram-section" markdown="1">
 
 ```mermaid
@@ -33,6 +34,7 @@ flowchart LR
 </div>
 
 </div>
+<!-- markdownlint-enable MD033 -->
 
 ## Frontend
 
