@@ -1,5 +1,39 @@
 # Architecture
 
+<div class="architecture-diagram-section" markdown="1">
+
+```mermaid
+%%{init: {'flowchart': {'curve': 'basis', 'htmlLabels': true}}}%%
+flowchart LR
+    A["<div class='arch-node-label'><span class='arch-node-icon'>⚛️</span><span class='arch-node-title'>Frontend</span><span class='arch-node-subtitle'>Tauri / React</span></div>"]:::frontend
+    B["<div class='arch-node-label'><span class='arch-node-icon'>🦀</span><span class='arch-node-title'>Rust Backend</span></div>"]:::rust
+    C["<div class='arch-node-label'><span class='arch-node-icon'>🐍</span><span class='arch-node-title'>Python Backend</span><span class='arch-node-subtitle'>FastAPI</span></div>"]:::python
+    D["<div class='arch-node-label'><span class='arch-node-icon'>🔄</span><span class='arch-node-title'>Sync Microservice</span></div>"]:::sync
+
+    A --> B
+    B --> C
+    B --> D
+
+    classDef frontend fill:#dbeafe,stroke:#2563eb,color:#1e3a8a,stroke-width:2px
+    classDef rust fill:#dcfce7,stroke:#16a34a,color:#14532d,stroke-width:2px
+    classDef python fill:#ccfbf1,stroke:#0d9488,color:#134e4a,stroke-width:2px
+    classDef sync fill:#ffedd5,stroke:#ea580c,color:#7c2d12,stroke-width:2px
+
+    click A "/frontend/gallery-view/" "Desktop UI layer — Tauri shell with React components"
+    click B "/backend/backend_rust/api/" "Native bridge — file I/O, metadata, and Tauri IPC"
+    click C "/backend/backend_python/api/" "AI & API layer — FastAPI, ONNX models, and SQLite"
+    click D "/Manual_Setup_Guide/#sync-microservice-setup-steps" "Folder sync worker — watches filesystem and keeps the DB in sync"
+```
+
+<div class="arch-diagram-legend" markdown="0">
+  <div class="arch-legend-item"><span class="legend-swatch legend-frontend"></span> Frontend — Desktop UI (Tauri / React)</div>
+  <div class="arch-legend-item"><span class="legend-swatch legend-rust"></span> Rust Backend — Native bridge &amp; file system</div>
+  <div class="arch-legend-item"><span class="legend-swatch legend-python"></span> Python Backend — AI processing &amp; REST API</div>
+  <div class="arch-legend-item"><span class="legend-swatch legend-sync"></span> Sync Microservice — Background folder synchronization</div>
+</div>
+
+</div>
+
 ## Frontend
 
 For the frontend of our application, we use Tauri in combination with React. This allows us to create a desktop application with a web-based user interface. React handles the UI components and user interactions, while Tauri provides the bridge between our web-based frontend and Rust-based backend.

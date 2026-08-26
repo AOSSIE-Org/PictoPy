@@ -49,13 +49,21 @@ markdown_extensions:
       generic: true
   - footnotes
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.mark
   - attr_list
 
 extra_css:
   - stylesheets/output.css
   - stylesheets/extra.css
+  - stylesheets/architecture-diagram.css
+
+extra_javascript:
+  - javascripts/mermaid.mjs
 
 nav:
   - Home: index.md
