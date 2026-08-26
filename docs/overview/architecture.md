@@ -24,10 +24,8 @@ This combination allows us to leverage web technologies for the UI while benefit
 
 ### Core Technologies
 
-For the backend, we rely on several technologies. Our database is served using SQLite, while we use the parallel processing capabilities of `asyncio` due to its compatibility with FastAPI.
-
-Our models are from various sources:
-
+For the backend, we rely on several technologies. Our database is served using SQLite, while we use the asynchronous concurrency capabilities of `asyncio` due to its compatibility with FastAPI.
+Key technologies include:
 - **YOLO:** Used for object and face detection.
 - **FaceNet:** Used for generating embeddings of detected faces.
 - **ONNX Runtime:** Used to run the models while keeping the application lightweight.
