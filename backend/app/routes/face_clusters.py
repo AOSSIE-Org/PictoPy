@@ -1,4 +1,3 @@
-import logging
 from binascii import Error as Base64Error
 import base64
 from concurrent.futures import CancelledError, Future, ProcessPoolExecutor
@@ -37,8 +36,9 @@ from app.schemas.face_clusters import (
 )
 from app.schemas.images import FaceSearchRequest, InputType
 from app.utils.faceSearch import perform_face_search
+from app.logging.setup_logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter()
 
 
