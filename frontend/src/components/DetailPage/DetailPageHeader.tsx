@@ -32,18 +32,20 @@ export const DetailPageHeader = ({
         <div className="flex flex-wrap items-center gap-2">{actions}</div>
       )}
     </div>
-    <div className="mt-4 flex flex-wrap items-start justify-between gap-2">
+    <div className="mt-4">
       <div>
-        <h1 className="text-2xl font-bold">{title}</h1>
+        <div className="flex flex-wrap items-baseline gap-2">
+          <h1 className="text-2xl font-bold">{title}</h1>
+          {meta && (
+            <div className="text-muted-foreground text-sm whitespace-nowrap">
+              {meta}
+            </div>
+          )}
+        </div>
         {description && (
           <p className="text-muted-foreground text-sm">{description}</p>
         )}
       </div>
-      {meta && (
-        <p className="text-muted-foreground text-sm whitespace-nowrap">
-          {meta}
-        </p>
-      )}
     </div>
   </div>
 );
