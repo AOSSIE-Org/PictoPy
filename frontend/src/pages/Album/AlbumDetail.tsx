@@ -232,7 +232,6 @@ export const AlbumDetail = () => {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      {/* Header */}
       <DetailPageHeader
         backLabel="Back to Albums"
         onBack={handleBack}
