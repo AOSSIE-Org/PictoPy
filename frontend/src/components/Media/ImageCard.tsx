@@ -68,10 +68,10 @@ export function ImageCard({
             )}
           />
           {/* Dark overlay on hover */}
-          <div className="absolute inset-0 bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+          <div className="pointer-events-none absolute inset-0 bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
 
-          {/* Image actions on hover */}
-          <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+          {/* Favourite action: top-right, matching VideoCard's placement */}
+          <div className="absolute top-2 right-2 z-20 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-within:opacity-100">
             <Button
               variant="ghost"
               size="icon"
@@ -81,7 +81,6 @@ export function ImageCard({
                   : 'bg-white/10 hover:bg-white/20 hover:shadow-lg'
               }`}
               onClick={(e) => {
-                console.log(image);
                 e.stopPropagation();
                 handleToggleFavourite();
               }}
