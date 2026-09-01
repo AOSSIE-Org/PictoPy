@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  ChronologicalGallery,
-  MonthMarker,
-} from '@/components/Media/ChronologicalGallery';
+import { ChronologicalFavoritesGallery } from '@/components/Media/ChronologicalFavoritesGallery';
+import { MonthMarker } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
-import { Image } from '@/types/Media';
+import { Image, Video } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
 import { selectImages } from '@/features/imageSelectors';
+import { setVideos } from '@/features/videoSlice';
+import { selectVideos } from '@/features/videoSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
-import { fetchAllImages } from '@/api/api-functions';
+import { fetchAllImages, fetchAllVideos } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { Heart } from 'lucide-react';
@@ -18,19 +18,43 @@ import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 export const MyFav = () => {
   const dispatch = useDispatch();
   const images = useSelector(selectImages);
+  const videos = useSelector(selectVideos);
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
   const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
 
-  const { data, isLoading, isSuccess, isError, error } = usePictoQuery({
+  const {
+    data: imageData,
+    isLoading: isImagesLoading,
+    isSuccess: isImagesSuccess,
+    isError: isImagesError,
+    error: imagesError,
+  } = usePictoQuery({
     queryKey: ['images'],
     queryFn: () => fetchAllImages(),
     enabled: !isSearchActive,
   });
 
+  const {
+    data: videoData,
+    isLoading: isVideosLoading,
+    isSuccess: isVideosSuccess,
+    isError: isVideosError,
+    error: videosError,
+  } = usePictoQuery({
+    queryKey: ['videos'],
+    queryFn: () => fetchAllVideos(),
+    enabled: !isSearchActive,
+  });
+
   useMutationFeedback(
-    { isPending: isLoading, isSuccess, isError, error },
+    {
+      isPending: isImagesLoading,
+      isSuccess: isImagesSuccess,
+      isError: isImagesError,
+      error: imagesError,
+    },
     {
       loadingMessage: 'Loading images',
       showSuccess: false,
@@ -39,25 +63,54 @@ export const MyFav = () => {
     },
   );
 
+  useMutationFeedback(
+    {
+      isPending: isVideosLoading,
+      isSuccess: isVideosSuccess,
+      isError: isVideosError,
+      error: videosError,
+    },
+    {
+      loadingMessage: 'Loading videos',
+      showSuccess: false,
+      errorTitle: 'Error',
+      errorMessage: 'Failed to load videos. Please try again later.',
+    },
+  );
+
   // Handle fetching lifecycle
   useEffect(() => {
-    if (!isSearchActive && isSuccess) {
-      const images = (data?.data ?? []) as Image[];
+    if (!isSearchActive && isImagesSuccess) {
+      const images = (imageData?.data ?? []) as Image[];
       dispatch(setImages(images));
     }
-  }, [data, isSuccess, dispatch, isSearchActive]);
+  }, [imageData, isImagesSuccess, dispatch, isSearchActive]);
+
+  useEffect(() => {
+    if (!isSearchActive && isVideosSuccess) {
+      const videos = (videoData?.data ?? []) as Video[];
+      dispatch(setVideos(videos));
+    }
+  }, [videoData, isVideosSuccess, dispatch, isSearchActive]);
 
   const favouriteImages = useMemo(
     () => images.filter((image) => image.isFavourite === true),
     [images],
   );
 
+  const favouriteVideos = useMemo(
+    () => videos.filter((video) => video.isFavourite === true),
+    [videos],
+  );
+
+  const favouriteCount = favouriteImages.length + favouriteVideos.length;
+
   const title =
     isSearchActive && images.length > 0
       ? `Face Search Results (${images.length} found)`
-      : 'Favourite Image Gallery';
+      : 'Favorites';
 
-  if (favouriteImages.length === 0) {
+  if (favouriteCount === 0) {
     return (
       <div className="p-6">
         <h1 className="mb-6 text-2xl font-bold">{title}</h1>
@@ -69,11 +122,11 @@ export const MyFav = () => {
 
           {/* Text Content */}
           <h2 className="text-foreground mb-3 text-xl font-semibold">
-            No Favourite Images Yet
+            No Favorites Yet
           </h2>
           <p className="text-muted-foreground mb-6 max-w-md">
-            Start building your collection by marking images as favourites.
-            Click the heart icon on any image to add it here.
+            Start building your collection by marking images and videos as
+            favorites. Click the heart icon on any item to add it here.
           </p>
         </div>
       </div>
@@ -87,9 +140,10 @@ export const MyFav = () => {
         ref={scrollableRef}
         className="hide-scrollbar flex-1 overflow-x-hidden overflow-y-auto"
       >
-        {favouriteImages.length > 0 ? (
-          <ChronologicalGallery
+        {favouriteCount > 0 ? (
+          <ChronologicalFavoritesGallery
             images={favouriteImages}
+            videos={favouriteVideos}
             showTitle={true}
             title={title}
             onMonthOffsetsChange={setMonthMarkers}
