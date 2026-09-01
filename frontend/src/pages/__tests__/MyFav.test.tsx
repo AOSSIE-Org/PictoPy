@@ -89,7 +89,7 @@ describe('MyFav (Favorites) page', () => {
   });
 
   test('renders favourited images and videos mixed together, excluding non-favourites', async () => {
-    (fetchAllImages as jest.Mock).mockResolvedValue({
+    jest.mocked(fetchAllImages).mockResolvedValue({
       success: true,
       data: [
         makeImage(),
@@ -104,7 +104,7 @@ describe('MyFav (Favorites) page', () => {
         }),
       ],
     });
-    (fetchAllVideos as jest.Mock).mockResolvedValue({
+    jest.mocked(fetchAllVideos).mockResolvedValue({
       success: true,
       data: [
         makeVideo(),
@@ -133,11 +133,11 @@ describe('MyFav (Favorites) page', () => {
   });
 
   test('Date sort (default) groups items by month, newest capture date first', async () => {
-    (fetchAllImages as jest.Mock).mockResolvedValue({
+    jest.mocked(fetchAllImages).mockResolvedValue({
       success: true,
       data: [makeImage()],
     });
-    (fetchAllVideos as jest.Mock).mockResolvedValue({
+    jest.mocked(fetchAllVideos).mockResolvedValue({
       success: true,
       data: [makeVideo()],
     });
@@ -156,11 +156,11 @@ describe('MyFav (Favorites) page', () => {
   });
 
   test('Custom sort orders by favourited time (most recent first) with no month grouping', async () => {
-    (fetchAllImages as jest.Mock).mockResolvedValue({
+    jest.mocked(fetchAllImages).mockResolvedValue({
       success: true,
       data: [makeImage()],
     });
-    (fetchAllVideos as jest.Mock).mockResolvedValue({
+    jest.mocked(fetchAllVideos).mockResolvedValue({
       success: true,
       data: [makeVideo()],
     });
@@ -184,11 +184,11 @@ describe('MyFav (Favorites) page', () => {
   });
 
   test('persists the selected sort option across a remount', async () => {
-    (fetchAllImages as jest.Mock).mockResolvedValue({
+    jest.mocked(fetchAllImages).mockResolvedValue({
       success: true,
       data: [makeImage()],
     });
-    (fetchAllVideos as jest.Mock).mockResolvedValue({
+    jest.mocked(fetchAllVideos).mockResolvedValue({
       success: true,
       data: [makeVideo()],
     });
@@ -206,11 +206,11 @@ describe('MyFav (Favorites) page', () => {
   });
 
   test('excludes previously-loaded favourited videos while a face search is active', async () => {
-    (fetchAllImages as jest.Mock).mockResolvedValue({
+    jest.mocked(fetchAllImages).mockResolvedValue({
       success: true,
       data: [],
     });
-    (fetchAllVideos as jest.Mock).mockResolvedValue({
+    jest.mocked(fetchAllVideos).mockResolvedValue({
       success: true,
       data: [],
     });
