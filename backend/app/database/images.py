@@ -656,7 +656,7 @@ def _group_image_rows_with_tags(
     rows: List[Tuple], images_dict: Dict[str, dict]
 ) -> None:
     """
-    Group flat image+tag join rows (the shared 11-column SELECT shape used by
+    Group flat image+tag join rows (the shared 12-column SELECT shape used by
     db_search_images_by_tag and db_get_images_by_ids) into images_dict, keyed
     by image_id, aggregating tag_name into a deduplicated "tags" list.
     Mutates images_dict in place so callers can accumulate across chunks.
@@ -672,6 +672,7 @@ def _group_image_rows_with_tags(
         latitude,
         longitude,
         captured_at,
+        favourited_at,
         tag_name_result,
     ) in rows:
         if image_id not in images_dict:
@@ -686,6 +687,7 @@ def _group_image_rows_with_tags(
                 "latitude": latitude,
                 "longitude": longitude,
                 "captured_at": captured_at if captured_at else None,
+                "favouritedAt": favourited_at if favourited_at else None,
                 "tags": [],
             }
 
@@ -724,6 +726,7 @@ def db_search_images_by_tag(tag_name: str) -> List[dict]:
                 i.latitude,
                 i.longitude,
                 i.captured_at,
+                i.favouritedAt,
                 m.name as tag_name
             FROM images i
             LEFT JOIN image_classes_display ic ON i.id = ic.image_id
@@ -782,6 +785,7 @@ def db_get_images_by_ids(image_ids: List[str]) -> List[dict]:
                     i.latitude,
                     i.longitude,
                     i.captured_at,
+                    i.favouritedAt,
                     m.name as tag_name
                 FROM images i
                 LEFT JOIN image_classes_display ic ON i.id = ic.image_id

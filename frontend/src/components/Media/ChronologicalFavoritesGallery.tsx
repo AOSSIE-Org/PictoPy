@@ -7,10 +7,22 @@ import { cn } from '@/lib/utils';
 import { Image, Video } from '@/types/Media';
 import { groupImagesByYearMonthFromMetadata } from '@/utils/dateUtils';
 import { MonthMarker } from './ChronologicalGallery';
-import { setCurrentViewIndex as setCurrentImageViewIndex } from '@/features/imageSlice';
-import { setCurrentViewIndex as setCurrentVideoViewIndex } from '@/features/videoSlice';
-import { selectIsImageViewOpen } from '@/features/imageSelectors';
-import { selectIsVideoViewOpen } from '@/features/videoSelectors';
+import {
+  setCurrentViewIndex as setCurrentImageViewIndex,
+  closeImageView,
+} from '@/features/imageSlice';
+import {
+  setCurrentViewIndex as setCurrentVideoViewIndex,
+  closeVideoView,
+} from '@/features/videoSlice';
+import {
+  selectCurrentViewIndex,
+  selectIsImageViewOpen,
+} from '@/features/imageSelectors';
+import {
+  selectCurrentVideoIndex,
+  selectIsVideoViewOpen,
+} from '@/features/videoSelectors';
 import { MediaView } from './MediaView';
 import { VideoPlayerOverlay } from '@/components/VideoPlayer/VideoPlayerOverlay';
 
@@ -48,6 +60,10 @@ export const ChronologicalFavoritesGallery = ({
   const galleryRef = useRef<HTMLDivElement>(null);
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const isVideoViewOpen = useSelector(selectIsVideoViewOpen);
+  const currentImageIndex = useSelector(selectCurrentViewIndex);
+  const currentVideoIndex = useSelector(selectCurrentVideoIndex);
+  const previousImageIdsRef = useRef<string[]>([]);
+  const previousVideoIdsRef = useRef<string[]>([]);
 
   const merged = useMemo<FavoriteMediaItem[]>(
     () => [
@@ -125,6 +141,39 @@ export const ChronologicalFavoritesGallery = ({
     });
     return map;
   }, [orderedVideos]);
+
+  // Un-favouriting the item currently open in its viewer (e.g. from the
+  // heart button inside MediaView/VideoPlayerOverlay itself) drops it out of
+  // this gallery's list. The viewer's index is otherwise untouched, so it
+  // would silently show whatever now sits at that index -- or nothing, if
+  // the item was last. Close it instead of drifting to the wrong item.
+  useEffect(() => {
+    const previousIds = previousImageIdsRef.current;
+    const currentIds = orderedImages.map((img) => img.id);
+    if (
+      isImageViewOpen &&
+      currentImageIndex >= 0 &&
+      currentImageIndex < previousIds.length &&
+      !currentIds.includes(previousIds[currentImageIndex])
+    ) {
+      dispatch(closeImageView());
+    }
+    previousImageIdsRef.current = currentIds;
+  }, [orderedImages, isImageViewOpen, currentImageIndex, dispatch]);
+
+  useEffect(() => {
+    const previousIds = previousVideoIdsRef.current;
+    const currentIds = orderedVideos.map((video) => video.id);
+    if (
+      isVideoViewOpen &&
+      currentVideoIndex >= 0 &&
+      currentVideoIndex < previousIds.length &&
+      !currentIds.includes(previousIds[currentVideoIndex])
+    ) {
+      dispatch(closeVideoView());
+    }
+    previousVideoIdsRef.current = currentIds;
+  }, [orderedVideos, isVideoViewOpen, currentVideoIndex, dispatch]);
 
   const renderCard = useCallback(
     (item: FavoriteMediaItem) =>

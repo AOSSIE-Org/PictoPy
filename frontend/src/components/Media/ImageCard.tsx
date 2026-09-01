@@ -46,9 +46,10 @@ export function ImageCard({
       onClick={onClick}
     >
       <div className="relative">
-        {/* Selection tick mark */}
+        {/* Selection tick mark -- top-left, so it never overlaps the
+            favourite button at top-right */}
         {isSelected && (
-          <div className="absolute top-2 right-2 z-10 rounded-full bg-[#4088fa] p-1">
+          <div className="absolute top-2 left-2 z-10 rounded-full bg-[#4088fa] p-1">
             <Check className="h-4 w-4 text-white" />
           </div>
         )}

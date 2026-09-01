@@ -1,10 +1,14 @@
 import { videosEndpoints } from '../apiEndpoints';
 import { apiClient } from '../axiosConfig';
 import { APIResponse } from '@/types/API';
-import { ScoredVideo } from '@/types/Media';
+import { ScoredVideo, Video } from '@/types/Media';
 
-export const fetchAllVideos = async (): Promise<APIResponse> => {
-  const response = await apiClient.get<APIResponse>(
+export interface GetAllVideosResponse extends APIResponse {
+  data?: Video[];
+}
+
+export const fetchAllVideos = async (): Promise<GetAllVideosResponse> => {
+  const response = await apiClient.get<GetAllVideosResponse>(
     videosEndpoints.getAllVideos,
   );
   return response.data;

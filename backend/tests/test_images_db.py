@@ -400,6 +400,17 @@ class TestSearchAndGetByIds:
         results = db_get_images_by_ids(["img-3", "img-1", "missing"])
         assert [img["id"] for img in results] == ["img-3", "img-1"]
 
+    def test_search_by_tag_and_get_by_ids_carry_favouritedAt(self, folder, test_db):
+        db_bulk_insert_images([make_image_record("img-1", "/photos/a.jpg", folder)])
+        add_tag(test_db, "img-1", 9001, "sunset")
+        assert db_search_images_by_tag("sunset")[0]["favouritedAt"] is None
+        assert db_get_images_by_ids(["img-1"])[0]["favouritedAt"] is None
+
+        db_toggle_image_favourite_status("img-1")
+
+        assert db_search_images_by_tag("sunset")[0]["favouritedAt"] is not None
+        assert db_get_images_by_ids(["img-1"])[0]["favouritedAt"] is not None
+
 
 # ##############################
 # Marking embedded

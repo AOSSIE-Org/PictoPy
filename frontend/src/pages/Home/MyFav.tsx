@@ -6,7 +6,6 @@ import {
 } from '@/components/Media/ChronologicalFavoritesGallery';
 import { MonthMarker } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
-import { Image, Video } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
 import { selectImages } from '@/features/imageSelectors';
 import { setVideos } from '@/features/videoSlice';
@@ -69,15 +68,26 @@ export const MyFav = () => {
     enabled: !isSearchActive,
   });
 
+  // A single feedback call owns the global loader, kept up for as long as
+  // either query is pending -- two independent calls would each hide it the
+  // moment their own query settles, blanking it while the other still loads.
+  useMutationFeedback(
+    { isPending: isImagesLoading || isVideosLoading },
+    {
+      loadingMessage: 'Loading favorites',
+      showSuccess: false,
+      showError: false,
+    },
+  );
+
   useMutationFeedback(
     {
-      isPending: isImagesLoading,
       isSuccess: isImagesSuccess,
       isError: isImagesError,
       error: imagesError,
     },
     {
-      loadingMessage: 'Loading images',
+      showLoading: false,
       showSuccess: false,
       errorTitle: 'Error',
       errorMessage: 'Failed to load images. Please try again later.',
@@ -86,13 +96,12 @@ export const MyFav = () => {
 
   useMutationFeedback(
     {
-      isPending: isVideosLoading,
       isSuccess: isVideosSuccess,
       isError: isVideosError,
       error: videosError,
     },
     {
-      loadingMessage: 'Loading videos',
+      showLoading: false,
       showSuccess: false,
       errorTitle: 'Error',
       errorMessage: 'Failed to load videos. Please try again later.',
@@ -102,15 +111,13 @@ export const MyFav = () => {
   // Handle fetching lifecycle
   useEffect(() => {
     if (!isSearchActive && isImagesSuccess) {
-      const images = (imageData?.data ?? []) as Image[];
-      dispatch(setImages(images));
+      dispatch(setImages(imageData?.data ?? []));
     }
   }, [imageData, isImagesSuccess, dispatch, isSearchActive]);
 
   useEffect(() => {
     if (!isSearchActive && isVideosSuccess) {
-      const videos = (videoData?.data ?? []) as Video[];
-      dispatch(setVideos(videos));
+      dispatch(setVideos(videoData?.data ?? []));
     }
   }, [videoData, isVideosSuccess, dispatch, isSearchActive]);
 
@@ -120,8 +127,14 @@ export const MyFav = () => {
   );
 
   const favouriteVideos = useMemo(
-    () => videos.filter((video) => video.isFavourite === true),
-    [videos],
+    // The video query is disabled during search, but the store still holds
+    // whatever favourited videos were loaded before search started -- don't
+    // let them leak into the face-search results.
+    () =>
+      isSearchActive
+        ? []
+        : videos.filter((video) => video.isFavourite === true),
+    [videos, isSearchActive],
   );
 
   const favouriteCount = favouriteImages.length + favouriteVideos.length;
