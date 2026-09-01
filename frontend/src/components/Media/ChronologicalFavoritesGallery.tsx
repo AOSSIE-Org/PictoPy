@@ -18,9 +18,12 @@ type FavoriteMediaItem =
   | ({ mediaType: 'image' } & Image)
   | ({ mediaType: 'video' } & Video);
 
+export type FavoritesSortValue = 'date' | 'custom';
+
 type ChronologicalFavoritesGalleryProps = {
   images: Image[];
   videos: Video[];
+  sortBy?: FavoritesSortValue;
   showTitle?: boolean;
   title?: string;
   titleRight?: React.ReactNode;
@@ -32,6 +35,7 @@ type ChronologicalFavoritesGalleryProps = {
 export const ChronologicalFavoritesGallery = ({
   images,
   videos,
+  sortBy = 'date',
   showTitle = false,
   title = 'Favorites',
   titleRight,
@@ -69,48 +73,88 @@ export const ChronologicalFavoritesGallery = ({
       }));
   }, [grouped]);
 
-  const chronologicallySortedItems = useMemo(() => {
+  // "Custom" order: most-recently-favourited first. SQLite's CURRENT_TIMESTAMP
+  // format (YYYY-MM-DD HH:MM:SS) sorts correctly as a plain string. Items
+  // favourited before this field existed have no timestamp and sort last.
+  const customSorted = useMemo(() => {
+    return [...merged].sort((a, b) =>
+      (b.favouritedAt ?? '').localeCompare(a.favouritedAt ?? ''),
+    );
+  }, [merged]);
+
+  const orderedItems = useMemo(() => {
+    if (sortBy === 'custom') return customSorted;
     return sortedGrouped.flatMap(({ months }) =>
       months.flatMap(([, items]) => items),
     );
-  }, [sortedGrouped]);
+  }, [sortBy, customSorted, sortedGrouped]);
 
   // MediaView/VideoPlayerOverlay each navigate within their own media type,
   // so the index passed to them must be within the type-filtered sequence,
   // not the merged one.
-  const chronologicallySortedImages = useMemo(
+  const orderedImages = useMemo(
     () =>
-      chronologicallySortedItems.filter(
+      orderedItems.filter(
         (item): item is FavoriteMediaItem & { mediaType: 'image' } =>
           item.mediaType === 'image',
       ),
-    [chronologicallySortedItems],
+    [orderedItems],
   );
 
-  const chronologicallySortedVideos = useMemo(
+  const orderedVideos = useMemo(
     () =>
-      chronologicallySortedItems.filter(
+      orderedItems.filter(
         (item): item is FavoriteMediaItem & { mediaType: 'video' } =>
           item.mediaType === 'video',
       ),
-    [chronologicallySortedItems],
+    [orderedItems],
   );
 
   const imageIndexMap = useMemo(() => {
     const map = new Map<string, number>();
-    chronologicallySortedImages.forEach((img, idx) => {
+    orderedImages.forEach((img, idx) => {
       map.set(img.id, idx);
     });
     return map;
-  }, [chronologicallySortedImages]);
+  }, [orderedImages]);
 
   const videoIndexMap = useMemo(() => {
     const map = new Map<string, number>();
-    chronologicallySortedVideos.forEach((video, idx) => {
+    orderedVideos.forEach((video, idx) => {
       map.set(video.id, idx);
     });
     return map;
-  }, [chronologicallySortedVideos]);
+  }, [orderedVideos]);
+
+  const renderCard = useCallback(
+    (item: FavoriteMediaItem) =>
+      item.mediaType === 'image' ? (
+        <div key={item.id} className="group relative">
+          <ImageCard
+            image={item}
+            onClick={() =>
+              dispatch(
+                setCurrentImageViewIndex(imageIndexMap.get(item.id) ?? -1),
+              )
+            }
+            className="w-full transition-transform duration-200 group-hover:scale-105"
+          />
+        </div>
+      ) : (
+        <div key={item.id} className="group relative">
+          <VideoCard
+            video={item}
+            onClick={() =>
+              dispatch(
+                setCurrentVideoViewIndex(videoIndexMap.get(item.id) ?? -1),
+              )
+            }
+            className="w-full transition-transform duration-200 group-hover:scale-105"
+          />
+        </div>
+      ),
+    [dispatch, imageIndexMap, videoIndexMap],
+  );
 
   const recomputeMarkers = useCallback(() => {
     if (!onMonthOffsetsChange) return;
@@ -142,7 +186,7 @@ export const ChronologicalFavoritesGallery = ({
 
   useEffect(() => {
     recomputeMarkers();
-  }, [merged, recomputeMarkers]);
+  }, [merged, sortBy, recomputeMarkers]);
 
   useEffect(() => {
     const elementToObserve = scrollContainerRef?.current ?? galleryRef.current;
@@ -168,85 +212,61 @@ export const ChronologicalFavoritesGallery = ({
           </div>
         )}
 
-        {/* Gallery Content */}
-        {sortedGrouped.map(({ year, months }) => (
-          <div key={year} data-year={year}>
-            {months.map(([month, items]) => {
-              const monthName = new Date(
-                Number(year),
-                Number(month) - 1,
-              ).toLocaleString('default', { month: 'long' });
-
-              return (
-                <div
-                  key={`${year}-${month}`}
-                  className="mb-8"
-                  data-timeline-month={`${year}-${month}`}
-                  id={`timeline-section-${year}-${month}`}
-                  ref={(el) => {
-                    const key = `${year}-${month}`;
-                    if (el) {
-                      monthHeaderRefs.current.set(key, el);
-                    } else {
-                      monthHeaderRefs.current.delete(key);
-                    }
-                  }}
-                >
-                  {/* Sticky Month/Year Header */}
-                  <div className="bg-background sticky top-0 z-10 py-3 backdrop-blur-sm">
-                    <h3 className="flex items-center text-xl font-semibold text-gray-800 dark:text-gray-200">
-                      <div className="bg-primary mr-2 h-6 w-1"></div>
-                      {monthName} {year}
-                      <div className="mt-1 ml-2 text-sm font-normal text-gray-500">
-                        {items.length} {items.length === 1 ? 'item' : 'items'}
-                      </div>
-                    </h3>
-                  </div>
-
-                  {/* Media Grid */}
-                  <div className={cn(MEDIA_GRID_CLASS, 'p-2')}>
-                    {items.map((item) =>
-                      item.mediaType === 'image' ? (
-                        <div key={item.id} className="group relative">
-                          <ImageCard
-                            image={item}
-                            onClick={() =>
-                              dispatch(
-                                setCurrentImageViewIndex(
-                                  imageIndexMap.get(item.id) ?? -1,
-                                ),
-                              )
-                            }
-                            className="w-full transition-transform duration-200 group-hover:scale-105"
-                          />
-                        </div>
-                      ) : (
-                        <div key={item.id} className="group relative">
-                          <VideoCard
-                            video={item}
-                            onClick={() =>
-                              dispatch(
-                                setCurrentVideoViewIndex(
-                                  videoIndexMap.get(item.id) ?? -1,
-                                ),
-                              )
-                            }
-                            className="w-full transition-transform duration-200 group-hover:scale-105"
-                          />
-                        </div>
-                      ),
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+        {sortBy === 'custom' ? (
+          // Flat grid in favourited order -- there's no natural month
+          // grouping for "the order the user favourited things".
+          <div className={cn(MEDIA_GRID_CLASS, 'p-2')}>
+            {orderedItems.map(renderCard)}
           </div>
-        ))}
+        ) : (
+          /* Gallery Content, grouped by year/month */
+          sortedGrouped.map(({ year, months }) => (
+            <div key={year} data-year={year}>
+              {months.map(([month, items]) => {
+                const monthName = new Date(
+                  Number(year),
+                  Number(month) - 1,
+                ).toLocaleString('default', { month: 'long' });
+
+                return (
+                  <div
+                    key={`${year}-${month}`}
+                    className="mb-8"
+                    data-timeline-month={`${year}-${month}`}
+                    id={`timeline-section-${year}-${month}`}
+                    ref={(el) => {
+                      const key = `${year}-${month}`;
+                      if (el) {
+                        monthHeaderRefs.current.set(key, el);
+                      } else {
+                        monthHeaderRefs.current.delete(key);
+                      }
+                    }}
+                  >
+                    {/* Sticky Month/Year Header */}
+                    <div className="bg-background sticky top-0 z-10 py-3 backdrop-blur-sm">
+                      <h3 className="flex items-center text-xl font-semibold text-gray-800 dark:text-gray-200">
+                        <div className="bg-primary mr-2 h-6 w-1"></div>
+                        {monthName} {year}
+                        <div className="mt-1 ml-2 text-sm font-normal text-gray-500">
+                          {items.length} {items.length === 1 ? 'item' : 'items'}
+                        </div>
+                      </h3>
+                    </div>
+
+                    {/* Media Grid */}
+                    <div className={cn(MEDIA_GRID_CLASS, 'p-2')}>
+                      {items.map(renderCard)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))
+        )}
       </div>
-      {isImageViewOpen && <MediaView images={chronologicallySortedImages} />}
-      {isVideoViewOpen && (
-        <VideoPlayerOverlay videos={chronologicallySortedVideos} />
-      )}
+      {isImageViewOpen && <MediaView images={orderedImages} />}
+      {isVideoViewOpen && <VideoPlayerOverlay videos={orderedVideos} />}
     </>
   );
 };

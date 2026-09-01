@@ -41,6 +41,7 @@ class ImageRecord(TypedDict, total=False):
     latitude: Optional[float]
     longitude: Optional[float]
     captured_at: Optional[datetime]
+    favouritedAt: Optional[datetime]
 
 
 class UntaggedImageRecord(TypedDict):
@@ -90,6 +91,7 @@ def db_create_images_table() -> None:
             latitude REAL,
             longitude REAL,
             captured_at DATETIME,
+            favouritedAt DATETIME,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
     """
@@ -106,6 +108,13 @@ def db_create_images_table() -> None:
     cursor.execute(
         "CREATE INDEX IF NOT EXISTS ix_images_favourite_captured_at ON images(isFavourite, captured_at)"
     )
+
+    # favouritedAt: when the image was last favourited (NULL if never, or
+    # pre-dates this column). Guarded ALTER because shipped databases predate
+    # it and CREATE IF NOT EXISTS won't add it.
+    cursor.execute("PRAGMA table_info(images)")
+    if "favouritedAt" not in {row[1] for row in cursor.fetchall()}:
+        cursor.execute("ALTER TABLE images ADD COLUMN favouritedAt DATETIME")
 
     # Create new image_classes junction table
     cursor.execute(
@@ -193,17 +202,18 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
     try:
         # Build the query with optional WHERE clause
         query = """
-            SELECT 
-                i.id, 
-                i.path, 
-                i.folder_id, 
-                i.thumbnailPath, 
-                i.metadata, 
+            SELECT
+                i.id,
+                i.path,
+                i.folder_id,
+                i.thumbnailPath,
+                i.metadata,
                 i.isTagged,
                 i.isFavourite,
                 i.latitude,
                 i.longitude,
                 i.captured_at,
+                i.favouritedAt,
                 m.name as tag_name
             FROM images i
             LEFT JOIN image_classes_display ic ON i.id = ic.image_id
@@ -234,6 +244,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
             latitude,
             longitude,
             captured_at,
+            favourited_at,
             tag_name,
         ) in results:
             if image_id not in images_dict:
@@ -255,6 +266,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                     "captured_at": (
                         captured_at if captured_at else None
                     ),  # SQLite returns string
+                    "favouritedAt": favourited_at if favourited_at else None,
                     "tags": [],
                 }
 
@@ -586,7 +598,11 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         cursor.execute(
             """
             UPDATE images
-            SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
+            SET favouritedAt = CASE
+                    WHEN isFavourite = 1 THEN favouritedAt
+                    ELSE CURRENT_TIMESTAMP
+                END,
+                isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
             WHERE id = ?
             """,
             (image_id,),

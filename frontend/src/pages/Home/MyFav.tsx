@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { ChronologicalFavoritesGallery } from '@/components/Media/ChronologicalFavoritesGallery';
+import {
+  ChronologicalFavoritesGallery,
+  type FavoritesSortValue,
+} from '@/components/Media/ChronologicalFavoritesGallery';
 import { MonthMarker } from '@/components/Media/ChronologicalGallery';
 import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 import { Image, Video } from '@/types/Media';
@@ -9,11 +12,24 @@ import { selectImages } from '@/features/imageSelectors';
 import { setVideos } from '@/features/videoSlice';
 import { selectVideos } from '@/features/videoSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
+import { usePersistedSort } from '@/hooks/usePersistedSort';
 import { fetchAllImages, fetchAllVideos } from '@/api/api-functions';
 import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
-import { Heart } from 'lucide-react';
+import { Calendar, Heart, ListOrdered } from 'lucide-react';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import {
+  GallerySortDropdown,
+  type SortOption,
+} from '@/components/GallerySortDropdown';
+
+const FAV_SORT_OPTIONS: SortOption<FavoritesSortValue>[] = [
+  { value: 'date', label: 'Date', icon: Calendar },
+  { value: 'custom', label: 'Custom', icon: ListOrdered },
+];
+
+const FAV_SORT_STORAGE_KEY = 'pictopy-favorites-sort';
+const FAV_SORT_VALUES = FAV_SORT_OPTIONS.map((option) => option.value);
 
 export const MyFav = () => {
   const dispatch = useDispatch();
@@ -23,6 +39,11 @@ export const MyFav = () => {
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
   const searchState = useSelector((state: RootState) => state.search);
   const isSearchActive = searchState.active;
+  const [sortBy, setSortBy] = usePersistedSort<FavoritesSortValue>(
+    FAV_SORT_STORAGE_KEY,
+    'date',
+    FAV_SORT_VALUES,
+  );
 
   const {
     data: imageData,
@@ -144,8 +165,18 @@ export const MyFav = () => {
           <ChronologicalFavoritesGallery
             images={favouriteImages}
             videos={favouriteVideos}
+            sortBy={sortBy}
             showTitle={true}
             title={title}
+            titleRight={
+              !isSearchActive && (
+                <GallerySortDropdown
+                  value={sortBy}
+                  onValueChange={setSortBy}
+                  options={FAV_SORT_OPTIONS}
+                />
+              )
+            }
             onMonthOffsetsChange={setMonthMarkers}
             scrollContainerRef={scrollableRef}
           />

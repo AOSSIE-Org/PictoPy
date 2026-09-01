@@ -38,6 +38,7 @@ class ImageData(BaseModel):
     metadata: MetadataModel
     isTagged: bool
     isFavourite: bool
+    favouritedAt: Optional[str] = None
     tags: Optional[List[str]] = None
 
 
@@ -85,6 +86,7 @@ def get_all_images(
                 metadata=image_util_parse_metadata(image["metadata"]),
                 isTagged=image["isTagged"],
                 isFavourite=image.get("isFavourite", False),
+                favouritedAt=image.get("favouritedAt"),
                 tags=image["tags"],
             )
             for image in images
