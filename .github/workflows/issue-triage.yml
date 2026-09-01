@@ -1,4 +1,4 @@
-name: Smart Duplicate Issue Detector (Semantic)
+name: Issue Triage
 
 on:
   issues:
@@ -8,6 +8,25 @@ permissions:
   issues: write
 
 jobs:
+  welcome-comment:
+    if: |
+      github.event.issue.author_association != 'OWNER' &&
+      github.event.issue.author_association != 'MEMBER' &&
+      github.event.issue.author_association != 'COLLABORATOR'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Add comment to issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: "👋 Thanks for opening this issue! The maintainers will review it shortly. Till then, do not open any PR. This is a strict rule we like to follow around here :)"
+            })
+
   detect-duplicates:
     runs-on: ubuntu-latest
 
