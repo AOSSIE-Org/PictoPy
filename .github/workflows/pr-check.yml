@@ -39,6 +39,11 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      - name: Duplicate issue detector tests
+        run: |
+          cd .github/scripts
+          python test_detect_duplicate_issue.py
+
       - name: Install frontend dependencies
         run: |
           cd frontend
