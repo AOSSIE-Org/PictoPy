@@ -121,7 +121,7 @@ export const AlbumDetail = () => {
       const backendAlbum = (responseData?.album || responseData) as any;
 
       if (backendAlbum && backendAlbum.album_id) {
-        // Transform backend format to frontend format
+        // Transform backend format to frontend format while satisfying the required Album interface properties
         const albumInfo: Album = {
           id: backendAlbum.album_id,
           name: backendAlbum.album_name,
@@ -129,6 +129,8 @@ export const AlbumDetail = () => {
           is_locked: backendAlbum.is_locked || false,
           cover_image_path: backendAlbum.cover_image_path,
           image_count: backendAlbum.image_count || 0,
+          created_at: backendAlbum.created_at || new Date().toISOString(),
+          updated_at: backendAlbum.updated_at || new Date().toISOString(),
         };
 
         dispatch(setSelectedAlbum(albumInfo));
@@ -223,8 +225,8 @@ export const AlbumDetail = () => {
         <div className="text-center">
           <p className="mb-4 text-muted-foreground">Album not found</p>
 
-          <Button onClick={handleBack}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
+          <Button onClick={handleBack} aria-label="Back to Albums">
+            <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
             Back to Albums
           </Button>
         </div>
@@ -237,8 +239,13 @@ export const AlbumDetail = () => {
       {/* Header */}
       <div className="mb-6 flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={handleBack}>
-            <ArrowLeft className="h-5 w-5" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBack}
+            aria-label="Back to Albums"
+          >
+            <ArrowLeft className="h-5 w-5" aria-hidden="true" />
           </Button>
 
           <div>
@@ -272,7 +279,7 @@ export const AlbumDetail = () => {
                   onClick={handleRemoveSelected}
                   disabled={selectedImages.size === 0}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
                   Remove Selected
                 </Button>
               </>
@@ -292,7 +299,7 @@ export const AlbumDetail = () => {
                   size="sm"
                   onClick={() => setIsAddImagesDialogOpen(true)}
                 >
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
                   Add Images
                 </Button>
               </>
@@ -319,12 +326,13 @@ export const AlbumDetail = () => {
             title="No images in this album yet"
             description="Add images to start organizing this album."
             formatsHint=""
-          >
-            <Button onClick={() => setIsAddImagesDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Images
-            </Button>
-          </EmptyGalleryState>
+            action={
+              <Button onClick={() => setIsAddImagesDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+                Add Images
+              </Button>
+            }
+          />
         ) : (
           <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {images.map((image, index) => (
