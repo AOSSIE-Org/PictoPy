@@ -4,15 +4,14 @@
 
 - **Intelligent Photo Tagging**: Automatically tags photos based on detected objects, faces, and facial recognition.
 - **Traditional Gallery Management**: Complete album organization and management tools.
-- **Memories Feature**: Automatically organize photos into meaningful collections based on location and date, with Google Photos-style presentation.
+- **Memories Feature**: Automatically curates photos and short clips into collections that resurface on their own, played back as full-screen stories.
 
 ### Advanced Image Analysis
 
 - Object detection using **YOLOv11** for identifying various items in images
-- Face detection and clustering powered by **FaceNet**.
-- **Spatial Clustering**: Groups photos by location using DBSCAN algorithm (5km radius)
-- **Temporal Grouping**: Organizes photos by date with monthly grouping
-- **Reverse Geocoding**: Identifies actual city names from GPS coordinates
+- Face detection and clustering powered by **FaceNet**, with DBSCAN grouping face embeddings into people you can name
+- **Scene and event recognition**: **SigLIP2** labels photos with the scene and the kind of occasion they show — weddings, festivals, hikes, birthdays and similar
+- **Capture dates**: reads the date a shot was actually taken from EXIF, Google Takeout sidecar files, or the video container itself, so a copied library still groups by when the photos were taken
 
 ### Privacy-Focused Design
 
@@ -40,52 +39,75 @@
 
 ### Memories Feature
 
-Automatically creates meaningful photo collections inspired by Google Photos:
+Curates photos and short video clips into stories worth looking back on, and
+brings them to you instead of waiting to be browsed. See
+[Memories](../frontend/memories.md) for the full walkthrough.
 
-#### **On This Day**
+#### **How Memories Reach You**
 
-- Shows photos from the same date in previous years
-- Featured card display with "On this day last year" messaging
-- Nostalgic look back at past moments
+- Memories are curated in the background while your library is indexed, so they
+  are already waiting the next time you open the app
+- The Memories page shows how many new memories you have not looked at yet
+- A **Refresh** button curates on demand, and tells you to wait if indexing is
+  still running rather than scoring a half-processed library
 
-#### **Smart Grouping**
+#### **Kinds of Memories**
 
-- **Location-based Memories**: Groups photos taken at the same location (5km radius using DBSCAN clustering)
-  - Displays as "Trip to [City Name], [Year]" (e.g., "Trip to Jaipur, 2025")
-  - Uses reverse geocoding to show actual city names
-  - Supports 30+ major cities worldwide
-- **Date-based Memories**: Groups photos by month for images without GPS data
-  - Perfect for photos without location metadata
-  - Organized chronologically
+- **Anniversaries**: photos taken on this date in previous years
+- **Import events**: a burst of photos from a single outing, separated from the
+  rest of your library wherever there is a long gap in time or a big jump in
+  distance
+- **Recognized occasions**: photos that on-device **SigLIP2** recognizes as one
+  event — weddings, festivals, hikes, birthdays and similar
 
-#### **Intelligent Filtering**
+#### **Choosing the Photos**
 
-- Filter by All, Location, or Date memories
-- View counts for each category
-- Seamless navigation between memory types
+- Every candidate photo is ranked, so the best ones lead the story
+- Ranking favors your favorites, photos of people you have named, recognized
+  occasions, photos with faces in them, and places away from home
+- Near-duplicates are dropped, so a burst of near-identical frames does not fill
+  a memory with the same shot
+- Photos that do not visually belong with the rest of an outing are trimmed out
+- The survivors are spread across the memory's time span rather than clumped at
+  one end
+- Short video clips shot during the same span are woven in alongside the photos
+  in chronological order; the cover is always a still
 
-#### **Memory Sections**
+#### **Story Viewer**
 
-- **Recent Memories**: Last 30 days of captured moments
-- **This Year**: All memories from the current year
-- **All Memories**: Complete collection organized by recency
+- Full-screen, Instagram-style playback with a segmented progress bar, one
+  segment per slide
+- Autoplays and advances on its own; a clip is held for its own length instead
+  of a fixed interval
+- Keyboard navigation (arrow keys, Space to pause or resume, Esc to close) and
+  swipe navigation
+- Clips play silently, with a per-slide sound toggle
+- A filmstrip along the bottom jumps straight into another memory
+- Opening a memory clears its unread state
 
-#### **Rich Viewing Experience**
+#### **Titles**
 
-- Full-screen image viewer with zoom support
-- Slideshow mode for automatic playback
-- Image metadata panel with EXIF data
-- Keyboard shortcuts (Space, arrows, +/-, R, ESC)
-- Thumbnail navigation strip
-- Favorite marking and folder opening
+- A memory is named after what its photos are actually of, using the occasion or
+  scene that best describes the ones that made the final cut
+- When nothing is recognized confidently enough, a generic title is used and the
+  date moves to the subtitle
+
+#### **Settings**
+
+- Turn memory generation off entirely
+- Set the smallest and largest number of photos a memory may hold
+- Set how long each photo is held before the story advances
+- Adjust the relative weight of each ranking signal through user preferences
 
 #### **Technical Implementation**
 
-- Backend: Python with DBSCAN clustering algorithm
-- Frontend: React + Redux Toolkit for state management
-- Real-time memory generation with configurable parameters
-- Flexible clustering: works with date OR location (not both required)
-- Efficient SQLite queries for fast retrieval
+- Backend: Python, curating on a background worker so a curation failure never
+  interrupts or fails an import
+- Frontend: React, with React Query for server state and Redux Toolkit for
+  viewer state
+- Curated memories are stored in SQLite and read back by the UI, so a story
+  opens immediately rather than being recomputed on view
+- Deleting a memory removes only the collection; the photos stay in your library
 
 ### Cross-Platform Compatibility
 

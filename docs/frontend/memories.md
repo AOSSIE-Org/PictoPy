@@ -1,352 +1,239 @@
-# Memories Feature Documentation
+# Memories
 
-## Overview
+Memories are curated collections of photos and short clips that the backend
+scores and stores, and the frontend plays back as a full-screen, Instagram-style
+story. The frontend never clusters or scores anything itself: it lists memories,
+opens one, marks it viewed, and asks for a new curation run.
 
-The Memories feature automatically organizes photos into meaningful collections based on location and date, providing a Google Photos-style experience for reliving past moments.
+For how memories are produced — the schema, the three triggers and the scoring
+signals — see [Memories (backend)](../backend/backend_python/memories.md).
 
-## Features
+## Routes and Pages
 
-### 1. On This Day
+| Route               | Page component                      | Purpose                                     |
+| ------------------- | ----------------------------------- | ------------------------------------------- |
+| `memories`          | `pages/Memories/Memories.tsx`       | Grid of memory cards, plus the story viewer |
+| `memories/settings` | `pages/Memories/MemorySettings.tsx` | Memory preferences                          |
 
-Shows photos from the same date in previous years with a prominent featured card.
+Both are registered in `routes/AppRoutes.tsx`, with path names in
+`constants/routes.ts` (`ROUTES.MEMORIES`, `ROUTES.MEMORIES_SETTINGS`).
 
-**Display:**
+## The Grid Page
 
-- "On this day last year" for photos from exactly 1 year ago
-- "[X] years ago" for photos from multiple years ago
-- Featured hero image with gradient overlay
-- Photo count and year badges
+`Memories.tsx` requests up to 60 cards and renders them in a responsive grid
+(2 columns, up to 5 at `xl`).
 
-### 2. Memory Types
+- **Header** – Title, plus an "N new to look back on" line driven by
+  `unviewed_count` from the status endpoint.
+- **Refresh** – Requests a curation run. If the status snapshot reports
+  `indexing_busy`, the click opens an info dialog instead of firing the request,
+  because the backend declines to curate a half-indexed library.
+- **Settings** – A gear button that navigates to the settings page.
+- **Loading** – Ten pulsing placeholder tiles while the list query is in flight.
+- **Empty state** – A dashed panel whose copy changes depending on whether a
+  run is currently in progress.
+- **Errors** – A failed list query is surfaced through the shared info dialog
+  (`showInfoDialog`), not inline.
 
-#### Location-Based Memories
-
-Photos grouped by GPS coordinates using DBSCAN clustering:
-
-- **Radius**: 5km (configurable)
-- **Title Format**: "Trip to [City Name], [Year]"
-- **Example**: "Trip to Jaipur, 2025"
-- **Reverse Geocoding**: Maps coordinates to actual city names
-- **Supported Cities**: 30+ major cities worldwide (Indian, European, American, Asian, etc.)
-
-#### Date-Based Memories
-
-Photos grouped by month for images without GPS:
-
-- **Grouping**: Monthly clusters
-- **Title Format**: "[Month] [Year]"
-- **Flexibility**: Works even without location data
-
-### 3. Memory Sections
-
-#### Recent Memories
-
-- **Timeframe**: Last 30 days
-- **Use Case**: Recent trips and events
-- **API**: `GET /api/memories/timeline?days=30`
-
-#### This Year
-
-- **Timeframe**: Last 365 days (current year)
-- **Use Case**: Year-in-review
-- **API**: `GET /api/memories/timeline?days=365`
-
-#### All Memories
-
-- **Timeframe**: All time
-- **Use Case**: Complete memory collection
-- **API**: `POST /api/memories/generate`
-
-### 4. Filtering
-
-**Filter Options:**
-
-- **All**: Shows all memories (default)
-- **Location**: Only memories with GPS coordinates
-- **Date**: Only memories without GPS (date-based)
-
-**Implementation:**
-
-```typescript
-const applyFilter = (memories: Memory[]) => {
-  if (filter === "location") {
-    return memories.filter((m) => m.center_lat !== 0 || m.center_lon !== 0);
-  }
-  if (filter === "date") {
-    return memories.filter((m) => m.center_lat === 0 && m.center_lon === 0);
-  }
-  return memories; // 'all'
-};
-```
-
-### 5. Memory Viewer
-
-Full-screen modal for viewing memory photos:
-
-**Features:**
-
-- Image grid with hover effects
-- Click to open MediaView
-- Zoom and pan support
-- Slideshow mode
-- Keyboard navigation
-- Info panel with metadata
-- Thumbnail strip
-
-**Controls:**
-
-- **Zoom**: Mouse wheel or +/- keys
-- **Navigation**: Arrow keys or buttons
-- **Slideshow**: Play/Pause button or Space key
-- **Info Panel**: Toggle with 'I' key
-- **Close**: ESC key or X button
-
-## Components
-
-### MemoriesPage
-
-Main page component with sections:
-
-- Header with refresh button
-- Filter buttons
-- On This Day section
-- Recent Memories grid
-- This Year grid
-- All Memories grid
+The page also mirrors the user's slide interval preference into the Redux slice
+that the viewer reads, and renders `MemoryStoryViewer` whenever
+`activeMemoryId` is set.
 
 ### MemoryCard
 
-Individual memory card display:
+`components/Memories/MemoryCard.tsx` renders one tile as a `<button>`, so it is
+focusable and keyboard-activatable. Each tile shows:
 
-- Thumbnail image
-- Memory title (formatted based on type)
-- Date range (relative format)
-- Location (if available)
-- Photo count badge
-- Type badge (Location/Date)
+- The cover thumbnail (lazy loaded, scaling slightly on hover) over a gradient
+  scrim that keeps the caption legible.
+- A badge for the trigger type: `anniversary` reads "On this day",
+  `import_event` reads "Event", `semantic_event` reads "Highlight".
+- A dot beside the badge when `viewed_at` is still `null`.
+- Title, subtitle and photo count, lifting on hover.
 
-### FeaturedMemoryCard
+Covers and thumbnails resolve through `convertFileSrc()` and fall back to
+`/photo.png` on load failure.
 
-Large featured card for "On This Day":
+## The Story Viewer
 
-- Hero image with gradient overlay
-- "On this day last year" text
-- Photo count and year info
-- Additional image previews
+`components/Memories/MemoryStoryViewer.tsx` is a full-screen `role="dialog"`
+overlay. It fetches the full memory by id, merges its stills and clips into one
+slide sequence, and plays through them.
 
-### MemoryViewer
+### Progress and Autoplay
 
-Modal for viewing memory album:
+A row of segmented bars sits at the top — one per slide. Passed slides are
+full, the active one fills live, later ones are empty.
 
-- Conditionally rendered to prevent event bubbling
-- Grid layout of all photos
-- MediaView integration for full-screen viewing
-- Proper z-index layering
+`hooks/useStoryProgress.ts` drives the fill. It runs on
+`requestAnimationFrame` and accumulates elapsed time in a ref, so pausing
+resumes from where it stopped rather than restarting the slide. Changing the
+slide index resets progress to zero; reaching 1 calls `onComplete`, which
+advances the story.
 
-## State Management
+Slide length is not uniform. `slideDurationMs()` gives a still the configured
+photo interval, and gives a clip its own `duration` so the story neither cuts
+away mid-shot nor holds a frozen last frame.
 
-Using Redux Toolkit with slices:
+### Navigation
 
-```typescript
-// Store structure
-{
-  memories: {
-    onThisDay: {
-      images: MemoryImage[],
-      meta: { today: string, years: number[] }
-    },
-    recent: Memory[],
-    year: Memory[],
-    all: Memory[],
-    selectedMemory: Memory | null,
-    loading: { onThisDay, recent, year, all },
-    error: { onThisDay, recent, year, all }
-  }
-}
-```
+| Input                                     | Effect            |
+| ----------------------------------------- | ----------------- |
+| `ArrowRight` / right chevron / swipe left | Next slide        |
+| `ArrowLeft` / left chevron / swipe right  | Previous slide    |
+| `Space`                                   | Toggle play/pause |
+| `Escape` / close button                   | Close the viewer  |
 
-**Key Actions:**
+Swipes are measured on pointer events with a 50 px threshold, so a shorter drag
+is ignored. Advancing past the last slide closes the viewer rather than
+looping; going back from the first slide stays put.
 
-- `fetchOnThisDay()` - Get photos from same date
-- `fetchRecentMemories(days)` - Get timeline memories
-- `fetchYearMemories(days)` - Get year memories
-- `fetchAllMemories()` - Generate all memories
-- `setSelectedMemory(memory)` - Open memory viewer
+The header also carries a play/pause button, a `current / total` counter, and a
+gear that navigates to the settings page.
 
-## API Endpoints
+### Video Clips
 
-### GET `/api/memories/on-this-day`
+A memory's videos arrive in their own array but share one `sort_order`
+sequence with the images, so `buildMemorySlides()` merges rather than
+concatenates them. Slides are a discriminated union (`{ kind: 'image' }` or
+`{ kind: 'video' }`) because the two render as different elements.
 
-Returns photos from the same date in previous years.
+Clips render as `<video autoPlay muted playsInline>` with the thumbnail as the
+poster and no native controls — the story's own play/pause governs them. A
+mute/unmute button appears in the corner on video slides only. Unmuting is a
+per-slide choice: moving to another slide restores silence.
 
-**Response:**
+### Filmstrip
 
-```json
-{
-  "images": [...],
-  "today": "December 14",
-  "years": [2024, 2023, 2022]
-}
-```
+`components/Memories/MemoryFilmstrip.tsx` sits below the stage: a horizontally
+scrolling `role="tablist"` of circular covers for jumping between memories
+without leaving the viewer. The active memory has a white ring, unviewed ones a
+primary-coloured ring, and already-viewed ones a faint one.
 
-### GET `/api/memories/timeline?days=30`
+### Marking as Viewed
 
-Returns timeline-based memories for specified days.
+Opening a memory whose `viewed_at` is `null` fires a `PATCH` with
+`{ viewed: true }`. It is guarded by memory id in a ref, so re-renders and
+refetches do not repeat the mutation.
 
-**Parameters:**
+### Background Music
 
-- `days` (query): Number of days to look back
+The viewer has a background-audio path gated on the `story_music_enabled`
+preference (off by default): when enabled, a mute toggle appears in the header
+and an `<audio loop>` element is mounted pointing at `/memory-theme.mp3`. An
+audible clip mutes the theme so two soundtracks never overlap.
 
-**Response:**
+**The `memory-theme.mp3` asset is not shipped in `frontend/public/`, so the
+theme is silent even with the preference on.**
 
-```json
-{
-  "memories": [...]
-}
-```
+## Settings
 
-### POST `/api/memories/generate`
+`MemorySettings.tsx` writes through `updateMemoriesPreferences()`, which patches
+`user_preferences.memories`. Every control is disabled while a save is in
+flight.
 
-Generates all memories with clustering.
+| Control               | Preference               | Range / default                          |
+| --------------------- | ------------------------ | ---------------------------------------- |
+| Generate memories     | `enabled`                | on                                       |
+| Desktop notifications | `notifications_enabled`  | on; disabled unless memories are enabled |
+| Background music      | `story_music_enabled`    | off                                      |
+| Seconds per photo     | `slide_duration_seconds` | 1–15, default 5                          |
+| Minimum photos        | `min_images`             | 2–20, default 5                          |
+| Maximum photos        | `max_images`             | 5–100 step 5, default 30                 |
 
-**Parameters (query):**
+The two size sliders are clamped against each other on commit, since the
+backend rejects a minimum above the maximum and would fail the whole save.
 
-- `location_radius_km` (default: 5.0)
-- `date_tolerance_days` (default: 3)
-- `min_images` (default: 2)
+The seven scoring weights also live under `memories.weights` (defaults in
+`hooks/useUserPreferences.tsx`) and can be patched through the same hook, but
+this page does not expose an editor for them.
 
-**Response:**
+## Data Layer
 
-```json
-{
-  "memories": [...],
-  "breakdown": {
-    "total": 10,
-    "location": 6,
-    "date": 4
-  }
-}
-```
+Server state is React Query; Redux holds viewer UI state only.
 
-## Backend Implementation
+### API Functions
 
-### Memory Clustering Algorithm
+`api/api-functions/memories.ts` holds the types (`MemoryCard`, `MemoryStory`,
+`MemoryImage`, `MemoryVideo`, `MemoryStatusData`) and the fetchers. Endpoint
+paths are centralised in `api/apiEndpoints.ts` as `memoriesEndpoints`.
 
-**Location-based (DBSCAN):**
+| Function                         | Request                                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------------------- |
+| `getMemories(params)`            | `GET /memories` with `limit`, `offset`, `event_type`, `include_viewed`, `include_dismissed` |
+| `getTodayMemory()`               | `GET /memories/today` — `data.memory` may be `null`                                         |
+| `getMemory(id)`                  | `GET /memories/{id}` — the full story, images and videos                                    |
+| `generateMemories(request)`      | `POST /memories/generate` with `{ force, reference_date }`                                  |
+| `getMemoryStatus()`              | `GET /memories/status`                                                                      |
+| `patchMemory({ memoryId, ... })` | `PATCH /memories/{id}` with `viewed`, `dismissed`, `notified`                               |
+| `deleteMemory(id)`               | `DELETE /memories/{id}` — the underlying photos are untouched                               |
 
-1. Extract GPS coordinates from images
-2. Convert to radians for haversine distance
-3. Apply DBSCAN clustering (5km radius)
-4. Group images by cluster
-5. Reverse geocode center coordinates
-6. Generate title with city name and year
+### Hooks
 
-**Date-based (Monthly grouping):**
+`hooks/useMemories.tsx` wraps those in `usePictoQuery` / `usePictoMutation`
+under the `['memories']` key. Every query pins its payload generic explicitly so
+`successData` stays typed.
 
-1. Filter images without GPS
-2. Group by year-month
-3. Create monthly memories
-4. Use date as title
+| Hook                                     | Calls              | Notes                                                   |
+| ---------------------------------------- | ------------------ | ------------------------------------------------------- |
+| `useMemories(params)`                    | `getMemories`      | Backs the grid and filmstrip; 5-minute stale time       |
+| `useTodayMemory()`                       | `getTodayMemory`   | The single memory to surface now                        |
+| `useMemory(id)`                          | `getMemory`        | Disabled until an id is passed                          |
+| `useMemoryStatus(enabled, forcePolling)` | `getMemoryStatus`  | Polls every 2 s while a run is running, or while forced |
+| `useRefreshMemories()`                   | `generateMemories` | See below                                               |
+| `useUpdateMemory()`                      | `patchMemory`      | Invalidates the `memories` key                          |
+| `useDeleteMemory()`                      | `deleteMemory`     | Invalidates the `memories` key                          |
 
-### Reverse Geocoding
+### Refresh Flow
 
-Maps GPS coordinates to city names using pre-defined database:
+`POST /memories/generate` returns once the run is _queued_, not once it has
+finished, so `useRefreshMemories` follows the run instead of the response:
 
-```python
-def _reverse_geocode(self, lat: float, lon: float) -> str:
-    """Find nearest city within 50km"""
-    for city_name, (city_lat, city_lon) in self.CITY_COORDINATES.items():
-        distance = haversine_distance(lat, lon, city_lat, city_lon)
-        if distance < 50:
-            return city_name
-    return f"{lat:.4f}°, {lon:.4f}°"
-```
+1. The mutation records the run start time already on file and turns on forced
+   status polling, which covers the window before the worker writes `running`.
+2. While a run is active — and once more on the transition out of it — only the
+   `['memories', 'list']` key is invalidated, so results appear as they land.
+   The `status` key is deliberately left alone; invalidating it would refetch
+   the query driving the loop.
+3. Forced polling stops when a run start time different from the recorded
+   baseline appears, or the status reads `running`, or 90 s elapse. Keying on
+   the start time rather than on catching `running` mid-flight matters for small
+   libraries, where a run can begin and finish between two polls.
 
-**Supported Cities:**
+`isRefreshing` stays true from the click until the run settles, and drives both
+the spinning icon and the disabled Refresh button.
 
-- India: Mumbai, Delhi, Bangalore, Hyderabad, Chennai, Kolkata, Pune, Ahmedabad, Jaipur, Lucknow, Kanpur, Nagpur, Visakhapatnam, Bhopal, Patna, Vadodara
-- Europe: London, Paris, Berlin, Madrid, Rome, Amsterdam, Prague, Vienna, Barcelona, Budapest, Lisbon
-- Americas: New York, Los Angeles, Toronto, San Francisco, Chicago, Vancouver
-- Asia-Pacific: Tokyo, Seoul, Singapore, Hong Kong, Sydney, Melbourne
+### Redux Slice
 
-## Bug Fixes & Improvements
+`features/memoriesSlice.ts` holds viewer UI state and nothing else:
+`activeMemoryId`, `slideIndex`, `isPlaying` (starts true), `isMuted` (starts
+true) and `slideDurationMs` (default 5000, floored at 1000). `openMemory`
+resets the index and starts playback; `closeMemory` clears the id and index.
 
-### Event Bubbling Fix
+### Formatting Helpers
 
-**Problem:** Clicking MediaView controls (slideshow, info) closed the entire viewer.
+`utils/memories.ts` is pure formatting plus slide assembly:
 
-**Solution:** Conditional rendering of MemoryViewer backdrop:
-
-```tsx
-{
-  !showMediaView && <div onClick={handleCloseViewer}>{/* Grid content */}</div>
-}
-```
-
-### Image Upload Fix
-
-**Problem:** Images without GPS couldn't be inserted into database.
-
-**Solution:** Always include latitude/longitude fields (set to `None` if not available):
-
-```python
-image_record = {
-    "latitude": latitude,  # Can be None
-    "longitude": longitude,  # Can be None
-    "captured_at": captured_at
-}
-```
-
-### Title Display Enhancement
-
-**Problem:** Generic "Location - Nov 2025" titles.
-
-**Solution:** Format as "Trip to [City], [Year]" using reverse geocoding:
-
-```typescript
-const year = memory.date_start ? new Date(memory.date_start).getFullYear() : "";
-displayTitle = `Trip to ${displayLocation}${year ? `, ${year}` : ""}`;
-```
+- `getMemoryImageUrl`, `getThumbnailUrl`, `getCoverUrl` – resolve stored paths
+  through `convertFileSrc()`, falling back to `/photo.png`.
+- `formatMemoryDate`, `formatDateRange` – locale dates; a range collapses to one
+  date for a single day and to `12–14 July 2024` within a single month.
+- `formatPhotoCount`, `formatEventType`, `formatMemorySubtitle` – card captions.
+  The subtitle prefers the curator's own text, then the date span, then the
+  surface date.
+- `buildMemorySlides`, `slideDurationMs` – the merge and timing described above.
 
 ## Testing
 
-### Backend Tests
+- `components/Memories/__tests__/MemoryStoryViewer.test.tsx`
+- `features/__tests__/memoriesSlice.test.ts`
+- `hooks/__tests__/useRefreshMemories.test.tsx`
+- `utils/__tests__/memories.test.ts`
 
-Located in `backend/tests/`:
+## Related Documentation
 
-- 100 unit tests covering all routes
-- Run with: `pytest tests/`
-
-### Frontend Tests
-
-Located in `frontend/src/pages/__tests__/`:
-
-- Page rendering tests
-- Run with: `npm test`
-
-### Manual Testing
-
-Use `backend/test_memories_api.py` for API endpoint testing:
-
-```bash
-python test_memories_api.py
-```
-
-## Performance Considerations
-
-1. **Lazy Loading**: Images load on-demand with `loading="lazy"`
-2. **Thumbnail Optimization**: Uses Tauri's `convertFileSrc()` for efficient file access
-3. **Redux Memoization**: Uses `React.memo()` for card components
-4. **Efficient Queries**: SQLite indexes on `latitude`, `longitude`, `captured_at`
-5. **Background Processing**: Memory generation runs asynchronously
-
-## Future Enhancements
-
-- [ ] Custom memory creation
-- [ ] Memory sharing and export
-- [ ] Advanced filtering (by location, date range, etc.)
-- [ ] Memory annotations and descriptions
-- [ ] Map view for location-based memories
-- [ ] AI-generated memory titles
-- [ ] Multi-photo featured cards
-- [ ] Memory notifications and reminders
+- [Memories (backend)](../backend/backend_python/memories.md) – Schema,
+  curation triggers and scoring.
+- [State Management](state-management.md) – How the Redux store is organized.
+- [Gallery View](gallery-view.md) – The main browsing experience.
+- [UI Components](ui-components.md) – Shared components used across the app.

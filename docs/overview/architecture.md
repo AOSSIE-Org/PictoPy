@@ -20,22 +20,30 @@ This combination allows us to leverage web technologies for the UI while benefit
 </div>
 
 <br>
-For the backend, we rely on several techstack, our database is served on sqlite while we using parallel processing capabilities of asyncio due to its compatibility
+For the backend, we rely on several techstack, our database is served on SQLite while we using parallel processing capabilities of asyncio due to its compatibility
 with FastAPI.  Our models are from various sources, we use YOLO models for object and face detection while we use FaceNet for generating the embeddings
 of the faces detected. All these models are run on ONNX runtime to avoid heavy dependancies, keeping the application light weight.
 
-We use DBSCAN algorithm to perform clustering for face embeddings generated. All of our database is in SQL (sqlite) and our API calls rely
+We use DBSCAN algorithm to perform clustering for face embeddings generated. All of our database is in SQL (SQLite) and our API calls rely
 on queries from the backend.
 
 For natural-language photo search, we additionally run [SigLIP2](https://huggingface.co/docs/transformers/en/model_doc/siglip2)
 (also via ONNX Runtime, following the same distribution pattern as YOLO/FaceNet) to generate a reusable embedding per photo in the background,
 and to embed search queries live at request time. See [Semantic Search](../backend/backend_python/semantic-search.md) for the full architecture.
 
+Memories are curated by a background subsystem that shares the same worker as the rest of our library processing. A curation run is submitted to the
+single-worker process pool executor, so it serializes behind indexing and semantic scoring instead of racing them for CPU. Runs are triggered from the
+folder add, folder sync and AI tagging pipelines, and each run writes its scored collections into SQLite, which the UI then reads back.
+See [Memories](../backend/backend_python/memories.md) for the triggers, scoring signals and schema.
+
+!!! note "Diagram"
+    The backend architecture image above predates the memories subsystem and does not show it yet.
+
 !!! note "Note"
-We discuss all of the features and configuration of our application in further sections of the documentation. They can be used for both developers
-as well as users who want to use the app. A postman collection has also been added which can be found in our API section.
-<br>
-<br>
+    We discuss all of the features and configuration of our application in further sections of the documentation. They can be used for both developers
+    as well as users who want to use the app. A postman collection has also been added which can be found in our API section.
+    <br>
+    <br>
 
 ## Backend rust (via Tauri)
 
