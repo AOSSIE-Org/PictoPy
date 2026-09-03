@@ -130,6 +130,7 @@ export const AlbumDetail = () => {
           cover_image_path: backendAlbum.cover_image_path,
           image_count: backendAlbum.image_count || 0,
         };
+
         dispatch(setSelectedAlbum(albumInfo));
       }
     }
@@ -145,6 +146,7 @@ export const AlbumDetail = () => {
           variant: 'error',
         }),
       );
+
       navigate('/albums');
     } else if (imagesSuccess && imagesData && allImagesData) {
       // Backend returns {"success":true,"image_ids":[...]} structure
@@ -181,11 +183,13 @@ export const AlbumDetail = () => {
     if (isSelectionMode) {
       const imageId = images[index].id;
       const newSelected = new Set(selectedImages);
+
       if (newSelected.has(imageId)) {
         newSelected.delete(imageId);
       } else {
         newSelected.add(imageId);
       }
+
       setSelectedImages(newSelected);
     } else {
       dispatch(setCurrentViewIndex(index));
@@ -218,6 +222,7 @@ export const AlbumDetail = () => {
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
           <p className="mb-4 text-muted-foreground">Album not found</p>
+
           <Button onClick={handleBack}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Albums
@@ -229,12 +234,13 @@ export const AlbumDetail = () => {
 
   return (
     <div className="flex h-full flex-col">
+      {/* Header */}
       <div className="mb-6 flex items-start justify-between gap-4">
-        {/* Restored Back Button in Header */}
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={handleBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
+
           <div>
             <h1 className="text-2xl font-bold">{album.name}</h1>
             {album.description && (
@@ -313,13 +319,12 @@ export const AlbumDetail = () => {
             title="No images in this album yet"
             description="Add images to start organizing this album."
             formatsHint=""
-            action={
-              <Button onClick={() => setIsAddImagesDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Images
-              </Button>
-            }
-          />
+          >
+            <Button onClick={() => setIsAddImagesDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Images
+            </Button>
+          </EmptyGalleryState>
         ) : (
           <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {images.map((image, index) => (
@@ -336,6 +341,7 @@ export const AlbumDetail = () => {
                       : ''
                   }
                 />
+
                 {isSelectionMode && selectedImages.has(image.id) && (
                   <div className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     ✓
