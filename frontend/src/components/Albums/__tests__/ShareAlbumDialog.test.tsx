@@ -241,10 +241,10 @@ describe('ShareAlbumDialog', () => {
       mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
       renderDialog([]);
 
-      const passwordToggle = await screen.findByRole('switch', { name: /require a password/i });
-      
-      expect(internetToggle()).toBeChecked();
-      expect(passwordToggle).toBeChecked();
+      await waitFor(() => expect(internetToggle()).toBeChecked());
+      expect(
+        await screen.findByRole('switch', { name: /require a password/i }),
+      ).toBeChecked();
     });
 
     it('reports a tunnel that would not close', async () => {
