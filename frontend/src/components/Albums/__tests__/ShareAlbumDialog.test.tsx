@@ -177,6 +177,7 @@ describe('ShareAlbumDialog', () => {
       );
     });
 
+
     // Failing quietly would leave nothing on screen and no way to reach the
     // page, which is how a missing capability presented in the running app.
     it('hands over the address when the browser cannot be opened', async () => {
@@ -234,6 +235,16 @@ describe('ShareAlbumDialog', () => {
       expect(mockOpenUrl).toHaveBeenLastCalledWith(
         'https://aossie-org.github.io/PictoPy/overview/sharing-albums/#internet-mode',
       );
+    });
+    
+    it('asks for a password by default when auto-restoring internet mode', async () => {
+      mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
+      renderDialog([]);
+
+      const passwordToggle = await screen.findByRole('switch', { name: /require a password/i });
+      
+      expect(internetToggle()).toBeChecked();
+      expect(passwordToggle).toBeChecked();
     });
 
     it('reports a tunnel that would not close', async () => {

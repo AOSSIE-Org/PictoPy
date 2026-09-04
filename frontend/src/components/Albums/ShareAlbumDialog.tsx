@@ -216,6 +216,9 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     tunnel.refresh().then((current) => {
       if (current) {
         setMode('internet');
+        // Same safer default the manual switch applies: an internet link is
+        // public, so it starts protected however the mode was arrived at.
+        setWithPassword(true);
       }
     });
   }, [isOpen, album?.id, tunnel.refresh]);
