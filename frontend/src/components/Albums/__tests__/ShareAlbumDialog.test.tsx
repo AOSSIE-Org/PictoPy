@@ -248,8 +248,8 @@ describe('ShareAlbumDialog', () => {
 
     it('does not override user changes if the background tunnel check resolves late', async () => {
       const user = userEvent.setup();
-      
-      // 1. Create a manual promise so we can control EXACTLY when the tunnel answers
+
+      // 1. Create a manual promise so we can control when the tunnel answers.
       let resolveTunnel: (value: string | null) => void = () => undefined;
       mockTunnelStatus.mockReturnValueOnce(
         new Promise((resolve) => {
