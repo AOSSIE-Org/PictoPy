@@ -177,7 +177,6 @@ describe('ShareAlbumDialog', () => {
       );
     });
 
-
     // Failing quietly would leave nothing on screen and no way to reach the
     // page, which is how a missing capability presented in the running app.
     it('hands over the address when the browser cannot be opened', async () => {
@@ -245,6 +244,38 @@ describe('ShareAlbumDialog', () => {
       
       expect(internetToggle()).toBeChecked();
       expect(passwordToggle).toBeChecked();
+    });
+
+    it('does not override user changes if the background tunnel check resolves late', async () => {
+      const user = userEvent.setup();
+      
+      // 1. Create a manual promise so we can control EXACTLY when the tunnel answers
+      let resolveTunnel: (value: string | null) => void = () => undefined;
+      mockTunnelStatus.mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveTunnel = resolve;
+        }),
+      );
+
+      // 2. Open the dialog
+      renderDialog([]);
+
+      // 3. User manually selects 'Internet'
+      await user.click(internetToggle());
+      const passwordToggle = screen.getByRole('switch', { name: /require a password/i });
+      
+      // Manual click turns password ON by default. The user decides to turn it OFF.
+      expect(passwordToggle).toBeChecked();
+      await user.click(passwordToggle);
+      expect(passwordToggle).not.toBeChecked();
+
+      // 4. Suddenly, the background tunnel check finally finishes
+      await act(async () => {
+        resolveTunnel('https://abc123.lhr.life');
+      });
+
+      // 5. Verify the password toggle is STILL off (the ref protected the user's choice)
+      expect(passwordToggle).not.toBeChecked();
     });
 
     it('reports a tunnel that would not close', async () => {
