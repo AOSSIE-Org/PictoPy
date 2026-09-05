@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { open } from '@tauri-apps/plugin-shell';
-import { openPath } from '@tauri-apps/plugin-opener';
+import { invoke } from '@tauri-apps/api/core';
 import {
   X,
   ImageIcon as ImageLucide,
@@ -218,7 +218,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
                   e.preventDefault();
                   if (currentImage?.path) {
                     try {
-                      await openPath(currentImage.path);
+                      await invoke('open_image_file', { path: currentImage.path });
                     } catch (err) {
                       console.error('Failed to open file:', err);
                     }

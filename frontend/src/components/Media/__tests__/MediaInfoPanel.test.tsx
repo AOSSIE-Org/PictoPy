@@ -1,14 +1,14 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MediaInfoPanel } from '../MediaInfoPanel';
 import { Image } from '@/types/Media';
-import { openPath } from '@tauri-apps/plugin-opener';
+import { invoke } from '@tauri-apps/api/core';
 
 jest.mock('@tauri-apps/plugin-shell', () => ({
   open: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('@tauri-apps/plugin-opener', () => ({
-  openPath: jest.fn().mockResolvedValue(undefined),
+jest.mock('@tauri-apps/api/core', () => ({
+  invoke: jest.fn().mockResolvedValue(undefined),
 }));
 
 const makeImage = (tags: string[]): Image => ({
@@ -130,13 +130,15 @@ describe('MediaInfoPanel tag list', () => {
 });
 
 describe('MediaInfoPanel Open Original File button', () => {
-  test('calls openPath with the current image path when clicked', async () => {
+  test('calls the open_image_file command with the current image path when clicked', async () => {
     renderPanel(['alpha']);
 
     fireEvent.click(screen.getByRole('button', { name: /open original file/i }));
 
     await waitFor(() => {
-      expect(openPath).toHaveBeenCalledWith('C:\\pics\\img1.jpg');
+      expect(invoke).toHaveBeenCalledWith('open_image_file', {
+        path: 'C:\\pics\\img1.jpg',
+      });
     });
   });
 });
