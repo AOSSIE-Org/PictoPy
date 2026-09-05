@@ -25,7 +25,9 @@ This combination allows us to leverage web technologies for the UI while benefit
 ### Core Technologies
 
 For the backend, we rely on several technologies. Our database is served using SQLite, while we use the asynchronous concurrency capabilities of `asyncio` due to its compatibility with FastAPI.
+
 Key technologies include:
+
 - **YOLO:** Used for object and face detection.
 - **FaceNet:** Used for generating embeddings of detected faces.
 - **ONNX Runtime:** Used to run the models while keeping the application lightweight.
@@ -36,17 +38,22 @@ Our API calls rely on queries from the backend and interact with the SQLite data
 
 ### Semantic Search
 
-For natural-language photo search, we additionally run [SigLIP2](https://huggingface.co/docs/transformers/en/model_doc/siglip2), also through ONNX Runtime, following the same distribution pattern as YOLO and FaceNet.
+For natural-language photo search, we additionally run
+[SigLIP2](https://huggingface.co/docs/transformers/en/model_doc/siglip2),
+also through ONNX Runtime, following the same distribution pattern as YOLO
+and FaceNet.
 
 The system generates a reusable embedding for each photo in the background and embeds search queries at request time.
 
 See [Semantic Search](../backend/backend_python/semantic-search.md) for the full architecture.
 
-
-
 ## Backend API Architecture
 
-PictoPy's Python backend exposes its HTTP API through FastAPI. Requests are routed from the application entry point to the corresponding route module, which interacts with the database and utility layers before returning a Pydantic response model.
+PictoPy's Python backend exposes its HTTP API through FastAPI.
+
+Requests are routed from the application entry point to the corresponding
+route module, which interacts with the database and utility layers before
+returning a Pydantic response model.
 
 ```mermaid
 flowchart TD
@@ -59,9 +66,15 @@ flowchart TD
     D --> H[Pydantic Response Model]
     H -->|JSON Response| A
 ```
+
 ## Image Retrieval API Flow
 
-The `GET /images/` endpoint provides a concrete example of the backend request/response flow. The request is routed to `get_all_images()`, which retrieves image records through `db_get_all_images()`. The database layer retrieves image and tag data from SQLite and parses stored metadata. `get_all_images()` invokes `image_util_parse_metadata()` again while constructing each `ImageData` item before returning the response model.
+The `GET /images/` endpoint provides a concrete example of the backend
+request/response flow. The request is routed to `get_all_images()`, which
+retrieves image records through `db_get_all_images()`. The database layer
+retrieves image and tag data from SQLite and parses stored metadata.
+`get_all_images()` invokes `image_util_parse_metadata()` again while
+constructing each `ImageData` item before returning the response model.
 
 ```mermaid
 flowchart TD
@@ -81,8 +94,10 @@ flowchart TD
 ```
 
 !!! note "Note"
-We discuss all of the features and configuration of our application in further sections of the documentation. They can be used for both developers
-as well as users who want to use the app. A postman collection has also been added which can be found in our API section.
+We discuss all of the features and configuration of our application in
+further sections of the documentation. They can be used for both
+developers as well as users who want to use the app. A postman collection
+has also been added which can be found in our API section.
 <br>
 <br>
 
