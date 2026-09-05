@@ -11,6 +11,7 @@ use tauri::{Manager, Window, WindowEvent};
 use tauri_plugin_autostart::ManagerExt;
 #[cfg(feature = "ci")]
 use tauri_plugin_shell::ShellExt;
+use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_store::StoreExt;
 
 const STORE_PATH: &str = "settings.json";
@@ -274,6 +275,18 @@ fn set_close_to_tray(app: tauri::AppHandle, enabled: bool) -> Result<(), String>
     store.save().map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn open_image_file(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    let allowed_extensions = [".jpg", ".jpeg", ".png"];
+    let lower = path.to_lowercase();
+    if !allowed_extensions.iter().any(|ext| lower.ends_with(ext)) {
+        return Err("Only image files can be opened".into());
+    }
+    app.opener()
+        .open_path(path, None::<String>)
+        .map_err(|e| e.to_string())
+}
+
 fn main() {
     tauri::Builder::default()
         // Auto-start: pass --minimized so the window starts hidden when launched at boot
@@ -361,6 +374,7 @@ fn main() {
             is_autostart_enabled,
             get_close_to_tray,
             set_close_to_tray,
+            open_image_file,
         ])
         .on_window_event(on_window_event)
         .build(tauri::generate_context!())
