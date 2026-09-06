@@ -43,7 +43,6 @@ def db_upsert_image_embeddings(rows: List[Tuple[str, str, np.ndarray]]):
         conn = _connect()
         cursor = conn.cursor()
 
-        # Convert each embedding
         db_rows = [
             (
                 image_id,

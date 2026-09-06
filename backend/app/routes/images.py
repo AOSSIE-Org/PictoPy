@@ -11,7 +11,6 @@ from app.database.images import (
 )
 from app.logging.setup_logging import get_logger
 
-# Initialize logger
 logger = get_logger(__name__)
 router = APIRouter()
 
@@ -75,7 +74,6 @@ def get_all_images(
         # Get all images with tags from database (single query with optional filter)
         images = db_get_all_images(tagged=tagged)
 
-        # Convert to response format
         image_data = [
             ImageData(
                 id=image["id"],
@@ -240,10 +238,8 @@ def semantic_search_images(
         # siglip_util_invalidate_text_model for the uninstall interaction.
         text_model = siglip_util_get_text_model(text_model_path, text_key)
         text_vec = text_model.get_embedding(input_ids, attention_mask)
-        # Flatten to 1D vector. (Report shows what shape the method actually returns below)
         text_vec = np.array(text_vec, dtype=np.float32).flatten()
 
-        # scores = 1/(1+np.exp(-(matrix @ text_vec * np.exp(logit_scale) + logit_bias)))
         dot_products = matrix @ text_vec
         scaled_logits = dot_products * np.exp(logit_scale) + logit_bias
         scores = 1 / (1 + np.exp(-scaled_logits))
@@ -257,7 +253,6 @@ def semantic_search_images(
             if score >= match_threshold:
                 matched_pairs.append((img_id, score))
 
-        # Sort desc by score
         matched_pairs.sort(key=lambda x: x[1], reverse=True)
 
         if not matched_pairs:

@@ -8,9 +8,7 @@ import pytest
 
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 
-# ##############################
 # Pytest Fixtures
-# ##############################
 
 
 @pytest.fixture(scope="function")
@@ -43,9 +41,7 @@ def fetch_mappings(db_path: str) -> List[Tuple[int, str]]:
     return rows
 
 
-# ##############################
 # Table creation
-# ##############################
 
 
 class TestCreateYOLOClassesTable:

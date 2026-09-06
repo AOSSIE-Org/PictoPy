@@ -12,52 +12,18 @@ type MutationState = {
 };
 
 type FeedbackOptions = {
-  /**
-   * Show loading state
-   */
   showLoading?: boolean;
-  /**
-   * Custom loading message
-   */
   loadingMessage?: string;
-  /**
-   * Show success message
-   */
   showSuccess?: boolean;
-  /**
-   * Custom success title
-   */
   successTitle?: string;
-  /**
-   * Custom success message
-   */
   successMessage?: string;
-  /**
-   * Show error message
-   */
   showError?: boolean;
-  /**
-   * Custom error title
-   */
   errorTitle?: string;
-  /**
-   * Custom error message
-   */
   errorMessage?: string;
-  /**
-   * Optional callback on success
-   */
   onSuccess?: () => void;
-  /**
-   * Optional callback on error
-   */
   onError?: (error: Error | unknown) => void;
 };
 
-/**
- * Custom hook to provide standardized feedback for mutation states
- * Handles loading indicators, success messages, and error messages
- */
 export const useMutationFeedback = (
   mutationState: MutationState,
   options: FeedbackOptions = {},
@@ -77,6 +43,8 @@ export const useMutationFeedback = (
     onError,
   } = options;
 
+  // Held in refs so an inline callback, which is a new function every render,
+  // stays out of the effect deps below and cannot re-fire the dialog.
   const onSuccessRef = useRef(onSuccess);
   const onErrorRef = useRef(onError);
   onSuccessRef.current = onSuccess;
@@ -84,7 +52,6 @@ export const useMutationFeedback = (
 
   const { isPending, isSuccess, isError, error } = mutationState;
 
-  // Handle loading state
   useEffect(() => {
     if (showLoading && isPending) {
       dispatch(showLoader(loadingMessage));
@@ -93,7 +60,6 @@ export const useMutationFeedback = (
     }
   }, [isPending, showLoading, loadingMessage, dispatch]);
 
-  // Handle success state
   useEffect(() => {
     if (isSuccess && showSuccess) {
       dispatch(
@@ -110,7 +76,6 @@ export const useMutationFeedback = (
     }
   }, [isSuccess, showSuccess, successTitle, successMessage, dispatch]);
 
-  // Handle error state
   useEffect(() => {
     if (isError && showError) {
       const errorMsg = getErrorMessage(error, errorMessage);
@@ -129,7 +94,6 @@ export const useMutationFeedback = (
     }
   }, [isError, showError, errorTitle, errorMessage, error, dispatch]);
 
-  // Return original state for convenience
   return mutationState;
 };
 

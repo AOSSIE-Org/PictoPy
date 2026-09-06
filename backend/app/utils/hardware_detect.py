@@ -92,7 +92,6 @@ def detect_hardware_tier() -> str:
     if apple_tier is not None:
         return apple_tier
 
-    # Check RAM in GB
     ram_gb = psutil.virtual_memory().total / (1024**3)
 
     gpu_names = detect_physical_gpu()

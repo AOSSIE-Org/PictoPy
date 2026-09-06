@@ -32,10 +32,8 @@ def _mock_ort_session(input_names: list[str]) -> MagicMock:
 @pytest.fixture(autouse=True)
 def _clean_registry():
     yield
-    # Belt-and-suspenders: don't let a failed assertion mid-test leak a
-    # registered session into other tests sharing this real model key. A
-    # fresh SigLIP2Text(...).close() is a no-op here (its _session_registered
-    # starts False), so decrement the registry directly instead.
+    # Stops a failed assertion leaking a registered session into other tests.
+    # A fresh close() is a no-op here, so decrement the registry directly.
     while get_active_session_count(MODEL_KEY) > 0:
         mark_model_session_inactive(MODEL_KEY)
 

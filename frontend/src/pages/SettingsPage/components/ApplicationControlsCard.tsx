@@ -14,9 +14,6 @@ import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { showGlobalAlert } from '@/features/globalAlertSlice';
 
-/**
- * Component for application controls in settings
- */
 const ApplicationControlsCard: React.FC = () => {
   const dispatch = useDispatch();
 

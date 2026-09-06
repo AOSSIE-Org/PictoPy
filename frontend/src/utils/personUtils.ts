@@ -8,11 +8,8 @@ export function getPhotoCountText(count: number): string {
   return `${count} photo${count !== 1 ? 's' : ''}`;
 }
 
-/**
- * Formats selected people names into a readable title based on match mode.
- * match_any: "Person A or Person B" (any one of them)
- * match_all: "Person A & Person B" (all together)
- */
+// match_any reads "A or B", match_all reads "A and B" -- the title has to say
+// which query actually ran.
 export function formatPeopleTitle(
   names: string[],
   matchMode: 'match_any' | 'match_all',

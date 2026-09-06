@@ -11,7 +11,6 @@ from app.config.settings import (
 )
 from app.logging.setup_logging import get_logger
 
-# Initialize logger
 logger = get_logger(__name__)
 
 # Type definitions
@@ -44,10 +43,8 @@ def db_create_videos_table() -> None:
     conn = _connect()
     cursor = conn.cursor()
 
-    # Videos are kept separate from images by design; isTagged tracks the
-    # keyframe sampling pass (see video_frames). thumbnailPath is nullable:
-    # videos whose codec OpenCV cannot decode are still indexed (frontend
-    # shows a placeholder).
+    # isTagged tracks the keyframe sampling pass (see video_frames). thumbnailPath
+    # is nullable: a codec OpenCV cannot decode is still indexed, with a placeholder.
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS videos (
