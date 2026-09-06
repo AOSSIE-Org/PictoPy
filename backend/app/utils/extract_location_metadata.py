@@ -78,7 +78,7 @@ class MetadataExtractor:
             lon = metadata.get("longitude")
 
             # Method 2: Check nested 'exif' -> 'gps' structure
-            if not lat or not lon:
+            if lat is None or lon is None:
                 exif = metadata.get("exif", {})
                 if isinstance(exif, dict):
                     gps = exif.get("gps", {})
@@ -87,7 +87,7 @@ class MetadataExtractor:
                         lon = lon or gps.get("longitude")
 
             # Method 3: Check alternative field names
-            if not lat or not lon:
+            if lat is None or lon is None:
                 lat = lat or metadata.get("lat") or metadata.get("Latitude")
                 lon = lon or metadata.get("lon") or metadata.get("Longitude")
 
