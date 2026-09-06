@@ -25,9 +25,9 @@ from app.utils.semantic_labels import (
 )
 from app.utils.model_downloader import ensure_model
 from app.database.metadata import db_get_metadata
-import logging
+from app.logging.setup_logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter()
 
