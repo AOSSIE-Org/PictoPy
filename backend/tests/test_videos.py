@@ -418,6 +418,8 @@ class TestVideosDatabase:
         record = make_video_record("vid-1", "/videos/a.mp4", test_folder_id)
         db_bulk_insert_videos([record])
         assert db_toggle_video_favourite_status("vid-1") is True
+        favourited_at = db_get_all_videos()[0]["favouritedAt"]
+        assert favourited_at is not None
 
         # Re-scan inserts the same path under a new id; favourite must survive
         rescan = make_video_record("vid-new", "/videos/a.mp4", test_folder_id)
@@ -427,6 +429,22 @@ class TestVideosDatabase:
         assert len(videos) == 1
         assert videos[0]["id"] == "vid-1"
         assert videos[0]["isFavourite"] is True
+        assert videos[0]["favouritedAt"] == favourited_at
+
+    def test_toggling_favourite_stamps_favouritedAt(self, test_db, test_folder_id):
+        db_bulk_insert_videos(
+            [make_video_record("vid-1", "/videos/a.mp4", test_folder_id)]
+        )
+        assert db_get_all_videos()[0]["favouritedAt"] is None
+
+        db_toggle_video_favourite_status("vid-1")
+        stamped_at = db_get_all_videos()[0]["favouritedAt"]
+        assert stamped_at is not None
+
+        # Un-favouriting doesn't need to clear it -- the item is filtered out
+        # of "favourites" by isFavourite anyway.
+        db_toggle_video_favourite_status("vid-1")
+        assert db_get_all_videos()[0]["favouritedAt"] == stamped_at
 
     def test_upsert_keeps_old_thumbnail_when_new_is_null(self, test_db, test_folder_id):
         db_bulk_insert_videos(
@@ -506,12 +524,22 @@ class TestVideosAPI:
         assert data[0]["metadata"]["duration"] == 12.5
 
     def test_toggle_favourite(self, client, test_folder_id):
+        metadata = '{"name": "a.mp4", "date_created": "2026-01-01T00:00:00", "width": 640, "height": 480, "file_location": "/videos/a.mp4", "file_size": 123, "item_type": "video/mp4"}'
         db_bulk_insert_videos(
-            [make_video_record("vid-1", "/videos/a.mp4", test_folder_id)]
+            [
+                make_video_record(
+                    "vid-1", "/videos/a.mp4", test_folder_id, metadata=metadata
+                )
+            ]
         )
         response = client.post("/videos/toggle-favourite", json={"video_id": "vid-1"})
         assert response.status_code == 200
         assert response.json()["isFavourite"] is True
+
+        # The list endpoint -- what the frontend actually reads -- now carries
+        # a favouritedAt timestamp for the item.
+        listed = client.get("/videos/").json()["data"][0]
+        assert listed["favouritedAt"] is not None
 
         response = client.post("/videos/toggle-favourite", json={"video_id": "vid-1"})
         assert response.json()["isFavourite"] is False

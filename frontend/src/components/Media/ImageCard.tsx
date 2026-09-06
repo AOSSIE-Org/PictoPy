@@ -46,9 +46,10 @@ export function ImageCard({
       onClick={onClick}
     >
       <div className="relative">
-        {/* Selection tick mark */}
+        {/* Selection tick mark -- top-left, so it never overlaps the
+            favourite button at top-right */}
         {isSelected && (
-          <div className="absolute top-2 right-2 z-10 rounded-full bg-[#4088fa] p-1">
+          <div className="absolute top-2 left-2 z-10 rounded-full bg-[#4088fa] p-1">
             <Check className="h-4 w-4 text-white" />
           </div>
         )}
@@ -68,10 +69,10 @@ export function ImageCard({
             )}
           />
           {/* Dark overlay on hover */}
-          <div className="absolute inset-0 bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+          <div className="pointer-events-none absolute inset-0 bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
 
-          {/* Image actions on hover */}
-          <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+          {/* Favourite action: top-right, matching VideoCard's placement */}
+          <div className="absolute top-2 right-2 z-20 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-within:opacity-100">
             <Button
               variant="ghost"
               size="icon"
@@ -81,7 +82,6 @@ export function ImageCard({
                   : 'bg-white/10 hover:bg-white/20 hover:shadow-lg'
               }`}
               onClick={(e) => {
-                console.log(image);
                 e.stopPropagation();
                 handleToggleFavourite();
               }}
