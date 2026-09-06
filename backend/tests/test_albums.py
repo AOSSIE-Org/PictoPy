@@ -694,3 +694,38 @@ class TestCreateAlbumFromMemory:
             assert response.status_code == 409
             assert response.json()["detail"]["error"] == "Album Already Exists"
             mock_create.assert_not_called()
+
+
+class TestAlbumRouteErrors:
+    """Test suite for verifying that album routes correctly handle exceptions."""
+
+    def test_unexpected_exceptions_mapped_to_500(self):
+        """Verify that an unexpected exception returns a 500 error."""
+        from unittest.mock import patch
+
+        with patch("app.routes.albums.db_get_all_albums") as mock_get_all:
+            mock_get_all.side_effect = Exception("Database explosion")
+            response = client.get("/albums/")
+            assert response.status_code == 500
+            json_resp = response.json()
+            assert json_resp["detail"]["success"] is False
+            assert "unexpected error" in json_resp["detail"]["message"].lower()
+
+    def test_duplicate_album_integrity_error(self):
+        """Verify that a database IntegrityError returns a 409 conflict."""
+        import sqlite3
+        from unittest.mock import patch
+
+        with patch("app.routes.albums.db_get_album_by_name", return_value=None):
+            with patch(
+                "app.routes.albums.db_insert_album",
+                side_effect=sqlite3.IntegrityError("Unique constraint failed"),
+            ):
+                response = client.post(
+                    "/albums/",
+                    json={"name": "Duplicate", "description": "This should fail"},
+                )
+                assert response.status_code == 409
+                json_resp = response.json()
+                assert json_resp["detail"]["success"] is False
+                assert "album already exists" in json_resp["detail"]["error"].lower()
