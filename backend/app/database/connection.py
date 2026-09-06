@@ -1,10 +1,22 @@
 import sqlite3
 from contextlib import contextmanager
 from typing import Generator
-from app.config.settings import DATABASE_PATH
+import app.config.settings as settings
 from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
+
+ORIGINAL_DATABASE_PATH = settings.DATABASE_PATH
+DATABASE_PATH = settings.DATABASE_PATH
+
+
+def get_database_path() -> str:
+    """Resolve the active database path dynamically, supporting
+    various test patching styles.
+    """
+    if DATABASE_PATH != ORIGINAL_DATABASE_PATH:
+        return DATABASE_PATH
+    return settings.DATABASE_PATH
 
 
 @contextmanager
@@ -16,7 +28,7 @@ def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
     - Works for both single and multi-step transactions
     - Automatically commits on success or rolls back on failure
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(get_database_path())
 
     # --- Strict enforcement of all relational and logical rules ---
     conn.execute("PRAGMA foreign_keys = ON;")  # Enforce FK constraints

@@ -1,9 +1,7 @@
 import json
 from typing import List, Tuple
-
 import numpy as np
-
-from app.database.images import _connect
+from app.database.connection import get_db_connection
 from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
@@ -13,9 +11,7 @@ SEMANTIC_CLASS_ID_OFFSET = 1000
 
 
 def db_create_semantic_labels_table():
-    conn = None
-    try:
-        conn = _connect()
+    with get_db_connection() as conn:
         cursor = conn.cursor()
 
         # Migrate the pre-vocabulary shell schema. It shipped with no writer,
@@ -71,11 +67,6 @@ def db_create_semantic_labels_table():
             """
         )
 
-        conn.commit()
-    finally:
-        if conn:
-            conn.close()
-
 
 def db_upsert_semantic_vocabulary(labels: List[dict]) -> None:
     """Idempotently sync the seed vocabulary into mappings + semantic_labels.
@@ -85,9 +76,7 @@ def db_upsert_semantic_vocabulary(labels: List[dict]) -> None:
     missing from the seed are deactivated (rows kept -- image_classes may
     reference them).
     """
-    conn = None
-    try:
-        conn = _connect()
+    with get_db_connection() as conn:
         cursor = conn.cursor()
 
         cursor.execute("SELECT class_id, name FROM mappings")
@@ -186,15 +175,11 @@ def db_upsert_semantic_vocabulary(labels: List[dict]) -> None:
                 )
                 deactivated += 1
 
-        conn.commit()
         if added or updated or skipped or deactivated:
             logger.info(
                 f"Semantic vocabulary sync: {added} added, {updated} updated, "
                 f"{deactivated} deactivated, {skipped} skipped"
             )
-    finally:
-        if conn:
-            conn.close()
 
 
 def db_get_labels_needing_embeddings(
@@ -202,9 +187,7 @@ def db_get_labels_needing_embeddings(
 ) -> List[Tuple[int, List[str]]]:
     """Active labels whose cached embedding is missing or belongs to a
     different checkpoint. Returns (class_id, descriptions) pairs."""
-    conn = None
-    try:
-        conn = _connect()
+    with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -219,9 +202,6 @@ def db_get_labels_needing_embeddings(
             (class_id, json.loads(descriptions))
             for class_id, descriptions in cursor.fetchall()
         ]
-    finally:
-        if conn:
-            conn.close()
 
 
 def db_update_label_embeddings(
@@ -231,9 +211,7 @@ def db_update_label_embeddings(
 
     Same raw-float32 blob format as image_embeddings.embedding.
     """
-    conn = None
-    try:
-        conn = _connect()
+    with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.executemany(
             """
@@ -250,10 +228,6 @@ def db_update_label_embeddings(
                 for class_id, embedding, model_version in rows
             ],
         )
-        conn.commit()
-    finally:
-        if conn:
-            conn.close()
 
 
 def db_get_active_label_embeddings(
@@ -266,9 +240,7 @@ def db_get_active_label_embeddings(
     matrix, so row order must be deterministic); threshold is None where the
     label has no per-label override.
     """
-    conn = None
-    try:
-        conn = _connect()
+    with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -292,9 +264,6 @@ def db_get_active_label_embeddings(
             [np.frombuffer(blob, dtype=np.float32) for _, _, _, blob in rows]
         )
         return meta, matrix
-    finally:
-        if conn:
-            conn.close()
 
 
 def db_write_image_semantic_scores(
@@ -303,9 +272,7 @@ def db_write_image_semantic_scores(
     """Replace each image's semantic tag rows with the given (class_id, score)
     pairs and stamp its scored_signature. YOLO rows (class_id below the
     offset) are never touched."""
-    conn = None
-    try:
-        conn = _connect()
+    with get_db_connection() as conn:
         cursor = conn.cursor()
         for image_id, pairs in batch:
             cursor.execute(
@@ -322,7 +289,3 @@ def db_write_image_semantic_scores(
                 "WHERE image_id = ?",
                 (signature, image_id),
             )
-        conn.commit()
-    finally:
-        if conn:
-            conn.close()
