@@ -2,11 +2,9 @@
 
 Hi there! Thank you for considering contributing to **PictoPy** – we’re excited to collaborate with you. Whether you're fixing a bug, improving documentation, or suggesting a new feature — you're welcome here!
 
-NOTE: Please do not open a PR for the issue which is not yet reviewed and labelled by the maintainer. Wait for the maintainer to give a green light.
+> **Note:** Do not open a PR for an issue that maintainers have not reviewed and labelled. Wait for the maintainer to give a green light.
 
 ## Setting Up the Project
-
-## Setup
 
 1. Setup Using Script (Recommended for Windows, Debian-based OS like Ubuntu, and Fedora/RedHat-based OS): [Guide](docs/Script_Setup_Guide.md)
 2. Setup Manually(Recommended for other OSes): [Guide](docs/Manual_Setup_Guide.md)
@@ -75,8 +73,7 @@ You remain the author of everything you submit — read your diff before opening
 ### Frontend
 
 ```bash
-cd frontend
-npm test
+(cd frontend && npm test)
 ```
 
 ### Backend
@@ -84,15 +81,13 @@ npm test
 - FastAPI
 
   ```bash
-  cd backend
-  pytest
+  (cd backend && pytest)
   ```
 
 - Tauri
 
   ```bash
-  cd frontend/src-tauri/
-  cargo test
+  (cd frontend/src-tauri && cargo test)
   ```
 
 ## Building for Production
@@ -105,14 +100,14 @@ npm run tauri signer generate
 
 Set the public key in tauri.conf.json as pubkey and private key and password in Environment Variables(of your terminal) as TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 
-As an **example** of the private key would look like this:
+As an **example**, exporting the private key in your terminal would look like this:
 
 ```bash
-TAURI_SIGNING_PRIVATE_KEY=dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5NlF2SjE3cWNXOVlQQ0JBTlNITEpOUVoyQ3ZuNTdOSkwyNE1NN2RmVWQ1a0FBQkFBQUFBQUFBQUFBQUlBQUFBQU9XOGpTSFNRd0Q4SjNSbm5Oc1E0OThIUGx6SS9lWXI3ZjJxN3BESEh1QTRiQXlkR2E5aG1oK1g0Tk5kcmFzc0IvZFZScEpubnptRkxlbDlUR2R1d1Y5OGRSYUVmUGoxNTFBcHpQZ1dSS2lHWklZVHNkV1Byd1VQSnZCdTZFWlVGOUFNVENBRlgweUU9Cg==
+export TAURI_SIGNING_PRIVATE_KEY=dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5NlF2SjE3cWNXOVlQQ0JBTlNITEpOUVoyQ3ZuNTdOSkwyNE1NN2RmVWQ1a0FBQkFBQUFBQUFBQUFBQUlBQUFBQU9XOGpTSFNRd0Q4SjNSbm5Oc1E0OThIUGx6SS9lWXI3ZjJxN3BESEh1QTRiQXlkR2E5aG1oK1g0Tk5kcmFzc0IvZFZScEpubnptRkxlbDlUR2R1d1Y5OGRSYUVmUGoxNTFBcHpQZ1dSS2lHWklZVHNkV1Byd1VQSnZCdTZFWlVGOUFNVENBRlgweUU9Cg==
 ```
 
 ```bash
-TAURI_SIGNING_PRIVATE_KEY_PASSWORD=pass
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD=pass
 ```
 
 ```bash
@@ -171,7 +166,7 @@ When a release is approaching, trigger the release prep workflow from the GitHub
 ## Additional Resources
 
 - [Tauri Documentation](https://tauri.app/start/)
-- [React Documentation](https://reactjs.org/docs/getting-started.html)
+- [React Documentation](https://react.dev/)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 
 ## Troubleshooting
