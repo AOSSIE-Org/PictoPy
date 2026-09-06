@@ -32,12 +32,15 @@ class GetAllImagesResponse(BaseModel):
     data: List[ImageData]
 
 
-def perform_face_search(image_path: str) -> GetAllImagesResponse:
+def perform_face_search(
+    image_path: Optional[str] = None, image_bytes: Optional[bytes] = None
+) -> GetAllImagesResponse:
     """
     Performs face detection, embedding generation, and similarity search.
 
     Args:
         image_path (str): Path to the image file to process.
+        image_bytes (bytes): Optional in-memory raw image bytes.
 
     Returns:
         GetAllImagesResponse: Search result containing matched images.
@@ -50,7 +53,12 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
         image_id = str(uuid.uuid4())
 
         try:
-            result = fd.detect_faces(image_id, image_path, forSearch=True)
+            result = fd.detect_faces(
+                image_id,
+                image_path=image_path,
+                forSearch=True,
+                image_bytes=image_bytes,
+            )
         except Exception as e:
             return GetAllImagesResponse(
                 success=False,
