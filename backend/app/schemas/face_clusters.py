@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Union, Any
+from typing import List, Literal, Optional, Dict, Union, Any
 
 
 # Request Models
@@ -74,16 +74,32 @@ class GetClusterImagesResponse(BaseModel):
     data: Optional[GetClusterImagesData] = None
 
 
-class GlobalReclusterData(BaseModel):
+class GlobalReclusterStartData(BaseModel):
+    task_id: str
+
+
+class GlobalReclusterStartResponse(BaseModel):
+    """Returned immediately when a global reclustering job is started."""
+
+    success: bool
+    message: Optional[str] = None
+    error: Optional[str] = None
+    data: Optional[GlobalReclusterStartData] = None
+
+
+class GlobalReclusterStatusData(BaseModel):
+    status: Literal["running", "complete", "error"]
     clusters_created: Optional[int] = None
     faces_skipped: Optional[int] = None
 
 
-class GlobalReclusterResponse(BaseModel):
+class GlobalReclusterStatusResponse(BaseModel):
+    """Polled to check on the progress of a global reclustering job."""
+
     success: bool
     message: Optional[str] = None
     error: Optional[str] = None
-    data: Optional[GlobalReclusterData] = None
+    data: Optional[GlobalReclusterStatusData] = None
 
 
 class MultiPersonSearchRequest(BaseModel):
