@@ -60,6 +60,10 @@ markdown_extensions:
 extra_css:
   - stylesheets/output.css
   - stylesheets/extra.css
+  - stylesheets/architecture-diagram.css
+
+extra_javascript:
+  - javascripts/mermaid.mjs
 
 nav:
   - Home: index.md
