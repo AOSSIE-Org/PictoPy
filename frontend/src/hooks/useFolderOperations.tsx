@@ -131,10 +131,9 @@ export const useFolderOperations = () => {
     errorMessage: 'Failed to disable AI tagging. Please try again.',
   });
 
-  // Delete folder mutation
+  // Delete folders mutation - takes a list so one confirmation can remove a batch
   const deleteFolderMutation = usePictoMutation({
-    mutationFn: async (folder_id: string) =>
-      deleteFolders({ folder_ids: [folder_id] }),
+    mutationFn: async (folder_ids: string[]) => deleteFolders({ folder_ids }),
     autoInvalidateTags: ['folders'],
     // Deleting a folder cascades to its images and faces, so any cluster built from
     // them is now stale. This has to be a separate call: autoInvalidateTags is passed
@@ -145,15 +144,15 @@ export const useFolderOperations = () => {
     },
   });
 
-  // Apply feedback to the delete folder mutation
+  // Apply feedback to the delete folder mutation.
+  // No success dialog here: the user has already confirmed the deletion and the
+  // folders disappear from the list, so a second modal only adds a click.
   useMutationFeedback(deleteFolderMutation, {
     showLoading: true,
-    loadingMessage: 'Deleting folder',
-    successTitle: 'Folder Deleted',
-    successMessage:
-      'The folder has been successfully removed from your library.',
+    loadingMessage: 'Deleting folders',
+    showSuccess: false,
     errorTitle: 'Delete Error',
-    errorMessage: 'Failed to delete the folder. Please try again.',
+    errorMessage: 'Failed to delete the folders. Please try again.',
   });
 
   /**
@@ -168,10 +167,11 @@ export const useFolderOperations = () => {
   };
 
   /**
-   * Delete a folder
+   * Delete one or more folders in a single request
    */
-  const deleteFolder = (folderId: string) => {
-    deleteFolderMutation.mutate(folderId);
+  const handleDeleteFolders = (folderIds: string[]) => {
+    if (folderIds.length === 0) return;
+    deleteFolderMutation.mutate(folderIds);
   };
 
   return {
@@ -181,12 +181,12 @@ export const useFolderOperations = () => {
 
     // Operations
     toggleAITagging,
-    deleteFolder,
+    deleteFolders: handleDeleteFolders,
 
     // Mutation states (for use in UI, e.g., disabling buttons)
     enableAITaggingPending: enableAITaggingMutation.isPending,
     disableAITaggingPending: disableAITaggingMutation.isPending,
-    deleteFolderPending: deleteFolderMutation.isPending,
+    deleteFoldersPending: deleteFolderMutation.isPending,
   };
 };
 
