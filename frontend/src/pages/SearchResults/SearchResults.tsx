@@ -94,6 +94,11 @@ export const SearchResults = () => {
   }
   const currentSearchGeneration = searchGenerationRef.current;
 
+  // Reset the scroll position to the top whenever the search changes
+  useEffect(() => {
+    document.getElementById('main-scroll-container')?.scrollTo({ top: 0 });
+  }, [query, mode]);
+
   const { data: statusData, isSuccess: isStatusSuccess } = usePictoQuery({
     queryKey: ['models', 'status'],
     queryFn: fetchModelStatus,
