@@ -7,6 +7,7 @@ regenerating on every backend startup.
 Usage:
     python scripts/generate_openapi.py
 """
+
 import os
 import sys
 
@@ -16,4 +17,5 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from main import generate_openapi_json
 
 if __name__ == "__main__":
-    generate_openapi_json()
+    success = generate_openapi_json()
+    sys.exit(0 if success else 1)
