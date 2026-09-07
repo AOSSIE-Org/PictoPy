@@ -73,7 +73,6 @@ os.makedirs(THUMBNAIL_IMAGES_PATH, exist_ok=True)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create tables and initialize systems
-    generate_openapi_json()
     db_create_folders_table()
     db_create_images_table()
     db_create_videos_table()
