@@ -935,6 +935,16 @@ class TestFoldersUnit:
         assert db_get_folder_path_from_id("folder-id-1") is None
         assert db_get_folder_path_from_id("folder-id-2") is None
 
+    def test_db_delete_folders_batch_partial_missing(self, test_db):
+       db_insert_folders_batch(
+           [("folder-id-1", "/tmp/photos", None, 1693526400, True, False)]
+       )
+
+       result = db_delete_folders_batch(["folder-id-1", "missing-id"])
+
+       assert result == 1
+       assert db_get_folder_path_from_id("folder-id-1") is None
+       
     def test_db_update_parent_ids_for_subtree(self, test_db):
 
         db_insert_folders_batch(
