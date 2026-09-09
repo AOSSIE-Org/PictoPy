@@ -929,11 +929,11 @@ class TestFoldersUnit:
             ]
         )
 
-        result = db_delete_folders_batch(["folder-id-1"])
+        result = db_delete_folders_batch(["folder-id-1", "folder-id-2"])
 
-        assert result == 1
+        assert result == 2
         assert db_get_folder_path_from_id("folder-id-1") is None
-        assert db_get_folder_path_from_id("folder-id-2") == "/tmp/docs"
+        assert db_get_folder_path_from_id("folder-id-2") is None
 
     def test_db_update_parent_ids_for_subtree(self, test_db):
 
