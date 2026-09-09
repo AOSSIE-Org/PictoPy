@@ -529,11 +529,11 @@ def _convert_to_degrees(value):
     """Converts a GPS coordinate value from DMS to decimal degrees."""
 
     def to_float(v):
-        return (
-            float(v.numerator) / float(v.denominator)
-            if hasattr(v, "numerator")
-            else float(v)
-        )
+        if hasattr(v, "numerator") and hasattr(v, "denominator"):
+            if float(v.denominator) == 0.0:
+                raise ValueError("Denominator cannot be zero")
+            return float(v.numerator) / float(v.denominator)
+        return float(v)
 
     d, m, s = (to_float(v) for v in value[:3])
     return d + (m / 60.0) + (s / 3600.0)
@@ -578,7 +578,6 @@ def _extract_gps_coordinates(exif_data: Any) -> Tuple[float | None, float | None
                 TypeError,
                 ValueError,
                 AttributeError,
-                ZeroDivisionError,
             ):
                 latitude = None
                 longitude = None
