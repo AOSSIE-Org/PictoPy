@@ -578,6 +578,7 @@ def _extract_gps_coordinates(exif_data: Any) -> Tuple[float | None, float | None
                 TypeError,
                 ValueError,
                 AttributeError,
+                ZeroDivisionError,
             ):
                 latitude = None
                 longitude = None
