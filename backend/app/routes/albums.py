@@ -123,6 +123,7 @@ def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)
             ).model_dump(),
         )
 
+    # Note: Album video exclusion (clips) is intentional because albums currently only support images.
     album_dict = {
         "album_id": album[0],
         "album_name": album[1],
