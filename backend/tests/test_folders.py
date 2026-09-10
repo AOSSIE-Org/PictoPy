@@ -935,7 +935,9 @@ class TestFoldersUnit:
         assert db_get_folder_path_from_id("folder-id-1") is None
         assert db_get_folder_path_from_id("folder-id-2") is None
 
-    def test_db_delete_folders_batch_partial_missing(self, test_db):
+    def test_db_delete_folders_batch_partial_missing(
+        self, test_db: str
+    ) -> None:
         db_insert_folders_batch(
             [("folder-id-1", "/tmp/photos", None, 1693526400, True, False)]
         )
