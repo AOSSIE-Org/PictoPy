@@ -253,7 +253,6 @@ const FolderManagementCard: React.FC = () => {
     if (selectedFolderIds.size === 0) return;
 
     deleteMultipleFolders(Array.from(selectedFolderIds));
-    setSelectedFolderIds(new Set());
   };
 
   const deleteCount = selectedFolderIds.size;
