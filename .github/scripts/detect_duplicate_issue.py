@@ -36,21 +36,26 @@ def find_duplicates(
     max_results: int = MAX_RESULTS,
 ) -> list[dict]:
     # Embeddings are normalized, so dot product equals cosine similarity.
-    matches = []
+    # Sort by the raw score, not the rounded display value, so close scores
+    # that round to the same tenth (e.g. 90.04 vs 90.01) still rank correctly.
+    scored: list[tuple[float, dict]] = []
     for issue, embedding in zip(others, other_embeddings):
         score = dot_product(current_embedding, embedding) * 100
         if score >= threshold * 100:
-            matches.append(
-                {
-                    "number": issue["number"],
-                    "title": issue["title"],
-                    "url": issue["url"],
-                    "state": issue["state"],
-                    "score": round(score, 1),
-                }
+            scored.append(
+                (
+                    score,
+                    {
+                        "number": issue["number"],
+                        "title": issue["title"],
+                        "url": issue["url"],
+                        "state": issue["state"],
+                        "score": round(score, 1),
+                    },
+                )
             )
-    matches.sort(key=lambda m: -m["score"])
-    return matches[:max_results]
+    scored.sort(key=lambda item: -item[0])
+    return [match for _, match in scored[:max_results]]
 
 
 def main() -> None:

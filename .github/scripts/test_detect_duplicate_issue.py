@@ -25,6 +25,33 @@ def test_find_duplicates_filters_below_threshold_and_sorts_descending() -> None:
     assert matches[0]["score"] == 90.0
 
 
+def test_find_duplicates_ranks_by_raw_score_not_rounded_display_value() -> None:
+    others = [
+        {
+            "number": 1,
+            "title": "lower raw score, ties at 90.0 when rounded",
+            "url": "u1",
+            "state": "open",
+        },
+        {
+            "number": 2,
+            "title": "higher raw score, also ties at 90.0 when rounded",
+            "url": "u2",
+            "state": "open",
+        },
+        {"number": 3, "title": "clear top match", "url": "u3", "state": "open"},
+    ]
+    current_embedding = [1.0]
+    other_embeddings = [[0.9001], [0.9004], [0.95]]
+
+    matches = find_duplicates(
+        current_embedding, other_embeddings, others, threshold=0.5, max_results=2
+    )
+
+    assert [m["number"] for m in matches] == [3, 2]
+    assert matches[1]["score"] == 90.0
+
+
 def test_find_duplicates_respects_max_results() -> None:
     others = [
         {"number": i, "title": "t", "url": "u", "state": "open"} for i in range(5)
@@ -42,5 +69,6 @@ def test_find_duplicates_respects_max_results() -> None:
 if __name__ == "__main__":
     test_dot_product_matches_cosine_similarity_for_normalized_vectors()
     test_find_duplicates_filters_below_threshold_and_sorts_descending()
+    test_find_duplicates_ranks_by_raw_score_not_rounded_display_value()
     test_find_duplicates_respects_max_results()
     print("All tests passed.")
