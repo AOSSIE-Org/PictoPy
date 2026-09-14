@@ -338,7 +338,8 @@ def image_util_prepare_image_records(
                 latitude, longitude, captured_at = extractor.extract_all(metadata_json)
 
                 # Log GPS extraction results
-                if latitude and longitude:
+                # (0 is a valid coordinate, so test for None rather than truthiness)
+                if latitude is not None and longitude is not None:
                     logger.info(
                         f"GPS extracted for {os.path.basename(image_path)}: ({latitude}, {longitude})"
                     )
