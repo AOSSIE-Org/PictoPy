@@ -837,13 +837,8 @@ class TestFoldersAPI:
 
 
 class TestFolderPathPrefixMatching:
-    """Regression tests for case-insensitive folder prefix matching.
-
-    Guards against reintroducing ``PRAGMA case_sensitive_like = ON`` (see
-    issue #1346): the prefix query must keep using SQLite's default
-    case-insensitive ``LIKE`` so subfolders are still found on
-    case-insensitive filesystems (macOS/Windows).
-    """
+    # Case-sensitive LIKE (#1346) would miss subfolders on macOS and Windows,
+    # where the filesystem treats "Pics" and "pics" as the same folder.
 
     @pytest.fixture
     def folders_db(self):
@@ -892,14 +887,8 @@ class TestFolderPathPrefixMatching:
 
 
 class TestSharedConnectionLikeCaseSensitivity:
-    """Regression test for issue #1346 covering the shared connection helper.
-
-    ``db_get_folder_ids_by_path_prefix`` opens SQLite directly, so it never
-    exercises ``get_db_connection()``. No production query currently runs
-    ``LIKE`` through that shared helper, but this guards it directly so a
-    future ``PRAGMA case_sensitive_like = ON`` reintroduced there would be
-    caught even before any query starts relying on it.
-    """
+    # The prefix query above opens SQLite directly, so the shared helper needs
+    # its own guard before any LIKE query moves onto it.
 
     def test_like_is_case_insensitive_through_shared_connection(self):
         from app.database import connection as connection_module
