@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-14
+
+<!-- Auto-generated draft. Review and edit before merging. -->
+
+### Added
+- Consolidate PR Labeling Workflows & Fix and Improve Duplicate Issue Detection (#1530) by @rohan-pandeyy
+- Feat: Unify images and videos into a sortable Favorites gallery (#1527) by @rohan-pandeyy
+- fix(albums): align album detail header with AI Tagging page layout (#1517) by @akshajtiwari
+- feat: share an album from the desktop app (#1473) by @rohan-pandeyy
+- feat: protect a shared album with a password (#1471) by @rohan-pandeyy
+- Cropped Image-fix in addImagesCropDialog (#1466) by @Takitxt
+- Indexing works in parallel instead of series. (#1464) by @Takitxt
+- feat(ui): Prevent Face Collection from Pushing Tagged Images Below the Fold (#1457) by @akshajtiwari
+- fix: improve Model Manager window sizing and card layout (#1449) by @Akshit-Tyagi-05
+- feat(search): text-based multi-person face search (#1446) by @rohan-pandeyy
+- Folder management Loading state cleanup (#1443) by @Takitxt
+- Move memory settings into the settings page (#1438) by @rohan-pandeyy
+- fix(frontend): make viewer nav arrows visible in dark theme and disable at edges (#1432) by @sanskar-singh-2403
+- Feat/themed-scrollbar-and-tag-toggle (#1431) by @yellstales
+- Smart Memories - persisted, scored photo collections with a story viewer (#1430) by @rohan-pandeyy
+- fix: visibiliity of video player controls for bright video  (#1423) by @akshajtiwari
+- feat: extend AI tagging to video files via YouTube-style keyframe sampling (#1413) by @rohan-pandeyy
+- Implement Videos Page with Video Support (#1402) by @rohan-pandeyy
+- fix(face-clusters): remove stale clusters after folder deletion (#1023) (#1392) by @VanshajPoonia
+- Predefined Semantic Vocabulary layer with Cached AI Tags (#1389) by @rohan-pandeyy
+- Fix: Exclude CoreML provider for SigLIP2 sessions on macOS (#1386) by @rohan-pandeyy
+- Feat: Introduce SigLIP2 Embedding Infrastructure for Semantic Search (#1377) by @rohan-pandeyy
+- feat: add auto-start and minimize to tray feature (#1301) by @g-k-s-03
+- feat: implement albums feature with create, edit, delete, and image management UI (#610) by @SiddharthJiyani
+
+### Fixed
+- Consolidate PR Labeling Workflows & Fix and Improve Duplicate Issue Detection (#1530) by @rohan-pandeyy
+- Cropped Image-fix in addImagesCropDialog (#1466) by @Takitxt
+- Infinite "Searching by meaning..." loading state on back navigation and sequential searches fix (#1447) by @Takitxt
+- fix(models): serialize inference on shared SigLIP ONNX sessions (#1445) by @rohan-pandeyy
+- fix(backend): keep GPS coordinates of 0 during metadata extraction (#1425) by @prawnsgupta
+- Enhance Adaptive Face Clustering and Improve Face Collection Showcase (#1394) by @rohan-pandeyy
+- fix(face-clusters): remove stale clusters after folder deletion (#1023) (#1392) by @VanshajPoonia
+- fix: navbar disappears on scroll past one frame size window, only returns at top Issue#1383 (#1387) by @Takitxt
+- Fix: Exclude CoreML provider for SigLIP2 sessions on macOS (#1386) by @rohan-pandeyy
+- Automatically backfill semantic embeddings after model installation (#1382) by @rohan-pandeyy
+- Folder Appears Empty If AI Tagging Is Enabled Before Indexing Completes (#1380) by @Takitxt
+- fix(backend): resolve correct database path in reset_database.py (#1378) by @AbiramiR-27
+- fix(video-player): accessibility & controls-visibility UX for NetflixStylePlayer (#1333) (#1374) by @VanshajPoonia
+
+### Changed
+- docs: add backend API documentation (#1494) by @Yashu-svg
+- Documentation: Issue:1257 fix: download section alignment and remove link underlines in README (#1384) by @Takitxt
+- DOC: Update backend routes directory structure documentation (#1367) by @Dotify71
+
+### Other
+- fix: skip unchanged files when rescanning a folder (#1481) by @rohan-pandeyy
+- feat: share an album beyond the local network (#1478) by @rohan-pandeyy
+- feat: share an album over the local network (#1469) by @rohan-pandeyy
+- Convert a memory into an album, plus album sorting and grid updates (#1456) by @rohan-pandeyy
+- Fix review findings in the agent instructions (#1454) by @rohan-pandeyy
+- Albums: bug fixes and improvements (#1453) by @rohan-pandeyy
+- fix(ci): run lint on pull_request so fork PRs are actually linted (#1448) by @rohan-pandeyy
+- ci(lint): run lint checks without requiring maintainer approval (#1441) (#1442) by @VanshajPoonia
+- fix: normalize whitespace in search queries (#1437) by @Prince-ES
+- fix: show error dialog for duplicate folder addition (#1427) by @Prince-ES
+- Implementation of PFP uploads. (#1424) by @Takitxt
+- feat: add light theme support for Image Viewer and Video Viewer (#1421) by @sanskar-singh-2403
+- test(backend): add images DB coverage + lift videos/model tests to 100% (#1410) by @rohan-pandeyy
+- Add Agent Instructions to Codebase (#1408) by @rohan-pandeyy
+- test: add coverage for Model API endpoints (#1362) by @akshajtiwari
+- test: add database metadata and YOLO mapping coverage (#1343) by @priyanshunitr
+-  add database tests for albums and faces (#1238) (#1342) by @Mansi2007275
+- add test (#1341) by @NancyWei123
+- perf: add lazy loading and dynamic alt text to ImageCard (#1336) by @Dotify71
+
+
 ## [1.2.0] - 2026-07-16
 
 ### Added
