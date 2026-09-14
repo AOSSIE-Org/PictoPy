@@ -1,13 +1,17 @@
 import { imagesEndpoints } from '../apiEndpoints';
 import { apiClient } from '../axiosConfig';
 import { APIResponse } from '@/types/API';
-import { ScoredImage } from '@/types/Media';
+import { Image, ScoredImage } from '@/types/Media';
+
+export interface GetAllImagesResponse extends APIResponse {
+  data?: Image[];
+}
 
 export const fetchAllImages = async (
   tagged?: boolean,
-): Promise<APIResponse> => {
+): Promise<GetAllImagesResponse> => {
   const params = tagged !== undefined ? { tagged } : {};
-  const response = await apiClient.get<APIResponse>(
+  const response = await apiClient.get<GetAllImagesResponse>(
     imagesEndpoints.getAllImages,
     { params },
   );

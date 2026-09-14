@@ -30,6 +30,7 @@ class VideoRecord(TypedDict, total=False):
     isTagged: bool
     isFavourite: bool
     captured_at: Optional[datetime]
+    favouritedAt: Optional[datetime]
 
 
 def _connect() -> sqlite3.Connection:
@@ -56,6 +57,7 @@ def db_create_videos_table() -> None:
             isTagged BOOLEAN DEFAULT 0,
             isFavourite BOOLEAN DEFAULT 0,
             captured_at DATETIME,
+            favouritedAt DATETIME,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
     """
@@ -64,6 +66,13 @@ def db_create_videos_table() -> None:
     cursor.execute(
         "CREATE INDEX IF NOT EXISTS ix_videos_captured_at ON videos(captured_at)"
     )
+
+    # favouritedAt: when the video was last favourited (NULL if never, or
+    # pre-dates this column). Guarded ALTER because shipped databases predate
+    # it and CREATE IF NOT EXISTS won't add it.
+    cursor.execute("PRAGMA table_info(videos)")
+    if "favouritedAt" not in {row[1] for row in cursor.fetchall()}:
+        cursor.execute("ALTER TABLE videos ADD COLUMN favouritedAt DATETIME")
 
     conn.commit()
     conn.close()
@@ -120,7 +129,7 @@ def db_get_all_videos() -> List[dict]:
     try:
         cursor.execute(
             """
-            SELECT id, path, folder_id, thumbnailPath, metadata, isTagged, isFavourite, captured_at
+            SELECT id, path, folder_id, thumbnailPath, metadata, isTagged, isFavourite, captured_at, favouritedAt
             FROM videos
             ORDER BY path
             """
@@ -155,6 +164,7 @@ def _build_video_dicts(rows: List[Tuple]) -> List[dict]:
         is_tagged,
         is_favourite,
         captured_at,
+        favourited_at,
     ) in rows:
         videos.append(
             {
@@ -166,6 +176,7 @@ def _build_video_dicts(rows: List[Tuple]) -> List[dict]:
                 "isTagged": bool(is_tagged),
                 "isFavourite": bool(is_favourite),
                 "captured_at": captured_at if captured_at else None,
+                "favouritedAt": favourited_at if favourited_at else None,
                 "tags": tags_by_video.get(video_id) or None,
             }
         )
@@ -228,7 +239,7 @@ def db_get_videos_by_ids(video_ids: List[VideoId]) -> List[dict]:
             cursor.execute(
                 f"""
                 SELECT id, path, folder_id, thumbnailPath, metadata, isTagged,
-                       isFavourite, captured_at
+                       isFavourite, captured_at, favouritedAt
                 FROM videos
                 WHERE id IN ({placeholders})
                 """,
@@ -335,7 +346,11 @@ def db_toggle_video_favourite_status(video_id: str) -> bool:
         cursor.execute(
             """
             UPDATE videos
-            SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
+            SET favouritedAt = CASE
+                    WHEN isFavourite = 1 THEN favouritedAt
+                    ELSE CURRENT_TIMESTAMP
+                END,
+                isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
             WHERE id = ?
             """,
             (video_id,),

@@ -4,9 +4,10 @@ import {
   ChevronDown,
   Zap,
   Trash2,
-  Clapperboard,
+  Video,
   HardDrive,
   Sparkles,
+  ClockFading,
   Bell,
 } from 'lucide-react';
 
@@ -279,7 +280,7 @@ const UserPreferencesCard: React.FC = () => {
             className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg p-4 text-left transition-colors"
           >
             <div className="flex items-start gap-3">
-              <Clapperboard className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+              <Video className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
               <div className="space-y-1">
                 <span className="text-foreground text-sm font-medium">
                   Video Tagging
@@ -387,7 +388,7 @@ const UserPreferencesCard: React.FC = () => {
             className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg p-4 text-left transition-colors"
           >
             <div className="flex items-start gap-3">
-              <Sparkles className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+              <ClockFading className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
               <div className="space-y-1">
                 <span className="text-foreground text-sm font-medium">
                   Memories

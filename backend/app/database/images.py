@@ -40,6 +40,7 @@ class ImageRecord(TypedDict, total=False):
     latitude: Optional[float]
     longitude: Optional[float]
     captured_at: Optional[datetime]
+    favouritedAt: Optional[datetime]
 
 
 class UntaggedImageRecord(TypedDict):
@@ -89,6 +90,7 @@ def db_create_images_table() -> None:
             latitude REAL,
             longitude REAL,
             captured_at DATETIME,
+            favouritedAt DATETIME,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
     """
@@ -104,6 +106,12 @@ def db_create_images_table() -> None:
     cursor.execute(
         "CREATE INDEX IF NOT EXISTS ix_images_favourite_captured_at ON images(isFavourite, captured_at)"
     )
+
+    # Shipped databases predate favouritedAt and CREATE IF NOT EXISTS won't add
+    # it, so the ALTER is guarded. NULL means never favourited, or before this.
+    cursor.execute("PRAGMA table_info(images)")
+    if "favouritedAt" not in {row[1] for row in cursor.fetchall()}:
+        cursor.execute("ALTER TABLE images ADD COLUMN favouritedAt DATETIME")
 
     cursor.execute(
         """
@@ -189,17 +197,18 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
 
     try:
         query = """
-            SELECT 
-                i.id, 
-                i.path, 
-                i.folder_id, 
-                i.thumbnailPath, 
-                i.metadata, 
+            SELECT
+                i.id,
+                i.path,
+                i.folder_id,
+                i.thumbnailPath,
+                i.metadata,
                 i.isTagged,
                 i.isFavourite,
                 i.latitude,
                 i.longitude,
                 i.captured_at,
+                i.favouritedAt,
                 m.name as tag_name
             FROM images i
             LEFT JOIN image_classes_display ic ON i.id = ic.image_id
@@ -230,6 +239,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
             latitude,
             longitude,
             captured_at,
+            favourited_at,
             tag_name,
         ) in results:
             if image_id not in images_dict:
@@ -251,6 +261,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                     "captured_at": (
                         captured_at if captured_at else None
                     ),  # SQLite returns string
+                    "favouritedAt": favourited_at if favourited_at else None,
                     "tags": [],
                 }
 
@@ -578,7 +589,11 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         cursor.execute(
             """
             UPDATE images
-            SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
+            SET favouritedAt = CASE
+                    WHEN isFavourite = 1 THEN favouritedAt
+                    ELSE CURRENT_TIMESTAMP
+                END,
+                isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
             WHERE id = ?
             """,
             (image_id,),
@@ -632,7 +647,7 @@ def _group_image_rows_with_tags(
     rows: List[Tuple], images_dict: Dict[str, dict]
 ) -> None:
     """
-    Group flat image+tag join rows (the shared 11-column SELECT shape used by
+    Group flat image+tag join rows (the shared 12-column SELECT shape used by
     db_search_images_by_tag and db_get_images_by_ids) into images_dict, keyed
     by image_id, aggregating tag_name into a deduplicated "tags" list.
     Mutates images_dict in place so callers can accumulate across chunks.
@@ -648,6 +663,7 @@ def _group_image_rows_with_tags(
         latitude,
         longitude,
         captured_at,
+        favourited_at,
         tag_name_result,
     ) in rows:
         if image_id not in images_dict:
@@ -662,6 +678,7 @@ def _group_image_rows_with_tags(
                 "latitude": latitude,
                 "longitude": longitude,
                 "captured_at": captured_at if captured_at else None,
+                "favouritedAt": favourited_at if favourited_at else None,
                 "tags": [],
             }
 
@@ -700,6 +717,7 @@ def db_search_images_by_tag(tag_name: str) -> List[dict]:
                 i.latitude,
                 i.longitude,
                 i.captured_at,
+                i.favouritedAt,
                 m.name as tag_name
             FROM images i
             LEFT JOIN image_classes_display ic ON i.id = ic.image_id
@@ -758,6 +776,7 @@ def db_get_images_by_ids(image_ids: List[str]) -> List[dict]:
                     i.latitude,
                     i.longitude,
                     i.captured_at,
+                    i.favouritedAt,
                     m.name as tag_name
                 FROM images i
                 LEFT JOIN image_classes_display ic ON i.id = ic.image_id

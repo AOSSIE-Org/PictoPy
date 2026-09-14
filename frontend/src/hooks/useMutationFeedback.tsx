@@ -52,10 +52,13 @@ export const useMutationFeedback = (
 
   const { isPending, isSuccess, isError, error } = mutationState;
 
+  // The loader is global, so a call with showLoading: false must never touch it,
+  // or it would hide a loader a sibling call is still showing.
   useEffect(() => {
-    if (showLoading && isPending) {
+    if (!showLoading) return;
+    if (isPending) {
       dispatch(showLoader(loadingMessage));
-    } else if (!isPending) {
+    } else {
       dispatch(hideLoader());
     }
   }, [isPending, showLoading, loadingMessage, dispatch]);
