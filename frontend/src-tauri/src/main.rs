@@ -9,8 +9,6 @@ use tauri::path::BaseDirectory;
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, Window, WindowEvent};
 use tauri_plugin_autostart::ManagerExt;
-#[cfg(feature = "ci")]
-use tauri_plugin_shell::ShellExt;
 use tauri_plugin_store::StoreExt;
 
 const STORE_PATH: &str = "settings.json";
