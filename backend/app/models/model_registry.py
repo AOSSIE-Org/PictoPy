@@ -5,8 +5,14 @@ import os
 import sys
 from platformdirs import user_data_dir
 
-FeatureType = Literal["object_detection", "face_detection", "face_embedding"]
-TierType = Literal["nano", "small", "medium", "required"]
+FeatureType = Literal[
+    "object_detection",
+    "face_detection",
+    "face_embedding",
+    "semantic_vision",
+    "semantic_text",
+]
+TierType = Literal["nano", "small", "medium", "required", "manual", "semantic"]
 
 
 class ModelSpec(TypedDict):
@@ -75,6 +81,62 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
         feature="face_embedding",
         tier="required",
     ),
+    "siglip2_base_vision": ModelSpec(
+        filename="SigLIP2_Base_Vision.onnx",
+        url="https://github.com/AOSSIE-Org/PictoPy/releases/download/models-v1.0/SigLIP2_Base_Vision.onnx",
+        sha256="c5efd0fcbe0e700bd457f2ce4dde5c85b0ea8bb2b2b48948439d1b25c749845d",
+        size_mb=355,
+        feature="semantic_vision",
+        tier="semantic",
+    ),
+    "siglip2_base_text": ModelSpec(
+        filename="SigLIP2_Base_Text.onnx",
+        url="https://github.com/AOSSIE-Org/PictoPy/releases/download/models-v1.0/SigLIP2_Base_Text.onnx",
+        sha256="d9d3d199aea7584f215955074afae2aa0f79a618d8eb8b561c5fe6599fc9df35",
+        size_mb=1078,
+        feature="semantic_text",
+        tier="semantic",
+    ),
+    "siglip2_base_tokenizer": ModelSpec(
+        filename="SigLIP2_Base_Tokenizer.json",
+        url="https://github.com/AOSSIE-Org/PictoPy/releases/download/models-v1.0/SigLIP2_Base_Tokenizer.json",
+        sha256="caefd63119539a63be2d55ef3e05023fbb793948c4bda5bc0c366b42a382f903",
+        size_mb=32.8,
+        feature="semantic_text",
+        tier="semantic",
+    ),
+    "siglip2_large_vision": ModelSpec(
+        filename="SigLIP2_Large_Vision.onnx",
+        url="PLACEHOLDER_URL",  # TODO
+        sha256="PLACEHOLDER_SHA256",  # TODO
+        size_mb=0,  # TODO
+        feature="semantic_vision",
+        tier="medium",
+    ),
+    "siglip2_large_text": ModelSpec(
+        filename="SigLIP2_Large_Text.onnx",
+        url="PLACEHOLDER_URL",  # TODO
+        sha256="PLACEHOLDER_SHA256",  # TODO
+        size_mb=0,  # TODO
+        feature="semantic_text",
+        tier="medium",
+    ),
+    "siglip2_so400m_vision": ModelSpec(
+        filename="SigLIP2_SO400M_Vision.onnx",
+        url="PLACEHOLDER_URL",  # TODO
+        sha256="PLACEHOLDER_SHA256",  # TODO
+        size_mb=0,  # TODO
+        feature="semantic_vision",
+        tier="manual",
+    ),
+    "siglip2_so400m_text": ModelSpec(
+        filename="SigLIP2_SO400M_Text.onnx",
+        url="PLACEHOLDER_URL",  # TODO
+        sha256="PLACEHOLDER_SHA256",  # TODO
+        size_mb=0,  # TODO
+        feature="semantic_text",
+        tier="manual",
+    ),
 }
 
 TIER_MODELS: dict[str, list[str]] = {
@@ -82,6 +144,12 @@ TIER_MODELS: dict[str, list[str]] = {
     "small": ["yolo_small", "yolo_small_face"],
     "medium": ["yolo_medium", "yolo_medium_face"],
     "required": ["facenet"],  # Required model; not user-selectable
+    "manual": [],
+    "semantic": [
+        "siglip2_base_vision",
+        "siglip2_base_text",
+        "siglip2_base_tokenizer",
+    ],
 }
 
 USER_DATA_MODELS = os.path.join(user_data_dir("PictoPy"), "models")
@@ -114,3 +182,22 @@ def get_model_key_from_path(model_path: str) -> str | None:
         if spec["filename"].lower() == target_filename:
             return key
     return None
+
+
+def get_siglip2_registry_keys(checkpoint: str) -> tuple[str, str]:
+    """Map a SIGLIP2_ACTIVE_CHECKPOINT value ('base'|'large'|'so400m')
+    to its (vision_key, text_key) MODEL_REGISTRY entries."""
+    vision_key = f"siglip2_{checkpoint}_vision"
+    text_key = f"siglip2_{checkpoint}_text"
+    if vision_key not in MODEL_REGISTRY or text_key not in MODEL_REGISTRY:
+        raise ValueError(
+            f"Unknown SigLIP2 checkpoint keys for checkpoint: {checkpoint}"
+        )
+    return vision_key, text_key
+
+
+def get_siglip2_tokenizer_key(checkpoint: str) -> str:
+    key = f"siglip2_{checkpoint}_tokenizer"
+    if key not in MODEL_REGISTRY:
+        raise ValueError(f"Unknown SigLIP2 tokenizer key for checkpoint: {checkpoint}")
+    return key

@@ -20,6 +20,7 @@ describe('Page Sanity Tests', () => {
       await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
       });
+      await screen.findByRole('switch', { name: /launch at startup/i });
 
       expect(screen.getByText('Folder Management')).toBeInTheDocument();
       expect(screen.getByText('User Preferences')).toBeInTheDocument();

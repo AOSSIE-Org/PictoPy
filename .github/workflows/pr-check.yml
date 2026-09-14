@@ -1,0 +1,121 @@
+name: PR Check
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  linting:
+    runs-on: ubuntu-latest
+    name: Linting
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Markdown lint
+        uses: DavidAnson/markdownlint-cli2-action@v23
+        with:
+          config: .github/.markdownlint-cli2.jsonc
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Agent hook tests
+        run: node scripts/agent-format-hook.test.mjs
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Duplicate issue detector tests
+        run: |
+          cd .github/scripts
+          python test_detect_duplicate_issue.py
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci --ignore-scripts
+
+      - name: Install backend lint dependencies
+        run: |
+          cd backend
+          pip install -r requirements-lint.txt
+
+      - name: Run Linters
+        run: |
+          cd frontend
+          npm run lint:check
+          npm run format:check
+          cd ..
+          cd backend
+          pre-commit run --config ../.pre-commit-config.yaml --all-files || exit 1
+          cd ..
+          cd frontend/src-tauri
+          cargo fmt -- --check
+
+  # Frontend Test Job
+  frontend:
+    runs-on: ubuntu-latest
+    name: Frontend Tests
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install Dependencies & Run Tests
+        run: |
+          cd frontend
+          npm install
+          npm test
+
+  # Backend Test Job
+  backend:
+    runs-on: ubuntu-latest
+    name: Backend Tests
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build check(Main backend)
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pyinstaller main.py --name PictoPy_Server --onedir --distpath dist
+
+      - name: Build check(Sync Microservice)
+        run: |
+          cd sync-microservice
+          pip install -r requirements.txt
+          pyinstaller main.py --name PictoPy_Sync_Microservice --onedir --distpath dist
+
+      - name: Run Tests
+        run: |
+          cd backend
+          pytest

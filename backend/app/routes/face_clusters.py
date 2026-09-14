@@ -1,10 +1,11 @@
 import logging
 from binascii import Error as Base64Error
 import base64
+from concurrent.futures import CancelledError, Future, ProcessPoolExecutor
 from typing import Annotated
 import uuid
 import os
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.database.face_clusters import (
     db_get_cluster_by_id,
     db_update_cluster,
@@ -12,6 +13,9 @@ from app.database.face_clusters import (
     db_get_images_by_cluster_id,
     db_get_images_by_face_clusters,
 )
+from starlette.datastructures import State
+
+from app.routes.dependencies import get_state
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.schemas.face_clusters import (
     RenameClusterRequest,
@@ -38,12 +42,48 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _log_rescore_outcome(cluster_id: str, done: "Future[int]") -> None:
+    """
+    Report a rescore that died in the worker.
+
+    A submitted job's exception surfaces only through its Future, so without
+    this a failed rescore is silent. The rename itself already stands.
+    """
+    try:
+        done.result()
+    except CancelledError:
+        logger.info(f"Memory rescore for cluster {cluster_id} was cancelled")
+    except Exception:
+        logger.error(f"Memory rescore for cluster {cluster_id} failed", exc_info=True)
+
+
+def _rescore_memories_for_cluster(app_state: State, cluster_id: str) -> None:
+    """
+    Queue a rescore of memories containing this cluster.
+
+    Offloaded to the shared executor and swallowed on failure: renaming a
+    person must succeed whether or not memories can be refreshed.
+    """
+    try:
+        from app.utils.memory_curator import memory_curator_rescore_for_cluster
+
+        executor: ProcessPoolExecutor = app_state.executor
+        future = executor.submit(memory_curator_rescore_for_cluster, cluster_id)
+        future.add_done_callback(lambda done: _log_rescore_outcome(cluster_id, done))
+    except Exception as e:
+        logger.error(f"Failed to queue memory rescore for cluster {cluster_id}: {e}")
+
+
 @router.put(
     "/{cluster_id}",
     response_model=RenameClusterResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 404, 500]},
 )
-def rename_cluster(cluster_id: str, request: RenameClusterRequest):
+def rename_cluster(
+    cluster_id: str,
+    request: RenameClusterRequest,
+    app_state: State = Depends(get_state),
+):
     """Rename a face cluster by its ID."""
     try:
         # Step 1: Data Validation
@@ -80,6 +120,11 @@ def rename_cluster(cluster_id: str, request: RenameClusterRequest):
                     message=f"Failed to update cluster '{cluster_id}'.",
                 ).model_dump(),
             )
+
+        # Naming a person raises the known_people signal for every photo they
+        # appear in, so memories already holding those photos are now ranked
+        # on stale inputs.
+        _rescore_memories_for_cluster(app_state, cluster_id)
 
         return RenameClusterResponse(
             success=True,

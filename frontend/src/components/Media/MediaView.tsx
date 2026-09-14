@@ -172,7 +172,7 @@ export function MediaView({
   // console.log(currentImage);
   const currentImageAlt = `image-${currentViewIndex}`;
   return (
-    <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-gradient-to-b from-black/95 to-black/98 backdrop-blur-lg">
+    <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-gradient-to-b from-white/95 to-white/98 backdrop-blur-lg dark:from-black/95 dark:to-black/98">
       {/* Controls */}
       <MediaViewControls
         showInfo={showInfo}
@@ -208,6 +208,8 @@ export function MediaView({
         <NavigationButtons
           onPrevious={handlePreviousImage}
           onNext={handleNextImage}
+          disablePrevious={currentViewIndex <= 0}
+          disableNext={currentViewIndex >= images.length - 1}
         />
       </div>
 

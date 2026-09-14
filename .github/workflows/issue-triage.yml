@@ -1,0 +1,151 @@
+name: Issue Triage
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  welcome-comment:
+    if: |
+      github.event.issue.author_association != 'OWNER' &&
+      github.event.issue.author_association != 'MEMBER' &&
+      github.event.issue.author_association != 'COLLABORATOR'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Add comment to issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: "👋 Thanks for opening this issue! The maintainers will review it shortly. Till then, do not open any PR. This is a strict rule we like to follow around here :)"
+            })
+
+  detect-duplicates:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --no-cache-dir sentence-transformers
+
+      - name: Fetch upstream issues (AOSSIE-Org/PictoPy)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const issue = context.payload.issue;
+
+            const upstreamIssues = await github.paginate(
+              github.rest.issues.listForRepo,
+              {
+                owner: "AOSSIE-Org",
+                repo: "PictoPy",
+                state: "all",
+                per_page: 100
+              }
+            );
+
+            const data = {
+              current: {
+                number: issue.number,
+                title: issue.title,
+                body: issue.body || ""
+              },
+              others: upstreamIssues
+                .filter(i => !i.pull_request && i.number !== issue.number)
+                .map(i => ({
+                  number: i.number,
+                  title: i.title,
+                  body: i.body || "",
+                  url: i.html_url,
+                  state: i.state
+                }))
+            };
+
+            fs.writeFileSync("issues.json", JSON.stringify(data));
+
+      - name: Run semantic similarity analysis
+        run: python .github/scripts/detect_duplicate_issue.py issues.json matches.json
+
+      - name: Comment and soft-label in fork (non-blocking)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const matches = JSON.parse(fs.readFileSync("matches.json", "utf8"));
+
+            if (matches.length === 0) {
+              core.notice("No semantic duplicates found.");
+              return;
+            }
+
+            const list = matches.map(
+              (m, i) =>
+                `${i + 1}. **${m.title}** (#${m.number}, ${m.state})\n` +
+                `   ${m.url}\n` +
+                `   Similarity: ${m.score}%`
+            ).join("\n\n");
+
+            const safe = async (fn) => {
+              try { await fn(); }
+              catch (e) { core.notice(`Skipped write action: ${e.message}`); }
+            };
+
+            await safe(() =>
+              github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                body:
+                  `⚠️ **Potential Duplicate Issue (Semantic Match)**\n\n` +
+                  `This issue appears semantically similar to the following issues in AOSSIE-Org/PictoPy:\n\n` +
+                  `${list}\n\n` +
+                  `Please review before proceeding.`
+              })
+            );
+
+            const labelName = "possible-duplicate";
+
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: labelName
+              });
+            } catch (e) {
+              if (e.status === 404) {
+                await safe(() =>
+                  github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: labelName,
+                    color: "FBCA04",
+                    description: "Potential semantic duplicate (upstream comparison)"
+                  })
+                );
+              }
+            }
+
+            await safe(() =>
+              github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                labels: [labelName]
+              })
+            );

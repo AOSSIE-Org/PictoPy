@@ -19,6 +19,12 @@ const Main = () => {
   );
 };
 
+const searchParams = new URLSearchParams(window.location.search);
+const routeParam = searchParams.get('route');
+if (routeParam) {
+  window.history.replaceState({}, '', routeParam);
+}
+
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <Main />

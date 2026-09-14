@@ -4,7 +4,10 @@ import threading
 
 _active_sessions: dict[str, int] = {}
 _models_pending_deletion: set[str] = set()
-_registry_lock = threading.Lock()
+# RLock is required: routes/models.py's delete_model acquires this lock
+# and then calls try_mark_model_for_deletion, which re-acquires it on
+# the same thread. A plain Lock would self-deadlock in that case.
+_registry_lock = threading.RLock()
 
 
 def mark_model_session_active(model_key: str) -> None:

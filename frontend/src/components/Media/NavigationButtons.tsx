@@ -4,30 +4,54 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 interface NavigationButtonsProps {
   onPrevious: () => void;
   onNext: () => void;
+  previousLabel?: string;
+  nextLabel?: string;
+  disablePrevious?: boolean;
+  disableNext?: boolean;
 }
+
+const chipBase =
+  'flex items-center justify-center rounded-full bg-white/80 p-3 shadow-md backdrop-blur-md transition-all duration-200 dark:bg-black/50 dark:shadow-none';
+const chipHover =
+  'group-hover:bg-white group-hover:shadow-lg dark:group-hover:bg-black/70 dark:group-hover:shadow-lg';
 
 export const NavigationButtons: React.FC<NavigationButtonsProps> = ({
   onPrevious,
   onNext,
+  previousLabel = 'Previous image',
+  nextLabel = 'Next image',
+  disablePrevious = false,
+  disableNext = false,
 }) => {
+  // Full class strings so Tailwind's scanner keeps left-0/right-0 (no dynamic concat).
+  const buttonClasses = (disabled: boolean, position: string) =>
+    `absolute inset-y-0 ${position} z-30 flex w-20 items-center justify-center bg-transparent text-gray-800 dark:text-white ${
+      disabled ? 'cursor-not-allowed opacity-40' : 'group cursor-pointer'
+    }`;
+
+  const chipClasses = (disabled: boolean) =>
+    disabled ? chipBase : `${chipBase} ${chipHover}`;
+
   return (
     <>
       <button
         onClick={onPrevious}
-        className="group absolute inset-y-0 left-0 z-30 flex w-20 cursor-pointer items-center justify-center bg-transparent text-white"
-        aria-label="Previous image"
+        disabled={disablePrevious}
+        className={buttonClasses(disablePrevious, 'left-0')}
+        aria-label={previousLabel}
       >
-        <span className="flex items-center justify-center rounded-full p-3 backdrop-blur-md transition-all duration-200 group-hover:bg-black/80 group-hover:shadow-lg">
+        <span className={chipClasses(disablePrevious)}>
           <ChevronLeft className="h-6 w-6" />
         </span>
       </button>
 
       <button
         onClick={onNext}
-        className="group absolute inset-y-0 right-0 z-30 flex w-20 cursor-pointer items-center justify-center bg-transparent text-white"
-        aria-label="Next image"
+        disabled={disableNext}
+        className={buttonClasses(disableNext, 'right-0')}
+        aria-label={nextLabel}
       >
-        <span className="flex items-center justify-center rounded-full p-3 backdrop-blur-md transition-all duration-200 group-hover:bg-black/80 group-hover:shadow-lg">
+        <span className={chipClasses(disableNext)}>
           <ChevronRight className="h-6 w-6" />
         </span>
       </button>

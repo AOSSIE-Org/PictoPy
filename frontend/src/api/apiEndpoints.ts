@@ -1,6 +1,18 @@
 export const imagesEndpoints = {
   getAllImages: '/images/',
   setFavourite: '/images/toggle-favourite',
+  searchByTag: (tag: string) => `/images/search?tag=${encodeURIComponent(tag)}`,
+  semanticSearch: (query: string) =>
+    `/images/semantic-search?query=${encodeURIComponent(query)}`,
+};
+
+export const videosEndpoints = {
+  getAllVideos: '/videos/',
+  setFavourite: '/videos/toggle-favourite',
+  searchByTag: (tag: string) => `/videos/search?tag=${encodeURIComponent(tag)}`,
+  semanticSearch: (query: string) =>
+    `/videos/semantic-search?query=${encodeURIComponent(query)}`,
+  purgeFrameCache: '/videos/purge-frame-cache',
 };
 
 export const faceClustersEndpoints = {
@@ -32,9 +44,33 @@ export const healthEndpoints = {
   healthCheck: '/health',
 };
 
+export const albumsEndpoints = {
+  getAllAlbums: '/albums/',
+  getAlbumById: (albumId: string) => `/albums/${albumId}`,
+  createAlbum: '/albums/',
+  createAlbumFromMemory: '/albums/from-memory',
+  updateAlbum: (albumId: string) => `/albums/${albumId}`,
+  deleteAlbum: (albumId: string) => `/albums/${albumId}`,
+  addImagesToAlbum: (albumId: string) => `/albums/${albumId}/images`,
+  getAlbumImages: (albumId: string) => `/albums/${albumId}/images/get`,
+  removeImageFromAlbum: (albumId: string, imageId: string) =>
+    `/albums/${albumId}/images/${imageId}`,
+  removeMultipleImagesFromAlbum: (albumId: string) =>
+    `/albums/${albumId}/images`,
+};
+
+export const shareEndpoints = {
+  getShares: '/share/',
+  getInterfaces: '/share/interfaces',
+  createShare: (albumId: string) =>
+    `/share/albums/${encodeURIComponent(albumId)}`,
+  revokeShare: (token: string) => `/share/${encodeURIComponent(token)}`,
+};
+
 export const memoriesEndpoints = {
-  generate: '/api/memories/generate',
-  timeline: '/api/memories/timeline',
-  onThisDay: '/api/memories/on-this-day',
-  locations: '/api/memories/locations',
+  list: '/memories',
+  generate: '/memories/generate',
+  status: '/memories/status',
+  today: '/memories/today',
+  byId: (memoryId: string) => `/memories/${memoryId}`,
 };

@@ -1,0 +1,3462 @@
+{
+  "vocab_version": 1,
+  "notes": "Seed vocabulary v1 with authored descriptions. Derived from scripts/vocabulary/raw_candidates.json (Places365 + Open Images minus COCO-80) via hand-prune, plus hand-written event and attribute blocks. Descriptions are caption-shaped, lowercase, visually diagnostic; the label embedding is the renormalized mean of their text embeddings.",
+  "label_count": 395,
+  "labels": [
+    {
+      "name": "airplane cabin",
+      "category": "scene",
+      "descriptions": [
+        "rows of seats inside an airplane cabin",
+        "passengers seated in the aisle of a plane",
+        "the view down a narrow airplane aisle with overhead bins"
+      ]
+    },
+    {
+      "name": "airport terminal",
+      "category": "scene",
+      "descriptions": [
+        "travelers with luggage walking through an airport terminal",
+        "a departure hall with check in counters and flight boards",
+        "people waiting with suitcases near airport gates"
+      ]
+    },
+    {
+      "name": "alley",
+      "category": "scene",
+      "descriptions": [
+        "a narrow alley between old buildings",
+        "a dim back alley with brick walls",
+        "a cobbled lane squeezed between houses"
+      ]
+    },
+    {
+      "name": "amphitheater",
+      "category": "scene",
+      "descriptions": [
+        "an ancient stone amphitheater with tiered seating",
+        "curved rows of stone seats around an open stage",
+        "tourists walking among the ruins of a roman amphitheater"
+      ]
+    },
+    {
+      "name": "amusement park",
+      "category": "scene",
+      "descriptions": [
+        "a colorful amusement park with a ferris wheel and rides",
+        "people riding a roller coaster at a theme park",
+        "bright carnival rides and game stalls at an amusement park"
+      ]
+    },
+    {
+      "name": "apartment building",
+      "category": "scene",
+      "descriptions": [
+        "a tall apartment building with rows of balconies",
+        "the facade of a residential block with many windows",
+        "an apartment complex seen from the street"
+      ]
+    },
+    {
+      "name": "aquarium",
+      "category": "scene",
+      "descriptions": [
+        "people watching fish through a large aquarium tank window",
+        "colorful fish swimming in a glowing blue aquarium",
+        "a child pressing hands against glass at an aquarium"
+      ]
+    },
+    {
+      "name": "arcade",
+      "category": "scene",
+      "descriptions": [
+        "rows of glowing arcade game machines",
+        "people playing video games in a dark arcade",
+        "claw machines and arcade cabinets with bright screens"
+      ]
+    },
+    {
+      "name": "arena",
+      "category": "scene",
+      "descriptions": [
+        "a large indoor arena filled with spectators",
+        "bright lights over the floor of a sports arena",
+        "crowded stands surrounding an arena floor"
+      ]
+    },
+    {
+      "name": "art gallery",
+      "category": "scene",
+      "descriptions": [
+        "framed paintings hanging on white gallery walls",
+        "visitors looking at artwork in an art gallery",
+        "a bright exhibition room with pictures on the walls"
+      ]
+    },
+    {
+      "name": "art studio",
+      "category": "scene",
+      "descriptions": [
+        "an artist painting on a canvas at an easel",
+        "a messy studio with paint tubes and brushes",
+        "canvases and easels in a painters workspace"
+      ]
+    },
+    {
+      "name": "attic",
+      "category": "scene",
+      "descriptions": [
+        "a dusty attic with wooden beams and stored boxes",
+        "old furniture stored under a sloped attic roof",
+        "a cramped loft space lit by a small window"
+      ]
+    },
+    {
+      "name": "auditorium",
+      "category": "scene",
+      "descriptions": [
+        "rows of seats facing a stage in an auditorium",
+        "an audience seated in a large hall for a presentation",
+        "a speaker on stage in front of a seated crowd"
+      ]
+    },
+    {
+      "name": "backyard",
+      "category": "scene",
+      "descriptions": [
+        "a backyard with a lawn and a wooden fence",
+        "children playing on grass behind a house",
+        "a garden chair and plants in a home backyard"
+      ]
+    },
+    {
+      "name": "bakery",
+      "category": "scene",
+      "descriptions": [
+        "fresh loaves of bread on display in a bakery",
+        "shelves of pastries and cakes behind a bakery counter",
+        "a baker arranging baked goods in a shop"
+      ]
+    },
+    {
+      "name": "balcony",
+      "category": "scene",
+      "descriptions": [
+        "a view from a balcony with a railing",
+        "potted plants and chairs on a small balcony",
+        "a person leaning on a balcony railing overlooking the street"
+      ]
+    },
+    {
+      "name": "ball pit",
+      "category": "scene",
+      "descriptions": [
+        "a child playing in a pit full of colorful plastic balls",
+        "hundreds of bright plastic balls in a play area",
+        "kids jumping into a ball pit at a play center"
+      ]
+    },
+    {
+      "name": "ballroom",
+      "category": "scene",
+      "descriptions": [
+        "an ornate ballroom with chandeliers and a polished floor",
+        "couples dancing in a grand decorated hall",
+        "round tables set for an event in a ballroom"
+      ]
+    },
+    {
+      "name": "bamboo forest",
+      "category": "scene",
+      "descriptions": [
+        "a path through a dense bamboo forest",
+        "tall green bamboo stalks growing close together",
+        "sunlight filtering through a grove of bamboo"
+      ]
+    },
+    {
+      "name": "banquet hall",
+      "category": "scene",
+      "descriptions": [
+        "long tables set with dishes in a banquet hall",
+        "a decorated hall prepared for a wedding reception",
+        "guests dining at round tables under chandeliers"
+      ]
+    },
+    {
+      "name": "bar",
+      "category": "scene",
+      "descriptions": [
+        "bottles lined up behind a bar counter",
+        "a bartender pouring drinks at a bar",
+        "people sitting on stools at a counter with drinks"
+      ]
+    },
+    {
+      "name": "barn",
+      "category": "scene",
+      "descriptions": [
+        "a red wooden barn in a farm field",
+        "hay bales stacked inside a wooden barn",
+        "a rustic barn with large doors and a pitched roof"
+      ]
+    },
+    {
+      "name": "baseball field",
+      "category": "scene",
+      "descriptions": [
+        "a baseball diamond with dirt base paths and green grass",
+        "players on a baseball field during a game",
+        "a pitcher on the mound of a baseball field"
+      ]
+    },
+    {
+      "name": "basement",
+      "category": "scene",
+      "descriptions": [
+        "an unfinished basement with concrete walls and pipes",
+        "storage boxes and shelves in a dim basement",
+        "a cellar room below a house with low ceilings"
+      ]
+    },
+    {
+      "name": "basketball court",
+      "category": "scene",
+      "descriptions": [
+        "players shooting hoops on an indoor basketball court",
+        "a basketball hoop above a polished court floor",
+        "a marked court with players dribbling a basketball"
+      ]
+    },
+    {
+      "name": "bathroom",
+      "category": "scene",
+      "descriptions": [
+        "a bathroom with a sink mirror and toilet",
+        "white tiles and a bathtub in a clean bathroom",
+        "a modern bathroom with a glass shower"
+      ]
+    },
+    {
+      "name": "beach",
+      "category": "scene",
+      "descriptions": [
+        "a sandy beach where the ocean meets the shore",
+        "people relaxing on a beach on a sunny day",
+        "waves washing onto a sandy shoreline with footprints"
+      ]
+    },
+    {
+      "name": "beach house",
+      "category": "scene",
+      "descriptions": [
+        "a wooden house on stilts by the seashore",
+        "a cottage overlooking the beach and ocean",
+        "a seaside house with a deck facing the water"
+      ]
+    },
+    {
+      "name": "beauty salon",
+      "category": "scene",
+      "descriptions": [
+        "a hairdresser cutting hair in a salon chair",
+        "mirrors and styling chairs in a beauty salon",
+        "a woman getting her hair styled at a salon"
+      ]
+    },
+    {
+      "name": "bedroom",
+      "category": "scene",
+      "descriptions": [
+        "a bedroom with a neatly made bed and pillows",
+        "a cozy bedroom with a lamp on the nightstand",
+        "morning light falling on a bed in a bedroom"
+      ]
+    },
+    {
+      "name": "beer garden",
+      "category": "scene",
+      "descriptions": [
+        "people drinking beer at long wooden tables outdoors",
+        "an outdoor beer garden with benches under trees",
+        "friends raising beer mugs at an outdoor table"
+      ]
+    },
+    {
+      "name": "boardwalk",
+      "category": "scene",
+      "descriptions": [
+        "a wooden boardwalk along the beach",
+        "people strolling on a boardwalk by the sea",
+        "a long wooden walkway over sand and dunes"
+      ]
+    },
+    {
+      "name": "boat deck",
+      "category": "scene",
+      "descriptions": [
+        "passengers standing on the deck of a boat at sea",
+        "the wooden deck of a ship with railings and ocean views",
+        "people enjoying the breeze on a cruise ship deck"
+      ]
+    },
+    {
+      "name": "bookstore",
+      "category": "scene",
+      "descriptions": [
+        "shelves packed with books in a bookstore",
+        "a person browsing books in a book shop",
+        "stacks of books on display tables in a store"
+      ]
+    },
+    {
+      "name": "botanical garden",
+      "category": "scene",
+      "descriptions": [
+        "flower beds and labeled plants in a botanical garden",
+        "visitors walking among exotic plants in a glasshouse",
+        "manicured garden paths lined with flowers and trees"
+      ]
+    },
+    {
+      "name": "bowling alley",
+      "category": "scene",
+      "descriptions": [
+        "polished bowling lanes with pins at the end",
+        "a person throwing a bowling ball down a lane",
+        "glowing lanes and seating at a bowling alley"
+      ]
+    },
+    {
+      "name": "boxing ring",
+      "category": "scene",
+      "descriptions": [
+        "two boxers fighting in a roped boxing ring",
+        "a boxing ring with red and blue corner posts",
+        "a fighter training in a gym boxing ring"
+      ]
+    },
+    {
+      "name": "bridge",
+      "category": "scene",
+      "descriptions": [
+        "a long bridge spanning across a river",
+        "a suspension bridge with tall towers and cables",
+        "cars crossing a bridge over water"
+      ]
+    },
+    {
+      "name": "butcher shop",
+      "category": "scene",
+      "descriptions": [
+        "cuts of meat displayed in a butcher shop counter",
+        "a butcher slicing meat behind a glass case",
+        "sausages and meat hanging in a butchery"
+      ]
+    },
+    {
+      "name": "cabin",
+      "category": "scene",
+      "descriptions": [
+        "a log cabin in the woods",
+        "a small wooden cabin surrounded by trees",
+        "a rustic timber cottage with a chimney in the forest"
+      ]
+    },
+    {
+      "name": "cafeteria",
+      "category": "scene",
+      "descriptions": [
+        "people eating at long tables in a cafeteria",
+        "trays of food at a self service cafeteria counter",
+        "a school canteen with students having lunch"
+      ]
+    },
+    {
+      "name": "campsite",
+      "category": "scene",
+      "descriptions": [
+        "tents pitched at a campsite in the woods",
+        "camping chairs around a fire pit at a campsite",
+        "a campground with tents and a picnic table"
+      ]
+    },
+    {
+      "name": "campus",
+      "category": "scene",
+      "descriptions": [
+        "students walking between university buildings",
+        "a college campus with lawns and academic halls",
+        "a university quad with students and trees"
+      ]
+    },
+    {
+      "name": "canal",
+      "category": "scene",
+      "descriptions": [
+        "boats moving along a canal between buildings",
+        "a narrow waterway lined with old houses",
+        "a canal with arched bridges crossing it"
+      ]
+    },
+    {
+      "name": "candy store",
+      "category": "scene",
+      "descriptions": [
+        "jars of colorful sweets in a candy store",
+        "shelves of lollipops and chocolates in a sweet shop",
+        "a display of candies in bright wrappers"
+      ]
+    },
+    {
+      "name": "canyon",
+      "category": "scene",
+      "descriptions": [
+        "steep red rock walls of a deep canyon",
+        "a river winding at the bottom of a canyon",
+        "layered rock cliffs carved into a gorge"
+      ]
+    },
+    {
+      "name": "carousel",
+      "category": "scene",
+      "descriptions": [
+        "a carousel with painted horses spinning at a fair",
+        "children riding a colorful merry go round",
+        "the lights of a carousel turning at dusk"
+      ]
+    },
+    {
+      "name": "castle",
+      "category": "scene",
+      "descriptions": [
+        "a medieval stone castle with towers and battlements",
+        "a fortress castle on a hilltop",
+        "the walls and turrets of an old castle"
+      ]
+    },
+    {
+      "name": "cave",
+      "category": "scene",
+      "descriptions": [
+        "the dark entrance of a rocky cave",
+        "stalactites hanging inside a limestone cave",
+        "a person exploring a cavern with a light"
+      ]
+    },
+    {
+      "name": "cemetery",
+      "category": "scene",
+      "descriptions": [
+        "rows of gravestones in a quiet cemetery",
+        "old tombstones under trees in a graveyard",
+        "flowers laid on graves in a cemetery"
+      ]
+    },
+    {
+      "name": "church",
+      "category": "scene",
+      "descriptions": [
+        "a church with a steeple and arched windows",
+        "wooden pews and a stained glass window inside a church",
+        "the altar and nave of an old church"
+      ]
+    },
+    {
+      "name": "city",
+      "category": "scene",
+      "descriptions": [
+        "a downtown skyline of tall city buildings",
+        "busy streets and skyscrapers in a big city",
+        "a city viewed from above with dense buildings"
+      ]
+    },
+    {
+      "name": "classroom",
+      "category": "scene",
+      "descriptions": [
+        "students sitting at desks in a classroom",
+        "a whiteboard and rows of desks in a school room",
+        "a teacher writing on a board in front of students"
+      ]
+    },
+    {
+      "name": "cliff",
+      "category": "scene",
+      "descriptions": [
+        "a steep rocky cliff dropping to the sea",
+        "a person standing at the edge of a high cliff",
+        "sheer rock cliffs along a coastline"
+      ]
+    },
+    {
+      "name": "closet",
+      "category": "scene",
+      "descriptions": [
+        "clothes hanging on rails inside a closet",
+        "shelves of folded clothes and shoes in a wardrobe",
+        "an organized walk in closet with hangers"
+      ]
+    },
+    {
+      "name": "clothing store",
+      "category": "scene",
+      "descriptions": [
+        "racks of clothes in a fashion store",
+        "mannequins displaying outfits in a clothing shop",
+        "a person browsing garments on store racks"
+      ]
+    },
+    {
+      "name": "coast",
+      "category": "scene",
+      "descriptions": [
+        "a rocky coastline with waves crashing on rocks",
+        "a winding shoreline seen from above",
+        "cliffs and sea meeting along a rugged coast"
+      ]
+    },
+    {
+      "name": "cockpit",
+      "category": "scene",
+      "descriptions": [
+        "the instrument panel and controls of an airplane cockpit",
+        "pilots seated at the controls of an aircraft",
+        "switches and screens inside a plane cockpit"
+      ]
+    },
+    {
+      "name": "coffee shop",
+      "category": "scene",
+      "descriptions": [
+        "people drinking coffee at small cafe tables",
+        "a barista making coffee behind a cafe counter",
+        "a cozy coffee shop with cups and pastries"
+      ]
+    },
+    {
+      "name": "conference room",
+      "category": "scene",
+      "descriptions": [
+        "a long table with chairs in a meeting room",
+        "colleagues in a meeting around a conference table",
+        "a presentation screen in a corporate meeting room"
+      ]
+    },
+    {
+      "name": "construction site",
+      "category": "scene",
+      "descriptions": [
+        "cranes and scaffolding at a construction site",
+        "workers in hard hats on a building site",
+        "concrete and steel framework of an unfinished building"
+      ]
+    },
+    {
+      "name": "convenience store",
+      "category": "scene",
+      "descriptions": [
+        "shelves of snacks and drinks in a small convenience store",
+        "a brightly lit corner store with packed shelves",
+        "refrigerated drink cases in a mini mart"
+      ]
+    },
+    {
+      "name": "cottage",
+      "category": "scene",
+      "descriptions": [
+        "a small cottage with a garden and flowers",
+        "a quaint stone cottage with a thatched roof",
+        "a charming little house in the countryside"
+      ]
+    },
+    {
+      "name": "courtyard",
+      "category": "scene",
+      "descriptions": [
+        "an inner courtyard surrounded by building walls",
+        "a paved courtyard with plants and a fountain",
+        "an open patio enclosed by arched walkways"
+      ]
+    },
+    {
+      "name": "creek",
+      "category": "scene",
+      "descriptions": [
+        "a small creek flowing over rocks",
+        "a shallow stream running through the woods",
+        "clear water trickling along a narrow brook"
+      ]
+    },
+    {
+      "name": "dam",
+      "category": "scene",
+      "descriptions": [
+        "a massive concrete dam holding back a reservoir",
+        "water spilling down the face of a dam",
+        "a hydroelectric dam across a river valley"
+      ]
+    },
+    {
+      "name": "desert",
+      "category": "scene",
+      "descriptions": [
+        "rolling sand dunes in a vast desert",
+        "a dry desert landscape with sparse cactus plants",
+        "cracked earth and sand stretching to the horizon"
+      ]
+    },
+    {
+      "name": "dining room",
+      "category": "scene",
+      "descriptions": [
+        "a dining table set with plates and chairs",
+        "a family eating dinner at a dining room table",
+        "a chandelier above a wooden dining table"
+      ]
+    },
+    {
+      "name": "driveway",
+      "category": "scene",
+      "descriptions": [
+        "a car parked on a driveway in front of a house",
+        "a paved driveway leading to a garage",
+        "a concrete drive beside a front lawn"
+      ]
+    },
+    {
+      "name": "elevator",
+      "category": "scene",
+      "descriptions": [
+        "the metal doors of an elevator in a hallway",
+        "buttons and mirrors inside an elevator car",
+        "people standing inside a lift"
+      ]
+    },
+    {
+      "name": "escalator",
+      "category": "scene",
+      "descriptions": [
+        "moving escalator steps in a shopping center",
+        "people riding an escalator between floors",
+        "parallel escalators going up and down"
+      ]
+    },
+    {
+      "name": "farm",
+      "category": "scene",
+      "descriptions": [
+        "a farmhouse and fields on a rural farm",
+        "tractors and crops on farmland",
+        "farm animals grazing near a barn"
+      ]
+    },
+    {
+      "name": "field",
+      "category": "scene",
+      "descriptions": [
+        "a wide open grassy field under the sky",
+        "tall grass swaying in an open meadow",
+        "a green field stretching to the horizon"
+      ]
+    },
+    {
+      "name": "fire station",
+      "category": "scene",
+      "descriptions": [
+        "a red fire truck parked in a fire station",
+        "the garage bays of a firehouse",
+        "firefighters and equipment at a fire station"
+      ]
+    },
+    {
+      "name": "flea market",
+      "category": "scene",
+      "descriptions": [
+        "stalls of secondhand goods at a flea market",
+        "people browsing antiques at an outdoor market",
+        "tables piled with used items for sale"
+      ]
+    },
+    {
+      "name": "flower shop",
+      "category": "scene",
+      "descriptions": [
+        "buckets of fresh flowers in a florist shop",
+        "a florist arranging a bouquet",
+        "colorful flower bouquets on display for sale"
+      ]
+    },
+    {
+      "name": "football field",
+      "category": "scene",
+      "descriptions": [
+        "a striped football field with goalposts",
+        "players on a floodlit football pitch",
+        "a stadium field marked with yard lines"
+      ]
+    },
+    {
+      "name": "forest",
+      "category": "scene",
+      "descriptions": [
+        "tall trees in a dense green forest",
+        "sunlight filtering through the forest canopy",
+        "a trail winding between mossy trees in the woods"
+      ]
+    },
+    {
+      "name": "fountain",
+      "category": "scene",
+      "descriptions": [
+        "water spraying from a stone fountain in a plaza",
+        "an ornate fountain with sculpted figures",
+        "a round fountain with jets of water"
+      ]
+    },
+    {
+      "name": "garage",
+      "category": "scene",
+      "descriptions": [
+        "a car parked inside a home garage",
+        "tools and shelves along a garage wall",
+        "an open garage door with storage inside"
+      ]
+    },
+    {
+      "name": "garden",
+      "category": "scene",
+      "descriptions": [
+        "a garden with blooming flower beds",
+        "a person watering plants in a home garden",
+        "green shrubs and flowers along a garden path"
+      ]
+    },
+    {
+      "name": "gas station",
+      "category": "scene",
+      "descriptions": [
+        "fuel pumps under the canopy of a gas station",
+        "a car being refueled at a petrol station",
+        "a gas station with price signs and pumps"
+      ]
+    },
+    {
+      "name": "gazebo",
+      "category": "scene",
+      "descriptions": [
+        "a white gazebo in the middle of a garden",
+        "an open sided pavilion with a pointed roof",
+        "a wooden gazebo with benches inside"
+      ]
+    },
+    {
+      "name": "gift shop",
+      "category": "scene",
+      "descriptions": [
+        "souvenirs and trinkets displayed in a gift shop",
+        "shelves of mugs and keepsakes in a souvenir store",
+        "postcards and gifts on display racks"
+      ]
+    },
+    {
+      "name": "glacier",
+      "category": "scene",
+      "descriptions": [
+        "a massive glacier flowing between mountains",
+        "blue ice walls of a glacier",
+        "cracked glacial ice stretching down a valley"
+      ]
+    },
+    {
+      "name": "golf course",
+      "category": "scene",
+      "descriptions": [
+        "manicured green fairways of a golf course",
+        "a golfer swinging a club on a green",
+        "sand bunkers and flags on a golf course"
+      ]
+    },
+    {
+      "name": "greenhouse",
+      "category": "scene",
+      "descriptions": [
+        "rows of plants growing inside a glass greenhouse",
+        "sunlight streaming into a greenhouse full of seedlings",
+        "a glass house with potted plants on benches"
+      ]
+    },
+    {
+      "name": "gym",
+      "category": "scene",
+      "descriptions": [
+        "exercise machines and weights in a gym",
+        "people working out with dumbbells at a fitness center",
+        "treadmills lined up in a fitness gym"
+      ]
+    },
+    {
+      "name": "hallway",
+      "category": "scene",
+      "descriptions": [
+        "a long hallway with doors on both sides",
+        "an empty corridor with overhead lights",
+        "a narrow passage inside a building"
+      ]
+    },
+    {
+      "name": "harbor",
+      "category": "scene",
+      "descriptions": [
+        "boats moored in a harbor at the waterfront",
+        "sailboats and yachts docked at a marina",
+        "fishing boats tied up along a harbor quay"
+      ]
+    },
+    {
+      "name": "highway",
+      "category": "scene",
+      "descriptions": [
+        "cars driving down a multi lane highway",
+        "a long straight freeway stretching into the distance",
+        "highway lanes with traffic and road signs"
+      ]
+    },
+    {
+      "name": "home office",
+      "category": "scene",
+      "descriptions": [
+        "a desk with a computer in a home office",
+        "a person working at a desk in a study room",
+        "bookshelves and a laptop in a home workspace"
+      ]
+    },
+    {
+      "name": "home theater",
+      "category": "scene",
+      "descriptions": [
+        "a large screen and recliner seats in a home theater",
+        "a dark room with a projector screen and sofas",
+        "a movie playing on a big home cinema screen"
+      ]
+    },
+    {
+      "name": "hospital",
+      "category": "scene",
+      "descriptions": [
+        "the exterior of a hospital building with an entrance sign",
+        "nurses and a corridor inside a hospital",
+        "a hospital lobby with wheelchairs and staff"
+      ]
+    },
+    {
+      "name": "hospital room",
+      "category": "scene",
+      "descriptions": [
+        "a patient in a hospital bed with monitors",
+        "medical equipment beside a hospital bed",
+        "a white hospital room with an iv stand"
+      ]
+    },
+    {
+      "name": "hot spring",
+      "category": "scene",
+      "descriptions": [
+        "steam rising from a natural hot spring pool",
+        "people bathing in a rocky thermal spring",
+        "a turquoise geothermal pool with steam"
+      ]
+    },
+    {
+      "name": "hot tub",
+      "category": "scene",
+      "descriptions": [
+        "people relaxing in a bubbling hot tub",
+        "a steaming jacuzzi with jets of water",
+        "a round spa tub on a wooden deck"
+      ]
+    },
+    {
+      "name": "hotel",
+      "category": "scene",
+      "descriptions": [
+        "the entrance and sign of a hotel building",
+        "a grand hotel facade with many windows",
+        "a resort hotel with palm trees at the entrance"
+      ]
+    },
+    {
+      "name": "hotel room",
+      "category": "scene",
+      "descriptions": [
+        "a hotel room with a large bed and lamps",
+        "neatly arranged twin beds in a hotel room",
+        "a suitcase on the bed of a tidy hotel room"
+      ]
+    },
+    {
+      "name": "house",
+      "category": "scene",
+      "descriptions": [
+        "a family house with a front yard",
+        "a two story home with a driveway",
+        "a suburban house with a porch and garden"
+      ]
+    },
+    {
+      "name": "ice rink",
+      "category": "scene",
+      "descriptions": [
+        "people ice skating on a rink",
+        "a smooth ice rink surrounded by barriers",
+        "skaters gliding across an ice skating rink"
+      ]
+    },
+    {
+      "name": "iceberg",
+      "category": "scene",
+      "descriptions": [
+        "a huge iceberg floating in cold water",
+        "a white and blue iceberg against a gray sea",
+        "chunks of ice drifting near a large iceberg"
+      ]
+    },
+    {
+      "name": "igloo",
+      "category": "scene",
+      "descriptions": [
+        "a dome shaped igloo built from snow blocks",
+        "an igloo on a snowy plain",
+        "the entrance tunnel of a snow igloo"
+      ]
+    },
+    {
+      "name": "island",
+      "category": "scene",
+      "descriptions": [
+        "a small green island surrounded by blue sea",
+        "a tropical island with palm trees and beaches",
+        "an island seen from the air amid turquoise water"
+      ]
+    },
+    {
+      "name": "japanese garden",
+      "category": "scene",
+      "descriptions": [
+        "a japanese garden with a red bridge and koi pond",
+        "raked gravel and stone lanterns in a zen garden",
+        "manicured bonsai trees and a wooden tea house"
+      ]
+    },
+    {
+      "name": "kitchen",
+      "category": "scene",
+      "descriptions": [
+        "a kitchen with cabinets stove and counters",
+        "someone cooking at a kitchen counter",
+        "pots and utensils in a home kitchen"
+      ]
+    },
+    {
+      "name": "laboratory",
+      "category": "scene",
+      "descriptions": [
+        "scientists working with equipment in a laboratory",
+        "test tubes and instruments on a lab bench",
+        "a researcher in a white coat using lab apparatus"
+      ]
+    },
+    {
+      "name": "lake",
+      "category": "scene",
+      "descriptions": [
+        "a calm lake surrounded by trees",
+        "still lake water reflecting the mountains",
+        "a wooden dock extending into a quiet lake"
+      ]
+    },
+    {
+      "name": "laundromat",
+      "category": "scene",
+      "descriptions": [
+        "rows of washing machines in a laundromat",
+        "a person loading laundry into a machine",
+        "coin operated dryers along a laundromat wall"
+      ]
+    },
+    {
+      "name": "library",
+      "category": "scene",
+      "descriptions": [
+        "tall shelves of books in a library",
+        "people reading at tables in a quiet library",
+        "aisles of bookshelves under library lighting"
+      ]
+    },
+    {
+      "name": "lighthouse",
+      "category": "scene",
+      "descriptions": [
+        "a lighthouse standing on a rocky shore",
+        "a striped lighthouse tower against the sky",
+        "a lighthouse beacon overlooking the sea"
+      ]
+    },
+    {
+      "name": "living room",
+      "category": "scene",
+      "descriptions": [
+        "a living room with a sofa and coffee table",
+        "a family relaxing on couches in a living room",
+        "a tv and cushions in a cozy lounge room"
+      ]
+    },
+    {
+      "name": "lobby",
+      "category": "scene",
+      "descriptions": [
+        "a spacious hotel lobby with seating and a front desk",
+        "people checking in at a reception counter",
+        "a marble floored entrance hall of a building"
+      ]
+    },
+    {
+      "name": "mansion",
+      "category": "scene",
+      "descriptions": [
+        "a grand mansion with columns and manicured grounds",
+        "a huge luxury house with many windows",
+        "an elegant estate home behind iron gates"
+      ]
+    },
+    {
+      "name": "market",
+      "category": "scene",
+      "descriptions": [
+        "stalls piled with fresh produce at a market",
+        "vendors selling fruits and vegetables at a street market",
+        "a busy bazaar with goods on display"
+      ]
+    },
+    {
+      "name": "mosque",
+      "category": "scene",
+      "descriptions": [
+        "a mosque with domes and tall minarets",
+        "the ornate arched interior of a mosque",
+        "worshippers praying in rows inside a mosque"
+      ]
+    },
+    {
+      "name": "mountain",
+      "category": "scene",
+      "descriptions": [
+        "a tall mountain peak against the sky",
+        "rocky mountain slopes rising above a valley",
+        "a hiker looking at distant mountain ranges"
+      ]
+    },
+    {
+      "name": "movie theater",
+      "category": "scene",
+      "descriptions": [
+        "rows of red seats facing a cinema screen",
+        "an audience watching a film in a dark theater",
+        "a large movie screen glowing in a cinema hall"
+      ]
+    },
+    {
+      "name": "museum",
+      "category": "scene",
+      "descriptions": [
+        "exhibits displayed in glass cases at a museum",
+        "visitors viewing displays in a museum hall",
+        "sculptures and artifacts in a museum gallery"
+      ]
+    },
+    {
+      "name": "music studio",
+      "category": "scene",
+      "descriptions": [
+        "a mixing console and monitors in a recording studio",
+        "a singer recording behind a studio microphone",
+        "soundproof panels and instruments in a music studio"
+      ]
+    },
+    {
+      "name": "nightclub",
+      "category": "scene",
+      "descriptions": [
+        "people dancing under colorful lights in a nightclub",
+        "a dj performing at a crowded club",
+        "laser lights and a packed dance floor"
+      ]
+    },
+    {
+      "name": "nursery",
+      "category": "scene",
+      "descriptions": [
+        "a baby crib in a softly decorated nursery",
+        "pastel walls and toys in a baby room",
+        "a rocking chair beside a crib in a nursery"
+      ]
+    },
+    {
+      "name": "ocean",
+      "category": "scene",
+      "descriptions": [
+        "open ocean waves stretching to the horizon",
+        "deep blue sea water with rolling swells",
+        "sunlight sparkling on the surface of the sea"
+      ]
+    },
+    {
+      "name": "office",
+      "category": "scene",
+      "descriptions": [
+        "desks with computers in an office",
+        "coworkers at workstations in an open office",
+        "a tidy office desk with a monitor and papers"
+      ]
+    },
+    {
+      "name": "office building",
+      "category": "scene",
+      "descriptions": [
+        "a tall glass office building downtown",
+        "the mirrored facade of a corporate tower",
+        "an office block with rows of windows"
+      ]
+    },
+    {
+      "name": "orchard",
+      "category": "scene",
+      "descriptions": [
+        "rows of fruit trees in an orchard",
+        "apples ripening on trees in an orchard",
+        "a person picking fruit from an orchard tree"
+      ]
+    },
+    {
+      "name": "pagoda",
+      "category": "scene",
+      "descriptions": [
+        "a multi tiered pagoda tower with curved roofs",
+        "an asian pagoda temple among trees",
+        "a red pagoda rising above a garden"
+      ]
+    },
+    {
+      "name": "palace",
+      "category": "scene",
+      "descriptions": [
+        "an ornate palace with gilded decoration",
+        "a grand royal palace with sprawling courtyards",
+        "the lavish facade of a historic palace"
+      ]
+    },
+    {
+      "name": "pantry",
+      "category": "scene",
+      "descriptions": [
+        "shelves stocked with jars and cans in a pantry",
+        "organized food containers in a kitchen pantry",
+        "a narrow storage room lined with groceries"
+      ]
+    },
+    {
+      "name": "park",
+      "category": "scene",
+      "descriptions": [
+        "a public park with lawns and walking paths",
+        "people relaxing on benches under park trees",
+        "a green city park on a sunny day"
+      ]
+    },
+    {
+      "name": "parking lot",
+      "category": "scene",
+      "descriptions": [
+        "rows of parked cars in a parking lot",
+        "an outdoor car park with painted lines",
+        "a half empty parking area beside a building"
+      ]
+    },
+    {
+      "name": "pasture",
+      "category": "scene",
+      "descriptions": [
+        "cows grazing in a green pasture",
+        "a fenced meadow with livestock",
+        "rolling grassland dotted with grazing animals"
+      ]
+    },
+    {
+      "name": "patio",
+      "category": "scene",
+      "descriptions": [
+        "an outdoor patio with chairs and a table",
+        "a paved terrace with potted plants",
+        "people dining outside on a patio"
+      ]
+    },
+    {
+      "name": "pharmacy",
+      "category": "scene",
+      "descriptions": [
+        "shelves of medicine boxes in a pharmacy",
+        "a pharmacist at the counter of a drug store",
+        "rows of health products in a chemist shop"
+      ]
+    },
+    {
+      "name": "phone booth",
+      "category": "scene",
+      "descriptions": [
+        "a red telephone booth on a street corner",
+        "an old public phone box on the sidewalk",
+        "a glass phone booth with a telephone inside"
+      ]
+    },
+    {
+      "name": "pier",
+      "category": "scene",
+      "descriptions": [
+        "a long wooden pier stretching over the sea",
+        "people walking along a pier at the shore",
+        "wooden pilings of a pier above the waves"
+      ]
+    },
+    {
+      "name": "playground",
+      "category": "scene",
+      "descriptions": [
+        "children playing on slides and swings at a playground",
+        "a colorful playground with climbing frames",
+        "kids on a jungle gym in a play area"
+      ]
+    },
+    {
+      "name": "playroom",
+      "category": "scene",
+      "descriptions": [
+        "toys scattered across a childrens playroom",
+        "a bright room with toy shelves and a play mat",
+        "kids playing with blocks in a playroom"
+      ]
+    },
+    {
+      "name": "plaza",
+      "category": "scene",
+      "descriptions": [
+        "a wide open city square with people walking",
+        "a paved plaza surrounded by historic buildings",
+        "pigeons and pedestrians in a town square"
+      ]
+    },
+    {
+      "name": "pond",
+      "category": "scene",
+      "descriptions": [
+        "a small pond with lily pads",
+        "ducks swimming on a garden pond",
+        "still green water of a quiet pond"
+      ]
+    },
+    {
+      "name": "porch",
+      "category": "scene",
+      "descriptions": [
+        "a front porch with rocking chairs",
+        "a wooden veranda attached to a house",
+        "steps leading up to a covered porch"
+      ]
+    },
+    {
+      "name": "racetrack",
+      "category": "scene",
+      "descriptions": [
+        "race cars speeding around a racetrack",
+        "horses racing on an oval track",
+        "the curved asphalt of a racing circuit"
+      ]
+    },
+    {
+      "name": "railroad track",
+      "category": "scene",
+      "descriptions": [
+        "steel railroad tracks stretching into the distance",
+        "railway lines crossing wooden sleepers",
+        "train tracks curving through the landscape"
+      ]
+    },
+    {
+      "name": "rainforest",
+      "category": "scene",
+      "descriptions": [
+        "dense green rainforest with hanging vines",
+        "a misty jungle thick with tropical plants",
+        "huge leaves and ferns in a humid rainforest"
+      ]
+    },
+    {
+      "name": "residential neighborhood",
+      "category": "scene",
+      "descriptions": [
+        "a quiet street lined with family homes",
+        "rows of houses in a suburban neighborhood",
+        "sidewalks and front yards along a residential street"
+      ]
+    },
+    {
+      "name": "restaurant",
+      "category": "scene",
+      "descriptions": [
+        "diners eating at tables in a restaurant",
+        "a waiter serving food in a restaurant",
+        "set tables and ambient lighting in a dining venue"
+      ]
+    },
+    {
+      "name": "rice paddy",
+      "category": "scene",
+      "descriptions": [
+        "terraced rice paddies on a green hillside",
+        "farmers working in a flooded rice field",
+        "young rice plants growing in water covered fields"
+      ]
+    },
+    {
+      "name": "river",
+      "category": "scene",
+      "descriptions": [
+        "a wide river flowing through the landscape",
+        "a river winding between banks of trees",
+        "boats floating down a calm river"
+      ]
+    },
+    {
+      "name": "rock arch",
+      "category": "scene",
+      "descriptions": [
+        "a natural rock arch carved by erosion",
+        "a sandstone arch against the desert sky",
+        "a stone arch formation over a trail"
+      ]
+    },
+    {
+      "name": "ruins",
+      "category": "scene",
+      "descriptions": [
+        "crumbling stone ruins of an ancient building",
+        "broken columns at an archaeological site",
+        "tourists exploring weathered ancient ruins"
+      ]
+    },
+    {
+      "name": "runway",
+      "category": "scene",
+      "descriptions": [
+        "an airplane taking off from an airport runway",
+        "a long paved runway with markings",
+        "a jet taxiing on the tarmac"
+      ]
+    },
+    {
+      "name": "sandbox",
+      "category": "scene",
+      "descriptions": [
+        "a child playing with buckets in a sandbox",
+        "toys in the sand of a play sandbox",
+        "kids digging in a sandpit at a playground"
+      ]
+    },
+    {
+      "name": "sauna",
+      "category": "scene",
+      "descriptions": [
+        "wooden benches inside a steamy sauna",
+        "people relaxing in a hot wooden sauna",
+        "steam rising over sauna stones"
+      ]
+    },
+    {
+      "name": "shed",
+      "category": "scene",
+      "descriptions": [
+        "a small garden shed with tools inside",
+        "a wooden storage shed in a backyard",
+        "rakes and pots stored in a garden hut"
+      ]
+    },
+    {
+      "name": "shopping mall",
+      "category": "scene",
+      "descriptions": [
+        "shoppers walking through a bright shopping mall",
+        "multiple floors of stores inside a mall atrium",
+        "storefronts and escalators in a shopping center"
+      ]
+    },
+    {
+      "name": "shower",
+      "category": "scene",
+      "descriptions": [
+        "water spraying from a shower head",
+        "a glass shower stall with steam",
+        "a tiled shower with running water"
+      ]
+    },
+    {
+      "name": "ski resort",
+      "category": "scene",
+      "descriptions": [
+        "ski lodges and lifts at a snowy ski resort",
+        "skiers gathering at the base of a ski slope",
+        "chairlifts rising over groomed ski runs"
+      ]
+    },
+    {
+      "name": "sky",
+      "category": "scene",
+      "descriptions": [
+        "a wide blue sky with scattered clouds",
+        "the open sky stretching above the horizon",
+        "a bright clear sky on a sunny day"
+      ]
+    },
+    {
+      "name": "skyscraper",
+      "category": "scene",
+      "descriptions": [
+        "a glass skyscraper towering into the sky",
+        "looking up at a tall high rise building",
+        "skyscrapers forming a city skyline"
+      ]
+    },
+    {
+      "name": "snowfield",
+      "category": "scene",
+      "descriptions": [
+        "a wide field completely covered in snow",
+        "untouched white snow stretching to the horizon",
+        "footprints crossing a snowy plain"
+      ]
+    },
+    {
+      "name": "snowy mountain",
+      "category": "scene",
+      "descriptions": [
+        "a mountain peak covered in snow",
+        "snowcapped mountains under a clear sky",
+        "white slopes of a snowy mountain range"
+      ]
+    },
+    {
+      "name": "soccer field",
+      "category": "scene",
+      "descriptions": [
+        "players on a green soccer pitch with goals",
+        "a soccer field with white boundary lines",
+        "kids playing football on a grass field"
+      ]
+    },
+    {
+      "name": "stable",
+      "category": "scene",
+      "descriptions": [
+        "horses standing in stalls inside a stable",
+        "a horse looking out over a stable door",
+        "hay and saddles in a horse barn"
+      ]
+    },
+    {
+      "name": "stadium",
+      "category": "scene",
+      "descriptions": [
+        "a packed stadium with tiers of spectators",
+        "floodlights over a large sports stadium",
+        "fans filling the stands of an arena bowl"
+      ]
+    },
+    {
+      "name": "stage",
+      "category": "scene",
+      "descriptions": [
+        "performers under spotlights on a stage",
+        "a theater stage with curtains and lighting",
+        "musicians performing on a concert stage"
+      ]
+    },
+    {
+      "name": "staircase",
+      "category": "scene",
+      "descriptions": [
+        "a winding staircase with a wooden railing",
+        "stone steps of a spiral staircase",
+        "a grand staircase inside a building"
+      ]
+    },
+    {
+      "name": "storefront",
+      "category": "scene",
+      "descriptions": [
+        "the glass front window of a small shop",
+        "a store entrance with signs and displays",
+        "shop windows along a commercial street"
+      ]
+    },
+    {
+      "name": "street",
+      "category": "scene",
+      "descriptions": [
+        "a city street with shops and pedestrians",
+        "cars and people moving along a busy street",
+        "a quiet street lined with lampposts"
+      ]
+    },
+    {
+      "name": "subway station",
+      "category": "scene",
+      "descriptions": [
+        "passengers waiting on a subway platform",
+        "a metro train arriving at an underground station",
+        "tiled walls and tracks of a subway stop"
+      ]
+    },
+    {
+      "name": "supermarket",
+      "category": "scene",
+      "descriptions": [
+        "aisles of groceries in a supermarket",
+        "a shopping cart in front of stocked store shelves",
+        "people shopping in a grocery store"
+      ]
+    },
+    {
+      "name": "swamp",
+      "category": "scene",
+      "descriptions": [
+        "murky water and trees in a swamp",
+        "mangrove roots rising from swampy water",
+        "mist over a marshy wetland"
+      ]
+    },
+    {
+      "name": "swimming pool",
+      "category": "scene",
+      "descriptions": [
+        "clear blue water of a swimming pool",
+        "people swimming laps in a pool",
+        "sun loungers beside an outdoor pool"
+      ]
+    },
+    {
+      "name": "synagogue",
+      "category": "scene",
+      "descriptions": [
+        "the ornate interior of a synagogue",
+        "a synagogue with arched windows and a dome",
+        "rows of seats facing the ark in a synagogue"
+      ]
+    },
+    {
+      "name": "temple",
+      "category": "scene",
+      "descriptions": [
+        "an ornate temple with carved stone towers",
+        "worshippers at a traditional asian temple",
+        "incense burning at a temple shrine"
+      ]
+    },
+    {
+      "name": "tower",
+      "category": "scene",
+      "descriptions": [
+        "a tall historic tower rising above the city",
+        "a famous landmark tower against the sky",
+        "a stone tower overlooking the surroundings"
+      ]
+    },
+    {
+      "name": "toy store",
+      "category": "scene",
+      "descriptions": [
+        "shelves packed with toys in a toy store",
+        "stuffed animals and games on display in a shop",
+        "a child looking at toys in a toy shop aisle"
+      ]
+    },
+    {
+      "name": "train station",
+      "category": "scene",
+      "descriptions": [
+        "a train waiting at a station platform",
+        "passengers boarding a train at a railway station",
+        "the arched roof of a grand train station"
+      ]
+    },
+    {
+      "name": "tree house",
+      "category": "scene",
+      "descriptions": [
+        "a wooden tree house built among branches",
+        "a ladder leading up to a tree house",
+        "children playing in a house built in a tree"
+      ]
+    },
+    {
+      "name": "tundra",
+      "category": "scene",
+      "descriptions": [
+        "flat treeless tundra stretching to the horizon",
+        "low arctic vegetation on a cold plain",
+        "a barren northern landscape under gray sky"
+      ]
+    },
+    {
+      "name": "underwater",
+      "category": "scene",
+      "descriptions": [
+        "an underwater view of fish and coral",
+        "sun rays shining down through the sea",
+        "a diver photographing life under the surface"
+      ]
+    },
+    {
+      "name": "valley",
+      "category": "scene",
+      "descriptions": [
+        "a green valley between rolling hills",
+        "a river running through a wide valley",
+        "farmland spread across a mountain valley"
+      ]
+    },
+    {
+      "name": "vegetable garden",
+      "category": "scene",
+      "descriptions": [
+        "rows of vegetables growing in a garden plot",
+        "tomato and lettuce plants in raised beds",
+        "a person tending vegetable rows in a garden"
+      ]
+    },
+    {
+      "name": "village",
+      "category": "scene",
+      "descriptions": [
+        "small houses clustered in a rural village",
+        "a quiet village lane with old cottages",
+        "a hillside village with tiled roofs"
+      ]
+    },
+    {
+      "name": "vineyard",
+      "category": "scene",
+      "descriptions": [
+        "rows of grapevines stretching across a vineyard",
+        "ripe grapes hanging on vines in a vineyard",
+        "rolling hills covered with grape vines"
+      ]
+    },
+    {
+      "name": "volcano",
+      "category": "scene",
+      "descriptions": [
+        "a volcanic cone with a crater at the top",
+        "smoke rising from an active volcano",
+        "lava rock slopes of a volcano"
+      ]
+    },
+    {
+      "name": "volleyball court",
+      "category": "scene",
+      "descriptions": [
+        "players jumping at the net on a volleyball court",
+        "a beach volleyball net on the sand",
+        "people playing volleyball over a net"
+      ]
+    },
+    {
+      "name": "waiting room",
+      "category": "scene",
+      "descriptions": [
+        "people sitting in chairs in a waiting room",
+        "rows of seats in a clinic waiting area",
+        "magazines on a table in a waiting lounge"
+      ]
+    },
+    {
+      "name": "water park",
+      "category": "scene",
+      "descriptions": [
+        "colorful water slides at a water park",
+        "people splashing in a wave pool",
+        "twisting slides above swimming pools at a water park"
+      ]
+    },
+    {
+      "name": "waterfall",
+      "category": "scene",
+      "descriptions": [
+        "a waterfall cascading over rocks",
+        "white water plunging into a pool below",
+        "mist rising at the base of a tall waterfall"
+      ]
+    },
+    {
+      "name": "wave",
+      "category": "scene",
+      "descriptions": [
+        "a large ocean wave curling and breaking",
+        "white foam of waves crashing on the shore",
+        "a big wave rising in the open sea"
+      ]
+    },
+    {
+      "name": "wheat field",
+      "category": "scene",
+      "descriptions": [
+        "golden wheat swaying in a field",
+        "ripe grain stalks under a summer sky",
+        "a farm field of golden wheat at harvest"
+      ]
+    },
+    {
+      "name": "wind farm",
+      "category": "scene",
+      "descriptions": [
+        "rows of wind turbines on open hills",
+        "tall white windmill turbines generating power",
+        "wind turbines spinning against the sky"
+      ]
+    },
+    {
+      "name": "windmill",
+      "category": "scene",
+      "descriptions": [
+        "an old wooden windmill with large blades",
+        "a traditional dutch windmill in a field",
+        "a stone windmill turning in the wind"
+      ]
+    },
+    {
+      "name": "zoo",
+      "category": "scene",
+      "descriptions": [
+        "visitors watching animals in zoo enclosures",
+        "animals behind fences at a zoo exhibit",
+        "families walking between animal habitats at a zoo"
+      ]
+    },
+    {
+      "name": "alpaca",
+      "category": "object",
+      "descriptions": [
+        "a fluffy alpaca standing in a field",
+        "an alpaca with a long neck and woolly coat"
+      ]
+    },
+    {
+      "name": "antelope",
+      "category": "object",
+      "descriptions": [
+        "an antelope with curved horns on a grassland",
+        "a herd of antelope grazing on a savanna"
+      ]
+    },
+    {
+      "name": "balloon",
+      "category": "object",
+      "descriptions": [
+        "colorful balloons floating on strings",
+        "a bunch of helium balloons at a celebration",
+        "a hot air balloon drifting in the sky"
+      ]
+    },
+    {
+      "name": "bathtub",
+      "category": "object",
+      "descriptions": [
+        "a white bathtub with a faucet in a bathroom",
+        "a bubble bath filled tub",
+        "a freestanding bathtub on a tiled floor"
+      ]
+    },
+    {
+      "name": "bee",
+      "category": "object",
+      "descriptions": [
+        "a bee collecting pollen from a flower",
+        "a close view of a honeybee on a blossom"
+      ]
+    },
+    {
+      "name": "beehive",
+      "category": "object",
+      "descriptions": [
+        "wooden beehive boxes in a field",
+        "bees swarming around a hive"
+      ]
+    },
+    {
+      "name": "beer",
+      "category": "object",
+      "descriptions": [
+        "a glass of beer with a foamy head",
+        "friends clinking beer mugs together",
+        "a cold beer bottle on a table"
+      ]
+    },
+    {
+      "name": "bookshelf",
+      "category": "object",
+      "descriptions": [
+        "a bookshelf filled with rows of books",
+        "wooden shelves stacked with colorful book spines"
+      ]
+    },
+    {
+      "name": "bread",
+      "category": "object",
+      "descriptions": [
+        "a fresh loaf of crusty bread",
+        "sliced bread on a cutting board",
+        "baked bread rolls in a basket"
+      ]
+    },
+    {
+      "name": "butterfly",
+      "category": "object",
+      "descriptions": [
+        "a butterfly with colorful wings on a flower",
+        "a monarch butterfly resting with wings spread"
+      ]
+    },
+    {
+      "name": "camel",
+      "category": "object",
+      "descriptions": [
+        "a camel with a hump standing in the desert",
+        "people riding camels across sand dunes"
+      ]
+    },
+    {
+      "name": "camera",
+      "category": "object",
+      "descriptions": [
+        "a dslr camera with a large lens",
+        "a person holding a camera up to take a photo",
+        "a vintage film camera on a table"
+      ]
+    },
+    {
+      "name": "candle",
+      "category": "object",
+      "descriptions": [
+        "a lit candle with a glowing flame",
+        "several candles burning in a dark room",
+        "a decorative candle on a holder"
+      ]
+    },
+    {
+      "name": "candy",
+      "category": "object",
+      "descriptions": [
+        "colorful wrapped candies in a pile",
+        "gummy sweets and lollipops",
+        "a jar full of assorted candy"
+      ]
+    },
+    {
+      "name": "canoe",
+      "category": "object",
+      "descriptions": [
+        "a canoe gliding across a calm lake",
+        "a wooden canoe pulled up on the shore",
+        "people paddling a canoe on a river"
+      ]
+    },
+    {
+      "name": "cheese",
+      "category": "object",
+      "descriptions": [
+        "wedges of cheese on a wooden board",
+        "a platter of assorted cheeses"
+      ]
+    },
+    {
+      "name": "cheetah",
+      "category": "object",
+      "descriptions": [
+        "a cheetah with spotted fur standing alert",
+        "a cheetah sprinting across a grassland"
+      ]
+    },
+    {
+      "name": "cherry blossom",
+      "category": "object",
+      "descriptions": [
+        "pink cherry blossom flowers on tree branches",
+        "cherry trees in full bloom along a path",
+        "petals falling from blossoming cherry trees"
+      ]
+    },
+    {
+      "name": "chicken",
+      "category": "object",
+      "descriptions": [
+        "a hen pecking at the ground",
+        "chickens in a farmyard coop",
+        "a rooster with red comb standing in a yard"
+      ]
+    },
+    {
+      "name": "christmas tree",
+      "category": "object",
+      "descriptions": [
+        "a decorated christmas tree with lights and ornaments",
+        "presents under a christmas tree",
+        "a star on top of a lit christmas tree"
+      ]
+    },
+    {
+      "name": "cocktail",
+      "category": "object",
+      "descriptions": [
+        "a colorful cocktail with a garnish in a glass",
+        "cocktails served with straws and fruit slices",
+        "a martini glass with a mixed drink"
+      ]
+    },
+    {
+      "name": "coconut",
+      "category": "object",
+      "descriptions": [
+        "a coconut cut open showing white flesh",
+        "coconuts hanging on a palm tree",
+        "a coconut drink with a straw"
+      ]
+    },
+    {
+      "name": "coffee",
+      "category": "object",
+      "descriptions": [
+        "a cup of coffee with latte art",
+        "steam rising from a mug of hot coffee",
+        "an espresso cup on a saucer"
+      ]
+    },
+    {
+      "name": "cookie",
+      "category": "object",
+      "descriptions": [
+        "chocolate chip cookies on a plate",
+        "freshly baked cookies cooling on a rack"
+      ]
+    },
+    {
+      "name": "crab",
+      "category": "object",
+      "descriptions": [
+        "a crab with claws on wet sand",
+        "a red crab walking on the beach"
+      ]
+    },
+    {
+      "name": "crib",
+      "category": "object",
+      "descriptions": [
+        "a baby sleeping in a wooden crib",
+        "a crib with soft bedding in a nursery"
+      ]
+    },
+    {
+      "name": "crocodile",
+      "category": "object",
+      "descriptions": [
+        "a crocodile lying at the edge of the water",
+        "the open jaws of a large crocodile"
+      ]
+    },
+    {
+      "name": "deer",
+      "category": "object",
+      "descriptions": [
+        "a deer with antlers standing in a forest clearing",
+        "a doe and fawn grazing at the forest edge"
+      ]
+    },
+    {
+      "name": "dessert",
+      "category": "object",
+      "descriptions": [
+        "a plated dessert with cream and fruit",
+        "a slice of layered cake on a plate",
+        "sweet pastries and puddings on a table"
+      ]
+    },
+    {
+      "name": "dinosaur",
+      "category": "object",
+      "descriptions": [
+        "a dinosaur skeleton displayed in a museum",
+        "a life size dinosaur model with sharp teeth",
+        "a toy dinosaur figure"
+      ]
+    },
+    {
+      "name": "dolphin",
+      "category": "object",
+      "descriptions": [
+        "a dolphin leaping out of the sea",
+        "dolphins swimming alongside a boat"
+      ]
+    },
+    {
+      "name": "dress",
+      "category": "object",
+      "descriptions": [
+        "a woman wearing an elegant long dress",
+        "a colorful summer dress on a hanger",
+        "a flowing gown worn at a formal event"
+      ]
+    },
+    {
+      "name": "drum",
+      "category": "object",
+      "descriptions": [
+        "a drummer playing a drum kit",
+        "hands beating a traditional drum"
+      ]
+    },
+    {
+      "name": "duck",
+      "category": "object",
+      "descriptions": [
+        "a duck floating on a pond",
+        "a mother duck with ducklings in a row"
+      ]
+    },
+    {
+      "name": "dumbbell",
+      "category": "object",
+      "descriptions": [
+        "a rack of dumbbells at a gym",
+        "a person lifting a dumbbell during a workout"
+      ]
+    },
+    {
+      "name": "eagle",
+      "category": "object",
+      "descriptions": [
+        "an eagle soaring with wings spread wide",
+        "a bald eagle perched on a branch"
+      ]
+    },
+    {
+      "name": "egg",
+      "category": "object",
+      "descriptions": [
+        "fried eggs in a pan",
+        "a carton of white eggs",
+        "boiled eggs cut in half"
+      ]
+    },
+    {
+      "name": "fireplace",
+      "category": "object",
+      "descriptions": [
+        "logs burning in a brick fireplace",
+        "a cozy living room fireplace with flames",
+        "stockings hung over a mantel with a fire below"
+      ]
+    },
+    {
+      "name": "fish",
+      "category": "object",
+      "descriptions": [
+        "a colorful fish swimming in clear water",
+        "a school of fish underwater",
+        "a freshly caught fish held up"
+      ]
+    },
+    {
+      "name": "flag",
+      "category": "object",
+      "descriptions": [
+        "a flag waving on a flagpole",
+        "a national flag fluttering in the wind"
+      ]
+    },
+    {
+      "name": "flower",
+      "category": "object",
+      "descriptions": [
+        "a colorful flower in full bloom",
+        "a bouquet of fresh flowers",
+        "wildflowers blooming in a field"
+      ]
+    },
+    {
+      "name": "flute",
+      "category": "object",
+      "descriptions": [
+        "a person playing a silver flute",
+        "a flute held sideways during a performance"
+      ]
+    },
+    {
+      "name": "fox",
+      "category": "object",
+      "descriptions": [
+        "a red fox with a bushy tail in the wild",
+        "a fox walking through snow"
+      ]
+    },
+    {
+      "name": "french fries",
+      "category": "object",
+      "descriptions": [
+        "golden french fries in a paper container",
+        "crispy fries with ketchup on the side"
+      ]
+    },
+    {
+      "name": "frog",
+      "category": "object",
+      "descriptions": [
+        "a green frog sitting on a lily pad",
+        "a close view of a frog with bulging eyes"
+      ]
+    },
+    {
+      "name": "fruit",
+      "category": "object",
+      "descriptions": [
+        "a bowl of mixed fresh fruit",
+        "assorted fruits displayed at a market",
+        "sliced tropical fruits on a plate"
+      ]
+    },
+    {
+      "name": "glasses",
+      "category": "object",
+      "descriptions": [
+        "a pair of eyeglasses folded on a table",
+        "a person wearing round reading glasses"
+      ]
+    },
+    {
+      "name": "goat",
+      "category": "object",
+      "descriptions": [
+        "a goat with horns standing on rocks",
+        "goats grazing on a hillside"
+      ]
+    },
+    {
+      "name": "gondola",
+      "category": "object",
+      "descriptions": [
+        "a gondolier rowing a gondola down a canal",
+        "black gondola boats moored in venice"
+      ]
+    },
+    {
+      "name": "grape",
+      "category": "object",
+      "descriptions": [
+        "a bunch of purple grapes on the vine",
+        "green grapes in a bowl"
+      ]
+    },
+    {
+      "name": "guitar",
+      "category": "object",
+      "descriptions": [
+        "a person strumming an acoustic guitar",
+        "an electric guitar on a stand",
+        "hands playing chords on a guitar neck"
+      ]
+    },
+    {
+      "name": "hamburger",
+      "category": "object",
+      "descriptions": [
+        "a hamburger with lettuce and cheese in a bun",
+        "a juicy burger served with fries"
+      ]
+    },
+    {
+      "name": "hamster",
+      "category": "object",
+      "descriptions": [
+        "a hamster stuffing food into its cheeks",
+        "a small hamster in a cage with bedding"
+      ]
+    },
+    {
+      "name": "hat",
+      "category": "object",
+      "descriptions": [
+        "a person wearing a wide brimmed hat",
+        "a straw hat resting on a chair",
+        "a knitted winter hat with a pompom"
+      ]
+    },
+    {
+      "name": "headphones",
+      "category": "object",
+      "descriptions": [
+        "a person wearing large over ear headphones",
+        "headphones resting around someone's neck"
+      ]
+    },
+    {
+      "name": "hedgehog",
+      "category": "object",
+      "descriptions": [
+        "a small hedgehog with spines curled up",
+        "a hedgehog walking through grass"
+      ]
+    },
+    {
+      "name": "helicopter",
+      "category": "object",
+      "descriptions": [
+        "a helicopter hovering with spinning rotors",
+        "a helicopter landing on a helipad"
+      ]
+    },
+    {
+      "name": "helmet",
+      "category": "object",
+      "descriptions": [
+        "a person wearing a safety helmet",
+        "a motorcycle helmet resting on a seat"
+      ]
+    },
+    {
+      "name": "high heels",
+      "category": "object",
+      "descriptions": [
+        "a pair of high heeled shoes",
+        "a woman walking in stiletto heels"
+      ]
+    },
+    {
+      "name": "hippopotamus",
+      "category": "object",
+      "descriptions": [
+        "a hippo submerged in water with eyes showing",
+        "a hippopotamus with a huge open mouth"
+      ]
+    },
+    {
+      "name": "ice cream",
+      "category": "object",
+      "descriptions": [
+        "scoops of ice cream in a waffle cone",
+        "a sundae with ice cream and toppings",
+        "a child licking an ice cream cone"
+      ]
+    },
+    {
+      "name": "jellyfish",
+      "category": "object",
+      "descriptions": [
+        "a translucent jellyfish drifting in dark water",
+        "glowing jellyfish with trailing tentacles"
+      ]
+    },
+    {
+      "name": "jet ski",
+      "category": "object",
+      "descriptions": [
+        "a person riding a jet ski across the water",
+        "a jet ski spraying water at speed"
+      ]
+    },
+    {
+      "name": "kangaroo",
+      "category": "object",
+      "descriptions": [
+        "a kangaroo standing upright in the outback",
+        "a kangaroo hopping with a joey in its pouch"
+      ]
+    },
+    {
+      "name": "koala",
+      "category": "object",
+      "descriptions": [
+        "a koala clinging to a eucalyptus tree",
+        "a sleepy koala resting on a branch"
+      ]
+    },
+    {
+      "name": "ladybug",
+      "category": "object",
+      "descriptions": [
+        "a red ladybug with black spots on a leaf",
+        "a ladybug crawling along a plant stem"
+      ]
+    },
+    {
+      "name": "lantern",
+      "category": "object",
+      "descriptions": [
+        "a glowing paper lantern hanging at night",
+        "an old metal lantern with a candle inside",
+        "rows of festive lanterns strung overhead"
+      ]
+    },
+    {
+      "name": "lemon",
+      "category": "object",
+      "descriptions": [
+        "bright yellow lemons with green leaves",
+        "lemon slices beside a glass of lemonade"
+      ]
+    },
+    {
+      "name": "leopard",
+      "category": "object",
+      "descriptions": [
+        "a leopard with spotted fur lying on a branch",
+        "a leopard prowling through tall grass"
+      ]
+    },
+    {
+      "name": "life jacket",
+      "category": "object",
+      "descriptions": [
+        "a person wearing an orange life jacket on a boat",
+        "life vests hanging in a row"
+      ]
+    },
+    {
+      "name": "limousine",
+      "category": "object",
+      "descriptions": [
+        "a long stretch limousine parked at an event",
+        "a black limo waiting outside a venue"
+      ]
+    },
+    {
+      "name": "lion",
+      "category": "object",
+      "descriptions": [
+        "a male lion with a thick mane",
+        "a lioness resting in the savanna grass",
+        "a lion lying on a rock at a wildlife park"
+      ]
+    },
+    {
+      "name": "lizard",
+      "category": "object",
+      "descriptions": [
+        "a lizard basking on a warm rock",
+        "a green lizard clinging to a branch"
+      ]
+    },
+    {
+      "name": "lobster",
+      "category": "object",
+      "descriptions": [
+        "a red lobster with large claws on a plate",
+        "a live lobster in a tank"
+      ]
+    },
+    {
+      "name": "mango",
+      "category": "object",
+      "descriptions": [
+        "ripe yellow mangoes in a basket",
+        "sliced mango showing orange flesh"
+      ]
+    },
+    {
+      "name": "microphone",
+      "category": "object",
+      "descriptions": [
+        "a singer holding a microphone on stage",
+        "a studio microphone on a stand"
+      ]
+    },
+    {
+      "name": "mirror",
+      "category": "object",
+      "descriptions": [
+        "a framed mirror hanging on a wall",
+        "a person's reflection in a bathroom mirror"
+      ]
+    },
+    {
+      "name": "monkey",
+      "category": "object",
+      "descriptions": [
+        "a monkey sitting on a tree branch",
+        "a monkey eating fruit with its hands",
+        "monkeys grooming each other"
+      ]
+    },
+    {
+      "name": "mushroom",
+      "category": "object",
+      "descriptions": [
+        "wild mushrooms growing on the forest floor",
+        "a red capped mushroom among fallen leaves"
+      ]
+    },
+    {
+      "name": "necklace",
+      "category": "object",
+      "descriptions": [
+        "a gold necklace with a pendant",
+        "a woman wearing a beaded necklace"
+      ]
+    },
+    {
+      "name": "ostrich",
+      "category": "object",
+      "descriptions": [
+        "an ostrich with a long neck standing tall",
+        "an ostrich running across dry grassland"
+      ]
+    },
+    {
+      "name": "otter",
+      "category": "object",
+      "descriptions": [
+        "an otter floating on its back in the water",
+        "a sea otter holding food with its paws"
+      ]
+    },
+    {
+      "name": "owl",
+      "category": "object",
+      "descriptions": [
+        "an owl with large round eyes perched on a branch",
+        "a white owl staring straight at the camera"
+      ]
+    },
+    {
+      "name": "palm tree",
+      "category": "object",
+      "descriptions": [
+        "tall palm trees against a blue sky",
+        "a row of palm trees along a tropical beach"
+      ]
+    },
+    {
+      "name": "pancake",
+      "category": "object",
+      "descriptions": [
+        "a stack of pancakes with syrup dripping down",
+        "pancakes topped with berries and butter"
+      ]
+    },
+    {
+      "name": "panda",
+      "category": "object",
+      "descriptions": [
+        "a giant panda eating bamboo",
+        "a black and white panda lying on grass"
+      ]
+    },
+    {
+      "name": "parachute",
+      "category": "object",
+      "descriptions": [
+        "a skydiver descending under an open parachute",
+        "a colorful parachute canopy in the sky"
+      ]
+    },
+    {
+      "name": "parrot",
+      "category": "object",
+      "descriptions": [
+        "a colorful parrot with bright feathers",
+        "a parrot perched on a person's shoulder"
+      ]
+    },
+    {
+      "name": "pasta",
+      "category": "object",
+      "descriptions": [
+        "a plate of spaghetti with sauce",
+        "fresh pasta noodles being tossed in a pan"
+      ]
+    },
+    {
+      "name": "pastry",
+      "category": "object",
+      "descriptions": [
+        "flaky golden pastries on a tray",
+        "a croissant on a plate with coffee"
+      ]
+    },
+    {
+      "name": "penguin",
+      "category": "object",
+      "descriptions": [
+        "a penguin standing on ice",
+        "a group of penguins waddling together"
+      ]
+    },
+    {
+      "name": "piano",
+      "category": "object",
+      "descriptions": [
+        "hands playing the keys of a piano",
+        "a grand piano on a stage",
+        "a child practicing at an upright piano"
+      ]
+    },
+    {
+      "name": "picnic basket",
+      "category": "object",
+      "descriptions": [
+        "a wicker picnic basket on a blanket",
+        "an open picnic basket packed with food"
+      ]
+    },
+    {
+      "name": "pig",
+      "category": "object",
+      "descriptions": [
+        "a pink pig in a muddy pen",
+        "a piglet standing on a farm"
+      ]
+    },
+    {
+      "name": "pineapple",
+      "category": "object",
+      "descriptions": [
+        "a whole pineapple with spiky leaves",
+        "pineapple slices on a plate"
+      ]
+    },
+    {
+      "name": "pool table",
+      "category": "object",
+      "descriptions": [
+        "colored balls on a green pool table",
+        "a person lining up a shot with a cue stick"
+      ]
+    },
+    {
+      "name": "popcorn",
+      "category": "object",
+      "descriptions": [
+        "a bucket overflowing with popcorn",
+        "popcorn kernels popped and buttery"
+      ]
+    },
+    {
+      "name": "pumpkin",
+      "category": "object",
+      "descriptions": [
+        "orange pumpkins in a field",
+        "a carved pumpkin glowing with candlelight",
+        "pumpkins stacked at a harvest market"
+      ]
+    },
+    {
+      "name": "rabbit",
+      "category": "object",
+      "descriptions": [
+        "a rabbit with long ears sitting in grass",
+        "a fluffy white bunny nibbling a vegetable"
+      ]
+    },
+    {
+      "name": "raccoon",
+      "category": "object",
+      "descriptions": [
+        "a raccoon with a black mask on its face",
+        "a raccoon climbing on a fence at night"
+      ]
+    },
+    {
+      "name": "rangoli",
+      "category": "object",
+      "descriptions": [
+        "a colorful rangoli pattern drawn on the floor",
+        "an intricate design made of colored powder and petals",
+        "a decorative rangoli with flowers and diyas at an entrance"
+      ]
+    },
+    {
+      "name": "rhinoceros",
+      "category": "object",
+      "descriptions": [
+        "a rhinoceros with a large horn grazing",
+        "a rhino walking across a dusty plain"
+      ]
+    },
+    {
+      "name": "rocket",
+      "category": "object",
+      "descriptions": [
+        "a rocket launching with flames and smoke",
+        "a tall rocket standing on a launch pad"
+      ]
+    },
+    {
+      "name": "roller skates",
+      "category": "object",
+      "descriptions": [
+        "a person skating in four wheeled roller skates",
+        "a pair of retro roller skates"
+      ]
+    },
+    {
+      "name": "rose",
+      "category": "object",
+      "descriptions": [
+        "a single red rose in bloom",
+        "a bouquet of roses wrapped in paper"
+      ]
+    },
+    {
+      "name": "salad",
+      "category": "object",
+      "descriptions": [
+        "a fresh green salad in a bowl",
+        "a salad with tomatoes and leafy greens"
+      ]
+    },
+    {
+      "name": "saxophone",
+      "category": "object",
+      "descriptions": [
+        "a person playing a brass saxophone",
+        "a saxophone gleaming under stage lights"
+      ]
+    },
+    {
+      "name": "sculpture",
+      "category": "object",
+      "descriptions": [
+        "a carved stone sculpture on display",
+        "a bronze statue in a public square",
+        "an abstract sculpture in a gallery"
+      ]
+    },
+    {
+      "name": "seal",
+      "category": "object",
+      "descriptions": [
+        "a seal lying on a rocky shore",
+        "a seal poking its head out of the water"
+      ]
+    },
+    {
+      "name": "shark",
+      "category": "object",
+      "descriptions": [
+        "a shark swimming with its fin above water",
+        "a great white shark underwater with sharp teeth"
+      ]
+    },
+    {
+      "name": "snail",
+      "category": "object",
+      "descriptions": [
+        "a snail with a spiral shell on a leaf",
+        "a snail slowly crossing a wet path"
+      ]
+    },
+    {
+      "name": "snake",
+      "category": "object",
+      "descriptions": [
+        "a coiled snake with patterned scales",
+        "a snake slithering through grass"
+      ]
+    },
+    {
+      "name": "snowman",
+      "category": "object",
+      "descriptions": [
+        "a snowman with a carrot nose and scarf",
+        "children building a snowman in the yard"
+      ]
+    },
+    {
+      "name": "spider",
+      "category": "object",
+      "descriptions": [
+        "a spider sitting in the center of its web",
+        "a close view of a hairy spider"
+      ]
+    },
+    {
+      "name": "squirrel",
+      "category": "object",
+      "descriptions": [
+        "a squirrel holding a nut in its paws",
+        "a squirrel climbing a tree trunk"
+      ]
+    },
+    {
+      "name": "starfish",
+      "category": "object",
+      "descriptions": [
+        "an orange starfish on wet sand",
+        "a starfish clinging to a rock in a tide pool"
+      ]
+    },
+    {
+      "name": "strawberry",
+      "category": "object",
+      "descriptions": [
+        "ripe red strawberries with green stems",
+        "a basket of fresh picked strawberries"
+      ]
+    },
+    {
+      "name": "suit",
+      "category": "object",
+      "descriptions": [
+        "a man wearing a tailored business suit",
+        "a suit jacket and tie on a hanger"
+      ]
+    },
+    {
+      "name": "sunflower",
+      "category": "object",
+      "descriptions": [
+        "a bright yellow sunflower facing the sun",
+        "a field of tall blooming sunflowers"
+      ]
+    },
+    {
+      "name": "sunglasses",
+      "category": "object",
+      "descriptions": [
+        "a person wearing dark sunglasses",
+        "a pair of sunglasses resting on a table"
+      ]
+    },
+    {
+      "name": "sushi",
+      "category": "object",
+      "descriptions": [
+        "sushi rolls arranged on a wooden board",
+        "nigiri sushi with chopsticks and soy sauce"
+      ]
+    },
+    {
+      "name": "swan",
+      "category": "object",
+      "descriptions": [
+        "a white swan gliding on a lake",
+        "a swan with curved neck reflected in water"
+      ]
+    },
+    {
+      "name": "taco",
+      "category": "object",
+      "descriptions": [
+        "tacos filled with meat and vegetables",
+        "a hand holding a folded taco"
+      ]
+    },
+    {
+      "name": "tea",
+      "category": "object",
+      "descriptions": [
+        "a cup of tea with steam rising",
+        "tea being poured from a teapot into a cup"
+      ]
+    },
+    {
+      "name": "tent",
+      "category": "object",
+      "descriptions": [
+        "a dome tent pitched on grass",
+        "a glowing tent lit from inside at night"
+      ]
+    },
+    {
+      "name": "tiger",
+      "category": "object",
+      "descriptions": [
+        "a tiger with orange and black stripes",
+        "a tiger walking through jungle grass",
+        "a tiger cooling off in the water"
+      ]
+    },
+    {
+      "name": "toy",
+      "category": "object",
+      "descriptions": [
+        "colorful toys scattered on the floor",
+        "a child playing with building blocks",
+        "stuffed animals piled on a bed"
+      ]
+    },
+    {
+      "name": "tree",
+      "category": "object",
+      "descriptions": [
+        "a large tree with a wide green canopy",
+        "a lone tree standing in an open field",
+        "the thick trunk and branches of an old tree"
+      ]
+    },
+    {
+      "name": "trumpet",
+      "category": "object",
+      "descriptions": [
+        "a person playing a shiny brass trumpet",
+        "a trumpet held up during a performance"
+      ]
+    },
+    {
+      "name": "turkey",
+      "category": "object",
+      "descriptions": [
+        "a turkey with fanned tail feathers",
+        "a roasted turkey on a serving platter"
+      ]
+    },
+    {
+      "name": "turtle",
+      "category": "object",
+      "descriptions": [
+        "a turtle with a patterned shell walking on sand",
+        "a sea turtle swimming over a reef"
+      ]
+    },
+    {
+      "name": "vegetable",
+      "category": "object",
+      "descriptions": [
+        "a pile of fresh mixed vegetables",
+        "chopped vegetables on a cutting board",
+        "baskets of vegetables at a farm stand"
+      ]
+    },
+    {
+      "name": "violin",
+      "category": "object",
+      "descriptions": [
+        "a violinist playing with a bow",
+        "a violin resting on sheet music"
+      ]
+    },
+    {
+      "name": "waffle",
+      "category": "object",
+      "descriptions": [
+        "a golden waffle topped with berries and syrup",
+        "waffles with a square grid pattern on a plate"
+      ]
+    },
+    {
+      "name": "watch",
+      "category": "object",
+      "descriptions": [
+        "a wristwatch with a leather strap",
+        "a close view of a watch face and hands"
+      ]
+    },
+    {
+      "name": "watermelon",
+      "category": "object",
+      "descriptions": [
+        "slices of red watermelon with black seeds",
+        "a whole watermelon cut in half"
+      ]
+    },
+    {
+      "name": "whale",
+      "category": "object",
+      "descriptions": [
+        "a whale breaching out of the ocean",
+        "the tail fluke of a whale above the water"
+      ]
+    },
+    {
+      "name": "wheelchair",
+      "category": "object",
+      "descriptions": [
+        "a person sitting in a wheelchair",
+        "an empty wheelchair in a hallway"
+      ]
+    },
+    {
+      "name": "wine",
+      "category": "object",
+      "descriptions": [
+        "red wine being poured into a glass",
+        "wine glasses raised in a toast",
+        "a wine bottle beside filled glasses"
+      ]
+    },
+    {
+      "name": "baby shower",
+      "category": "event",
+      "descriptions": [
+        "a baby shower party with pastel balloons and gifts",
+        "a pregnant woman celebrating with friends and presents",
+        "a decorated table with baby themed cake and gifts"
+      ]
+    },
+    {
+      "name": "barbecue",
+      "category": "event",
+      "descriptions": [
+        "food grilling over a smoky barbecue",
+        "a person flipping skewers on an outdoor grill",
+        "friends gathered around a backyard barbecue"
+      ]
+    },
+    {
+      "name": "birthday",
+      "category": "event",
+      "descriptions": [
+        "a person blowing out candles on a birthday cake",
+        "a birthday party with balloons and streamers",
+        "children in party hats around a birthday cake"
+      ]
+    },
+    {
+      "name": "bonfire",
+      "category": "event",
+      "descriptions": [
+        "people gathered around a large bonfire at night",
+        "tall flames of a bonfire against the dark",
+        "friends sitting around a campfire roasting food on sticks"
+      ]
+    },
+    {
+      "name": "carnival",
+      "category": "event",
+      "descriptions": [
+        "performers in feathered costumes dancing at a carnival",
+        "a carnival parade with elaborate colorful costumes",
+        "dancers and drummers in a street carnival celebration"
+      ]
+    },
+    {
+      "name": "christmas",
+      "category": "event",
+      "descriptions": [
+        "a decorated christmas tree with lights and ornaments",
+        "people opening presents around a christmas tree",
+        "a living room decorated with stockings and christmas lights",
+        "santa hats and festive red and green decorations"
+      ]
+    },
+    {
+      "name": "circus",
+      "category": "event",
+      "descriptions": [
+        "acrobats performing inside a circus tent",
+        "a circus ring with performers under spotlights",
+        "a big top tent with an audience watching a show"
+      ]
+    },
+    {
+      "name": "concert",
+      "category": "event",
+      "descriptions": [
+        "a crowd with raised hands at a live concert",
+        "a band performing on stage under bright lights",
+        "a singer on stage in front of a large audience"
+      ]
+    },
+    {
+      "name": "cricket",
+      "category": "event",
+      "descriptions": [
+        "a batsman striking a cricket ball on a pitch",
+        "a bowler delivering a ball in a cricket match",
+        "children playing cricket in the street with a bat",
+        "a cricket match underway on an oval green field"
+      ]
+    },
+    {
+      "name": "dance",
+      "category": "event",
+      "descriptions": [
+        "dancers performing a routine on stage",
+        "a couple dancing together at a celebration",
+        "a group dance performance in matching costumes"
+      ]
+    },
+    {
+      "name": "diwali",
+      "category": "event",
+      "descriptions": [
+        "rows of glowing clay oil lamps lit for diwali",
+        "a home decorated with strings of lights and burning diyas",
+        "people lighting sparklers during a diwali celebration",
+        "a rangoli surrounded by small oil lamps at night"
+      ]
+    },
+    {
+      "name": "durga puja",
+      "category": "event",
+      "descriptions": [
+        "an ornate pandal with an idol of the goddess durga",
+        "a durga idol with many arms decorated with ornaments",
+        "crowds visiting a decorated festival pandal at night"
+      ]
+    },
+    {
+      "name": "easter",
+      "category": "event",
+      "descriptions": [
+        "children hunting for painted easter eggs in a garden",
+        "a basket filled with decorated easter eggs",
+        "colorful dyed eggs hidden in spring grass"
+      ]
+    },
+    {
+      "name": "eid",
+      "category": "event",
+      "descriptions": [
+        "people in traditional clothes embracing in greeting on eid",
+        "a table of dates and sweets for an eid feast",
+        "crescent moon and lantern decorations for eid"
+      ]
+    },
+    {
+      "name": "engagement",
+      "category": "event",
+      "descriptions": [
+        "a person proposing on one knee with a ring",
+        "a couple showing off an engagement ring",
+        "an engagement ring being slipped onto a finger"
+      ]
+    },
+    {
+      "name": "festival",
+      "category": "event",
+      "descriptions": [
+        "a large outdoor festival crowd with flags and tents",
+        "colorful decorations in a crowded festival street",
+        "people celebrating together at an outdoor festival"
+      ]
+    },
+    {
+      "name": "fireworks",
+      "category": "event",
+      "descriptions": [
+        "colorful fireworks bursting in the night sky",
+        "a fireworks display reflected over water",
+        "sparkling fireworks above a city skyline"
+      ]
+    },
+    {
+      "name": "fishing",
+      "category": "event",
+      "descriptions": [
+        "a person casting a fishing rod at a lake",
+        "an angler holding up a freshly caught fish",
+        "fishing rods set up at the edge of the water"
+      ]
+    },
+    {
+      "name": "ganesh chaturthi",
+      "category": "event",
+      "descriptions": [
+        "a decorated idol of the elephant headed god ganesha",
+        "people carrying a ganesha idol in a street procession",
+        "a ganesha statue adorned with flowers and garlands"
+      ]
+    },
+    {
+      "name": "graduation",
+      "category": "event",
+      "descriptions": [
+        "graduates in caps and gowns at a ceremony",
+        "a student throwing a graduation cap into the air",
+        "a graduate holding a diploma in a gown"
+      ]
+    },
+    {
+      "name": "halloween",
+      "category": "event",
+      "descriptions": [
+        "children in costumes trick or treating at night",
+        "carved jack o lantern pumpkins glowing on a porch",
+        "people dressed in spooky halloween costumes at a party"
+      ]
+    },
+    {
+      "name": "hanukkah",
+      "category": "event",
+      "descriptions": [
+        "a lit menorah with candles in a window",
+        "a family lighting hanukkah candles together",
+        "a nine branched menorah glowing in a dark room"
+      ]
+    },
+    {
+      "name": "hiking",
+      "category": "event",
+      "descriptions": [
+        "hikers with backpacks walking a mountain trail",
+        "a person trekking up a rocky path with poles",
+        "a group hiking along a ridge with views behind them"
+      ]
+    },
+    {
+      "name": "holi",
+      "category": "event",
+      "descriptions": [
+        "people covered in bright colored powder celebrating holi",
+        "clouds of pink and green powder thrown into the air",
+        "faces and clothes smeared with vivid holi colors"
+      ]
+    },
+    {
+      "name": "horseback riding",
+      "category": "event",
+      "descriptions": [
+        "a person riding a horse along a trail",
+        "a rider in a helmet trotting on horseback",
+        "someone galloping on a horse across a field"
+      ]
+    },
+    {
+      "name": "kayaking",
+      "category": "event",
+      "descriptions": [
+        "a person paddling a kayak on a river",
+        "a bright kayak cutting through rapids",
+        "kayakers gliding across calm water"
+      ]
+    },
+    {
+      "name": "lunar new year",
+      "category": "event",
+      "descriptions": [
+        "red paper lanterns strung across a street",
+        "a dragon dance performing through a crowd",
+        "red envelopes and golden new year decorations"
+      ]
+    },
+    {
+      "name": "marathon",
+      "category": "event",
+      "descriptions": [
+        "runners wearing race bibs on a city street",
+        "a dense crowd of runners in a road race",
+        "a runner crossing the finish line with arms raised"
+      ]
+    },
+    {
+      "name": "mehndi",
+      "category": "event",
+      "descriptions": [
+        "intricate henna patterns drawn on a woman's hands",
+        "an artist applying mehndi designs on a bride's palms",
+        "hands and arms decorated with dark henna designs"
+      ]
+    },
+    {
+      "name": "navratri",
+      "category": "event",
+      "descriptions": [
+        "people in colorful traditional dress dancing garba in circles",
+        "dancers striking decorated sticks in a dandiya dance",
+        "a festival ground crowded with garba dancers at night"
+      ]
+    },
+    {
+      "name": "new year",
+      "category": "event",
+      "descriptions": [
+        "fireworks bursting over a city at midnight",
+        "people toasting with champagne and confetti falling",
+        "a countdown celebration with balloons and streamers"
+      ]
+    },
+    {
+      "name": "parade",
+      "category": "event",
+      "descriptions": [
+        "decorated floats moving down a street in a parade",
+        "a marching band in uniform during a parade",
+        "crowds lining a street watching a parade pass"
+      ]
+    },
+    {
+      "name": "party",
+      "category": "event",
+      "descriptions": [
+        "friends celebrating at a party with drinks",
+        "a crowded room with balloons and party decorations",
+        "people dancing and laughing at a house party"
+      ]
+    },
+    {
+      "name": "picnic",
+      "category": "event",
+      "descriptions": [
+        "food spread on a picnic blanket in a park",
+        "a family having a picnic on the grass",
+        "friends sharing food outdoors on a checkered blanket"
+      ]
+    },
+    {
+      "name": "prom",
+      "category": "event",
+      "descriptions": [
+        "teenagers in formal dresses and suits at a school dance",
+        "a young couple posing in formal wear with a corsage",
+        "a decorated hall with students dancing in gowns"
+      ]
+    },
+    {
+      "name": "rock climbing",
+      "category": "event",
+      "descriptions": [
+        "a climber scaling a steep rock face with ropes",
+        "a person bouldering up a climbing wall",
+        "a climber reaching for a hold on a cliff"
+      ]
+    },
+    {
+      "name": "safari",
+      "category": "event",
+      "descriptions": [
+        "tourists in an open safari jeep watching wild animals",
+        "a game drive vehicle near elephants on a savanna",
+        "travelers photographing wildlife from a safari truck"
+      ]
+    },
+    {
+      "name": "scuba diving",
+      "category": "event",
+      "descriptions": [
+        "a scuba diver swimming among coral and fish",
+        "a diver underwater with a tank and bubbles rising",
+        "a person in a wetsuit and mask exploring a reef"
+      ]
+    },
+    {
+      "name": "skiing",
+      "category": "event",
+      "descriptions": [
+        "a skier carving down a snowy slope",
+        "a person on skis kicking up powder snow",
+        "skiers riding a chairlift over white slopes"
+      ]
+    },
+    {
+      "name": "snowboarding",
+      "category": "event",
+      "descriptions": [
+        "a snowboarder carving down a mountain slope",
+        "a person mid jump with a snowboard in the air",
+        "a snowboarder in goggles riding through snow"
+      ]
+    },
+    {
+      "name": "surfing",
+      "category": "event",
+      "descriptions": [
+        "a surfer riding a breaking wave",
+        "a person carrying a surfboard along the beach",
+        "a surfer cutting across a wave with spray flying"
+      ]
+    },
+    {
+      "name": "thanksgiving",
+      "category": "event",
+      "descriptions": [
+        "a family gathered around a table with a roast turkey",
+        "a thanksgiving dinner table with autumn decorations",
+        "a large roasted turkey being carved for dinner"
+      ]
+    },
+    {
+      "name": "valentines day",
+      "category": "event",
+      "descriptions": [
+        "a bouquet of red roses with a heart shaped gift",
+        "a romantic candlelit dinner for two",
+        "heart shaped balloons and chocolates"
+      ]
+    },
+    {
+      "name": "wedding",
+      "category": "event",
+      "descriptions": [
+        "a bride and groom exchanging vows at a wedding ceremony",
+        "a bride in a wedding dress holding a bouquet",
+        "guests celebrating around a newlywed couple",
+        "an indian bride and groom in ornate red and gold wedding attire"
+      ]
+    },
+    {
+      "name": "yoga",
+      "category": "event",
+      "descriptions": [
+        "a person holding a yoga pose on a mat",
+        "a group yoga class stretching in unison",
+        "someone sitting cross legged meditating on a yoga mat"
+      ]
+    },
+    {
+      "name": "aerial view",
+      "category": "attribute",
+      "descriptions": [
+        "an aerial view looking straight down from above",
+        "a landscape photographed from a drone high in the air",
+        "a birds eye view of buildings and roads below"
+      ]
+    },
+    {
+      "name": "autumn",
+      "category": "attribute",
+      "descriptions": [
+        "trees with orange and red autumn leaves",
+        "fallen yellow leaves covering the ground",
+        "a park glowing in warm fall colors"
+      ]
+    },
+    {
+      "name": "clouds",
+      "category": "attribute",
+      "descriptions": [
+        "white fluffy clouds in a blue sky",
+        "dramatic storm clouds filling the sky",
+        "a sky full of scattered clouds"
+      ]
+    },
+    {
+      "name": "fog",
+      "category": "attribute",
+      "descriptions": [
+        "thick fog blanketing the landscape",
+        "trees fading into heavy gray mist",
+        "a foggy morning with low visibility"
+      ]
+    },
+    {
+      "name": "group photo",
+      "category": "attribute",
+      "descriptions": [
+        "a large group of people posing together for a photo",
+        "friends standing in rows smiling at the camera",
+        "a family posed together looking at the camera"
+      ]
+    },
+    {
+      "name": "lightning",
+      "category": "attribute",
+      "descriptions": [
+        "a lightning bolt striking from a dark storm sky",
+        "branched lightning lighting up night clouds"
+      ]
+    },
+    {
+      "name": "moon",
+      "category": "attribute",
+      "descriptions": [
+        "a full moon glowing in the night sky",
+        "the moon rising over a dark landscape",
+        "a bright moon among night clouds"
+      ]
+    },
+    {
+      "name": "night",
+      "category": "attribute",
+      "descriptions": [
+        "a scene photographed at night in the dark",
+        "city lights glowing against the darkness",
+        "a dark sky over dimly lit surroundings"
+      ]
+    },
+    {
+      "name": "rain",
+      "category": "attribute",
+      "descriptions": [
+        "rain falling on a wet street",
+        "raindrops streaking down a window",
+        "people holding umbrellas in the rain"
+      ]
+    },
+    {
+      "name": "rainbow",
+      "category": "attribute",
+      "descriptions": [
+        "a rainbow arching across the sky",
+        "a bright rainbow over a landscape after rain"
+      ]
+    },
+    {
+      "name": "reflection",
+      "category": "attribute",
+      "descriptions": [
+        "a mirror reflection on still water",
+        "mountains reflected in a calm lake",
+        "a building reflected in glass and water"
+      ]
+    },
+    {
+      "name": "selfie",
+      "category": "attribute",
+      "descriptions": [
+        "a person taking a selfie at arm's length",
+        "a close self portrait taken with a phone camera",
+        "friends leaning their heads together for a selfie"
+      ]
+    },
+    {
+      "name": "silhouette",
+      "category": "attribute",
+      "descriptions": [
+        "a dark silhouette of a person against a bright sky",
+        "figures outlined in black against the light",
+        "a tree silhouetted against a glowing sunset"
+      ]
+    },
+    {
+      "name": "snow",
+      "category": "attribute",
+      "descriptions": [
+        "fresh snow covering the ground and trees",
+        "snowflakes falling in a white winter scene",
+        "everything blanketed in deep snow"
+      ]
+    },
+    {
+      "name": "stars",
+      "category": "attribute",
+      "descriptions": [
+        "a night sky filled with stars",
+        "the milky way stretching across a dark sky",
+        "stars glittering above a silhouetted horizon"
+      ]
+    },
+    {
+      "name": "sunrise",
+      "category": "attribute",
+      "descriptions": [
+        "the sun rising over the horizon in soft morning light",
+        "early golden light breaking over the landscape at dawn",
+        "a pale morning sky with the sun just appearing"
+      ]
+    },
+    {
+      "name": "sunset",
+      "category": "attribute",
+      "descriptions": [
+        "an orange sunset glowing over the horizon",
+        "the sun setting behind clouds in pink and orange",
+        "a landscape silhouetted against a sunset sky"
+      ]
+    }
+  ]
+}
