@@ -434,6 +434,7 @@ def face_tagging(
     "/global-recluster",
     status_code=status.HTTP_202_ACCEPTED,
     response_model=GlobalReclusterStartResponse,
+    responses={code: {"model": ErrorResponse} for code in [500]},
 )
 async def trigger_global_reclustering() -> GlobalReclusterStartResponse:
     """
@@ -479,7 +480,7 @@ async def trigger_global_reclustering() -> GlobalReclusterStartResponse:
 @router.get(
     "/global-recluster/{task_id}",
     response_model=GlobalReclusterStatusResponse,
-    responses={code: {"model": ErrorResponse} for code in [404]},
+    responses={code: {"model": ErrorResponse} for code in [404, 500]},
 )
 async def get_global_recluster_status(task_id: str) -> GlobalReclusterStatusResponse:
     """Poll the status of a previously started global reclustering job."""
