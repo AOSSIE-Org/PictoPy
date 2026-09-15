@@ -39,11 +39,15 @@ tauri-plugin-updater = "2.9.0"
 tauri-plugin-opener = "2.5.2"
 tauri-plugin-autostart = "2"
 
+[dev-dependencies]
+# mock_app() lets tests hand prod() a real AppHandle without opening a window.
+tauri = { version = "2.9.1", features = ["test"] }
+
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
 # Enables spawning the bundled Python backend/sync sidecars. Required for
-# release builds (see frontend/src-tauri/src/main.rs); without it `prod()`
+# release builds (see frontend/src-tauri/src/services/sidecars.rs); without it `prod()`
 # fails loudly in release builds instead of silently launching a backend-less app.
 bundled-sidecars = []
 
