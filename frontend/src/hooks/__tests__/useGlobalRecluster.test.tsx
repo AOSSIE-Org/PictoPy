@@ -146,6 +146,7 @@ describe('useGlobalRecluster', () => {
     expect(result.current.errorMessage).toBe(
       'ERR_BAD_REQUEST: Request failed with status code 404',
     );
+    expect(result.current.error).toBeInstanceOf(Error);
     expect(invalidateSpy).not.toHaveBeenCalled();
   });
 

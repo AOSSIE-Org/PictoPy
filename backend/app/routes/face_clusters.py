@@ -103,7 +103,7 @@ _active_recluster_task_id: Optional[str] = None
 RECLUSTER_TASK_TTL_MINUTES = 15
 
 
-async def _run_global_recluster(task_id: str):
+async def _run_global_recluster(task_id: str) -> None:
     global _active_recluster_task_id
     entry = recluster_tasks[task_id]
     try:
@@ -132,7 +132,7 @@ async def _run_global_recluster(task_id: str):
             _active_recluster_task_id = None
 
 
-async def _cleanup_stale_recluster_tasks():
+async def _cleanup_stale_recluster_tasks() -> None:
     """Periodically drop finished reclustering results once they age out.
 
     Running tasks are left untouched (a legitimate recluster can run for a
@@ -434,9 +434,8 @@ def face_tagging(
     "/global-recluster",
     status_code=status.HTTP_202_ACCEPTED,
     response_model=GlobalReclusterStartResponse,
-    responses={code: {"model": ErrorResponse} for code in [500]},
 )
-async def trigger_global_reclustering():
+async def trigger_global_reclustering() -> GlobalReclusterStartResponse:
     """
     Start a global face reclustering job in the background.
     This forces full reclustering regardless of the 24-hour rule.
@@ -482,7 +481,7 @@ async def trigger_global_reclustering():
     response_model=GlobalReclusterStatusResponse,
     responses={code: {"model": ErrorResponse} for code in [404]},
 )
-async def get_global_recluster_status(task_id: str):
+async def get_global_recluster_status(task_id: str) -> GlobalReclusterStatusResponse:
     """Poll the status of a previously started global reclustering job."""
     entry = recluster_tasks.get(task_id)
     if entry is None:

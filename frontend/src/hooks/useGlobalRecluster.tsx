@@ -29,6 +29,12 @@ const idleState: ReclusterState = {
   errorMessage: undefined,
 };
 
+export type UseGlobalReclusterResult = ReclusterState & { trigger: () => void };
+
+// Rejections can be plain objects, not Errors, but state promises an Error.
+const toError = (err: unknown): Error =>
+  err instanceof Error ? err : new Error(getErrorMessage(err));
+
 /**
  * Triggers global face reclustering and polls for completion.
  *
@@ -37,7 +43,7 @@ const idleState: ReclusterState = {
  * instead of blocking the HTTP request. This hook polls the job's status
  * endpoint until it reaches a terminal state.
  */
-export function useGlobalRecluster() {
+export function useGlobalRecluster(): UseGlobalReclusterResult {
   const queryClient = useQueryClient();
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Identifies the latest trigger() call. A callback bails if a newer trigger
@@ -110,13 +116,13 @@ export function useGlobalRecluster() {
               successData: statusRes.data,
               successMessage: statusRes.message,
             });
-          } catch (err) {
+          } catch (err: unknown) {
             if (!isActive()) return;
             stopPolling();
             setState({
               ...idleState,
               isError: true,
-              error: err as Error,
+              error: toError(err),
               errorMessage: getErrorMessage(err),
             });
           }
@@ -124,12 +130,12 @@ export function useGlobalRecluster() {
 
         poll();
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (!isActive()) return;
         setState({
           ...idleState,
           isError: true,
-          error: err,
+          error: toError(err),
           errorMessage: getErrorMessage(err),
         });
       });
