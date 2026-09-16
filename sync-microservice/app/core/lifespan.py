@@ -27,7 +27,6 @@ async def lifespan(app: FastAPI):
         # Startup
         logger.info("Starting PictoPy Sync Microservice...")
 
-        # Check database connection
         logger.info("Checking database connection...")
         connection_timeout = 60
         retry_interval = 5

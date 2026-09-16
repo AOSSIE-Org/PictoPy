@@ -24,10 +24,7 @@ interface ConvertMemoryToAlbumDialogProps {
   onClose: () => void;
 }
 
-/**
- * Copies a memory's photos into a new album. The name is pre-filled from the
- * memory's title; everything else about the album is edited afterwards.
- */
+/** Copies a memory's photos into a new album; the name pre-fills from its title. */
 export const ConvertMemoryToAlbumDialog: React.FC<
   ConvertMemoryToAlbumDialogProps
 > = ({ memory, isOpen, onClose }) => {

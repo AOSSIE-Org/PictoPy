@@ -178,10 +178,8 @@ describe('Navbar Component', () => {
     fireEvent.click(screen.getByPlaceholderText('Add to your search'));
     expect(screen.getByText('Favourites')).toBeInTheDocument();
 
-    // Click Favourites
     fireEvent.click(screen.getByText('Favourites'));
 
-    // Should navigate to /favourites
     expect(mockNavigate).toHaveBeenCalledWith('/favourites');
 
     // Dropdown should be closed
@@ -217,7 +215,6 @@ describe('Navbar Component', () => {
     expect(screen.queryByText('Favourites')).not.toBeInTheDocument();
 
     const searchInput = screen.getByPlaceholderText('Add to your search');
-    // Focus the input directly using fireEvent
     fireEvent.focus(searchInput);
     expect(screen.getByText('Favourites')).toBeInTheDocument();
   });

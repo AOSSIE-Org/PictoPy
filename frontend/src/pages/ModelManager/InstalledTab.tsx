@@ -124,7 +124,6 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
 
   const models = statusData.data;
 
-  // Group standard tiers
   const standardTiers = TIER_ORDER.map((tier) => {
     const objectModelKey = Object.keys(models).find(
       (key) =>
@@ -163,7 +162,6 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
     .filter(([_, model]) => model.tier === 'required' && model.installed)
     .map(([key, model]) => ({ key, ...model }));
 
-  // Group semantic models
   const semanticModels = SEMANTIC_BUNDLE_KEYS.map((k) => models[k]).filter(
     Boolean,
   );

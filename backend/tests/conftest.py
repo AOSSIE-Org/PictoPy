@@ -20,7 +20,6 @@ from app.database.memories import db_create_memories_table
 def setup_before_all_tests():
     print("\n=== Running manual setup fixture ===")
 
-    # Set test environment
     os.environ["TEST_MODE"] = "true"
 
     # Create all database tables in the same order as main.py

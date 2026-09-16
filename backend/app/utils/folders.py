@@ -27,7 +27,6 @@ def folder_util_add_folder_tree(
 
     for dirpath, dirnames, _ in os.walk(root_path, topdown=True):
         dirpath = os.path.abspath(dirpath)
-        # Generate a UUID for this folder
         this_folder_id = str(uuid.uuid4())
 
         # Determine parent ID for the map (not for initial insert)
@@ -57,7 +56,6 @@ def folder_util_add_folder_tree(
             )
         )
 
-    # Insert all folders in a single database transaction
     db_insert_folders_batch(folders_data)
 
     return folder_map[root_path][0], folder_map
@@ -119,7 +117,6 @@ def folder_util_delete_obsolete_folders(
     if not folders_to_delete:
         return 0, []
 
-    # Get the folder IDs for the folders to delete
     folder_ids_to_delete = [
         folder_id
         for folder_id, folder_path in db_child_folders
@@ -154,7 +151,6 @@ def folder_util_add_multiple_folder_trees(
 
     for folder_path in folders_to_add:
         try:
-            # Add each new folder tree (including its subdirectories)
             root_folder_id, folder_map = folder_util_add_folder_tree(
                 root_path=folder_path,
                 parent_folder_id=parent_folder_id,
@@ -162,7 +158,6 @@ def folder_util_add_multiple_folder_trees(
                 taggingCompleted=False,
             )
 
-            # Update parent IDs for the new folder tree
             db_update_parent_ids_for_subtree(folder_path, folder_map)
 
             # Add all folders from the folder_map as (folder_id, folder_path) tuples

@@ -5,12 +5,10 @@ export interface FaceClustersState {
   clusters: Cluster[];
 }
 
-// Initial state
 const initialState: FaceClustersState = {
   clusters: [],
 };
 
-// Face clusters slice
 const faceClustersSlice = createSlice({
   name: 'faceClusters',
   initialState,

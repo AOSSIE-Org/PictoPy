@@ -4,9 +4,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.share.registry import PASSWORD_MAX_BYTES
 
-# ##############################
 # Request Handler
-# ##############################
 
 
 class CreateShareRequest(BaseModel):
@@ -25,9 +23,7 @@ class CreateShareRequest(BaseModel):
         return value
 
 
-# ##############################
 # Response Handler
-# ##############################
 
 
 class ShareInterface(BaseModel):

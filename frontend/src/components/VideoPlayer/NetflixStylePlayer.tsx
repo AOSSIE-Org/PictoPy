@@ -59,12 +59,7 @@ export default function NetflixStylePlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const hideControlsTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
-  // const resolvedSrc = useMemo(() => convertFileSrc(videoSrc), [videoSrc]);
-  const resolvedSrc = useMemo(() => {
-    const src = convertFileSrc(videoSrc);
-    console.log('Resolved video src:', src);
-    return src;
-  }, [videoSrc]);
+  const resolvedSrc = useMemo(() => convertFileSrc(videoSrc), [videoSrc]);
 
   // Reset per-source state. The overlay remounts the player per video, but this
   // keeps the component correct if a caller swaps videoSrc without remounting.

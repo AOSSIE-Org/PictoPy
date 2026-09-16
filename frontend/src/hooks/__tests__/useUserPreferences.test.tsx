@@ -72,13 +72,8 @@ const mountLoaded = async () => {
 const sentBodies = () =>
   mockUpdateUserPreferences.mock.calls.map(([body]) => body);
 
-/**
- * Let the query effect run.
- *
- * A response reaches the cache a tick before the effect that would apply it,
- * so asserting straight after the request resolves reads state that has not
- * been overwritten yet, whether or not anything guards it.
- */
+// A response reaches the cache a tick before the effect that applies it, so
+// asserting on resolve reads state nothing has overwritten yet.
 const settle = async () => {
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));

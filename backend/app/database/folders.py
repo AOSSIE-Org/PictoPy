@@ -5,7 +5,6 @@ from typing import List, Tuple, Dict, Optional
 from app.config.settings import DATABASE_PATH
 from app.logging.setup_logging import get_logger
 
-# Initialize logger
 logger = get_logger(__name__)
 
 # Type definitions
@@ -193,7 +192,6 @@ def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
         cursor.execute("PRAGMA foreign_keys = ON;")
         conn.commit()
 
-        # Create placeholders for the IN clause
         placeholders = ",".join("?" * len(folder_ids))
 
         cursor.execute(
@@ -323,7 +321,6 @@ def db_update_ai_tagging_batch(
     cursor = conn.cursor()
 
     try:
-        # Create placeholders for the IN clause
         placeholders = ",".join("?" * len(folder_ids))
 
         cursor.execute(
@@ -399,10 +396,8 @@ def db_get_folder_ids_by_paths(
     cursor = conn.cursor()
 
     try:
-        # Convert all paths to absolute paths
         abs_paths = [os.path.abspath(path) for path in folder_paths]
 
-        # Create placeholders for the IN clause
         placeholders = ",".join("?" * len(abs_paths))
 
         cursor.execute(
@@ -412,7 +407,6 @@ def db_get_folder_ids_by_paths(
 
         results = cursor.fetchall()
 
-        # Create a mapping from folder_path to folder_id
         path_to_id = {folder_path: folder_id for folder_path, folder_id in results}
 
         return path_to_id

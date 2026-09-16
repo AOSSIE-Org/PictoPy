@@ -137,10 +137,8 @@ def db_create_memories_table() -> None:
             """
         )
 
-        # Videos get their own table rather than a media_type column on
-        # memory_images: the real cascade is the reason that table exists, and
-        # one id column cannot reference two parents. sort_order is shared
-        # across both, so a story still reads in one chronological sequence.
+        # Its own table rather than a media_type column: one id column cannot
+        # reference two parents. sort_order is shared, so a story stays in sequence.
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS memory_videos (
@@ -1444,10 +1442,8 @@ def db_get_images_in_period(
         conn = _connect()
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        # Compared through datetime() rather than as raw strings: stored
-        # timestamps use a space separator while ISO bounds use "T", and "T"
-        # sorts after every digit, so a direct comparison silently matches
-        # nothing.
+        # Through datetime(), not raw strings: stored timestamps use a space where
+        # ISO bounds use "T", which sorts after every digit and matches nothing.
         cursor.execute(
             """
             SELECT id, path, thumbnailPath, captured_at, latitude, longitude,

@@ -9,7 +9,6 @@ from app.database.folders import db_get_all_folders_with_ids
 from app.config.settings import PRIMARY_BACKEND_URL
 from app.logging.setup_logging import get_sync_logger
 
-# Configure third-party loggers
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("watchfiles").setLevel(logging.WARNING)  # Silence watchfiles logger
@@ -38,10 +37,8 @@ def watcher_util_get_folder_id_if_watched(file_path: str) -> Optional[str]:
     Returns:
         Folder ID if the path is a watched folder, None otherwise
     """
-    # Normalize the file path
     normalized_path = os.path.abspath(file_path)
 
-    # Check if this path matches any of our watched folders
     for folder_id, folder_path in watched_folders:
         if os.path.abspath(folder_path) == normalized_path:
             return folder_id
@@ -62,14 +59,12 @@ def watcher_util_handle_file_changes(changes: set) -> None:
 
     # First pass - count changes and identify affected folders
     for change, file_path in changes:
-        # Process deletions
         if change == Change.deleted:
             deleted_folder_id = watcher_util_get_folder_id_if_watched(file_path)
             if deleted_folder_id:
                 deleted_folder_ids.append(deleted_folder_id)
                 continue
 
-        # Find affected folder
         closest_folder = watcher_util_find_closest_parent_folder(
             file_path, watched_folders
         )
@@ -77,11 +72,9 @@ def watcher_util_handle_file_changes(changes: set) -> None:
             folder_id, folder_path = closest_folder
             affected_folders[folder_path] = folder_id
 
-    # Process affected folders
     for folder_path, folder_id in affected_folders.items():
         watcher_util_call_sync_folder_api(folder_id, folder_path)
 
-    # Handle deleted folders
     if deleted_folder_ids:
         logger.info(f"Processing {len(deleted_folder_ids)} deleted folders")
         watcher_util_call_delete_folders_api(deleted_folder_ids)
@@ -101,17 +94,14 @@ def watcher_util_find_closest_parent_folder(
     Returns:
         Tuple of (folder_id, folder_path) if found, None otherwise
     """
-    # Normalize the file path
     file_path = os.path.abspath(file_path)
 
     best_match = None
     longest_match_length = 0
 
     for folder_id, folder_path in watched_folders:
-        # Normalize the folder path
         folder_path = os.path.abspath(folder_path)
 
-        # Check if this folder is a parent of the file
         if file_path.startswith(folder_path):
             # Ensure it's a proper parent (not just a prefix)
             if file_path == folder_path or file_path[len(folder_path)] == os.sep:
@@ -204,7 +194,6 @@ def watcher_util_watcher_worker(folder_paths: List[str]) -> None:
 
                 logger.debug("Detailed changes:\n %s", format_debug_changes(changes))
 
-            # Process changes
             watcher_util_handle_file_changes(changes)
     except Exception as e:
         logger.error(f"Error in watcher worker: {e}")
@@ -323,7 +312,6 @@ def watcher_util_stop_folder_watcher() -> None:
         logger.error(f"Error stopping watcher: {e}")
     finally:
         watcher_thread = None
-        # Clear state
         watched_folders = []
         folder_id_map = {}
 

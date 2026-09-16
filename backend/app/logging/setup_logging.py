@@ -62,17 +62,14 @@ class ColorFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         """Format the log record with colors and component prefix."""
-        # Add component information to the record
         component_prefix = self.component_config.get("prefix", "")
         record.component = component_prefix
 
-        # Format the message
         formatted_message = super().format(record)
 
         if not self.use_colors:
             return formatted_message
 
-        # Add color to the component prefix
         component_color = self.component_config.get("color", "")
         if component_color and component_color in self.COLORS:
             component_start = formatted_message.find(f"[{component_prefix}]")
@@ -86,7 +83,6 @@ class ColorFormatter(logging.Formatter):
                     + formatted_message[component_end:]
                 )
 
-        # Add color to the log level
         level_color = self.level_colors.get(record.levelname, "")
         if level_color:
             # Handle comma-separated color specs like "red,bg_white"
@@ -147,7 +143,6 @@ def setup_logging(component_name: str, environment: Optional[str] = None) -> Non
         )
         return
 
-    # Get environment settings
     if not environment:
         environment = os.environ.get(
             "ENV", config.get("default_environment", "development")
@@ -158,32 +153,26 @@ def setup_logging(component_name: str, environment: Optional[str] = None) -> Non
     use_colors = env_settings.get("colored_output", True)
     console_logging = env_settings.get("console_logging", True)
 
-    # Get component configuration
     component_config = config.get("components", {}).get(
         component_name, {"prefix": component_name.upper(), "color": "white"}
     )
 
-    # Configure root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
 
-    # Clear existing handlers
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
 
-    # Configure specific loggers if defined in environment settings
     if "loggers" in env_settings:
         for logger_name, logger_config in env_settings["loggers"].items():
             logger = logging.getLogger(logger_name)
             if "level" in logger_config:
                 logger.setLevel(getattr(logging, logger_config["level"], log_level))
 
-    # Set up console handler
     if console_logging:
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(log_level)
 
-        # Create formatter with component and color information
         fmt = (
             config.get("formatters", {})
             .get("default", {})
@@ -235,7 +224,6 @@ class InterceptHandler(logging.Handler):
         Args:
             record: The log record to process
         """
-        # Get the appropriate module name
         module_name = record.name
         if module_name.startswith("uvicorn"):
             module_name = "uvicorn"
@@ -247,7 +235,6 @@ class InterceptHandler(logging.Handler):
 
         record.msg = f"[{module_name}] {msg}"
         record.args = ()
-        # Clear exception / stack info to avoid duplicate traces
         record.exc_info = None
         record.stack_info = None
 
@@ -266,7 +253,6 @@ def configure_uvicorn_logging(component_name: str) -> None:
     """
     import logging.config
 
-    # Create an intercept handler with our component name
     intercept_handler = InterceptHandler(component_name)
 
     # Make sure the handler uses our ColorFormatter
@@ -284,7 +270,6 @@ def configure_uvicorn_logging(component_name: str) -> None:
     formatter = ColorFormatter(fmt, component_config, level_colors, use_colors)
     intercept_handler.setFormatter(formatter)
 
-    # Configure Uvicorn loggers to use our handler
     for logger_name in ["uvicorn", "uvicorn.error", "uvicorn.access"]:
         uvicorn_logger = logging.getLogger(logger_name)
         uvicorn_logger.handlers = []  # Clear existing handlers

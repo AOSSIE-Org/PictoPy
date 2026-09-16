@@ -27,10 +27,9 @@ SIDECAR_SUFFIXES = (".supplemental-metadata.json", ".json")
 ALBUM_METADATA_KEYS = frozenset({"entries", "albumData"})
 
 
-# The last directory listing, reused across its images. A sidecar lookup runs
-# for every photo missing EXIF GPS, so scanning per photo made an N-file folder
-# cost N scans of N entries. The stamp is read as one tuple, so a concurrent
-# write can only cost a rescan, never a wrong answer.
+# Reused across a directory's images: a lookup runs per photo missing EXIF GPS,
+# so scanning each time cost N scans of N entries. Read as one tuple, so a
+# concurrent write costs a rescan, never a wrong answer.
 _LISTING_CACHE: Tuple[Optional[str], float, Tuple[str, ...]] = (None, 0.0, ())
 
 

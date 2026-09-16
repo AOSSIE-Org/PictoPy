@@ -2,9 +2,7 @@ import numpy as np
 
 from app.utils.face_quality import face_passes_quality_gate
 
-# ##############################
 # Helpers
-# ##############################
 
 
 def sharp_gray(size: int = 50) -> np.ndarray:
@@ -14,9 +12,7 @@ def sharp_gray(size: int = 50) -> np.ndarray:
     return img
 
 
-# ##############################
 # Quality gate
-# ##############################
 
 
 class TestFaceQualityGate:

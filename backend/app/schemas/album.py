@@ -16,9 +16,7 @@ class Album(BaseModel):
     updated_at: Optional[str] = None
 
 
-# ##############################
 # Request Handler
-# ##############################
 
 
 class CreateAlbumRequest(BaseModel):
@@ -88,9 +86,7 @@ class ImageIdsRequest(BaseModel):
         return cleaned
 
 
-# ##############################
 # Response Handler
-# ##############################
 
 
 class GetAlbumsResponse(BaseModel):

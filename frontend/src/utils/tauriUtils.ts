@@ -1,8 +1,3 @@
-/**
- * Utility functions for Tauri environment detection
- */
-
-// Type declarations for Tauri window properties
 declare global {
   interface Window {
     __TAURI_INTERNALS__?: unknown;

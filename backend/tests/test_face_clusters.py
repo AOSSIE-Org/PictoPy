@@ -22,9 +22,7 @@ app.include_router(face_clusters_router, prefix="/face_clusters")
 client = TestClient(app)
 
 
-# ##############################
 # Pytest Fixtures
-# ##############################
 
 
 @pytest.fixture
@@ -93,17 +91,13 @@ def sample_cluster_images():
     ]
 
 
-# ##############################
 # Test Classes
-# ##############################
 
 
 class TestFaceClustersAPI:
     """Test class for Face Clusters API endpoints."""
 
-    # ============================================================================
     # PUT /face_clusters/{cluster_id} - Rename Cluster Tests
-    # ============================================================================
 
     @patch("app.routes.face_clusters.db_update_cluster")
     @patch("app.routes.face_clusters.db_get_cluster_by_id")
@@ -229,9 +223,7 @@ class TestFaceClustersAPI:
             cluster_name="John Doe",  # Should be trimmed
         )
 
-    # ============================================================================
     # GET /face_clusters/ - Get All Clusters Tests
-    # ============================================================================
 
     @patch("app.routes.face_clusters.db_get_all_clusters_with_face_counts")
     def test_get_all_clusters_success(
@@ -248,7 +240,6 @@ class TestFaceClustersAPI:
         assert "Successfully retrieved 3 cluster(s)" in data["message"]
         assert len(data["data"]["clusters"]) == 3
 
-        # Check first cluster details
         first_cluster = data["data"]["clusters"][0]
         assert first_cluster["cluster_id"] == "cluster_1"
         assert first_cluster["cluster_name"] == "John Doe"
@@ -306,9 +297,7 @@ class TestFaceClustersAPI:
                 assert isinstance(cluster["cluster_name"], str)
                 assert isinstance(cluster["face_count"], int)
 
-    # ============================================================================
     # GET /face_clusters/{cluster_id}/images - Get Cluster Images Tests
-    # ============================================================================
 
     @patch("app.routes.face_clusters.db_get_images_by_cluster_id")
     @patch("app.routes.face_clusters.db_get_cluster_by_id")
@@ -334,7 +323,6 @@ class TestFaceClustersAPI:
         assert data["data"]["total_images"] == 2
         assert len(data["data"]["images"]) == 2
 
-        # Check first image details
         first_image = data["data"]["images"][0]
         assert first_image["id"] == "img_1"
         assert first_image["path"] == "/path/to/image1.jpg"
@@ -390,9 +378,7 @@ class TestFaceClustersAPI:
         assert data["detail"]["success"] is False
         assert data["detail"]["error"] == "Internal server error"
 
-    # ============================================================================
     # Additional Edge Case Tests
-    # ============================================================================
 
     def test_rename_cluster_missing_request_body(self):
         """Test rename cluster with missing request body."""
@@ -425,9 +411,7 @@ class TestFaceClustersAPI:
         assert response.status_code == 405
 
 
-# ============================================================================
 # Algorithmic Logic Tests
-# ============================================================================
 
 
 def generate_synthetic_embeddings(
@@ -444,7 +428,6 @@ def generate_synthetic_embeddings(
         center = np.random.randn(dim)
         center = center / np.linalg.norm(center)
 
-        # Add points around center
         for _ in range(points_per_identity):
             noise = np.random.randn(dim) * noise_std
             point = center + noise
@@ -476,7 +459,6 @@ class TestFaceClusteringAlgo:
     @patch("app.utils.face_clusters.db_get_all_faces_with_cluster_names")
     def test_folder_size_regression(self, mock_db_get):
         """Test 1: Folder-size regression (the original bug)"""
-        # Generate 20 embeddings (2 identities, 10 points each)
         identity_embs, identity_labels = generate_synthetic_embeddings(
             num_identities=2, points_per_identity=10
         )
@@ -496,7 +478,6 @@ class TestFaceClusteringAlgo:
             len(isolated_clusters) == 2
         ), f"The folder-size bug is present: expected 2 clusters, got {len(isolated_clusters)} in isolated run"
 
-        # Verify points were assigned correctly (10 points per cluster)
         cluster_counts = {}
         for r in results_isolated:
             cluster_counts[r.cluster_uuid] = cluster_counts.get(r.cluster_uuid, 0) + 1
@@ -561,10 +542,8 @@ class TestFaceClusteringAlgo:
     @patch("app.utils.face_clusters.db_get_all_faces_with_cluster_names")
     def test_adaptive_eps_clamping_regression(self, mock_db_get):
         """Test 4: Adaptive eps clamping under sparse datasets with singletons"""
-        # Create 9 embeddings:
-        # Identity A: 2 points (very close)
-        # Identity B: 2 points (very close)
-        # 5 Singleton points (completely random / orthogonal)
+        # 9 embeddings: two tight pairs (identities A and B) and 5 orthogonal
+        # singletons.
         dim = 512
         np.random.seed(42)
 
@@ -596,7 +575,6 @@ class TestFaceClusteringAlgo:
 
         all_embeddings = [pt_a1, pt_a2, pt_b1, pt_b2] + singletons
 
-        # Mock database call
         mock_db_get.return_value = [
             {"face_id": i, "embeddings": emb, "cluster_name": None}
             for i, emb in enumerate(all_embeddings)
@@ -713,9 +691,7 @@ class TestFaceClusteringAlgo:
         )
 
 
-# ##############################
 # Stale cluster cleanup (issue #1023)
-# ##############################
 
 
 @pytest.fixture

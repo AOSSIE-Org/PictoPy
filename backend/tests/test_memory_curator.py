@@ -17,17 +17,13 @@ real_get_preferences = memory_curator.memory_curator_get_preferences
 T0 = datetime(2024, 7, 26, 10, 0, 0)
 REFERENCE = "2026-07-26"
 
-# One shared direction stands in for a visually consistent set. Scattered sets
-# use mutually orthogonal basis vectors: with N distinct directions the mean
-# cosine to the centroid is 1/sqrt(N), so eight of them land well under the
-# gate while two would not.
+# One shared direction stands in for a consistent set. Orthogonal ones score a
+# mean pairwise cosine of 0, well under any baseline, so the gate rejects them.
 COHERENT = np.eye(8, dtype=np.float32)[0]
 SCATTER_BASIS = np.eye(8, dtype=np.float32)
 
-# What a random pair of photos in this library already scores, measured on the
-# real one. Every cohesion test is a margin over it, so a run that reads no
-# baseline at all judges nothing - which is why it is stubbed rather than left
-# to whatever embeddings happen to be in the database.
+# Measured on the real library. Every cohesion test is a margin over it, so it is
+# stubbed rather than left to whatever embeddings the database happens to hold.
 LIBRARY_BASELINE = 0.58
 
 
@@ -47,9 +43,7 @@ def library_sample(pairwise: float = LIBRARY_BASELINE, count: int = 4) -> List[A
     return vectors
 
 
-# ##############################
 # Pytest Fixtures
-# ##############################
 
 
 @pytest.fixture(autouse=True)
@@ -217,9 +211,7 @@ def of_type(upserts: List[Dict[str, Any]], event_type: str) -> List[Dict[str, An
     return [u for u in upserts if u["memory"]["event_type"] == event_type]
 
 
-# ##############################
 # Helpers
-# ##############################
 
 
 class TestAnniversaryWindow:
@@ -321,9 +313,7 @@ class TestParamsSignature:
         assert baseline == changed
 
 
-# ##############################
 # Trigger 1: anniversary
-# ##############################
 
 
 class TestAnniversaryCuration:
@@ -410,9 +400,7 @@ class TestAnniversaryCuration:
         assert len(seen) == 2
 
 
-# ##############################
 # Trigger 2: import event
-# ##############################
 
 
 class TestSegmentByTimeAndPlace:
@@ -538,9 +526,7 @@ class TestImportEventCuration:
         assert len(upserts) == memory_curator.MAX_IMPORT_MEMORIES
 
 
-# ##############################
 # Trigger 3: semantic event
-# ##############################
 
 
 def event_hits(
@@ -799,9 +785,7 @@ class TestSemanticSurfaceDate:
         )
 
 
-# ##############################
 # Run orchestration
-# ##############################
 
 
 class TestOutlierTrimming:
@@ -1073,9 +1057,7 @@ class TestRunOrchestration:
         assert mocks["db_get_recently_used_image_ids"].call_count == 4
 
 
-# ##############################
 # Enablement
-# ##############################
 
 
 class TestEnablement:

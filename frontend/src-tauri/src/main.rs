@@ -366,10 +366,8 @@ fn main() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
-            // The close handler and the tray item both stop the tunnel already,
-            // but neither covers every way the app can exit. This is the one
-            // path all of them pass through, and an ssh child outliving
-            // PictoPy would leave an album reachable from the internet.
+            // The close handler and tray item stop the tunnel, but miss some exit
+            // paths; this one they all pass through.
             if let tauri::RunEvent::Exit = event {
                 services::tunnel::shutdown(app);
             }

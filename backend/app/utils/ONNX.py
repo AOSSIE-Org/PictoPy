@@ -16,18 +16,15 @@ def ONNX_util_get_execution_providers(exclude: tuple[str, ...] = ()) -> list:
     """
     from app.database.metadata import db_get_metadata
 
-    # Get metadata from database
     metadata = db_get_metadata()
 
     # Default to CPU if no preferences found
     gpu_acceleration = True
 
-    # Extract GPU acceleration setting from user preferences
     if metadata and "user_preferences" in metadata:
         user_prefs = metadata["user_preferences"]
         gpu_acceleration = user_prefs.get("GPU_Acceleration", True)
 
-    # Return appropriate execution providers
     if gpu_acceleration:
         providers = [
             p for p in onnxruntime.get_available_providers() if p not in exclude

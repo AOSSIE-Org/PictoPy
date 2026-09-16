@@ -2,14 +2,8 @@ import { useCallback, useRef, useState } from 'react';
 import { startTunnel, stopTunnel, tunnelStatus } from '@/utils/tunnel';
 import { ShareTunnel } from '@/types/Share';
 
-/**
- * The tunnel that makes the share server reachable off the LAN.
- *
- * One tunnel forwards the whole share port, so it belongs to the application
- * rather than to any one album. This owns the view of it, and deliberately
- * asks the Rust side rather than trusting what a dialog last saw: a share can
- * be stopped before the first status lookup has even resolved.
- */
+// One tunnel forwards the whole share port, so it belongs to the app, not to an
+// album. Asks the Rust side rather than trusting what a dialog last saw.
 export const useShareTunnel = (): ShareTunnel => {
   const [url, setUrl] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -60,10 +54,8 @@ export const useShareTunnel = (): ShareTunnel => {
 
   const close = useCallback(async (): Promise<void> => {
     revision.current += 1;
-    // Asked for unconditionally rather than only when something is known to be
-    // running: a start still in flight has a child the owner can already kill,
-    // and asking first would read null and skip the stop entirely. Stopping
-    // when nothing is open is a no-op.
+    // Unconditional: checking first would read null while a start is in flight
+    // and skip the stop, which queues behind that start anyway. Idle is a no-op.
     await stopTunnel();
     apply(null);
   }, [apply]);

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
-// Import modular components
 import FolderManagementCard from './components/FolderManagementCard';
 import UserPreferencesCard from './components/UserPreferencesCard';
 import ApplicationControlsCard from './components/ApplicationControlsCard';
@@ -10,10 +9,6 @@ import AccountSettingsCard, {
 } from './components/AccountSettingsCard';
 import SystemSettingsCard from './components/SystemSettingsCard';
 
-/**
- * Settings page component
- * Acts as an orchestrator for the settings sections
- */
 const Settings: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();

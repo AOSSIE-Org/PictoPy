@@ -91,7 +91,6 @@ colors = rng.uniform(0, 255, size=(len(class_names), 3))
 
 
 def YOLO_util_nms(boxes, scores, iou_threshold):
-    # Sort by score
     sorted_indices = np.argsort(scores)[::-1]
 
     keep_boxes = []
@@ -106,7 +105,6 @@ def YOLO_util_nms(boxes, scores, iou_threshold):
         # Remove boxes with IoU over the threshold
         keep_indices = np.where(ious < iou_threshold)[0]
 
-        # print(keep_indices.shape, sorted_indices.shape)
         sorted_indices = sorted_indices[keep_indices + 1]
 
     return keep_boxes
@@ -254,18 +252,15 @@ def YOLO_util_get_model_path(model_type: str = "object") -> str:
     """
     from app.database.metadata import db_get_metadata
 
-    # Get metadata from database
     metadata = db_get_metadata()
 
     # Default model size if no preferences found
     model_size = "small"
 
-    # Extract YOLO model size from user preferences
     if metadata and "user_preferences" in metadata:
         user_prefs = metadata["user_preferences"]
         model_size = user_prefs.get("YOLO_model_size", "small")
 
-    # Define model mappings
     model_mappings = {
         "object": {
             "nano": settings.NANO_OBJ_DETECTION_MODEL,
@@ -279,8 +274,6 @@ def YOLO_util_get_model_path(model_type: str = "object") -> str:
         },
     }
 
-    # Get the appropriate model mapping
     models = model_mappings.get(model_type, model_mappings["object"])
 
-    # Return the model path with fallback to small
     return models.get(model_size, models["small"])

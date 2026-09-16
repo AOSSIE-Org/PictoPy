@@ -18,9 +18,7 @@ app.include_router(albums_router.router, prefix="/albums", tags=["albums"])
 
 client = TestClient(app)
 
-# ##############################
 # Pytest Fixtures
-# ##############################
 
 
 def album_row(
@@ -87,9 +85,7 @@ def mock_db_locked_album():
     }
 
 
-# ##############################
 # Test Classes
-# ##############################
 
 
 class TestAlbumRoutes:
@@ -127,7 +123,6 @@ class TestAlbumRoutes:
             assert "album_id" in json_response
 
             mock_insert.assert_called_once()
-            # Verify that the album_id is a valid UUID
             album_id = json_response["album_id"]
             uuid.UUID(album_id)  # This will raise ValueError if not a valid UUID
 

@@ -18,9 +18,7 @@ from app.database.faces import (
 )
 from app.database.face_clusters import db_create_clusters_table
 
-# ##############################
 # Pytest Fixtures
-# ##############################
 
 
 @pytest.fixture(scope="function")
@@ -68,9 +66,7 @@ def add_face(
     )
 
 
-# ##############################
 # Table creation
-# ##############################
 
 
 class TestFacesTable:
@@ -104,9 +100,7 @@ class TestFacesTable:
             conn.close.assert_called_once()
 
 
-# ##############################
 # Inserting embeddings
-# ##############################
 
 
 class TestInsertFaceEmbeddings:
@@ -138,9 +132,7 @@ class TestInsertFaceEmbeddings:
         assert bbox_json is None
 
 
-# ##############################
 # Reading faces
-# ##############################
 
 
 class TestUnassignedFaces:
@@ -177,9 +169,7 @@ class TestFacesWithClusterNames:
         assert db_get_all_faces_with_cluster_names() == []
 
 
-# ##############################
 # Cluster assignment
-# ##############################
 
 
 class TestUpdateClusterIdsBatch:
@@ -233,9 +223,7 @@ class TestUpdateClusterIdsBatch:
         assert [f["face_id"] for f in db_get_faces_unassigned_clusters()] == [face_id]
 
 
-# ##############################
 # Cluster mean embeddings
-# ##############################
 
 
 class TestClusterMeanEmbeddings:

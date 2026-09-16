@@ -36,9 +36,7 @@ from app.utils.videos import (
     video_util_sample_frame_timestamps,
 )
 
-# ##############################
 # Pytest Fixtures
-# ##############################
 
 
 @pytest.fixture(scope="function")
@@ -165,9 +163,7 @@ def insert_frames(video_id, count, frames_dir=None):
     return records
 
 
-# ##############################
 # Sampling strategy
-# ##############################
 
 
 class TestSampleFrameTimestamps:
@@ -201,9 +197,7 @@ class TestSampleFrameTimestamps:
         assert len(video_util_sample_frame_timestamps(100.0, 1.0, 10)) == 10
 
 
-# ##############################
 # Aggregating frames into video tags
-# ##############################
 
 
 class TestAggregateFrameClasses:
@@ -229,9 +223,7 @@ class TestAggregateFrameClasses:
         assert video_util_aggregate_frame_classes([], 2) == []
 
 
-# ##############################
 # Frame extraction
-# ##############################
 
 
 class TestExtractVideoFrames:
@@ -268,9 +260,7 @@ class TestExtractVideoFrames:
         assert video_util_extract_video_frames("vid-1", broken, 5.0) == []
 
 
-# ##############################
 # Database round-trips
-# ##############################
 
 
 class TestVideoFrameDatabase:
@@ -360,9 +350,7 @@ class TestVideoFrameDatabase:
         assert db_get_videos_needing_scoring("m1", "sig-2", 10) == [video_id]
 
 
-# ##############################
 # Purging the frame cache
-# ##############################
 
 
 class TestPurgeFrameCache:
@@ -389,9 +377,7 @@ class TestPurgeFrameCache:
         assert video_util_purge_frame_cache() == 0
 
 
-# ##############################
 # Routes
-# ##############################
 
 
 class TestVideoTagRoutes:

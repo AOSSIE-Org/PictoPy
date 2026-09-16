@@ -41,7 +41,6 @@ from app.config.settings import (
 )
 from app.logging.setup_logging import get_logger
 
-# Initialize logger
 logger = get_logger(__name__)
 
 
@@ -149,16 +148,13 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
                     "face_image_base64": None,  # Will be updated later
                 }
 
-        # Convert to list for batch insert
         cluster_list = list(unique_clusters.values())
 
         # Perform all database operations within a single transaction
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            # Clear old clusters first
             db_delete_all_clusters(cursor)
 
-            # Insert the new clusters into database first
             db_insert_clusters_batch(cluster_list, cursor)
 
             # Now update face cluster assignments (foreign keys will be valid)
@@ -168,7 +164,6 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
             for cluster_id in unique_clusters.keys():
                 face_image_base64 = _generate_cluster_face_image(cluster_id, cursor)
                 if face_image_base64:
-                    # Update the cluster with the generated face image
                     success = _update_cluster_face_image(
                         cluster_id, face_image_base64, cursor
                     )
@@ -203,11 +198,9 @@ def _validate_embedding(embedding: NDArray, min_norm: float = 1e-6) -> bool:
     Returns:
         True if embedding is valid, False otherwise
     """
-    # Check for NaN or infinite values
     if not np.isfinite(embedding).all():
         return False
 
-    # Check if embedding is effectively zero (too small norm)
     norm = np.linalg.norm(embedding)
     if norm < min_norm:
         return False
@@ -247,13 +240,11 @@ def cluster_util_cluster_all_face_embeddings(
     Returns:
         List of ClusterResult objects containing face_id, embedding, cluster_uuid, and cluster_name
     """
-    # Get all faces with their existing cluster names
     faces_data = db_get_all_faces_with_cluster_names()
 
     if not faces_data:
         return [], 0
 
-    # Extract embeddings and face IDs with validation
     embeddings = []
     face_ids = []
     image_ids = []
@@ -286,10 +277,8 @@ def cluster_util_cluster_all_face_embeddings(
 
     logger.info(f"Total valid faces to cluster: {len(face_ids)}")
 
-    # Convert to numpy array for DBSCAN
     embeddings_array = np.array(embeddings)
 
-    # Calculate pairwise distances with similarity threshold
     distances = cosine_distances(embeddings_array)
 
     # Guard against NaN distances (shouldn't happen after validation, but double-check)
@@ -352,17 +341,14 @@ def cluster_util_cluster_all_face_embeddings(
                 }
             )
 
-    # Generate cluster UUIDs and determine cluster names
     results = []
 
     for cluster_label, faces_in_cluster in clusters.items():
-        # Generate unique UUID for this cluster
         cluster_uuid = str(uuid.uuid4())
 
         # Determine cluster name using majority voting
         cluster_name = _determine_cluster_name(faces_in_cluster)
 
-        # Create ClusterResult objects for all faces in this cluster
         for face in faces_in_cluster:
             result = ClusterResult(
                 face_id=face["face_id"],
@@ -411,18 +397,15 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
     Returns:
         List of face-cluster mappings ready for batch update
     """
-    # Get faces without cluster assignments
     unassigned_faces = db_get_faces_unassigned_clusters()
     if not unassigned_faces:
         return [], 0
 
-    # Get cluster mean embeddings
     cluster_means = db_get_cluster_mean_embeddings()
 
     if not cluster_means:
         return [], 0
 
-    # Prepare data for nearest neighbor assignment with validation
     cluster_ids = []
     mean_embeddings = []
     invalid_clusters = 0
@@ -430,7 +413,6 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
     for cluster_data in cluster_means:
         mean_emb = cluster_data["mean_embedding"]
 
-        # Validate cluster mean embedding
         if _validate_embedding(mean_emb):
             cluster_ids.append(cluster_data["cluster_id"])
             mean_embeddings.append(mean_emb)
@@ -452,7 +434,6 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
     # (cluster_id, image_id) pairs already taken; a photo's faces are distinct people
     occupied_pairs = db_get_cluster_image_pairs()
 
-    # Prepare batch update data
     face_cluster_mappings = []
     skipped_invalid = 0
 
@@ -460,13 +441,11 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
         face_id = face["face_id"]
         face_embedding = face["embeddings"]
 
-        # Validate face embedding
         if not _validate_embedding(face_embedding):
             skipped_invalid += 1
             logger.warning(f"Skipping face_id {face_id} with invalid embedding")
             continue
 
-        # Calculate cosine distances to all cluster means
         distances = _calculate_cosine_distances(face_embedding, mean_embeddings_array)
 
         # Guard against NaN distances
@@ -581,7 +560,6 @@ def _merge_similar_clusters(
     if len(cluster_map) <= 1:
         return results  # Nothing to merge
 
-    # Calculate mean embedding for each cluster with validation
     cluster_means = {}
     invalid_clusters = []
 
@@ -589,7 +567,6 @@ def _merge_similar_clusters(
         embeddings = np.array([face.embedding for face in cluster_faces])
         mean_embedding = np.mean(embeddings, axis=0)
 
-        # Validate cluster mean
         if _validate_embedding(mean_embedding):
             cluster_means[cluster_uuid] = mean_embedding
         else:
@@ -598,7 +575,6 @@ def _merge_similar_clusters(
                 f"Cluster {cluster_uuid} has invalid mean embedding, excluding from merge"
             )
 
-    # Remove invalid clusters from consideration
     for invalid_uuid in invalid_clusters:
         cluster_map.pop(invalid_uuid, None)
 
@@ -618,7 +594,6 @@ def _merge_similar_clusters(
             if uuid2 in merge_mapping:
                 continue  # Already merged
 
-            # Calculate similarity between cluster means
             emb1 = cluster_means[uuid1].reshape(1, -1)
             emb2 = cluster_means[uuid2].reshape(1, -1)
 
@@ -638,7 +613,6 @@ def _merge_similar_clusters(
                     f"Merging cluster {uuid2} into {uuid1} (similarity: {similarity:.3f})"
                 )
 
-    # Apply merges
     if merge_mapping:
         # Resolve transitive merges (follow chain to ultimate target)
         def resolve_final_cluster(uuid):
@@ -649,7 +623,6 @@ def _merge_similar_clusters(
                 current = merge_mapping[current]
             return current
 
-        # Build merged results with resolved cluster UUIDs
         merged_results = []
         for result in results:
             final_cluster = resolve_final_cluster(result.cluster_uuid)
@@ -680,7 +653,6 @@ def _merge_similar_clusters(
             else:
                 final_cluster_names[cluster_uuid] = None
 
-        # Update all results with final cluster names
         for result in merged_results:
             result.cluster_name = final_cluster_names.get(result.cluster_uuid)
 
@@ -723,7 +695,6 @@ def _calculate_cosine_distances(
     # Calculate cosine similarities (dot product of normalized vectors)
     cosine_similarities = np.dot(cluster_norms, face_norm)
 
-    # Convert to cosine distances (1 - similarity)
     cosine_distances = 1 - cosine_similarities
 
     # Guard against numerical errors producing values outside [0, 2]
@@ -838,24 +809,20 @@ def _calculate_square_crop_bounds(
     width = int(bbox.get("width", 100))
     height = int(bbox.get("height", 100))
 
-    # Add padding around the face
     x_start = max(0, x - padding)
     y_start = max(0, y - padding)
     x_end = min(img_width, x + width + padding)
     y_end = min(img_height, y + height + padding)
 
-    # Calculate square crop dimensions centered on the face
     crop_width = x_end - x_start
     crop_height = y_end - y_start
 
     # Use the larger dimension to create a square crop
     square_size = max(crop_width, crop_height)
 
-    # Calculate center of the current crop
     center_x = x_start + crop_width // 2
     center_y = y_start + crop_height // 2
 
-    # Calculate square crop bounds centered on the face
     half_square = square_size // 2
     square_x_start = max(0, center_x - half_square)
     square_y_start = max(0, center_y - half_square)
@@ -873,7 +840,6 @@ def _calculate_square_crop_bounds(
     square_x_end = square_x_start + actual_square_size
     square_y_end = square_y_start + actual_square_size
 
-    # Ensure bounds are within image
     square_x_start = max(0, square_x_start)
     square_y_start = max(0, square_y_start)
     square_x_end = min(img_width, square_x_end)
@@ -902,7 +868,6 @@ def _crop_and_resize_face(
         # Crop the square region
         face_crop = img[y_start:y_end, x_start:x_end]
 
-        # Check if crop is valid
         if face_crop.size == 0:
             return None
 
@@ -948,27 +913,22 @@ def _generate_cluster_face_image(
         Base64 encoded face image string, or None if generation fails
     """
     try:
-        # Get face data from database
         face_data = _get_cluster_face_data(cluster_uuid, cursor)
         if not face_data:
             return None
 
         image_path, bbox = face_data
 
-        # Load the image
         img = cv2.imread(image_path)
         if img is None:
             return None
 
-        # Calculate square crop bounds
         crop_bounds = _calculate_square_crop_bounds(bbox, img.shape)
 
-        # Crop and resize the face
         face_crop = _crop_and_resize_face(img, crop_bounds)
         if face_crop is None:
             return None
 
-        # Encode to base64
         return _encode_image_to_base64(face_crop)
 
     except Exception as e:
@@ -986,7 +946,6 @@ def _determine_cluster_name(faces_in_cluster: List[Dict]) -> Optional[str]:
     Returns:
         Most common non-null cluster name, or None if no named clusters exist
     """
-    # Extract non-null cluster names
     existing_names = [
         face["existing_cluster_name"]
         for face in faces_in_cluster

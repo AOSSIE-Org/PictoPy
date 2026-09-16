@@ -153,13 +153,4 @@ describe('Settings Page', () => {
       });
     });
   });
-
-  // eslint-disable-next-line no-warning-comments
-  /**
-   * FUTURE: System integrations (future scope)
-   * Belongs in E2E tests (Playwright/Cypress) rather than Jest
-   * - Full user flows with mocked/real backend
-   * - Update preferences API verification
-   * - Check for updates flow
-   */
 });

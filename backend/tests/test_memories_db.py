@@ -32,9 +32,7 @@ from app.database.memories import (
 )
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 
-# ##############################
 # Pytest Fixtures
-# ##############################
 
 
 @pytest.fixture(scope="function")
@@ -114,9 +112,7 @@ def set_started_at(db_path: str, run_date: str, expression: str) -> None:
     conn.close()
 
 
-# ##############################
 # Table creation
-# ##############################
 
 
 class TestCreateMemoriesTable:
@@ -168,9 +164,7 @@ class TestCreateMemoriesTable:
             db_upsert_memory(make_memory("k", event_type=event_type), [])
 
 
-# ##############################
 # Upsert
-# ##############################
 
 
 class TestUpsertMemory:
@@ -240,9 +234,7 @@ class TestUpsertMemory:
         assert db_get_memory(memory_id)["signals"] is None
 
 
-# ##############################
 # Cascade behaviour
-# ##############################
 
 
 class TestCascades:
@@ -284,9 +276,7 @@ class TestCascades:
         assert stored["live_image_count"] == 1
 
 
-# ##############################
 # Marking and pruning
-# ##############################
 
 
 class TestMarkAndPrune:
@@ -335,9 +325,7 @@ class TestMarkAndPrune:
         assert db_get_memory(keep)["status"] == "complete"
 
 
-# ##############################
 # Stale memories
-# ##############################
 
 
 def redate(db_path: str, image_id: str, captured_at: Optional[str]) -> None:
@@ -441,9 +429,7 @@ class TestDeleteStaleMemories:
         assert db_get_memory(intact) is not None
 
 
-# ##############################
 # Listing and surfacing
-# ##############################
 
 
 class TestListAndSurface:
@@ -522,9 +508,7 @@ class TestListAndSurface:
         assert db_count_unviewed_memories("2026-07-26") == 1
 
 
-# ##############################
 # Dedupe keys and recent use
-# ##############################
 
 
 class TestDedupeAndRecentUse:
@@ -565,9 +549,7 @@ class TestDedupeAndRecentUse:
         assert db_get_recently_used_image_ids(30, "2026-07-26") == set()
 
 
-# ##############################
 # Anniversary candidates
-# ##############################
 
 
 class TestAnniversaryCandidates:
@@ -586,9 +568,7 @@ class TestAnniversaryCandidates:
         assert db_get_anniversary_candidates([], 2025) == []
 
 
-# ##############################
 # Runs
-# ##############################
 
 
 class TestMemoryRuns:
@@ -649,9 +629,7 @@ class TestMemoryRuns:
         assert db_reap_stale_memory_runs(30) == 0
 
 
-# ##############################
 # Indexing gate
-# ##############################
 
 
 class TestIndexingBusy:

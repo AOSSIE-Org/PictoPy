@@ -13,20 +13,15 @@ def siglip_util_preprocess_image(img_path: str, resolution: int) -> np.ndarray |
     Returns a [3, R, R] float32 array or None if the image is corrupt/unreadable.
     """
     try:
-        # PIL bicubic (antialiased, Pillow>=9.1). Measured vs HF
-        # SiglipImageProcessor on real 4032x3024 photos: embedding cosine
-        # ~0.984 (HF uses an internal resampler that plain PIL resize does
-        # not reproduce; exact parity would require shipping transformers).
-        # Production is self-consistent: SIGLIP2_MATCH_THRESHOLD was tuned
-        # against THIS pipeline. Any future threshold/calibration work must
-        # use this function, not AutoImageProcessor.
+        # PIL bicubic measures cosine ~0.984 against HF SiglipImageProcessor;
+        # exact parity would mean shipping transformers. SIGLIP2_MATCH_THRESHOLD
+        # was tuned here, so recalibration must use this function, not HF's.
         img = (
             Image.open(img_path)
             .convert("RGB")
             .resize((resolution, resolution), Image.BICUBIC)
         )
 
-        # Convert to numpy array and normalize to [0, 1]
         img_np = np.asarray(img).astype(np.float32) / 255.0
 
         # Normalize: (x - 0.5) / 0.5 (SigLIP mean=std=0.5 per channel)
@@ -60,11 +55,8 @@ def siglip_util_tokenize_query(query: str) -> tuple[np.ndarray, np.ndarray]:
 
     current_key = get_siglip2_tokenizer_key(SIGLIP2_ACTIVE_CHECKPOINT)
 
-    # Lock around the check-load-assign sequence only: without it, two
-    # threads racing on a cold/stale cache could both load a tokenizer and
-    # interleave their _tokenizer/_tokenizer_key assignments, leaving the
-    # pair mismatched. encode() itself doesn't touch the cache, so it runs
-    # outside the lock on a captured local -- no need to serialize it.
+    # Guards check-load-assign only: racing threads could otherwise interleave
+    # the _tokenizer/_tokenizer_key writes and leave the pair mismatched.
     with _tokenizer_lock:
         if _tokenizer is None or _tokenizer_key != current_key:
             tokenizer_path = get_model_path(current_key)

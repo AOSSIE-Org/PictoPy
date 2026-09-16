@@ -142,11 +142,8 @@ export const ChronologicalFavoritesGallery = ({
     return map;
   }, [orderedVideos]);
 
-  // Un-favouriting the item currently open in its viewer (e.g. from the
-  // heart button inside MediaView/VideoPlayerOverlay itself) drops it out of
-  // this gallery's list. The viewer's index is otherwise untouched, so it
-  // would silently show whatever now sits at that index -- or nothing, if
-  // the item was last. Close it instead of drifting to the wrong item.
+  // Un-favouriting the open item removes it from this list but leaves the viewer's
+  // index alone, so it would show the wrong item. Close the viewer instead.
   useEffect(() => {
     const previousIds = previousImageIdsRef.current;
     const currentIds = orderedImages.map((img) => img.id);

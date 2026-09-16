@@ -28,9 +28,7 @@ from app.database.albums import (
 )
 from app.database.images import db_create_images_table
 
-# ##############################
 # Pytest Fixtures
-# ##############################
 
 
 @pytest.fixture(scope="function")
@@ -100,9 +98,7 @@ def stored_hash(db_path: str, album_id: str) -> Optional[str]:
     return row[0]
 
 
-# ##############################
 # Table creation
-# ##############################
 
 
 class TestAlbumTables:
@@ -179,9 +175,7 @@ class TestAlbumTables:
             conn.close.assert_called_once()
 
 
-# ##############################
 # Album CRUD
-# ##############################
 
 
 class TestAlbumCrud:
@@ -232,9 +226,7 @@ class TestAlbumCrud:
         assert db_get_album("album-1") is None
 
 
-# ##############################
 # Album images
-# ##############################
 
 
 class TestAlbumImages:
@@ -492,9 +484,7 @@ class TestCreateAlbumWithImages:
         assert db_get_album("album-2") is None
 
 
-# ##############################
 # Password handling
-# ##############################
 
 
 class TestAlbumPassword:
@@ -537,9 +527,7 @@ class TestAlbumPassword:
         assert verify_album_password("album-1", "oldpass") is True
 
 
-# ##############################
 # Cover image
-# ##############################
 
 
 class TestAlbumCoverPath:

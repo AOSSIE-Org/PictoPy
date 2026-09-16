@@ -13,9 +13,7 @@ from app.database.metadata import (
     db_update_metadata,
 )
 
-# ##############################
 # Pytest Fixtures
-# ##############################
 
 
 @pytest.fixture(scope="function")
@@ -70,9 +68,7 @@ class RollbackSpy:
         return getattr(self._conn, name)
 
 
-# ##############################
 # Table creation
-# ##############################
 
 
 class TestCreateMetadataTable:
@@ -98,9 +94,7 @@ class TestCreateMetadataTable:
                 db_create_metadata_table()
 
 
-# ##############################
 # Reading metadata
-# ##############################
 
 
 class TestGetMetadata:
@@ -117,9 +111,7 @@ class TestGetMetadata:
         assert db_get_metadata() is None
 
 
-# ##############################
 # Updating metadata
-# ##############################
 
 
 class TestUpdateMetadata:
