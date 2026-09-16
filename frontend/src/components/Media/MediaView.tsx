@@ -94,12 +94,13 @@ export function MediaView({
   }, [dispatch, resetViewerState]);
 
   // Slideshow functionality
-  const { isSlideshowActive, toggleSlideshow } = useSlideshow(
-    totalImages,
-    handleNextImage,
-    handleLoopToStart,
-    currentViewIndex,
-  );
+  const { isSlideshowActive, toggleSlideshow, duration, setDuration } =
+    useSlideshow(
+      totalImages,
+      handleNextImage,
+      handleLoopToStart,
+      currentViewIndex,
+    );
 
   /** Opens the system file explorer at the current image's location. */
   const handleOpenFolder = async () => {
@@ -184,6 +185,8 @@ export function MediaView({
         onToggleSlideshow={toggleSlideshow}
         onClose={handleClose}
         type={type}
+        duration={duration}
+        onDurationChange={setDuration}
       />
 
       {/* Main viewer area */}
