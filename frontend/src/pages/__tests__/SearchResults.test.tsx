@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@/test-utils';
+import { render, screen, waitFor, fireEvent } from '@/test-utils';
+import { useNavigate } from 'react-router';
 import { SearchResults } from '../SearchResults/SearchResults';
 import {
   searchImagesByTag,
@@ -372,5 +373,85 @@ describe('SearchResults Page', () => {
       },
       { timeout: 3000 },
     );
+  });
+
+  test('resets the main scroll container to the top on a new search', async () => {
+    // The real scroll container lives in the layout, which this page-level
+    // test does not mount. Stand one in and give its scrollTo the same
+    // observable effect a browser has -- it updates scrollTop -- so the test
+    // can assert the user-visible scroll state rather than a spy call.
+    const scrollContainer = document.createElement('div');
+    scrollContainer.id = 'main-scroll-container';
+    const scrollTo = jest.fn((options?: ScrollToOptions) => {
+      if (typeof options?.top === 'number') {
+        scrollContainer.scrollTop = options.top;
+      }
+    });
+    // Define the property directly instead of casting a jest.fn onto the
+    // read-only overloaded HTMLElement['scrollTo'] signature.
+    Object.defineProperty(scrollContainer, 'scrollTo', {
+      value: scrollTo,
+      writable: true,
+      configurable: true,
+    });
+    document.body.appendChild(scrollContainer);
+
+    // Navigate within the same mounted SearchResults so the transition mirrors
+    // a real new search (query param changes, component stays mounted) rather
+    // than a fresh mount whose effect would trivially fire once.
+    const GoToSearch = ({ to }: { to: string }) => {
+      const navigate = useNavigate();
+      return (
+        <button type="button" onClick={() => navigate(to)}>
+          go to {to}
+        </button>
+      );
+    };
+
+    try {
+      (searchImagesByTag as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [
+          {
+            id: '1',
+            path: '/img1.jpg',
+            thumbnailPath: '/thumb1.jpg',
+            tags: ['cat'],
+          },
+        ],
+      });
+
+      render(
+        <>
+          <GoToSearch to="/search?value=motorcycle" />
+          <SearchResults />
+        </>,
+        { initialRoutes: ['/search?value=cat'] },
+      );
+
+      // Let the initial search settle so we isolate the new-search transition.
+      await waitFor(() => {
+        expect(screen.getByText('Results for "cat"')).toBeInTheDocument();
+      });
+
+      // Simulate the user having scrolled the previous, longer result set to
+      // the bottom, then start observing from a clean slate.
+      scrollContainer.scrollTop = 500;
+      scrollTo.mockClear();
+
+      // Run the new search on the still-mounted component.
+      fireEvent.click(screen.getByRole('button', { name: /motorcycle/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Results for "motorcycle"'),
+        ).toBeInTheDocument();
+        // The user-visible result: the viewport is back at the top.
+        expect(scrollContainer.scrollTop).toBe(0);
+      });
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
+    } finally {
+      document.body.removeChild(scrollContainer);
+    }
   });
 });
