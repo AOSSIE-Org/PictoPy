@@ -1,6 +1,7 @@
 # app/detectors/FaceDetector.py
 
 import cv2
+import numpy as np
 from app.models.FaceNet import FaceNet
 from app.utils.FaceNet import FaceNet_util_preprocess_image, FaceNet_util_get_model_path
 from app.utils.YOLO import YOLO_util_get_model_path
@@ -13,6 +14,7 @@ from app.config.settings import (
     PICTO_CLUSTERING_MIN_FACE_SIZE,
 )
 from app.utils.face_quality import face_passes_quality_gate
+from typing import Optional
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -29,10 +31,23 @@ class FaceDetector:
         self._initialized = True
         logger.info("FaceDetector initialized with YOLO and FaceNet models.")
 
-    def detect_faces(self, image_id: str, image_path: str, forSearch: bool = False):
-        img = cv2.imread(image_path)
+    def detect_faces(
+        self,
+        image_id: str,
+        image_path: Optional[str] = None,
+        forSearch: bool = False,
+        image_bytes: Optional[bytes] = None,
+    ) -> Optional[dict]:
+        if image_bytes is not None:
+            img = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
+        elif image_path is not None:
+            img = cv2.imread(image_path)
+        else:
+            logger.error("Neither image_path nor image_bytes was provided.")
+            return None
+
         if img is None:
-            logger.error(f"Failed to load image: {image_path}")
+            logger.error(f"Failed to load image: {image_path or '<bytes>'}")
             return None
 
         boxes, scores, class_ids = self.yolo_detector(img)
