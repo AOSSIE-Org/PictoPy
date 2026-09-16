@@ -38,7 +38,9 @@ DEFAULT_FACENET_MODEL = f"{MODEL_EXPORTS_PATH}/FaceNet_128D.onnx"
 
 TEST_INPUT_PATH = "tests/inputs"
 TEST_OUTPUT_PATH = "tests/outputs"
-if os.getenv("GITHUB_ACTIONS") == "true":
+# TEST_MODE has to be honoured here, not just GITHUB_ACTIONS: CI sets the latter
+# for free, so a local pytest run would otherwise write to the real library.
+if os.getenv("GITHUB_ACTIONS") == "true" or os.getenv("TEST_MODE") == "true":
     DATABASE_PATH = os.path.join(os.getcwd(), "test_db.sqlite3")
 else:
     DATABASE_PATH = os.path.join(user_data_dir("PictoPy"), "database", "PictoPy.db")
