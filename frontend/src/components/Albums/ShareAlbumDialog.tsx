@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { QRCodeSVG } from 'qrcode.react';
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -72,6 +72,7 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
   onClose,
   onChanged,
 }) => {
+  const userInteracted = useRef(false);
   const dispatch = useDispatch();
   const [mode, setMode] = useState<ShareMode>('lan');
   const [expiry, setExpiry] = useState<string>('1440');
@@ -200,6 +201,13 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     if (!isOpen) {
       return;
     }
+
+    // A close and reopen can race an earlier refresh(): the reset below clears
+    // userInteracted, so a lookup still in flight from the previous open has to
+    // be ignored rather than left to restore internet mode on this one.
+    let isMounted = true;
+    userInteracted.current = false;
+
     setMode('lan');
     setExpiry('1440');
     setWithPassword(false);
@@ -209,18 +217,29 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     setCreatedShare(null);
     setSelectedUrl('');
     setCopied(false);
+
     // A share made earlier is still served by whatever tunnel is up, so ask
     // rather than assume it was a local one. The mode follows the answer:
     // showing an internet link while the help button explains local sharing
     // would describe the wrong thing.
     tunnel.refresh().then((current) => {
-      if (current) {
-        setMode('internet');
+      // Skip once this open is superseded, or the user has already chosen.
+      if (!isMounted || !current || userInteracted.current) {
+        return;
       }
+      setMode('internet');
+      // Same safer default the manual switch applies: an internet link is
+      // public, so it starts protected however the mode was arrived at.
+      setWithPassword(true);
     });
+
+    return () => {
+      isMounted = false;
+    };
   }, [isOpen, album?.id, tunnel.refresh]);
 
   const handleModeChange = (next: ShareMode) => {
+    userInteracted.current = true; // Mark that user took control
     setMode(next);
     setError('');
     setTunnelError('');
@@ -549,6 +568,7 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
                   id="share-password-toggle"
                   checked={withPassword}
                   onCheckedChange={(checked) => {
+                    userInteracted.current = true; // Mark that user took control
                     setWithPassword(checked);
                     setError('');
                   }}
