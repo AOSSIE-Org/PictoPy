@@ -24,7 +24,7 @@ you change this list, change that file too.
 Find what changed:
 
 ```bash
-git diff --name-only origin/main...HEAD
+git diff --name-only origin/dev...HEAD
 ```
 
 Skip gates for areas the diff does not touch, and say which ones you skipped and why. A
@@ -122,7 +122,7 @@ If the format check fails, run `cargo fmt` without `--check` to fix it.
   from the linked issue onto the PR.
 - Confirm the issue was reviewed and labelled by a maintainer. PictoPy asks contributors
   not to open PRs against unlabelled issues.
-- PRs target `main`.
+- PRs target `dev`.
 
 ## Report
 

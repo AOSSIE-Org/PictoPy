@@ -5,7 +5,8 @@ Every check that runs on a pull request, and how to reproduce it locally. Source
 **If either workflow changes, change this file and `agent-kit/skills/pre-pr-check/SKILL.md`
 with it.**
 
-Both workflows trigger on `pull_request` against `main`.
+Both workflows trigger on `pull_request` against `dev` and `main` (the latter only sees the
+release PR that merges `dev` into `main`).
 
 ## Job: Linting (`lint.yml`)
 
@@ -64,8 +65,8 @@ the runner.
 - `cargo test` is not run by `pr-check-tests.yml`, but `CONTRIBUTING.md` asks contributors
   to run it and `pr-check-build.yml` builds the Rust side. Run it for any `src-tauri/`
   change.
-- CodeRabbit reviews every PR (`.coderabbit.yaml`), configured against `develop` as its
-  base branch even though PR checks target `main`.
+- CodeRabbit reviews every PR (`.coderabbit.yaml`), configured against `dev` as its base
+  branch, matching where day-to-day PR checks target.
 - `linked-issue.yml` copies labels from the issue referenced in the PR body onto the PR. A
   PR body without a `#<number>` reference gets no labels.
 
