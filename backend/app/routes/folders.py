@@ -417,13 +417,32 @@ def disable_ai_tagging(request: UpdateAITaggingRequest):
     response_model=DeleteFoldersResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
-def delete_folders(request: DeleteFoldersRequest):
+def delete_folders(
+    request: DeleteFoldersRequest, app_state: State = Depends(get_state)
+):
     """Delete multiple folders by their IDs."""
     try:
         if not request.folder_ids:
             raise ValueError("No folder IDs provided")
 
         deleted_count = db_delete_folders_batch(request.folder_ids)
+
+        # Synchronous so the response can't race the frontend's next
+        # Memories fetch; imported late, like _curate_memories below.
+        try:
+            from app.utils.memory_curator import memory_curator_prune_empty
+
+            memory_curator_prune_empty()
+        except Exception:
+            logger.exception("Failed to prune empty memories after folder delete")
+
+        # New memories from what's left can still be found in the
+        # background -- best-effort, a dropped submit just delays it.
+        executor: ProcessPoolExecutor = app_state.executor
+        try:
+            executor.submit(_curate_memories, "folder_delete")
+        except Exception:
+            logger.exception("Failed to queue memory curation after folder delete")
 
         return DeleteFoldersResponse(
             data=DeleteFoldersData(

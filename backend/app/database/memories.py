@@ -389,10 +389,12 @@ def db_delete_memory(memory_id: MemoryId) -> bool:
 
 def db_prune_empty_memories(min_images: int) -> int:
     """
-    Mark memories whose live image count fell below min_images as 'empty'.
+    Mark memories as 'empty' once they no longer have enough live media.
 
     Images deleted from the library cascade out of memory_images, so a memory
-    can silently shrink below the point where it is worth surfacing.
+    can silently shrink below the point where it is worth surfacing. A memory
+    that still holds live videos is left alone even so -- the video content
+    stands on its own regardless of how few images remain.
     """
     conn = None
     try:
@@ -404,6 +406,8 @@ def db_prune_empty_memories(min_images: int) -> int:
             WHERE status = 'complete'
               AND (SELECT COUNT(*) FROM memory_images mi
                     WHERE mi.memory_id = memories.memory_id) < ?
+              AND (SELECT COUNT(*) FROM memory_videos mv
+                    WHERE mv.memory_id = memories.memory_id) = 0
             """,
             (min_images,),
         )
