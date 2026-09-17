@@ -39,7 +39,7 @@ reviews:
       - "WIP"
     drafts: false
     base_branches:
-      - develop
+      - dev
 
   high_level_summary: true
   sequence_diagrams: true
