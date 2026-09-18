@@ -18,6 +18,9 @@ from app.database.faces import (
     db_get_cluster_mean_embeddings,
 )
 from app.database.face_clusters import db_create_clusters_table
+from app.database.images import db_create_images_table
+from app.database.videos import db_create_videos_table
+from app.database.video_frames import db_create_video_frames_tables
 
 # ##############################
 # Pytest Fixtures
@@ -33,10 +36,29 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
     monkeypatch.setattr("app.config.settings.DATABASE_PATH", db_path)
     monkeypatch.setattr("app.database.faces.DATABASE_PATH", db_path)
     monkeypatch.setattr("app.database.face_clusters.DATABASE_PATH", db_path)
+    monkeypatch.setattr("app.database.images.DATABASE_PATH", db_path)
+    monkeypatch.setattr("app.database.videos.DATABASE_PATH", db_path)
 
-    # clusters first: db_get_all_faces_with_cluster_names LEFT JOINs it
+    # FKs are enforced on faces, and SQLite resolves every parent table even
+    # for NULL children, so all of them must exist before the first insert.
     db_create_clusters_table()
+    db_create_images_table()
+    db_create_videos_table()
+    db_create_video_frames_tables()
     db_create_faces_table()
+
+    # Seed the parents the tests' faces point at
+    with closing(sqlite3.connect(db_path)) as conn:
+        conn.executemany(
+            "INSERT INTO images (id, path) VALUES (?, ?)",
+            [(image_id, f"/photos/{image_id}.jpg") for image_id in ("img-1", "img-2")],
+        )
+        conn.execute("INSERT INTO videos (id, path) VALUES ('vid-1', '/a.mp4')")
+        conn.execute(
+            "INSERT INTO video_frames (id, video_id, frame_path) "
+            "VALUES ('frame-1', 'vid-1', '/f.jpg')"
+        )
+        conn.commit()
 
     yield db_path
 
@@ -137,6 +159,15 @@ class TestInsertFaceEmbeddings:
         conn.close()
         assert confidence is None
         assert bbox_json is None
+
+    def test_rejects_a_face_for_a_missing_image(self, test_db):
+        """FKs are enforced, so a face can't outlive or precede its image."""
+        with pytest.raises(sqlite3.IntegrityError):
+            add_face("img-deleted")
+
+    def test_rejects_an_unknown_cluster(self, test_db):
+        with pytest.raises(sqlite3.IntegrityError):
+            add_face("img-1", cluster_id="cluster-missing")
 
 
 # ##############################
@@ -390,38 +421,17 @@ class TestVideoFaces:
 class TestVideoFaceCascade:
     def test_deleting_a_video_removes_its_frame_faces(self, test_db, monkeypatch):
         """Two-hop cascade: videos -> video_frames -> faces. Photo faces must be
-        untouched. The delete needs its own FK-enabled connection because the
-        write paths in this module do not enable foreign keys."""
+        untouched."""
         from app.database import folders as folders_db
-        from app.database import images as images_db
-        from app.database import videos as videos_db
-        from app.database import video_frames as video_frames_db
         from app.database import yolo_mapping as yolo_db
 
         monkeypatch.setattr(folders_db, "DATABASE_PATH", test_db)
-        monkeypatch.setattr(images_db, "DATABASE_PATH", test_db)
-        monkeypatch.setattr(videos_db, "DATABASE_PATH", test_db)
         monkeypatch.setattr(yolo_db, "DATABASE_PATH", test_db)
 
-        # Every parent the cascade touches has to exist: with FKs on, SQLite
-        # resolves them even for NULL children, and deleting a video walks
-        # video_frames and video_classes (which references mappings).
+        # Beyond the fixture's tables, deleting a video walks video_classes,
+        # which references mappings, so those parents must exist too.
         folders_db.db_create_folders_table()
         yolo_db.db_create_YOLO_classes_table()
-        images_db.db_create_images_table()
-        videos_db.db_create_videos_table()
-        video_frames_db.db_create_video_frames_tables()
-        db_create_faces_table()
-
-        with closing(sqlite3.connect(test_db)) as conn:
-            conn.execute("PRAGMA foreign_keys = ON")
-            conn.execute("INSERT INTO images (id, path) VALUES ('img-1', '/a.jpg')")
-            conn.execute("INSERT INTO videos (id, path) VALUES ('vid-1', '/a.mp4')")
-            conn.execute(
-                "INSERT INTO video_frames (id, video_id, frame_path) "
-                "VALUES ('frame-1', 'vid-1', '/f.jpg')"
-            )
-            conn.commit()
 
         add_face("img-1")
         add_face(image_id=None, frame_id="frame-1")

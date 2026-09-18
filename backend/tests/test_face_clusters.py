@@ -1,3 +1,5 @@
+import sqlite3
+
 import pytest
 import numpy as np
 from unittest.mock import patch
@@ -7,6 +9,7 @@ import app.database.faces as faces_db
 import app.database.images as images_db
 import app.database.folders as folders_db
 import app.database.yolo_mapping as yolo_db
+import app.database.video_frames as video_frames_db
 from app.utils.face_clusters import (
     cluster_util_cluster_all_face_embeddings,
     cluster_util_face_clusters_sync,
@@ -737,7 +740,20 @@ def isolated_cluster_db(tmp_path, monkeypatch):
     faces_db.db_create_faces_table()
     folders_db.db_create_folders_table()
     images_db.db_create_images_table()
+    # faces has an FK to video_frames; SQLite needs the table even for NULL frame_ids
+    video_frames_db.db_create_video_frames_tables()
     yield db_path
+
+
+def make_images(db_path: str, *image_ids: str) -> None:
+    """Seed image rows; faces reference them by an enforced FK."""
+    conn = sqlite3.connect(db_path)
+    conn.executemany(
+        "INSERT INTO images (id, path) VALUES (?, ?)",
+        [(image_id, f"/photos/{image_id}.jpg") for image_id in image_ids],
+    )
+    conn.commit()
+    conn.close()
 
 
 class TestEmptyClusterCleanup:
@@ -746,6 +762,7 @@ class TestEmptyClusterCleanup:
 
     def test_listing_excludes_clusters_with_no_faces(self, isolated_cluster_db):
         """A cluster whose faces are all gone is not returned to the caller."""
+        make_images(isolated_cluster_db, "img-1")
         face_clusters_db.db_insert_clusters_batch(
             [
                 {
@@ -775,6 +792,7 @@ class TestEmptyClusterCleanup:
     def test_clusters_count_only_counts_clusters_with_faces(self, isolated_cluster_db):
         """The count drives the bootstrap decision, so it has to agree with the
         listing: an orphan row is not a cluster anyone can use."""
+        make_images(isolated_cluster_db, "img-1")
         assert face_clusters_db.db_get_clusters_count() == 0
 
         face_clusters_db.db_insert_clusters_batch(
@@ -896,6 +914,7 @@ class TestReclusteringNeededBootstrap:
         rows as existing clusters would suppress the bootstrap full pass and
         leave the new faces unclustered.
         """
+        make_images(isolated_cluster_db, "img-new")
         face_clusters_db.db_insert_clusters_batch(
             [
                 {
@@ -918,6 +937,7 @@ class TestReclusteringNeededBootstrap:
     def test_faces_still_attached_keep_the_incremental_path(self, isolated_cluster_db):
         """Guard the other side: a cluster that still has faces can seed the
         incremental pass, so it must not be dragged into a full recluster."""
+        make_images(isolated_cluster_db, "img-1", "img-new")
         face_clusters_db.db_insert_clusters_batch(
             [
                 {

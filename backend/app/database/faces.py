@@ -33,11 +33,17 @@ class FaceData(TypedDict):
 FaceClusterMapping = Dict[FaceId, Optional[ClusterId]]
 
 
+def _connect() -> sqlite3.Connection:
+    conn = sqlite3.connect(DATABASE_PATH)
+    # Ensure ON DELETE CASCADE and other FKs are enforced
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+
 def db_create_faces_table() -> None:
     conn = None
     try:
-        conn = sqlite3.connect(DATABASE_PATH)
-        conn.execute("PRAGMA foreign_keys = ON")
+        conn = _connect()
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -111,7 +117,7 @@ def db_insert_face_embeddings(
             f"(got image_id={image_id!r}, frame_id={frame_id!r})"
         )
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -184,7 +190,7 @@ def db_insert_face_embeddings_by_image_id(
 
 
 def get_all_face_embeddings():
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -268,7 +274,7 @@ def db_get_faces_unassigned_clusters() -> (
         List of dictionaries containing face_id, image_id, frame_id, and
         embeddings (as numpy array). Exactly one of image_id / frame_id is set.
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -309,7 +315,7 @@ def db_get_all_faces_with_cluster_names() -> (
         (as numpy array), and cluster_name. Exactly one of image_id / frame_id
         is set.
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -368,7 +374,7 @@ def db_update_face_cluster_ids_batch(
 
     own_connection = cursor is None
     if own_connection:
-        conn = sqlite3.connect(DATABASE_PATH)
+        conn = _connect()
         cursor = conn.cursor()
 
     # 1. Prepare update data outside the DB transaction.
@@ -410,7 +416,7 @@ def db_update_face_cluster_ids_batch(
 
 def db_get_cluster_image_pairs() -> set:
     """Distinct (cluster_id, image_id) pairs for all cluster-assigned faces."""
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     try:
         rows = conn.execute(
             "SELECT DISTINCT cluster_id, image_id FROM faces WHERE cluster_id IS NOT NULL"
@@ -428,7 +434,7 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
         List of dictionaries containing cluster_id and mean_embedding (as numpy array)
         Only returns clusters that have at least one face assigned
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:

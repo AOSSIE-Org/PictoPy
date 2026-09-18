@@ -5,6 +5,7 @@ import uuid
 import datetime
 import json
 import logging
+import sqlite3
 from typing import List, Optional, Tuple, Dict, Any, Mapping
 from PIL import Image, ExifTags
 from pathlib import Path
@@ -234,7 +235,15 @@ def image_util_classify_and_face_detect_images(
 
             # Step 3: Detect faces if "person" class is present
             if classes and 0 in classes:
-                result = face_detector.detect_faces(image_id, image_path)
+                try:
+                    result = face_detector.detect_faces(image_id, image_path)
+                except sqlite3.IntegrityError:
+                    # The image can be deleted during inference, failing the faces FK;
+                    # skip it rather than abort the whole tagging pass.
+                    logger.info(
+                        f"Image {image_id} was removed during tagging; skipping"
+                    )
+                    continue
                 if result:
                     total_faces_skipped += result.get("faces_skipped", 0)
 
