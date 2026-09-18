@@ -17,7 +17,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from concurrent.futures import ProcessPoolExecutor
-from app.database.faces import db_create_faces_table
+from app.database.faces import db_create_faces_table, db_repair_orphaned_faces
 from app.database.images import db_create_images_table
 from app.database.videos import db_create_videos_table
 from app.database.face_clusters import db_create_clusters_table
@@ -90,6 +90,9 @@ async def lifespan(app: FastAPI):
     # Nothing is indexing or tagging yet, so anything still flagged busy is
     # left over from a previous session and would block memory generation.
     db_clear_stale_processing_flags()
+    # Faces written before FKs were enforced can point at deleted images,
+    # keyframes or clusters; they would otherwise keep feeding clustering.
+    db_repair_orphaned_faces()
     # Needs the mappings table (created above): semantic labels register
     # there as class_ids >= SEMANTIC_CLASS_ID_OFFSET
     semantic_util_sync_vocabulary()

@@ -87,6 +87,51 @@ def db_create_faces_table() -> None:
             conn.close()
 
 
+def db_repair_orphaned_faces() -> int:
+    """
+    Apply the FK actions that rows written before enforcement missed: delete faces
+    whose image or keyframe is gone, unassign faces whose cluster is gone.
+    Returns rows repaired.
+    """
+    conn = _connect()
+    try:
+        # Each id is NULL on the side of the arc a face doesn't use, so only a
+        # set id with no parent row is an orphan.
+        deleted = conn.execute(
+            """
+            DELETE FROM faces
+             WHERE (image_id IS NOT NULL AND NOT EXISTS (
+                       SELECT 1 FROM images WHERE images.id = faces.image_id))
+                OR (frame_id IS NOT NULL AND NOT EXISTS (
+                       SELECT 1 FROM video_frames
+                        WHERE video_frames.id = faces.frame_id))
+            """
+        ).rowcount
+        unassigned = conn.execute(
+            """
+            UPDATE faces SET cluster_id = NULL
+             WHERE cluster_id IS NOT NULL
+               AND NOT EXISTS (
+                   SELECT 1 FROM face_clusters
+                    WHERE face_clusters.cluster_id = faces.cluster_id
+               )
+            """
+        ).rowcount
+        conn.commit()
+        if deleted or unassigned:
+            logger.info(
+                f"Removed {deleted} orphaned face(s); "
+                f"unassigned {unassigned} from missing clusters"
+            )
+        return deleted + unassigned
+    except sqlite3.Error as e:
+        logger.error(f"Error repairing orphaned faces: {e}")
+        conn.rollback()
+        return 0
+    finally:
+        conn.close()
+
+
 def db_insert_face_embeddings(
     image_id: Optional[ImageId],
     embeddings: FaceEmbedding,

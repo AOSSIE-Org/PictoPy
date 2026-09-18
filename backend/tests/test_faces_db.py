@@ -16,6 +16,7 @@ from app.database.faces import (
     db_get_all_faces_with_cluster_names,
     db_update_face_cluster_ids_batch,
     db_get_cluster_mean_embeddings,
+    db_repair_orphaned_faces,
 )
 from app.database.face_clusters import db_create_clusters_table
 from app.database.images import db_create_images_table
@@ -91,6 +92,24 @@ def add_face(
     )
 
 
+def add_orphan_face(
+    db_path: str,
+    image_id: Optional[str],
+    cluster_id: Optional[str] = None,
+    frame_id: Optional[str] = None,
+) -> int:
+    """Insert a face with FKs off, as rows were written before enforcement."""
+    conn = sqlite3.connect(db_path)
+    face_id = conn.execute(
+        "INSERT INTO faces (image_id, frame_id, cluster_id, embeddings) "
+        "VALUES (?, ?, ?, ?)",
+        (image_id, frame_id, cluster_id, "[0.1, 0.2]"),
+    ).lastrowid
+    conn.commit()
+    conn.close()
+    return face_id
+
+
 # ##############################
 # Table creation
 # ##############################
@@ -125,6 +144,59 @@ class TestFacesTable:
                 db_create_faces_table()
 
             conn.close.assert_called_once()
+
+
+# ##############################
+# Startup repair
+# ##############################
+
+
+class TestRepairOrphanedFaces:
+    def test_deletes_faces_whose_image_is_gone(self, test_db):
+        kept = add_face("img-1")
+        add_orphan_face(test_db, "img-deleted")
+
+        assert db_repair_orphaned_faces() == 1
+        assert [f["face_id"] for f in db_get_faces_unassigned_clusters()] == [kept]
+
+    def test_keeps_video_faces(self, test_db):
+        """A keyframe face has no image_id by design; it is not an orphan."""
+        face_id = add_face(image_id=None, frame_id="frame-1")
+
+        assert db_repair_orphaned_faces() == 0
+        assert [f["face_id"] for f in db_get_faces_unassigned_clusters()] == [face_id]
+
+    def test_deletes_faces_whose_keyframe_is_gone(self, test_db):
+        kept = add_face(image_id=None, frame_id="frame-1")
+        add_orphan_face(test_db, image_id=None, frame_id="frame-deleted")
+
+        assert db_repair_orphaned_faces() == 1
+        assert [f["face_id"] for f in db_get_faces_unassigned_clusters()] == [kept]
+
+    def test_unassigns_faces_whose_cluster_is_gone(self, test_db):
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        add_face("img-1", cluster_id=cluster)
+        stale = add_orphan_face(test_db, "img-2", cluster_id="cluster-deleted")
+
+        assert db_repair_orphaned_faces() == 1
+        # The face survives, back in the pool for clustering; the valid one stays put
+        assert [f["face_id"] for f in db_get_faces_unassigned_clusters()] == [stale]
+
+    def test_is_a_noop_on_a_consistent_database(self, test_db):
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        add_face("img-1", cluster_id=cluster)
+        add_face("img-2")
+
+        assert db_repair_orphaned_faces() == 0
+        assert len(db_get_all_faces_with_cluster_names()) == 2
+
+    def test_failure_does_not_raise(self, test_db):
+        """Runs at startup, so a broken database must not stop the backend."""
+        conn = sqlite3.connect(test_db)
+        conn.execute("DROP TABLE images")
+        conn.close()
+
+        assert db_repair_orphaned_faces() == 0
 
 
 # ##############################
