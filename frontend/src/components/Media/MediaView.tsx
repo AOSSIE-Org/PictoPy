@@ -12,7 +12,7 @@ import { MediaThumbnails } from './MediaThumbnails';
 import { MediaInfoPanel } from './MediaInfoPanel';
 import { ImageViewer } from './ImageViewer';
 import { NavigationButtons } from './NavigationButtons';
-import { ConfirmDialog } from '@/components/ConfirmDialog/ConfirmDialog';
+import { ConfirmDialog } from '@/components/Dialog/ConfirmDialog';
 import type { ImageViewerRef } from './ImageViewer';
 
 // Custom hooks
@@ -207,10 +207,10 @@ export function MediaView({
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         title="Delete photo"
-        description="Choose whether this photo is only removed from PictoPy, or deleted from your computer as well."
+        description="Remove this Photo from PictoPy"
         confirmLabel="Delete"
         onConfirm={handleConfirmDelete}
-        checkboxLabel="Also delete the file from the folder on my computer"
+        checkboxLabel="Delete from Computer"
         checkboxChecked={deleteFromDevice}
         onCheckboxChange={setDeleteFromDevice}
         checkboxHint={
@@ -218,6 +218,7 @@ export function MediaView({
             ? 'The file will be permanently deleted from its folder. This cannot be undone.'
             : 'Removed from your PictoPy gallery. The file stays in its folder.'
         }
+        checkboxHintDestructive={deleteFromDevice}
       />
 
       {/* Main viewer area */}
