@@ -143,6 +143,10 @@ def get_state(request: Request):
 def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
     try:
         # Step 1: Data Validation
+        
+        # Normalize path before validation to handle malformed inputs and explicitly support
+        # drive roots (e.g., "D:\\" or "X:\\") which require special handling.
+        request.folder_path = os.path.abspath(request.folder_path)
 
         if not os.path.isdir(request.folder_path):
             raise ValueError(
@@ -163,8 +167,6 @@ def add_folder(request: AddFolderRequest, app_state=Depends(get_state)):
                     message="The app does not have read permission for the specified folder",
                 ).model_dump(),
             )
-
-        request.folder_path = os.path.abspath(request.folder_path)
 
         # Step 2: Check if folder already exists
         if db_folder_exists(request.folder_path):
