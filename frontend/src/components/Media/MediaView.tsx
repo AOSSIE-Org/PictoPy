@@ -12,6 +12,7 @@ import { MediaThumbnails } from './MediaThumbnails';
 import { MediaInfoPanel } from './MediaInfoPanel';
 import { ImageViewer } from './ImageViewer';
 import { NavigationButtons } from './NavigationButtons';
+import { ConfirmDialog } from '@/components/Dialog/ConfirmDialog';
 import type { ImageViewerRef } from './ImageViewer';
 
 // Custom hooks
@@ -19,6 +20,7 @@ import { useImageViewControls } from '@/hooks/useImageViewControls';
 import { useSlideshow } from '@/hooks/useSlideshow';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import { useToggleFav } from '../../hooks/useToggleFav';
+import { useDeleteImages } from '@/hooks/useDeleteImages';
 import { useLocation } from 'react-router';
 import { ROUTES } from '@/constants/routes';
 
@@ -48,6 +50,8 @@ export function MediaView({
   const [showInfo, setShowInfo] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(false);
   const [resetSignal, setResetSignal] = useState(0);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteFromDevice, setDeleteFromDevice] = useState(false);
 
   // Custom hooks
   const { viewState, handlers } = useImageViewControls();
@@ -86,6 +90,18 @@ export function MediaView({
 
   const location = useLocation();
   const { toggleFavourite } = useToggleFav();
+  const { deleteImages } = useDeleteImages();
+
+  /** Start unticked every time, so a previous tick never causes a file deletion. */
+  const handleOpenDeleteDialog = useCallback(() => {
+    setDeleteFromDevice(false);
+    setShowDeleteDialog(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!currentImage?.id) return;
+    deleteImages({ imageIds: [currentImage.id], deleteFromDevice });
+  }, [currentImage, deleteImages, deleteFromDevice]);
 
   // Loop to first image handler for slideshow
   const handleLoopToStart = useCallback(() => {
@@ -180,10 +196,29 @@ export function MediaView({
         onToggleFavourite={handleToggleFavourite}
         isFavourite={currentImage.isFavourite || false}
         onOpenFolder={handleOpenFolder}
+        onDelete={type === 'image' ? handleOpenDeleteDialog : undefined}
         isSlideshowActive={isSlideshowActive}
         onToggleSlideshow={toggleSlideshow}
         onClose={handleClose}
         type={type}
+      />
+
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Delete photo"
+        description="Remove this Photo from PictoPy"
+        confirmLabel="Delete"
+        onConfirm={handleConfirmDelete}
+        checkboxLabel="Delete from Computer"
+        checkboxChecked={deleteFromDevice}
+        onCheckboxChange={setDeleteFromDevice}
+        checkboxHint={
+          deleteFromDevice
+            ? 'The file will be permanently deleted from its folder. This cannot be undone.'
+            : 'Removed from your PictoPy gallery. The file stays in its folder.'
+        }
+        checkboxHintDestructive={deleteFromDevice}
       />
 
       {/* Main viewer area */}

@@ -44,6 +44,18 @@ const imageSlice = createSlice({
       }
     },
 
+    removeImages(state, action: PayloadAction<string[]>) {
+      const removed = new Set(action.payload);
+      state.images = state.images.filter((img) => !removed.has(img.id));
+      // Keep the viewer on a real image: deleting a middle one shows the next,
+      // deleting the last steps back, and deleting the only one closes the viewer.
+      if (state.images.length === 0) {
+        state.currentViewIndex = -1;
+      } else if (state.currentViewIndex > state.images.length - 1) {
+        state.currentViewIndex = state.images.length - 1;
+      }
+    },
+
     clearImages(state) {
       state.images = [];
       state.currentViewIndex = -1;
@@ -56,6 +68,7 @@ export const {
   setCurrentViewIndex,
   closeImageView,
   updateImageFavoriteStatus,
+  removeImages,
   clearImages,
 } = imageSlice.actions;
 

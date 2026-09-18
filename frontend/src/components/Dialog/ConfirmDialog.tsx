@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -19,6 +20,13 @@ export interface ConfirmDialogProps {
   cancelLabel?: string;
   onConfirm: () => void | Promise<void>;
   destructive?: boolean;
+  /** Offers the caller an extra choice alongside the confirmation. */
+  checkboxLabel?: string;
+  checkboxChecked?: boolean;
+  onCheckboxChange?: (checked: boolean) => void;
+  /** Spells out what the current checkbox state will actually do. */
+  checkboxHint?: string;
+  checkboxHintDestructive?: boolean;
 }
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -30,6 +38,11 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   cancelLabel = 'Cancel',
   onConfirm,
   destructive = true,
+  checkboxLabel,
+  checkboxChecked = false,
+  onCheckboxChange,
+  checkboxHint,
+  checkboxHintDestructive,
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -47,6 +60,36 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
+        {checkboxLabel && (
+          <div className="flex items-start gap-3">
+            <input
+              id="confirm-dialog-checkbox"
+              type="checkbox"
+              checked={checkboxChecked}
+              onChange={(e) => onCheckboxChange?.(e.target.checked)}
+              className="accent-primary mt-0.5 h-4 w-4 cursor-pointer"
+            />
+            <div className="space-y-1">
+              <Label
+                htmlFor="confirm-dialog-checkbox"
+                className="cursor-pointer"
+              >
+                {checkboxLabel}
+              </Label>
+              {checkboxHint && (
+                <p
+                  className={
+                    checkboxHintDestructive
+                      ? 'text-destructive text-sm'
+                      : 'text-muted-foreground text-sm'
+                  }
+                >
+                  {checkboxHint}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {cancelLabel}
