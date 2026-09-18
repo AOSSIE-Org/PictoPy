@@ -18,7 +18,7 @@ effort when missed:
 > Do not open a PR for an issue that maintainers have not reviewed and labelled. Comment on
 > the issue and wait for the green light first.
 
-PRs target `main`, and the PR body must reference its issue as `#<number>`.
+PRs target `dev`, and the PR body must reference its issue as `#<number>`.
 
 ## 2. Prerequisites
 

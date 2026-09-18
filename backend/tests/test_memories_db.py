@@ -85,6 +85,27 @@ def images(test_db: str) -> List[str]:
     return image_ids
 
 
+@pytest.fixture
+def videos(test_db: str, images: List[str]) -> List[str]:
+    """Insert five videos into the same folder the `images` fixture uses."""
+    conn = sqlite3.connect(test_db)
+    video_ids = [f"vid-{i}" for i in range(5)]
+    for i, video_id in enumerate(video_ids):
+        conn.execute(
+            "INSERT INTO videos (id, path, folder_id, thumbnailPath, captured_at) "
+            "VALUES (?, ?, 'folder-1', ?, ?)",
+            (
+                video_id,
+                f"/videos/{i}.mp4",
+                f"/thumbs/vid-{i}.jpg",
+                f"2024-06-15 1{i}:30:00",
+            ),
+        )
+    conn.commit()
+    conn.close()
+    return video_ids
+
+
 def make_memory(dedupe_key: str, **overrides: Any) -> Dict[str, Any]:
     memory: Dict[str, Any] = {
         "memory_id": str(uuid.uuid4()),
@@ -333,6 +354,27 @@ class TestMarkAndPrune:
         assert db_prune_empty_memories(2) == 1
         assert db_get_memory(shrink)["status"] == "empty"
         assert db_get_memory(keep)["status"] == "complete"
+
+    def test_prune_retains_video_only_memories(self, videos: List[str]):
+        """Losing every image doesn't make a memory empty if videos remain."""
+        memory_id = db_upsert_memory(make_memory("video-only"), [], entries(videos[:2]))
+
+        assert db_prune_empty_memories(2) == 0
+        assert db_get_memory(memory_id)["status"] == "complete"
+
+    def test_prune_marks_below_threshold_images_with_no_videos(self, images: List[str]):
+        """Too few images and no video to fall back on: still prune."""
+        memory_id = db_upsert_memory(make_memory("thin"), entries(images[:1]))
+
+        assert db_prune_empty_memories(2) == 1
+        assert db_get_memory(memory_id)["status"] == "empty"
+
+    def test_prune_marks_memories_with_no_media_at_all(self, test_db: str):
+        """No images, no videos: unambiguously empty."""
+        memory_id = db_upsert_memory(make_memory("bare"), [])
+
+        assert db_prune_empty_memories(2) == 1
+        assert db_get_memory(memory_id)["status"] == "empty"
 
 
 # ##############################
