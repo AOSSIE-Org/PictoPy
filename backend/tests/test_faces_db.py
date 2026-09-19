@@ -16,6 +16,7 @@ from app.database.faces import (
     db_get_all_faces_with_cluster_names,
     db_update_face_cluster_ids_batch,
     db_get_cluster_mean_embeddings,
+    db_get_cluster_media_pairs,
     db_repair_orphaned_faces,
 )
 from app.database.face_clusters import db_create_clusters_table
@@ -369,6 +370,40 @@ class TestClusterMeanEmbeddings:
     def test_returns_empty_without_assigned_faces(self, test_db):
         add_face("img-1")  # unassigned faces are excluded
         assert db_get_cluster_mean_embeddings() == []
+
+    def test_keyframe_faces_never_move_the_mean(self, test_db):
+        """A cluster is defined by its photos; attached video faces must not
+        drag it, or matches could drift across people one face at a time."""
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        add_face("img-1", np.array([0.2, 0.4]), cluster_id=cluster)
+        add_face(None, np.array([1.0, 1.0]), cluster_id=cluster, frame_id="frame-1")
+
+        (mean,) = db_get_cluster_mean_embeddings()
+        assert np.allclose(mean["mean_embedding"], [0.2, 0.4])
+
+    def test_cluster_of_only_keyframe_faces_has_no_mean(self, test_db):
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        add_face(None, np.array([1.0, 1.0]), cluster_id=cluster, frame_id="frame-1")
+        assert db_get_cluster_mean_embeddings() == []
+
+
+# ##############################
+# Cannot-link units
+# ##############################
+
+
+class TestClusterMediaPairs:
+    def test_covers_photos_and_keyframes(self, test_db):
+        """A cluster may hold one face per photo and one per keyframe."""
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        add_face("img-1", cluster_id=cluster)
+        add_face(None, cluster_id=cluster, frame_id="frame-1")
+        add_face("img-2")  # unassigned faces take no slot
+
+        assert db_get_cluster_media_pairs() == {
+            ("cluster-1", "img-1"),
+            ("cluster-1", "frame-1"),
+        }
 
 
 # ##############################

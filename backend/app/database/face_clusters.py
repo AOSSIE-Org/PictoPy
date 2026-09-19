@@ -190,16 +190,17 @@ def db_get_all_clusters() -> List[ClusterData]:
 
 def db_get_clusters_count() -> int:
     """
-    Count the clusters that still have at least one face attached.
+    Count the clusters that still have at least one photo face attached.
 
     Rows whose faces are all gone (e.g. after their folder was deleted) are
     excluded, matching the INNER JOIN used by the cluster listing. Callers ask
     this to decide whether any *usable* cluster exists: an orphan row cannot
     seed incremental assignment, because that matches faces against cluster
-    means derived from the faces table.
+    means derived from the faces table. Those means come from photo faces only,
+    so a cluster left holding just keyframe faces cannot seed it either.
 
     Returns:
-        Number of clusters with one or more faces
+        Number of clusters with one or more photo faces
     """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
@@ -209,7 +210,8 @@ def db_get_clusters_count() -> int:
             """
             SELECT COUNT(DISTINCT fc.cluster_id)
             FROM face_clusters fc
-            INNER JOIN faces f ON fc.cluster_id = f.cluster_id
+            INNER JOIN faces f
+                ON fc.cluster_id = f.cluster_id AND f.image_id IS NOT NULL
             """
         )
         return cursor.fetchone()[0]

@@ -1,16 +1,21 @@
 import sqlite3
+from contextlib import closing
 
 import pytest
 import numpy as np
 from unittest.mock import patch
 from fastapi import FastAPI
+import app.database.connection as connection_db
 import app.database.face_clusters as face_clusters_db
 import app.database.faces as faces_db
 import app.database.images as images_db
 import app.database.folders as folders_db
+import app.database.videos as videos_db
 import app.database.yolo_mapping as yolo_db
 import app.database.video_frames as video_frames_db
 from app.utils.face_clusters import (
+    cluster_util_assign_cluster_to_faces_without_clusterId,
+    cluster_util_attach_keyframe_faces,
     cluster_util_cluster_all_face_embeddings,
     cluster_util_face_clusters_sync,
     cluster_util_is_reclustering_needed,
@@ -963,3 +968,241 @@ class TestReclusteringNeededBootstrap:
         )
 
         assert cluster_util_is_reclustering_needed({"user_preferences": {}}) is False
+
+
+# ##############################
+# Video keyframe faces: attached to photo clusters, never clustered
+# ##############################
+
+
+def axis(i: int) -> np.ndarray:
+    return np.eye(128)[i]
+
+
+def near(i: int, cosine: float, spill: int = 127) -> np.ndarray:
+    """A unit vector at `cosine` similarity to axis(i), leaning towards axis(spill)."""
+    return cosine * axis(i) + np.sqrt(1 - cosine**2) * axis(spill)
+
+
+def jitter(rng: np.random.Generator, i: int) -> np.ndarray:
+    """axis(i) with a little noise: one person's faces, never quite identical."""
+    v = axis(i) + rng.normal(0, 0.02, 128)
+    return v / np.linalg.norm(v)
+
+
+@pytest.fixture
+def keyframe_db(isolated_cluster_db, monkeypatch):
+    """isolated_cluster_db plus a video to hang keyframes on. The sync path
+    writes through get_db_connection, so that module is redirected too."""
+    monkeypatch.setattr(videos_db, "DATABASE_PATH", isolated_cluster_db)
+    monkeypatch.setattr(connection_db, "DATABASE_PATH", isolated_cluster_db)
+    videos_db.db_create_videos_table()
+    with closing(sqlite3.connect(isolated_cluster_db)) as conn:
+        conn.execute("INSERT INTO videos (id, path) VALUES ('vid-1', '/v.mp4')")
+        conn.commit()
+    return isolated_cluster_db
+
+
+def add_cluster_row(cluster_id: str) -> None:
+    face_clusters_db.db_insert_clusters_batch(
+        [{"cluster_id": cluster_id, "cluster_name": None, "face_image_base64": None}]
+    )
+
+
+def photo_face(db_path, image_id, embedding, cluster_id=None) -> int:
+    make_images(db_path, image_id)
+    return faces_db.db_insert_face_embeddings(
+        image_id, embedding, 0.9, None, cluster_id
+    )
+
+
+def keyframe_face(db_path, frame_id, embedding, cluster_id=None) -> int:
+    with closing(sqlite3.connect(db_path)) as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO video_frames (id, video_id, frame_path) "
+            "VALUES (?, 'vid-1', ?)",
+            (frame_id, f"/frames/{frame_id}.jpg"),
+        )
+        conn.commit()
+    return faces_db.db_insert_face_embeddings(
+        None, embedding, 0.9, None, cluster_id, frame_id=frame_id
+    )
+
+
+def cluster_of(db_path: str, face_id: int):
+    with closing(sqlite3.connect(db_path)) as conn:
+        return conn.execute(
+            "SELECT cluster_id FROM faces WHERE face_id = ?", (face_id,)
+        ).fetchone()[0]
+
+
+@pytest.fixture
+def people(keyframe_db):
+    """Two photo clusters: alice (mean = axis 0) and bob (mean = axis 1)."""
+    add_cluster_row("alice")
+    add_cluster_row("bob")
+    photo_face(keyframe_db, "img-a1", axis(0), "alice")
+    photo_face(keyframe_db, "img-a2", axis(0), "alice")
+    photo_face(keyframe_db, "img-b1", axis(1), "bob")
+    return keyframe_db
+
+
+class TestKeyframeFacesAttachToPhotoClusters:
+    def test_attaches_at_the_same_person_threshold(self, people):
+        close = keyframe_face(people, "frame-1", near(0, 0.70))
+        far = keyframe_face(people, "frame-2", near(0, 0.60))
+
+        assert cluster_util_attach_keyframe_faces() == 1
+        assert cluster_of(people, close) == "alice"
+        assert cluster_of(people, far) is None
+
+    def test_one_face_per_keyframe_per_cluster_and_the_closer_wins(self, people):
+        """Faces sharing a keyframe are different people. The weaker match is
+        stored first, so row order would pick it; similarity must decide."""
+        weaker = keyframe_face(people, "frame-1", near(0, 0.75, spill=126))
+        stronger = keyframe_face(people, "frame-1", near(0, 0.95))
+
+        cluster_util_attach_keyframe_faces()
+
+        assert cluster_of(people, stronger) == "alice"
+        assert cluster_of(people, weaker) is None
+
+    def test_a_keyframe_already_in_a_cluster_blocks_a_second_face(self, people):
+        keyframe_face(people, "frame-1", near(0, 0.9))
+        cluster_util_attach_keyframe_faces()
+        second = keyframe_face(people, "frame-1", near(0, 0.95, spill=126))
+
+        cluster_util_attach_keyframe_faces()
+
+        assert cluster_of(people, second) is None
+
+    def test_one_video_can_attach_across_keyframes(self, people):
+        """Different keyframes of one video are the same person over time."""
+        first = keyframe_face(people, "frame-1", near(0, 0.9))
+        later = keyframe_face(people, "frame-2", near(0, 0.9, spill=126))
+
+        cluster_util_attach_keyframe_faces()
+
+        assert cluster_of(people, first) == cluster_of(people, later) == "alice"
+
+    def test_attaching_never_moves_a_cluster_mean(self, people):
+        def means():
+            return {
+                m["cluster_id"]: m["mean_embedding"]
+                for m in faces_db.db_get_cluster_mean_embeddings()
+            }
+
+        before = means()
+        for i in range(5):
+            keyframe_face(people, f"frame-{i}", near(0, 0.7, spill=100 + i))
+        assert cluster_util_attach_keyframe_faces() == 5
+
+        after = means()
+        assert before.keys() == after.keys()
+        for cluster_id, mean in before.items():
+            assert np.allclose(mean, after[cluster_id])
+
+    def test_photo_assignment_leaves_keyframe_faces_alone(self, people):
+        """Photos keep their own path; keyframe faces only join through theirs."""
+        keyframe_face(people, "frame-1", near(0, 0.9))
+        photo = photo_face(people, "img-a3", near(0, 0.9))
+
+        mappings, _ = cluster_util_assign_cluster_to_faces_without_clusterId()
+
+        assert [m["face_id"] for m in mappings] == [photo]
+
+    def test_photo_threshold_is_unchanged(self, people):
+        photo_face(people, "img-a3", near(0, 0.75))
+
+        mappings, _ = cluster_util_assign_cluster_to_faces_without_clusterId()
+
+        assert mappings == []
+
+
+class TestKeyframeFacesNeverFormClusters:
+    @patch("app.utils.face_clusters.db_get_all_faces_with_cluster_names")
+    def test_dbscan_never_sees_keyframe_faces(self, mock_faces):
+        """A crowd of keyframe faces of someone with no photos must neither
+        become a cluster nor bridge the photo clusters."""
+        rng = np.random.default_rng(0)
+        photos = [jitter(rng, 0) for _ in range(5)] + [jitter(rng, 1) for _ in range(5)]
+        videos = [jitter(rng, 2) for _ in range(20)]
+        mock_faces.return_value = [
+            {"face_id": i, "frame_id": None, "embeddings": e, "cluster_name": None}
+            for i, e in enumerate(photos)
+        ] + [
+            {
+                "face_id": 100 + i,
+                "frame_id": f"f{i}",
+                "embeddings": e,
+                "cluster_name": None,
+            }
+            for i, e in enumerate(videos)
+        ]
+
+        results, _ = cluster_util_cluster_all_face_embeddings()
+
+        assert {r.face_id for r in results} <= set(range(10))
+        assert len({r.cluster_uuid for r in results}) == 2
+
+    @patch("app.utils.face_clusters.db_get_clusters_count")
+    @patch("app.utils.face_clusters.db_get_faces_unassigned_clusters")
+    def test_unmatched_keyframe_faces_never_force_a_recluster(
+        self, mock_unassigned, mock_count
+    ):
+        """Many keyframe faces never match a photo cluster; counting them would
+        rebuild every cluster on every sync."""
+        mock_unassigned.return_value = [
+            {"face_id": i, "frame_id": f"f{i}"} for i in range(150)
+        ]
+        mock_count.return_value = 3
+
+        assert cluster_util_is_reclustering_needed({"user_preferences": {}}) is False
+
+    @patch("app.utils.face_clusters.db_get_clusters_count")
+    @patch("app.utils.face_clusters.db_get_faces_unassigned_clusters")
+    def test_keyframe_faces_cannot_bootstrap_the_first_cluster(
+        self, mock_unassigned, mock_count
+    ):
+        mock_unassigned.return_value = [{"face_id": 1, "frame_id": "f1"}]
+        mock_count.return_value = 0
+
+        assert cluster_util_is_reclustering_needed({"user_preferences": {}}) is False
+
+    def test_clusters_holding_only_keyframe_faces_are_not_usable(self, keyframe_db):
+        """Means come from photos, so a cluster whose photos are gone cannot seed
+        incremental assignment and must not suppress the bootstrap pass."""
+        add_cluster_row("c1")
+        keyframe_face(keyframe_db, "frame-1", axis(0), cluster_id="c1")
+        assert face_clusters_db.db_get_clusters_count() == 0
+
+        photo_face(keyframe_db, "img-1", axis(0), "c1")
+        assert face_clusters_db.db_get_clusters_count() == 1
+
+
+class TestFullReclusterWithKeyframeFaces:
+    @patch("app.utils.face_clusters._generate_cluster_face_image", return_value=None)
+    @patch("app.utils.face_clusters.db_update_metadata")
+    @patch("app.utils.face_clusters.db_get_metadata", return_value={})
+    def test_rebuild_reattaches_keyframe_faces_to_the_new_clusters(
+        self, _metadata, _update_metadata, _avatar, keyframe_db
+    ):
+        """A rebuild drops every assignment (ON DELETE SET NULL). Keyframe faces
+        must rejoin the rebuilt clusters, and strangers must stay out."""
+        rng = np.random.default_rng(1)
+        alice = [photo_face(keyframe_db, f"img-a{k}", jitter(rng, 0)) for k in range(3)]
+        for k in range(3):
+            photo_face(keyframe_db, f"img-b{k}", jitter(rng, 1))
+        alice_on_video = keyframe_face(keyframe_db, "frame-1", near(0, 0.9))
+        stranger = [
+            keyframe_face(keyframe_db, f"frame-s{k}", jitter(rng, 2)) for k in range(10)
+        ]
+
+        created, _ = cluster_util_face_clusters_sync(force_full_reclustering=True)
+
+        assert created == 2
+        assert cluster_of(keyframe_db, alice[0]) is not None
+        assert cluster_of(keyframe_db, alice_on_video) == cluster_of(
+            keyframe_db, alice[0]
+        )
+        assert all(cluster_of(keyframe_db, face) is None for face in stranger)

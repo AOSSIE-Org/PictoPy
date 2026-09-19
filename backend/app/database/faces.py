@@ -459,12 +459,14 @@ def db_update_face_cluster_ids_batch(
             conn.close()
 
 
-def db_get_cluster_image_pairs() -> set:
-    """Distinct (cluster_id, image_id) pairs for all cluster-assigned faces."""
+def db_get_cluster_media_pairs() -> set:
+    """Distinct (cluster_id, photo or keyframe id) pairs for all cluster-assigned
+    faces: the units a cluster may hold only one face from."""
     conn = _connect()
     try:
         rows = conn.execute(
-            "SELECT DISTINCT cluster_id, image_id FROM faces WHERE cluster_id IS NOT NULL"
+            "SELECT DISTINCT cluster_id, COALESCE(image_id, frame_id) "
+            "FROM faces WHERE cluster_id IS NOT NULL"
         ).fetchall()
         return set(rows)
     finally:
@@ -475,9 +477,13 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
     """
     Get cluster IDs and their corresponding mean face embeddings.
 
+    Means come from photo faces only: a cluster's identity is defined by its photos,
+    and attached keyframe faces must never move it, or matches could drift across
+    people one video face at a time.
+
     Returns:
         List of dictionaries containing cluster_id and mean_embedding (as numpy array)
-        Only returns clusters that have at least one face assigned
+        Only returns clusters that have at least one photo face assigned
     """
     conn = _connect()
     cursor = conn.cursor()
@@ -487,7 +493,7 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
             """
             SELECT f.cluster_id, f.embeddings
             FROM faces f
-            WHERE f.cluster_id IS NOT NULL
+            WHERE f.cluster_id IS NOT NULL AND f.image_id IS NOT NULL
             ORDER BY f.cluster_id
             """
         )
