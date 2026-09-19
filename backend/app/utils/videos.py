@@ -2,14 +2,26 @@ from __future__ import annotations
 
 import os
 import shutil
+import sqlite3
 import uuid
 import datetime
 import json
 import mimetypes
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    TypedDict,
+)
 from pathlib import Path
 
 import cv2
+import numpy as np
 from PIL import Image
 
 from app.config.settings import THUMBNAIL_IMAGES_PATH, VIDEO_FRAMES_PATH
@@ -34,6 +46,9 @@ from app.utils.images import (
     image_util_parse_metadata,
 )
 from app.logging.setup_logging import get_logger
+
+if TYPE_CHECKING:
+    from app.models.FaceDetector import FaceDetector
 
 logger = get_logger(__name__)
 
@@ -613,9 +628,76 @@ def video_util_aggregate_frame_classes(
     )
 
 
+class VideoFace(TypedDict):
+    """A face found in one keyframe, before it is stored."""
+
+    frame_id: str
+    embedding: np.ndarray  # L2-normalised FaceNet vector
+    bbox: Dict[str, int]  # in keyframe pixels
+    confidence: float
+
+
+def video_util_detect_video_faces(
+    face_detector: FaceDetector,
+    frames: List[dict],
+    frame_class_ids: List[List[int]],
+) -> List[VideoFace]:
+    """Faces in every keyframe YOLO saw a person in. Gated per frame, not on the
+    video's person tag, which needs VIDEO_TAG_MIN_FRAME_SUPPORT frames to exist.
+    """
+    faces: List[VideoFace] = []
+    for frame, class_ids in zip(frames, frame_class_ids):
+        if 0 not in class_ids:
+            continue
+        result = face_detector.detect_faces(frame["frame_path"])
+        if not result:
+            continue
+        for embedding, bbox, confidence in zip(
+            result["embeddings"], result["bboxes"], result["confidences"]
+        ):
+            faces.append(
+                VideoFace(
+                    frame_id=frame["id"],
+                    embedding=embedding,
+                    bbox=bbox,
+                    confidence=confidence,
+                )
+            )
+    return faces
+
+
+def video_util_select_video_faces(
+    faces: List[VideoFace], dedupe_threshold: float, max_faces: int
+) -> List[VideoFace]:
+    """The faces worth storing for one video, highest confidence first.
+
+    A face nearly identical to one already kept is the same person in a
+    neighbouring keyframe and adds nothing to clustering.
+    """
+    kept: List[VideoFace] = []
+    for face in sorted(faces, key=lambda f: -f["confidence"]):
+        if len(kept) >= max_faces:
+            break
+        # FaceNet embeddings are L2-normalised, so the dot product is the cosine.
+        if any(
+            float(np.dot(face["embedding"], other["embedding"])) >= dedupe_threshold
+            for other in kept
+        ):
+            continue
+        kept.append(face)
+    return kept
+
+
 def video_util_process_untagged_videos() -> bool:
-    """Sample and object-tag every untagged video in AI-tagging folders."""
-    from app.config.settings import VIDEO_TAG_MIN_FRAME_SUPPORT
+    """Sample, object-tag and face-detect every untagged video in AI-tagging
+    folders."""
+    from app.config.settings import (
+        VIDEO_FACE_DEDUPE_THRESHOLD,
+        VIDEO_FACE_DETECTION,
+        VIDEO_MAX_FACES_PER_VIDEO,
+        VIDEO_TAG_MIN_FRAME_SUPPORT,
+    )
+    from app.database.faces import db_insert_face_embeddings
     from app.database.video_frames import (
         db_bulk_insert_video_frames,
         db_delete_frames_for_videos,
@@ -623,6 +705,7 @@ def video_util_process_untagged_videos() -> bool:
         db_mark_videos_tagged,
         db_write_video_classes,
     )
+    from app.models.FaceDetector import FaceDetector
     from app.models.ObjectClassifier import ObjectClassifier
 
     try:
@@ -632,7 +715,9 @@ def video_util_process_untagged_videos() -> bool:
 
         interval = video_util_get_frame_interval()
         object_classifier = ObjectClassifier()
+        face_detector = FaceDetector() if VIDEO_FACE_DETECTION else None
         total_frames = 0
+        total_faces = 0
 
         try:
             for video in untagged_videos:
@@ -658,6 +743,34 @@ def video_util_process_untagged_videos() -> bool:
                     object_classifier.get_classes(frame["frame_path"]) or []
                     for frame in frames
                 ]
+
+                # Re-tags start clean: deleting the old frames above cascaded
+                # their faces away, so these never pile up on an existing set.
+                faces: List[VideoFace] = []
+                if face_detector is not None:
+                    faces = video_util_select_video_faces(
+                        video_util_detect_video_faces(
+                            face_detector, frames, frame_class_ids
+                        ),
+                        VIDEO_FACE_DEDUPE_THRESHOLD,
+                        VIDEO_MAX_FACES_PER_VIDEO,
+                    )
+                try:
+                    for face in faces:
+                        db_insert_face_embeddings(
+                            None,
+                            face["embedding"],
+                            confidence=face["confidence"],
+                            bbox=face["bbox"],
+                            frame_id=face["frame_id"],
+                        )
+                except sqlite3.IntegrityError:
+                    # The video can be deleted during inference, cascading its
+                    # keyframes away and failing the faces FK; skip it.
+                    logger.info(f"Video {video_id} was removed during tagging")
+                    continue
+                total_faces += len(faces)
+
                 db_write_video_classes(
                     video_id,
                     video_util_aggregate_frame_classes(
@@ -667,10 +780,13 @@ def video_util_process_untagged_videos() -> bool:
                 db_mark_videos_tagged([video_id])
         finally:
             object_classifier.close()
+            if face_detector is not None:
+                face_detector.close()
 
         logger.info(
             f"Video tagging pass complete. Videos: {len(untagged_videos)}, "
-            f"Frames sampled: {total_frames}, Interval: {interval}s"
+            f"Frames sampled: {total_frames}, Faces stored: {total_faces}, "
+            f"Interval: {interval}s"
         )
         return True
     except Exception as e:
