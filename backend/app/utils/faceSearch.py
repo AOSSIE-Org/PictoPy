@@ -1,10 +1,8 @@
-import uuid
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
-from app.config.settings import CONFIDENCE_PERCENT, DEFAULT_FACENET_MODEL
+from app.config.settings import CONFIDENCE_PERCENT
 from app.database.faces import get_all_face_embeddings
 from app.models.FaceDetector import FaceDetector
-from app.models.FaceNet import FaceNet
 from app.utils.FaceNet import FaceNet_util_cosine_similarity
 
 
@@ -43,29 +41,27 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
         GetAllImagesResponse: Search result containing matched images.
     """
     fd = FaceDetector()
-    fn = FaceNet(DEFAULT_FACENET_MODEL)
 
     try:
         matches = []
-        image_id = str(uuid.uuid4())
 
         try:
-            result = fd.detect_faces(image_id, image_path, forSearch=True)
+            result = fd.detect_faces(image_path)
         except Exception as e:
             return GetAllImagesResponse(
                 success=False,
                 message=f"Failed to process image: {str(e)}",
                 data=[],
             )
-        if not result or result["num_faces"] == 0:
+        if not result or not result["embeddings"]:
             return GetAllImagesResponse(
                 success=True,
                 message="No faces detected in the image.",
                 data=[],
             )
 
-        process_face = result["processed_faces"][0]
-        new_embedding = fn.get_embedding(process_face)
+        # The detector already ran FaceNet on this crop; no second model needed.
+        new_embedding = result["embeddings"][0]
 
         images = get_all_face_embeddings()
         if not images:
@@ -102,5 +98,3 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
     finally:
         if "fd" in locals() and fd is not None:
             fd.close()
-        if "fn" in locals() and fn is not None:
-            fn.close()

@@ -21,6 +21,7 @@ from app.database.images import (
     db_get_images_by_folder_ids,
     db_delete_images_by_ids,
 )
+from app.database.faces import db_insert_face_embeddings_by_image_id
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
 from app.logging.setup_logging import get_logger
@@ -235,17 +236,24 @@ def image_util_classify_and_face_detect_images(
 
             # Step 3: Detect faces if "person" class is present
             if classes and 0 in classes:
-                try:
-                    result = face_detector.detect_faces(image_id, image_path)
-                except sqlite3.IntegrityError:
-                    # The image can be deleted during inference, failing the faces FK;
-                    # skip it rather than abort the whole tagging pass.
-                    logger.info(
-                        f"Image {image_id} was removed during tagging; skipping"
-                    )
-                    continue
+                result = face_detector.detect_faces(image_path)
+                if result and result["embeddings"]:
+                    try:
+                        db_insert_face_embeddings_by_image_id(
+                            image_id,
+                            result["embeddings"],
+                            confidence=result["confidences"],
+                            bbox=result["bboxes"],
+                        )
+                    except sqlite3.IntegrityError:
+                        # The image can be deleted during inference, which fails
+                        # the faces FK; skip it rather than abort the whole pass.
+                        logger.info(
+                            f"Image {image_id} was removed during tagging; skipping"
+                        )
+                        continue
                 if result:
-                    total_faces_skipped += result.get("faces_skipped", 0)
+                    total_faces_skipped += result["faces_skipped"]
 
             # Step 4: Update the image status in the database
             db_update_image_tagged_status(image_id, True)
