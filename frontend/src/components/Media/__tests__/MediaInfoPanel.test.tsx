@@ -1,9 +1,14 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MediaInfoPanel } from '../MediaInfoPanel';
 import { Image } from '@/types/Media';
+import { invoke } from '@tauri-apps/api/core';
 
 jest.mock('@tauri-apps/plugin-shell', () => ({
   open: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@tauri-apps/api/core', () => ({
+  invoke: jest.fn().mockResolvedValue(undefined),
 }));
 
 const makeImage = (tags: string[]): Image => ({
@@ -104,11 +109,9 @@ describe('MediaInfoPanel tag list', () => {
       />,
     );
 
-    // Expand on the first image.
     fireEvent.click(screen.getByRole('button', { name: /show more/i }));
     expect(screen.getByText('epsilon')).toBeInTheDocument();
 
-    // Navigating to a different image collapses the list again.
     rerender(
       <MediaInfoPanel
         show
@@ -123,5 +126,19 @@ describe('MediaInfoPanel tag list', () => {
     expect(
       screen.getByRole('button', { name: /show more/i }),
     ).toBeInTheDocument();
+  });
+});
+
+describe('MediaInfoPanel Open Original File button', () => {
+  test('calls the open_image_file command with the current image path when clicked', async () => {
+    renderPanel(['alpha']);
+
+    fireEvent.click(screen.getByRole('button', { name: /open original file/i }));
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith('open_image_file', {
+        path: 'C:\\pics\\img1.jpg',
+      });
+    });
   });
 });
