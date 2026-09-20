@@ -98,13 +98,13 @@ def get_all_images(
             data=image_data,
         )
 
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
-                message=f"Unable to retrieve images: {str(e)}",
+                message="Unable to retrieve images.",
             ).model_dump(),
         )
 
