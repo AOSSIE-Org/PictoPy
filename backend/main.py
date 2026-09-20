@@ -73,7 +73,6 @@ os.makedirs(THUMBNAIL_IMAGES_PATH, exist_ok=True)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create tables and initialize systems
-    generate_openapi_json()
     db_create_folders_table()
     db_create_images_table()
     db_create_videos_table()
@@ -138,7 +137,7 @@ app = FastAPI(
 logger = get_logger(__name__)
 
 
-def generate_openapi_json():
+def generate_openapi_json() -> bool:
     try:
         openapi_schema = get_openapi(
             title=app.title,
@@ -160,8 +159,10 @@ def generate_openapi_json():
         with open(openapi_path, "w") as f:
             json.dump(openapi_schema, f, indent=2)
         logger.info(f"OpenAPI JSON generated at {openapi_path}")
+        return True
     except Exception as e:
         logger.error(f"Failed to generate openapi.json: {e}")
+        return False
 
 
 # Add CORS middleware
