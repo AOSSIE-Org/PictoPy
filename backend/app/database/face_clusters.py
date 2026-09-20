@@ -188,6 +188,35 @@ def db_get_all_clusters() -> List[ClusterData]:
         conn.close()
 
 
+def db_get_clusters_count() -> int:
+    """
+    Count the clusters that still have at least one face attached.
+
+    Rows whose faces are all gone (e.g. after their folder was deleted) are
+    excluded, matching the INNER JOIN used by the cluster listing. Callers ask
+    this to decide whether any *usable* cluster exists: an orphan row cannot
+    seed incremental assignment, because that matches faces against cluster
+    means derived from the faces table.
+
+    Returns:
+        Number of clusters with one or more faces
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT COUNT(DISTINCT fc.cluster_id)
+            FROM face_clusters fc
+            INNER JOIN faces f ON fc.cluster_id = f.cluster_id
+            """
+        )
+        return cursor.fetchone()[0]
+    finally:
+        conn.close()
+
+
 def db_update_cluster(
     cluster_id: ClusterId,
     cluster_name: Optional[ClusterName] = None,
@@ -262,7 +291,7 @@ def db_get_all_clusters_with_face_counts() -> (
                 fc.face_image_base64,
                 COALESCE(AVG(f.confidence), 0) as avg_confidence
             FROM face_clusters fc
-            LEFT JOIN faces f ON fc.cluster_id = f.cluster_id
+            INNER JOIN faces f ON fc.cluster_id = f.cluster_id
             GROUP BY fc.cluster_id, fc.cluster_name, fc.face_image_base64
             """
         )

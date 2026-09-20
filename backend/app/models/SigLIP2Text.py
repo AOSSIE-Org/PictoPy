@@ -76,10 +76,11 @@ class SigLIP2Text(ONNXSessionBase):
         the HF tokenizer -- this graph does not tokenize internally.
         Returns an L2-normalized embedding."""
         session, input_ids_name, attention_mask_name, output_name = self.get_session()
-        result = session.run(
-            [output_name],
-            {input_ids_name: input_ids, attention_mask_name: attention_mask},
-        )[0]
+        with self._inference_lock:
+            result = session.run(
+                [output_name],
+                {input_ids_name: input_ids, attention_mask_name: attention_mask},
+            )[0]
         embedding = result[0]
         norm = np.linalg.norm(embedding)
         return embedding / norm if norm > 0 else embedding

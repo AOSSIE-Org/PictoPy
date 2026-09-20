@@ -413,9 +413,10 @@ class TestUserPreferencesAPI:
 
     def test_update_user_preferences_response_structure(self):
         """Test that update user preferences returns correct response structure."""
-        with patch("app.routes.user_preferences.db_get_metadata") as mock_get, patch(
-            "app.routes.user_preferences.db_update_metadata"
-        ) as mock_update:
+        with (
+            patch("app.routes.user_preferences.db_get_metadata") as mock_get,
+            patch("app.routes.user_preferences.db_update_metadata") as mock_update,
+        ):
             mock_get.return_value = {}
             mock_update.return_value = True
 
@@ -437,9 +438,10 @@ class TestUserPreferencesAPI:
 
     def test_update_user_preferences_preserves_other_metadata(self):
         """Test that updating preferences preserves other metadata fields."""
-        with patch("app.routes.user_preferences.db_get_metadata") as mock_get, patch(
-            "app.routes.user_preferences.db_update_metadata"
-        ) as mock_update:
+        with (
+            patch("app.routes.user_preferences.db_get_metadata") as mock_get,
+            patch("app.routes.user_preferences.db_update_metadata") as mock_update,
+        ):
             existing_metadata = {
                 "user_preferences": {"YOLO_model_size": "small"},
                 "other_field": "should_be_preserved",
@@ -504,3 +506,235 @@ class TestUserPreferencesAPI:
         """Test that unsupported HTTP methods return 405."""
         response = client.request(method, endpoint)
         assert response.status_code == 405
+
+
+class TestVideoFrameIntervalValidation:
+    """Boundary coverage for the video keyframe interval on both preference
+    models, guarding the sampling API contract."""
+
+    def test_default_matches_sampler_config(self):
+        from app.schemas.user_preferences import UserPreferencesData
+        from app.config.settings import VIDEO_FRAME_INTERVAL_SECONDS
+
+        assert (
+            UserPreferencesData().Video_Frame_Interval == VIDEO_FRAME_INTERVAL_SECONDS
+        )
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            0.5,  # exact minimum
+            300.0,  # exact maximum
+            5.0,
+        ],
+    )
+    def test_accepts_in_range_values(self, value):
+        from app.schemas.user_preferences import (
+            UserPreferencesData,
+            UpdateUserPreferencesRequest,
+        )
+
+        assert UserPreferencesData(Video_Frame_Interval=value).Video_Frame_Interval == (
+            value
+        )
+        assert (
+            UpdateUserPreferencesRequest(
+                Video_Frame_Interval=value
+            ).Video_Frame_Interval
+            == value
+        )
+
+    @pytest.mark.parametrize("value", [0.4, 300.1, 0.0, -1.0])
+    def test_rejects_out_of_range_values(self, value):
+        from pydantic import ValidationError
+        from app.schemas.user_preferences import (
+            UserPreferencesData,
+            UpdateUserPreferencesRequest,
+        )
+
+        with pytest.raises(ValidationError):
+            UserPreferencesData(Video_Frame_Interval=value)
+        with pytest.raises(ValidationError):
+            UpdateUserPreferencesRequest(Video_Frame_Interval=value)
+
+    def test_partial_update_allows_none(self):
+        from app.schemas.user_preferences import UpdateUserPreferencesRequest
+
+        assert UpdateUserPreferencesRequest().Video_Frame_Interval is None
+        assert (
+            UpdateUserPreferencesRequest(Video_Frame_Interval=None).Video_Frame_Interval
+            is None
+        )
+
+
+# ##############################
+# Memories preferences
+# ##############################
+
+
+class TestMemoriesPreferences:
+    def test_defaults_appear_when_the_key_is_absent(self):
+        with patch(
+            "app.routes.user_preferences.db_get_metadata",
+            return_value={"user_preferences": {"YOLO_model_size": "small"}},
+        ):
+            response = client.get("/user_preferences/")
+
+        memories = response.json()["user_preferences"]["memories"]
+        assert memories["enabled"] is True
+        # Desktop alerts are opt-in.
+        assert memories["notifications_enabled"] is False
+        # The story viewer ships muted; audio is opt-in.
+        assert memories["story_music_enabled"] is False
+        assert memories["min_images"] == 5
+        assert memories["max_images"] == 30
+
+    def test_stored_values_round_trip(self):
+        stored = {
+            "user_preferences": {
+                "memories": {"story_music_enabled": True, "min_images": 8}
+            }
+        }
+        with patch("app.routes.user_preferences.db_get_metadata", return_value=stored):
+            memories = client.get("/user_preferences/").json()["user_preferences"][
+                "memories"
+            ]
+
+        assert memories["story_music_enabled"] is True
+        assert memories["min_images"] == 8
+        assert memories["max_images"] == 30  # untouched default
+
+    def test_partial_update_preserves_sibling_fields(self):
+        stored = {
+            "user_preferences": {
+                "YOLO_model_size": "medium",
+                "memories": {"enabled": False, "min_images": 7},
+            }
+        }
+        with (
+            patch("app.routes.user_preferences.db_get_metadata", return_value=stored),
+            patch(
+                "app.routes.user_preferences.db_update_metadata", return_value=True
+            ) as update,
+        ):
+            response = client.put(
+                "/user_preferences/", json={"memories": {"story_music_enabled": True}}
+            )
+
+        assert response.status_code == 200
+        saved = update.call_args[0][0]["user_preferences"]
+        assert saved["YOLO_model_size"] == "medium"
+        assert saved["memories"] == {
+            "enabled": False,
+            "min_images": 7,
+            "story_music_enabled": True,
+        }
+
+    def test_updating_only_memories_is_a_valid_request(self):
+        with (
+            patch("app.routes.user_preferences.db_get_metadata", return_value={}),
+            patch("app.routes.user_preferences.db_update_metadata", return_value=True),
+        ):
+            response = client.put(
+                "/user_preferences/", json={"memories": {"enabled": False}}
+            )
+
+        assert response.status_code == 200
+        assert response.json()["user_preferences"]["memories"]["enabled"] is False
+
+    def test_weights_normalize_to_one_on_read(self):
+        stored = {
+            "user_preferences": {
+                "memories": {
+                    "weights": {
+                        "favourite": 1.0,
+                        "known_people": 0.5,
+                        "event_strength": 0.5,
+                        "face_presence": 0.4,
+                        "semantic_confidence": 0.0,
+                        "gps_novelty": 0.0,
+                        "in_album": 0.0,
+                    }
+                }
+            }
+        }
+        with patch("app.routes.user_preferences.db_get_metadata", return_value=stored):
+            weights = client.get("/user_preferences/").json()["user_preferences"][
+                "memories"
+            ]["weights"]
+
+        assert round(sum(weights.values()), 6) == 1.0
+        assert weights["favourite"] > weights["known_people"]
+
+    def test_partial_weights_are_stored_raw_not_rescaled(self):
+        """Rescaling a lone slider to 1.0 would silently zero out the others."""
+        stored = {"user_preferences": {"memories": {"weights": {"known_people": 0.4}}}}
+        with (
+            patch("app.routes.user_preferences.db_get_metadata", return_value=stored),
+            patch(
+                "app.routes.user_preferences.db_update_metadata", return_value=True
+            ) as update,
+        ):
+            client.put(
+                "/user_preferences/", json={"memories": {"weights": {"favourite": 0.6}}}
+            )
+
+        saved = update.call_args[0][0]["user_preferences"]["memories"]["weights"]
+        assert saved == {"known_people": 0.4, "favourite": 0.6}
+
+    def test_all_zero_weights_fall_back_to_defaults(self):
+        from app.schemas.user_preferences import MemoryScoringWeights
+
+        zeroed = MemoryScoringWeights(
+            **{name: 0.0 for name in MemoryScoringWeights.model_fields}
+        )
+        assert zeroed.favourite == 0.22
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {"memories": {"min_images": 1}},
+            {"memories": {"min_images": 99}},
+            {"memories": {"max_images": 1}},
+            {"memories": {"weights": {"favourite": -0.1}}},
+            {"memories": {"weights": {"favourite": 1.5}}},
+        ],
+    )
+    def test_rejects_out_of_range_values(self, payload):
+        assert client.put("/user_preferences/", json=payload).status_code == 422
+
+    def test_rejects_max_images_below_min_images(self):
+        with (
+            patch("app.routes.user_preferences.db_get_metadata", return_value={}),
+            patch("app.routes.user_preferences.db_update_metadata", return_value=True),
+        ):
+            response = client.put(
+                "/user_preferences/",
+                json={"memories": {"min_images": 40, "max_images": 10}},
+            )
+
+        assert response.status_code == 400
+        assert response.json()["detail"]["error"] == "Validation Error"
+
+    def test_bounds_are_checked_against_the_merged_result(self):
+        """max_images lives in storage; a min_images-only patch can still break it."""
+        stored = {"user_preferences": {"memories": {"max_images": 10}}}
+        with (
+            patch("app.routes.user_preferences.db_get_metadata", return_value=stored),
+            patch("app.routes.user_preferences.db_update_metadata", return_value=True),
+        ):
+            response = client.put(
+                "/user_preferences/", json={"memories": {"min_images": 40}}
+            )
+
+        assert response.status_code == 400
+
+    def test_corrupt_stored_preferences_fall_back_to_defaults(self):
+        with patch(
+            "app.routes.user_preferences.db_get_metadata",
+            return_value={"user_preferences": {"YOLO_model_size": "gigantic"}},
+        ):
+            response = client.get("/user_preferences/")
+
+        assert response.status_code == 200
+        assert response.json()["user_preferences"]["YOLO_model_size"] == "small"

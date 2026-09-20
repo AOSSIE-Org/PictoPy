@@ -18,6 +18,7 @@ export interface Image {
   isTagged: boolean;
   metadata?: ImageMetadata;
   isFavourite?: boolean;
+  favouritedAt?: string | null;
   tags?: string[];
   bboxes?: { x: number; y: number; width: number; height: number }[];
 }
@@ -45,7 +46,14 @@ export interface Video {
   folder_id: string;
   metadata?: VideoMetadata;
   isFavourite?: boolean;
+  favouritedAt?: string | null;
   tags?: string[];
+}
+
+export interface ScoredVideo extends Video {
+  score: number;
+  /** Timestamp (seconds) of the keyframe that matched best. */
+  best_frame_timestamp?: number | null;
 }
 
 export interface ImageGalleryProps {

@@ -18,6 +18,10 @@ else:
 # Microservice URLs
 SYNC_MICROSERVICE_URL = "http://localhost:52124"
 
+# The album share listener. Unlike the two services above this one binds
+# 0.0.0.0, so it is reachable by anything that can route to this machine.
+SHARE_SERVER_PORT = 52125
+
 CONFIDENCE_PERCENT = 0.6
 # Object Detection Models:
 SMALL_OBJ_DETECTION_MODEL = f"{MODEL_EXPORTS_PATH}/YOLOv11_Small.onnx"
@@ -39,6 +43,7 @@ if os.getenv("GITHUB_ACTIONS") == "true":
 else:
     DATABASE_PATH = os.path.join(user_data_dir("PictoPy"), "database", "PictoPy.db")
 THUMBNAIL_IMAGES_PATH = os.path.join(user_data_dir("PictoPy"), "thumbnails")
+VIDEO_FRAMES_PATH = os.path.join(user_data_dir("PictoPy"), "video_frames")
 IMAGES_PATH = "./images"
 
 
@@ -175,6 +180,33 @@ SEMANTIC_BUCKET_THRESHOLDS = {
 }
 SEMANTIC_DEFAULT_THRESHOLD = 5e-05
 
+# Video keyframe sampling. One frame every N seconds instead of per-frame
+# inference (30fps = 1800 forward passes per minute of video). The interval is
+# stretched when a video would exceed the cap, so cost per video is bounded.
+# The bounds are the single source of truth for both the sampler default here
+# and the user-preferences API schema, so the API can never accept an interval
+# the sampler would reject.
+VIDEO_FRAME_INTERVAL_MIN = 0.5
+VIDEO_FRAME_INTERVAL_MAX = 300.0
+VIDEO_FRAME_INTERVAL_SECONDS = _get_env_float(
+    "VIDEO_FRAME_INTERVAL_SECONDS",
+    5.0,
+    min_value=VIDEO_FRAME_INTERVAL_MIN,
+    max_value=VIDEO_FRAME_INTERVAL_MAX,
+)
+VIDEO_MAX_FRAMES_PER_VIDEO = _get_env_int(
+    "VIDEO_MAX_FRAMES_PER_VIDEO", 200, min_value=1
+)
+# Frames are saved above SigLIP2's largest input (384) so a checkpoint swap
+# doesn't require re-extraction.
+VIDEO_FRAME_MAX_DIMENSION = _get_env_int("VIDEO_FRAME_MAX_DIMENSION", 640, min_value=64)
+# A tag must appear in this many frames to describe the video; drops one-off
+# detections from a single unlucky keyframe.
+VIDEO_TAG_MIN_FRAME_SUPPORT = _get_env_int(
+    "VIDEO_TAG_MIN_FRAME_SUPPORT", 2, min_value=1
+)
+VIDEO_TAG_TOP_K = _get_env_int("VIDEO_TAG_TOP_K", 15, min_value=1)
+
 # Clustering Configuration
 PICTO_CLUSTERING_EPS = _get_env_float("PICTO_CLUSTERING_EPS", 0.75, min_value=0.0)
 PICTO_CLUSTERING_MIN_SAMPLES = _get_env_int(
@@ -202,3 +234,7 @@ PICTO_CLUSTERING_BLUR_THRESHOLD = _get_env_float(
 PICTO_CLUSTERING_MIN_FACE_SIZE = _get_env_int(
     "PICTO_CLUSTERING_MIN_FACE_SIZE", 1000, min_value=1
 )
+
+
+# Separate pool for folder indexing so it never queues behind AI tagging.
+INDEXING_MAX_WORKERS = _get_env_int("INDEXING_MAX_WORKERS", 2, min_value=1, max_value=8)

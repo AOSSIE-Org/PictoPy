@@ -15,6 +15,7 @@ import {
 } from '@tanstack/react-query';
 
 import { getErrorMessage } from '@/lib/utils';
+import axios from 'axios';
 
 export interface BackendRes<T = any> {
   success: boolean;
@@ -42,7 +43,13 @@ export function usePictoMutation<
   const myQueryClient = useQueryClient();
 
   const defaultOptions = {
-    retry: 2,
+    retry: (failureCount: number, error: TError): boolean => {
+      if (axios.isAxiosError(error) && error.response?.status === 409) {
+        return false;
+      }
+
+      return failureCount < 2;
+    },
     retryDelay: 500,
   };
 

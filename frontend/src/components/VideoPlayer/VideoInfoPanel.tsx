@@ -1,6 +1,16 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Film, Calendar, Clock, Monitor, Info } from 'lucide-react';
+import {
+  X,
+  Film,
+  Calendar,
+  Clock,
+  Monitor,
+  Info,
+  Tag,
+  Plus,
+  Minus,
+} from 'lucide-react';
 import { Video } from '@/types/Media';
 import { formatDurationLabel } from '@/utils/durationUtils';
 
@@ -41,6 +51,15 @@ export const VideoInfoPanel: React.FC<VideoInfoPanelProps> = ({
   const height = video?.metadata?.height ?? 0;
   const resolution =
     width > 0 && height > 0 ? `${width} × ${height}` : 'Not available';
+  const tags = video?.tags ?? [];
+  const [showAllTags, setShowAllTags] = React.useState(false);
+
+  const tagResetKey = `${show}:${video?.id ?? ''}`;
+  const [prevTagResetKey, setPrevTagResetKey] = React.useState(tagResetKey);
+  if (tagResetKey !== prevTagResetKey) {
+    setPrevTagResetKey(tagResetKey);
+    setShowAllTags(false);
+  }
 
   return (
     <AnimatePresence>
@@ -50,13 +69,15 @@ export const VideoInfoPanel: React.FC<VideoInfoPanelProps> = ({
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ type: 'spring', stiffness: 260, damping: 25 }}
-          className="absolute top-20 left-6 z-50 w-[350px] rounded-xl border border-white/10 bg-black/60 p-6 shadow-xl backdrop-blur-lg"
+          className="absolute top-20 left-6 z-50 w-[350px] rounded-xl border border-black/10 bg-white/80 p-6 shadow-xl backdrop-blur-lg dark:border-white/10 dark:bg-black/60"
         >
-          <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
-            <h3 className="text-xl font-medium text-white">Video Details</h3>
+          <div className="mb-4 flex items-center justify-between border-b border-black/10 pb-3 dark:border-white/10">
+            <h3 className="text-xl font-medium text-gray-900 dark:text-white">
+              Video Details
+            </h3>
             <button
               onClick={onClose}
-              className="text-white/70 hover:text-white"
+              className="text-gray-500 hover:text-gray-900 dark:text-white/70 dark:hover:text-white"
               aria-label="Close info panel"
             >
               <X className="h-5 w-5" />
@@ -65,13 +86,13 @@ export const VideoInfoPanel: React.FC<VideoInfoPanelProps> = ({
 
           <div className="space-y-4 text-sm">
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-white/10 p-2">
-                <Film className="h-5 w-5 text-blue-400" />
+              <div className="rounded-lg bg-black/5 p-2 dark:bg-white/10">
+                <Film className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-white/50">Name</p>
+                <p className="text-xs text-gray-500 dark:text-white/50">Name</p>
                 <p
-                  className="truncate font-medium text-white"
+                  className="truncate font-medium text-gray-900 dark:text-white"
                   title={getVideoName()}
                 >
                   {getVideoName()}
@@ -80,44 +101,99 @@ export const VideoInfoPanel: React.FC<VideoInfoPanelProps> = ({
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-white/10 p-2">
-                <Calendar className="h-5 w-5 text-emerald-400" />
+              <div className="rounded-lg bg-black/5 p-2 dark:bg-white/10">
+                <Calendar className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
-                <p className="text-xs text-white/50">Date</p>
-                <p className="font-medium text-white">{getFormattedDate()}</p>
+                <p className="text-xs text-gray-500 dark:text-white/50">Date</p>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {getFormattedDate()}
+                </p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-white/10 p-2">
-                <Clock className="h-5 w-5 text-purple-400" />
+              <div className="rounded-lg bg-black/5 p-2 dark:bg-white/10">
+                <Clock className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-xs text-white/50">Duration</p>
-                <p className="font-medium text-white">
+                <p className="text-xs text-gray-500 dark:text-white/50">
+                  Duration
+                </p>
+                <p className="font-medium text-gray-900 dark:text-white">
                   {duration ?? 'Not available'}
                 </p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-white/10 p-2">
-                <Monitor className="h-5 w-5 text-amber-400" />
+              <div className="rounded-lg bg-black/5 p-2 dark:bg-white/10">
+                <Monitor className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-xs text-white/50">Resolution</p>
-                <p className="font-medium text-white">{resolution}</p>
+                <p className="text-xs text-gray-500 dark:text-white/50">
+                  Resolution
+                </p>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {resolution}
+                </p>
               </div>
             </div>
 
+            {tags.length > 0 && (
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-black/5 p-2 dark:bg-white/10">
+                  <Tag className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-gray-500 dark:text-white/50">
+                    Tags
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {(showAllTags ? tags : tags.slice(0, 3)).map(
+                      (tag, index) => (
+                        <span
+                          key={`${tag}-${index}`}
+                          className="rounded-full border border-black/20 px-2 py-0.5 text-xs text-gray-800 dark:border-white/30 dark:text-white"
+                        >
+                          {tag}
+                        </span>
+                      ),
+                    )}
+                    {tags.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllTags((prev) => !prev)}
+                        className="focus-visible:ring-ring/50 inline-flex items-center gap-1.5 rounded-full bg-black/10 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-gray-800 shadow-xs transition-all outline-none hover:bg-black/15 focus-visible:ring-[3px] dark:bg-white/15 dark:text-white dark:hover:bg-white/20"
+                      >
+                        {showAllTags ? (
+                          <Minus
+                            className="h-2.5 w-2.5 shrink-0"
+                            strokeWidth={2.5}
+                          />
+                        ) : (
+                          <Plus
+                            className="h-2.5 w-2.5 shrink-0"
+                            strokeWidth={2.5}
+                          />
+                        )}
+                        <span>{showAllTags ? 'show less' : 'show more'}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-white/10 p-2">
-                <Info className="h-5 w-5 text-blue-400" />
+              <div className="rounded-lg bg-black/5 p-2 dark:bg-white/10">
+                <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-xs text-white/50">Position</p>
-                <p className="font-medium text-white">
+                <p className="text-xs text-gray-500 dark:text-white/50">
+                  Position
+                </p>
+                <p className="font-medium text-gray-900 dark:text-white">
                   {currentIndex + 1} of {totalVideos}
                 </p>
               </div>

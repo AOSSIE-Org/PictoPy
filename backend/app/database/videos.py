@@ -31,6 +31,7 @@ class VideoRecord(TypedDict, total=False):
     isTagged: bool
     isFavourite: bool
     captured_at: Optional[datetime]
+    favouritedAt: Optional[datetime]
 
 
 def _connect() -> sqlite3.Connection:
@@ -44,9 +45,10 @@ def db_create_videos_table() -> None:
     conn = _connect()
     cursor = conn.cursor()
 
-    # Videos are kept separate from images by design; isTagged is reserved
-    # for future AI video tagging. thumbnailPath is nullable: videos whose
-    # codec OpenCV cannot decode are still indexed (frontend shows a placeholder).
+    # Videos are kept separate from images by design; isTagged tracks the
+    # keyframe sampling pass (see video_frames). thumbnailPath is nullable:
+    # videos whose codec OpenCV cannot decode are still indexed (frontend
+    # shows a placeholder).
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS videos (
@@ -58,6 +60,7 @@ def db_create_videos_table() -> None:
             isTagged BOOLEAN DEFAULT 0,
             isFavourite BOOLEAN DEFAULT 0,
             captured_at DATETIME,
+            favouritedAt DATETIME,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
     """
@@ -66,6 +69,13 @@ def db_create_videos_table() -> None:
     cursor.execute(
         "CREATE INDEX IF NOT EXISTS ix_videos_captured_at ON videos(captured_at)"
     )
+
+    # favouritedAt: when the video was last favourited (NULL if never, or
+    # pre-dates this column). Guarded ALTER because shipped databases predate
+    # it and CREATE IF NOT EXISTS won't add it.
+    cursor.execute("PRAGMA table_info(videos)")
+    if "favouritedAt" not in {row[1] for row in cursor.fetchall()}:
+        cursor.execute("ALTER TABLE videos ADD COLUMN favouritedAt DATETIME")
 
     conn.commit()
     conn.close()
@@ -92,7 +102,10 @@ def db_bulk_insert_videos(video_records: List[VideoRecord]) -> bool:
                     WHEN excluded.isTagged THEN 1
                     ELSE videos.isTagged
                 END,
-                captured_at=COALESCE(excluded.captured_at, videos.captured_at)
+                -- Not COALESCE: every record comes from a full re-read of
+                -- the file, so NULL means "no capture date exists" and has to
+                -- overwrite a bad one a previous extractor guessed.
+                captured_at=excluded.captured_at
             """,
             video_records,
         )
@@ -119,7 +132,7 @@ def db_get_all_videos() -> List[dict]:
     try:
         cursor.execute(
             """
-            SELECT id, path, folder_id, thumbnailPath, metadata, isTagged, isFavourite, captured_at
+            SELECT id, path, folder_id, thumbnailPath, metadata, isTagged, isFavourite, captured_at, favouritedAt
             FROM videos
             ORDER BY path
             """
@@ -127,40 +140,51 @@ def db_get_all_videos() -> List[dict]:
 
         results = cursor.fetchall()
 
-        videos = []
-        for (
-            video_id,
-            path,
-            folder_id,
-            thumbnail_path,
-            metadata,
-            is_tagged,
-            is_favourite,
-            captured_at,
-        ) in results:
-            from app.utils.images import image_util_parse_metadata
-
-            videos.append(
-                {
-                    "id": video_id,
-                    "path": path,
-                    "folder_id": str(folder_id),
-                    "thumbnailPath": thumbnail_path,
-                    "metadata": image_util_parse_metadata(metadata),
-                    "isTagged": bool(is_tagged),
-                    "isFavourite": bool(is_favourite),
-                    "captured_at": captured_at if captured_at else None,
-                    "tags": None,
-                }
-            )
-
-        return videos
+        return _build_video_dicts(results)
 
     except sqlite3.Error as e:
         logger.error(f"Error getting all videos: {e}")
         return []
     finally:
         conn.close()
+
+
+def _build_video_dicts(rows: List[Tuple]) -> List[dict]:
+    """Turn the shared 8-column video SELECT into dicts, attaching each
+    video's display tags."""
+    from app.database.video_frames import db_get_video_tags
+    from app.utils.images import image_util_parse_metadata
+
+    tags_by_video = db_get_video_tags([row[0] for row in rows])
+
+    videos = []
+    for (
+        video_id,
+        path,
+        folder_id,
+        thumbnail_path,
+        metadata,
+        is_tagged,
+        is_favourite,
+        captured_at,
+        favourited_at,
+    ) in rows:
+        videos.append(
+            {
+                "id": video_id,
+                "path": path,
+                "folder_id": str(folder_id),
+                "thumbnailPath": thumbnail_path,
+                "metadata": image_util_parse_metadata(metadata),
+                "isTagged": bool(is_tagged),
+                "isFavourite": bool(is_favourite),
+                "captured_at": captured_at if captured_at else None,
+                "favouritedAt": favourited_at if favourited_at else None,
+                "tags": tags_by_video.get(video_id) or None,
+            }
+        )
+
+    return videos
 
 
 def db_get_video_index_by_folder_ids(
@@ -196,6 +220,44 @@ def db_get_video_index_by_folder_ids(
     except sqlite3.Error as e:
         logger.error(f"Error getting video index by folder IDs: {e}")
         return []
+    finally:
+        conn.close()
+
+
+def db_get_videos_by_ids(video_ids: List[VideoId]) -> List[dict]:
+    """Get videos by ID, preserving the order of video_ids."""
+    if not video_ids:
+        return []
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        rows = []
+        # Chunked by 500 to stay under SQLite's 999-variable limit.
+        chunk_size = 500
+        for i in range(0, len(video_ids), chunk_size):
+            chunk = video_ids[i : i + chunk_size]
+            placeholders = ",".join("?" for _ in chunk)
+            cursor.execute(
+                f"""
+                SELECT id, path, folder_id, thumbnailPath, metadata, isTagged,
+                       isFavourite, captured_at, favouritedAt
+                FROM videos
+                WHERE id IN ({placeholders})
+                """,
+                chunk,
+            )
+            rows.extend(cursor.fetchall())
+
+        video_lookup = {video["id"]: video for video in _build_video_dicts(rows)}
+        return [
+            video_lookup[video_id] for video_id in video_ids if video_id in video_lookup
+        ]
+
+    except sqlite3.Error as e:
+        logger.error(f"Error getting videos by IDs: {e}")
+        raise
     finally:
         conn.close()
 
@@ -287,7 +349,11 @@ def db_toggle_video_favourite_status(video_id: str) -> bool:
         cursor.execute(
             """
             UPDATE videos
-            SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
+            SET favouritedAt = CASE
+                    WHEN isFavourite = 1 THEN favouritedAt
+                    ELSE CURRENT_TIMESTAMP
+                END,
+                isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
             WHERE id = ?
             """,
             (video_id,),

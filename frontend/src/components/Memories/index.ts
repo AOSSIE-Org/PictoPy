@@ -1,13 +1,8 @@
-/**
- * Memories Component Exports
- *
- * Barrel file for clean imports across the application.
- * Import components like: import { MemoriesPage, MemoryCard } from '@/components/Memories'
- */
-
-export { default as MemoriesPage } from './MemoriesPage';
-export { default as MemoryCard } from './MemoryCard';
-export { default as FeaturedMemoryCard } from './FeaturedMemoryCard';
-
-// Export types if needed
-export type { Memory, MemoryImage } from '@/api/api-functions/memories';
+export { MemoryCard } from './MemoryCard';
+export { MemoryFilmstrip } from './MemoryFilmstrip';
+export { MemoryStoryViewer } from './MemoryStoryViewer';
+export type {
+  MemoryCard as MemoryCardData,
+  MemoryImage,
+  MemoryStory,
+} from '@/api/api-functions/memories';

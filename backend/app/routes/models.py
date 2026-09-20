@@ -6,7 +6,7 @@ from concurrent.futures import ProcessPoolExecutor
 from typing import Dict, List
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 from starlette.datastructures import State
@@ -16,6 +16,7 @@ from app.models.session_registry import (
     release_model_deletion_mark,
     _registry_lock,
 )
+from app.routes.dependencies import get_state
 from app.utils.hardware_detect import get_hardware_info
 from app.utils.images import image_util_process_unembedded_images
 from app.utils.semantic_labels import (
@@ -33,10 +34,6 @@ router = APIRouter()
 REQUIRED_MODELS = ["facenet"]
 
 SEMANTIC_FEATURES = ("semantic_vision", "semantic_text")
-
-
-def get_state(request: Request) -> State:
-    return request.app.state
 
 
 def submit_embedding_backfill_if_semantic(

@@ -4,7 +4,7 @@ import { AvatarSelectionStep } from '@/components/OnboardingSteps/AvatarSelectio
 
 const VALID_30 = 'a'.repeat(30);
 const INVALID_31 = 'a'.repeat(31);
-const ERROR_MSG = 'A single word in your name cannot exceed 30 characters.';
+const ERROR_MSG = 'A single word cannot exceed 30 characters.';
 
 beforeEach(() => localStorage.clear());
 

@@ -36,6 +36,9 @@ def get_folders_tagging_status():
                 total_images=folder.total_images,
                 tagged_images=folder.tagged_images,
                 embedded_images=folder.embedded_images,
+                total_videos=folder.total_videos,
+                tagged_videos=folder.tagged_videos,
+                embedded_videos=folder.embedded_videos,
                 ai_tagging=folder.ai_tagging,
             )
             for folder in tagging_progress

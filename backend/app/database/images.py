@@ -1,4 +1,5 @@
 # Standard library imports
+import os
 import sqlite3
 from typing import Any, Dict, List, Mapping, Tuple, TypedDict, Union, Optional
 import json
@@ -20,6 +21,10 @@ ImagePath = str
 FolderId = str
 ClassId = int
 
+# SQLite caps host parameters per statement (999 before 3.32), so callers bind
+# long id lists in chunks rather than in one IN clause.
+SQLITE_ID_CHUNK = 500
+
 
 class ImageRecord(TypedDict, total=False):
     """Represents the full images table structure"""
@@ -36,6 +41,7 @@ class ImageRecord(TypedDict, total=False):
     latitude: Optional[float]
     longitude: Optional[float]
     captured_at: Optional[datetime]
+    favouritedAt: Optional[datetime]
 
 
 class UntaggedImageRecord(TypedDict):
@@ -46,6 +52,14 @@ class UntaggedImageRecord(TypedDict):
     folder_id: FolderId
     thumbnailPath: str
     metadata: Mapping[str, Any]
+
+
+class ImageSyncState(TypedDict):
+    """What a rescan needs in order to tell an unchanged file from a new one."""
+
+    thumbnailPath: Optional[str]
+    file_size: Optional[int]
+    file_mtime: Optional[int]
 
 
 ImageClassPair = Tuple[ImageId, ClassId]
@@ -77,6 +91,7 @@ def db_create_images_table() -> None:
             latitude REAL,
             longitude REAL,
             captured_at DATETIME,
+            favouritedAt DATETIME,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
     """
@@ -93,6 +108,13 @@ def db_create_images_table() -> None:
     cursor.execute(
         "CREATE INDEX IF NOT EXISTS ix_images_favourite_captured_at ON images(isFavourite, captured_at)"
     )
+
+    # favouritedAt: when the image was last favourited (NULL if never, or
+    # pre-dates this column). Guarded ALTER because shipped databases predate
+    # it and CREATE IF NOT EXISTS won't add it.
+    cursor.execute("PRAGMA table_info(images)")
+    if "favouritedAt" not in {row[1] for row in cursor.fetchall()}:
+        cursor.execute("ALTER TABLE images ADD COLUMN favouritedAt DATETIME")
 
     # Create new image_classes junction table
     cursor.execute(
@@ -146,7 +168,10 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
                 END,
                 latitude=COALESCE(excluded.latitude, images.latitude),
                 longitude=COALESCE(excluded.longitude, images.longitude),
-                captured_at=COALESCE(excluded.captured_at, images.captured_at)
+                -- Not COALESCE: every record here comes from a full re-read of
+                -- the file, so NULL means "no capture date exists" and has to
+                -- overwrite a bad one a previous extractor guessed.
+                captured_at=excluded.captured_at
             """,
             image_records,
         )
@@ -177,17 +202,18 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
     try:
         # Build the query with optional WHERE clause
         query = """
-            SELECT 
-                i.id, 
-                i.path, 
-                i.folder_id, 
-                i.thumbnailPath, 
-                i.metadata, 
+            SELECT
+                i.id,
+                i.path,
+                i.folder_id,
+                i.thumbnailPath,
+                i.metadata,
                 i.isTagged,
                 i.isFavourite,
                 i.latitude,
                 i.longitude,
                 i.captured_at,
+                i.favouritedAt,
                 m.name as tag_name
             FROM images i
             LEFT JOIN image_classes_display ic ON i.id = ic.image_id
@@ -218,6 +244,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
             latitude,
             longitude,
             captured_at,
+            favourited_at,
             tag_name,
         ) in results:
             if image_id not in images_dict:
@@ -239,6 +266,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                     "captured_at": (
                         captured_at if captured_at else None
                     ),  # SQLite returns string
+                    "favouritedAt": favourited_at if favourited_at else None,
                     "tags": [],
                 }
 
@@ -459,6 +487,72 @@ def db_get_images_by_folder_ids(
         conn.close()
 
 
+def _as_int(value: Any) -> Optional[int]:
+    """A metadata blob is whatever a past scan wrote; non-numeric means unknown."""
+    try:
+        return int(value)
+    except (TypeError, ValueError, OverflowError):
+        # OverflowError is not a ValueError: JSON reads 1e309 as inf, and this
+        # query runs once for every folder, so letting it escape would abort the
+        # whole scan rather than one file.
+        return None
+
+
+def db_get_image_sync_state_by_folder_ids(
+    folder_ids: List[FolderId],
+) -> Dict[ImagePath, ImageSyncState]:
+    """
+    Map stored image paths to the size and mtime recorded when each was last read.
+
+    Keyed by normcased absolute path, because the caller matches against paths it
+    just walked off disk and Windows hands back inconsistent casing.
+    """
+    if not folder_ids:
+        return {}
+
+    conn = _connect()
+    cursor = conn.cursor()
+    state: Dict[ImagePath, ImageSyncState] = {}
+
+    try:
+        placeholders = ",".join("?" for _ in folder_ids)
+        cursor.execute(
+            f"""
+            SELECT path, thumbnailPath, metadata
+            FROM images
+            WHERE folder_id IN ({placeholders})
+            """,
+            folder_ids,
+        )
+
+        for path, thumbnail_path, metadata in cursor.fetchall():
+            if not path:
+                continue
+
+            parsed: Mapping[str, Any] = {}
+            if metadata:
+                try:
+                    loaded = json.loads(metadata)
+                    if isinstance(loaded, dict):
+                        parsed = loaded
+                except (json.JSONDecodeError, TypeError):
+                    # An unreadable blob just means this row gets re-read.
+                    pass
+
+            state[os.path.normcase(os.path.abspath(path))] = ImageSyncState(
+                thumbnailPath=thumbnail_path,
+                file_size=_as_int(parsed.get("file_size")),
+                file_mtime=_as_int(parsed.get("file_mtime")),
+            )
+
+        return state
+    except sqlite3.Error as e:
+        logger.error(f"Error getting image sync state by folder IDs: {e}")
+        return {}
+    finally:
+        conn.close()
+
+
 def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
     """
     Delete multiple images from the database by their IDs.
@@ -504,7 +598,11 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         cursor.execute(
             """
             UPDATE images
-            SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
+            SET favouritedAt = CASE
+                    WHEN isFavourite = 1 THEN favouritedAt
+                    ELSE CURRENT_TIMESTAMP
+                END,
+                isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
             WHERE id = ?
             """,
             (image_id,),
@@ -558,7 +656,7 @@ def _group_image_rows_with_tags(
     rows: List[Tuple], images_dict: Dict[str, dict]
 ) -> None:
     """
-    Group flat image+tag join rows (the shared 11-column SELECT shape used by
+    Group flat image+tag join rows (the shared 12-column SELECT shape used by
     db_search_images_by_tag and db_get_images_by_ids) into images_dict, keyed
     by image_id, aggregating tag_name into a deduplicated "tags" list.
     Mutates images_dict in place so callers can accumulate across chunks.
@@ -574,6 +672,7 @@ def _group_image_rows_with_tags(
         latitude,
         longitude,
         captured_at,
+        favourited_at,
         tag_name_result,
     ) in rows:
         if image_id not in images_dict:
@@ -588,6 +687,7 @@ def _group_image_rows_with_tags(
                 "latitude": latitude,
                 "longitude": longitude,
                 "captured_at": captured_at if captured_at else None,
+                "favouritedAt": favourited_at if favourited_at else None,
                 "tags": [],
             }
 
@@ -626,6 +726,7 @@ def db_search_images_by_tag(tag_name: str) -> List[dict]:
                 i.latitude,
                 i.longitude,
                 i.captured_at,
+                i.favouritedAt,
                 m.name as tag_name
             FROM images i
             LEFT JOIN image_classes_display ic ON i.id = ic.image_id
@@ -684,6 +785,7 @@ def db_get_images_by_ids(image_ids: List[str]) -> List[dict]:
                     i.latitude,
                     i.longitude,
                     i.captured_at,
+                    i.favouritedAt,
                     m.name as tag_name
                 FROM images i
                 LEFT JOIN image_classes_display ic ON i.id = ic.image_id
@@ -712,387 +814,6 @@ def db_get_images_by_ids(image_ids: List[str]) -> List[dict]:
     except sqlite3.Error as e:
         logger.error(f"Error getting images by IDs: {e}")
         raise
-    finally:
-        conn.close()
-
-
-# ============================================================================
-# MEMORIES FEATURE - Location and Time-based Queries
-# ============================================================================
-
-
-def db_get_images_by_date_range(
-    start_date: datetime, end_date: datetime, include_favorites_only: bool = False
-) -> List[dict]:
-    """
-    Get images captured within a date range for Memories timeline.
-
-    Args:
-        start_date: Start of date range (inclusive)
-        end_date: End of date range (inclusive)
-        include_favorites_only: If True, only return favorite images
-
-    Returns:
-        List of image dictionaries with location and time data
-    """
-    conn = _connect()
-    cursor = conn.cursor()
-
-    try:
-        query = """
-            SELECT 
-                i.id, 
-                i.path, 
-                i.folder_id,
-                i.thumbnailPath, 
-                i.metadata,
-                i.isTagged,
-                i.isFavourite,
-                i.latitude, 
-                i.longitude, 
-                i.captured_at,
-                GROUP_CONCAT(m.name, ',') as tags
-            FROM images i
-            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
-            LEFT JOIN mappings m ON ic.class_id = m.class_id
-            WHERE i.captured_at BETWEEN ? AND ?
-        """
-
-        params = [start_date, end_date]
-
-        if include_favorites_only:
-            query += " AND i.isFavourite = 1"
-
-        query += """
-            GROUP BY i.id
-            ORDER BY i.captured_at DESC
-        """
-
-        cursor.execute(query, params)
-        results = cursor.fetchall()
-
-        images = []
-        for row in results:
-            from app.utils.images import image_util_parse_metadata
-
-            images.append(
-                {
-                    "id": row[0],
-                    "path": row[1],
-                    "folder_id": str(row[2]) if row[2] else None,
-                    "thumbnailPath": row[3],
-                    "metadata": image_util_parse_metadata(row[4]),
-                    "isTagged": bool(row[5]),
-                    "isFavourite": bool(row[6]),
-                    "latitude": row[7],
-                    "longitude": row[8],
-                    "captured_at": row[9] if row[9] else None,
-                    "tags": row[10].split(",") if row[10] else None,
-                }
-            )
-
-        return images
-
-    except sqlite3.Error as e:
-        logger.error(f"Error getting images by date range: {e}")
-        return []
-    finally:
-        conn.close()
-
-
-def db_get_images_near_location(
-    latitude: float, longitude: float, radius_km: float = 5.0
-) -> List[dict]:
-    """
-    Get images near a location within radius_km using bounding box approximation.
-
-    Args:
-        latitude: Center latitude (-90 to 90)
-        longitude: Center longitude (-180 to 180)
-        radius_km: Search radius in kilometers (default: 5km)
-
-    Returns:
-        List of image dictionaries with location data
-
-    Note:
-        Uses simple bounding box (not precise Haversine distance).
-        1 degree latitude ≈ 111 km
-        1 degree longitude ≈ 111 km * cos(latitude)
-    """
-    conn = _connect()
-    cursor = conn.cursor()
-
-    try:
-        import math
-
-        # Calculate bounding box offsets
-        lat_offset = radius_km / 111.0
-        cos_lat = abs(math.cos(math.radians(latitude)))
-        # Clamp to avoid division by near-zero at poles
-        lon_offset = radius_km / (111.0 * max(cos_lat, 0.01))
-
-        cursor.execute(
-            """
-            SELECT 
-                i.id, 
-                i.path, 
-                i.folder_id,
-                i.thumbnailPath, 
-                i.metadata,
-                i.isTagged,
-                i.isFavourite,
-                i.latitude, 
-                i.longitude, 
-                i.captured_at,
-                GROUP_CONCAT(m.name, ',') as tags
-            FROM images i
-            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
-            LEFT JOIN mappings m ON ic.class_id = m.class_id
-            WHERE i.latitude BETWEEN ? AND ?
-              AND i.longitude BETWEEN ? AND ?
-              AND i.latitude IS NOT NULL 
-              AND i.longitude IS NOT NULL
-            GROUP BY i.id
-            ORDER BY i.captured_at DESC
-        """,
-            (
-                latitude - lat_offset,
-                latitude + lat_offset,
-                longitude - lon_offset,
-                longitude + lon_offset,
-            ),
-        )
-
-        results = cursor.fetchall()
-
-        images = []
-        for row in results:
-            from app.utils.images import image_util_parse_metadata
-
-            images.append(
-                {
-                    "id": row[0],
-                    "path": row[1],
-                    "folder_id": str(row[2]) if row[2] else None,
-                    "thumbnailPath": row[3],
-                    "metadata": image_util_parse_metadata(row[4]),
-                    "isTagged": bool(row[5]),
-                    "isFavourite": bool(row[6]),
-                    "latitude": row[7],
-                    "longitude": row[8],
-                    "captured_at": row[9] if row[9] else None,  # SQLite returns string,
-                    "tags": row[10].split(",") if row[10] else None,
-                }
-            )
-
-        return images
-
-    except sqlite3.Error as e:
-        logger.error(f"Error getting images near location: {e}")
-        return []
-    finally:
-        conn.close()
-
-
-def db_get_images_by_year_month(year: int, month: int) -> List[dict]:
-    """
-    Get all images captured in a specific year and month.
-
-    Args:
-        year: Year (e.g., 2024)
-        month: Month (1-12)
-
-    Returns:
-        List of image dictionaries captured in the specified month
-    """
-    conn = _connect()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-            """
-            SELECT 
-                i.id, 
-                i.path, 
-                i.folder_id,
-                i.thumbnailPath, 
-                i.metadata,
-                i.isTagged,
-                i.isFavourite,
-                i.latitude, 
-                i.longitude, 
-                i.captured_at,
-                GROUP_CONCAT(m.name, ',') as tags
-            FROM images i
-            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
-            LEFT JOIN mappings m ON ic.class_id = m.class_id
-            WHERE strftime('%Y', i.captured_at) = ?
-              AND strftime('%m', i.captured_at) = ?
-            GROUP BY i.id
-            ORDER BY i.captured_at DESC
-        """,
-            (str(year).zfill(4), str(month).zfill(2)),
-        )
-
-        results = cursor.fetchall()
-
-        images = []
-        for row in results:
-            from app.utils.images import image_util_parse_metadata
-
-            images.append(
-                {
-                    "id": row[0],
-                    "path": row[1],
-                    "folder_id": str(row[2]) if row[2] else None,
-                    "thumbnailPath": row[3],
-                    "metadata": image_util_parse_metadata(row[4]),
-                    "isTagged": bool(row[5]),
-                    "isFavourite": bool(row[6]),
-                    "latitude": row[7],
-                    "longitude": row[8],
-                    "captured_at": row[9] if row[9] else None,  # SQLite returns string,
-                    "tags": row[10].split(",") if row[10] else None,
-                }
-            )
-
-        return images
-
-    except sqlite3.Error as e:
-        logger.error(f"Error getting images by year/month: {e}")
-        return []
-    finally:
-        conn.close()
-
-
-def db_get_images_with_location() -> List[dict]:
-    """
-    Get all images that have valid GPS coordinates.
-    Useful for displaying all photos on a map.
-
-    Returns:
-        List of image dictionaries that have latitude and longitude
-    """
-    conn = _connect()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-            """
-            SELECT 
-                i.id, 
-                i.path, 
-                i.folder_id,
-                i.thumbnailPath, 
-                i.metadata,
-                i.isTagged,
-                i.isFavourite,
-                i.latitude, 
-                i.longitude, 
-                i.captured_at,
-                GROUP_CONCAT(m.name, ',') as tags
-            FROM images i
-            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
-            LEFT JOIN mappings m ON ic.class_id = m.class_id
-            WHERE i.latitude IS NOT NULL 
-              AND i.longitude IS NOT NULL
-            GROUP BY i.id
-            ORDER BY i.captured_at DESC
-        """
-        )
-
-        results = cursor.fetchall()
-
-        images = []
-        for row in results:
-            from app.utils.images import image_util_parse_metadata
-
-            images.append(
-                {
-                    "id": row[0],
-                    "path": row[1],
-                    "folder_id": str(row[2]) if row[2] else None,
-                    "thumbnailPath": row[3],
-                    "metadata": image_util_parse_metadata(row[4]),
-                    "isTagged": bool(row[5]),
-                    "isFavourite": bool(row[6]),
-                    "latitude": row[7],
-                    "longitude": row[8],
-                    "captured_at": row[9] if row[9] else None,  # SQLite returns string,
-                    "tags": row[10].split(",") if row[10] else None,
-                }
-            )
-
-        return images
-
-    except sqlite3.Error as e:
-        logger.error(f"Error fetching images with location: {e}")
-        return []
-    finally:
-        conn.close()
-
-
-def db_get_all_images_for_memories() -> List[dict]:
-    """
-    Get ALL images that can be used for memories (with OR without GPS).
-    Includes images with timestamps for date-based memories.
-
-    Returns:
-        List of all image dictionaries (both GPS and non-GPS images)
-    """
-    conn = _connect()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-            """
-            SELECT 
-                i.id, 
-                i.path, 
-                i.folder_id,
-                i.thumbnailPath, 
-                i.metadata,
-                i.isTagged,
-                i.isFavourite,
-                i.latitude, 
-                i.longitude, 
-                i.captured_at,
-                GROUP_CONCAT(m.name, ',') as tags
-            FROM images i
-            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
-            LEFT JOIN mappings m ON ic.class_id = m.class_id
-            GROUP BY i.id
-            ORDER BY i.captured_at DESC
-        """
-        )
-
-        results = cursor.fetchall()
-
-        images = []
-        for row in results:
-            from app.utils.images import image_util_parse_metadata
-
-            images.append(
-                {
-                    "id": row[0],
-                    "path": row[1],
-                    "folder_id": str(row[2]) if row[2] else None,
-                    "thumbnailPath": row[3],
-                    "metadata": image_util_parse_metadata(row[4]),
-                    "isTagged": bool(row[5]),
-                    "isFavourite": bool(row[6]),
-                    "latitude": row[7] if row[7] is not None else None,  # Can be None
-                    "longitude": row[8] if row[8] is not None else None,  # Can be None
-                    "captured_at": row[9] if row[9] else None,
-                    "tags": row[10].split(",") if row[10] else None,
-                }
-            )
-
-        return images
-
-    except sqlite3.Error as e:
-        logger.error(f"Error getting images from database: {e}")
-        return []
     finally:
         conn.close()
 
