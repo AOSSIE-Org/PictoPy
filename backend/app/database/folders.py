@@ -212,36 +212,6 @@ def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
         conn.close()
 
 
-def db_delete_folder(folder_path: FolderPath) -> None:
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
-    try:
-        abs_folder_path = os.path.abspath(folder_path)
-        cursor.execute(
-            "PRAGMA foreign_keys = ON;"
-        )  # Important for deleting rows in image_id_mapping and images table because they reference this folder_id
-        conn.commit()
-        cursor.execute(
-            "SELECT folder_id FROM folders WHERE folder_path = ?",
-            (abs_folder_path,),
-        )
-        existing_folder = cursor.fetchone()
-
-        if not existing_folder:
-            raise ValueError(
-                f"Error: Folder '{folder_path}' does not exist in the database."
-            )
-
-        cursor.execute(
-            "DELETE FROM folders WHERE folder_path = ?",
-            (abs_folder_path,),
-        )
-
-        conn.commit()
-    finally:
-        conn.close()
-
-
 def db_update_parent_ids_for_subtree(
     root_folder_path: FolderPath, folder_map: FolderMap
 ) -> None:

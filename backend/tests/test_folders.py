@@ -27,7 +27,6 @@ from app.database.folders import (
     db_insert_folders_batch,
     db_insert_folder,
     db_get_folder_id_from_path,
-    db_delete_folder,
     db_update_parent_ids_for_subtree,
     db_folder_exists,
     db_delete_folders_batch,
@@ -58,7 +57,7 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
 
         # Build the real schema rather than a hand-written copy: a divergent
         # CREATE silently reorders columns and drops the ON DELETE CASCADE.
-        # db_delete_folder turns foreign keys on, so the whole FK chain
+        # db_delete_folders_batch turns foreign keys on, so the whole FK chain
         # (folders <- images <- image_classes -> mappings) has to resolve.
         db_create_YOLO_classes_table()
         db_create_folders_table()
@@ -930,29 +929,23 @@ class TestFoldersUnit:
             ]
         )
 
-        result = db_delete_folders_batch(["folder-id-1"])
+        result = db_delete_folders_batch(["folder-id-1", "folder-id-2"])
+
+        assert result == 2
+        assert db_get_folder_path_from_id("folder-id-1") is None
+        assert db_get_folder_path_from_id("folder-id-2") is None
+
+    def test_db_delete_folders_batch_partial_missing(
+        self, test_db: str
+    ) -> None:
+        db_insert_folders_batch(
+            [("folder-id-1", "/tmp/photos", None, 1693526400, True, False)]
+        )
+
+        result = db_delete_folders_batch(["folder-id-1", "missing-id"])
 
         assert result == 1
         assert db_get_folder_path_from_id("folder-id-1") is None
-        assert db_get_folder_path_from_id("folder-id-2") == "/tmp/docs"
-
-    def test_db_delete_folder_success(self, test_db, tmp_path):
-
-        folder = tmp_path / "photos"
-        folder.mkdir()
-
-        db_insert_folder(str(folder), folder_id="folder-id-1")
-        db_delete_folder(str(folder))
-
-        assert db_folder_exists(str(folder)) is False
-
-    def test_db_delete_folder_not_exists(self, test_db, tmp_path):
-
-        folder = tmp_path / "missing"
-        folder.mkdir()
-
-        with pytest.raises(ValueError):
-            db_delete_folder(str(folder))
 
     def test_db_update_parent_ids_for_subtree(self, test_db):
 

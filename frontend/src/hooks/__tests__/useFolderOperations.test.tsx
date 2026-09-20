@@ -47,30 +47,33 @@ const clustersKeyCalls = (spy: jest.SpyInstance) =>
     ([arg]) => JSON.stringify(arg?.queryKey) === JSON.stringify(['clusters']),
   );
 
-describe('useFolderOperations - delete folder cache invalidation', () => {
+describe('useFolderOperations - multiple folder deletion cache invalidation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('invalidates the clusters query when folder deletion succeeds', async () => {
+  it('calls deleteFolders API with multiple folder IDs and invalidates clusters query when deletion succeeds', async () => {
     deleteFolders.mockResolvedValueOnce({ success: true, data: {} });
     const { result, invalidateSpy } = renderUseFolderOperations();
 
-    result.current.deleteFolder('folder-1');
+    result.current.deleteMultipleFolders(['folder-1', 'folder-2']);
 
     await waitFor(() => {
+      expect(deleteFolders).toHaveBeenCalledWith({
+        folder_ids: ['folder-1', 'folder-2'],
+      });
       expect(clustersKeyCalls(invalidateSpy).length).toBeGreaterThan(0);
     });
   });
 
-  it('does not invalidate the clusters query when folder deletion fails', async () => {
+  it('calls deleteFolders API with multiple folder IDs and does not invalidate clusters query when deletion fails', async () => {
     // usePictoMutation hardcodes retry: 2, so every attempt (not just the
     // first) must reject -- otherwise the retry falls through to the mock's
     // default undefined return, which resolves as a false success.
     deleteFolders.mockRejectedValue(new Error('delete failed'));
     const { result, invalidateSpy } = renderUseFolderOperations();
 
-    result.current.deleteFolder('folder-1');
+    result.current.deleteMultipleFolders(['folder-1', 'folder-2']);
 
     // autoInvalidateTags still fires ['folders'] on settle regardless of
     // outcome, so wait for that instead of an arbitrary timeout to know the
@@ -88,6 +91,9 @@ describe('useFolderOperations - delete folder cache invalidation', () => {
       { timeout: 3000 },
     );
 
+    expect(deleteFolders).toHaveBeenCalledWith({
+      folder_ids: ['folder-1', 'folder-2'],
+    });
     expect(clustersKeyCalls(invalidateSpy)).toHaveLength(0);
   });
 });
