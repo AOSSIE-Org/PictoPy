@@ -29,8 +29,10 @@ def _make_image(path: str, fmt: str, mode: str = "RGB", size=(10, 10)):
         (".webp", "WEBP"),
         (".bmp", "BMP"),
         (".tiff", "TIFF"),
+        (".tif", "TIFF"),
         (".gif", "GIF"),
         (".jpg", "JPEG"),
+        (".jpeg", "JPEG"),
         (".png", "PNG"),
     ],
 )
