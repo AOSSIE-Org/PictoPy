@@ -66,7 +66,7 @@ jobs:
           npm run format:check
           cd ..
           cd backend
-          pre-commit run --config ../.pre-commit-config.yaml || exit 1
+          pre-commit run --config ../.pre-commit-config.yaml --all-files || exit 1
           cd ..
           cd frontend/src-tauri
           cargo fmt -- --check
@@ -85,19 +85,11 @@ jobs:
           )
 
           if (( ${#backend_files[@]} > 0 )); then
-            backend_files=("${backend_files[@]#backend/}")
-            (
-              cd backend
-              mypy "${backend_files[@]}"
-            )
+            mypy --config-file backend/pyproject.toml "${backend_files[@]}"
           fi
 
           if (( ${#sync_files[@]} > 0 )); then
-            sync_files=("${sync_files[@]#sync-microservice/}")
-            (
-              cd sync-microservice
-              mypy "${sync_files[@]}"
-            )
+            mypy --config-file sync-microservice/pyproject.toml "${sync_files[@]}"
           fi
 
           if (( ${#backend_files[@]} == 0 && ${#sync_files[@]} == 0 )); then

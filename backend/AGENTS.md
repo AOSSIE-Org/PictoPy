@@ -35,8 +35,8 @@ them before writing a new resource.
 
 ## Types and reuse
 
-- Annotate function signatures and return types. CI runs MyPy on Python files changed in a
-  pull request, so annotations are enforced as well as documented.
+- Annotate function signatures and return types. CI type-checks Python files changed in a
+  pull request; complete annotations remain a project convention.
 - Table rows are `TypedDict` classes (`VideoRecord`), never bare dicts passed around.
 - Before writing a helper, check `app/utils/` — it already has 19 modules covering image
   metadata, face clustering, hardware detection, model bootstrap, and more.
