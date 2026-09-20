@@ -5,6 +5,8 @@ import UserPreferencesCard from '../UserPreferencesCard';
 import type { MemoriesPreferences } from '@/api/api-functions/user_preferences';
 
 const mockUpdateMemoriesPreferences = jest.fn().mockResolvedValue(undefined);
+const mockToggleVideoFaceDetection = jest.fn().mockResolvedValue(undefined);
+let mockVideoFaceDetection = false;
 let mockMemories: MemoriesPreferences;
 let mockIsUpdating = false;
 
@@ -14,6 +16,7 @@ jest.mock('@/hooks/useUserPreferences', () => ({
       YOLO_model_size: 'nano',
       GPU_Acceleration: false,
       Video_Frame_Interval: 5,
+      Video_Face_Detection: mockVideoFaceDetection,
       memories: mockMemories,
     },
     memoriesPreferences: mockMemories,
@@ -21,6 +24,7 @@ jest.mock('@/hooks/useUserPreferences', () => ({
     updateYoloModelSize: jest.fn().mockResolvedValue(undefined),
     toggleGpuAcceleration: jest.fn().mockResolvedValue(undefined),
     updateVideoFrameInterval: jest.fn().mockResolvedValue(undefined),
+    toggleVideoFaceDetection: mockToggleVideoFaceDetection,
     updateMemoriesPreferences: mockUpdateMemoriesPreferences,
     refetch: jest.fn().mockResolvedValue(undefined),
     isUpdating: mockIsUpdating,
@@ -184,5 +188,39 @@ describe('UserPreferencesCard memories panel', () => {
     expect(trigger('memories-duration')).toBeDisabled();
     expect(trigger('memories-min')).toBeDisabled();
     expect(trigger('memories-max')).toBeDisabled();
+  });
+});
+
+describe('UserPreferencesCard video face detection', () => {
+  const openVideoPanel = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(
+      screen.getByRole('button', { name: /Control how videos are sampled/i }),
+    );
+  };
+
+  it('turns finding people in videos on from the video settings', async () => {
+    mockVideoFaceDetection = false;
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openVideoPanel(user);
+
+    const toggle = screen.getByRole('switch', {
+      name: /Find People in Videos/i,
+    });
+    expect(toggle).not.toBeChecked();
+
+    await user.click(toggle);
+    expect(mockToggleVideoFaceDetection).toHaveBeenCalled();
+  });
+
+  it('reflects the stored preference', async () => {
+    mockVideoFaceDetection = true;
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openVideoPanel(user);
+
+    expect(
+      screen.getByRole('switch', { name: /Find People in Videos/i }),
+    ).toBeChecked();
   });
 });

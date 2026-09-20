@@ -13,6 +13,7 @@ from app.models.FaceDetector import FaceDetectionResult
 from app.utils.videos import (
     VideoFace,
     video_util_detect_video_faces,
+    video_util_face_detection_enabled,
     video_util_process_untagged_videos,
     video_util_select_video_faces,
 )
@@ -62,6 +63,39 @@ def _frames(video_id: str, count: int, generation: str = "") -> List[dict]:
 # ##############################
 # Choosing which faces to keep
 # ##############################
+
+
+class TestFaceDetectionPreference:
+    """Opt-in from Settings, with the config value as the fallback."""
+
+    @pytest.mark.parametrize("stored", [True, False])
+    def test_the_setting_from_settings_wins_over_the_default(self, stored):
+        with (
+            patch(
+                "app.database.metadata.db_get_metadata",
+                return_value={"user_preferences": {"Video_Face_Detection": stored}},
+            ),
+            patch("app.config.settings.VIDEO_FACE_DETECTION", not stored),
+        ):
+            assert video_util_face_detection_enabled() is stored
+
+    @pytest.mark.parametrize("default", [True, False])
+    def test_falls_back_when_the_user_never_chose(self, default):
+        with (
+            patch("app.database.metadata.db_get_metadata", return_value={}),
+            patch("app.config.settings.VIDEO_FACE_DETECTION", default),
+        ):
+            assert video_util_face_detection_enabled() is default
+
+    def test_an_unreadable_preference_does_not_break_tagging(self):
+        with (
+            patch(
+                "app.database.metadata.db_get_metadata",
+                side_effect=RuntimeError("no database"),
+            ),
+            patch("app.config.settings.VIDEO_FACE_DETECTION", False),
+        ):
+            assert video_util_face_detection_enabled() is False
 
 
 class TestSelectVideoFaces:

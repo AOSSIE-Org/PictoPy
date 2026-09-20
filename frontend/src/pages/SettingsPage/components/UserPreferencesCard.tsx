@@ -56,6 +56,7 @@ const UserPreferencesCard: React.FC = () => {
     updateYoloModelSize,
     toggleGpuAcceleration,
     updateVideoFrameInterval,
+    toggleVideoFaceDetection,
     updateMemoriesPreferences,
     isUpdating,
     refetch,
@@ -346,6 +347,31 @@ const UserPreferencesCard: React.FC = () => {
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
+              </div>
+
+              {/* Finding people in videos */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="video-face-detection"
+                    className="text-foreground text-sm font-medium"
+                  >
+                    Find People in Videos
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    Look for faces in video keyframes so videos show up under
+                    the people in them. Slower to tag. Applies to videos tagged
+                    from now on.
+                  </p>
+                </div>
+                <Switch
+                  className="cursor-pointer"
+                  id="video-face-detection"
+                  checked={preferences.Video_Face_Detection}
+                  onCheckedChange={() =>
+                    toggleVideoFaceDetection().catch(console.warn)
+                  }
+                />
               </div>
 
               {/* Video Frame Cache */}

@@ -533,6 +533,23 @@ def video_util_get_frame_interval() -> float:
     return VIDEO_FRAME_INTERVAL_SECONDS
 
 
+def video_util_face_detection_enabled() -> bool:
+    """Whether to look for people in keyframes -- opt-in from Settings, since
+    it runs a second detector over every keyframe showing a person."""
+    from app.config.settings import VIDEO_FACE_DETECTION
+    from app.database.metadata import db_get_metadata
+
+    try:
+        metadata = db_get_metadata() or {}
+        enabled = metadata.get("user_preferences", {}).get("Video_Face_Detection")
+        if enabled is not None:
+            return bool(enabled)
+    except Exception as e:
+        logger.warning(f"Could not read video face detection preference: {e}")
+
+    return VIDEO_FACE_DETECTION
+
+
 def video_util_sample_frame_timestamps(
     duration: Optional[float], interval: float, max_frames: int
 ) -> List[float]:
@@ -721,7 +738,6 @@ def video_util_process_untagged_videos() -> bool:
     folders."""
     from app.config.settings import (
         VIDEO_FACE_DEDUPE_THRESHOLD,
-        VIDEO_FACE_DETECTION,
         VIDEO_MAX_FACES_PER_VIDEO,
         VIDEO_TAG_MIN_FRAME_SUPPORT,
     )
@@ -743,7 +759,7 @@ def video_util_process_untagged_videos() -> bool:
 
         interval = video_util_get_frame_interval()
         object_classifier = ObjectClassifier()
-        face_detector = FaceDetector() if VIDEO_FACE_DETECTION else None
+        face_detector = FaceDetector() if video_util_face_detection_enabled() else None
         total_frames = 0
         total_faces = 0
 
