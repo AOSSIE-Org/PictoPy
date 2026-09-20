@@ -528,6 +528,8 @@ def image_util_is_valid_image(file_path: str) -> bool:
 
     # Then verify it's a valid image
     try:
+        if not os.path.isfile(file_path) or os.path.getsize(file_path) == 0:
+            return False
         with Image.open(file_path) as img:
             img.verify()
         return True
