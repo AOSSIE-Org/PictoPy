@@ -1,15 +1,21 @@
+from PIL import Image
 from app.utils.images import image_util_is_valid_image
+
+
+def _create_image(path):
+    img = Image.new("RGB", (10, 10), color="red")
+    img.save(path, "JPEG")
 
 
 def test_image_util_is_valid_image(tmp_path):
     # Setup valid image (e.g., non-zero size, correct extension)
     valid_img = tmp_path / "valid.jpg"
-    valid_img.write_text("dummy content")
+    _create_image(str(valid_img))
     assert image_util_is_valid_image(str(valid_img)) is True
 
     # Setup valid image with uppercase extension
     valid_img_upper = tmp_path / "VALID.JPG"
-    valid_img_upper.write_text("dummy content")
+    _create_image(str(valid_img_upper))
     assert image_util_is_valid_image(str(valid_img_upper)) is True
 
     # Setup unsupported extension

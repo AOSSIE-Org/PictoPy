@@ -525,9 +525,15 @@ def image_util_is_valid_image(file_path: str) -> bool:
 
     if file_extension not in allowed_extensions:
         return False
+
+    # Then verify it's a valid image
     try:
-        return os.path.isfile(file_path) and os.path.getsize(file_path) > 0
-    except OSError:
+        if not os.path.isfile(file_path) or os.path.getsize(file_path) == 0:
+            return False
+        with Image.open(file_path) as img:
+            img.verify()
+        return True
+    except Exception:
         return False
 
 
