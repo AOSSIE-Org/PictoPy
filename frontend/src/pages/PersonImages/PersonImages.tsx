@@ -2,10 +2,17 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
-import { Image } from '@/types/Media';
+import { VideoCard } from '@/components/Media/VideoCard';
+import { VideoPlayerOverlay } from '@/components/VideoPlayer/VideoPlayerOverlay';
+import { Image, Video } from '@/types/Media';
 import { setCurrentViewIndex, setImages } from '@/features/imageSlice';
+import {
+  setCurrentViewIndex as setCurrentVideoViewIndex,
+  setVideos,
+} from '@/features/videoSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
+import { selectIsVideoViewOpen, selectVideos } from '@/features/videoSelectors';
 import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtension';
 import { fetchClusterImages, renameCluster } from '@/api/api-functions';
 import { useNavigate, useParams } from 'react-router';
@@ -19,6 +26,8 @@ export const PersonImages = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const images = useSelector(selectImages);
+  const isVideoViewOpen = useSelector(selectIsVideoViewOpen);
+  const videos = useSelector(selectVideos);
   const [clusterName, setClusterName] = useState<string>('random_name');
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
@@ -44,6 +53,7 @@ export const PersonImages = () => {
       const res: any = data?.data;
       const images = (res?.images || []) as Image[];
       dispatch(setImages(images));
+      dispatch(setVideos((res?.videos || []) as Video[]));
       setClusterName(res?.cluster_name || 'random_name');
       setLoadedClusterId(clusterId);
       dispatch(hideLoader());
@@ -55,6 +65,10 @@ export const PersonImages = () => {
     clusterId !== undefined && loadedClusterId === clusterId
       ? images
       : ((data?.data as { images?: Image[] })?.images ?? []);
+  const personVideos =
+    clusterId !== undefined && loadedClusterId === clusterId
+      ? videos
+      : ((data?.data as { videos?: Video[] })?.videos ?? []);
   const displayName =
     clusterId !== undefined && loadedClusterId === clusterId
       ? clusterName
@@ -136,8 +150,27 @@ export const PersonImages = () => {
         ))}
       </div>
 
-      {/* Media Viewer Modal */}
+      {/* Videos the same person was found in, via their keyframes */}
+      {personVideos.length > 0 && (
+        <>
+          <h2 className="mb-4 text-xl font-semibold">Videos</h2>
+          <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {personVideos.map((video, index) => (
+              <div key={video.id} className="group relative">
+                <VideoCard
+                  video={video}
+                  className="w-full transition-transform duration-200 group-hover:scale-105"
+                  onClick={() => dispatch(setCurrentVideoViewIndex(index))}
+                />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Media Viewer Modals */}
       {isImageViewOpen && <MediaView images={personImages} />}
+      {isVideoViewOpen && <VideoPlayerOverlay videos={personVideos} />}
     </div>
   );
 };

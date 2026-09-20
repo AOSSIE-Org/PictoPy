@@ -59,18 +59,21 @@ def sample_clusters_with_counts():
             "cluster_id": "cluster_1",
             "cluster_name": "John Doe",
             "face_count": 15,
+            "video_count": 2,
             "face_image_base64": "base64_string_1",
         },
         {
             "cluster_id": "cluster_2",
             "cluster_name": "Jane Smith",
             "face_count": 8,
+            "video_count": 0,
             "face_image_base64": "base64_string_2",
         },
         {
             "cluster_id": "cluster_3",
             "cluster_name": "Unknown Person",
             "face_count": 3,
+            "video_count": 0,
             "face_image_base64": "base64_string_3",
         },
     ]
@@ -351,6 +354,50 @@ class TestFaceClustersAPI:
 
         mock_get_cluster.assert_called_once_with(cluster_id)
         mock_get_images.assert_called_once_with(cluster_id)
+
+    @patch("app.routes.face_clusters.db_get_videos_by_ids")
+    @patch("app.routes.face_clusters.db_get_video_ids_by_cluster_id")
+    @patch("app.routes.face_clusters.db_get_images_by_cluster_id", return_value=[])
+    @patch("app.routes.face_clusters.db_get_cluster_by_id")
+    def test_get_cluster_images_returns_the_persons_videos(
+        self, mock_get_cluster, _mock_images, mock_video_ids, mock_videos
+    ):
+        """The person view renders these with the same card as the videos page,
+        so they come back in the videos routes' shape."""
+        mock_get_cluster.return_value = {"cluster_id": "c1", "cluster_name": "John Doe"}
+        mock_video_ids.return_value = ["vid-1"]
+        mock_videos.return_value = [
+            {
+                "id": "vid-1",
+                "path": "/videos/clip.mp4",
+                "folder_id": "1",
+                "thumbnailPath": "/thumbs/clip.jpg",
+                "metadata": {
+                    "name": "clip.mp4",
+                    "date_created": None,
+                    "width": 1920,
+                    "height": 1080,
+                    "duration": 12.5,
+                    "file_location": "clip.mp4",
+                    "file_size": 1024,
+                    "item_type": "video/mp4",
+                },
+                "isFavourite": False,
+                "favouritedAt": None,
+                "tags": ["person"],
+            }
+        ]
+
+        response = client.get("/face_clusters/c1/images")
+
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert data["total_videos"] == 1
+        (video,) = data["videos"]
+        assert video["id"] == "vid-1"
+        assert video["metadata"]["duration"] == 12.5
+        assert video["tags"] == ["person"]
+        mock_video_ids.assert_called_once_with("c1")
 
     @patch("app.routes.face_clusters.db_get_cluster_by_id")
     def test_get_cluster_images_cluster_not_found(self, mock_get_cluster):
@@ -1016,16 +1063,22 @@ def photo_face(db_path, image_id, embedding, cluster_id=None) -> int:
     )
 
 
-def keyframe_face(db_path, frame_id, embedding, cluster_id=None) -> int:
+def keyframe_face(
+    db_path, frame_id, embedding, cluster_id=None, video_id="vid-1", confidence=0.9
+) -> int:
     with closing(sqlite3.connect(db_path)) as conn:
         conn.execute(
+            "INSERT OR IGNORE INTO videos (id, path) VALUES (?, ?)",
+            (video_id, f"/videos/{video_id}.mp4"),
+        )
+        conn.execute(
             "INSERT OR IGNORE INTO video_frames (id, video_id, frame_path) "
-            "VALUES (?, 'vid-1', ?)",
-            (frame_id, f"/frames/{frame_id}.jpg"),
+            "VALUES (?, ?, ?)",
+            (frame_id, video_id, f"/frames/{frame_id}.jpg"),
         )
         conn.commit()
     return faces_db.db_insert_face_embeddings(
-        None, embedding, 0.9, None, cluster_id, frame_id=frame_id
+        None, embedding, confidence, None, cluster_id, frame_id=frame_id
     )
 
 
@@ -1206,3 +1259,60 @@ class TestFullReclusterWithKeyframeFaces:
             keyframe_db, alice[0]
         )
         assert all(cluster_of(keyframe_db, face) is None for face in stranger)
+
+
+class TestClusterVideosQuery:
+    def test_one_row_per_video_best_match_first(self, people):
+        """A person appears in many keyframes of one video; the person view
+        wants the video once, and the strongest match first."""
+        keyframe_face(people, "f-a1", axis(0), "alice", "vid-a", confidence=0.6)
+        keyframe_face(people, "f-a2", axis(0), "alice", "vid-a", confidence=0.7)
+        keyframe_face(people, "f-b1", axis(0), "alice", "vid-b", confidence=0.95)
+
+        assert face_clusters_db.db_get_video_ids_by_cluster_id("alice") == [
+            "vid-b",
+            "vid-a",
+        ]
+
+    def test_other_peoples_videos_are_not_returned(self, people):
+        keyframe_face(people, "f-a1", axis(0), "alice", "vid-a")
+        keyframe_face(people, "f-b1", axis(1), "bob", "vid-b")
+
+        assert face_clusters_db.db_get_video_ids_by_cluster_id("bob") == ["vid-b"]
+
+    def test_unattached_keyframe_faces_are_not_returned(self, people):
+        keyframe_face(people, "f-a1", axis(0), None, "vid-a")
+
+        assert face_clusters_db.db_get_video_ids_by_cluster_id("alice") == []
+
+
+class TestClusterCounts:
+    def test_face_count_is_photos_and_videos_are_counted_separately(self, people):
+        """The card labels face_count 'N photos', so keyframe faces must not
+        inflate it -- they get their own count."""
+        keyframe_face(people, "f-a1", axis(0), "alice", "vid-a")
+        keyframe_face(people, "f-a2", axis(0), "alice", "vid-a")  # same video
+        keyframe_face(people, "f-b1", axis(0), "alice", "vid-b")
+
+        counts = {
+            c["cluster_id"]: c
+            for c in face_clusters_db.db_get_all_clusters_with_face_counts()
+        }
+
+        assert counts["alice"]["face_count"] == 2  # img-a1, img-a2
+        assert counts["alice"]["video_count"] == 2  # vid-a counted once
+        assert counts["bob"]["face_count"] == 1
+        assert counts["bob"]["video_count"] == 0
+
+    def test_ranking_ignores_keyframe_faces(self, people):
+        """bob has fewer photos, so a pile of video faces must not lift him
+        above alice in the People listing."""
+        for i in range(20):
+            keyframe_face(people, f"f-{i}", axis(1), "bob", f"vid-{i}")
+
+        listed = [
+            c["cluster_id"]
+            for c in face_clusters_db.db_get_all_clusters_with_face_counts()
+        ]
+
+        assert listed.index("alice") < listed.index("bob")

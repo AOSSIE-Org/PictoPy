@@ -224,7 +224,10 @@ export function MultiPersonSearchDialog({
                       {getPersonName(cluster)}
                     </span>
                     <span className="text-muted-foreground text-[10px]">
-                      {getPhotoCountText(cluster.face_count)}
+                      {getPhotoCountText(
+                        cluster.face_count,
+                        cluster.video_count,
+                      )}
                     </span>
                   </button>
                 );

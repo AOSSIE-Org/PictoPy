@@ -277,8 +277,13 @@ def db_get_all_clusters_with_face_counts() -> (
     so frequently-photographed people (likely the device owner) rank first
     without letting large low-quality clusters outrank clean ones.
 
+    face_count and the ranking are photo-only: the UI labels the number "N photos",
+    and keyframe faces attach to a cluster without defining it. Videos are counted
+    separately.
+
     Returns:
-        List of dictionaries containing cluster_id, cluster_name, face_count, and face_image_base64
+        List of dictionaries containing cluster_id, cluster_name, face_count,
+        video_count, and face_image_base64
     """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
@@ -289,11 +294,14 @@ def db_get_all_clusters_with_face_counts() -> (
             SELECT
                 fc.cluster_id,
                 fc.cluster_name,
-                COUNT(f.face_id) as face_count,
+                COUNT(f.image_id) as face_count,
                 fc.face_image_base64,
-                COALESCE(AVG(f.confidence), 0) as avg_confidence
+                COALESCE(AVG(CASE WHEN f.image_id IS NOT NULL THEN f.confidence END), 0)
+                    as avg_confidence,
+                COUNT(DISTINCT vf.video_id) as video_count
             FROM face_clusters fc
             INNER JOIN faces f ON fc.cluster_id = f.cluster_id
+            LEFT JOIN video_frames vf ON f.frame_id = vf.id
             GROUP BY fc.cluster_id, fc.cluster_name, fc.face_image_base64
             """
         )
@@ -302,12 +310,20 @@ def db_get_all_clusters_with_face_counts() -> (
 
         clusters = []
         for row in rows:
-            cluster_id, cluster_name, face_count, face_image_base64, avg_conf = row
+            (
+                cluster_id,
+                cluster_name,
+                face_count,
+                face_image_base64,
+                avg_conf,
+                video_count,
+            ) = row
             clusters.append(
                 {
                     "cluster_id": cluster_id,
                     "cluster_name": cluster_name,
                     "face_count": face_count,
+                    "video_count": video_count,
                     "face_image_base64": face_image_base64,
                     "_score": avg_conf * math.log2(1 + face_count),
                 }
@@ -396,6 +412,31 @@ def db_get_images_by_cluster_id(
             )
 
         return images
+    finally:
+        conn.close()
+
+
+def db_get_video_ids_by_cluster_id(cluster_id: ClusterId) -> List[str]:
+    """
+    Videos in which this cluster's person was found, best match first.
+
+    One row per video however many keyframes they appear in; the caller turns
+    these into full records with db_get_videos_by_ids.
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    try:
+        rows = conn.execute(
+            """
+            SELECT vf.video_id
+            FROM faces f
+            INNER JOIN video_frames vf ON f.frame_id = vf.id
+            WHERE f.cluster_id = ?
+            GROUP BY vf.video_id
+            ORDER BY MAX(f.confidence) DESC
+            """,
+            (cluster_id,),
+        ).fetchall()
+        return [row[0] for row in rows]
     finally:
         conn.close()
 

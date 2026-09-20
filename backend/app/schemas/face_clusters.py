@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Union, Any
 
+from app.schemas.videos import VideoData
+
 
 # Request Models
 class RenameClusterRequest(BaseModel):
@@ -30,7 +32,8 @@ class ClusterMetadata(BaseModel):
     cluster_id: str
     cluster_name: Optional[str]
     face_image_base64: Optional[str]
-    face_count: int
+    face_count: int  # photos only; videos are counted separately
+    video_count: int = 0
 
 
 class GetClustersData(BaseModel):
@@ -63,6 +66,9 @@ class GetClusterImagesData(BaseModel):
     cluster_name: Optional[str] = None
     images: List[ImageInCluster]
     total_images: int
+    # Videos the same person was found in, as the videos routes return them.
+    videos: List[VideoData] = []
+    total_videos: int = 0
 
 
 class GetClusterImagesResponse(BaseModel):
