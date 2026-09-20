@@ -1,6 +1,6 @@
 import math
 import sqlite3
-from typing import Optional, List, Dict, TypedDict, Union
+from typing import Optional, List, Dict, Tuple, TypedDict, Union
 from app.config.settings import DATABASE_PATH
 from app.logging.setup_logging import get_logger
 
@@ -499,5 +499,43 @@ def db_get_images_by_face_clusters(
                 }
             )
         return results
+    finally:
+        conn.close()
+
+
+def db_get_video_matches_by_face_clusters(
+    cluster_ids: List[str],
+    match_mode: str = "match_any",
+) -> List[Tuple[str, int]]:
+    """
+    (video_id, match_count) for videos the requested identities were found in,
+    ranked like db_get_images_by_face_clusters. The caller turns the ids into
+    full records with db_get_videos_by_ids.
+    """
+    if not cluster_ids:
+        return []
+
+    placeholders = ", ".join("?" * len(cluster_ids))
+    params: list = list(cluster_ids)
+    having = ""
+    if match_mode == "match_all":
+        having = "HAVING COUNT(DISTINCT f.cluster_id) = ?"
+        params.append(len(cluster_ids))
+
+    conn = sqlite3.connect(DATABASE_PATH)
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT vf.video_id, COUNT(DISTINCT f.cluster_id) AS match_count
+            FROM faces f
+            INNER JOIN video_frames vf ON f.frame_id = vf.id
+            WHERE f.cluster_id IN ({placeholders})
+            GROUP BY vf.video_id
+            {having}
+            ORDER BY match_count DESC
+            """,
+            params,
+        ).fetchall()
+        return [(row[0], row[1]) for row in rows]
     finally:
         conn.close()

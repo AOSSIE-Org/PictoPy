@@ -21,9 +21,10 @@ import {
   MultiPersonSearchRequest,
 } from '@/api/api-functions/face_clusters';
 import { setImages } from '@/features/imageSlice';
+import { setVideos } from '@/features/videoSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
-import type { Image } from '@/types/Media';
+import type { Image, Video } from '@/types/Media';
 
 interface MultiPersonSearchDialogProps {
   open: boolean;
@@ -52,20 +53,21 @@ export function MultiPersonSearchDialog({
       fetchMultiPersonSearch(req),
     onSuccess: (data) => {
       const images = data?.data?.images;
+      const videos = (data?.data?.videos ?? []) as Video[];
       dispatch(hideLoader());
 
-      if (!images || images.length === 0) {
+      if ((!images || images.length === 0) && videos.length === 0) {
         dispatch(
           showInfoDialog({
             title: 'No Matches Found',
-            message: 'No photos found for the selected people.',
+            message: 'No photos or videos found for the selected people.',
             variant: 'info',
           }),
         );
         return;
       }
 
-      const mappedImages = images.map((img: any) => ({
+      const mappedImages = (images ?? []).map((img: any) => ({
         id: img.id,
         path: img.path,
         thumbnailPath: img.thumbnailPath || '',
@@ -82,6 +84,7 @@ export function MultiPersonSearchDialog({
         .filter((name): name is string => name !== null);
 
       dispatch(setImages(mappedImages));
+      dispatch(setVideos(videos));
       onSearchActivated?.(selectedNames, matchMode);
       onOpenChange(false);
     },

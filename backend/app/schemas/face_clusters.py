@@ -105,10 +105,18 @@ class MultiPersonSearchImage(BaseModel):
     match_count: int
 
 
+class MultiPersonSearchVideo(VideoData):
+    """A matching video, as the videos routes return them plus the rank."""
+
+    match_count: int
+
+
 class MultiPersonSearchData(BaseModel):
     images: List[MultiPersonSearchImage]
     total: int
     match_mode: str
+    videos: List[MultiPersonSearchVideo] = []
+    total_videos: int = 0
 
 
 class MultiPersonSearchResponse(BaseModel):

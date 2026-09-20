@@ -51,6 +51,29 @@ def sample_cluster_data():
     }
 
 
+def video_row(video_id: str, duration: float = 12.5) -> dict:
+    """A video row shaped like db_get_videos_by_ids returns."""
+    return {
+        "id": video_id,
+        "path": f"/videos/{video_id}.mp4",
+        "folder_id": "1",
+        "thumbnailPath": f"/thumbs/{video_id}.jpg",
+        "metadata": {
+            "name": f"{video_id}.mp4",
+            "date_created": None,
+            "width": 1920,
+            "height": 1080,
+            "duration": duration,
+            "file_location": f"{video_id}.mp4",
+            "file_size": 1024,
+            "item_type": "video/mp4",
+        },
+        "isFavourite": False,
+        "favouritedAt": None,
+        "tags": ["person"],
+    }
+
+
 @pytest.fixture
 def sample_clusters_with_counts():
     """Sample clusters data with face counts."""
@@ -366,27 +389,7 @@ class TestFaceClustersAPI:
         so they come back in the videos routes' shape."""
         mock_get_cluster.return_value = {"cluster_id": "c1", "cluster_name": "John Doe"}
         mock_video_ids.return_value = ["vid-1"]
-        mock_videos.return_value = [
-            {
-                "id": "vid-1",
-                "path": "/videos/clip.mp4",
-                "folder_id": "1",
-                "thumbnailPath": "/thumbs/clip.jpg",
-                "metadata": {
-                    "name": "clip.mp4",
-                    "date_created": None,
-                    "width": 1920,
-                    "height": 1080,
-                    "duration": 12.5,
-                    "file_location": "clip.mp4",
-                    "file_size": 1024,
-                    "item_type": "video/mp4",
-                },
-                "isFavourite": False,
-                "favouritedAt": None,
-                "tags": ["person"],
-            }
-        ]
+        mock_videos.return_value = [video_row("vid-1")]
 
         response = client.get("/face_clusters/c1/images")
 
@@ -1284,6 +1287,60 @@ class TestClusterVideosQuery:
         keyframe_face(people, "f-a1", axis(0), None, "vid-a")
 
         assert face_clusters_db.db_get_video_ids_by_cluster_id("alice") == []
+
+
+class TestMultiPersonSearchRoute:
+    @patch("app.routes.face_clusters.db_get_videos_by_ids")
+    @patch("app.routes.face_clusters.db_get_video_matches_by_face_clusters")
+    @patch("app.routes.face_clusters.db_get_images_by_face_clusters", return_value=[])
+    def test_returns_videos_with_their_match_counts(
+        self, _mock_images, mock_matches, mock_videos
+    ):
+        """Counts are keyed to ids, never zipped: db_get_videos_by_ids drops
+        ids it can't find, which would shift counts onto the wrong video."""
+        mock_matches.return_value = [("vid-both", 2), ("vid-gone", 2), ("vid-one", 1)]
+        # vid-gone was deleted between the two queries
+        mock_videos.return_value = [video_row("vid-both"), video_row("vid-one")]
+
+        response = client.post(
+            "/face_clusters/multi-search",
+            json={"cluster_ids": ["alice", "bob"], "match_mode": "match_any"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert data["total_videos"] == 2
+        assert [(v["id"], v["match_count"]) for v in data["videos"]] == [
+            ("vid-both", 2),
+            ("vid-one", 1),
+        ]
+
+
+class TestMultiPersonVideoMatches:
+    def test_ranks_videos_by_how_many_of_the_people_appear(self, people):
+        keyframe_face(people, "f-1", axis(0), "alice", "vid-both")
+        keyframe_face(people, "f-2", axis(1), "bob", "vid-both")
+        keyframe_face(people, "f-3", axis(0), "alice", "vid-alice")
+
+        matches = face_clusters_db.db_get_video_matches_by_face_clusters(
+            ["alice", "bob"]
+        )
+
+        assert matches == [("vid-both", 2), ("vid-alice", 1)]
+
+    def test_match_all_keeps_only_videos_with_everyone(self, people):
+        keyframe_face(people, "f-1", axis(0), "alice", "vid-both")
+        keyframe_face(people, "f-2", axis(1), "bob", "vid-both")
+        keyframe_face(people, "f-3", axis(0), "alice", "vid-alice")
+
+        matches = face_clusters_db.db_get_video_matches_by_face_clusters(
+            ["alice", "bob"], "match_all"
+        )
+
+        assert matches == [("vid-both", 2)]
+
+    def test_no_clusters_is_no_matches(self, people):
+        assert face_clusters_db.db_get_video_matches_by_face_clusters([]) == []
 
 
 class TestClusterCounts:
