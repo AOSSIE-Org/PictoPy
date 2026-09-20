@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0-single-instance-test.1]
+
+### Fixed
+- Enforce single instance to restore tray-hidden window instead of launching a duplicate process
+
 ## [1.3.0-alpha] - 2026-09-16
 
 ### Added
