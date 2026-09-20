@@ -70,3 +70,29 @@ export const purgeVideoFrameCache =
     );
     return response.data;
   };
+
+export interface FaceScanStatus {
+  total: number;
+  scanned: number;
+  pending: number;
+}
+
+export interface FaceScanStatusResponse extends APIResponse {
+  data: FaceScanStatus;
+}
+
+/** Starts the scan in the background; the response is its starting point. */
+export const startVideoFaceScan = async (): Promise<FaceScanStatusResponse> => {
+  const response = await apiClient.post<FaceScanStatusResponse>(
+    videosEndpoints.scanFaces,
+  );
+  return response.data;
+};
+
+export const getVideoFaceScanStatus =
+  async (): Promise<FaceScanStatusResponse> => {
+    const response = await apiClient.get<FaceScanStatusResponse>(
+      videosEndpoints.faceScanStatus,
+    );
+    return response.data;
+  };

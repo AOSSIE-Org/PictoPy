@@ -1,14 +1,29 @@
-import { render, screen } from '@/test-utils';
+import { render, screen, waitFor } from '@/test-utils';
 import userEvent from '@testing-library/user-event';
 
 import UserPreferencesCard from '../UserPreferencesCard';
 import type { MemoriesPreferences } from '@/api/api-functions/user_preferences';
+import type { FaceScanStatus } from '@/api/api-functions/videos';
 
 const mockUpdateMemoriesPreferences = jest.fn().mockResolvedValue(undefined);
 const mockToggleVideoFaceDetection = jest.fn().mockResolvedValue(undefined);
+const mockStartVideoFaceScan = jest.fn();
+const mockGetVideoFaceScanStatus = jest.fn();
 let mockVideoFaceDetection = false;
 let mockMemories: MemoriesPreferences;
 let mockIsUpdating = false;
+
+const scanStatus = (status: FaceScanStatus) => ({
+  success: true,
+  message: 'ok',
+  data: status,
+});
+
+jest.mock('@/api/api-functions', () => ({
+  purgeVideoFrameCache: jest.fn().mockResolvedValue({ bytes_reclaimed: 0 }),
+  startVideoFaceScan: () => mockStartVideoFaceScan(),
+  getVideoFaceScanStatus: () => mockGetVideoFaceScanStatus(),
+}));
 
 jest.mock('@/hooks/useUserPreferences', () => ({
   useUserPreferences: () => ({
@@ -75,6 +90,13 @@ beforeEach(() => {
   mockUpdateMemoriesPreferences.mockClear();
   mockMemories = memoriesWith();
   mockIsUpdating = false;
+  mockVideoFaceDetection = false;
+  mockStartVideoFaceScan
+    .mockReset()
+    .mockResolvedValue(scanStatus({ total: 9, scanned: 0, pending: 9 }));
+  mockGetVideoFaceScanStatus
+    .mockReset()
+    .mockResolvedValue(scanStatus({ total: 9, scanned: 0, pending: 9 }));
 });
 
 describe('UserPreferencesCard memories panel', () => {
@@ -222,5 +244,71 @@ describe('UserPreferencesCard video face detection', () => {
     expect(
       screen.getByRole('switch', { name: /Find People in Videos/i }),
     ).toBeChecked();
+  });
+
+  it('offers to scan existing videos only once the switch is on', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<UserPreferencesCard />);
+    await openVideoPanel(user);
+
+    // With the switch off there is nothing the scan could add.
+    expect(
+      screen.queryByRole('button', { name: /Scan videos/i }),
+    ).not.toBeInTheDocument();
+
+    mockVideoFaceDetection = true;
+    rerender(<UserPreferencesCard />);
+
+    expect(
+      await screen.findByRole('button', { name: /Scan videos/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('waits to be asked rather than claiming it is already scanning', async () => {
+    // Unscanned videos are the normal state before the user asks for a scan,
+    // so a backlog on its own must not read as work in progress.
+    mockVideoFaceDetection = true;
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openVideoPanel(user);
+
+    expect(
+      await screen.findByRole('button', { name: /Scan videos/i }),
+    ).toBeEnabled();
+    expect(await screen.findByText(/9 video\(s\)/i)).toBeInTheDocument();
+  });
+
+  it('starts a scan and reports how far it has got', async () => {
+    mockVideoFaceDetection = true;
+    mockGetVideoFaceScanStatus
+      .mockResolvedValueOnce(scanStatus({ total: 9, scanned: 0, pending: 9 }))
+      .mockResolvedValue(scanStatus({ total: 9, scanned: 4, pending: 5 }));
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openVideoPanel(user);
+
+    await user.click(
+      await screen.findByRole('button', { name: /Scan videos/i }),
+    );
+
+    expect(mockStartVideoFaceScan).toHaveBeenCalled();
+    expect(await screen.findByText(/4 of 9 done/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Scanning/i })).toBeDisabled(),
+    );
+  });
+
+  it('says so when every video has been scanned', async () => {
+    mockVideoFaceDetection = true;
+    mockGetVideoFaceScanStatus.mockResolvedValue(
+      scanStatus({ total: 9, scanned: 9, pending: 0 }),
+    );
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openVideoPanel(user);
+
+    expect(
+      await screen.findByRole('button', { name: /All scanned/i }),
+    ).toBeDisabled();
   });
 });
