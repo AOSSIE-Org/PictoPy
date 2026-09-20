@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, status
 from typing import List, Optional
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 from app.database.videos import (
     db_get_all_videos,
@@ -8,7 +8,8 @@ from app.database.videos import (
     db_toggle_video_favourite_status,
     db_get_video_by_id,
 )
-from app.schemas.videos import ErrorResponse
+from app.schemas.videos import ErrorResponse, VideoData
+from app.utils.videos import video_util_to_video_data
 from app.logging.setup_logging import get_logger
 
 # Initialize logger
@@ -17,58 +18,10 @@ router = APIRouter()
 
 
 # Response Models
-class VideoMetadataModel(BaseModel):
-    name: str
-    date_created: Optional[str]
-    width: int
-    height: int
-    duration: Optional[float] = None
-    fps: Optional[float] = None
-    file_location: str
-    file_size: int
-    item_type: str
-
-
-class VideoData(BaseModel):
-    id: str
-    path: str
-    folder_id: str
-    thumbnailPath: Optional[str]
-    metadata: VideoMetadataModel
-    isFavourite: bool
-    favouritedAt: Optional[str] = None
-    tags: Optional[List[str]] = None
-
-
 class GetAllVideosResponse(BaseModel):
     success: bool
     message: str
     data: List[VideoData]
-
-
-def _to_video_data(videos: List[dict]) -> List[VideoData]:
-    """Build per row: one record with unusable metadata shouldn't 500 the
-    whole listing and hide every other video."""
-    video_data = []
-    for video in videos:
-        try:
-            video_data.append(
-                VideoData(
-                    id=video["id"],
-                    path=video["path"],
-                    folder_id=video["folder_id"],
-                    thumbnailPath=video["thumbnailPath"],
-                    metadata=video["metadata"],
-                    isFavourite=video.get("isFavourite", False),
-                    favouritedAt=video.get("favouritedAt"),
-                    tags=video["tags"],
-                )
-            )
-        except ValidationError as e:
-            logger.warning(
-                f"Skipping video {video.get('id')} with invalid metadata: {e}"
-            )
-    return video_data
 
 
 @router.get(
@@ -79,7 +32,7 @@ def _to_video_data(videos: List[dict]) -> List[VideoData]:
 def get_all_videos():
     """Get all videos from the database."""
     try:
-        video_data = _to_video_data(db_get_all_videos())
+        video_data = video_util_to_video_data(db_get_all_videos())
 
         return GetAllVideosResponse(
             success=True,
@@ -108,7 +61,9 @@ def search_videos_by_tag(tag: str = Query(..., description="Tag name to search f
     try:
         from app.database.video_frames import db_get_video_ids_by_tag
 
-        video_data = _to_video_data(db_get_videos_by_ids(db_get_video_ids_by_tag(tag)))
+        video_data = video_util_to_video_data(
+            db_get_videos_by_ids(db_get_video_ids_by_tag(tag))
+        )
 
         return GetAllVideosResponse(
             success=True,
@@ -235,7 +190,7 @@ def semantic_search_videos(
         # find, which would silently shift every score onto the wrong video.
         by_id = {
             video.id: video
-            for video in _to_video_data(
+            for video in video_util_to_video_data(
                 db_get_videos_by_ids([video_id for video_id, _ in ranked])
             )
         }

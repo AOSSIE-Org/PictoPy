@@ -23,6 +23,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 from PIL import Image
+from pydantic import ValidationError
 
 from app.config.settings import THUMBNAIL_IMAGES_PATH, VIDEO_FRAMES_PATH
 from app.database.videos import (
@@ -39,6 +40,7 @@ from app.utils.extract_location_metadata import (
     DATE_SOURCE_UNKNOWN,
     TRUSTED_DATE_SOURCES,
 )
+from app.schemas.videos import VideoData
 from app.utils.takeout_sidecar import takeout_sidecar_read
 from app.utils.video_capture_date import video_capture_date_candidates
 from app.utils.images import (
@@ -51,6 +53,32 @@ if TYPE_CHECKING:
     from app.models.FaceDetector import FaceDetector
 
 logger = get_logger(__name__)
+
+
+def video_util_to_video_data(videos: List[dict]) -> List[VideoData]:
+    """Build per row: one record with unusable metadata shouldn't 500 the
+    whole listing and hide every other video."""
+    video_data = []
+    for video in videos:
+        try:
+            video_data.append(
+                VideoData(
+                    id=video["id"],
+                    path=video["path"],
+                    folder_id=video["folder_id"],
+                    thumbnailPath=video["thumbnailPath"],
+                    metadata=video["metadata"],
+                    isFavourite=video.get("isFavourite", False),
+                    favouritedAt=video.get("favouritedAt"),
+                    tags=video["tags"],
+                )
+            )
+        except ValidationError as e:
+            logger.warning(
+                f"Skipping video {video.get('id')} with invalid metadata: {e}"
+            )
+    return video_data
+
 
 # Formats WebView2's HTML5 <video> can play; extend deliberately —
 # indexing formats the player can't decode gives a broken playback UX.
