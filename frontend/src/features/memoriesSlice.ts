@@ -6,6 +6,7 @@
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { RootState } from '@/app/store';
 
 export const DEFAULT_SLIDE_DURATION_MS = 5000;
 
@@ -76,13 +77,10 @@ export const {
 
 export default memoriesSlice.reducer;
 
-export const selectActiveMemoryId = (state: { memories: MemoriesState }) =>
+export const selectActiveMemoryId = (state: RootState) =>
   state.memories.activeMemoryId;
-export const selectSlideIndex = (state: { memories: MemoriesState }) =>
-  state.memories.slideIndex;
-export const selectIsPlaying = (state: { memories: MemoriesState }) =>
-  state.memories.isPlaying;
-export const selectIsMuted = (state: { memories: MemoriesState }) =>
-  state.memories.isMuted;
-export const selectSlideDurationMs = (state: { memories: MemoriesState }) =>
+export const selectSlideIndex = (state: RootState) => state.memories.slideIndex;
+export const selectIsPlaying = (state: RootState) => state.memories.isPlaying;
+export const selectIsMuted = (state: RootState) => state.memories.isMuted;
+export const selectSlideDurationMs = (state: RootState) =>
   state.memories.slideDurationMs;
