@@ -3,6 +3,7 @@ import os
 import sqlite3
 import tempfile
 import shutil
+from unittest.mock import MagicMock, patch
 
 import cv2
 import numpy as np
@@ -33,7 +34,10 @@ from app.database.video_frames import (
     db_write_video_semantic_scores,
 )
 from app.database.videos import db_bulk_insert_videos, db_create_videos_table
-from app.routes.videos import router as videos_router
+from app.routes.videos import (
+    post_video_face_scan_sequence,
+    router as videos_router,
+)
 from app.utils.videos import (
     video_util_aggregate_frame_classes,
     video_util_extract_video_frames,
@@ -520,3 +524,55 @@ class TestVideoTagRoutes:
 
         assert response.status_code == 200
         assert response.json()["bytes_reclaimed"] > 0
+
+
+# ##############################
+# Starting and watching a face scan
+# ##############################
+
+
+@pytest.fixture
+def scan_client(test_db):
+    """A client with an executor, since starting a scan hands it off to one."""
+    app = FastAPI()
+    app.include_router(videos_router, prefix="/videos")
+    app.state.executor = MagicMock()
+    return TestClient(app)
+
+
+class TestFaceScanRoutes:
+    def test_starting_a_scan_reports_what_is_left(self, scan_client, video_id):
+        db_mark_videos_tagged([video_id])
+
+        with patch("app.config.settings.VIDEO_FACE_DETECTION", True):
+            response = scan_client.post("/videos/scan-faces")
+
+        assert response.status_code == 200
+        assert response.json()["data"] == {"total": 1, "scanned": 0, "pending": 1}
+        # Handed off rather than run inline: a full library takes over an hour.
+        submitted = scan_client.app.state.executor.submit.call_args.args[0]
+        assert submitted is post_video_face_scan_sequence
+
+    def test_scanning_is_refused_while_the_setting_is_off(self, scan_client, video_id):
+        with patch("app.config.settings.VIDEO_FACE_DETECTION", False):
+            response = scan_client.post("/videos/scan-faces")
+
+        assert response.status_code == 400
+        assert "Find People in Videos" in response.json()["detail"]["message"]
+        scan_client.app.state.executor.submit.assert_not_called()
+
+    def test_status_counts_scanned_against_the_whole_library(
+        self, scan_client, video_id
+    ):
+        db_mark_videos_faces_scanned([video_id])
+
+        response = scan_client.get("/videos/face-scan-status")
+
+        assert response.status_code == 200
+        assert response.json()["data"] == {"total": 1, "scanned": 1, "pending": 0}
+
+    def test_status_of_an_empty_library_is_not_an_error(self, scan_client):
+        response = scan_client.get("/videos/face-scan-status")
+
+        assert response.status_code == 200
+        assert response.json()["data"] == {"total": 0, "scanned": 0, "pending": 0}

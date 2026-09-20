@@ -62,6 +62,7 @@ from app.utils.semantic_labels import (
     semantic_util_score_videos,
 )
 from app.utils.videos import (
+    video_util_backfill_video_faces,
     video_util_process_folder_videos,
     video_util_process_unembedded_frames,
     video_util_process_untagged_videos,
@@ -171,6 +172,8 @@ def post_AI_tagging_enabled_sequence():
         _curate_memories("ai_tagging")
         # Videos last: photos are the primary surface, so they finish first.
         video_util_process_untagged_videos()
+        # Catches up videos tagged before finding people in videos was on.
+        video_util_backfill_video_faces()
         # Keyframe faces only exist from here; join them to the clusters built
         # above now rather than on the next sync.
         cluster_util_attach_keyframe_faces()
@@ -214,6 +217,7 @@ def post_sync_folder_sequence(
         semantic_util_score_images()
         _curate_memories("sync_folder")
         video_util_process_untagged_videos()
+        video_util_backfill_video_faces()
         cluster_util_attach_keyframe_faces()
         video_util_process_unembedded_frames()
         semantic_util_score_videos()

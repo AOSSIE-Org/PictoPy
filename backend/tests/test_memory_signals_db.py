@@ -932,6 +932,7 @@ AI_PIPELINE_STEPS = (
     "image_util_process_unembedded_images",
     "semantic_util_score_images",
     "video_util_process_untagged_videos",
+    "video_util_backfill_video_faces",
     "cluster_util_attach_keyframe_faces",
     "video_util_process_unembedded_frames",
     "semantic_util_score_videos",
