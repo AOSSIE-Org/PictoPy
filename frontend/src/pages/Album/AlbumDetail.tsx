@@ -4,6 +4,7 @@ import { useParams, useNavigate, useLocation } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { ImageCard } from '@/components/Media/ImageCard';
+import { DetailPageHeader } from '@/components/DetailPage/DetailPageHeader';
 import { MediaView } from '@/components/Media/MediaView';
 import { AddImagesToAlbumDialog } from '@/components/Albums/AddImagesToAlbumDialog';
 import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtension';
@@ -231,73 +232,59 @@ export const AlbumDetail = () => {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="mb-6">
-        <div className="mb-4 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={handleBack}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold">{album.name}</h1>
-            {album.description && (
-              <p className="text-muted-foreground text-sm">
-                {album.description}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <p className="text-muted-foreground text-sm">
+      <DetailPageHeader
+        backLabel="Back to Albums"
+        onBack={handleBack}
+        title={album.name}
+        description={album.description}
+        meta={
+          <>
             {images.length} {images.length === 1 ? 'photo' : 'photos'}
             {selectedImages.size > 0 && ` • ${selectedImages.size} selected`}
-          </p>
-
-          <div className="flex items-center gap-2">
-            {isSelectionMode ? (
-              <>
+          </>
+        }
+        actions={
+          isSelectionMode ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsSelectionMode(false);
+                  setSelectedImages(new Set());
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleRemoveSelected}
+                disabled={selectedImages.size === 0}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Remove Selected
+              </Button>
+            </>
+          ) : (
+            <>
+              {images.length > 0 && (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setIsSelectionMode(false);
-                    setSelectedImages(new Set());
-                  }}
+                  onClick={() => setIsSelectionMode(true)}
                 >
-                  Cancel
+                  Select Images
                 </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleRemoveSelected}
-                  disabled={selectedImages.size === 0}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Remove Selected
-                </Button>
-              </>
-            ) : (
-              <>
-                {images.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsSelectionMode(true)}
-                  >
-                    Select Images
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  onClick={() => setIsAddImagesDialogOpen(true)}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Images
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
+              )}
+              <Button size="sm" onClick={() => setIsAddImagesDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Images
+              </Button>
+            </>
+          )
+        }
+      />
 
       {/* Images Grid */}
       <div className="flex-1 overflow-y-auto pt-2">
