@@ -56,7 +56,7 @@ describe('useFolderOperations - delete folder cache invalidation', () => {
     deleteFolders.mockResolvedValueOnce({ success: true, data: {} });
     const { result, invalidateSpy } = renderUseFolderOperations();
 
-    result.current.deleteFolder('folder-1');
+    result.current.deleteFolders(['folder-1']);
 
     await waitFor(() => {
       expect(clustersKeyCalls(invalidateSpy).length).toBeGreaterThan(0);
@@ -70,7 +70,7 @@ describe('useFolderOperations - delete folder cache invalidation', () => {
     deleteFolders.mockRejectedValue(new Error('delete failed'));
     const { result, invalidateSpy } = renderUseFolderOperations();
 
-    result.current.deleteFolder('folder-1');
+    result.current.deleteFolders(['folder-1']);
 
     // autoInvalidateTags still fires ['folders'] on settle regardless of
     // outcome, so wait for that instead of an arbitrary timeout to know the
