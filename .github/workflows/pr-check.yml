@@ -77,11 +77,17 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          if ! git rev-parse --verify --quiet "${BASE_SHA}^{commit}" > /dev/null || \
+            ! git rev-parse --verify --quiet "${HEAD_SHA}^{commit}" > /dev/null; then
+            echo "Unable to resolve pull request commits for MyPy."
+            exit 1
+          fi
+
           mapfile -t backend_files < <(
-            git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" -- 'backend/**/*.py'
+            git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- 'backend/**/*.py'
           )
           mapfile -t sync_files < <(
-            git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" -- 'sync-microservice/**/*.py'
+            git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- 'sync-microservice/**/*.py'
           )
 
           if (( ${#backend_files[@]} > 0 )); then

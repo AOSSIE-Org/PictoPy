@@ -34,7 +34,7 @@ It runs pre-commit from inside `backend/` with `--config ../.pre-commit-config.y
 running it from the repository root with `--config .pre-commit-config.yaml` is equivalent
 and covers `sync-microservice/` too.
 
-MyPy compares the pull request's base and head commits and checks only added, copied,
+MyPy compares the pull request's merge base and head commits and checks only added, copied,
 modified, or renamed `.py` files in `backend/` and `sync-microservice/`. It skips cleanly
 when a pull request changes no Python files. The pre-commit configuration also runs MyPy
 for staged Python files in either service. CI skips those local hooks during its all-files
@@ -47,8 +47,13 @@ pull request's base commit when needed:
 ```bash
 BASE_SHA=origin/dev
 HEAD_SHA=HEAD
-mapfile -t backend_files < <(git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" -- 'backend/**/*.py')
-mapfile -t sync_files < <(git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" -- 'sync-microservice/**/*.py')
+if ! git rev-parse --verify --quiet "${BASE_SHA}^{commit}" > /dev/null || \
+  ! git rev-parse --verify --quiet "${HEAD_SHA}^{commit}" > /dev/null; then
+  echo "Unable to resolve pull request commits for MyPy."
+  exit 1
+fi
+mapfile -t backend_files < <(git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- 'backend/**/*.py')
+mapfile -t sync_files < <(git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- 'sync-microservice/**/*.py')
 (( ${#backend_files[@]} > 0 )) && mypy --config-file backend/pyproject.toml "${backend_files[@]}"
 (( ${#sync_files[@]} > 0 )) && mypy --config-file sync-microservice/pyproject.toml "${sync_files[@]}"
 ```
