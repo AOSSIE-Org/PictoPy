@@ -236,6 +236,102 @@ describe('ShareAlbumDialog', () => {
       );
     });
 
+    it('asks for a password by default when auto-restoring internet mode', async () => {
+      mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
+      renderDialog([]);
+
+      // Both toggles render in their default state and only flip once the
+      // tunnel status resolves, so wait for the restored state itself rather
+      // than for the switch merely existing.
+      await waitFor(() => {
+        expect(internetToggle()).toBeChecked();
+        expect(
+          screen.getByRole('switch', { name: /require a password/i }),
+        ).toBeChecked();
+      });
+    });
+
+    // A slow status lookup from an earlier open must not land on a later one:
+    // the reset on reopen clears the interaction flag, so without a guard the
+    // stale answer would switch the fresh dialog to internet mode.
+    it('ignores a tunnel check left over from a previous open', async () => {
+      let resolveStale: (value: string | null) => void = () => undefined;
+      mockTunnelStatus
+        .mockReturnValueOnce(
+          new Promise<string | null>((resolve) => {
+            resolveStale = resolve;
+          }),
+        )
+        .mockResolvedValue(null);
+
+      const { rerender } = renderDialog([]);
+
+      // Close and reopen before the first status lookup resolves.
+      rerender(
+        <ShareAlbumDialog
+          album={album}
+          shares={[]}
+          isOpen={false}
+          onClose={jest.fn()}
+          onChanged={jest.fn()}
+        />,
+      );
+      rerender(
+        <ShareAlbumDialog
+          album={album}
+          shares={[]}
+          isOpen={true}
+          onClose={jest.fn()}
+          onChanged={jest.fn()}
+        />,
+      );
+
+      // The leftover lookup now reports a live tunnel, but it belonged to the
+      // dialog that has since closed; the reopened one keeps its defaults.
+      await act(async () => {
+        resolveStale('https://abc123.lhr.life');
+      });
+
+      expect(internetToggle()).not.toBeChecked();
+      expect(
+        screen.getByRole('switch', { name: /require a password/i }),
+      ).not.toBeChecked();
+    });
+
+    it('does not override user changes if the background tunnel check resolves late', async () => {
+      const user = userEvent.setup();
+
+      // 1. Create a manual promise so we can control when the tunnel answers.
+      let resolveTunnel: (value: string | null) => void = () => undefined;
+      mockTunnelStatus.mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveTunnel = resolve;
+        }),
+      );
+
+      // 2. Open the dialog
+      renderDialog([]);
+
+      // 3. User manually selects 'Internet'
+      await user.click(internetToggle());
+      const passwordToggle = screen.getByRole('switch', {
+        name: /require a password/i,
+      });
+
+      // Manual click turns password ON by default. The user decides to turn it OFF.
+      expect(passwordToggle).toBeChecked();
+      await user.click(passwordToggle);
+      expect(passwordToggle).not.toBeChecked();
+
+      // 4. Suddenly, the background tunnel check finally finishes
+      await act(async () => {
+        resolveTunnel('https://abc123.lhr.life');
+      });
+
+      // 5. Verify the password toggle is STILL off (the ref protected the user's choice)
+      expect(passwordToggle).not.toBeChecked();
+    });
+
     it('reports a tunnel that would not close', async () => {
       const user = userEvent.setup();
       mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
