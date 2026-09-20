@@ -12,7 +12,8 @@ import {
 import { useDispatch } from 'react-redux';
 import { useFile } from '@/hooks/selectFile';
 import { startSearch, clearSearch } from '@/features/searchSlice';
-import type { Image } from '@/types/Media';
+import { setVideos } from '@/features/videoSlice';
+import type { Image, Video } from '@/types/Media';
 import { hideLoader, showLoader } from '@/features/loaderSlice';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { fetchSearchedFaces } from '@/api/api-functions';
@@ -33,10 +34,12 @@ export function FaceSearchDialog() {
     mutationFn: async (path: string) => fetchSearchedFaces({ path }),
     onSuccess: (data) => {
       const result = data?.data as Image[];
+      const videos = ((data as { videos?: Video[] })?.videos ?? []) as Video[];
       dispatch(hideLoader());
       setIsDialogOpen(false);
-      if (result && result.length > 0) {
-        dispatch(setImages(result));
+      if ((result && result.length > 0) || videos.length > 0) {
+        dispatch(setImages(result ?? []));
+        dispatch(setVideos(videos));
       } else {
         dispatch(clearSearch());
         dispatch(

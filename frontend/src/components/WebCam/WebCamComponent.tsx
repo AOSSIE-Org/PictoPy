@@ -18,11 +18,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useDispatch } from 'react-redux';
 import { startSearch, clearSearch } from '@/features/searchSlice';
-import type { Image } from '@/types/Media';
+import type { Image, Video } from '@/types/Media';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { fetchSearchedFacesBase64 } from '@/api/api-functions';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { setImages } from '@/features/imageSlice.ts';
+import { setVideos } from '@/features/videoSlice';
 import { DefaultError } from '@tanstack/react-query';
 import { BackendRes } from '@/hooks/useQueryExtension';
 
@@ -57,8 +58,11 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
     errorMessage: 'Failed to search images. Please try again.',
     onSuccess: () => {
       const result = searchByFaceMutation.data?.data;
-      if (result && result.length > 0) {
-        dispatch(setImages(result));
+      const videos = (searchByFaceMutation.data as { videos?: Video[] })
+        ?.videos;
+      if ((result && result.length > 0) || (videos && videos.length > 0)) {
+        dispatch(setImages(result ?? []));
+        dispatch(setVideos(videos ?? []));
       } else {
         dispatch(
           showInfoDialog({

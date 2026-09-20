@@ -234,6 +234,36 @@ def db_insert_face_embeddings_by_image_id(
         )
 
 
+def db_get_all_video_face_embeddings() -> List[Dict[str, Union[str, list]]]:
+    """
+    Every keyframe face with the video it came from, for face search.
+
+    Several rows can share a video -- the caller keeps the best match rather
+    than picking an arbitrary face per video.
+    """
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            """
+            SELECT vf.video_id, f.embeddings
+            FROM faces f
+            INNER JOIN video_frames vf ON f.frame_id = vf.id
+            """
+        ).fetchall()
+
+        faces = []
+        for video_id, embeddings in rows:
+            try:
+                faces.append(
+                    {"video_id": video_id, "embeddings": json.loads(embeddings)}
+                )
+            except json.JSONDecodeError:
+                continue
+        return faces
+    finally:
+        conn.close()
+
+
 def get_all_face_embeddings():
     conn = _connect()
     cursor = conn.cursor()
