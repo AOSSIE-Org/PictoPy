@@ -1,6 +1,6 @@
 """
 Tests for image_util_is_valid_image() accepting the additional formats
-(WebP, BMP, TIFF, GIF) added alongside the existing jpg/jpeg/png support.
+(WebP, BMP, TIFF/TIF, GIF) added alongside the existing jpg/jpeg/png support.
 """
 
 import os
