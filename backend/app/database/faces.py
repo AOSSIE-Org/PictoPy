@@ -264,6 +264,24 @@ def db_get_all_video_face_embeddings() -> List[Dict[str, Union[str, list]]]:
         conn.close()
 
 
+def db_delete_keyframe_faces_for_video(video_id: str) -> int:
+    """Drop a video's keyframe faces, so a scan interrupted part-way through
+    one video cannot leave half its faces behind to be duplicated on retry."""
+    conn = _connect()
+    try:
+        deleted = conn.execute(
+            """
+            DELETE FROM faces
+            WHERE frame_id IN (SELECT id FROM video_frames WHERE video_id = ?)
+            """,
+            (video_id,),
+        ).rowcount
+        conn.commit()
+        return deleted
+    finally:
+        conn.close()
+
+
 def get_all_face_embeddings():
     conn = _connect()
     cursor = conn.cursor()

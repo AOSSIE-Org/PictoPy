@@ -11,6 +11,7 @@ import pytest
 
 from app.database.faces import (
     db_create_faces_table,
+    db_delete_keyframe_faces_for_video,
     db_insert_face_embeddings,
     db_get_faces_unassigned_clusters,
     db_get_all_faces_with_cluster_names,
@@ -523,6 +524,23 @@ class TestVideoFaces:
         (face,) = db_get_all_faces_with_cluster_names()
         assert face["frame_id"] == "frame-1"
         assert face["cluster_name"] == "Alice"
+
+    def test_deleting_one_videos_keyframe_faces_spares_photos(self, test_db):
+        """A scan that died part-way through a video clears what it wrote, so
+        the retry cannot store the same faces twice."""
+        add_face(image_id=None, frame_id="frame-1")
+        add_face(image_id=None, frame_id="frame-1")
+        add_face("img-1")
+
+        assert db_delete_keyframe_faces_for_video("vid-1") == 2
+
+        conn = sqlite3.connect(test_db)
+        rows = conn.execute("SELECT image_id, frame_id FROM faces").fetchall()
+        conn.close()
+        assert rows == [("img-1", None)]
+
+    def test_deleting_faces_for_a_video_without_any_is_harmless(self, test_db):
+        assert db_delete_keyframe_faces_for_video("vid-1") == 0
 
 
 class TestVideoFaceCascade:
