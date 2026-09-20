@@ -1,5 +1,8 @@
+# Must come first: it sets TEST_MODE, which settings.py reads at import time to
+# keep the suite off the user's real library database.
+import tests.db_isolation  # noqa: F401
+
 import pytest
-import os
 
 # Import database table creation functions
 from app.database.faces import db_create_faces_table
@@ -19,9 +22,6 @@ from app.database.memories import db_create_memories_table
 @pytest.fixture(scope="session", autouse=True)
 def setup_before_all_tests():
     print("\n=== Running manual setup fixture ===")
-
-    # Set test environment
-    os.environ["TEST_MODE"] = "true"
 
     # Create all database tables in the same order as main.py
     print("Creating database tables...")
@@ -49,6 +49,5 @@ def setup_before_all_tests():
     # Teardown code runs after all tests
     print("\n=== Running cleanup after all tests ===")
 
-    # Cleanup code here
-    if "TEST_MODE" in os.environ:
-        del os.environ["TEST_MODE"]
+    # TEST_MODE stays set: unsetting it would let any late import of settings.py
+    # resolve DATABASE_PATH back to the real library.

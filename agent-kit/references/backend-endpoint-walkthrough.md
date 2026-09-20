@@ -86,5 +86,7 @@ source of truth.
 ## Tests
 
 `backend/tests/test_videos.py` runs against a real SQLite database: the session fixture in
-`conftest.py` creates every table and sets `TEST_MODE=true` before any test runs, then
-tears down afterwards. There is no mocking layer to satisfy.
+`conftest.py` creates every table before any test runs, then tears down afterwards. There
+is no mocking layer to satisfy. The database is a throwaway `backend/test_db.sqlite3`:
+`tests/db_isolation.py` sets `TEST_MODE=true` ahead of every app import so `DATABASE_PATH`
+never resolves to the user's real library.
