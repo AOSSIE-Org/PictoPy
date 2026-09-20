@@ -16,6 +16,7 @@ release PR that merges `dev` into `main`).
 | Frontend lint | `(cd frontend && npm run lint:check)` |
 | Frontend format | `(cd frontend && npm run format:check)` |
 | Python lint + format | `pre-commit run --config .pre-commit-config.yaml --all-files` |
+| Python type check | `mypy <changed Python files>` |
 | Agent hook tests | `node scripts/agent-format-hook.test.mjs` |
 | Rust format | `(cd frontend/src-tauri && cargo fmt -- --check)` |
 
@@ -27,10 +28,18 @@ Bare `npx markdownlint-cli2` resolves to the latest release instead, so it can d
 CI over rules that changed between versions.
 
 CI installs the linters from `backend/requirements-lint.txt`, which pins `pre-commit`,
-`ruff`, and `black` — install from that file locally so your versions match the runner's.
+`ruff`, `black`, and `mypy` — install from that file locally so your versions match the
+runner's.
 It runs pre-commit from inside `backend/` with `--config ../.pre-commit-config.yaml`;
 running it from the repository root with `--config .pre-commit-config.yaml` is equivalent
 and covers `sync-microservice/` too.
+
+MyPy compares the pull request's base and head commits and checks only added, copied,
+modified, or renamed `.py` files in `backend/` and `sync-microservice/`. It skips cleanly
+when a pull request changes no Python files. The pre-commit configuration also runs MyPy
+for staged Python files in either service. CI skips those local hooks during its all-files
+lint run, then uses the dynamic PR diff step above so legacy files outside the PR do not
+block it.
 
 The agent hook tests cover the formatting hook's guard, its path exclusions, and the
 entrypoint's exit codes. They need no dependencies, so the step runs before `npm ci`.

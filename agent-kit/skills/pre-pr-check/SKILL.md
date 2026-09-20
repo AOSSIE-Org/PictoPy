@@ -76,7 +76,9 @@ by hand.
 Covers both `backend/` and `sync-microservice/`.
 
 ```bash
-pre-commit run --config .pre-commit-config.yaml --all-files
+SKIP=mypy-backend,mypy-sync-microservice pre-commit run --config .pre-commit-config.yaml --all-files
+(cd backend && mypy <changed backend Python files>)
+(cd sync-microservice && mypy <changed sync-service Python files>)
 (cd backend && pytest)
 ```
 

@@ -1,2 +1,10 @@
 [tool.ruff]
 line-length = 300
+
+[tool.mypy]
+python_version = "3.11"
+explicit_package_bases = true
+follow_imports = "skip"
+ignore_missing_imports = true
+check_untyped_defs = true
+disable_error_code = ["import-untyped"]
