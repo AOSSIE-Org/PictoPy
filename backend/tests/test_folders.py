@@ -1101,15 +1101,50 @@ class TestFoldersUnit:
                 ("folder-id-1", "/tmp/photos"),
                 ("folder-id-2", "/tmp/photos/2024"),
                 ("folder-id-3", "/other/documents"),
+                ("folder-id-4", "/tmp/photos%2024"),
+                ("folder-id-5", "/tmp/photos_2024"),
+                ("folder-id-6", "/tmp/photos\\2024"),
+                ("folder-id-7", "/tmp/photos/100%_sure"),
+                ("folder-id-8", "/tmp/photos/100%_sure/yes"),
             ],
         )
         conn.commit()
         conn.close()
+
         result = db_get_folder_ids_by_path_prefix("/tmp")
         # The query has no ORDER BY, so row order isn't part of the contract
         assert set(result) == {
             ("folder-id-1", "/tmp/photos"),
             ("folder-id-2", "/tmp/photos/2024"),
+            ("folder-id-4", "/tmp/photos%2024"),
+            ("folder-id-5", "/tmp/photos_2024"),
+            ("folder-id-6", "/tmp/photos\\2024"),
+            ("folder-id-7", "/tmp/photos/100%_sure"),
+            ("folder-id-8", "/tmp/photos/100%_sure/yes"),
+        }
+
+        # Verify literal percent doesn't match everything
+        result = db_get_folder_ids_by_path_prefix("/tmp/photos%")
+        assert set(result) == {
+            ("folder-id-4", "/tmp/photos%2024"),
+        }
+
+        # Verify literal underscore doesn't match single characters
+        result = db_get_folder_ids_by_path_prefix("/tmp/photos_")
+        assert set(result) == {
+            ("folder-id-5", "/tmp/photos_2024"),
+        }
+
+        # Verify literal backslash
+        result = db_get_folder_ids_by_path_prefix("/tmp/photos\\")
+        assert set(result) == {
+            ("folder-id-6", "/tmp/photos\\2024"),
+        }
+
+        # Verify combined percent and underscore, including appending os.sep
+        result = db_get_folder_ids_by_path_prefix("/tmp/photos/100%_sure" + os.sep)
+        assert set(result) == {
+            ("folder-id-8", "/tmp/photos/100%_sure/yes"),
         }
 
     def test_db_get_folder_ids_by_paths(self, test_db):
@@ -1392,3 +1427,104 @@ class TestFoldersIntegration:
 
         mock_enable_batch.assert_called_once_with(folder_ids)
         mock_delete_batch.assert_called_once_with(folder_ids)
+
+
+class TestFolderUtils:
+    @patch("app.utils.folders.os.remove")
+    def test_folder_util_cleanup_thumbnails(self, mock_remove, test_db):
+        conn = sqlite3.connect(test_db)
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS folders (folder_id TEXT, folder_path TEXT)"
+        )
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS images (id TEXT, path TEXT, thumbnailPath TEXT, folder_id TEXT)"
+        )
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS videos (id TEXT, path TEXT, thumbnailPath TEXT, folder_id TEXT)"
+        )
+
+        conn.executemany(
+            "INSERT INTO folders (folder_id, folder_path) VALUES (?, ?)",
+            [
+                ("f1", "/test/folder"),
+                ("f2", "/test/folder/sub"),
+                ("f3", "/test/folder_sibling"),
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO images (id, thumbnailPath, folder_id) VALUES (?, ?, ?)",
+            [
+                ("img1", "/thumb/img1.jpg", "f1"),
+                ("img2", "/thumb/img2.jpg", "f2"),
+                ("img3", "/thumb/img3.jpg", "f3"),
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO videos (id, thumbnailPath, folder_id) VALUES (?, ?, ?)",
+            [
+                ("vid1", "/thumb/vid1.jpg", "f1"),
+            ],
+        )
+        conn.commit()
+        conn.close()
+
+        from app.utils.folders import folder_util_cleanup_thumbnails
+
+        mock_remove.return_value = None
+        count = folder_util_cleanup_thumbnails(["f1"])
+
+        assert mock_remove.call_count == 3
+        mock_remove.assert_any_call("/thumb/img1.jpg")
+        mock_remove.assert_any_call("/thumb/img2.jpg")
+        mock_remove.assert_any_call("/thumb/vid1.jpg")
+        assert count == 3
+
+    @patch("app.utils.folders.os.remove")
+    def test_folder_util_cleanup_thumbnails_errors(self, mock_remove, test_db):
+        conn = sqlite3.connect(test_db)
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS folders (folder_id TEXT, folder_path TEXT)"
+        )
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS images (id TEXT, path TEXT, thumbnailPath TEXT, folder_id TEXT)"
+        )
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path) VALUES ('f1', '/test')"
+        )
+        conn.execute(
+            "INSERT INTO images (id, thumbnailPath, folder_id) VALUES ('img1', '/thumb/img1.jpg', 'f1')"
+        )
+        conn.commit()
+        conn.close()
+
+        from app.utils.folders import folder_util_cleanup_thumbnails
+
+        # Test FileNotFoundError is ignored
+        mock_remove.side_effect = FileNotFoundError()
+        count = folder_util_cleanup_thumbnails(["f1"])
+        assert count == 0
+
+        # Test other OSError is raised
+        mock_remove.side_effect = PermissionError()
+        with pytest.raises(PermissionError):
+            folder_util_cleanup_thumbnails(["f1"])
+
+    @patch("app.utils.folders.db_delete_folders_batch")
+    @patch("app.utils.folders.folder_util_cleanup_thumbnails")
+    def test_folder_util_delete_obsolete_folders(self, mock_cleanup, mock_delete_db):
+        from app.utils.folders import folder_util_delete_obsolete_folders
+
+        db_child_folders = [("f1", "/test/obsolete"), ("f2", "/test/active")]
+        folders_to_delete = {"/test/obsolete"}
+
+        mock_delete_db.return_value = 1
+
+        deleted_count, deleted_list = folder_util_delete_obsolete_folders(
+            db_child_folders, folders_to_delete
+        )
+
+        assert deleted_count == 1
+        assert deleted_list == ["/test/obsolete"]
+
+        mock_cleanup.assert_called_once_with(["f1"])
+        mock_delete_db.assert_called_once_with(["f1"])
