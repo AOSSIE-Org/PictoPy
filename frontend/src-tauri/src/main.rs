@@ -3,6 +3,7 @@
 
 mod services;
 
+use services::settings::{CLOSE_TO_TRAY_KEY, START_MINIMIZED_KEY, STORE_PATH};
 use sysinfo::System;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::path::BaseDirectory;
@@ -12,9 +13,6 @@ use tauri_plugin_autostart::ManagerExt;
 #[cfg(feature = "ci")]
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_store::StoreExt;
-
-const STORE_PATH: &str = "settings.json";
-const CLOSE_TO_TRAY_KEY: &str = "close_to_tray";
 
 const ENDPOINTS: [(&str, &str, &str); 2] = [
     (
@@ -258,22 +256,6 @@ fn is_autostart_enabled(app: tauri::AppHandle) -> Result<bool, String> {
     app.autolaunch().is_enabled().map_err(|e| e.to_string())
 }
 
-#[tauri::command]
-fn get_close_to_tray(app: tauri::AppHandle) -> Result<bool, String> {
-    let store = app.store(STORE_PATH).map_err(|e| e.to_string())?;
-    Ok(store
-        .get(CLOSE_TO_TRAY_KEY)
-        .and_then(|v| v.as_bool())
-        .unwrap_or(true))
-}
-
-#[tauri::command]
-fn set_close_to_tray(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
-    let store = app.store(STORE_PATH).map_err(|e| e.to_string())?;
-    store.set(CLOSE_TO_TRAY_KEY, enabled);
-    store.save().map_err(|e| e.to_string())
-}
-
 fn main() {
     tauri::Builder::default()
         // Auto-start: pass --minimized so the window starts hidden when launched at boot
@@ -296,9 +278,19 @@ fn main() {
             prod(app.handle(), &resource_path)?;
 
             // When auto-started at boot (--minimized flag), keep the window hidden
+            // unless the user has opted out via the "Start Minimized" preference.
             if std::env::args().any(|a| a == "--minimized") {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.hide();
+                let start_minimized = app
+                    .store(STORE_PATH)
+                    .ok()
+                    .and_then(|s| s.get(START_MINIMIZED_KEY))
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true); // default: start minimized to tray
+
+                if start_minimized {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.hide();
+                    }
                 }
             }
 
@@ -359,8 +351,10 @@ fn main() {
             enable_autostart,
             disable_autostart,
             is_autostart_enabled,
-            get_close_to_tray,
-            set_close_to_tray,
+            services::settings::get_close_to_tray,
+            services::settings::set_close_to_tray,
+            services::settings::get_start_minimized,
+            services::settings::set_start_minimized,
         ])
         .on_window_event(on_window_event)
         .build(tauri::generate_context!())
