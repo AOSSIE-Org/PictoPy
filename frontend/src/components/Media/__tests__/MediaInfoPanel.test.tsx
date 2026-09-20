@@ -133,7 +133,9 @@ describe('MediaInfoPanel Open Original File button', () => {
   test('calls the open_image_file command with the current image path when clicked', async () => {
     renderPanel(['alpha']);
 
-    fireEvent.click(screen.getByRole('button', { name: /open original file/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /open original file/i }),
+    );
 
     await waitFor(() => {
       expect(invoke).toHaveBeenCalledWith('open_image_file', {

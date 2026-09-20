@@ -130,7 +130,7 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
                   Location
                 </p>
                 {currentImage?.metadata?.latitude &&
-                  currentImage?.metadata?.longitude ? (
+                currentImage?.metadata?.longitude ? (
                   <button
                     type="button"
                     onClick={handleLocationClick}
@@ -218,7 +218,9 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
                   e.preventDefault();
                   if (currentImage?.path) {
                     try {
-                      await invoke<void>('open_image_file', { path: currentImage.path });
+                      await invoke<void>('open_image_file', {
+                        path: currentImage.path,
+                      });
                     } catch (err) {
                       console.error('Failed to open file:', err);
                     }

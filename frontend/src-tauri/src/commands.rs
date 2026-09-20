@@ -1,12 +1,26 @@
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use tauri_plugin_opener::OpenerExt;
 
 const FOLDERS_URL: &str = "http://localhost:52123/folders/all-folders";
 
+const ALLOWED_EXTENSIONS: &[&str] = &[
+    // images
+    "jpg", "jpeg", "png", "webp", "bmp", "tiff", "tif", "gif", // videos
+    "mp4", "mov", "webm", "m4v",
+];
+
 /// Fetch the user's library folders from the Python backend (trusted source,
 /// not from frontend input) and canonicalize them.
 async fn fetch_library_folders() -> Result<Vec<PathBuf>, String> {
-    let body = reqwest::get(FOLDERS_URL)
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let body = client
+        .get(FOLDERS_URL)
+        .send()
         .await
         .map_err(|e| format!("Could not reach backend: {e}"))?
         .text()
@@ -38,14 +52,14 @@ pub async fn open_image_file(app: tauri::AppHandle, path: String) -> Result<(), 
     }
 
     // Check the extension on the resolved path.
-    let is_image = canonical
+    let is_supported = canonical
         .extension()
         .and_then(|e| e.to_str())
-        .map(|e| matches!(e.to_lowercase().as_str(), "jpg" | "jpeg" | "png"))
+        .map(|e| ALLOWED_EXTENSIONS.contains(&e.to_lowercase().as_str()))
         .unwrap_or(false);
 
-    if !is_image {
-        return Err("Only image files can be opened".into());
+    if !is_supported {
+        return Err("Only image and video files can be opened".into());
     }
 
     // Only allow files inside the user's configured library folders.
