@@ -21,7 +21,7 @@ if [[ $1 == "--test" ]]; then
         sleep 3
     done
 else
-    # print the value of the WORKERS environment variable
-    echo "WORKERS: ${WORKERS:-1}"
-    hypercorn main:app --workers ${WORKERS:-1} --bind 0.0.0.0:8000
+    # Model-download and reclustering jobs are tracked in memory, per worker, so
+    # a second worker would answer status polls it knows nothing about.
+    hypercorn main:app --workers 1 --bind 0.0.0.0:8000
 fi
