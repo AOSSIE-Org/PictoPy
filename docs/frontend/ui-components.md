@@ -51,7 +51,10 @@ These implement specific features and often use the primitives above:
 ### Media and gallery
 
 - **Media/** – `ChronologicalGallery`, `ImageCard`, `ImageViewer`, `MediaView`, `MediaThumbnails`, `MediaInfoPanel`, `MediaViewControls`, `ZoomControls`, `NavigationButtons`, `ImageTags`
-- **FaceCollections** – Face clusters and naming UI
+- **FaceCollections** – Face clusters and naming UI. Each card counts a person's photos and, when finding
+  people in videos is on, their videos ("12 photos · 3 videos"), via `getPhotoCountText` in `utils/personUtils.ts`
+- **PersonImages** (`pages/PersonImages/`) – One person's page: their photos, then their videos, which open in the
+  shared `VideoPlayerOverlay`
 
 ### Navigation and layout
 
@@ -62,10 +65,15 @@ These implement specific features and often use the primitives above:
 
 - **OnboardingSteps/** – Steps, folder setup, avatar choice, theme selection, server check, etc.
 - **account-settings** – User account and preference UI
+- **UserPreferencesCard** (`pages/SettingsPage/components/`) – The Video Tagging group holds the keyframe interval,
+  the **Find People in Videos** switch, and, while that switch is on, a **Scan videos** button for videos tagged
+  before it. The scan runs in the background; the card polls `GET /videos/face-scan-status` for its progress
 
 ### Dialogs and feedback
 
-- **Dialog/** – `InfoDialog`, `FaceSearchDialog`
+- **Dialog/** – `InfoDialog`, `FaceSearchDialog`, `MultiPersonSearchDialog`. Every face search, including the
+  webcam, dispatches the matching videos with `setVideos` as well as the photos; the Home and AI Tagging pages show them only while a
+  search is active, so the Videos page's own list never leaks into the gallery
 - **Loader/** – `GlobalLoader`
 - **EmptyStates/** – `EmptyGalleryState`, `EmptyAITaggingState`
 

@@ -30,15 +30,65 @@ We use another YOLOv11 model for this as well by default. This was pretrained on
 
 ???+ note "What's an embedding?"
 An embedding is a bunch of numbers that represent the face. Similar faces will have similar numbers. FaceNet creates a
-512-dimensional embedding array for each detected face in the image.
+128-dimensional embedding array for each detected face in the image, normalised to unit length so that comparing two
+faces is a single dot product.
+
+Not every detected face is worth embedding. A face must pass a quality gate first: it needs to be at least
+`PICTO_CLUSTERING_MIN_FACE_SIZE` (1000 px²) and not too blurry. Below that size FaceNet's embeddings stop telling
+people apart, and unrelated faces start to look like the same person.
 
 ## Face Clustering
 
 Now, here's where it gets interesting:
 
-We use something called DBSCAN to group similar faces together. This process happens automatically as you add new photos to the system, we perform reclustering
-after every 5 photos are added (this can be changed in the code) but apart from that, the photos are assigned a cluster based on the embedding distance
-of the faces in the photo with the mean of each of the clusters.
+We use something called DBSCAN to group similar faces together. A full recluster runs when the last one is more than
+24 hours old, or when more than 100 faces are waiting for a cluster. In between, each new face is assigned to the
+cluster whose mean embedding it is most similar to, provided the similarity is at least 0.8.
+
+## Finding People in Videos
+
+Videos can show up under the people in them too. This is **off by default**, because it runs a second detector over
+every keyframe with a person in it; turn it on under **Settings → Video Tagging → Find People in Videos**.
+
+Videos are never analysed frame by frame. Instead, PictoPy samples keyframes (one every few seconds, set by the
+keyframe interval) and stores them as JPEGs up to 1280 px on the long side. That size matters: at 640 px most faces in
+a video are too small to pass the quality gate above.
+
+For each video:
+
+1. YOLOv11 looks at every keyframe. Only keyframes where it sees a `person` go on to face detection.
+2. Faces are detected, quality-gated and embedded exactly as they are for photos.
+3. Near-identical faces are dropped (the same person in a neighbouring keyframe), keeping the most confident one, and
+   each video keeps at most 40 faces, so a crowd scene can't flood the database.
+
+???+ warning "Video faces join people; they never create them"
+Faces from videos are **never** fed to DBSCAN. Keyframes include motion blur, odd angles and partial faces, and these
+act as bridges: DBSCAN can chain through them and merge several different people into one cluster.
+
+Instead, each video face is attached to the nearest existing person, found from photos, when its similarity to that
+person's mean is at least 0.65 (`PICTO_CLUSTERING_SIMILARITY_THRESHOLD`). A face that matches no one is kept but left
+unassigned. Only photo faces count towards a person's mean, and one keyframe can attach to the same person only once.
+
+A person's card counts **photos only** ("12 photos · 3 videos"), and the photo count alone decides how people are
+ordered.
+
+### Scanning videos that were already tagged
+
+Videos tagged before the setting was turned on have no faces yet. **Settings → Video Tagging → Scan videos** finds
+them in the background and shows its progress; the same scan also runs as part of any later folder sync or AI
+tagging pass.
+
+The scan does not re-tag these videos. It keeps each keyframe, its timestamp and its semantic search embedding, and
+only re-samples a keyframe at full resolution if it shows a person and was stored smaller than the source allows. Each
+video is marked once it has been scanned (`videos.facesScanned`), so an interrupted scan picks up where it stopped.
+
+### Where video faces appear
+
+- **A person's page** lists their videos alongside their photos.
+- **Searching for several people** returns videos too, matching any or all of them.
+- **Searching by a photo or the webcam** returns videos, ranked by their best-matching keyframe.
+
+Videos always play from the start; jumping to the moment a person appears is not supported yet.
 
 ## Semantic Search with SigLIP2
 
@@ -80,6 +130,8 @@ model calibration details, and known limitations — see the dedicated
 
 When you add a new photo, we first look for objects and faces. If we find faces, we generate embeddings for them. These embeddings then get added to our face clusters.
 Then, if the semantic search models are installed, we generate a SigLIP2 embedding for the photo too.
+Videos follow once the photos are done: their keyframes are tagged, and, if finding people in videos is on, their
+faces are attached to the people found in your photos.
 All this information gets stored in our database so we can find it later.
 
 ## Under the Hood
@@ -104,7 +156,7 @@ Here are some key parameters for the main models used in PictoPy's image process
 
 | Parameter    | Value                          | Description                             |
 | ------------ | ------------------------------ | --------------------------------------- |
-| `conf_thres` | 0.35                           | Confidence threshold for face detection |
+| `conf_thres` | 0.45                           | Confidence threshold for face detection |
 | `iou_thres`  | 0.45                           | IoU threshold for NMS in face detection |
 | Model Path   | `DEFAULT_FACE_DETECTION_MODEL` | Path to the face detection model file   |
 
@@ -114,15 +166,26 @@ Here are some key parameters for the main models used in PictoPy's image process
 | ----------- | ----------------------- | ------------------------------------ |
 | Model Path  | `DEFAULT_FACENET_MODEL` | Path to the FaceNet model file       |
 | Input Shape | (1, 3, 160, 160)        | Expected input shape for face images |
-| Output      | 512-dimensional vector  | Face embedding dimension             |
+| Output      | 128-dimensional vector  | Face embedding, unit length          |
 
 ### Face Clustering (DBSCAN)
 
-| Parameter     | Value    | Description                                                                                |
-| ------------- | -------- | ------------------------------------------------------------------------------------------ |
-| `eps`         | 0.3      | Maximum distance between two samples for them to be considered as in the same neighborhood |
-| `min_samples` | 2        | Number of samples in a neighborhood for a point to be considered as a core point           |
-| `metric`      | "cosine" | Distance metric used for clustering                                                        |
+| Parameter | Value | Description |
+| --------- | ----- | ----------- |
+| `eps` | Adaptive | Estimated from the data, capped at 0.35 (1 − the 0.65 similarity threshold). 0.75 (`PICTO_CLUSTERING_EPS`) is used only when there are too few faces to estimate it |
+| `min_samples` | 2 | Number of samples in a neighborhood for a point to be considered as a core point. Values below 2 are reset to 2 to prevent chaining |
+| `metric` | "cosine" | Distance metric used for clustering |
+
+### Faces in Videos
+
+| Parameter | Value | Description |
+| --------- | ----- | ----------- |
+| `Video_Face_Detection` | Off | User preference (Settings → Video Tagging). `VIDEO_FACE_DETECTION` sets the default |
+| `VIDEO_FRAME_MAX_DIMENSION` | 1280 | Longest side of a stored keyframe. Smaller frames leave most video faces below the quality gate |
+| `PICTO_CLUSTERING_MIN_FACE_SIZE` | 1000 px² | Smallest face that is embedded, for photos and videos alike |
+| `VIDEO_FACE_DEDUPE_THRESHOLD` | 0.92 | Cosine similarity above which two faces in one video count as the same appearance |
+| `VIDEO_MAX_FACES_PER_VIDEO` | 40 | Most faces kept per video, highest confidence first |
+| `PICTO_CLUSTERING_SIMILARITY_THRESHOLD` | 0.65 | Minimum similarity to a person's photo mean for a video face to attach to them |
 
 ### Semantic Search (SigLIP2)
 
