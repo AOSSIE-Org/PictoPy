@@ -108,7 +108,7 @@ export function MultiPersonSearchDialog({
         <DialogHeader>
           <DialogTitle>Search by Multiple People</DialogTitle>
           <DialogDescription>
-            Select one or more people to find photos containing them.
+            Select one or more people to find photos and videos containing them.
           </DialogDescription>
         </DialogHeader>
 
@@ -147,8 +147,8 @@ export function MultiPersonSearchDialog({
           </div>
           <p className="text-muted-foreground mt-1.5 text-xs">
             {matchMode === 'match_any'
-              ? 'Photos containing ANY of the selected people'
-              : 'Photos containing ALL of the selected people'}
+              ? 'Photos and videos containing ANY of the selected people'
+              : 'Photos and videos containing ALL of the selected people'}
           </p>
         </div>
 

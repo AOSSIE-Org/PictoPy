@@ -2,8 +2,9 @@ import json
 import os
 import sqlite3
 import tempfile
+import time
 import shutil
-from concurrent.futures import Future
+from concurrent.futures import Future, ThreadPoolExecutor
 from unittest.mock import MagicMock, patch
 
 import cv2
@@ -582,6 +583,26 @@ class TestFaceScanRoutes:
             scan_client.post("/videos/scan-faces")
             scan_client.post("/videos/scan-faces")
 
+        assert scan_client.app.state.executor.submit.call_count == 1
+
+    def test_concurrent_starts_queue_only_one_scan(self, scan_client, video_id):
+        # A slow submit widens the gap between the running check and the
+        # assignment, where two unlocked requests would both get through.
+        def slow_submit(fn):
+            time.sleep(0.2)
+            return Future()
+
+        db_mark_videos_tagged([video_id])
+        scan_client.app.state.executor.submit.side_effect = slow_submit
+        with (
+            patch("app.config.settings.VIDEO_FACE_DETECTION", True),
+            ThreadPoolExecutor(max_workers=2) as pool,
+        ):
+            responses = list(
+                pool.map(lambda _: scan_client.post("/videos/scan-faces"), range(2))
+            )
+
+        assert [r.status_code for r in responses] == [200, 200]
         assert scan_client.app.state.executor.submit.call_count == 1
 
     def test_status_counts_scanned_against_the_whole_library(

@@ -1,3 +1,4 @@
+import threading
 from concurrent.futures import Future, ProcessPoolExecutor
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -263,6 +264,10 @@ class FaceScanStatusResponse(BaseModel):
     data: FaceScanStatusData
 
 
+# Sync routes run on a threadpool, so two clicks could both see no scan running
+_face_scan_lock = threading.Lock()
+
+
 def _face_scan_status(app_state: State) -> FaceScanStatusData:
     total, scanned = db_count_video_face_scan_progress()
     scan: Optional[Future] = getattr(app_state, "video_face_scan", None)
@@ -299,9 +304,12 @@ def scan_video_faces(
 
         # Kept on app state so the status endpoint can report a running or
         # failed scan; a second click while one is running is a no-op.
-        if not _face_scan_status(app_state).running:
-            executor: ProcessPoolExecutor = app_state.executor
-            app_state.video_face_scan = executor.submit(post_video_face_scan_sequence)
+        with _face_scan_lock:
+            if not _face_scan_status(app_state).running:
+                executor: ProcessPoolExecutor = app_state.executor
+                app_state.video_face_scan = executor.submit(
+                    post_video_face_scan_sequence
+                )
 
         status_data = _face_scan_status(app_state)
         return FaceScanStatusResponse(
