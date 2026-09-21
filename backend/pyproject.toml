@@ -4,6 +4,7 @@ line-length = 300
 [tool.mypy]
 python_version = "3.11"
 explicit_package_bases = true
+mypy_path = "$MYPY_CONFIG_FILE_DIR"
 follow_imports = "skip"
 ignore_missing_imports = true
 check_untyped_defs = true
