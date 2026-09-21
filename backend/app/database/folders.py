@@ -361,21 +361,33 @@ def db_disable_ai_tagging_batch(folder_ids: List[FolderId]) -> int:
 
 
 def db_get_folder_ids_by_path_prefix(root_path: str) -> List[FolderIdPath]:
-    """Get all folder IDs and paths whose path starts with the given root path."""
+    """Get the folder ID and path of root_path and every folder beneath it."""
+    # A trailing separator would otherwise demand a double one below.
+    root = root_path.rstrip("/\\") or root_path
+    # Escape LIKE wildcards so '%' and '_' in a path match only themselves.
+    escaped = root.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     try:
-        # Use path LIKE with wildcard to match all subfolders
         cursor.execute(
             """
             SELECT folder_id, folder_path FROM folders 
-            WHERE folder_path LIKE ? || '%'
+            WHERE folder_path LIKE ? || '%' ESCAPE '!'
         """,
-            (root_path,),
+            (escaped,),
         )
 
-        return cursor.fetchall()
+        # The prefix alone also matches siblings ('/photos2' for '/photos'), so
+        # keep only the folder itself and paths continuing past a separator.
+        return [
+            (folder_id, folder_path)
+            for folder_id, folder_path in cursor.fetchall()
+            if len(folder_path) == len(root)
+            or folder_path[len(root)] in "/\\"
+            or root[-1] in "/\\"
+        ]
     finally:
         conn.close()
 

@@ -1190,6 +1190,48 @@ class TestFoldersUnit:
             ("folder-id-2", "/tmp/photos/2024"),
         }
 
+    def test_db_get_folder_ids_by_path_prefix_excludes_siblings(self, test_db):
+        conn = sqlite3.connect(test_db)
+        conn.executemany(
+            "INSERT INTO folders (folder_id, folder_path) VALUES (?, ?)",
+            [
+                ("folder-id-1", "/tmp/photos"),
+                ("folder-id-2", "/tmp/photos/2024"),
+                ("folder-id-3", "/tmp/photos2"),
+                ("folder-id-4", "/tmp/photos_old"),
+                ("folder-id-5", r"C:\Photos"),
+                ("folder-id-6", r"C:\Photos\2020"),
+                ("folder-id-7", r"C:\PhotosX"),
+            ],
+        )
+        conn.commit()
+        conn.close()
+        assert {r[0] for r in db_get_folder_ids_by_path_prefix("/tmp/photos")} == {
+            "folder-id-1",
+            "folder-id-2",
+        }
+        assert {r[0] for r in db_get_folder_ids_by_path_prefix(r"C:\Photos")} == {
+            "folder-id-5",
+            "folder-id-6",
+        }
+
+    def test_db_get_folder_ids_by_path_prefix_escapes_wildcards(self, test_db):
+        conn = sqlite3.connect(test_db)
+        conn.executemany(
+            "INSERT INTO folders (folder_id, folder_path) VALUES (?, ?)",
+            [
+                ("folder-id-1", "/tmp/photos_"),
+                ("folder-id-2", "/tmp/photos_/a"),
+                ("folder-id-3", "/tmp/photosX/a"),
+            ],
+        )
+        conn.commit()
+        conn.close()
+        assert {r[0] for r in db_get_folder_ids_by_path_prefix("/tmp/photos_")} == {
+            "folder-id-1",
+            "folder-id-2",
+        }
+
     def test_db_get_folder_ids_by_paths(self, test_db):
         conn = sqlite3.connect(test_db)
         folder1 = os.path.abspath("test_folder_1")
