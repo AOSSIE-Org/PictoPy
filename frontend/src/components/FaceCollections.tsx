@@ -120,7 +120,7 @@ export function FaceCollections({ onSearchActivated }: FaceCollectionsProps) {
               <div className="text-center">
                 <p className="font-medium">{getPersonName(cluster)}</p>
                 <p className="text-muted-foreground text-xs">
-                  {getPhotoCountText(cluster.face_count)}
+                  {getPhotoCountText(cluster.face_count, cluster.video_count)}
                 </p>
               </div>
             </div>

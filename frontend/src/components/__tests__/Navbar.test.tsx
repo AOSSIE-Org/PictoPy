@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { setClusters } from '@/features/faceClustersSlice';
+import type { Cluster } from '@/types/Media';
 import { selectName, selectAvatar } from '@/features/onboardingSelectors';
 
 // Mock dependencies
@@ -55,13 +56,6 @@ jest.mock('framer-motion', () => ({
   },
 }));
 
-interface TestCluster {
-  cluster_id: string;
-  cluster_name: string;
-  face_count: number;
-  face_image_base64?: string;
-}
-
 describe('Navbar Component', () => {
   let mockDispatch: jest.Mock;
   let mockNavigate: jest.Mock;
@@ -80,7 +74,7 @@ describe('Navbar Component', () => {
     });
   });
 
-  const setupUseSelector = (clusters: TestCluster[] = []) => {
+  const setupUseSelector = (clusters: Cluster[] = []) => {
     (useSelector as unknown as jest.Mock).mockImplementation((selector) => {
       if (selector === selectName) return 'Test User';
       if (selector === selectAvatar) return '/test-avatar.png';
@@ -158,7 +152,12 @@ describe('Navbar Component', () => {
 
     // Mock that we now have clusters
     setupUseSelector([
-      { cluster_id: '1', cluster_name: 'Person A', face_count: 0 },
+      {
+        cluster_id: '1',
+        cluster_name: 'Person A',
+        face_count: 0,
+        video_count: 0,
+      },
     ]);
     rerender(<Navbar />);
 
@@ -191,8 +190,13 @@ describe('Navbar Component', () => {
   it('dispatches setClusters when clustersData and clustersSuccess are present', () => {
     setupUseSelector([]);
 
-    const mockClusters: TestCluster[] = [
-      { cluster_id: '1', cluster_name: 'Test Cluster', face_count: 0 },
+    const mockClusters: Cluster[] = [
+      {
+        cluster_id: '1',
+        cluster_name: 'Test Cluster',
+        face_count: 0,
+        video_count: 0,
+      },
     ];
 
     // Mock usePictoQuery to return success with data
@@ -223,10 +227,11 @@ describe('Navbar Component', () => {
   });
 
   it('renders a maximum of 6 face clusters even if the store has more', () => {
-    const manyClusters: TestCluster[] = Array.from({ length: 10 }, (_, i) => ({
+    const manyClusters: Cluster[] = Array.from({ length: 10 }, (_, i) => ({
       cluster_id: `id-${i}`,
       cluster_name: `Person ${i}`,
       face_count: 0,
+      video_count: 0,
     }));
     setupUseSelector(manyClusters);
     render(<Navbar />);
@@ -256,13 +261,19 @@ describe('Navbar Component', () => {
   });
 
   it('renders correct fallback initials and labels when face_image_base64 and cluster_name are absent', () => {
-    const fallbackClusters: TestCluster[] = [
+    const fallbackClusters: Cluster[] = [
       {
         cluster_id: '1234abcd',
         cluster_name: 'John Doe',
         face_count: 0,
+        video_count: 0,
       },
-      { cluster_id: '5678efgh', cluster_name: '', face_count: 0 },
+      {
+        cluster_id: '5678efgh',
+        cluster_name: '',
+        face_count: 0,
+        video_count: 0,
+      },
     ];
     setupUseSelector(fallbackClusters);
     render(<Navbar />);
@@ -279,7 +290,12 @@ describe('Navbar Component', () => {
 
   it('navigates to specific cluster and closes dropdown when clicking an avatar chip', () => {
     setupUseSelector([
-      { cluster_id: 'cluster-123', cluster_name: 'Test Person', face_count: 0 },
+      {
+        cluster_id: 'cluster-123',
+        cluster_name: 'Test Person',
+        face_count: 0,
+        video_count: 0,
+      },
     ]);
     render(<Navbar />);
     fireEvent.click(screen.getByPlaceholderText('Add to your search'));

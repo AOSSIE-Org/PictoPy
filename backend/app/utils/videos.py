@@ -2,15 +2,28 @@ from __future__ import annotations
 
 import os
 import shutil
+import sqlite3
 import uuid
 import datetime
 import json
 import mimetypes
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    TypedDict,
+)
 from pathlib import Path
 
 import cv2
+import numpy as np
 from PIL import Image
+from pydantic import ValidationError
 
 from app.config.settings import THUMBNAIL_IMAGES_PATH, VIDEO_FRAMES_PATH
 from app.database.videos import (
@@ -27,6 +40,7 @@ from app.utils.extract_location_metadata import (
     DATE_SOURCE_UNKNOWN,
     TRUSTED_DATE_SOURCES,
 )
+from app.schemas.videos import VideoData
 from app.utils.takeout_sidecar import takeout_sidecar_read
 from app.utils.video_capture_date import video_capture_date_candidates
 from app.utils.images import (
@@ -35,7 +49,36 @@ from app.utils.images import (
 )
 from app.logging.setup_logging import get_logger
 
+if TYPE_CHECKING:
+    from app.models.FaceDetector import FaceDetector
+
 logger = get_logger(__name__)
+
+
+def video_util_to_video_data(videos: List[dict]) -> List[VideoData]:
+    """Build per row: one record with unusable metadata shouldn't 500 the
+    whole listing and hide every other video."""
+    video_data = []
+    for video in videos:
+        try:
+            video_data.append(
+                VideoData(
+                    id=video["id"],
+                    path=video["path"],
+                    folder_id=video["folder_id"],
+                    thumbnailPath=video["thumbnailPath"],
+                    metadata=video["metadata"],
+                    isFavourite=video.get("isFavourite", False),
+                    favouritedAt=video.get("favouritedAt"),
+                    tags=video["tags"],
+                )
+            )
+        except ValidationError as e:
+            logger.warning(
+                f"Skipping video {video.get('id')} with invalid metadata: {e}"
+            )
+    return video_data
+
 
 # Formats WebView2's HTML5 <video> can play; extend deliberately —
 # indexing formats the player can't decode gives a broken playback UX.
@@ -490,6 +533,23 @@ def video_util_get_frame_interval() -> float:
     return VIDEO_FRAME_INTERVAL_SECONDS
 
 
+def video_util_face_detection_enabled() -> bool:
+    """Whether to look for people in keyframes -- opt-in from Settings, since
+    it runs a second detector over every keyframe showing a person."""
+    from app.config.settings import VIDEO_FACE_DETECTION
+    from app.database.metadata import db_get_metadata
+
+    try:
+        metadata = db_get_metadata() or {}
+        enabled = metadata.get("user_preferences", {}).get("Video_Face_Detection")
+        if enabled is not None:
+            return bool(enabled)
+    except Exception as e:
+        logger.warning(f"Could not read video face detection preference: {e}")
+
+    return VIDEO_FACE_DETECTION
+
+
 def video_util_sample_frame_timestamps(
     duration: Optional[float], interval: float, max_frames: int
 ) -> List[float]:
@@ -613,16 +673,310 @@ def video_util_aggregate_frame_classes(
     )
 
 
+class VideoFace(TypedDict):
+    """A face found in one keyframe, before it is stored."""
+
+    frame_id: str
+    embedding: np.ndarray  # L2-normalised FaceNet vector
+    bbox: Dict[str, int]  # in keyframe pixels
+    confidence: float
+
+
+def video_util_detect_video_faces(
+    face_detector: FaceDetector,
+    frames: List[dict],
+    frame_class_ids: List[List[int]],
+) -> List[VideoFace]:
+    """Faces in every keyframe YOLO saw a person in. Gated per frame, not on the
+    video's person tag, which needs VIDEO_TAG_MIN_FRAME_SUPPORT frames to exist.
+    """
+    faces: List[VideoFace] = []
+    for frame, class_ids in zip(frames, frame_class_ids):
+        if 0 not in class_ids:
+            continue
+        result = face_detector.detect_faces(frame["frame_path"])
+        if not result:
+            continue
+        for embedding, bbox, confidence in zip(
+            result["embeddings"], result["bboxes"], result["confidences"]
+        ):
+            faces.append(
+                VideoFace(
+                    frame_id=frame["id"],
+                    embedding=embedding,
+                    bbox=bbox,
+                    confidence=confidence,
+                )
+            )
+    return faces
+
+
+def video_util_select_video_faces(
+    faces: List[VideoFace], dedupe_threshold: float, max_faces: int
+) -> List[VideoFace]:
+    """The faces worth storing for one video, highest confidence first.
+
+    A face nearly identical to one already kept is the same person in a
+    neighbouring keyframe and adds nothing to clustering.
+    """
+    kept: List[VideoFace] = []
+    for face in sorted(faces, key=lambda f: -f["confidence"]):
+        if len(kept) >= max_faces:
+            break
+        # FaceNet embeddings are L2-normalised, so the dot product is the cosine.
+        if any(
+            float(np.dot(face["embedding"], other["embedding"])) >= dedupe_threshold
+            for other in kept
+        ):
+            continue
+        kept.append(face)
+    return kept
+
+
+def video_util_expected_frame_dimension(metadata: Mapping[str, Any]) -> int:
+    """The longest side a keyframe of this video should have. A source smaller
+    than the cap can never reach it, so its frames are already current."""
+    from app.config.settings import VIDEO_FRAME_MAX_DIMENSION
+
+    source = max(int(metadata.get("width") or 0), int(metadata.get("height") or 0))
+    if not source:
+        return VIDEO_FRAME_MAX_DIMENSION
+    return min(source, VIDEO_FRAME_MAX_DIMENSION)
+
+
+def video_util_frame_needs_refresh(
+    frame_path: Optional[str], expected_dimension: int
+) -> bool:
+    """Whether a stored keyframe has to be sampled again: it was purged, its
+    file is gone, or it was written smaller than the source allows -- which is
+    what leaves its faces too small to embed.
+    """
+    if not frame_path or not os.path.exists(frame_path):
+        return True
+    try:
+        # Lazy open: this reads the JPEG header, not the pixels.
+        with Image.open(frame_path) as image:
+            return max(image.size) < expected_dimension
+    except Exception as e:
+        logger.warning(f"Could not read keyframe {frame_path}, re-sampling it: {e}")
+        return True
+
+
+def video_util_refresh_frame_images(
+    video_id: str,
+    video_path: str,
+    frames: List[dict],
+    expected_dimension: int,
+) -> List[dict]:
+    """Re-sample the stale keyframes among `frames`, writing each back over its
+    own path, and return the ones now readable on disk.
+
+    Frame rows, ids and timestamps are left alone, so the SigLIP2 embeddings
+    hanging off them survive -- a re-tag would throw all of that away.
+    """
+    from app.database.video_frames import db_set_video_frame_paths
+
+    stale = {
+        frame["id"]
+        for frame in frames
+        if video_util_frame_needs_refresh(frame["frame_path"], expected_dimension)
+    }
+    if not stale:
+        return frames
+
+    frame_dir = video_util_frame_directory(video_id)
+    os.makedirs(frame_dir, exist_ok=True)
+
+    capture = cv2.VideoCapture(video_path)
+    try:
+        if not capture.isOpened():
+            logger.warning(f"Could not open video to re-sample frames: {video_path}")
+            # Whatever is already on disk is still worth looking at.
+            return [frame for frame in frames if frame["id"] not in stale]
+
+        usable = []
+        restored = []
+        for frame in frames:
+            if frame["id"] not in stale:
+                usable.append(frame)
+                continue
+
+            # A purged frame has no path of its own left to write back to.
+            frame_path = frame["frame_path"] or os.path.abspath(
+                os.path.join(frame_dir, f"frame_{frame['frame_index']:04d}.jpg")
+            )
+            capture.set(cv2.CAP_PROP_POS_MSEC, (frame["timestamp_sec"] or 0.0) * 1000)
+            ret, image = capture.read()
+            if not ret or image is None:
+                continue
+
+            try:
+                img = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+                # Never upscales, so this matches what the sampler would write.
+                img.thumbnail((expected_dimension, expected_dimension))
+                img.save(frame_path, "JPEG", quality=85)
+            except Exception as e:
+                logger.error(f"Error re-sampling frame of {video_path}: {e}")
+                continue
+
+            if not frame["frame_path"]:
+                restored.append((frame["id"], frame_path))
+            usable.append({**frame, "frame_path": frame_path})
+
+        db_set_video_frame_paths(restored)
+        return usable
+    finally:
+        capture.release()
+
+
+def video_util_backfill_video_faces() -> int:
+    """Find people in videos that were tagged before face detection was on.
+
+    Keyframes are classified as they already sit on disk and only the ones
+    showing a person are sampled again at full resolution: YOLO letterboxes to
+    its own input size, so the stored resolution decides whether a face can be
+    embedded, not whether a person is found.
+    """
+    from app.config.settings import (
+        VIDEO_FACE_DEDUPE_THRESHOLD,
+        VIDEO_MAX_FACES_PER_VIDEO,
+    )
+    from app.database.faces import (
+        db_delete_keyframe_faces_for_video,
+        db_insert_face_embeddings,
+    )
+    from app.database.video_frames import (
+        db_get_frames_for_video,
+        db_get_videos_needing_face_scan,
+        db_mark_videos_faces_scanned,
+    )
+    from app.models.FaceDetector import FaceDetector
+    from app.models.ObjectClassifier import ObjectClassifier
+
+    if not video_util_face_detection_enabled():
+        return 0
+
+    try:
+        videos = db_get_videos_needing_face_scan()
+        if not videos:
+            return 0
+
+        object_classifier = ObjectClassifier()
+        face_detector = FaceDetector()
+        scanned = 0
+        total_faces = 0
+        failed: List[str] = []
+
+        try:
+            for video in videos:
+                video_id = video["id"]
+                try:
+                    frames = db_get_frames_for_video(video_id)
+                    if not frames:
+                        # Nothing was ever sampled, so there is nothing to look at
+                        # -- but don't re-probe the file on every pass either.
+                        db_mark_videos_faces_scanned([video_id])
+                        scanned += 1
+                        continue
+
+                    expected_dimension = video_util_expected_frame_dimension(
+                        image_util_parse_metadata(video["metadata"])
+                    )
+                    # A purged cache leaves nothing to classify, so there is no way
+                    # to tell which frames are worth sampling: all of them are.
+                    if any(not frame["frame_path"] for frame in frames):
+                        frames = video_util_refresh_frame_images(
+                            video_id, video["path"], frames, expected_dimension
+                        )
+
+                    classes_by_frame = {
+                        frame["id"]: object_classifier.get_classes(frame["frame_path"])
+                        or []
+                        for frame in frames
+                        if frame["frame_path"]
+                    }
+                    person_frames = video_util_refresh_frame_images(
+                        video_id,
+                        video["path"],
+                        [
+                            frame
+                            for frame in frames
+                            if 0 in classes_by_frame.get(frame["id"], [])
+                        ],
+                        expected_dimension,
+                    )
+
+                    faces = video_util_select_video_faces(
+                        video_util_detect_video_faces(
+                            face_detector,
+                            person_frames,
+                            [classes_by_frame[frame["id"]] for frame in person_frames],
+                        ),
+                        VIDEO_FACE_DEDUPE_THRESHOLD,
+                        VIDEO_MAX_FACES_PER_VIDEO,
+                    )
+
+                    # Clean first: a scan killed part-way through this video would
+                    # otherwise have its faces stored twice on the retry.
+                    db_delete_keyframe_faces_for_video(video_id)
+                    try:
+                        for face in faces:
+                            db_insert_face_embeddings(
+                                None,
+                                face["embedding"],
+                                confidence=face["confidence"],
+                                bbox=face["bbox"],
+                                frame_id=face["frame_id"],
+                            )
+                    except sqlite3.IntegrityError:
+                        # The video can be deleted during inference, cascading its
+                        # keyframes away and failing the faces FK; skip it.
+                        logger.info(
+                            f"Video {video_id} was removed during the face scan"
+                        )
+                        continue
+
+                    db_mark_videos_faces_scanned([video_id])
+                    scanned += 1
+                    total_faces += len(faces)
+                except Exception:
+                    # One bad video must not stop every video queued behind it
+                    logger.exception(f"Face scan failed for video {video_id}")
+                    failed.append(video_id)
+        finally:
+            object_classifier.close()
+            face_detector.close()
+
+        logger.info(
+            f"Video face scan complete. Videos: {scanned}/{len(videos)}, "
+            f"Faces stored: {total_faces}"
+        )
+        if failed:
+            logger.warning(f"{len(failed)} video(s) failed the face scan: {failed}")
+        return scanned
+    except Exception as e:
+        logger.error(f"Error scanning videos for faces: {e}")
+        return 0
+
+
 def video_util_process_untagged_videos() -> bool:
-    """Sample and object-tag every untagged video in AI-tagging folders."""
-    from app.config.settings import VIDEO_TAG_MIN_FRAME_SUPPORT
+    """Sample, object-tag and face-detect every untagged video in AI-tagging
+    folders."""
+    from app.config.settings import (
+        VIDEO_FACE_DEDUPE_THRESHOLD,
+        VIDEO_MAX_FACES_PER_VIDEO,
+        VIDEO_TAG_MIN_FRAME_SUPPORT,
+    )
+    from app.database.faces import db_insert_face_embeddings
     from app.database.video_frames import (
         db_bulk_insert_video_frames,
         db_delete_frames_for_videos,
         db_get_untagged_videos,
+        db_mark_videos_faces_scanned,
         db_mark_videos_tagged,
         db_write_video_classes,
     )
+    from app.models.FaceDetector import FaceDetector
     from app.models.ObjectClassifier import ObjectClassifier
 
     try:
@@ -632,46 +986,94 @@ def video_util_process_untagged_videos() -> bool:
 
         interval = video_util_get_frame_interval()
         object_classifier = ObjectClassifier()
+        face_detector = FaceDetector() if video_util_face_detection_enabled() else None
         total_frames = 0
+        total_faces = 0
+        failed: List[str] = []
 
         try:
             for video in untagged_videos:
                 video_id = video["id"]
-                frames = video_util_extract_video_frames(
-                    video_id, video["path"], interval
-                )
+                try:
+                    frames = video_util_extract_video_frames(
+                        video_id, video["path"], interval
+                    )
 
-                if not frames:
-                    # Undecodable files are still marked tagged, otherwise
-                    # every folder sync retries them forever.
-                    logger.warning(
-                        f"No frames sampled from {video['path']}; tagging as empty"
+                    if not frames:
+                        # Undecodable files are still marked tagged, otherwise
+                        # every folder sync retries them forever.
+                        logger.warning(
+                            f"No frames sampled from {video['path']}; tagging as empty"
+                        )
+                        db_mark_videos_tagged([video_id])
+                        if face_detector is not None:
+                            db_mark_videos_faces_scanned([video_id])
+                        continue
+
+                    db_delete_frames_for_videos([video_id])
+                    db_bulk_insert_video_frames(frames)
+                    total_frames += len(frames)
+
+                    frame_class_ids = [
+                        object_classifier.get_classes(frame["frame_path"]) or []
+                        for frame in frames
+                    ]
+
+                    # Re-tags start clean: deleting the old frames above cascaded
+                    # their faces away, so these never pile up on an existing set.
+                    faces: List[VideoFace] = []
+                    if face_detector is not None:
+                        faces = video_util_select_video_faces(
+                            video_util_detect_video_faces(
+                                face_detector, frames, frame_class_ids
+                            ),
+                            VIDEO_FACE_DEDUPE_THRESHOLD,
+                            VIDEO_MAX_FACES_PER_VIDEO,
+                        )
+                    try:
+                        for face in faces:
+                            db_insert_face_embeddings(
+                                None,
+                                face["embedding"],
+                                confidence=face["confidence"],
+                                bbox=face["bbox"],
+                                frame_id=face["frame_id"],
+                            )
+                    except sqlite3.IntegrityError:
+                        # The video can be deleted during inference, cascading its
+                        # keyframes away and failing the faces FK; skip it.
+                        logger.info(f"Video {video_id} was removed during tagging")
+                        continue
+                    total_faces += len(faces)
+
+                    db_write_video_classes(
+                        video_id,
+                        video_util_aggregate_frame_classes(
+                            frame_class_ids, VIDEO_TAG_MIN_FRAME_SUPPORT
+                        ),
                     )
                     db_mark_videos_tagged([video_id])
-                    continue
-
-                db_delete_frames_for_videos([video_id])
-                db_bulk_insert_video_frames(frames)
-                total_frames += len(frames)
-
-                frame_class_ids = [
-                    object_classifier.get_classes(frame["frame_path"]) or []
-                    for frame in frames
-                ]
-                db_write_video_classes(
-                    video_id,
-                    video_util_aggregate_frame_classes(
-                        frame_class_ids, VIDEO_TAG_MIN_FRAME_SUPPORT
-                    ),
-                )
-                db_mark_videos_tagged([video_id])
+                    # Only when the detector ran: leaving this clear is what lets
+                    # a later scan pick the video up once the setting is turned on.
+                    if face_detector is not None:
+                        db_mark_videos_faces_scanned([video_id])
+                except Exception:
+                    # One bad video must not stop every video queued behind it
+                    logger.exception(f"Tagging failed for video {video_id}")
+                    failed.append(video_id)
         finally:
             object_classifier.close()
+            if face_detector is not None:
+                face_detector.close()
 
         logger.info(
             f"Video tagging pass complete. Videos: {len(untagged_videos)}, "
-            f"Frames sampled: {total_frames}, Interval: {interval}s"
+            f"Frames sampled: {total_frames}, Faces stored: {total_faces}, "
+            f"Interval: {interval}s"
         )
+        if failed:
+            logger.warning(f"{len(failed)} video(s) failed tagging: {failed}")
+            return False
         return True
     except Exception as e:
         logger.error(f"Error processing untagged videos: {e}")

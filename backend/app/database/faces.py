@@ -10,6 +10,7 @@ logger = get_logger(__name__)
 # Type definitions
 FaceId = int
 ImageId = str
+FrameId = str
 ClusterId = int
 BoundingBox = Dict[str, Union[int, float]]
 FaceEmbedding = np.ndarray
@@ -19,7 +20,10 @@ class FaceData(TypedDict):
     """Represents the full faces table structure"""
 
     face_id: FaceId
-    image_id: ImageId
+    # Exactly one of image_id / frame_id is set: a face comes from a photo or
+    # from a sampled video keyframe. The video is reached via video_frames.
+    image_id: Optional[ImageId]
+    frame_id: Optional[FrameId]
     cluster_id: Optional[ClusterId]
     embeddings: FaceEmbedding  # Numpy array in application, stored as JSON string in DB
     confidence: Optional[float]
@@ -29,29 +33,53 @@ class FaceData(TypedDict):
 FaceClusterMapping = Dict[FaceId, Optional[ClusterId]]
 
 
+def _connect() -> sqlite3.Connection:
+    conn = sqlite3.connect(DATABASE_PATH)
+    # Ensure ON DELETE CASCADE and other FKs are enforced
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+
 def db_create_faces_table() -> None:
     conn = None
     try:
-        conn = sqlite3.connect(DATABASE_PATH)
-        conn.execute("PRAGMA foreign_keys = ON")
+        conn = _connect()
         cursor = conn.cursor()
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS faces (
                 face_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 image_id TEXT,
+                frame_id TEXT,
                 cluster_id INTEGER,
                 embeddings TEXT,
                 confidence REAL,
                 bbox TEXT,
                 FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
+                FOREIGN KEY (frame_id) REFERENCES video_frames(id) ON DELETE CASCADE,
                 FOREIGN KEY (cluster_id) REFERENCES face_clusters(cluster_id) ON DELETE SET NULL
             )
         """
         )
+        # Legacy databases only: they predate the column above, and
+        # CREATE IF NOT EXISTS will not add it to a table that already exists.
+        # No CHECK enforcing the exclusive arc -- SQLite cannot ALTER one in, so
+        # fresh and migrated databases would end up with different schemas.
+        cursor.execute("PRAGMA table_info(faces)")
+        if "frame_id" not in {row[1] for row in cursor.fetchall()}:
+            cursor.execute(
+                "ALTER TABLE faces ADD COLUMN frame_id TEXT "
+                "REFERENCES video_frames(id) ON DELETE CASCADE"
+            )
+
         # Face counts are looked up per image by the memory scorer.
         cursor.execute(
             "CREATE INDEX IF NOT EXISTS ix_faces_image_id ON faces(image_id)"
+        )
+        # Mirrors the image index: faces are looked up per keyframe, and the
+        # cascade from a deleted video walks this way.
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS ix_faces_frame_id ON faces(frame_id)"
         )
         conn.commit()
     finally:
@@ -59,25 +87,83 @@ def db_create_faces_table() -> None:
             conn.close()
 
 
+def db_repair_orphaned_faces() -> int:
+    """
+    Apply the FK actions that rows written before enforcement missed: delete faces
+    whose image or keyframe is gone, unassign faces whose cluster is gone.
+    Returns rows repaired.
+    """
+    conn = _connect()
+    try:
+        # Each id is NULL on the side of the arc a face doesn't use, so only a
+        # set id with no parent row is an orphan.
+        deleted = conn.execute(
+            """
+            DELETE FROM faces
+             WHERE (image_id IS NOT NULL AND NOT EXISTS (
+                       SELECT 1 FROM images WHERE images.id = faces.image_id))
+                OR (frame_id IS NOT NULL AND NOT EXISTS (
+                       SELECT 1 FROM video_frames
+                        WHERE video_frames.id = faces.frame_id))
+            """
+        ).rowcount
+        unassigned = conn.execute(
+            """
+            UPDATE faces SET cluster_id = NULL
+             WHERE cluster_id IS NOT NULL
+               AND NOT EXISTS (
+                   SELECT 1 FROM face_clusters
+                    WHERE face_clusters.cluster_id = faces.cluster_id
+               )
+            """
+        ).rowcount
+        conn.commit()
+        if deleted or unassigned:
+            logger.info(
+                f"Removed {deleted} orphaned face(s); "
+                f"unassigned {unassigned} from missing clusters"
+            )
+        return deleted + unassigned
+    except sqlite3.Error:
+        # Best effort: a failed repair must not stop the backend from starting
+        logger.exception("Error repairing orphaned faces")
+        conn.rollback()
+        return 0
+    finally:
+        conn.close()
+
+
 def db_insert_face_embeddings(
-    image_id: ImageId,
+    image_id: Optional[ImageId],
     embeddings: FaceEmbedding,
     confidence: Optional[float] = None,
     bbox: Optional[BoundingBox] = None,
     cluster_id: Optional[ClusterId] = None,
+    frame_id: Optional[FrameId] = None,
 ) -> FaceId:
     """
     Insert face embeddings with additional metadata.
 
 
     Args:
-        image_id: ID of the image this face belongs to
+        image_id: ID of the image this face belongs to (None for a video face)
         embeddings: Face embedding vector (numpy array)
         confidence: Confidence score for face detection (optional)
         bbox: Bounding box coordinates as dict with keys: x, y, width, height (optional)
         cluster_id: ID of the face cluster this face belongs to (optional)
+        frame_id: ID of the video keyframe this face belongs to (None for a photo)
+
+    Raises:
+        ValueError: if image_id and frame_id are both set or both missing
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    # Enforced here rather than as a CHECK constraint: see db_create_faces_table.
+    if (image_id is None) == (frame_id is None):
+        raise ValueError(
+            "Exactly one of image_id or frame_id must be set for a face "
+            f"(got image_id={image_id!r}, frame_id={frame_id!r})"
+        )
+
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -88,10 +174,11 @@ def db_insert_face_embeddings(
 
         cursor.execute(
             """
-            INSERT INTO faces (image_id, cluster_id, embeddings, confidence, bbox)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO faces
+                (image_id, frame_id, cluster_id, embeddings, confidence, bbox)
+            VALUES (?, ?, ?, ?, ?, ?)
         """,
-            (image_id, cluster_id, embeddings_json, confidence, bbox_json),
+            (image_id, frame_id, cluster_id, embeddings_json, confidence, bbox_json),
         )
 
         face_id = cursor.lastrowid
@@ -148,8 +235,56 @@ def db_insert_face_embeddings_by_image_id(
         )
 
 
+def db_get_all_video_face_embeddings() -> List[Dict[str, Union[str, list]]]:
+    """
+    Every keyframe face with the video it came from, for face search.
+
+    Several rows can share a video -- the caller keeps the best match rather
+    than picking an arbitrary face per video.
+    """
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            """
+            SELECT vf.video_id, f.embeddings
+            FROM faces f
+            INNER JOIN video_frames vf ON f.frame_id = vf.id
+            """
+        ).fetchall()
+
+        faces = []
+        for video_id, embeddings in rows:
+            try:
+                faces.append(
+                    {"video_id": video_id, "embeddings": json.loads(embeddings)}
+                )
+            except json.JSONDecodeError:
+                continue
+        return faces
+    finally:
+        conn.close()
+
+
+def db_delete_keyframe_faces_for_video(video_id: str) -> int:
+    """Drop a video's keyframe faces, so a scan interrupted part-way through
+    one video cannot leave half its faces behind to be duplicated on retry."""
+    conn = _connect()
+    try:
+        deleted = conn.execute(
+            """
+            DELETE FROM faces
+            WHERE frame_id IN (SELECT id FROM video_frames WHERE video_id = ?)
+            """,
+            (video_id,),
+        ).rowcount
+        conn.commit()
+        return deleted
+    finally:
+        conn.close()
+
+
 def get_all_face_embeddings():
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -223,30 +358,39 @@ def get_all_face_embeddings():
         conn.close()
 
 
-def db_get_faces_unassigned_clusters() -> List[Dict[str, Union[FaceId, FaceEmbedding]]]:
+def db_get_faces_unassigned_clusters() -> (
+    List[Dict[str, Union[FaceId, FaceEmbedding, Optional[str]]]]
+):
     """
     Get all faces that don't have assigned clusters.
 
     Returns:
-        List of dictionaries containing face_id and embeddings (as numpy array)
+        List of dictionaries containing face_id, image_id, frame_id, and
+        embeddings (as numpy array). Exactly one of image_id / frame_id is set.
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
         cursor.execute(
-            "SELECT face_id, image_id, embeddings FROM faces WHERE cluster_id IS NULL"
+            "SELECT face_id, image_id, frame_id, embeddings "
+            "FROM faces WHERE cluster_id IS NULL"
         )
 
         rows = cursor.fetchall()
 
         faces = []
         for row in rows:
-            face_id, image_id, embeddings_json = row
+            face_id, image_id, frame_id, embeddings_json = row
             # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
             faces.append(
-                {"face_id": face_id, "image_id": image_id, "embeddings": embeddings}
+                {
+                    "face_id": face_id,
+                    "image_id": image_id,
+                    "frame_id": frame_id,
+                    "embeddings": embeddings,
+                }
             )
 
         return faces
@@ -261,15 +405,17 @@ def db_get_all_faces_with_cluster_names() -> (
     Get all faces with their corresponding cluster names.
 
     Returns:
-        List of dictionaries containing face_id, embeddings (as numpy array), and cluster_name
+        List of dictionaries containing face_id, image_id, frame_id, embeddings
+        (as numpy array), and cluster_name. Exactly one of image_id / frame_id
+        is set.
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
         cursor.execute(
             """
-            SELECT f.face_id, f.image_id, f.embeddings, fc.cluster_name
+            SELECT f.face_id, f.image_id, f.frame_id, f.embeddings, fc.cluster_name
             FROM faces f
             LEFT JOIN face_clusters fc ON f.cluster_id = fc.cluster_id
             ORDER BY f.face_id
@@ -280,13 +426,14 @@ def db_get_all_faces_with_cluster_names() -> (
 
         faces = []
         for row in rows:
-            face_id, image_id, embeddings_json, cluster_name = row
+            face_id, image_id, frame_id, embeddings_json, cluster_name = row
             # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
             faces.append(
                 {
                     "face_id": face_id,
                     "image_id": image_id,
+                    "frame_id": frame_id,
                     "embeddings": embeddings,
                     "cluster_name": cluster_name,
                 }
@@ -321,7 +468,7 @@ def db_update_face_cluster_ids_batch(
 
     own_connection = cursor is None
     if own_connection:
-        conn = sqlite3.connect(DATABASE_PATH)
+        conn = _connect()
         cursor = conn.cursor()
 
     # 1. Prepare update data outside the DB transaction.
@@ -361,12 +508,14 @@ def db_update_face_cluster_ids_batch(
             conn.close()
 
 
-def db_get_cluster_image_pairs() -> set:
-    """Distinct (cluster_id, image_id) pairs for all cluster-assigned faces."""
-    conn = sqlite3.connect(DATABASE_PATH)
+def db_get_cluster_media_pairs() -> set:
+    """Distinct (cluster_id, photo or keyframe id) pairs for all cluster-assigned
+    faces: the units a cluster may hold only one face from."""
+    conn = _connect()
     try:
         rows = conn.execute(
-            "SELECT DISTINCT cluster_id, image_id FROM faces WHERE cluster_id IS NOT NULL"
+            "SELECT DISTINCT cluster_id, COALESCE(image_id, frame_id) "
+            "FROM faces WHERE cluster_id IS NOT NULL"
         ).fetchall()
         return set(rows)
     finally:
@@ -377,11 +526,15 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
     """
     Get cluster IDs and their corresponding mean face embeddings.
 
+    Means come from photo faces only: a cluster's identity is defined by its photos,
+    and attached keyframe faces must never move it, or matches could drift across
+    people one video face at a time.
+
     Returns:
         List of dictionaries containing cluster_id and mean_embedding (as numpy array)
-        Only returns clusters that have at least one face assigned
+        Only returns clusters that have at least one photo face assigned
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -389,7 +542,7 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
             """
             SELECT f.cluster_id, f.embeddings
             FROM faces f
-            WHERE f.cluster_id IS NOT NULL
+            WHERE f.cluster_id IS NOT NULL AND f.image_id IS NOT NULL
             ORDER BY f.cluster_id
             """
         )

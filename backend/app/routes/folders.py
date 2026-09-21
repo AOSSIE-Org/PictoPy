@@ -41,7 +41,10 @@ from app.schemas.folders import (
     UpdateAITaggingResponse,
 )
 from app.utils.API import API_util_restart_sync_microservice_watcher
-from app.utils.face_clusters import cluster_util_face_clusters_sync
+from app.utils.face_clusters import (
+    cluster_util_attach_keyframe_faces,
+    cluster_util_face_clusters_sync,
+)
 from app.utils.folders import (
     folder_util_add_folder_tree,
     folder_util_add_multiple_folder_trees,
@@ -59,6 +62,7 @@ from app.utils.semantic_labels import (
     semantic_util_score_videos,
 )
 from app.utils.videos import (
+    video_util_backfill_video_faces,
     video_util_process_folder_videos,
     video_util_process_unembedded_frames,
     video_util_process_untagged_videos,
@@ -168,6 +172,11 @@ def post_AI_tagging_enabled_sequence():
         _curate_memories("ai_tagging")
         # Videos last: photos are the primary surface, so they finish first.
         video_util_process_untagged_videos()
+        # Catches up videos tagged before finding people in videos was on.
+        video_util_backfill_video_faces()
+        # Keyframe faces only exist from here; join them to the clusters built
+        # above now rather than on the next sync.
+        cluster_util_attach_keyframe_faces()
         video_util_process_unembedded_frames()
         semantic_util_score_videos()
     except Exception as e:
@@ -208,6 +217,8 @@ def post_sync_folder_sequence(
         semantic_util_score_images()
         _curate_memories("sync_folder")
         video_util_process_untagged_videos()
+        video_util_backfill_video_faces()
+        cluster_util_attach_keyframe_faces()
         video_util_process_unembedded_frames()
         semantic_util_score_videos()
 

@@ -4,6 +4,7 @@ from typing import Optional, Literal
 # Single-sourced from the sampler's config so the API reports, validates, and
 # defaults to exactly what video_util_get_frame_interval() uses.
 from app.config.settings import (
+    VIDEO_FACE_DETECTION,
     VIDEO_FRAME_INTERVAL_SECONDS,
     VIDEO_FRAME_INTERVAL_MIN,
     VIDEO_FRAME_INTERVAL_MAX,
@@ -77,6 +78,9 @@ class UserPreferencesData(BaseModel):
         ge=VIDEO_FRAME_INTERVAL_MIN,
         le=VIDEO_FRAME_INTERVAL_MAX,
     )
+    # Finding people in videos runs a second detector over every keyframe with
+    # a person in it, so it is opt-in.
+    Video_Face_Detection: bool = VIDEO_FACE_DETECTION
     memories: MemoriesPreferences = Field(default_factory=MemoriesPreferences)
 
 
@@ -126,6 +130,7 @@ class UpdateUserPreferencesRequest(BaseModel):
     Video_Frame_Interval: Optional[float] = Field(
         default=None, ge=VIDEO_FRAME_INTERVAL_MIN, le=VIDEO_FRAME_INTERVAL_MAX
     )
+    Video_Face_Detection: Optional[bool] = None
     memories: Optional[MemoriesPreferencesUpdate] = None
 
 
