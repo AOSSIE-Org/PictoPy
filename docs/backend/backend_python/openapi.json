@@ -3337,6 +3337,16 @@
           "pending": {
             "type": "integer",
             "title": "Pending"
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running",
+            "default": false
+          },
+          "failed": {
+            "type": "boolean",
+            "title": "Failed",
+            "default": false
           }
         },
         "type": "object",

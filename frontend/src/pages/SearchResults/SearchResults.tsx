@@ -36,7 +36,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, AlertCircle, Users } from 'lucide-react';
 import { resolvePeopleQuery } from '@/utils/peopleQuery';
-import { formatPeopleTitle, getPersonName } from '@/utils/personUtils';
+import {
+  facePhotoToImage,
+  formatPeopleTitle,
+  getPersonName,
+} from '@/utils/personUtils';
 
 interface TagSearchResult extends APIResponse {
   resultType: 'tag';
@@ -284,21 +288,8 @@ export const SearchResults = () => {
       dispatch(hideLoader());
     } else if (isPeopleSuccess) {
       setPeopleSearchError(null);
-      const images = (peopleData?.data?.images ?? []) as Array<
-        Partial<Image> & { id: string; path: string }
-      >;
-      dispatch(
-        setImages(
-          images.map((img) => ({
-            id: img.id,
-            path: img.path,
-            thumbnailPath: img.thumbnailPath || '',
-            metadata: img.metadata,
-            folder_id: '',
-            isTagged: true,
-          })) as Image[],
-        ),
-      );
+      const images = peopleData?.data?.images ?? [];
+      dispatch(setImages(images.map(facePhotoToImage)));
       dispatch(hideLoader());
     }
 

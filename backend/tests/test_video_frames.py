@@ -3,6 +3,7 @@ import os
 import sqlite3
 import tempfile
 import shutil
+from concurrent.futures import Future
 from unittest.mock import MagicMock, patch
 
 import cv2
@@ -408,7 +409,11 @@ class TestFaceScanQueries:
 
         assert [v["id"] for v in db_get_videos_needing_face_scan()] == [video_id]
 
-    def test_progress_counts_every_video_in_ai_folders(self, video_id):
+    def test_progress_counts_the_videos_the_scan_works_through(self, video_id):
+        # Untagged videos aren't the scan's to do, so they'd hold it below 100%
+        assert db_count_video_face_scan_progress() == (0, 0)
+
+        db_mark_videos_tagged([video_id])
         assert db_count_video_face_scan_progress() == (1, 0)
 
         db_mark_videos_faces_scanned([video_id])
@@ -537,6 +542,9 @@ def scan_client(test_db):
     app = FastAPI()
     app.include_router(videos_router, prefix="/videos")
     app.state.executor = MagicMock()
+    # A real, never-finished Future: the scan reads as running until a test
+    # settles it
+    app.state.executor.submit.return_value = Future()
     return TestClient(app)
 
 
@@ -548,7 +556,13 @@ class TestFaceScanRoutes:
             response = scan_client.post("/videos/scan-faces")
 
         assert response.status_code == 200
-        assert response.json()["data"] == {"total": 1, "scanned": 0, "pending": 1}
+        assert response.json()["data"] == {
+            "total": 1,
+            "scanned": 0,
+            "pending": 1,
+            "running": True,
+            "failed": False,
+        }
         # Handed off rather than run inline: a full library takes over an hour.
         submitted = scan_client.app.state.executor.submit.call_args.args[0]
         assert submitted is post_video_face_scan_sequence
@@ -561,18 +575,73 @@ class TestFaceScanRoutes:
         assert "Find People in Videos" in response.json()["detail"]["message"]
         scan_client.app.state.executor.submit.assert_not_called()
 
+    def test_a_second_start_does_not_queue_another_scan(self, scan_client, video_id):
+        db_mark_videos_tagged([video_id])
+
+        with patch("app.config.settings.VIDEO_FACE_DETECTION", True):
+            scan_client.post("/videos/scan-faces")
+            scan_client.post("/videos/scan-faces")
+
+        assert scan_client.app.state.executor.submit.call_count == 1
+
     def test_status_counts_scanned_against_the_whole_library(
         self, scan_client, video_id
     ):
+        db_mark_videos_tagged([video_id])
         db_mark_videos_faces_scanned([video_id])
 
         response = scan_client.get("/videos/face-scan-status")
 
         assert response.status_code == 200
-        assert response.json()["data"] == {"total": 1, "scanned": 1, "pending": 0}
+        assert response.json()["data"] == {
+            "total": 1,
+            "scanned": 1,
+            "pending": 0,
+            "running": False,
+            "failed": False,
+        }
 
     def test_status_of_an_empty_library_is_not_an_error(self, scan_client):
         response = scan_client.get("/videos/face-scan-status")
 
         assert response.status_code == 200
-        assert response.json()["data"] == {"total": 0, "scanned": 0, "pending": 0}
+        assert response.json()["data"] == {
+            "total": 0,
+            "scanned": 0,
+            "pending": 0,
+            "running": False,
+            "failed": False,
+        }
+
+    @pytest.mark.parametrize(
+        "settle, failed",
+        [
+            (lambda future: future.set_result(True), False),
+            (lambda future: future.set_result(False), True),
+            (lambda future: future.set_exception(RuntimeError("worker died")), True),
+        ],
+        ids=["succeeded", "returned-false", "raised"],
+    )
+    def test_status_reports_how_the_scan_ended(
+        self, scan_client, video_id, settle, failed
+    ):
+        """A dead worker must not read as a scan still running, or the UI
+        polls forever with its retry button disabled."""
+        db_mark_videos_tagged([video_id])
+        with patch("app.config.settings.VIDEO_FACE_DETECTION", True):
+            scan_client.post("/videos/scan-faces")
+
+        settle(scan_client.app.state.video_face_scan)
+        data = scan_client.get("/videos/face-scan-status").json()["data"]
+
+        assert data["running"] is False
+        assert data["failed"] is failed
+
+    def test_a_failed_scan_can_be_retried(self, scan_client, video_id):
+        db_mark_videos_tagged([video_id])
+        with patch("app.config.settings.VIDEO_FACE_DETECTION", True):
+            scan_client.post("/videos/scan-faces")
+            scan_client.app.state.video_face_scan.set_exception(RuntimeError())
+            scan_client.post("/videos/scan-faces")
+
+        assert scan_client.app.state.executor.submit.call_count == 2

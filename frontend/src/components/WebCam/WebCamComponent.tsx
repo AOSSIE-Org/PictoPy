@@ -18,14 +18,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useDispatch } from 'react-redux';
 import { startSearch, clearSearch } from '@/features/searchSlice';
-import type { Image, Video } from '@/types/Media';
+import type { Image } from '@/types/Media';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
-import { fetchSearchedFacesBase64 } from '@/api/api-functions';
+import {
+  fetchSearchedFacesBase64,
+  type FaceSearchResponse,
+} from '@/api/api-functions';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { setImages } from '@/features/imageSlice.ts';
 import { setVideos } from '@/features/videoSlice';
 import { DefaultError } from '@tanstack/react-query';
-import { BackendRes } from '@/hooks/useQueryExtension';
 
 interface WebcamComponentProps {
   isOpen: boolean;
@@ -41,7 +43,7 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
   const dispatch = useDispatch();
 
   const searchByFaceMutation = usePictoMutation<
-    BackendRes<Image[]>,
+    FaceSearchResponse,
     DefaultError,
     string,
     unknown,
@@ -58,8 +60,7 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
     errorMessage: 'Failed to search images. Please try again.',
     onSuccess: () => {
       const result = searchByFaceMutation.data?.data;
-      const videos = (searchByFaceMutation.data as { videos?: Video[] })
-        ?.videos;
+      const videos = searchByFaceMutation.data?.videos;
       if ((result && result.length > 0) || (videos && videos.length > 0)) {
         dispatch(setImages(result ?? []));
         dispatch(setVideos(videos ?? []));

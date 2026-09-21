@@ -13,10 +13,12 @@ let mockVideoFaceDetection = false;
 let mockMemories: MemoriesPreferences;
 let mockIsUpdating = false;
 
-const scanStatus = (status: FaceScanStatus) => ({
+const scanStatus = (
+  status: Omit<FaceScanStatus, 'running' | 'failed'> & Partial<FaceScanStatus>,
+) => ({
   success: true,
   message: 'ok',
-  data: status,
+  data: { running: false, failed: false, ...status },
 });
 
 jest.mock('@/api/api-functions', () => ({
@@ -282,7 +284,9 @@ describe('UserPreferencesCard video face detection', () => {
     mockVideoFaceDetection = true;
     mockGetVideoFaceScanStatus
       .mockResolvedValueOnce(scanStatus({ total: 9, scanned: 0, pending: 9 }))
-      .mockResolvedValue(scanStatus({ total: 9, scanned: 4, pending: 5 }));
+      .mockResolvedValue(
+        scanStatus({ total: 9, scanned: 4, pending: 5, running: true }),
+      );
     const user = userEvent.setup();
     render(<UserPreferencesCard />);
     await openVideoPanel(user);
@@ -296,6 +300,22 @@ describe('UserPreferencesCard video face detection', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /Scanning/i })).toBeDisabled(),
     );
+  });
+
+  it('offers a retry when the scan died part-way', async () => {
+    // A crashed worker must not leave the card polling with a dead button
+    mockVideoFaceDetection = true;
+    mockGetVideoFaceScanStatus.mockResolvedValue(
+      scanStatus({ total: 9, scanned: 4, pending: 5, failed: true }),
+    );
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openVideoPanel(user);
+
+    expect(
+      await screen.findByRole('button', { name: /Retry scan/i }),
+    ).toBeEnabled();
+    expect(screen.getByText(/stopped with an error/i)).toBeInTheDocument();
   });
 
   it('says so when every video has been scanned', async () => {

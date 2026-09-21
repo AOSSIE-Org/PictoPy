@@ -258,6 +258,12 @@ def run_pass(test_db) -> Iterator[Callable[..., SimpleNamespace]]:
                 side_effect=lambda video_id, path, interval: frames[video_id],
             ),
             patch("app.utils.videos.video_util_get_frame_interval", return_value=5.0),
+            patch(
+                "app.database.metadata.db_get_metadata",
+                return_value={
+                    "user_preferences": {"Video_Face_Detection": face_detection}
+                },
+            ),
             patch("app.config.settings.VIDEO_FACE_DETECTION", face_detection),
             patch("app.models.ObjectClassifier.ObjectClassifier") as classifier_cls,
             patch("app.models.FaceDetector.FaceDetector") as detector_cls,
@@ -366,6 +372,31 @@ class TestVideoFacePass:
         assert run.ok
         assert _rows(test_db, "SELECT frame_id FROM faces") == [("vid-kept-f0",)]
         assert _rows(test_db, "SELECT id, isTagged FROM videos") == [("vid-kept", 1)]
+
+    def test_a_video_that_fails_does_not_stop_the_rest(self, test_db, run_pass):
+        _add_video(test_db, "vid-bad")
+        _add_video(test_db, "vid-good")
+        bad, good = _frames("vid-bad", 1), _frames("vid-good", 1)
+        bad_path, good_path = bad[0]["frame_path"], good[0]["frame_path"]
+
+        def fail_on_bad(path: str) -> None:
+            if path == bad_path:
+                raise RuntimeError("corrupt keyframe")
+
+        run = run_pass(
+            {"vid-bad": bad, "vid-good": good},
+            {bad_path: [0], good_path: [0]},
+            {good_path: _result((A, 0.9))},
+            on_detect=fail_on_bad,
+        )
+
+        # Reported as a failure, but only after the good video was tagged
+        assert run.ok is False
+        assert _rows(test_db, "SELECT frame_id FROM faces") == [("vid-good-f0",)]
+        assert _rows(test_db, "SELECT id, isTagged FROM videos ORDER BY id") == [
+            ("vid-bad", 0),
+            ("vid-good", 1),
+        ]
 
     def test_tagging_with_detection_on_marks_the_video_scanned(self, test_db, run_pass):
         _add_video(test_db, "vid-1")
@@ -593,6 +624,12 @@ def run_scan(test_db) -> Iterator[Callable[..., SimpleNamespace]]:
                 "app.utils.videos.video_util_refresh_frame_images",
                 side_effect=lambda video_id, path, frames, dimension: frames,
             ) as refresh,
+            patch(
+                "app.database.metadata.db_get_metadata",
+                return_value={
+                    "user_preferences": {"Video_Face_Detection": face_detection}
+                },
+            ),
             patch("app.config.settings.VIDEO_FACE_DETECTION", face_detection),
             patch("app.models.ObjectClassifier.ObjectClassifier") as classifier_cls,
             patch("app.models.FaceDetector.FaceDetector") as detector_cls,
@@ -731,3 +768,25 @@ class TestBackfillVideoFaces:
 
         assert run.scanned == 1
         assert _rows(test_db, "SELECT frame_id FROM faces") == [("vid-kept-f0",)]
+
+    def test_a_video_that_fails_does_not_stop_the_rest(self, test_db, run_scan):
+        _add_video(test_db, "vid-bad", is_tagged=1)
+        _add_video(test_db, "vid-good", is_tagged=1)
+        bad = _add_frames("vid-bad", 1)[0]["frame_path"]
+        good = _add_frames("vid-good", 1)[0]["frame_path"]
+
+        def fail_on_bad(path: str) -> None:
+            if path == bad:
+                raise RuntimeError("corrupt keyframe")
+
+        run = run_scan(
+            {bad: [0], good: [0]}, {good: _result((A, 0.9))}, on_detect=fail_on_bad
+        )
+
+        assert run.scanned == 1
+        assert _rows(test_db, "SELECT frame_id FROM faces") == [("vid-good-f0",)]
+        # Left unscanned, so the next scan tries it again
+        assert _rows(test_db, "SELECT id, facesScanned FROM videos ORDER BY id") == [
+            ("vid-bad", 0),
+            ("vid-good", 1),
+        ]

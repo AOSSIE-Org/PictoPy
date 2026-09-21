@@ -88,7 +88,7 @@ export interface Cluster {
   cluster_id: string;
   /** Photos only; videos are counted separately. */
   face_count: number;
-  cluster_name: string;
-  video_count?: number;
+  cluster_name: string | null;
+  video_count: number;
   face_image_base64?: string;
 }

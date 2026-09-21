@@ -4,7 +4,7 @@ import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 import { VideoCard } from '@/components/Media/VideoCard';
 import { VideoPlayerOverlay } from '@/components/VideoPlayer/VideoPlayerOverlay';
-import { Image, Video } from '@/types/Media';
+import { facePhotoToImage } from '@/utils/personUtils';
 import { setCurrentViewIndex, setImages } from '@/features/imageSlice';
 import {
   setCurrentViewIndex as setCurrentVideoViewIndex,
@@ -50,10 +50,9 @@ export const PersonImages = () => {
     } else if (isError) {
       dispatch(hideLoader());
     } else if (isSuccess) {
-      const res: any = data?.data;
-      const images = (res?.images || []) as Image[];
-      dispatch(setImages(images));
-      dispatch(setVideos((res?.videos || []) as Video[]));
+      const res = data?.data;
+      dispatch(setImages((res?.images ?? []).map(facePhotoToImage)));
+      dispatch(setVideos(res?.videos ?? []));
       setClusterName(res?.cluster_name || 'random_name');
       setLoadedClusterId(clusterId);
       dispatch(hideLoader());
@@ -64,16 +63,15 @@ export const PersonImages = () => {
   const personImages =
     clusterId !== undefined && loadedClusterId === clusterId
       ? images
-      : ((data?.data as { images?: Image[] })?.images ?? []);
+      : (data?.data?.images ?? []).map(facePhotoToImage);
   const personVideos =
     clusterId !== undefined && loadedClusterId === clusterId
       ? videos
-      : ((data?.data as { videos?: Video[] })?.videos ?? []);
+      : (data?.data?.videos ?? []);
   const displayName =
     clusterId !== undefined && loadedClusterId === clusterId
       ? clusterName
-      : ((data?.data as { cluster_name?: string })?.cluster_name ??
-        'random_name');
+      : (data?.data?.cluster_name ?? 'random_name');
 
   const handleEditName = () => {
     setClusterName(clusterName);

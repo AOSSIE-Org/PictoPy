@@ -2,7 +2,7 @@ import { faceClustersEndpoints } from '../apiEndpoints';
 import { apiClient } from '../axiosConfig';
 import { APIResponse } from '@/types/API';
 import { BackendRes } from '@/hooks/useQueryExtension';
-import type { Image } from '@/types/Media';
+import type { Image, ImageMetadata, Video } from '@/types/Media';
 
 //Request Types
 export interface RenameClusterRequest {
@@ -19,6 +19,43 @@ export interface FetchSearchedFacesRequest {
 
 export interface FetchSearchedFacesBase64Request {
   base64_data: string;
+}
+
+//Response Types
+/** A photo as the face routes return it: less than a full `Image`. */
+export interface FacePhoto {
+  id: string;
+  path: string;
+  thumbnailPath?: string | null;
+  metadata?: ImageMetadata | null;
+}
+
+export interface ClusterImage extends FacePhoto {
+  face_id: number;
+  confidence?: number | null;
+  bbox?: Record<string, number> | null;
+}
+
+export interface ClusterImagesData {
+  cluster_id: string;
+  cluster_name: string | null;
+  images: ClusterImage[];
+  total_images: number;
+  videos: Video[];
+  total_videos: number;
+}
+
+/** Face search puts its videos beside `data`, not inside it. */
+export interface FaceSearchResponse extends BackendRes<Image[]> {
+  videos?: Video[];
+}
+
+export interface MultiPersonSearchData {
+  images: (FacePhoto & { match_count: number })[];
+  total: number;
+  match_mode: MultiPersonSearchRequest['match_mode'];
+  videos: (Video & { match_count: number })[];
+  total_videos: number;
 }
 
 export const fetchAllClusters = async (): Promise<APIResponse> => {
@@ -40,8 +77,8 @@ export const renameCluster = async (
 
 export const fetchClusterImages = async (
   request: FetchClusterImagesRequest,
-): Promise<APIResponse> => {
-  const response = await apiClient.get<APIResponse>(
+): Promise<BackendRes<ClusterImagesData>> => {
+  const response = await apiClient.get<BackendRes<ClusterImagesData>>(
     faceClustersEndpoints.getClusterImages(request.clusterId),
   );
   return response.data;
@@ -49,8 +86,8 @@ export const fetchClusterImages = async (
 
 export const fetchSearchedFaces = async (
   request: FetchSearchedFacesRequest,
-): Promise<APIResponse> => {
-  const response = await apiClient.post<APIResponse>(
+): Promise<FaceSearchResponse> => {
+  const response = await apiClient.post<FaceSearchResponse>(
     faceClustersEndpoints.searchForFaces,
     request,
   );
@@ -59,8 +96,8 @@ export const fetchSearchedFaces = async (
 
 export const fetchSearchedFacesBase64 = async (
   request: FetchSearchedFacesBase64Request,
-): Promise<BackendRes<Image[]>> => {
-  const response = await apiClient.post<BackendRes<Image[]>>(
+): Promise<FaceSearchResponse> => {
+  const response = await apiClient.post<FaceSearchResponse>(
     faceClustersEndpoints.searchForFacesBase64,
     request,
   );
@@ -88,8 +125,8 @@ export interface MultiPersonSearchRequest {
 
 export const fetchMultiPersonSearch = async (
   request: MultiPersonSearchRequest,
-): Promise<APIResponse> => {
-  const response = await apiClient.post<APIResponse>(
+): Promise<BackendRes<MultiPersonSearchData>> => {
+  const response = await apiClient.post<BackendRes<MultiPersonSearchData>>(
     faceClustersEndpoints.multiPersonSearch,
     request,
   );

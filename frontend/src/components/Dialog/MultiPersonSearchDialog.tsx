@@ -13,7 +13,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PersonAvatar } from '@/components/PersonAvatar';
-import { getPersonName, getPhotoCountText } from '@/utils/personUtils';
+import {
+  facePhotoToImage,
+  getPersonName,
+  getPhotoCountText,
+} from '@/utils/personUtils';
 import { Switch } from '@/components/ui/switch';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
 import {
@@ -24,7 +28,6 @@ import { setImages } from '@/features/imageSlice';
 import { setVideos } from '@/features/videoSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
-import type { Image, Video } from '@/types/Media';
 
 interface MultiPersonSearchDialogProps {
   open: boolean;
@@ -53,7 +56,7 @@ export function MultiPersonSearchDialog({
       fetchMultiPersonSearch(req),
     onSuccess: (data) => {
       const images = data?.data?.images;
-      const videos = (data?.data?.videos ?? []) as Video[];
+      const videos = data?.data?.videos ?? [];
       dispatch(hideLoader());
 
       if ((!images || images.length === 0) && videos.length === 0) {
@@ -67,14 +70,7 @@ export function MultiPersonSearchDialog({
         return;
       }
 
-      const mappedImages = (images ?? []).map((img: any) => ({
-        id: img.id,
-        path: img.path,
-        thumbnailPath: img.thumbnailPath || '',
-        metadata: img.metadata,
-        folder_id: '',
-        isTagged: true,
-      })) as Image[];
+      const mappedImages = (images ?? []).map(facePhotoToImage);
 
       const selectedNames = [...selectedIds]
         .map((id) => {

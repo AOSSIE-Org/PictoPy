@@ -10,8 +10,9 @@
 
 - Object detection using **YOLOv11** for identifying various items in images
 - Face detection and clustering powered by **FaceNet**.
-- **People in videos** (optional): faces found in video keyframes join the people recognised in your photos, so a
-  person's page lists their videos too. Off by default; turn it on under Settings → Video Tagging.
+- **People in videos** (optional): faces found in video keyframes join the people recognized in your photos, so a
+  person's page lists their videos too. Off by default; turn it on under Settings → Video Tagging. Videos tagged
+  before it was turned on appear once they are scanned, from **Scan videos** there or the next folder sync.
 - **Spatial Clustering**: Groups photos by location using DBSCAN algorithm (5km radius)
 - **Temporal Grouping**: Organizes photos by date with monthly grouping
 - **Reverse Geocoding**: Identifies actual city names from GPS coordinates
@@ -32,7 +33,7 @@
 - Search photos based on:
   - Detected objects
   - Recognized faces, one or several people at once, or a face from a photo or webcam (videos are
-    included once people in videos is turned on)
+    included once people in videos is turned on and they have been scanned)
   - Embedded metadata
 - **Semantic Search** (optional, ~1.5 GB download): describe a photo in your
   own words — "beach sunset", "two people hugging" — and find it even if no

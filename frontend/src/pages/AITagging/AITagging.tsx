@@ -176,9 +176,10 @@ export const AITagging = () => {
                 scrollContainerRef={scrollableRef}
               />
             )
-          ) : (
+          ) : matchedVideos.length === 0 ? (
+            // A search can match only videos, which render below
             <EmptyAITaggingState />
-          )}
+          ) : null}
 
           {/* Videos the selected people appear in */}
           {matchedVideos.length > 0 && (

@@ -208,7 +208,8 @@ def db_mark_videos_faces_scanned(video_ids: List[str]) -> bool:
 
 
 def db_count_video_face_scan_progress() -> Tuple[int, int]:
-    """(total, scanned) videos in AI-tagging folders, for the scan's progress."""
+    """(total, scanned) tagged videos in AI-tagging folders, for the scan's
+    progress. Same set the scan works through, so it can reach 100%."""
     conn = None
     try:
         conn = _connect()
@@ -219,6 +220,7 @@ def db_count_video_face_scan_progress() -> Tuple[int, int]:
             FROM videos v
             JOIN folders f ON v.folder_id = f.folder_id
             WHERE f.AI_Tagging = TRUE
+              AND v.isTagged = TRUE
             """
         )
         total, scanned = cursor.fetchone()

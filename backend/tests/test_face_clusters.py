@@ -1231,9 +1231,15 @@ class TestKeyframeFacesNeverFormClusters:
         add_cluster_row("c1")
         keyframe_face(keyframe_db, "frame-1", axis(0), cluster_id="c1")
         assert face_clusters_db.db_get_clusters_count() == 0
+        # Nor listed: it would be a "0 photos" card the count says isn't there
+        assert face_clusters_db.db_get_all_clusters_with_face_counts() == []
 
         photo_face(keyframe_db, "img-1", axis(0), "c1")
         assert face_clusters_db.db_get_clusters_count() == 1
+        assert [
+            c["cluster_id"]
+            for c in face_clusters_db.db_get_all_clusters_with_face_counts()
+        ] == ["c1"]
 
 
 class TestFullReclusterWithKeyframeFaces:

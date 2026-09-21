@@ -22,6 +22,13 @@ class ClusterData(TypedDict):
 ClusterMap = Dict[ClusterId, ClusterData]
 
 
+def _connect() -> sqlite3.Connection:
+    conn = sqlite3.connect(DATABASE_PATH)
+    # Ensure ON DELETE CASCADE and other FKs are enforced
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+
 def db_create_clusters_table() -> None:
     """Create the face_clusters table if it doesn't exist."""
     conn = None
@@ -303,6 +310,8 @@ def db_get_all_clusters_with_face_counts() -> (
             INNER JOIN faces f ON fc.cluster_id = f.cluster_id
             LEFT JOIN video_frames vf ON f.frame_id = vf.id
             GROUP BY fc.cluster_id, fc.cluster_name, fc.face_image_base64
+            -- Keyframe faces alone don't define a person; see db_get_clusters_count
+            HAVING COUNT(f.image_id) > 0
             """
         )
 
@@ -423,7 +432,7 @@ def db_get_video_ids_by_cluster_id(cluster_id: ClusterId) -> List[str]:
     One row per video however many keyframes they appear in; the caller turns
     these into full records with db_get_videos_by_ids.
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     try:
         rows = conn.execute(
             """
@@ -522,7 +531,7 @@ def db_get_video_matches_by_face_clusters(
         having = "HAVING COUNT(DISTINCT f.cluster_id) = ?"
         params.append(len(cluster_ids))
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     try:
         rows = conn.execute(
             f"""

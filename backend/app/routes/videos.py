@@ -1,4 +1,4 @@
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import Future, ProcessPoolExecutor
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from starlette.datastructures import State
@@ -242,8 +242,8 @@ def post_video_face_scan_sequence() -> bool:
     try:
         video_util_backfill_video_faces()
         cluster_util_attach_keyframe_faces()
-    except Exception as e:
-        logger.error(f"Error scanning videos for faces: {e}")
+    except Exception:
+        logger.exception("Error scanning videos for faces")
         return False
     return True
 
@@ -252,6 +252,9 @@ class FaceScanStatusData(BaseModel):
     total: int
     scanned: int
     pending: int
+    # State of the scan started from Settings; a sync's own pass isn't tracked
+    running: bool = False
+    failed: bool = False
 
 
 class FaceScanStatusResponse(BaseModel):
@@ -260,9 +263,22 @@ class FaceScanStatusResponse(BaseModel):
     data: FaceScanStatusData
 
 
-def _face_scan_status() -> FaceScanStatusData:
+def _face_scan_status(app_state: State) -> FaceScanStatusData:
     total, scanned = db_count_video_face_scan_progress()
-    return FaceScanStatusData(total=total, scanned=scanned, pending=total - scanned)
+    scan: Optional[Future] = getattr(app_state, "video_face_scan", None)
+    running = scan is not None and not scan.done()
+    failed = (
+        scan is not None
+        and scan.done()
+        and (scan.cancelled() or scan.exception() is not None or not scan.result())
+    )
+    return FaceScanStatusData(
+        total=total,
+        scanned=scanned,
+        pending=total - scanned,
+        running=running,
+        failed=failed,
+    )
 
 
 @router.post(
@@ -270,7 +286,9 @@ def _face_scan_status() -> FaceScanStatusData:
     response_model=FaceScanStatusResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
-def scan_video_faces(app_state: State = Depends(get_state)):
+def scan_video_faces(
+    app_state: State = Depends(get_state),
+) -> FaceScanStatusResponse:
     """Start a background pass over videos tagged before finding people in
     videos was turned on. Returns how many it has to get through."""
     try:
@@ -279,10 +297,13 @@ def scan_video_faces(app_state: State = Depends(get_state)):
                 "Turn on 'Find People in Videos' in Settings before scanning"
             )
 
-        executor: ProcessPoolExecutor = app_state.executor
-        executor.submit(post_video_face_scan_sequence)
+        # Kept on app state so the status endpoint can report a running or
+        # failed scan; a second click while one is running is a no-op.
+        if not _face_scan_status(app_state).running:
+            executor: ProcessPoolExecutor = app_state.executor
+            app_state.video_face_scan = executor.submit(post_video_face_scan_sequence)
 
-        status_data = _face_scan_status()
+        status_data = _face_scan_status(app_state)
         return FaceScanStatusResponse(
             success=True,
             message=f"Scanning {status_data.pending} video(s) for people",
@@ -315,10 +336,12 @@ def scan_video_faces(app_state: State = Depends(get_state)):
     response_model=FaceScanStatusResponse,
     responses={500: {"model": ErrorResponse}},
 )
-def get_video_face_scan_status():
+def get_video_face_scan_status(
+    app_state: State = Depends(get_state),
+) -> FaceScanStatusResponse:
     """How far the face scan has got, for a caller polling its progress."""
     try:
-        status_data = _face_scan_status()
+        status_data = _face_scan_status(app_state)
         return FaceScanStatusResponse(
             success=True,
             message=f"{status_data.scanned} of {status_data.total} video(s) scanned",

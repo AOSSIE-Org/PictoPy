@@ -75,6 +75,9 @@ export interface FaceScanStatus {
   total: number;
   scanned: number;
   pending: number;
+  /** The scan started from Settings, not one a folder sync runs itself. */
+  running: boolean;
+  failed: boolean;
 }
 
 export interface FaceScanStatusResponse extends APIResponse {

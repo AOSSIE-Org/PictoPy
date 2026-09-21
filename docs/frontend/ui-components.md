@@ -67,7 +67,8 @@ These implement specific features and often use the primitives above:
 - **account-settings** – User account and preference UI
 - **UserPreferencesCard** (`pages/SettingsPage/components/`) – The Video Tagging group holds the keyframe interval,
   the **Find People in Videos** switch, and, while that switch is on, a **Scan videos** button for videos tagged
-  before it. The scan runs in the background; the card polls `GET /videos/face-scan-status` for its progress
+  before it. The scan runs in the background; the card polls `GET /videos/face-scan-status` for its progress,
+  and offers a retry if the scan stopped with an error
 
 ### Dialogs and feedback
 

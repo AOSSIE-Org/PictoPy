@@ -74,9 +74,7 @@ const UserPreferencesCard: React.FC = () => {
   const [purgeState, setPurgeState] = useState<'idle' | 'purging' | 'done'>(
     'idle',
   );
-  const [scanState, setScanState] = useState<'idle' | 'starting' | 'running'>(
-    'idle',
-  );
+  const [startingScan, setStartingScan] = useState(false);
   // Collapsed by default: video tagging is a niche setting, so it stays out
   // of the way until a user with videos goes looking for it.
   const [videoSettingsOpen, setVideoSettingsOpen] = useState(false);
@@ -107,26 +105,26 @@ const UserPreferencesCard: React.FC = () => {
     queryFn: getVideoFaceScanStatus,
     enabled: preferences.Video_Face_Detection,
     refetchInterval: (query) =>
-      (query.state.data?.data?.pending ?? 0) > 0 ? 2000 : false,
+      query.state.data?.data?.running ? 2000 : false,
     refetchIntervalInBackground: true,
   });
   const faceScan = faceScanQuery.successData;
   const pendingScans = faceScan?.pending ?? 0;
-  // Videos left over is not the same as a scan being under way, so the two
-  // are tracked apart: unscanned videos are the normal state until asked.
-  const scanning = scanState === 'running' && pendingScans > 0;
+  // The backend reports whether its scan is running or died, so a crashed
+  // worker ends the polling and re-enables the button instead of hanging.
+  const scanning = faceScan?.running ?? false;
+  const scanFailed = (faceScan?.failed ?? false) && pendingScans > 0;
   const everythingScanned = pendingScans === 0 && (faceScan?.total ?? 0) > 0;
 
   const handleScanVideoFaces = useCallback(async () => {
-    setScanState('starting');
+    setStartingScan(true);
     try {
       await startVideoFaceScan();
-      setScanState('running');
     } catch (err) {
       console.error('Failed to start the video face scan', err);
-      setScanState('idle');
     }
     await faceScanQuery.refetch();
+    setStartingScan(false);
   }, [faceScanQuery]);
 
   useEffect(() => {
@@ -425,7 +423,9 @@ const UserPreferencesCard: React.FC = () => {
                         ? `Looking for people — ${faceScan?.scanned ?? 0} of ${faceScan?.total ?? 0} done. This takes a while and keeps going in the background.`
                         : everythingScanned
                           ? `All ${faceScan?.total} videos have been searched for people.`
-                          : `${pendingScans} video(s) tagged before this was turned on have not been searched for people yet.`}
+                          : scanFailed
+                            ? `The last scan stopped with an error. ${pendingScans} video(s) still to search.`
+                            : `${pendingScans} video(s) tagged before this was turned on have not been searched for people yet.`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -433,11 +433,7 @@ const UserPreferencesCard: React.FC = () => {
                     <Button
                       variant="outline"
                       className="cursor-pointer"
-                      disabled={
-                        scanState === 'starting' ||
-                        scanning ||
-                        everythingScanned
-                      }
+                      disabled={startingScan || scanning || everythingScanned}
                       onClick={handleScanVideoFaces}
                     >
                       <ScanFace className="mr-2 h-4 w-4" />
@@ -445,7 +441,9 @@ const UserPreferencesCard: React.FC = () => {
                         ? 'Scanning...'
                         : everythingScanned
                           ? 'All scanned'
-                          : 'Scan videos'}
+                          : scanFailed
+                            ? 'Retry scan'
+                            : 'Scan videos'}
                     </Button>
                   </div>
                 </div>

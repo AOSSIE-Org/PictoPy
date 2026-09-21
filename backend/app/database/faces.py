@@ -124,8 +124,9 @@ def db_repair_orphaned_faces() -> int:
                 f"unassigned {unassigned} from missing clusters"
             )
         return deleted + unassigned
-    except sqlite3.Error as e:
-        logger.error(f"Error repairing orphaned faces: {e}")
+    except sqlite3.Error:
+        # Best effort: a failed repair must not stop the backend from starting
+        logger.exception("Error repairing orphaned faces")
         conn.rollback()
         return 0
     finally:

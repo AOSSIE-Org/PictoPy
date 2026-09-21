@@ -865,76 +865,84 @@ def video_util_backfill_video_faces() -> int:
         face_detector = FaceDetector()
         scanned = 0
         total_faces = 0
+        failed: List[str] = []
 
         try:
             for video in videos:
                 video_id = video["id"]
-                frames = db_get_frames_for_video(video_id)
-                if not frames:
-                    # Nothing was ever sampled, so there is nothing to look at
-                    # -- but don't re-probe the file on every pass either.
-                    db_mark_videos_faces_scanned([video_id])
-                    scanned += 1
-                    continue
+                try:
+                    frames = db_get_frames_for_video(video_id)
+                    if not frames:
+                        # Nothing was ever sampled, so there is nothing to look at
+                        # -- but don't re-probe the file on every pass either.
+                        db_mark_videos_faces_scanned([video_id])
+                        scanned += 1
+                        continue
 
-                expected_dimension = video_util_expected_frame_dimension(
-                    image_util_parse_metadata(video["metadata"])
-                )
-                # A purged cache leaves nothing to classify, so there is no way
-                # to tell which frames are worth sampling: all of them are.
-                if any(not frame["frame_path"] for frame in frames):
-                    frames = video_util_refresh_frame_images(
-                        video_id, video["path"], frames, expected_dimension
+                    expected_dimension = video_util_expected_frame_dimension(
+                        image_util_parse_metadata(video["metadata"])
+                    )
+                    # A purged cache leaves nothing to classify, so there is no way
+                    # to tell which frames are worth sampling: all of them are.
+                    if any(not frame["frame_path"] for frame in frames):
+                        frames = video_util_refresh_frame_images(
+                            video_id, video["path"], frames, expected_dimension
+                        )
+
+                    classes_by_frame = {
+                        frame["id"]: object_classifier.get_classes(frame["frame_path"])
+                        or []
+                        for frame in frames
+                        if frame["frame_path"]
+                    }
+                    person_frames = video_util_refresh_frame_images(
+                        video_id,
+                        video["path"],
+                        [
+                            frame
+                            for frame in frames
+                            if 0 in classes_by_frame.get(frame["id"], [])
+                        ],
+                        expected_dimension,
                     )
 
-                classes_by_frame = {
-                    frame["id"]: object_classifier.get_classes(frame["frame_path"])
-                    or []
-                    for frame in frames
-                    if frame["frame_path"]
-                }
-                person_frames = video_util_refresh_frame_images(
-                    video_id,
-                    video["path"],
-                    [
-                        frame
-                        for frame in frames
-                        if 0 in classes_by_frame.get(frame["id"], [])
-                    ],
-                    expected_dimension,
-                )
+                    faces = video_util_select_video_faces(
+                        video_util_detect_video_faces(
+                            face_detector,
+                            person_frames,
+                            [classes_by_frame[frame["id"]] for frame in person_frames],
+                        ),
+                        VIDEO_FACE_DEDUPE_THRESHOLD,
+                        VIDEO_MAX_FACES_PER_VIDEO,
+                    )
 
-                faces = video_util_select_video_faces(
-                    video_util_detect_video_faces(
-                        face_detector,
-                        person_frames,
-                        [classes_by_frame[frame["id"]] for frame in person_frames],
-                    ),
-                    VIDEO_FACE_DEDUPE_THRESHOLD,
-                    VIDEO_MAX_FACES_PER_VIDEO,
-                )
-
-                # Clean first: a scan killed part-way through this video would
-                # otherwise have its faces stored twice on the retry.
-                db_delete_keyframe_faces_for_video(video_id)
-                try:
-                    for face in faces:
-                        db_insert_face_embeddings(
-                            None,
-                            face["embedding"],
-                            confidence=face["confidence"],
-                            bbox=face["bbox"],
-                            frame_id=face["frame_id"],
+                    # Clean first: a scan killed part-way through this video would
+                    # otherwise have its faces stored twice on the retry.
+                    db_delete_keyframe_faces_for_video(video_id)
+                    try:
+                        for face in faces:
+                            db_insert_face_embeddings(
+                                None,
+                                face["embedding"],
+                                confidence=face["confidence"],
+                                bbox=face["bbox"],
+                                frame_id=face["frame_id"],
+                            )
+                    except sqlite3.IntegrityError:
+                        # The video can be deleted during inference, cascading its
+                        # keyframes away and failing the faces FK; skip it.
+                        logger.info(
+                            f"Video {video_id} was removed during the face scan"
                         )
-                except sqlite3.IntegrityError:
-                    # The video can be deleted during inference, cascading its
-                    # keyframes away and failing the faces FK; skip it.
-                    logger.info(f"Video {video_id} was removed during the face scan")
-                    continue
+                        continue
 
-                db_mark_videos_faces_scanned([video_id])
-                scanned += 1
-                total_faces += len(faces)
+                    db_mark_videos_faces_scanned([video_id])
+                    scanned += 1
+                    total_faces += len(faces)
+                except Exception:
+                    # One bad video must not stop every video queued behind it
+                    logger.exception(f"Face scan failed for video {video_id}")
+                    failed.append(video_id)
         finally:
             object_classifier.close()
             face_detector.close()
@@ -943,6 +951,8 @@ def video_util_backfill_video_faces() -> int:
             f"Video face scan complete. Videos: {scanned}/{len(videos)}, "
             f"Faces stored: {total_faces}"
         )
+        if failed:
+            logger.warning(f"{len(failed)} video(s) failed the face scan: {failed}")
         return scanned
     except Exception as e:
         logger.error(f"Error scanning videos for faces: {e}")
@@ -979,72 +989,78 @@ def video_util_process_untagged_videos() -> bool:
         face_detector = FaceDetector() if video_util_face_detection_enabled() else None
         total_frames = 0
         total_faces = 0
+        failed: List[str] = []
 
         try:
             for video in untagged_videos:
                 video_id = video["id"]
-                frames = video_util_extract_video_frames(
-                    video_id, video["path"], interval
-                )
+                try:
+                    frames = video_util_extract_video_frames(
+                        video_id, video["path"], interval
+                    )
 
-                if not frames:
-                    # Undecodable files are still marked tagged, otherwise
-                    # every folder sync retries them forever.
-                    logger.warning(
-                        f"No frames sampled from {video['path']}; tagging as empty"
+                    if not frames:
+                        # Undecodable files are still marked tagged, otherwise
+                        # every folder sync retries them forever.
+                        logger.warning(
+                            f"No frames sampled from {video['path']}; tagging as empty"
+                        )
+                        db_mark_videos_tagged([video_id])
+                        if face_detector is not None:
+                            db_mark_videos_faces_scanned([video_id])
+                        continue
+
+                    db_delete_frames_for_videos([video_id])
+                    db_bulk_insert_video_frames(frames)
+                    total_frames += len(frames)
+
+                    frame_class_ids = [
+                        object_classifier.get_classes(frame["frame_path"]) or []
+                        for frame in frames
+                    ]
+
+                    # Re-tags start clean: deleting the old frames above cascaded
+                    # their faces away, so these never pile up on an existing set.
+                    faces: List[VideoFace] = []
+                    if face_detector is not None:
+                        faces = video_util_select_video_faces(
+                            video_util_detect_video_faces(
+                                face_detector, frames, frame_class_ids
+                            ),
+                            VIDEO_FACE_DEDUPE_THRESHOLD,
+                            VIDEO_MAX_FACES_PER_VIDEO,
+                        )
+                    try:
+                        for face in faces:
+                            db_insert_face_embeddings(
+                                None,
+                                face["embedding"],
+                                confidence=face["confidence"],
+                                bbox=face["bbox"],
+                                frame_id=face["frame_id"],
+                            )
+                    except sqlite3.IntegrityError:
+                        # The video can be deleted during inference, cascading its
+                        # keyframes away and failing the faces FK; skip it.
+                        logger.info(f"Video {video_id} was removed during tagging")
+                        continue
+                    total_faces += len(faces)
+
+                    db_write_video_classes(
+                        video_id,
+                        video_util_aggregate_frame_classes(
+                            frame_class_ids, VIDEO_TAG_MIN_FRAME_SUPPORT
+                        ),
                     )
                     db_mark_videos_tagged([video_id])
+                    # Only when the detector ran: leaving this clear is what lets
+                    # a later scan pick the video up once the setting is turned on.
                     if face_detector is not None:
                         db_mark_videos_faces_scanned([video_id])
-                    continue
-
-                db_delete_frames_for_videos([video_id])
-                db_bulk_insert_video_frames(frames)
-                total_frames += len(frames)
-
-                frame_class_ids = [
-                    object_classifier.get_classes(frame["frame_path"]) or []
-                    for frame in frames
-                ]
-
-                # Re-tags start clean: deleting the old frames above cascaded
-                # their faces away, so these never pile up on an existing set.
-                faces: List[VideoFace] = []
-                if face_detector is not None:
-                    faces = video_util_select_video_faces(
-                        video_util_detect_video_faces(
-                            face_detector, frames, frame_class_ids
-                        ),
-                        VIDEO_FACE_DEDUPE_THRESHOLD,
-                        VIDEO_MAX_FACES_PER_VIDEO,
-                    )
-                try:
-                    for face in faces:
-                        db_insert_face_embeddings(
-                            None,
-                            face["embedding"],
-                            confidence=face["confidence"],
-                            bbox=face["bbox"],
-                            frame_id=face["frame_id"],
-                        )
-                except sqlite3.IntegrityError:
-                    # The video can be deleted during inference, cascading its
-                    # keyframes away and failing the faces FK; skip it.
-                    logger.info(f"Video {video_id} was removed during tagging")
-                    continue
-                total_faces += len(faces)
-
-                db_write_video_classes(
-                    video_id,
-                    video_util_aggregate_frame_classes(
-                        frame_class_ids, VIDEO_TAG_MIN_FRAME_SUPPORT
-                    ),
-                )
-                db_mark_videos_tagged([video_id])
-                # Only when the detector ran: leaving this clear is what lets
-                # a later scan pick the video up once the setting is turned on.
-                if face_detector is not None:
-                    db_mark_videos_faces_scanned([video_id])
+                except Exception:
+                    # One bad video must not stop every video queued behind it
+                    logger.exception(f"Tagging failed for video {video_id}")
+                    failed.append(video_id)
         finally:
             object_classifier.close()
             if face_detector is not None:
@@ -1055,6 +1071,9 @@ def video_util_process_untagged_videos() -> bool:
             f"Frames sampled: {total_frames}, Faces stored: {total_faces}, "
             f"Interval: {interval}s"
         )
+        if failed:
+            logger.warning(f"{len(failed)} video(s) failed tagging: {failed}")
+            return False
         return True
     except Exception as e:
         logger.error(f"Error processing untagged videos: {e}")
