@@ -362,8 +362,11 @@ def db_disable_ai_tagging_batch(folder_ids: List[FolderId]) -> int:
 
 def db_get_folder_ids_by_path_prefix(root_path: str) -> List[FolderIdPath]:
     """Get the folder ID and path of root_path and every folder beneath it."""
-    # A trailing separator would otherwise demand a double one below.
+    # A trailing separator would otherwise demand a double one below. A drive
+    # root keeps it: "C:" alone is drive-relative, not the root of the drive.
     root = root_path.rstrip("/\\") or root_path
+    if len(root) == 2 and root[1] == ":":
+        root = root_path[:3]
     # Escape LIKE wildcards so '%' and '_' in a path match only themselves.
     escaped = root.replace("!", "!!").replace("%", "!%").replace("_", "!_")
 
