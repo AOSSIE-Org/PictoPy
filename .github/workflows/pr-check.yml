@@ -84,10 +84,10 @@ jobs:
           fi
 
           mapfile -t backend_files < <(
-            git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- 'backend/**/*.py'
+            git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- ':(glob)backend/**/*.py'
           )
           mapfile -t sync_files < <(
-            git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- 'sync-microservice/**/*.py'
+            git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- ':(glob)sync-microservice/**/*.py'
           )
 
           if (( ${#backend_files[@]} > 0 )); then

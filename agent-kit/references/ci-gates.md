@@ -52,8 +52,8 @@ if ! git rev-parse --verify --quiet "${BASE_SHA}^{commit}" > /dev/null || \
   echo "Unable to resolve pull request commits for MyPy."
   exit 1
 fi
-mapfile -t backend_files < <(git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- 'backend/**/*.py')
-mapfile -t sync_files < <(git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- 'sync-microservice/**/*.py')
+mapfile -t backend_files < <(git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- ':(glob)backend/**/*.py')
+mapfile -t sync_files < <(git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- ':(glob)sync-microservice/**/*.py')
 (( ${#backend_files[@]} > 0 )) && mypy --config-file backend/pyproject.toml "${backend_files[@]}"
 (( ${#sync_files[@]} > 0 )) && mypy --config-file sync-microservice/pyproject.toml "${sync_files[@]}"
 ```
