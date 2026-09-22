@@ -546,7 +546,9 @@ class TestAlbumImageManagement:
             "app.routes.albums.db_remove_image_from_album"
         ) as mock_remove:
             mock_get_album.return_value = album_row(mock_db_album)
-            mock_remove.side_effect = ValueError("Image not found in the specified album")
+            mock_remove.side_effect = ValueError(
+                "Image not found in the specified album"
+            )
 
             response = client.delete(f"/albums/{album_id}/images/{image_id}")
             assert response.status_code == 404
@@ -554,7 +556,10 @@ class TestAlbumImageManagement:
             json_response = response.json()
             assert json_response["detail"]["success"] is False
             assert json_response["detail"]["error"] == "Image Not Found in Album"
-            assert "Image not found in the specified album" in json_response["detail"]["message"]
+            assert (
+                "Image not found in the specified album"
+                in json_response["detail"]["message"]
+            )
 
             mock_get_album.assert_called_once_with(album_id)
             mock_remove.assert_called_once_with(album_id, image_id)
