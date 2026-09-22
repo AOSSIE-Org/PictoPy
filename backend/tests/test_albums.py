@@ -535,6 +535,30 @@ class TestAlbumImageManagement:
             mock_get_album.assert_called_once_with(album_id)
             mock_remove.assert_called_once_with(album_id, image_id)
 
+    def test_remove_image_not_in_album_returns_404(self, mock_db_album):
+        """
+        Test removing an image that is not in the album returns HTTP 404 NOT FOUND.
+        """
+        album_id = mock_db_album["album_id"]
+        image_id = "71abff29-27b4-43a4-9e76-b78504bea325"
+
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_remove_image_from_album"
+        ) as mock_remove:
+            mock_get_album.return_value = album_row(mock_db_album)
+            mock_remove.side_effect = ValueError("Image not found in the specified album")
+
+            response = client.delete(f"/albums/{album_id}/images/{image_id}")
+            assert response.status_code == 404
+
+            json_response = response.json()
+            assert json_response["detail"]["success"] is False
+            assert json_response["detail"]["error"] == "Image Not Found in Album"
+            assert "Image not found in the specified album" in json_response["detail"]["message"]
+
+            mock_get_album.assert_called_once_with(album_id)
+            mock_remove.assert_called_once_with(album_id, image_id)
+
     def test_remove_multiple_images_from_album(self, mock_db_album):
         """
         Test removing multiple images from an album using the bulk delete endpoint.
